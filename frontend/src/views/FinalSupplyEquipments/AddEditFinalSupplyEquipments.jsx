@@ -75,18 +75,32 @@ export const AddEditFinalSupplyEquipments = () => {
           }
         ])
       } else {
-        setRowData(
-          data.finalSupplyEquipments.map((item) => ({
+        setRowData([
+          ...data.finalSupplyEquipments.map((item) => ({
             ...item,
             levelOfEquipment: item.levelOfEquipment.name,
             fuelMeasurementType: item.fuelMeasurementType.type,
             intendedUses: item.intendedUseTypes.map((i) => i.type),
             intendedUsers: item.intendedUserTypes.map((i) => i.typeName),
             id: uuid()
-          }))
-        )
+          })),
+          {
+            id: uuid(),
+            complianceReportId,
+            supplyFromDate: `${compliancePeriod}-01-01`,
+            supplyToDate: `${compliancePeriod}-12-31`
+          }
+        ])
       }
       params.api.sizeColumnsToFit()
+
+      setTimeout(() => {
+        const lastRowIndex = params.api.getLastDisplayedRowIndex()
+        params.api.startEditingCell({
+          rowIndex: lastRowIndex,
+          colKey: 'organizationName'
+        })
+      }, 100)
     },
     [compliancePeriod, complianceReportId, data]
   )
@@ -268,10 +282,18 @@ export const AddEditFinalSupplyEquipments = () => {
           <BCTypography
             variant="body4"
             color="primary"
-            sx={{ marginY: '2rem' }}
+            sx={{ marginTop: '2rem' }}
             component="div"
           >
             {t('finalSupplyEquipment:fseSubtitle')}
+          </BCTypography>
+          <BCTypography
+            variant="body4"
+            color="primary"
+            sx={{ marginBottom: '2rem', marginTop: '1rem' }}
+            component="div"
+          >
+            {t('finalSupplyEquipment:reportingResponsibilityInfo')}
           </BCTypography>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>

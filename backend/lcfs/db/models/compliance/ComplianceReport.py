@@ -100,6 +100,11 @@ class ComplianceReport(BaseModel, Auditable):
         default=lambda: str(uuid.uuid4()),
         comment="UUID that groups all versions of a compliance report",
     )
+    legacy_id = Column(
+        Integer,
+        nullable=True,
+        comment="ID from TFRS if this is a transferred application, NULL otherwise",
+    )
     version = Column(
         Integer,
         nullable=False,

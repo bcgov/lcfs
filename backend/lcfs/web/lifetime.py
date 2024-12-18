@@ -62,7 +62,7 @@ def register_startup_event(
         await init_org_balance_cache(app)
 
         # Setup RabbitMQ Listeners
-        await start_consumers()
+        await start_consumers(app)
 
     return _startup
 

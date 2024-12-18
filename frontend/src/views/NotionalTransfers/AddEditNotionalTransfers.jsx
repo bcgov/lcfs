@@ -39,13 +39,30 @@ export const AddEditNotionalTransfers = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (location.state?.message) {
+    if (location?.state?.message) {
       alertRef.triggerAlert({
         message: location.state.message,
         severity: location.state.severity || 'info'
       })
     }
-  }, [location.state])
+  }, [location?.state?.message, location?.state?.severity]);
+
+  const validate = (params, validationFn, errorMessage, alertRef, field = null) => {
+    const value = field ? params.node?.data[field] : params;
+
+    if (field && params.colDef.field !== field) {
+      return true;
+    }
+
+    if (!validationFn(value)) {
+      alertRef.current?.triggerAlert({
+        message: errorMessage,
+        severity: 'error',
+      });
+      return false;
+    }
+    return true; // Proceed with the update
+  };
 
   const onGridReady = (params) => {
     const ensureRowIds = (rows) => {
@@ -64,7 +81,13 @@ export const AddEditNotionalTransfers = () => {
 
     if (notionalTransfers && notionalTransfers.length > 0) {
       try {
-        setRowData(ensureRowIds(notionalTransfers))
+        setRowData([
+          ...ensureRowIds(notionalTransfers),
+          {
+            id: uuid(),
+            complianceReportId
+          }
+        ])
       } catch (error) {
         alertRef.triggerAlert({
           message: t('notionalTransfer:LoadFailMsg'),
@@ -78,11 +101,33 @@ export const AddEditNotionalTransfers = () => {
     }
 
     params.api.sizeColumnsToFit()
+
+    setTimeout(() => {
+      const lastRowIndex = params.api.getLastDisplayedRowIndex()
+      params.api.startEditingCell({
+        rowIndex: lastRowIndex,
+        colKey: 'legalName'
+      })
+    }, 100)
   }
 
   const onCellEditingStopped = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
+
+      const isValid = validate(
+        params,
+        (value) => {
+          return value !== null && !isNaN(value) && value > 0;
+        },
+        'Quantity supplied must be greater than 0.',
+        alertRef,
+        'quantity',
+      );
+
+      if (!isValid) {
+        return
+      }
 
       // Initialize updated data with 'pending' status
       params.node.updateData({

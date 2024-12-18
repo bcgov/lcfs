@@ -17,6 +17,8 @@ import {
   fuelTypeOtherConditionalStyle
 } from '@/utils/fuelTypeOther'
 
+export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+
 const cellErrorStyle = (params, errors) => {
   let style = {}
   if (
@@ -44,7 +46,7 @@ const cellErrorStyle = (params, errors) => {
   return style
 }
 
-export const fuelExportColDefs = (optionsData, errors) => [
+export const fuelExportColDefs = (optionsData, errors, gridReady) => [
   validation,
   actions({
     enableDuplicate: false,
@@ -103,12 +105,15 @@ export const fuelExportColDefs = (optionsData, errors) => [
     ),
     suppressKeyboardEvent,
     cellEditor: DateEditor,
-    cellEditorPopup: true
+    cellEditorPopup: true,
+    cellEditorParams: {
+      autoOpenLastRow: !gridReady
+    }
   },
   {
     field: 'fuelType',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelType'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
@@ -177,7 +182,7 @@ export const fuelExportColDefs = (optionsData, errors) => [
   {
     field: 'fuelCategory',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
@@ -318,29 +323,94 @@ export const fuelExportColDefs = (optionsData, errors) => [
     field: 'fuelCode',
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
     cellEditor: 'agSelectCellEditor',
-    cellEditorParams: (params) => ({
-      values: optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCodes.map((item) => item.fuelCode)
-    }),
+    suppressKeyboardEvent,
+    minWidth: 135,
+    cellEditorParams: (params) => {
+      const fuelTypeObj = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      return {
+        values: fuelTypeObj?.fuelCodes?.map((item) => item.fuelCode) || []
+      }
+    },
     cellStyle: (params) => {
       const style = cellErrorStyle(params, errors)
+      const fuelTypeObj = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      const fuelCodes =
+        fuelTypeObj?.fuelCodes.map((item) => item.fuelCode) || []
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+
+      // Check if fuel code is required (scenario) but missing
+      const fuelCodeRequiredAndMissing =
+        isFuelCodeScenario && !params.data.fuelCode
+
+      if (fuelCodeRequiredAndMissing) {
+        // If required and missing, force a red border
+        style.borderColor = 'red'
+      }
+
       const conditionalStyle =
-        optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCodes.map((item) => item.fuelCode).length > 0 &&
-        /Fuel code/i.test(params.data.provisionOfTheAct)
+        fuelCodes.length > 0 &&
+        isFuelCodeScenario &&
+        !fuelCodeRequiredAndMissing
           ? { backgroundColor: '#fff', borderColor: 'unset' }
           : { backgroundColor: '#f2f2f2' }
       return { ...style, ...conditionalStyle }
     },
-    suppressKeyboardEvent,
-    minWidth: 135,
-    editable: (params) =>
-      optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCodes.map((item) => item.fuelCode).length > 0 &&
-      /Fuel code/i.test(params.data.provisionOfTheAct)
+    editable: (params) => {
+      const fuelTypeObj = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      const fuelCodes = fuelTypeObj?.fuelCodes || []
+      return (
+        fuelCodes.length > 0 &&
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      )
+    },
+    valueGetter: (params) => {
+      const fuelTypeObj = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      if (!fuelTypeObj) return params.data.fuelCode
+
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      const fuelCodes =
+        fuelTypeObj.fuelCodes?.map((item) => item.fuelCode) || []
+
+      if (isFuelCodeScenario && !params.data.fuelCode) {
+        // Autopopulate if only one fuel code is available
+        if (fuelCodes.length === 1) {
+          const singleFuelCode = fuelTypeObj.fuelCodes[0]
+          params.data.fuelCode = singleFuelCode.fuelCode
+          params.data.fuelCodeId = singleFuelCode.fuelCodeId
+        }
+      }
+
+      return params.data.fuelCode
+    },
+    valueSetter: (params) => {
+      const newCode = params.newValue
+      const fuelTypeObj = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      const selectedFuelCodeObj = fuelTypeObj?.fuelCodes.find(
+        (item) => item.fuelCode === newCode
+      )
+
+      if (selectedFuelCodeObj) {
+        params.data.fuelCode = selectedFuelCodeObj.fuelCode
+        params.data.fuelCodeId = selectedFuelCodeObj.fuelCodeId
+      } else {
+        params.data.fuelCode = undefined
+        params.data.fuelCodeId = undefined
+      }
+
+      return true
+    }
   },
   {
     field: 'quantity',

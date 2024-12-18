@@ -12,10 +12,10 @@
   "fuelExportColLabels": {
     "complianceReportId": "Compliance Report ID",
     "fuelExportId": "Fuel export ID",
-    "fuelTypeId": "Fuel type",
+    "fuelType": "Fuel type",
     "exportDate": "Export date",
     "fuelTypeOther": "Fuel type other",
-    "fuelCategoryId": "Fuel catgory",
+    "fuelCategory": "Fuel catgory",
     "endUse": "End use",
     "provisionOfTheActId": "Determining carbon intensity",
     "fuelCode": "Fuel code",
@@ -32,5 +32,6 @@
   },
   "validateMsg": {
     "isRequired": "{{field}} is required"
-  }
+  },
+  "fuelCodeFieldRequiredError": "Error updating row: Fuel code field required"
 }

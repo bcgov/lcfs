@@ -76,13 +76,13 @@ async def test_create_transfer_success(transfer_service, mock_transfer_repo):
     )
     mock_transfer_repo.create_transfer.return_value = transfer_data
 
-    # Patch the _perform_notificaiton_call method
-    with patch.object(transfer_service, "_perform_notificaiton_call", AsyncMock()):
+    # Patch the _perform_notification_call method
+    with patch.object(transfer_service, "_perform_notification_call", AsyncMock()):
         result = await transfer_service.create_transfer(transfer_data)
 
         assert result.transfer_id == transfer_id
         assert isinstance(result, TransferCreateSchema)
-        transfer_service._perform_notificaiton_call.assert_called_once()
+        transfer_service._perform_notification_call.assert_called_once()
 
 
 @pytest.mark.anyio
@@ -91,8 +91,15 @@ async def test_update_transfer_success(
 ):
     transfer_status = TransferStatus(transfer_status_id=1, status="status")
     transfer_id = 1
+    # Create valid nested organization objects
+    from_org = Organization(organization_id=1, name="org1")
+    to_org = Organization(organization_id=2, name="org2")
+
+    # Create a Transfer object with the necessary attributes
     transfer = Transfer(
         transfer_id=transfer_id,
+        from_organization=from_org,
+        to_organization=to_org,
         from_organization_id=1,
         to_organization_id=2,
         from_transaction_id=1,
@@ -114,10 +121,21 @@ async def test_update_transfer_success(
     mock_transfer_repo.get_transfer_by_id.return_value = transfer
     mock_transfer_repo.update_transfer.return_value = transfer
 
+    # Replace _perform_notification_call with an AsyncMock
+    transfer_service._perform_notification_call = AsyncMock()
+
     result = await transfer_service.update_transfer(transfer)
 
+    # Assertions
     assert result.transfer_id == transfer_id
     assert isinstance(result, Transfer)
+
+    # Verify mocks
+    mock_transfer_repo.get_transfer_by_id.assert_called_once_with(transfer_id)
+    mock_transfer_repo.update_transfer.assert_called_once_with(transfer)
+    transfer_service._perform_notification_call.assert_awaited_once_with(
+        transfer, status="Return to analyst"
+    )
 
 
 @pytest.mark.anyio

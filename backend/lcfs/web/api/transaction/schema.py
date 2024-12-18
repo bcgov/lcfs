@@ -1,6 +1,6 @@
 from typing import Optional, List
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 from lcfs.web.api.base import BaseSchema
 from datetime import datetime
 from enum import Enum

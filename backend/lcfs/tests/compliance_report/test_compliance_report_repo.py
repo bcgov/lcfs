@@ -558,7 +558,7 @@ async def test_add_compliance_report_success(
         version=1,
     )
 
-    report = await compliance_report_repo.add_compliance_report(report=new_report)
+    report = await compliance_report_repo.create_compliance_report(report=new_report)
 
     assert isinstance(report, ComplianceReportBaseSchema)
     assert report.compliance_period_id == compliance_periods[0].compliance_period_id
@@ -577,7 +577,7 @@ async def test_add_compliance_report_exception(
     new_report = ComplianceReport()
 
     with pytest.raises(DatabaseException):
-        await compliance_report_repo.add_compliance_report(report=new_report)
+        await compliance_report_repo.create_compliance_report(report=new_report)
 
 
 @pytest.mark.anyio

@@ -3,15 +3,17 @@ Notification endpoints
 """
 
 from typing import Union, List
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.exception.exceptions import DataNotFoundException
 import structlog
-from fastapi import APIRouter, Body, Depends, HTTPException, Request
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.notification.schema import (
     DeleteNotificationChannelSubscriptionResponseSchema,
     DeleteNotificationMessageResponseSchema,
     DeleteSubscriptionSchema,
     DeleteNotificationMessageSchema,
+    NotificationsSchema,
     SubscriptionSchema,
     NotificationMessageSchema,
     NotificationCountSchema,
@@ -40,6 +42,56 @@ async def get_notification_messages_by_user_id(
 
     return await service.get_notification_messages_by_user_id(
         user_id=request.user.user_profile_id, is_read=is_read
+    )
+
+
+@router.post(
+    "/list", response_model=NotificationsSchema, status_code=status.HTTP_200_OK
+)
+@view_handler(["*"])
+async def get_notification_messages_by_user_id(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    response: Response = None,
+    service: NotificationService = Depends(),
+):
+    """
+    Retrieve all notifications of a user with pagination
+    """
+    return await service.get_paginated_notification_messages(
+        user_id=request.user.user_profile_id, pagination=pagination
+    )
+
+
+@router.put("/", response_model=List[int], status_code=status.HTTP_200_OK)
+@view_handler(["*"])
+async def update_notification_messages_to_read(
+    request: Request,
+    notification_ids: List[int] = Body(..., embed=False),
+    response: Response = None,
+    service: NotificationService = Depends(),
+):
+    """
+    Update notifications (mark the messages as read)
+    """
+    return await service.update_notification_messages(
+        request.user.user_profile_id, notification_ids
+    )
+
+
+@router.delete("/", response_model=List[int], status_code=status.HTTP_200_OK)
+@view_handler(["*"])
+async def delete_notification_messages(
+    request: Request,
+    notification_ids: List[int] = Body(..., embed=False),
+    response: Response = None,
+    service: NotificationService = Depends(),
+):
+    """
+    Delete notification messages
+    """
+    return await service.delete_notification_messages(
+        request.user.user_profile_id, notification_ids
     )
 
 

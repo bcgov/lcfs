@@ -3,6 +3,7 @@ import logging
 
 import aio_pika
 from aio_pika.abc import AbstractChannel, AbstractQueue
+from fastapi import FastAPI
 
 from lcfs.settings import settings
 
@@ -12,11 +13,12 @@ logger = logging.getLogger(__name__)
 
 
 class BaseConsumer:
-    def __init__(self, queue_name=None):
+    def __init__(self, app: FastAPI, queue_name: str):
         self.connection = None
         self.channel = None
         self.queue = None
         self.queue_name = queue_name
+        self.app = app
 
     async def connect(self):
         """Connect to RabbitMQ and set up the consumer."""
@@ -42,7 +44,6 @@ class BaseConsumer:
                 async with message.process():
                     logger.debug(f"Received message: {message.body.decode()}")
                     await self.process_message(message.body)
-                    logger.debug("Message Processed")
 
     async def process_message(self, body: bytes):
         """Process the incoming message. Override this method in subclasses."""

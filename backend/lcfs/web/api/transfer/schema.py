@@ -3,7 +3,7 @@ from lcfs.web.api.base import BaseSchema
 from typing import Optional, List
 from datetime import date, datetime
 from enum import Enum
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
 
 class TransferRecommendationEnumSchema(str, Enum):

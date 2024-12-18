@@ -1,3 +1,4 @@
+import json
 from lcfs.web.api.notification.schema import (
     INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER,
     NotificationMessageSchema,
@@ -129,7 +130,7 @@ class InitiativeAgreementServices:
         # Return the updated initiative agreement schema with the returned status flag
         ia_schema = InitiativeAgreementSchema.from_orm(updated_initiative_agreement)
         ia_schema.returned = returned
-        await self._perform_notificaiton_call(ia_schema, re_recommended)
+        await self._perform_notification_call(updated_initiative_agreement, returned)
         return ia_schema
 
     @service_handler
@@ -174,7 +175,7 @@ class InitiativeAgreementServices:
             await self.internal_comment_service.create_internal_comment(
                 internal_comment_data
             )
-        await self._perform_notificaiton_call(initiative_agreement)
+        await self._perform_notification_call(initiative_agreement)
         return initiative_agreement
 
     async def director_approve_initiative_agreement(
@@ -208,16 +209,28 @@ class InitiativeAgreementServices:
             initiative_agreement.transaction_effective_date = datetime.now().date()
 
         await self.repo.refresh_initiative_agreement(initiative_agreement)
-        await self._perform_notificaiton_call(initiative_agreement)
 
-    async def _perform_notificaiton_call(self, ia, re_recommended=False):
+    async def _perform_notification_call(self, ia, returned=False):
         """Send notifications based on the current status of the transfer."""
+        status = ia.current_status.status if not returned else "Return to analyst"
+        status_val = (
+            status.value
+            if isinstance(status, InitiativeAgreementStatusEnum)
+            else status
+        ).lower()
         notifications = INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER.get(
-            ia.current_status.status if not re_recommended else "Return to analyst",
-            None,
+            status, None
         )
+        message_data = {
+            "service": "InitiativeAgreement",
+            "id": ia.initiative_agreement_id,
+            "transactionId": ia.transaction_id,
+            "status": status_val,
+        }
         notification_data = NotificationMessageSchema(
-            message=f"Initiative Agreement {ia.initiative_agreement_id} has been {ia.current_status.status}",
+            type=f"Initiative agreement {status_val}",
+            related_transaction_id=f"IA{ia.initiative_agreement_id}",
+            message=json.dumps(message_data),
             related_organization_id=ia.to_organization_id,
             origin_user_profile_id=self.request.user.user_profile_id,
         )

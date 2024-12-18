@@ -20,6 +20,7 @@ class NotificationMessage(BaseModel, Auditable):
     is_warning = Column(Boolean, default=False)
     is_error = Column(Boolean, default=False)
     is_archived = Column(Boolean, default=False)
+    type = Column(Text, nullable=False)
     message = Column(Text, nullable=False)
 
     related_organization_id = Column(
@@ -32,12 +33,9 @@ class NotificationMessage(BaseModel, Auditable):
     notification_type_id = Column(
         Integer, ForeignKey("notification_type.notification_type_id")
     )
+    related_transaction_id = Column(Text, nullable=False)
 
-    # Models not created yet
-    # related_transaction_id = Column(Integer,ForeignKey(''))
-    # related_document_id = Column(Integer, ForeignKey('document.id'))
-    # related_report_id = Column(Integer, ForeignKey('compliance_report.id'))
-
+    # Relationships
     related_organization = relationship(
         "Organization", back_populates="notification_messages"
     )

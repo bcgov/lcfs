@@ -2,6 +2,8 @@ import structlog
 from typing import List, Optional, Dict
 from collections import defaultdict
 from datetime import datetime
+
+from lcfs.db.models import UserProfile
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.fuel.FuelType import FuelType
@@ -16,7 +18,6 @@ from lcfs.web.api.base import (
     PaginationRequestSchema,
     apply_filter_conditions,
     get_field_for_filter,
-    get_enum_value,
 )
 from lcfs.db.models.compliance import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import (
@@ -182,7 +183,9 @@ class ComplianceReportRepository:
         )
 
     @repo_handler
-    async def get_compliance_report_status_by_desc(self, status: str) -> int:
+    async def get_compliance_report_status_by_desc(
+        self, status: str
+    ) -> ComplianceReportStatus:
         """
         Retrieve the compliance report status ID from the database based on the description.
         Replaces spaces with underscores in the status description.
@@ -267,7 +270,7 @@ class ComplianceReportRepository:
         return result
 
     @repo_handler
-    async def add_compliance_report(self, report: ComplianceReport):
+    async def create_compliance_report(self, report: ComplianceReport):
         """
         Add a new compliance report to the database
         """
@@ -305,7 +308,9 @@ class ComplianceReportRepository:
         return history.scalar_one_or_none()
 
     @repo_handler
-    async def add_compliance_report_history(self, report: ComplianceReport, user):
+    async def add_compliance_report_history(
+        self, report: ComplianceReport, user: UserProfile
+    ):
         """
         Add a new compliance report history record to the database
         """
@@ -824,3 +829,26 @@ class ComplianceReportRepository:
             .limit(1)
         )
         return result.scalars().first()
+
+    async def get_compliance_report_by_legacy_id(self, legacy_id):
+        """
+        Retrieve a compliance report from the database by ID
+        """
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.user_profile
+                ),
+                joinedload(ComplianceReport.transaction),
+            )
+            .where(ComplianceReport.legacy_id == legacy_id)
+        )
+        return result.scalars().unique().first()

@@ -1,12 +1,12 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { apiRoutes } from '@/constants/routes'
+import { apiRoutes, ROUTES } from '@/constants/routes'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import i18n from '@/i18n'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
@@ -15,11 +15,12 @@ export const FuelSupplySummary = ({ data }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`fuel-supplies-grid`)
-  const { complianceReportId } = useParams()
+  const { complianceReportId, compliancePeriod } = useParams()
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'fuelSupply'])
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -125,6 +126,15 @@ export const FuelSupplySummary = ({ data }) => {
     setGridKey(`fuel-supplies-grid-${uuid()}`)
   }
 
+  const handleRowClicked = (params) => {
+    navigate(
+      ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
+        ':compliancePeriod',
+        compliancePeriod
+      ).replace(':complianceReportId', complianceReportId)
+    )
+  }
+
   return (
     <Grid2 className="fuel-supply-container" mx={-1}>
       <div>
@@ -149,6 +159,7 @@ export const FuelSupplySummary = ({ data }) => {
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={data.fuelSupplies.length <= 10}
+          handleRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>

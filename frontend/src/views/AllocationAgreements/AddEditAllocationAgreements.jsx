@@ -3,7 +3,6 @@ import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import {
@@ -66,7 +65,24 @@ export const AddEditAllocationAgreements = () => {
         severity: location.state.severity || 'info'
       })
     }
-  }, [location.state])
+  }, [location.state?.message, location.state?.severity])
+
+  const validate = (params, validationFn, errorMessage, alertRef, field = null) => {
+    const value = field ? params.node?.data[field] : params;
+
+    if (field && params.colDef.field !== field) {
+      return true;
+    }
+
+    if (!validationFn(value)) {
+      alertRef.current?.triggerAlert({
+        message: errorMessage,
+        severity: 'error',
+      });
+      return false;
+    }
+    return true; // Proceed with the update
+  };
 
   const onGridReady = useCallback(
     async (params) => {
@@ -80,13 +96,22 @@ export const AddEditAllocationAgreements = () => {
           ...item,
           id: item.id || uuid() // Ensure every item has a unique ID
         }))
-        setRowData(updatedRowData)
+        setRowData([...updatedRowData, { id: uuid() }])
       } else {
         // If allocationAgreements is not available or empty, initialize with a single row
         setRowData([{ id: uuid() }])
       }
 
       params.api.sizeColumnsToFit()
+
+      setTimeout(() => {
+        const lastRowIndex = params.api.getLastDisplayedRowIndex()
+        params.api.setFocusedCell(lastRowIndex, 'allocationTransactionType')
+        params.api.startEditingCell({
+          rowIndex: lastRowIndex,
+          colKey: 'allocationTransactionType'
+        })
+      }, 100)
     },
     [data]
   )
@@ -148,6 +173,22 @@ export const AddEditAllocationAgreements = () => {
     async (params) => {
       if (params.oldValue === params.newValue) return
 
+      const isValid = validate(
+        params,
+        (value) => {
+          return value !== null && !isNaN(value) && value > 0;
+        },
+        'Quantity supplied must be greater than 0.',
+        alertRef,
+        'quantity',
+      );
+
+      if (!isValid) {
+        return
+      }
+
+      if (!isValid) return
+
       params.node.updateData({
         ...params.node.data,
         validationStatus: 'pending'
@@ -167,6 +208,29 @@ export const AddEditAllocationAgreements = () => {
 
       if (updatedData.fuelType === 'Other') {
         updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
+      }
+
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      if (isFuelCodeScenario && !updatedData.fuelCode) {
+        // Fuel code is required but not provided
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [params.node.data.id]: ['fuelCode']
+        }))
+
+        alertRef.current?.triggerAlert({
+          message: t('allocationAgreement:fuelCodeFieldRequiredError'),
+          severity: 'error'
+        })
+
+        updatedData = {
+          ...updatedData,
+          validationStatus: 'error'
+        }
+
+        params.node.updateData(updatedData)
+        return // Stop execution, do not proceed to save
       }
 
       try {

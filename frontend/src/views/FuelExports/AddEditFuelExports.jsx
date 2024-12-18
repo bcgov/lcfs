@@ -13,14 +13,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { defaultColDef, fuelExportColDefs } from './_schema'
+import {
+  defaultColDef,
+  fuelExportColDefs,
+  PROVISION_APPROVED_FUEL_CODE
+} from './_schema'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
-  const [gridApi, setGridApi] = useState()
+  const [, setGridApi] = useState()
   const [errors, setErrors] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
+  const [gridReady, setGridReady] = useState(false)
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelExport'])
@@ -74,21 +79,34 @@ export const AddEditFuelExports = () => {
           endUse: item.endUse?.type || 'Any',
           id: uuid()
         }))
-        setRowData(updatedRowData)
+        setRowData([...updatedRowData, { id: uuid(), compliancePeriod }])
       } else {
         setRowData([{ id: uuid(), compliancePeriod }])
       }
       params.api.sizeColumnsToFit()
+
+      setTimeout(() => {
+        const lastRowIndex = params.api.getLastDisplayedRowIndex()
+        params.api.startEditingCell({
+          rowIndex: lastRowIndex,
+          colKey: 'exportDate'
+        })
+        setGridReady(true)
+      }, 500)
     },
     [compliancePeriod, data]
   )
 
   useEffect(() => {
     if (optionsData?.fuelTypes?.length > 0) {
-      const updatedColumnDefs = fuelExportColDefs(optionsData, errors)
+      const updatedColumnDefs = fuelExportColDefs(
+        optionsData,
+        errors,
+        gridReady
+      )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, optionsData])
+  }, [errors, gridReady, optionsData])
 
   useEffect(() => {
     if (!fuelExportsLoading && !isArrayEmpty(data)) {
@@ -143,7 +161,33 @@ export const AddEditFuelExports = () => {
           acc[key] = value
           return acc
         }, {})
+
       updatedData.compliancePeriod = compliancePeriod
+
+      // Local validation before saving
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+
+      if (isFuelCodeScenario && !updatedData.fuelCode) {
+        // Fuel code is required but not provided
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          [params.node.data.id]: ['fuelCode']
+        }))
+
+        alertRef.current?.triggerAlert({
+          message: t('fuelExport:fuelCodeFieldRequiredError'),
+          severity: 'error'
+        })
+
+        updatedData = {
+          ...updatedData,
+          validationStatus: 'error'
+        }
+        params.node.updateData(updatedData)
+        return // Don't proceed with save
+      }
+
       try {
         setErrors({})
         await saveRow(updatedData)
@@ -189,7 +233,7 @@ export const AddEditFuelExports = () => {
 
       params.node.updateData(updatedData)
     },
-    [saveRow, t]
+    [saveRow, t, compliancePeriod]
   )
 
   const onAction = async (action, params) => {

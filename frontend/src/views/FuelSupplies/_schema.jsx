@@ -19,6 +19,8 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 
+export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+
 export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   validation,
   actions({
@@ -102,7 +104,6 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         params.data.provisionOfTheAct = null
         params.data.fuelCode = null
         params.data.fuelCodeId = null
-        params.data.quantity = 0
         params.data.units = fuelType?.unit
         params.data.unrecognized = fuelType?.unrecognized
       }
@@ -176,7 +177,6 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         params.data.eer = null
         params.data.provisionOfTheAct = null
         params.data.fuelCode = null
-        params.data.quantity = 0
       }
       return true
     },
@@ -292,21 +292,35 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'fuelCode',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
     cellEditor: 'agSelectCellEditor',
-    cellEditorParams: (params) => ({
-      values: optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCodes.map((item) => item.fuelCode)
-    }),
+    cellEditorParams: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      return {
+        values: fuelType?.fuelCodes.map((item) => item.fuelCode) || []
+      }
+    },
     cellStyle: (params) => {
       const style = StandardCellWarningAndErrors(params, errors, warnings)
-      const conditionalStyle =
-        optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCodes.map((item) => item.fuelCode).length > 0 &&
-        /Fuel code/i.test(params.data.provisionOfTheAct)
-          ? { backgroundColor: '#fff' }
-          : { backgroundColor: '#f2f2f2', borderColor: 'unset' }
-      return { ...style, ...conditionalStyle }
+      const isFuelCodeScenario =
+        params.data?.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      const fuelCodes = fuelType?.fuelCodes || []
+      const fuelCodeRequiredAndMissing =
+        isFuelCodeScenario && !params.data.fuelCode
+
+      if (fuelCodeRequiredAndMissing) {
+        // Highlight the cell if fuel code is required but not selected
+        return { ...style, backgroundColor: '#fff', borderColor: 'red' }
+      } else if (isFuelCodeScenario && fuelCodes.length > 0) {
+        // Allow selection when scenario matches and codes are present
+        return { ...style, backgroundColor: '#fff', borderColor: 'unset' }
+      } else {
+        // Otherwise disabled styling
+        return { ...style, backgroundColor: '#f2f2f2', borderColor: 'unset' }
+      }
     },
     suppressKeyboardEvent,
     minWidth: 135,
@@ -314,29 +328,50 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
-      if (fuelType) {
-        return (
-          fuelType.fuelCodes.map((item) => item.fuelCode).length > 0 &&
-          /Fuel code/i.test(params.data.provisionOfTheAct)
-        )
+      return (
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
+        fuelType?.fuelCodes?.length > 0
+      )
+    },
+    valueGetter: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      if (!fuelType) return params.data.fuelCode
+
+      const isFuelCodeScenario =
+        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+      const fuelCodes = fuelType?.fuelCodes?.map((item) => item.fuelCode) || []
+
+      if (isFuelCodeScenario && !params.data.fuelCode) {
+        // If only one code is available, auto-populate
+        if (fuelCodes.length === 1) {
+          const singleFuelCode = fuelType.fuelCodes[0]
+          params.data.fuelCode = singleFuelCode.fuelCode
+          params.data.fuelCodeId = singleFuelCode.fuelCodeId
+        }
       }
-      return false
+
+      return params.data.fuelCode
     },
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCode = params.newValue
-
         const fuelType = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
         )
-        if (/Fuel code/i.test(params.data.provisionOfTheAct)) {
-          const matchingFuelCode = fuelType.fuelCodes?.find(
+        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+          const matchingFuelCode = fuelType?.fuelCodes?.find(
             (fuelCode) => params.data.fuelCode === fuelCode.fuelCode
           )
           if (matchingFuelCode) {
             params.data.fuelCodeId = matchingFuelCode.fuelCodeId
           }
         }
+      } else {
+        // If user clears the value
+        params.data.fuelCode = undefined
+        params.data.fuelCodeId = undefined
       }
       return true
     }
@@ -345,7 +380,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'quantity',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
-    valueFormatter,
+    valueFormatter: (params) => valueFormatter({ value: params.value }),
     cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
