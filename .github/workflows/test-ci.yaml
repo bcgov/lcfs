@@ -259,7 +259,7 @@ jobs:
     steps:
       - id: get-current-time
         run: |
-          echo "CURRENT_TIME=$(TZ="America/Vancouver" date '+%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_OUTPUT
+          echo "CURRENT_TIME=$(TZ='America/Vancouver' date '+%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_OUTPUT
 
       - name: Ask for approval for LCFS release-${{ env.VERSION }} Test deployment
         uses: trstringer/manual-approval@v1.6.0
