@@ -8,8 +8,9 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
-export const AllocationAgreementSummary = ({ data }) => {
+export const AllocationAgreementSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`allocation-agreements-grid`)
@@ -137,12 +138,14 @@ export const AllocationAgreementSummary = ({ data }) => {
   }
 
   const handleRowClicked = (params) => {
-    navigate(
-      ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
-    )
+    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
+      navigate(
+        ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
+      )
+    }
   }
 
   return (

@@ -10,8 +10,9 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import i18n from '@/i18n'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
-export const FuelSupplySummary = ({ data }) => {
+export const FuelSupplySummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`fuel-supplies-grid`)
@@ -126,13 +127,15 @@ export const FuelSupplySummary = ({ data }) => {
     setGridKey(`fuel-supplies-grid-${uuid()}`)
   }
 
-  const handleRowClicked = (params) => {
-    navigate(
-      ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
-    )
+  const handleRowClicked = () => {
+    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
+      navigate(
+        ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
+      )
+    }
   }
 
   return (
