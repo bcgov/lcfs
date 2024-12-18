@@ -95,6 +95,7 @@ async def save_fuel_supply_row(
         return await action_service.delete_fuel_supply(request_data, current_user_type)
     else:
         duplicate_id = await fs_validate.check_duplicate(request_data)
+        await fs_validate.validate_other(request_data)
         if duplicate_id is not None:
             duplicate_response = format_duplicate_error(duplicate_id)
             return duplicate_response
