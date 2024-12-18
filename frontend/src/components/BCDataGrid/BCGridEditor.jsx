@@ -181,6 +181,7 @@ export const BCGridEditor = ({
       params.event.target.dataset.action &&
       onAction
     ) {
+      alertRef.current.clearAlert()
       const action = params.event.target.dataset.action
       const transaction = await onAction(action, params)
 
@@ -207,6 +208,7 @@ export const BCGridEditor = ({
 
   const handleAddRowsInternal = useCallback(
     async (numRows) => {
+      alertRef.current.clearAlert()
       let newRows = []
 
       if (onAction) {

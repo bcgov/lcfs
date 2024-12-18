@@ -22,30 +22,33 @@ export const ActivityLinksList = () => {
               compliancePeriod
             ).replace(':complianceReportId', complianceReportId)
           )
-        }
+        },
+        children: [
+          {
+            name: t('report:activityLists.finalSupplyEquipment'),
+            action: () => {
+              navigate(
+                ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
+                  ':compliancePeriod',
+                  compliancePeriod
+                ).replace(':complianceReportId', complianceReportId)
+              )
+            }
+          },
+          {
+            name: t('report:activityLists.allocationAgreements'),
+            action: () => {
+              navigate(
+                ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
+                  ':compliancePeriod',
+                  compliancePeriod
+                ).replace(':complianceReportId', complianceReportId)
+              )
+            }
+          }
+        ]
       },
-      {
-        name: t('report:activityLists.finalSupplyEquipment'),
-        action: () => {
-          navigate(
-            ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
-          )
-        }
-      },
-      {
-        name: t('report:activityLists.allocationAgreements'),
-        action: () => {
-          navigate(
-            ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
-          )
-        }
-      },
+
       {
         name: t('report:activityLists.notionalTransfers'),
         action: () => {
@@ -89,24 +92,59 @@ export const ActivityLinksList = () => {
       sx={{ maxWidth: '100%', listStyleType: 'disc' }}
     >
       {activityList.map((activity, index) => (
-        <StyledListItem
-          sx={{ cursor: 'pointer' }}
-          component="a"
-          key={index}
-          alignItems="flex-start"
-          onClick={activity.action}
-        >
-          <BCTypography
-            variant="subtitle2"
-            color="link"
-            sx={{
-              textDecoration: 'underline',
-              '&:hover': { color: 'info.main' }
-            }}
+        <>
+          <StyledListItem
+            sx={{ cursor: 'pointer' }}
+            component="a"
+            key={index}
+            alignItems="flex-start"
+            onClick={activity.action}
           >
-            {activity.name}
-          </BCTypography>
-        </StyledListItem>
+            <BCTypography
+              variant="subtitle2"
+              color="link"
+              sx={{
+                textDecoration: 'underline',
+                '&:hover': { color: 'info.main' }
+              }}
+            >
+              {activity.name}
+            </BCTypography>
+          </StyledListItem>
+          {activity.children && (
+            <List
+              data-test="schedule-list"
+              component="div"
+              sx={{
+                maxWidth: '100%',
+                listStyleType: 'disc',
+                marginLeft: '20px',
+                padding: '0'
+              }}
+            >
+              {activity.children.map((activity, index) => (
+                <StyledListItem
+                  sx={{ cursor: 'pointer' }}
+                  component="a"
+                  key={index}
+                  alignItems="flex-start"
+                  onClick={activity.action}
+                >
+                  <BCTypography
+                    variant="subtitle2"
+                    color="link"
+                    sx={{
+                      textDecoration: 'underline',
+                      '&:hover': { color: 'info.main' }
+                    }}
+                  >
+                    {activity.name}
+                  </BCTypography>
+                </StyledListItem>
+              ))}
+            </List>
+          )}
+        </>
       ))}
     </List>
   )

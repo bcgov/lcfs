@@ -70,6 +70,9 @@ export const BCAlert2 = forwardRef(
         setSeverity(severity)
         setMessage(message)
         setTriggerCount((prevCount) => prevCount + 1)
+      },
+      clearAlert: () => {
+        setAlertStatus('fadeOut')
       }
     }))
 
