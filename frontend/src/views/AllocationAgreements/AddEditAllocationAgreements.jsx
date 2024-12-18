@@ -15,6 +15,7 @@ import {
   useGetAllocationAgreements,
   useSaveAllocationAgreement
 } from '@/hooks/useAllocationAgreement'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { DEFAULT_CI_FUEL } from '@/constants/common'
@@ -31,6 +32,7 @@ export const AddEditAllocationAgreements = () => {
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
+  const { data: currentUser } = useCurrentUser()
 
   const {
     data: optionsData,
@@ -117,9 +119,9 @@ export const AddEditAllocationAgreements = () => {
   )
 
   useEffect(() => {
-    const updatedColumnDefs = allocationAgreementColDefs(optionsData, errors)
+    const updatedColumnDefs = allocationAgreementColDefs(optionsData, errors, currentUser)
     setColumnDefs(updatedColumnDefs)
-  }, [errors, optionsData])
+  }, [errors, optionsData, currentUser])
 
   useEffect(() => {
     if (
@@ -172,6 +174,18 @@ export const AddEditAllocationAgreements = () => {
   const onCellEditingStopped = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
+
+      // User cannot select their own organization as the transaction partner
+      if (params.colDef.field === 'transactionPartner') {
+        if (params.newValue === currentUser.organization.name) {
+          alertRef.current?.triggerAlert({
+            message: 'You cannot select your own organization as the transaction partner.',
+            severity: 'error'
+          })
+          params.node.setDataValue('transactionPartner', '')
+          return
+        }
+      }
 
       const isValid = validate(
         params,
