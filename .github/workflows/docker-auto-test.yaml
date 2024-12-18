@@ -53,7 +53,6 @@ jobs:
 
       - name: Run backend tests
         id: backend_tests
-        continue-on-error: true
         run: |
           cd backend
           poetry run pytest --junitxml=pytest-results.xml
@@ -124,7 +123,6 @@ jobs:
 
       - name: Run frontend tests
         id: frontend_tests
-        continue-on-error: true
         run: |
           cd frontend
           npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
