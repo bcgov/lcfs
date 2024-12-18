@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Text, Enum
+from sqlalchemy import Column, Integer, Text, Enum, Float, Numeric
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder, EffectiveDates
 from sqlalchemy.orm import relationship
 
@@ -25,7 +25,14 @@ class FuelCategory(BaseModel, Auditable, DisplayOrder, EffectiveDates):
         nullable=False,
         comment="Name of the fuel category",
     )
-    description = Column(Text, nullable=True, comment="Description of the fuel categor")
+    description = Column(
+        Text, nullable=True, comment="Description of the fuel category"
+    )
+    default_carbon_intensity = Column(
+        Numeric(10, 2),
+        nullable=False,
+        comment="Default carbon intensity of the fuel category",
+    )
 
     energy_effectiveness_ratio = relationship("EnergyEffectivenessRatio")
     target_carbon_intensities = relationship(
