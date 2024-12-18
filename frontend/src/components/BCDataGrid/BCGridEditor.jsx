@@ -59,32 +59,36 @@ export const BCGridEditor = ({
 
     if (!firstEditableColumnRef.current) {
       const columns = ref.current.api.getAllDisplayedColumns()
-      firstEditableColumnRef.current = columns.find(col =>
-        col.colDef.editable !== false &&
-        !['action', 'checkbox'].includes(col.colDef.field)
+      firstEditableColumnRef.current = columns.find(
+        (col) =>
+          col.colDef.editable !== false &&
+          !['action', 'checkbox'].includes(col.colDef.field)
       )
     }
     return firstEditableColumnRef.current
   }, [])
 
   // Helper function to start editing first editable cell in a row
-  const startEditingFirstEditableCell = useCallback((rowIndex) => {
-    if (!ref.current?.api) return
+  const startEditingFirstEditableCell = useCallback(
+    (rowIndex) => {
+      if (!ref.current?.api) return
 
-    // Ensure we have the first editable column
-    const firstEditableColumn = findFirstEditableColumn()
-    if (!firstEditableColumn) return
+      // Ensure we have the first editable column
+      const firstEditableColumn = findFirstEditableColumn()
+      if (!firstEditableColumn) return
 
-    // Use setTimeout to ensure the grid is ready
-    setTimeout(() => {
-      ref.current.api.ensureIndexVisible(rowIndex)
-      ref.current.api.setFocusedCell(rowIndex, firstEditableColumn.getColId())
-      ref.current.api.startEditingCell({
-        rowIndex,
-        colKey: firstEditableColumn.getColId()
-      })
-    }, 100)
-  }, [findFirstEditableColumn])
+      // Use setTimeout to ensure the grid is ready
+      setTimeout(() => {
+        ref.current.api.ensureIndexVisible(rowIndex)
+        ref.current.api.setFocusedCell(rowIndex, firstEditableColumn.getColId())
+        ref.current.api.startEditingCell({
+          rowIndex,
+          colKey: firstEditableColumn.getColId()
+        })
+      }, 100)
+    },
+    [findFirstEditableColumn]
+  )
 
   const handleExcelPaste = useCallback(
     (params) => {
@@ -175,7 +179,11 @@ export const BCGridEditor = ({
       params.event.target.dataset.action &&
       onAction
     ) {
-      const transaction = await onAction(params.event.target.dataset.action, params)
+      alertRef.current.clearAlert()
+      const transaction = await onAction(
+        params.event.target.dataset.action,
+        params
+      )
       // Focus and edit the first editable column of the duplicated row
       if (transaction?.add.length > 0) {
         const duplicatedRowNode = transaction.add[0]
@@ -192,28 +200,32 @@ export const BCGridEditor = ({
     setAnchorEl(null)
   }
 
-  const handleAddRows = useCallback((numRows) => {
-    let newRows = []
-    if (props.onAddRows) {
-      newRows = props.onAddRows(numRows)
-    } else {
-      newRows = Array(numRows)
-        .fill()
-        .map(() => ({ id: uuid() }))
-    }
+  const handleAddRows = useCallback(
+    (numRows) => {
+      alertRef.current.clearAlert()
+      let newRows = []
+      if (props.onAddRows) {
+        newRows = props.onAddRows(numRows)
+      } else {
+        newRows = Array(numRows)
+          .fill()
+          .map(() => ({ id: uuid() }))
+      }
 
-    // Add the new rows
-    ref.current.api.applyTransaction({
-      add: newRows,
-      addIndex: ref.current.api.getDisplayedRowCount()
-    })
+      // Add the new rows
+      ref.current.api.applyTransaction({
+        add: newRows,
+        addIndex: ref.current.api.getDisplayedRowCount()
+      })
 
-    // Focus and start editing the first new row
-    const firstNewRowIndex = ref.current.api.getDisplayedRowCount() - numRows
-    startEditingFirstEditableCell(firstNewRowIndex)
+      // Focus and start editing the first new row
+      const firstNewRowIndex = ref.current.api.getDisplayedRowCount() - numRows
+      startEditingFirstEditableCell(firstNewRowIndex)
 
-    setAnchorEl(null)
-  }, [props.onAddRows, startEditingFirstEditableCell])
+      setAnchorEl(null)
+    },
+    [props.onAddRows, startEditingFirstEditableCell]
+  )
 
   const isGridValid = () => {
     let isValid = true
@@ -238,24 +250,25 @@ export const BCGridEditor = ({
     setShowCloseModal(true)
   }
   const hasRequiredHeaderComponent = useCallback(() => {
-    const columnDefs = ref.current?.api?.getColumnDefs() || [];
+    const columnDefs = ref.current?.api?.getColumnDefs() || []
     // Check if any column has `headerComponent` matching "RequiredHeader"
-    return columnDefs.some(
-      colDef => colDef.headerComponent?.name === 'RequiredHeader'
-    ) || columnDefs.some(colDef => !!colDef.headerComponent)
+    return (
+      columnDefs.some(
+        (colDef) => colDef.headerComponent?.name === 'RequiredHeader'
+      ) || columnDefs.some((colDef) => !!colDef.headerComponent)
+    )
   }, [ref])
-
 
   return (
     <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
-      {hasRequiredHeaderComponent() &&
+      {hasRequiredHeaderComponent() && (
         <BCTypography
           variant="body4"
           color="text"
           component="div"
           dangerouslySetInnerHTML={{ __html: t('asterisk') }}
         />
-      }
+      )}
       <BCGridBase
         ref={ref}
         className="ag-theme-quartz"
