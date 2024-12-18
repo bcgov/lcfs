@@ -1,10 +1,10 @@
+from dataclasses import dataclass
 from datetime import date
 from typing import List, Dict, Any, Union, Optional, Sequence
 
 import structlog
 from fastapi import Depends
 from sqlalchemy import and_, or_, select, func, text, update, distinct, desc, asc
-from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager
 
@@ -33,7 +33,6 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_code.schema import FuelCodeCloneSchema, FuelCodeSchema
 from lcfs.web.core.decorators import repo_handler
-from dataclasses import dataclass
 
 logger = structlog.get_logger(__name__)
 
@@ -175,9 +174,9 @@ class FuelCodeRepository:
         return (await self.db.execute(select(FuelCategory))).scalars().all()
 
     @repo_handler
-    async def get_fuel_category_by_name(self, name: str) -> FuelCategory:
-        """Get a fuel category by its name"""
-        result = await self.db.execute(select(FuelCategory).filter_by(category=name))
+    async def get_fuel_category_by(self, **filters: Any) -> FuelCategory:
+        """Get a fuel category by any filters"""
+        result = await self.db.execute(select(FuelCategory).filter_by(**filters))
         return result.scalar_one_or_none()
 
     @repo_handler
@@ -861,6 +860,12 @@ class FuelCodeRepository:
         if fuel_code_id:
             fuel_code = await self.get_fuel_code(fuel_code_id)
             effective_carbon_intensity = fuel_code.carbon_intensity
+        # Other Fuel uses the Default CI of the Category
+        elif fuel_type.unrecognized:
+            fuel_category = await self.get_fuel_category_by(
+                fuel_category_id=fuel_category_id
+            )
+            effective_carbon_intensity = fuel_category.default_carbon_intensity
         else:
             effective_carbon_intensity = fuel_type.default_carbon_intensity
 

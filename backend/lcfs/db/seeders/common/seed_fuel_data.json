@@ -249,17 +249,20 @@
     {
       "fuel_category_id": 1,
       "category": "Gasoline",
-      "description": "Gasoline"
+      "description": "Gasoline",
+      "default_carbon_intensity": 93.67
     },
     {
       "fuel_category_id": 2,
       "category": "Diesel",
-      "description": "Diesel"
+      "description": "Diesel",
+      "default_carbon_intensity": 100.21
     },
     {
       "fuel_category_id": 3,
       "category": "Jet fuel",
-      "description": "Jet fuel"
+      "description": "Jet fuel",
+      "default_carbon_intensity": 88.83
     }
   ],
   "end_use_types": [
