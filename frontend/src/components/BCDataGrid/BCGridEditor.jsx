@@ -27,6 +27,7 @@ import { BCAlert2 } from '@/components/BCAlert'
  * @property {React.Ref<any>} gridRef
  * @property {Function} handlePaste
  * @property {Function} onAction
+ * @property {Function} onAddRows
  *
  * @param {BCGridEditorProps & GridOptions} props
  * @returns {JSX.Element}
@@ -44,6 +45,7 @@ export const BCGridEditor = ({
   saveButtonProps = {
     enabled: false
   },
+  onAddRows,
   ...props
 }) => {
   const localRef = useRef(null)
@@ -180,14 +182,18 @@ export const BCGridEditor = ({
       onAction
     ) {
       alertRef.current.clearAlert()
-      const transaction = await onAction(
-        params.event.target.dataset.action,
-        params
-      )
-      // Focus and edit the first editable column of the duplicated row
-      if (transaction?.add.length > 0) {
-        const duplicatedRowNode = transaction.add[0]
-        startEditingFirstEditableCell(duplicatedRowNode.rowIndex)
+      const action = params.event.target.dataset.action
+      const transaction = await onAction(action, params)
+
+      // Apply the transaction if it exists
+      if (transaction?.add?.length > 0) {
+        const res = ref.current.api.applyTransaction(transaction)
+
+        // Focus and edit the first editable column of the added rows
+        if (res.add && res.add.length > 0) {
+          const firstNewRow = res.add[0]
+          startEditingFirstEditableCell(firstNewRow.rowIndex)
+        }
       }
     }
   }
@@ -200,31 +206,45 @@ export const BCGridEditor = ({
     setAnchorEl(null)
   }
 
-  const handleAddRows = useCallback(
-    (numRows) => {
+  const handleAddRowsInternal = useCallback(
+    async (numRows) => {
       alertRef.current.clearAlert()
       let newRows = []
-      if (props.onAddRows) {
-        newRows = props.onAddRows(numRows)
-      } else {
+
+      if (onAction) {
+        try {
+          for (let i = 0; i < numRows; i++) {
+            const transaction = await onAction('add')
+            if (transaction?.add?.length > 0) {
+              newRows = [...newRows, ...transaction.add]
+            }
+          }
+        } catch (error) {
+          console.error('Error during onAction add:', error)
+        }
+      }
+
+      // Default logic if onAction doesn't return rows
+      if (newRows.length === 0) {
         newRows = Array(numRows)
           .fill()
           .map(() => ({ id: uuid() }))
       }
 
-      // Add the new rows
-      ref.current.api.applyTransaction({
+      // Apply the new rows to the grid
+      const result = ref.current.api.applyTransaction({
         add: newRows,
         addIndex: ref.current.api.getDisplayedRowCount()
       })
 
-      // Focus and start editing the first new row
-      const firstNewRowIndex = ref.current.api.getDisplayedRowCount() - numRows
-      startEditingFirstEditableCell(firstNewRowIndex)
+      // Focus the first editable cell in the first new row
+      if (result.add && result.add.length > 0) {
+        startEditingFirstEditableCell(result.add[0].rowIndex)
+      }
 
       setAnchorEl(null)
     },
-    [props.onAddRows, startEditingFirstEditableCell]
+    [onAction, startEditingFirstEditableCell]
   )
 
   const isGridValid = () => {
@@ -297,7 +317,9 @@ export const BCGridEditor = ({
                 <FontAwesomeIcon icon={faCaretDown} className="small-icon" />
               )
             }
-            onClick={addMultiRow ? handleAddRowsClick : () => handleAddRows(1)}
+            onClick={
+              addMultiRow ? handleAddRowsClick : () => handleAddRowsInternal(1)
+            }
           >
             Add row
           </BCButton>
@@ -314,9 +336,15 @@ export const BCGridEditor = ({
                 }
               }}
             >
-              <MenuItem onClick={() => handleAddRows(1)}>1 row</MenuItem>
-              <MenuItem onClick={() => handleAddRows(5)}>5 rows</MenuItem>
-              <MenuItem onClick={() => handleAddRows(10)}>10 rows</MenuItem>
+              <MenuItem onClick={() => handleAddRowsInternal(1)}>
+                1 row
+              </MenuItem>
+              <MenuItem onClick={() => handleAddRowsInternal(5)}>
+                5 rows
+              </MenuItem>
+              <MenuItem onClick={() => handleAddRowsInternal(10)}>
+                10 rows
+              </MenuItem>
             </Menu>
           )}
         </BCBox>
@@ -358,8 +386,16 @@ BCGridEditor.propTypes = {
   alertRef: PropTypes.shape({ current: PropTypes.any }),
   handlePaste: PropTypes.func,
   onAction: PropTypes.func,
+  onAddRows: PropTypes.func,
   onRowEditingStopped: PropTypes.func,
   onCellValueChanged: PropTypes.func,
   showAddRowsButton: PropTypes.bool,
-  onAddRows: PropTypes.func
+  addMultiRow: PropTypes.bool,
+  saveButtonProps: PropTypes.shape({
+    enabled: PropTypes.bool,
+    text: PropTypes.string,
+    onSave: PropTypes.func,
+    confirmText: PropTypes.string,
+    confirmLabel: PropTypes.string
+  })
 }

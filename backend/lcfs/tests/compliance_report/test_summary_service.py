@@ -810,8 +810,7 @@ async def test_calculate_fuel_quantities_renewable(
 ):
     # Create a mock repository
     mock_repo.aggregate_fuel_supplies.return_value = {"gasoline": 200.0}
-    mock_repo.aggregate_other_uses.return_value = {"diesel": 75.0}
-    mock_repo.aggregate_allocation_agreements.return_value = {"jet-fuel": 25.0}
+    mock_repo.aggregate_other_uses.return_value = {"diesel": 75.0, "jet-fuel": 25.0}
 
     # Define test inputs
     compliance_report_id = 2
@@ -829,8 +828,5 @@ async def test_calculate_fuel_quantities_renewable(
     )
     mock_repo.aggregate_other_uses.assert_awaited_once_with(
         compliance_report_id, fossil_derived
-    )
-    mock_repo.aggregate_allocation_agreements.assert_awaited_once_with(
-        compliance_report_id
     )
     assert result == {"gasoline": 200.0, "diesel": 75.0, "jet-fuel": 25.0}

@@ -8,6 +8,7 @@ import { KeycloakProvider } from '@/components/KeycloakProvider'
 import { getKeycloak } from '@/utils/keycloak'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
+import { SnackbarProvider } from 'notistack'
 
 const queryClient = new QueryClient()
 const keycloak = getKeycloak()
@@ -20,8 +21,10 @@ if (root) {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider theme={theme}>
             <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <CssBaseline />
-              <App />
+              <SnackbarProvider>
+                <CssBaseline />
+                <App />
+              </SnackbarProvider>
             </LocalizationProvider>
           </ThemeProvider>
         </QueryClientProvider>

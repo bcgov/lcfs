@@ -12,7 +12,7 @@ import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { apiRoutes } from '@/constants/routes'
 import { StandardCellErrors } from '@/utils/grid/errorRenderers'
 
-export const notionalTransferColDefs = (optionsData, errors) => [
+export const notionalTransferColDefs = (optionsData, errors, currentUser) => [
   validation,
   actions({
     enableDuplicate: false,
@@ -45,8 +45,11 @@ export const notionalTransferColDefs = (optionsData, errors) => [
         let path = apiRoutes.organizationSearch
         path += 'org_name=' + queryKey[1]
         const response = await client.get(path)
-        params.node.data.apiDataCache = response.data
-        return response.data
+        const filteredData = response.data.filter(
+          (org) => org.name !== currentUser.organization.name
+        )
+        params.node.data.apiDataCache = filteredData
+        return filteredData
       },
       title: 'legalName',
       api: params.api
