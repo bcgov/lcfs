@@ -181,6 +181,7 @@ export const BCGridEditor = ({
       params.event.target.dataset.action &&
       onAction
     ) {
+<<<<<<< HEAD
       const action = params.event.target.dataset.action
       const transaction = await onAction(action, params)
 
@@ -193,6 +194,17 @@ export const BCGridEditor = ({
           const firstNewRow = res.add[0]
           startEditingFirstEditableCell(firstNewRow.rowIndex)
         }
+=======
+      alertRef.current.clearAlert()
+      const transaction = await onAction(
+        params.event.target.dataset.action,
+        params
+      )
+      // Focus and edit the first editable column of the duplicated row
+      if (transaction?.add.length > 0) {
+        const duplicatedRowNode = transaction.add[0]
+        startEditingFirstEditableCell(duplicatedRowNode.rowIndex)
+>>>>>>> ce726f71 (feat: clear alert on action)
       }
     }
   }
@@ -205,6 +217,7 @@ export const BCGridEditor = ({
     setAnchorEl(null)
   }
 
+<<<<<<< HEAD
   const handleAddRowsInternal = useCallback(
     async (numRows) => {
       let newRows = []
@@ -243,6 +256,33 @@ export const BCGridEditor = ({
       setAnchorEl(null)
     },
     [onAction, startEditingFirstEditableCell]
+=======
+  const handleAddRows = useCallback(
+    (numRows) => {
+      alertRef.current.clearAlert()
+      let newRows = []
+      if (props.onAddRows) {
+        newRows = props.onAddRows(numRows)
+      } else {
+        newRows = Array(numRows)
+          .fill()
+          .map(() => ({ id: uuid() }))
+      }
+
+      // Add the new rows
+      ref.current.api.applyTransaction({
+        add: newRows,
+        addIndex: ref.current.api.getDisplayedRowCount()
+      })
+
+      // Focus and start editing the first new row
+      const firstNewRowIndex = ref.current.api.getDisplayedRowCount() - numRows
+      startEditingFirstEditableCell(firstNewRowIndex)
+
+      setAnchorEl(null)
+    },
+    [props.onAddRows, startEditingFirstEditableCell]
+>>>>>>> ce726f71 (feat: clear alert on action)
   )
 
   const isGridValid = () => {

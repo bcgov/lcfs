@@ -64,24 +64,30 @@ export const AddEditFuelSupplies = () => {
         severity: location.state.severity || 'info'
       })
     }
-  }, [location?.state?.message, location?.state?.severity]);
+  }, [location?.state?.message, location?.state?.severity])
 
-  const validate = (params, validationFn, errorMessage, alertRef, field = null) => {
-    const value = field ? params.node?.data[field] : params;
+  const validate = (
+    params,
+    validationFn,
+    errorMessage,
+    alertRef,
+    field = null
+  ) => {
+    const value = field ? params.node?.data[field] : params
 
     if (field && params.colDef.field !== field) {
-      return true;
+      return true
     }
 
     if (!validationFn(value)) {
       alertRef.current?.triggerAlert({
         message: errorMessage,
-        severity: 'error',
-      });
-      return false;
+        severity: 'error'
+      })
+      return false
     }
-    return true; // Proceed with the update
-  };
+    return true // Proceed with the update
+  }
 
   const onGridReady = useCallback(
     async (params) => {
@@ -172,12 +178,12 @@ export const AddEditFuelSupplies = () => {
       const isValid = validate(
         params,
         (value) => {
-          return value !== null && !isNaN(value) && value > 0;
+          return value !== null && !isNaN(value) && value > 0
         },
         'Quantity supplied must be greater than 0.',
         alertRef,
-        'quantity',
-      );
+        'quantity'
+      )
 
       if (!isValid) {
         return
