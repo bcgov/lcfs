@@ -38,8 +38,10 @@ def sourceQuery = """
         INNER JOIN organization_actions_type oat ON oat.id = o.actions_type_id
         INNER JOIN organization_address oa ON oa.organization_id = o.id and oa.expiration_date is null;
 """
+
 // SQL query to check if the record with the same organization_id already exists
 def checkDuplicateQuery = "SELECT COUNT(*) FROM organization WHERE organization_id = ?"
+
 // SQL queries to fetch the status and type IDs from the destination database
 def getStatusIdQuery = "SELECT organization_status_id FROM organization_status WHERE status = ?::org_status_enum"
 def getTypeIdQuery = "SELECT organization_type_id FROM organization_type WHERE org_type = ?::org_type_enum"
@@ -122,25 +124,25 @@ try {
         }
 
         // If no duplicate exists, proceed with the insert logic
-        def name = resultSet.getString("name")
+        def name = resultSet.getString("name") ?: ""
         def operatingName = resultSet.getString("operating_name") ?: "" // not nullable string field
-        def email = resultSet.getString("email")
-        def phone = resultSet.getString("phone")
-        def edrmsRecord = resultSet.getString("edrms_record")
-        def orgStatusChar = resultSet.getString("org_status")
-        def orgTypeChar = resultSet.getString("organization_type")
-        def serviceStreetAddress = resultSet.getString("service_street_address")
-        def serviceAddressOther = resultSet.getString("service_address_other")
-        def serviceCity = resultSet.getString("service_city")
-        def serviceProvinceState = resultSet.getString("service_province_state")
-        def servicePostalCodeZipCode = resultSet.getString("service_postalCode_zipCode")
-        def serviceCountry = resultSet.getString("service_country")
-        def attorneyStreetAddress = resultSet.getString("attorney_street_address")
-        def attorneyAddressOther = resultSet.getString("attorney_address_other")
-        def attorneyCity = resultSet.getString("attorney_city")
-        def attorneyProvinceState = resultSet.getString("attorney_province_state")
-        def attorneyPostalCodeZipCode = resultSet.getString("attorney_postalCode_zipCode")
-        def attorneyCountry = resultSet.getString("attorney_country")
+        def email = resultSet.getString("email") ?: ""                  
+        def phone = resultSet.getString("phone") ?: ""                  
+        def edrmsRecord = resultSet.getString("edrms_record") ?: ""     
+        def orgStatusChar = resultSet.getString("org_status") ?: ""      
+        def orgTypeChar = resultSet.getString("organization_type") ?: ""
+        def serviceStreetAddress = resultSet.getString("service_street_address") ?: ""      
+        def serviceAddressOther = resultSet.getString("service_address_other") ?: ""        
+        def serviceCity = resultSet.getString("service_city") ?: ""                           
+        def serviceProvinceState = resultSet.getString("service_province_state") ?: ""         
+        def servicePostalCodeZipCode = resultSet.getString("service_postalCode_zipCode") ?: "" 
+        def serviceCountry = resultSet.getString("service_country") ?: ""                     
+        def attorneyStreetAddress = resultSet.getString("attorney_street_address") ?: ""      
+        def attorneyAddressOther = resultSet.getString("attorney_address_other") ?: ""        
+        def attorneyCity = resultSet.getString("attorney_city") ?: ""                        
+        def attorneyProvinceState = resultSet.getString("attorney_province_state") ?: ""      
+        def attorneyPostalCodeZipCode = resultSet.getString("attorney_postalCode_zipCode") ?: "" 
+        def attorneyCountry = resultSet.getString("attorney_country") ?: ""                    
 
         // Fetch organization_status_id and organization_type_id
         statusStmt.setString(1, orgStatusChar)
@@ -176,12 +178,12 @@ try {
         PreparedStatement insertAttorneyAddressStmt = destinationConn.prepareStatement(insertAttorneyAddressSQL)
         def organizationAttorneyAddressId = null
         insertAttorneyAddressStmt.setString(1, name)
-        insertAttorneyAddressStmt.setString(2, attorneyStreetAddress)
-        insertAttorneyAddressStmt.setString(3, attorneyAddressOther)
-        insertAttorneyAddressStmt.setString(4, attorneyCity)
-        insertAttorneyAddressStmt.setString(5, attorneyProvinceState)
-        insertAttorneyAddressStmt.setString(6, attorneyPostalCodeZipCode)
-        insertAttorneyAddressStmt.setString(7, attorneyCountry)
+        insertAttorneyAddressStmt.setString(2, attorneyStreetAddress)      
+        insertAttorneyAddressStmt.setString(3, attorneyAddressOther)      
+        insertAttorneyAddressStmt.setString(4, attorneyCity)               
+        insertAttorneyAddressStmt.setString(5, attorneyProvinceState)     
+        insertAttorneyAddressStmt.setString(6, attorneyPostalCodeZipCode) 
+        insertAttorneyAddressStmt.setString(7, attorneyCountry)           
         ResultSet attorneyAddressResultSet = insertAttorneyAddressStmt.executeQuery()
         if (attorneyAddressResultSet.next()) {
             organizationAttorneyAddressId = attorneyAddressResultSet.getInt("organization_attorney_address_id")
@@ -214,8 +216,8 @@ try {
         insertOrgStmt.setString(7, edrmsRecord)
         insertOrgStmt.setInt(8, orgStatusId)
         insertOrgStmt.setInt(9, orgTypeId)
-        insertOrgStmt.setInt(10, organizationAddressId)  // Service address ID
-        insertOrgStmt.setInt(11, organizationAttorneyAddressId)  // Attorney address ID
+        insertOrgStmt.setInt(10, organizationAddressId)         // Service address ID
+        insertOrgStmt.setInt(11, organizationAttorneyAddressId) // Attorney address ID
         insertOrgStmt.executeUpdate()
     }
 

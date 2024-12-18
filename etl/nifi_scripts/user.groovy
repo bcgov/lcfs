@@ -6,9 +6,9 @@ import java.sql.ResultSet
 def userProfileQuery = """
     SELECT id as user_profile_id,
            keycloak_user_id,
-           email as keycloak_email,
+           COALESCE(NULLIF(email, ''), 'test@gov.bc.ca') as keycloak_email,
            username as keycloak_username,
-           email,
+           COALESCE(NULLIF(email, ''), 'test@gov.bc.ca') as email,
            title,
            phone,
            cell_phone as mobile_phone,
