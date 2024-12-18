@@ -796,8 +796,9 @@ def prepareStatements(Connection conn) {
             create_user,
             create_date,
             update_user,
-            update_date
-        ) VALUES (?, ?, ?, NULL, ?, ?, ?::SupplementalInitiatorType, ?::ReportingFrequency, ?, ?, ?, ?, ?, ?)
+            update_date,
+            legacy_id
+        ) VALUES (?, ?, ?, NULL, ?, ?, ?::SupplementalInitiatorType, ?::ReportingFrequency, ?, ?, ?, ?, ?, ?, ?)
         RETURNING compliance_report_id
     """
 
@@ -867,6 +868,7 @@ def insertComplianceReport(PreparedStatement stmt, Map report, String groupUuid,
     stmt.setTimestamp(11, report.create_timestamp ?: Timestamp.valueOf("1970-01-01 00:00:00"))
     stmt.setString(12, updateUser)
     stmt.setTimestamp(13, report.update_timestamp ?: report.create_timestamp ?: Timestamp.valueOf("1970-01-01 00:00:00"))
+    stmt.setInt(14, report.compliance_report_id)
 
     def rs = null
     try {
