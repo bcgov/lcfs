@@ -50,21 +50,10 @@ async def upload_file(
     parent_type: str,
     file: UploadFile = File(...),
     document_service: DocumentService = Depends(),
-    compliance_report_service: ComplianceReportServices = Depends(),
 ) -> FileResponseSchema:
-    # Fetch the compliance report
-    compliance_report = await compliance_report_service.get_compliance_report_by_id(parent_id)
-    if not compliance_report:
-        raise HTTPException(status_code=404, detail="Compliance report not found")
-
-    # Check if the compliance report is submitted
-    if compliance_report.current_status.status == ComplianceReportStatusEnum.Submitted:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot upload files when the compliance report is submitted",
-        )
-
-    document = await document_service.upload_file(file, parent_id, parent_type)
+    document = await document_service.upload_file(
+        file, parent_id, parent_type, request.user
+    )
     return FileResponseSchema.model_validate(document)
 
 
