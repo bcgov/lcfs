@@ -42,6 +42,8 @@ export const useApiService = (opts = {}) => {
             variant: 'error'
           })
         }
+
+        return Promise.reject(error)
       }
     )
 
