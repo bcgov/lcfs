@@ -33,7 +33,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
     CompliancePeriodSchema,
-    ChainedComplianceReportSchema
+    ChainedComplianceReportSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from .services import OrganizationService
@@ -56,8 +56,7 @@ get_async_db = dependencies.get_async_db_session
 async def get_org_users(
     request: Request,
     organization_id: int,
-    status: str = Query(
-        default="Active", description="Active or Inactive users list"),
+    status: str = Query(default="Active", description="Active or Inactive users list"),
     pagination: PaginationRequestSchema = Body(..., embed=False),
     response: Response = None,
     org_service: OrganizationService = Depends(),
@@ -249,7 +248,9 @@ async def create_compliance_report(
     validate: OrganizationValidation = Depends(),
 ):
     await validate.create_compliance_report(organization_id, report_data)
-    return await report_service.create_compliance_report(organization_id, report_data)
+    return await report_service.create_compliance_report(
+        organization_id, report_data, request.user
+    )
 
 
 @router.post(
@@ -307,4 +308,6 @@ async def get_compliance_report_by_id(
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
     await report_validate.validate_organization_access(report_id)
-    return await report_service.get_compliance_report_by_id(report_id, apply_masking=True, get_chain=True)
+    return await report_service.get_compliance_report_by_id(
+        report_id, apply_masking=True, get_chain=True
+    )
