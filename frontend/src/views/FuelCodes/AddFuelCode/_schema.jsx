@@ -97,20 +97,13 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
         const selectedPrefix = optionsData?.fuelCodePrefixes?.find(
           (obj) => obj.prefix === params.newValue
         )
-        params.data.fuelCodePrefixId = selectedPrefix.fuelCodePrefixId
+        if (selectedPrefix) {
+          params.data.prefixId = selectedPrefix.fuelCodePrefixId
+          params.data.fuelCodePrefixId = selectedPrefix.fuelCodePrefixId
+          params.data.fuelCodePrefix = selectedPrefix.fuelCodePrefix
 
-        params.data.fuelSuffix = optionsData?.fuelCodePrefixes?.find(
-          (obj) => obj.prefix === params.newValue
-        )?.nextFuelCode
-        params.data.company = undefined
-        params.data.fuel = undefined
-        params.data.feedstock = undefined
-        params.data.feedstockLocation = undefined
-        params.data.feedstockFuelTransportMode = []
-        params.data.finishedFuelTransportMode = []
-        params.data.formerCompany = undefined
-        params.data.contactName = undefined
-        params.data.contactEmail = undefined
+          params.data.fuelSuffix = selectedPrefix.nextFuelCode
+        }
       }
       return true
     },

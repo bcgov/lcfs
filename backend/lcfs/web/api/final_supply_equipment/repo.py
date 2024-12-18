@@ -201,7 +201,7 @@ class FinalSupplyEquipmentRepository:
                 joinedload(FinalSupplyEquipment.level_of_equipment),
             )
             .where(FinalSupplyEquipment.compliance_report_id == report_id)
-            .order_by(FinalSupplyEquipment.final_supply_equipment_id)
+            .order_by(FinalSupplyEquipment.create_date.asc())
         )
         return result.unique().scalars().all()
 
@@ -232,7 +232,7 @@ class FinalSupplyEquipmentRepository:
         result = await self.db.execute(
             query.offset(offset)
             .limit(limit)
-            .order_by(FinalSupplyEquipment.create_date.desc())
+            .order_by(FinalSupplyEquipment.create_date.asc())
         )
         final_supply_equipments = result.unique().scalars().all()
         return final_supply_equipments, total_count
@@ -356,7 +356,7 @@ class FinalSupplyEquipmentRepository:
             sequence_number = 1
 
         return sequence_number
-    
+
     @repo_handler
     async def check_uniques_of_fse_row(self, row: FinalSupplyEquipmentCreateSchema) -> bool:
         """
