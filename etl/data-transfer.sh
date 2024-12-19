@@ -122,6 +122,9 @@ if [ "$direction" = "import" ]; then
     oc exec $pod_name -- bash -c "rm /tmp/$db_name.tar"
     echo
 
+    echo "** Cleaning up local dump file"
+    rm $db_name.tar
+
 elif [ "$direction" = "export" ]; then
     echo "** Starting pg_dump on local container"
     docker exec $local_container bash -c "pg_dump -U $db_name -F t --no-privileges --no-owner -c -d $db_name > /tmp/$db_name.tar"
@@ -131,24 +134,30 @@ elif [ "$direction" = "export" ]; then
     docker cp $local_container:/tmp/$db_name.tar ./
     echo
 
+    echo "** Preparing .tar file for OpenShift pod"
+    mkdir -p tmp_transfer
+    mv $db_name.tar tmp_transfer/
+    echo
+
     echo "** Uploading .tar file to OpenShift pod"
-    oc rsync ./$db_name.tar $pod_name:/tmp/
+    oc rsync ./tmp_transfer $pod_name:/tmp/
     echo
 
     echo "** Restoring database on OpenShift pod"
-    oc exec $pod_name -- bash -c "pg_restore -U postgres --dbname=$db_name --no-owner --clean --if-exists --verbose /tmp/$db_name.tar" || true
+    oc exec $pod_name -- bash -c "pg_restore -U postgres --dbname=$db_name --no-owner --clean --if-exists --verbose /tmp/tmp_transfer/$db_name.tar" || true
+    echo
+
+    echo "** Cleaning up temporary files on OpenShift pod"
+    oc exec $pod_name -- bash -c "rm -rf /tmp/tmp_transfer"
     echo
 
     echo "** Cleaning up dump file from local container"
-    docker exec $local_container bash -c "rm /tmp/$db_name.tar"
+    docker exec $local_container bash -c "rm /tmp/tmp_transfer" || true
     echo
+
+    echo "** Cleaning up local temporary directory"
+    rm -rf tmp_transfer
 fi
 
-echo "** Cleaning up dump file from local container"
-docker exec $local_container bash -c "rm /tmp/$db_name.tar" || true
-echo
-
-echo "** Cleaning up local dump file"
-rm $db_name.tar
 
 echo "** Finished data transfer and cleanup"

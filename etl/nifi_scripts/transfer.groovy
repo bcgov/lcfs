@@ -5,6 +5,8 @@ import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.sql.Timestamp
 
+log.warn("**** STARTING TRANSFER ETL ****")
+
 def SOURCE_QUERY = """
           WITH
         internal_comment AS (
@@ -515,3 +517,4 @@ def insertTransfer(ResultSet rs, PreparedStatement transferStmt, Long fromTransa
     return result.next() ? result.getInt('transfer_id') : null
 }
 
+log.warn("**** COMPLETED TRANSFER ETL ****")
