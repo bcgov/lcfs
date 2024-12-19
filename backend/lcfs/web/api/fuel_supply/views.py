@@ -81,7 +81,9 @@ async def save_fuel_supply_row(
 ):
     """Endpoint to save single fuel supply row"""
     compliance_report_id = request_data.compliance_report_id
-    await report_validate.validate_organization_access(compliance_report_id)
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
 
     # Determine user type for record creation
     current_user_type = request.user.user_type
@@ -102,12 +104,16 @@ async def save_fuel_supply_row(
         if request_data.fuel_supply_id:
             # Update existing fuel supply row using actions service
             return await action_service.update_fuel_supply(
-                request_data, current_user_type
+                request_data,
+                current_user_type,
+                compliance_report.compliance_period.description,
             )
         else:
             # Create new fuel supply row using actions service
             return await action_service.create_fuel_supply(
-                request_data, current_user_type
+                request_data,
+                current_user_type,
+                compliance_report.compliance_period.description,
             )
 
 

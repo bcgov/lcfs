@@ -1,13 +1,18 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey, Numeric
+from sqlalchemy import Column, Integer, Float, ForeignKey, Numeric, UniqueConstraint
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 from sqlalchemy.orm import relationship
 
 
 class TargetCarbonIntensity(BaseModel, Auditable, EffectiveDates):
     __tablename__ = "target_carbon_intensity"
-    __table_args__ = {
-        "comment": "Target carbon intensity values for various fuel categories"
-    }
+    __table_args__ = (
+        UniqueConstraint(
+            "compliance_period_id",
+            "fuel_category_id",
+            name="uq_target_carbon_intensity_compliance_fuel",
+        ),
+        {"comment": "Target carbon intensity values for various fuel categories"},
+    )
 
     target_carbon_intensity_id = Column(Integer, primary_key=True, autoincrement=True)
     compliance_period_id = Column(

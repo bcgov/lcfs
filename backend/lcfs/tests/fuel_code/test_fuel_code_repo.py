@@ -585,17 +585,16 @@ async def test_get_energy_effectiveness_ratio(fuel_code_repo, mock_db):
 
 
 @pytest.mark.anyio
-async def test_get_target_carbon_intensities(fuel_code_repo, mock_db):
+async def test_get_target_carbon_intensity(fuel_code_repo, mock_db):
     tci = TargetCarbonIntensity(
         target_carbon_intensity_id=1, target_carbon_intensity=50.0
     )
     mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = [tci]
+    mock_result.scalar_one.return_value = tci
     mock_db.execute.return_value = mock_result
 
-    result = await fuel_code_repo.get_target_carbon_intensities(1, "2024")
-    assert len(result) == 1
-    assert result[0] == tci
+    result = await fuel_code_repo.get_target_carbon_intensity(1, "2024")
+    assert result == tci
 
 
 @pytest.mark.anyio
@@ -625,14 +624,8 @@ async def test_get_standardized_fuel_data(fuel_code_repo, mock_db):
         ),
         # target carbon intensities
         MagicMock(
-            scalars=MagicMock(
-                return_value=MagicMock(
-                    all=MagicMock(
-                        return_value=[
-                            TargetCarbonIntensity(target_carbon_intensity=50.0)
-                        ]
-                    )
-                )
+            scalar_one=MagicMock(
+                return_value=TargetCarbonIntensity(target_carbon_intensity=50.0)
             )
         ),
         # additional carbon intensity
@@ -663,7 +656,6 @@ async def test_get_standardized_fuel_data_unrecognized(fuel_code_repo, mock_db):
     mock_fuel_type = FuelType(
         fuel_type_id=1,
         fuel_type="UnknownFuel",
-        default_carbon_intensity=None,
         unrecognized=True,
     )
 
@@ -699,13 +691,8 @@ async def test_get_standardized_fuel_data_unrecognized(fuel_code_repo, mock_db):
     )
     # Target Carbon Intensities
     tci_result = MagicMock(
-        scalars=MagicMock(
-            return_value=MagicMock(
-                all=MagicMock(
-                    return_value=[TargetCarbonIntensity(
-                        target_carbon_intensity=50.0)]
-                )
-            )
+        scalar_one=MagicMock(
+            return_value=TargetCarbonIntensity(target_carbon_intensity=50.0)
         )
     )
     # Additional Carbon Intensity
