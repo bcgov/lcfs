@@ -1,6 +1,6 @@
 export const config = {
   api_base: 'http://localhost:8000/api',
-  tfrs_base: 'http://localhost:3001',
+  tfrs_base: 'http://localhost:3000',
   keycloak: {
     REALM: 'standard',
     CLIENT_ID: 'low-carbon-fuel-standard-5147',
