@@ -1,12 +1,13 @@
-import structlog
-from typing import Optional, Union
+from typing import Union
 
+import structlog
 from fastapi import APIRouter, Body, Depends, Request, Response, status, HTTPException
 from starlette.responses import JSONResponse
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.api.fuel_supply.schema import (
     DeleteFuelSupplyResponseSchema,
     FuelSuppliesSchema,
@@ -17,7 +18,6 @@ from lcfs.web.api.fuel_supply.schema import (
 )
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
-from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()

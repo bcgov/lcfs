@@ -1,18 +1,22 @@
-from sqlalchemy import Column, Integer, Text, UniqueConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, Integer, Text
 from sqlalchemy.dialects.postgresql import ENUM
+from sqlalchemy.orm import relationship
+
 from lcfs.db.base import BaseModel, Auditable
 
 # ENUM for audience scope
 audience_scope_enum = ENUM(
-    "Director", "Analyst", "Compliance Manager", name="audience_scope", create_type=False
+    "Director",
+    "Analyst",
+    "Compliance Manager",
+    name="audience_scope",
+    create_type=False,
 )
 
 
 class InternalComment(BaseModel, Auditable):
     __tablename__ = "internal_comment"
     __table_args__ = (
-        UniqueConstraint("internal_comment_id"),
         {"comment": "Stores internal comments with scope and related metadata."},
     )
 

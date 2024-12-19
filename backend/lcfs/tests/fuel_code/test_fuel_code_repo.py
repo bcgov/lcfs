@@ -1,26 +1,23 @@
 from datetime import date
-from unittest import mock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.exc import NoResultFound
-from sqlalchemy.orm import joinedload
 
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
-from lcfs.db.models.fuel.TransportMode import TransportMode
-from lcfs.db.models.fuel.FuelType import FuelType
-from lcfs.db.models.fuel.FuelCategory import FuelCategory
-from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
+from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
+from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
+from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodePrefix import FuelCodePrefix
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatus, FuelCodeStatusEnum
-from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
-from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
+from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
-from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
-from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.fuel.TransportMode import TransportMode
+from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.exception.exceptions import DatabaseException
 
 

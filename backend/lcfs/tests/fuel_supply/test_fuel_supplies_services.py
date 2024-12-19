@@ -1,17 +1,17 @@
-import uuid
+from unittest.mock import MagicMock, AsyncMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 from fastapi import HTTPException
 
+from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models import (
     FuelType,
     EnergyEffectivenessRatio,
     EnergyDensity,
-    FuelCategory,
 )
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
-from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyCreateUpdateSchema,
@@ -21,9 +21,7 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelTypeSchema,
     FuelCategoryResponseSchema,
 )
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
-
 
 # Fixture to set up the FuelSupplyServices with mocked dependencies
 # Mock common fuel type and fuel category for reuse
