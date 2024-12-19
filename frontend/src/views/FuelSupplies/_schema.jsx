@@ -145,9 +145,9 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     minWidth: 250
   },
   {
-    field: 'fuelCategory',
+    field: 'fuelCategoryId',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategory'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||

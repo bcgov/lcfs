@@ -161,10 +161,12 @@ export const AddEditFuelSupplies = () => {
             (item) => item.fuelCategory
           )
 
-          params.node.setDataValue(
-            'fuelCategory',
-            fuelCategoryOptions[0] ?? null
-          )
+          // Set to null if multiple options, otherwise use first item
+          const categoryValue = fuelCategoryOptions.length === 1
+            ? fuelCategoryOptions[0]
+            : null
+
+          params.node.setDataValue('fuelCategory', categoryValue)
         }
       }
     },
