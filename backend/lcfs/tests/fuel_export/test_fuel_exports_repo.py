@@ -214,7 +214,7 @@ async def test_update_fuel_export_success(fuel_export_repo, mock_db):
     )
     updated_fuel_export = FuelExport(fuel_export_id=1)
 
-    mock_db.merge = MagicMock(return_value=updated_fuel_export)
+    mock_db.merge = AsyncMock(return_value=updated_fuel_export)
     mock_db.flush = AsyncMock()
     mock_db.refresh = AsyncMock()
 
