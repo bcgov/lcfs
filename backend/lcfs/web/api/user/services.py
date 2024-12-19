@@ -134,7 +134,7 @@ class UserServices:
                     math.ceil(total_count / pagination.size) if total_count > 0 else 0
                 ),
             ),
-            users=users if users else [],
+            users=users,
         )
 
     @service_handler
