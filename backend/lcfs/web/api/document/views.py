@@ -1,3 +1,6 @@
+from http.client import HTTPException
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.web.api.compliance_report.services import ComplianceReportServices
 import structlog
 from typing import List
 
@@ -40,7 +43,7 @@ async def get_all_documents(
     response_model=FileResponseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.ANALYST])
 async def upload_file(
     request: Request,
     parent_id: int,
@@ -48,7 +51,9 @@ async def upload_file(
     file: UploadFile = File(...),
     document_service: DocumentService = Depends(),
 ) -> FileResponseSchema:
-    document = await document_service.upload_file(file, parent_id, parent_type)
+    document = await document_service.upload_file(
+        file, parent_id, parent_type, request.user
+    )
     return FileResponseSchema.model_validate(document)
 
 
