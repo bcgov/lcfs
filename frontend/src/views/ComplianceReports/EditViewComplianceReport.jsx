@@ -18,10 +18,7 @@ import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { Introduction } from './components/Introduction'
-import {
-  useGetComplianceReport,
-  useUpdateComplianceReport
-} from '@/hooks/useComplianceReports'
+import { useUpdateComplianceReport } from '@/hooks/useComplianceReports'
 import ComplianceReportSummary from './components/ComplianceReportSummary'
 import ReportDetails from './components/ReportDetails'
 import { buttonClusterConfigFn } from './buttonConfigs'
@@ -35,7 +32,7 @@ const iconStyle = {
   height: '2rem',
   color: colors.white.main
 }
-export const EditViewComplianceReport = () => {
+export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
@@ -83,15 +80,6 @@ export const EditViewComplianceReport = () => {
     hasRoles
   } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
-  const {
-    data: reportData,
-    isLoading: isReportLoading,
-    isError,
-    error
-  } = useGetComplianceReport(
-    currentUser?.organization?.organizationId,
-    complianceReportId
-  )
 
   const currentStatus = reportData?.report.currentStatus?.status
   const { data: orgData, isLoading } = useOrganization(
@@ -158,7 +146,7 @@ export const EditViewComplianceReport = () => {
     }
   }, [location.state, isError, error])
 
-  if (isLoading || isReportLoading || isCurrentUserLoading) {
+  if (isLoading || isCurrentUserLoading) {
     return <Loading />
   }
 
