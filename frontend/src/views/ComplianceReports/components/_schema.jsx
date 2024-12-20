@@ -1,6 +1,6 @@
 import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { SUMMARY } from '@/constants/common'
-import { ReportsStatusRenderer, LinkRenderer } from '@/utils/grid/cellRenderers'
+import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
 
 export const reportsColDefs = (t, bceidRole) => [
@@ -8,11 +8,6 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
     width: 210,
-    cellRenderer: LinkRenderer,
-    cellRendererParams: {
-      url: ({ data }) =>
-        `${data.compliancePeriod?.description}/${data.complianceReportId}`
-    },
     valueGetter: ({ data }) => data.compliancePeriod?.description || '',
     filterParams: {
       buttons: ['clear']
@@ -23,11 +18,6 @@ export const reportsColDefs = (t, bceidRole) => [
     headerName: t('report:reportColLabels.organization'),
     flex: 2,
     hide: bceidRole,
-    cellRenderer: LinkRenderer,
-    cellRendererParams: {
-      url: ({ data }) =>
-        `${data.compliancePeriod?.description}/${data.complianceReportId}`
-    },
     valueGetter: ({ data }) => data.organization?.name || ''
   },
   {

@@ -125,14 +125,14 @@ class UserServices:
         Get all users
         """
         users, total_count = await self.repo.get_users_paginated(pagination=pagination)
-        if len(users) == 0:
-            raise DataNotFoundException("No users found")
         return UsersSchema(
             pagination=PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(total_count / pagination.size),
+                total_pages=(
+                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
+                ),
             ),
             users=users,
         )
