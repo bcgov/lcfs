@@ -52,8 +52,8 @@ class OtherUsesServices:
         """
         Converts data from OtherUsesCreateSchema to OtherUses data model to store into the database.
         """
-        fuel_category = await self.fuel_repo.get_fuel_category_by_name(
-            other_use.fuel_category
+        fuel_category = await self.fuel_repo.get_fuel_category_by(
+            category=other_use.fuel_category
         )
         fuel_type = await self.fuel_repo.get_fuel_type_by_name(other_use.fuel_type)
         expected_use = await self.fuel_repo.get_expected_use_type_by_name(
@@ -147,7 +147,8 @@ class OtherUsesServices:
         """
         other_uses = await self.repo.get_other_uses(compliance_report_id)
         return OtherUsesAllSchema(
-            other_uses=[OtherUsesSchema.model_validate(ou) for ou in other_uses]
+            other_uses=[OtherUsesSchema.model_validate(
+                ou) for ou in other_uses]
         )
 
     @service_handler
@@ -201,8 +202,8 @@ class OtherUsesServices:
 
             if other_use.fuel_category.category != other_use_data.fuel_category:
                 other_use.fuel_category = (
-                    await self.fuel_repo.get_fuel_category_by_name(
-                        other_use_data.fuel_category
+                    await self.fuel_repo.get_fuel_category_by(
+                        category=other_use_data.fuel_category
                     )
                 )
 
@@ -290,7 +291,8 @@ class OtherUsesServices:
         # Copy fields from the latest version for the deletion record
         for field in existing_fuel_supply.__table__.columns.keys():
             if field not in OTHER_USE_EXCLUDE_FIELDS:
-                setattr(deleted_entity, field, getattr(existing_fuel_supply, field))
+                setattr(deleted_entity, field, getattr(
+                    existing_fuel_supply, field))
 
         await self.repo.create_other_use(deleted_entity)
         return DeleteOtherUsesResponseSchema(success=True, message="Marked as deleted.")
