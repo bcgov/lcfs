@@ -11,8 +11,9 @@ import {
 } from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
 import { ROUTES } from '@/constants/routes'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
-export const OtherUsesSummary = ({ data }) => {
+export const OtherUsesSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { t } = useTranslation(['common', 'otherUses'])
@@ -86,13 +87,15 @@ export const OtherUsesSummary = ({ data }) => {
 
   const getRowId = (params) => params.data.otherUsesId
 
-  const handleRowClicked = (params) => {
-    navigate(
-      ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
-    )
+  const handleRowClicked = () => {
+    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
+      navigate(
+        ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
+      )
+    }
   }
 
   return (

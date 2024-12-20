@@ -81,7 +81,9 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
           ),
         useFetch: useGetFuelSupplies,
         component: (data) =>
-          data.fuelSupplies.length > 0 && <FuelSupplySummary data={data} />
+          data.fuelSupplies.length > 0 && (
+            <FuelSupplySummary status={currentStatus} data={data} />
+          )
       },
       {
         name: t('finalSupplyEquipment:fseTitle'),
@@ -95,7 +97,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         useFetch: useGetFinalSupplyEquipments,
         component: (data) =>
           data.finalSupplyEquipments.length > 0 && (
-            <FinalSupplyEquipmentSummary data={data} />
+            <FinalSupplyEquipmentSummary status={currentStatus} data={data} />
           )
       },
       {
@@ -110,7 +112,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         useFetch: useGetAllocationAgreements,
         component: (data) =>
           data.allocationAgreements.length > 0 && (
-            <AllocationAgreementSummary data={data} />
+            <AllocationAgreementSummary status={currentStatus} data={data} />
           )
       },
       {
@@ -124,7 +126,9 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
           ),
         useFetch: useGetAllNotionalTransfers,
         component: (data) =>
-          data.length > 0 && <NotionalTransferSummary data={data} />
+          data.length > 0 && (
+            <NotionalTransferSummary status={currentStatus} data={data} />
+          )
       },
       {
         name: t('otherUses:summaryTitle'),
@@ -136,7 +140,10 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
             ).replace(':complianceReportId', complianceReportId)
           ),
         useFetch: useGetAllOtherUses,
-        component: (data) => data.length > 0 && <OtherUsesSummary data={data} />
+        component: (data) =>
+          data.length > 0 && (
+            <OtherUsesSummary status={currentStatus} data={data} />
+          )
       },
       {
         name: t('fuelExport:fuelExportTitle'),
@@ -149,7 +156,9 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
           ),
         useFetch: useGetFuelExports,
         component: (data) =>
-          !isArrayEmpty(data) && <FuelExportSummary data={data} />
+          !isArrayEmpty(data) && (
+            <FuelExportSummary status={currentStatus} data={data} />
+          )
       }
     ],
     [

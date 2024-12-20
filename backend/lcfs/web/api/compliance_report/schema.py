@@ -40,7 +40,6 @@ class CompliancePeriodSchema(BaseSchema):
     display_order: Optional[int] = None
 
 
-
 class SummarySchema(BaseSchema):
     summary_id: int
     is_locked: bool
@@ -154,6 +153,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     update_date: Optional[datetime] = None
     history: Optional[List[ComplianceReportHistorySchema]] = None
     has_supplemental: bool
+    legacy_id: Optional[int] = None
 
 
 class ChainedComplianceReportSchema(BaseSchema):

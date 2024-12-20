@@ -8,8 +8,9 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { ROUTES } from '@/constants/routes'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
-export const NotionalTransferSummary = ({ data }) => {
+export const NotionalTransferSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { complianceReportId, compliancePeriod } = useParams()
@@ -34,14 +35,15 @@ export const NotionalTransferSummary = ({ data }) => {
     []
   )
 
-  const handleRowClicked = (params) => {
-    console.log('Row clicked', params)
-    navigate(
-      ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
-    )
+  const handleRowClicked = () => {
+    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
+      navigate(
+        ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
+      )
+    }
   }
 
   const columns = [

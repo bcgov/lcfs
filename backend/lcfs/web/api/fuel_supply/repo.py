@@ -443,20 +443,23 @@ class FuelSupplyRepository:
         query = (
             select(FuelSupply)
             .options(
-                # Use joinedload for scalar relationships
-                joinedload(FuelSupply.fuel_code).options(
-                    joinedload(FuelCode.fuel_code_status),
-                    joinedload(FuelCode.fuel_code_prefix),
+                # Use selectinload for collections
+                selectinload(FuelSupply.fuel_code).options(
+                    selectinload(FuelCode.fuel_code_status),
+                    selectinload(FuelCode.fuel_code_prefix),
                 ),
-                joinedload(FuelSupply.fuel_category).options(
-                    joinedload(FuelCategory.target_carbon_intensities),
-                    joinedload(FuelCategory.energy_effectiveness_ratio),
+                # Use selectinload for one-to-many relationships
+                selectinload(FuelSupply.fuel_category).options(
+                    selectinload(FuelCategory.target_carbon_intensities),
+                    selectinload(FuelCategory.energy_effectiveness_ratio),
                 ),
+                # Use joinedload for many-to-one relationships
                 joinedload(FuelSupply.fuel_type).options(
                     joinedload(FuelType.energy_density),
                     joinedload(FuelType.additional_carbon_intensity),
                     joinedload(FuelType.energy_effectiveness_ratio),
                 ),
+                # Use joinedload for single relationships
                 joinedload(FuelSupply.provision_of_the_act),
                 selectinload(FuelSupply.end_use_type),
             )
@@ -467,6 +470,7 @@ class FuelSupplyRepository:
                     FuelSupply.version == valid_fuel_supplies_subq.c.max_version,
                     user_type_priority == valid_fuel_supplies_subq.c.max_role_priority,
                 ),
+                isouter=False # Explicit inner join
             )
             .order_by(FuelSupply.create_date.asc())
         )
