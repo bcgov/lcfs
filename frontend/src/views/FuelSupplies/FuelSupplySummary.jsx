@@ -66,7 +66,7 @@ export const FuelSupplySummary = ({ data, status }) => {
         valueGetter: (params) => params.data.fuelType?.fuelType
       },
       {
-        headerName: t('fuelSupply:fuelSupplyColLabels.fuelCategory'),
+        headerName: t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
         field: 'fuelCategory',
         valueGetter: (params) => params.data.fuelCategory?.category
       },

@@ -7,7 +7,7 @@ import {
   useGetFuelSupplies,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
-import { isArrayEmpty } from '@/utils/formatters'
+import { isArrayEmpty, cleanEmptyStringValues } from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -201,7 +201,9 @@ export const AddEditFuelSupplies = () => {
         severity: 'pending'
       })
 
-      let updatedData = params.node.data
+      // clean up any null or empty string values
+      let updatedData = cleanEmptyStringValues(params.node.data)
+
       if (updatedData.fuelType === 'Other') {
         updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
       }

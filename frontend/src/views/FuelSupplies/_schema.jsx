@@ -98,6 +98,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         params.data.fuelTypeId = fuelType?.fuelTypeId
         params.data.fuelTypeOther = null
         params.data.fuelCategory = null
+        params.data.fuelCategoryId = null
         params.data.endUseId = null
         params.data.endUseType = null
         params.data.eer = null
@@ -145,7 +146,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     minWidth: 250
   },
   {
-    field: 'fuelCategoryId',
+    field: 'fuelCategory',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
     cellEditor: AutocompleteCellEditor,
@@ -182,16 +183,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     },
     suppressKeyboardEvent,
     minWidth: 135,
-    valueGetter: (params) => {
-      const options = optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCategories.map((item) => item.fuelCategory)
-      if (options?.length === 1) {
-        return options[0]
-      } else {
-        return params.data.fuelCategory
-      }
-    },
+    valueGetter: (params) => params.data.fuelCategory,
     editable: (params) =>
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
