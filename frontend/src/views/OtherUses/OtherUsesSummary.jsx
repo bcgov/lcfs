@@ -3,25 +3,24 @@ import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useGetOtherUses } from '@/hooks/useOtherUses'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useEffect, useState } from 'react'
-import { useLocation, useParams, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useParams } from 'react-router-dom'
 import {
-  formatNumberWithCommas as valueFormatter,
-  decimalFormatter
+  decimalFormatter,
+  formatNumberWithCommas as valueFormatter
 } from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
-import { ROUTES } from '@/constants/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const OtherUsesSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { t } = useTranslation(['common', 'otherUses'])
 
-  const { complianceReportId, compliancePeriod } = useParams()
+  const { complianceReportId } = useParams()
 
   const location = useLocation()
-  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -29,6 +28,22 @@ export const OtherUsesSummary = ({ data, status }) => {
       setAlertSeverity(location.state.severity || 'info')
     }
   }, [location.state])
+
+  const defaultColDef = useMemo(
+    () => ({
+      minWidth: 200,
+      floatingFilter: false,
+      filter: false,
+      cellRenderer:
+        status === COMPLIANCE_REPORT_STATUSES.DRAFT ? LinkRenderer : undefined,
+      cellRendererParams: {
+        url: () => {
+          return 'fuels-other-use'
+        }
+      }
+    }),
+    [status]
+  )
 
   const columns = [
     {
@@ -73,30 +88,17 @@ export const OtherUsesSummary = ({ data, status }) => {
       headerName: t('otherUses:otherUsesColLabels.expectedUse'),
       field: 'expectedUse',
       floatingFilter: false,
-      flex: 1,
-      minWidth: 200
+      flex: 1
     },
     {
       headerName: t('otherUses:otherUsesColLabels.rationale'),
       field: 'rationale',
       floatingFilter: false,
-      flex: 1,
-      minWidth: 200
+      flex: 1
     }
   ]
 
-  const getRowId = (params) => params.data.otherUsesId
-
-  const handleRowClicked = () => {
-    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
-      navigate(
-        ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
-          ':compliancePeriod',
-          compliancePeriod
-        ).replace(':complianceReportId', complianceReportId)
-      )
-    }
-  }
+  const getRowId = (params) => params.data.otherUsesId.toString()
 
   return (
     <Grid2 className="other-uses-container" data-test="container" mx={-1}>
@@ -109,22 +111,20 @@ export const OtherUsesSummary = ({ data, status }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          gridKey={'other-uses'}
+          gridKey="other-uses"
           getRowId={getRowId}
           columnDefs={columns}
-          defaultColDef={{ filter: false, floatingFilter: false }}
+          defaultColDef={defaultColDef}
           query={useGetOtherUses}
           queryParams={{ complianceReportId }}
-          dataKey={'otherUses'}
+          dataKey="otherUses"
           suppressPagination={data?.length <= 10}
           autoSizeStrategy={{
             type: 'fitCellContents',
-            defaultMinWidth: 50,
             defaultMaxWidth: 600
           }}
           enableCellTextSelection
           ensureDomOrder
-          onRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>

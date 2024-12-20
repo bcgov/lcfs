@@ -196,8 +196,6 @@ const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
     return `panel${index}`
   }).filter(Boolean)) // Initialize with panels that should be open by default
 
-  const [allExpanded, setAllExpanded] = useState(true)
-
   const handleChange = (panel) => (event, isExpanded) => {
     setExpanded((prev) =>
       isExpanded ? [...prev, panel] : prev.filter((p) => p !== panel)
@@ -206,7 +204,6 @@ const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
 
   const handleExpandAll = () => {
     setExpanded(activityList.map((_, index) => `panel${index}`))
-    setAllExpanded(true)
   }
 
   const handleCollapseAll = () => {

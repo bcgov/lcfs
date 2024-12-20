@@ -6,6 +6,7 @@ import structlog
 from fastapi import Depends
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.tests.fuel_supply.test_fuel_supplies_services import fuel_category
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.compliance.OtherUses import OtherUses
@@ -52,8 +53,8 @@ class OtherUsesServices:
         """
         Converts data from OtherUsesCreateSchema to OtherUses data model to store into the database.
         """
-        fuel_category = await self.fuel_repo.get_fuel_category_by_name(
-            other_use.fuel_category
+        fuel_category = await self.fuel_repo.get_fuel_category_by(
+            category=other_use.fuel_category
         )
         fuel_type = await self.fuel_repo.get_fuel_type_by_name(other_use.fuel_type)
         expected_use = await self.fuel_repo.get_expected_use_type_by_name(
@@ -200,10 +201,8 @@ class OtherUsesServices:
                 )
 
             if other_use.fuel_category.category != other_use_data.fuel_category:
-                other_use.fuel_category = (
-                    await self.fuel_repo.get_fuel_category_by_name(
-                        other_use_data.fuel_category
-                    )
+                other_use.fuel_category = await self.fuel_repo.get_fuel_category_by(
+                    category=other_use_data.fuel_category
                 )
 
             if other_use.expected_use.name != other_use_data.expected_use:

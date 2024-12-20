@@ -34,14 +34,7 @@ vi.mock('@/utils/formatters', () => ({
 
 // Mock BCDataGridServer component
 vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: ({ handleRowClicked }) => (
-    <div
-      data-test="mocked-data-grid"
-      onClick={() => handleRowClicked({ data: { userProfileId: '123' } })}
-    >
-      Mocked DataGrid
-    </div>
-  )
+  default: ({}) => <div data-test="mocked-data-grid">Mocked DataGrid</div>
 }))
 
 // Helper component to access current location
@@ -136,23 +129,5 @@ describe('Users Component', () => {
       </WrapperComponent>
     )
     expect(screen.getByText('Test alert message')).toBeInTheDocument()
-  })
-
-  it('handles row click correctly', async () => {
-    render(
-      <WrapperComponent>
-        <Users />
-      </WrapperComponent>
-    )
-
-    // Simulate a row click
-    const mockedDataGrid = screen.getByTestId('mocked-data-grid')
-    fireEvent.click(mockedDataGrid)
-
-    // Check if the navigation occurred
-    await waitFor(() => {
-      const locationDisplay = screen.getByTestId('location-display')
-      expect(locationDisplay.textContent).toBe('/admin/users/123')
-    })
   })
 })

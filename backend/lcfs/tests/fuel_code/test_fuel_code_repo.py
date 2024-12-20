@@ -158,7 +158,7 @@ async def test_get_fuel_categories(fuel_code_repo, mock_db):
 
 
 @pytest.mark.anyio
-async def test_get_fuel_category_by_name(fuel_code_repo, mock_db):
+async def test_get_fuel_category_by(fuel_code_repo, mock_db):
     mock_fc = FuelCategory(
         fuel_category_id=2, category="Fossil", default_carbon_intensity=0
     )

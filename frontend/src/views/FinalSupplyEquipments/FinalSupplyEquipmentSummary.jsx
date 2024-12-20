@@ -1,12 +1,12 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { apiRoutes, ROUTES } from '@/constants/routes'
-import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
+import { apiRoutes } from '@/constants/routes'
+import { CommonArrayRenderer, LinkRenderer } from '@/utils/grid/cellRenderers'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams, useNavigate } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { numberFormatter } from '@/utils/formatters.js'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
@@ -15,12 +15,11 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState('final-supply-equipments-grid')
-  const { complianceReportId, compliancePeriod } = useParams()
+  const { complianceReportId } = useParams()
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'finalSupplyEquipments'])
   const location = useLocation()
-  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -29,26 +28,37 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
     }
   }, [location.state])
 
-  const gridOptions = useMemo(() => ({
-    overlayNoRowsTemplate: t(
-      'finalSupplyEquipment:noFinalSupplyEquipmentsFound'
-    ),
-    autoSizeStrategy: {
-      type: 'fitCellContents',
-      defaultMinWidth: 50,
-      defaultMaxWidth: 600
-    },
-    enableCellTextSelection: true, // enables text selection on the grid
-    ensureDomOrder: true
-  }))
+  const gridOptions = useMemo(
+    () => ({
+      overlayNoRowsTemplate: t(
+        'finalSupplyEquipment:noFinalSupplyEquipmentsFound'
+      ),
+      autoSizeStrategy: {
+        type: 'fitCellContents',
+        defaultMaxWidth: 600
+      },
+      enableCellTextSelection: true, // enables text selection on the grid
+      ensureDomOrder: true
+    }),
+    [t]
+  )
 
   const defaultColDef = useMemo(
     () => ({
+      minWidth: 200,
       floatingFilter: false,
-      filter: false
+      filter: false,
+      cellRenderer:
+        status === COMPLIANCE_REPORT_STATUSES.DRAFT ? LinkRenderer : undefined,
+      cellRendererParams: {
+        url: () => {
+          return 'final-supply-equipments'
+        }
+      }
     }),
-    []
+    [status]
   )
+
   const columns = useMemo(
     () => [
       {
@@ -188,17 +198,6 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
     setGridKey(`final-supply-equipments-grid-${uuid()}`)
   }
 
-  const handleRowClicked = () => {
-    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
-      navigate(
-        ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
-          ':compliancePeriod',
-          compliancePeriod
-        ).replace(':complianceReportId', complianceReportId)
-      )
-    }
-  }
-
   return (
     <Grid2 className="final-supply-equipment-container" mx={-1}>
       <div>
@@ -210,10 +209,10 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
-          className={'ag-theme-material'}
+          className="ag-theme-material"
           gridRef={gridRef}
           apiEndpoint={apiRoutes.getAllFinalSupplyEquipments}
-          apiData={'finalSupplyEquipments'}
+          apiData="finalSupplyEquipments"
           apiParams={{ complianceReportId }}
           columnDefs={columns}
           gridKey={gridKey}
@@ -223,7 +222,6 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={data.finalSupplyEquipments.length <= 10}
-          handleRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>

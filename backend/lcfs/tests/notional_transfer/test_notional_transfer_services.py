@@ -47,7 +47,7 @@ async def test_get_table_options(notional_transfer_service):
 async def test_create_notional_transfer(notional_transfer_service):
     service, mock_repo, mock_fuel_repo = notional_transfer_service
     notional_transfer_data = create_mock_schema({})
-    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(
+    mock_fuel_repo.get_fuel_category_by = AsyncMock(
         return_value=MagicMock(fuel_category_id=1)
     )
 
@@ -93,7 +93,7 @@ async def test_update_notional_transfer(notional_transfer_service):
     mock_repo.get_latest_notional_transfer_by_group_uuid = AsyncMock(
         return_value=mock_existing_transfer
     )
-    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(
+    mock_fuel_repo.get_fuel_category_by = AsyncMock(
         return_value=MagicMock(category="Gasoline")
     )
 

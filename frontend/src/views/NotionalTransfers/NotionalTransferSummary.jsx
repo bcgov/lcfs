@@ -3,21 +3,20 @@ import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useGetNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams, useNavigate } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import { ROUTES } from '@/constants/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const NotionalTransferSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const { complianceReportId, compliancePeriod } = useParams()
+  const { complianceReportId } = useParams()
 
   const { t } = useTranslation(['common', 'notionalTransfers'])
   const location = useLocation()
-  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -29,37 +28,32 @@ export const NotionalTransferSummary = ({ data, status }) => {
   const getRowId = (params) => params.data.notionalTransferId
   const defaultColDef = useMemo(
     () => ({
+      minWidth: 200,
       floatingFilter: false,
-      filter: false
+      filter: false,
+      cellRenderer:
+        status === COMPLIANCE_REPORT_STATUSES.DRAFT ? LinkRenderer : undefined,
+      cellRendererParams: {
+        url: () => {
+          return 'notional-transfers'
+        }
+      }
     }),
-    []
+    [status]
   )
-
-  const handleRowClicked = () => {
-    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
-      navigate(
-        ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
-          ':compliancePeriod',
-          compliancePeriod
-        ).replace(':complianceReportId', complianceReportId)
-      )
-    }
-  }
 
   const columns = [
     {
       headerName: t('notionalTransfer:notionalTransferColLabels.legalName'),
       field: 'legalName',
-      flex: 1,
-      minWidth: 200
+      flex: 1
     },
     {
       headerName: t(
         'notionalTransfer:notionalTransferColLabels.addressForService'
       ),
       field: 'addressForService',
-      flex: 1,
-      minWidth: 200
+      flex: 1
     },
     {
       headerName: t('notionalTransfer:notionalTransferColLabels.fuelCategory'),
@@ -89,13 +83,13 @@ export const NotionalTransferSummary = ({ data, status }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          gridKey={'notional-transfers'}
+          gridKey="notional-transfers"
           getRowId={getRowId}
           columnDefs={columns}
           defaultColDef={defaultColDef}
           query={useGetNotionalTransfers}
           queryParams={{ complianceReportId }}
-          dataKey={'notionalTransfers'}
+          dataKey="notionalTransfers"
           suppressPagination={data?.length <= 10}
           autoSizeStrategy={{
             type: 'fitCellContents',
@@ -105,7 +99,6 @@ export const NotionalTransferSummary = ({ data, status }) => {
           enableCellTextSelection
           ensureDomOrder
           handleRo
-          onRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>

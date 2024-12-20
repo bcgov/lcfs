@@ -1,21 +1,16 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-// @mui component
 import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-// icons
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
-// hooks
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useCallback, useRef, useState, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { ROUTES, apiRoutes } from '@/constants/routes'
-import { usersColumnDefs, idirUserDefaultFilter } from './_schema'
-import { calculateRowHeight } from '@/utils/formatters'
+import { apiRoutes, ROUTES } from '@/constants/routes'
+import { idirUserDefaultFilter, usersColumnDefs } from './_schema'
 
 export const Users = () => {
   const { t } = useTranslation(['common', 'admin'])
@@ -45,10 +40,6 @@ export const Users = () => {
   const getRowId = useCallback((params) => {
     return params.data.userProfileId
   }, [])
-
-  const handleRowClicked = useCallback((params) => {
-    navigate(`${ROUTES.ADMIN_USERS}/${params.data.userProfileId}`)
-  })
 
   const gridRef = useRef()
   useEffect(() => {
@@ -99,7 +90,6 @@ export const Users = () => {
             defaultSortModel={defaultSortModel}
             defaultFilterModel={idirUserDefaultFilter}
             handleGridKey={handleGridKey}
-            handleRowClicked={handleRowClicked}
             enableResetButton={false}
             enableCopyButton={false}
           />

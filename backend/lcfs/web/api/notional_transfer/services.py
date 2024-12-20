@@ -6,6 +6,7 @@ import structlog
 from fastapi import Depends
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.tests.fuel_supply.test_fuel_supplies_services import fuel_category
 from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
@@ -50,8 +51,8 @@ class NotionalTransferServices:
         """
         Converts data from NotionalTransferCreateSchema to NotionalTransfer data model to store into the database.
         """
-        fuel_category = await self.fuel_repo.get_fuel_category_by_name(
-            notional_transfer_data.fuel_category
+        fuel_category = await self.fuel_repo.get_fuel_category_by(
+            category=notional_transfer_data.fuel_category
         )
         return NotionalTransfer(
             **notional_transfer_data.model_dump(
@@ -164,8 +165,8 @@ class NotionalTransferServices:
                 != notional_transfer_data.fuel_category
             ):
                 existing_transfer.fuel_category = (
-                    await self.fuel_repo.get_fuel_category_by_name(
-                        notional_transfer_data.fuel_category
+                    await self.fuel_repo.get_fuel_category_by(
+                        category=notional_transfer_data.fuel_category
                     )
                 )
 

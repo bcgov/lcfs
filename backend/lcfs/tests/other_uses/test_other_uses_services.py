@@ -66,10 +66,14 @@ async def test_create_other_use(other_uses_service):
     mock_fuel_code.fuel_code = "FuelCode123"
 
     # Mock fuel repository methods
-    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(return_value=mock_fuel_category)
+    mock_fuel_repo.get_fuel_category_by = AsyncMock(return_value=mock_fuel_category)
     mock_fuel_repo.get_fuel_type_by_name = AsyncMock(return_value=mock_fuel_type)
-    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(return_value=mock_expected_use)
-    mock_fuel_repo.get_provision_of_the_act_by_name = AsyncMock(return_value=mock_provision_of_the_act)
+    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(
+        return_value=mock_expected_use
+    )
+    mock_fuel_repo.get_provision_of_the_act_by_name = AsyncMock(
+        return_value=mock_provision_of_the_act
+    )
     mock_fuel_repo.get_fuel_code_by_name = AsyncMock(return_value=mock_fuel_code)
 
     # Create a mock for the created other use
@@ -135,8 +139,10 @@ async def test_update_other_use(other_uses_service):
 
     # Mock fuel repository methods
     mock_fuel_repo.get_fuel_type_by_name = AsyncMock(return_value=mock_fuel_type)
-    mock_fuel_repo.get_fuel_category_by_name = AsyncMock(return_value=mock_fuel_category)
-    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(return_value=mock_expected_use)
+    mock_fuel_repo.get_fuel_category_by = AsyncMock(return_value=mock_fuel_category)
+    mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(
+        return_value=mock_expected_use
+    )
     mock_fuel_repo.get_provision_of_the_act_by_name = AsyncMock(
         return_value=mock_provision_of_the_act
     )
@@ -179,7 +185,6 @@ async def test_update_other_use(other_uses_service):
 
     # Check that the update method was called
     mock_repo.update_other_use.assert_awaited_once()
-
 
 
 @pytest.mark.anyio

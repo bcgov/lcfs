@@ -1,27 +1,26 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { apiRoutes, ROUTES } from '@/constants/routes'
+import { apiRoutes } from '@/constants/routes'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import i18n from '@/i18n'
-import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const FuelSupplySummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`fuel-supplies-grid`)
-  const { complianceReportId, compliancePeriod } = useParams()
+  const { complianceReportId } = useParams()
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'fuelSupply'])
   const location = useLocation()
-  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -35,7 +34,6 @@ export const FuelSupplySummary = ({ data, status }) => {
       overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
       autoSizeStrategy: {
         type: 'fitCellContents',
-        defaultMinWidth: 50,
         defaultMaxWidth: 600
       },
       enableCellTextSelection: true, // enables text selection on the grid
@@ -46,10 +44,18 @@ export const FuelSupplySummary = ({ data, status }) => {
 
   const defaultColDef = useMemo(
     () => ({
+      minWidth: 200,
       floatingFilter: false,
-      filter: false
+      filter: false,
+      cellRenderer:
+        status === COMPLIANCE_REPORT_STATUSES.DRAFT ? LinkRenderer : undefined,
+      cellRendererParams: {
+        url: () => {
+          return 'supply-of-fuel'
+        }
+      }
     }),
-    []
+    [status]
   )
 
   // TODO: The values for the following columns must be determined
@@ -92,7 +98,10 @@ export const FuelSupplySummary = ({ data, status }) => {
         field: 'quantity',
         valueFormatter
       },
-      { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: 'units' },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.units'),
+        field: 'units'
+      },
       {
         headerName: t('fuelSupply:fuelSupplyColLabels.targetCi'),
         field: 'targetCi'
@@ -109,7 +118,10 @@ export const FuelSupplySummary = ({ data, status }) => {
         headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'),
         field: 'energyDensity'
       },
-      { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: 'eer' },
+      {
+        headerName: t('fuelSupply:fuelSupplyColLabels.eer'),
+        field: 'eer'
+      },
       {
         headerName: t('fuelSupply:fuelSupplyColLabels.energy'),
         field: 'energy',
@@ -125,17 +137,6 @@ export const FuelSupplySummary = ({ data, status }) => {
 
   const handleGridKey = () => {
     setGridKey(`fuel-supplies-grid-${uuid()}`)
-  }
-
-  const handleRowClicked = () => {
-    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
-      navigate(
-        ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
-          ':compliancePeriod',
-          compliancePeriod
-        ).replace(':complianceReportId', complianceReportId)
-      )
-    }
   }
 
   return (
@@ -162,7 +163,6 @@ export const FuelSupplySummary = ({ data, status }) => {
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={data.fuelSupplies.length <= 10}
-          handleRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>

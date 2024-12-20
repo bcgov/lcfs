@@ -37,7 +37,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
-  const [internalComment, setInternalComment] = useState('')
   const [hasMet, setHasMet] = useState(false)
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
@@ -60,9 +59,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       })
     }
   }
-  const handleCommentChange = useCallback((newComment) => {
-    setInternalComment(newComment)
-  }, [])
+
   const handleScroll = useCallback(() => {
     const scrollTop = window.pageYOffset || document.documentElement.scrollTop
     setIsScrollingUp(scrollTop < lastScrollTop || scrollTop === 0)
@@ -74,7 +71,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
-  // hooks
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
@@ -239,9 +235,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <BCBox>
                 <Role roles={govRoles}>
                   <InternalComments
-                    entityType={'complianceReport'}
+                    entityType="complianceReport"
                     entityId={parseInt(complianceReportId)}
-                    onCommentChange={handleCommentChange}
                   />
                 </Role>
               </BCBox>
