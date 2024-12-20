@@ -156,6 +156,9 @@ class ReportConsumer(BaseConsumer):
                 )
                 user = await UserRepository(db=session).get_user_by_id(user_id)
 
+                if not user:
+                    logger.error(f"Cannot parse Report {legacy_id} from TFRS, no user with ID {user_id}")
+
                 if action == "Created":
                     await self._handle_created(
                         org_id,

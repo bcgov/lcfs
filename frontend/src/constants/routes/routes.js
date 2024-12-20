@@ -36,13 +36,13 @@ export const ORGANIZATIONS_EDITUSER = `${ORGANIZATIONS_VIEWUSER}/edit-user`
 
 export const REPORTS = '/compliance-reporting'
 export const REPORTS_VIEW = `${REPORTS}/:compliancePeriod/:complianceReportId`
-export const REPORTS_COMPARE = `/compare-reporting`
 export const REPORTS_ADD_SUPPLY_OF_FUEL = `${REPORTS_VIEW}/supply-of-fuel`
 export const REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS = `${REPORTS_VIEW}/final-supply-equipments`
 export const REPORTS_ADD_ALLOCATION_AGREEMENTS = `${REPORTS_VIEW}/allocation-agreements`
 export const REPORTS_ADD_NOTIONAL_TRANSFERS = `${REPORTS_VIEW}/notional-transfers`
 export const REPORTS_ADD_OTHER_USE_FUELS = `${REPORTS_VIEW}/fuels-other-use`
 export const REPORTS_ADD_FUEL_EXPORTS = `${REPORTS_VIEW}/fuel-exports`
+export const REPORTS_COMPARE = '/compare-reporting'
 
 export const NOTIFICATIONS = '/notifications'
 export const NOTIFICATIONS_SETTINGS = `${NOTIFICATIONS}/configure`
