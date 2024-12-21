@@ -185,8 +185,8 @@
     {
       "fuel_type_id": 20,
       "fuel_type": "Other diesel",
-      "fossil_derived": true,
-      "other_uses_fossil_derived": true,
+      "fossil_derived": false,
+      "other_uses_fossil_derived": false,
       "provision_1_id": 1,
       "default_carbon_intensity": 100.21,
       "units": "L",

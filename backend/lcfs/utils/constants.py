@@ -83,3 +83,15 @@ id_prefix_to_transaction_type_map = {
 }
 
 default_ci = {"Gasoline": 93.67, "Diesel": 100.21, "Jet fuel": 88.83}
+
+
+RENEWABLE_FUEL_TYPES = [
+    "Renewable gasoline",
+    "Ethanol",
+    "Renewable naphtha",
+    "Biodiesel",
+    "HDRD",
+    "Other diesel",
+    "Alternative jet fuel",
+    "Other"
+]
