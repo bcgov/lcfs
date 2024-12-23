@@ -348,17 +348,20 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
         isFuelCodeScenario && !params.data.fuelCode
 
       if (fuelCodeRequiredAndMissing) {
-        // If required and missing, force a red border
+        // Required scenario but missing a fuel code
         style.borderColor = 'red'
+        style.backgroundColor = '#fff'
+      } else if (isFuelCodeScenario && fuelCodes.length > 1) {
+        style.backgroundColor = '#fff'
+        style.borderColor = 'unset'
+      } else if (isFuelCodeScenario && fuelCodes.length > 0) {
+        style.backgroundColor = '#fff'
+        style.borderColor = 'unset'
+      } else {
+        style.backgroundColor = '#f2f2f2'
       }
 
-      const conditionalStyle =
-        fuelCodes.length > 0 &&
-        isFuelCodeScenario &&
-        !fuelCodeRequiredAndMissing
-          ? { backgroundColor: '#fff', borderColor: 'unset' }
-          : { backgroundColor: '#f2f2f2' }
-      return { ...style, ...conditionalStyle }
+      return style
     },
     editable: (params) => {
       const fuelTypeObj = optionsData?.fuelTypes?.find(

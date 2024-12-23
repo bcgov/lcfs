@@ -60,14 +60,16 @@ export const otherUsesColDefs = (optionsData, errors) => [
     cellEditorParams: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
-      );
+      )
       return {
-        options: fuelType ? fuelType.fuelCategories.map((item) => item.category) : [],
+        options: fuelType
+          ? fuelType.fuelCategories.map((item) => item.category)
+          : [],
         multiple: false,
         disableCloseOnSelect: false,
         freeSolo: false,
         openOnFocus: true
-      };
+      }
     },
     suppressKeyboardEvent,
     cellRenderer: (params) =>
@@ -153,22 +155,18 @@ export const otherUsesColDefs = (optionsData, errors) => [
       const fuelCodeRequiredAndMissing =
         isFuelCodeScenario && !params.data.fuelCode
 
-      // If required and missing, show red border
       if (fuelCodeRequiredAndMissing) {
+        // Required scenario but missing a fuel code
         style.borderColor = 'red'
+        style.backgroundColor = '#fff'
+      } else if (isFuelCodeScenario && fuelCodes.length > 0) {
+        style.backgroundColor = '#fff'
+        style.borderColor = style.borderColor || 'unset'
+      } else {
+        style.backgroundColor = '#f2f2f2'
       }
 
-      const conditionalStyle =
-        isFuelCodeScenario &&
-        fuelCodes.length > 0 &&
-        !fuelCodeRequiredAndMissing
-          ? {
-              backgroundColor: '#fff',
-              borderColor: style.borderColor || 'unset'
-            }
-          : { backgroundColor: '#f2f2f2' }
-
-      return { ...style, ...conditionalStyle }
+      return style
     },
     suppressKeyboardEvent,
     minWidth: 150,
@@ -225,14 +223,18 @@ export const otherUsesColDefs = (optionsData, errors) => [
     cellEditorParams: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
-      );
-      const values = fuelType ? [fuelType.units] : [];
+      )
+      const values = fuelType ? [fuelType.units] : []
       return {
         values: values
-      };
+      }
     },
     cellRenderer: (params) => {
-      return params.value ? params.value : <BCTypography variant="body4">Select</BCTypography>;
+      return params.value ? (
+        params.value
+      ) : (
+        <BCTypography variant="body4">Select</BCTypography>
+      )
     },
     cellStyle: (params) => StandardCellErrors(params, errors),
     editable: true,
