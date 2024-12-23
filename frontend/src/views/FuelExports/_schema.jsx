@@ -111,9 +111,9 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     }
   },
   {
-    field: 'fuelType',
+    field: 'fuelTypeId',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelType'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
@@ -135,10 +135,21 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
         const fuelType = optionsData?.fuelTypes?.find(
           (obj) => obj.fuelType === params.newValue
         )
+        console.log("fuelType", fuelType)
+        console.log("fuelType.fuelCategories.length: ", fuelType.fuelCategories.length)
+        console.log("fuelType.fuelCategories[0].fuelCategory: ", fuelType.fuelCategories[0].fuelCategory )
         params.data.fuelType = params.newValue
         params.data.fuelTypeId = fuelType?.fuelTypeId
         params.data.fuelTypeOther = undefined
-        params.data.fuelCategory = undefined
+        // Set both category and categoryId if single option exists
+        if (fuelType?.fuelCategories?.length === 1) {
+          const category = fuelType.fuelCategories[0]
+          params.data.fuelCategory = category.fuelCategory
+          params.data.fuelCategoryId = category.fuelCategoryId
+        } else {
+          params.data.fuelCategory = undefined
+          params.data.fuelCategoryId = undefined
+        }
         params.data.endUseId = undefined
         params.data.endUseType = undefined
         params.data.eer = undefined
@@ -180,9 +191,9 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     minWidth: 250
   },
   {
-    field: 'fuelCategory',
+    field: 'fuelCategoryId',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||

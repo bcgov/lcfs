@@ -39,3 +39,13 @@ class FuelCategory(BaseModel, Auditable, DisplayOrder, EffectiveDates):
         "TargetCarbonIntensity", back_populates="fuel_category"
     )
     fuel_instances = relationship("FuelInstance", back_populates="fuel_category")
+
+    def __str__(self):
+        """
+        Returns a string representation of the model's values.
+        """
+        attributes = []
+        for attr in self.__mapper__.c:
+            value = getattr(self, attr.key, None)
+            attributes.append(f"{attr.key}: {value}")
+        return f"{self.__class__.__name__}({', '.join(attributes)})"

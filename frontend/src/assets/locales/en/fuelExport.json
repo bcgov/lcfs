@@ -12,10 +12,10 @@
   "fuelExportColLabels": {
     "complianceReportId": "Compliance Report ID",
     "fuelExportId": "Fuel export ID",
-    "fuelType": "Fuel type",
+    "fuelTypeId": "Fuel type",
     "exportDate": "Export date",
     "fuelTypeOther": "Fuel type other",
-    "fuelCategory": "Fuel catgory",
+    "fuelCategoryId": "Fuel category",
     "endUse": "End use",
     "provisionOfTheActId": "Determining carbon intensity",
     "fuelCode": "Fuel code",

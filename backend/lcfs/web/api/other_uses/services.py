@@ -55,6 +55,7 @@ class OtherUsesServices:
         fuel_category = await self.fuel_repo.get_fuel_category_by(
             category=other_use.fuel_category
         )
+        print("fuel_category", fuel_category)
         fuel_type = await self.fuel_repo.get_fuel_type_by_name(other_use.fuel_type)
         expected_use = await self.fuel_repo.get_expected_use_type_by_name(
             other_use.expected_use
@@ -206,6 +207,7 @@ class OtherUsesServices:
                         category=other_use_data.fuel_category
                     )
                 )
+                print("other_use.fuel_category", other_use.fuel_category)
 
             if other_use.expected_use.name != other_use_data.expected_use:
                 other_use.expected_use = (

@@ -154,6 +154,7 @@ export const AddEditFuelExports = () => {
         severity: 'pending'
       })
 
+      console.log('params.node.data', params.node.data)
       // clean up any null or empty string values
       let updatedData = Object.entries(params.node.data)
         .filter(([, value]) => value !== null && value !== '')

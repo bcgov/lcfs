@@ -213,6 +213,7 @@ export const AddEditAllocationAgreements = () => {
         severity: 'pending'
       })
 
+      console.log('params.node.data', params.node.data)
       let updatedData = Object.entries(params.node.data)
         .filter(([, value]) => value !== null && value !== '')
         .reduce((acc, [key, value]) => {
