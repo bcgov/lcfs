@@ -158,5 +158,6 @@
     "totalValue": "Total Value"
   },
   "summaryLoadingMsg": "Loading compliance report summary...",
-  "noSigningAuthorityTooltip": "Signing authority role required."
+  "noSigningAuthorityTooltip": "Signing authority role required.",
+  "viewLegacyBtn": "View Full Historical Report in TFRS"
 }

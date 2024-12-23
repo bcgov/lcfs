@@ -32,6 +32,8 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.utils.calculations import calculate_compliance_units
 
+from lcfs.utils.constants import RENEWABLE_FUEL_TYPES
+
 logger = logging.getLogger(__name__)
 
 
@@ -241,6 +243,12 @@ class ComplianceReportSummaryService:
 
         return summary_data
 
+    def filter_renewable_fuel_supplies(self, fuel_supplies: List[FuelSupply]) -> List[FuelSupply]:
+        return [
+            supply for supply in fuel_supplies
+            if supply.fuel_type and supply.fuel_type.fuel_type in RENEWABLE_FUEL_TYPES
+        ]
+
     @service_handler
     async def calculate_compliance_report_summary(
         self, report_id: int
@@ -326,14 +334,19 @@ class ComplianceReportSummaryService:
         )
 
         # Fetch fuel quantities
+        # line 1
         fossil_quantities = await self.calculate_fuel_quantities(
             compliance_report.compliance_report_id,
             effective_fuel_supplies,
             fossil_derived=True
         )
+        # line 2
+        filtered_renewable_fuel_supplies = self.filter_renewable_fuel_supplies(
+            effective_fuel_supplies)
+
         renewable_quantities = await self.calculate_fuel_quantities(
             compliance_report.compliance_report_id,
-            effective_fuel_supplies,
+            filtered_renewable_fuel_supplies,
             fossil_derived=False
         )
 
@@ -730,9 +743,13 @@ class ComplianceReportSummaryService:
         fuel_quantities = self.repo.aggregate_fuel_supplies(
             effective_fuel_supplies, fossil_derived
         )
-        fuel_quantities.update(
-            await self.repo.aggregate_other_uses(compliance_report_id, fossil_derived)
+
+        other_uses = await self.repo.aggregate_other_uses(
+            compliance_report_id, fossil_derived
         )
+
+        for key, value in other_uses.items():
+            fuel_quantities[key] = fuel_quantities.get(key, 0) + value
 
         return dict(fuel_quantities)
 

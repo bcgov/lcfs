@@ -4,20 +4,20 @@ import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 // react components
-import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 // Services
 import { Role } from '@/components/Role'
 // constants
 import { roles } from '@/constants/roles'
-import { ROUTES, apiRoutes } from '@/constants/routes'
+import { apiRoutes, ROUTES } from '@/constants/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 // hooks
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 // internal components
-import { reportsColDefs, defaultSortModel } from './components/_schema'
+import { defaultSortModel, reportsColDefs } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import BCTypography from '@/components/BCTypography'
 
@@ -44,15 +44,13 @@ export const ComplianceReports = () => {
     (params) => params.data.complianceReportId.toString(),
     []
   )
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const handleRowClicked = useCallback(
     ({ data }) => {
-      navigate(
-        ROUTES.REPORTS_VIEW.replace(
-          ':compliancePeriod',
-          data.compliancePeriod.description
-        ).replace(':complianceReportId', data.complianceReportId)
-      )
+      const mappedRoute = ROUTES.REPORTS_VIEW.replace(
+        ':compliancePeriod',
+        data.compliancePeriod.description
+      ).replace(':complianceReportId', data.complianceReportId)
+      navigate(mappedRoute)
     },
     [navigate]
   )

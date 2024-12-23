@@ -59,7 +59,8 @@ async def test_calculate_low_carbon_fuel_target_summary(
 
     # Assertions
     assert isinstance(summary, list)
-    assert all(isinstance(item, ComplianceReportSummaryRowSchema) for item in summary)
+    assert all(isinstance(item, ComplianceReportSummaryRowSchema)
+               for item in summary)
     assert len(summary) == 11  # Ensure all 11 lines are present
 
     # Check specific line values
@@ -510,7 +511,8 @@ async def test_calculate_renewable_fuel_target_summary_no_renewables(
 
     assert len(result) == 11
     assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-    assert result[10].gasoline == 15.0  # Penalty should be applied due to no renewables
+    # Penalty should be applied due to no renewables
+    assert result[10].gasoline == 15.0
     assert result[10].diesel == 36.0
     assert result[10].jet_fuel == 45.0
     assert result[10].total_value == 96.0
@@ -548,12 +550,10 @@ async def test_calculate_renewable_fuel_target_summary_high_renewables(
 
     assert len(result) == 11
     assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-    assert result[10].gasoline == 0  # No penalty since renewables exceed requirements
+    # No penalty since renewables exceed requirements
+    assert result[10].gasoline == 0
     assert result[10].diesel == 0
     assert result[10].jet_fuel == 0
-
-
-import pytest
 
 
 @pytest.mark.anyio
@@ -710,6 +710,13 @@ async def test_can_sign_flag_logic(
             "jet_fuel": 25,
         }
     )
+    mock_repo.aggregate_other_uses = AsyncMock(
+        return_value={
+            "gasoline": 50,
+            "diesel": 25,
+            "jet_fuel": 10,
+        }
+    )
     mock_repo.get_assessed_compliance_report_by_period = AsyncMock(
         return_value=MagicMock(
             summary=MagicMock(
@@ -810,7 +817,8 @@ async def test_calculate_fuel_quantities_renewable(
 ):
     # Create a mock repository
     mock_repo.aggregate_fuel_supplies.return_value = {"gasoline": 200.0}
-    mock_repo.aggregate_other_uses.return_value = {"diesel": 75.0, "jet-fuel": 25.0}
+    mock_repo.aggregate_other_uses.return_value = {
+        "diesel": 75.0, "jet-fuel": 25.0}
 
     # Define test inputs
     compliance_report_id = 2
