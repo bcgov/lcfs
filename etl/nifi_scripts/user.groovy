@@ -2,6 +2,8 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 
+log.warn("**** STARTING USER ETL ****")
+
 // SQL query to extract user profiles
 def userProfileQuery = """
     SELECT id as user_profile_id,
@@ -154,3 +156,5 @@ try {
     if (sourceConn != null) sourceConn.close()
     if (destinationConn != null) destinationConn.close()
 }
+
+log.warn("**** COMPLETED USER ETL ****")
