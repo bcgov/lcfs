@@ -31,6 +31,7 @@ origins = [
     "http://localhost:3000",
     "https://lcfs-dev.apps.silver.devops.gov.bc.ca",
     "https://lcfs-test.apps.silver.devops.gov.bc.ca",
+    "https://lcfs-prod.apps.silver.devops.gov.bc.ca",
     "https://lcfs.apps.silver.devops.gov.bc.ca",
 ]
 

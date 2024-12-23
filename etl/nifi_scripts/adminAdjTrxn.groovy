@@ -5,6 +5,8 @@ import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.sql.Timestamp
 
+log.warn("**** STARTED ADMIN ADJUSTMENT ETL ****")
+
 def SOURCE_QUERY = """
 WITH
         internal_comment AS (
@@ -434,3 +436,5 @@ def insertadminAdjustment(ResultSet rs, PreparedStatement adminAdjustmentStmt,
     def result = adminAdjustmentStmt.executeQuery()
     return result.next() ? result.getInt('admin_adjustment_id') : null
 }
+
+log.warn("**** COMPLETED ADMIN ADJUSTMENT ETL ****")

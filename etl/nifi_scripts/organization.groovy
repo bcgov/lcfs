@@ -3,6 +3,8 @@ import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.util.Random
 
+log.warn("**** STARTING ORGANIZATION ETL ****")
+
 // SQL query to fetch data from the source
 def sourceQuery = """
     SELECT
@@ -227,3 +229,5 @@ try {
     if (sourceConn != null) sourceConn.close()
     if (destinationConn != null) destinationConn.close()
 }
+
+log.warn("**** COMPLETED ORGANIZATION ETL ****")

@@ -1014,3 +1014,5 @@ def updateComplianceReportWithTransaction(Connection conn, int lcfsReportId, int
 // =========================================
 // Script Termination
 // =========================================
+
+log.warn("**** COMPLETED COMPLIANCE REPORT ETL ****")

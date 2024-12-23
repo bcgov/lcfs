@@ -5,6 +5,8 @@ import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.sql.Timestamp
 
+log.warn("**** STARTING INITIATIVE AGREEMENT ETL ****")
+
 def SOURCE_QUERY = """
 WITH
         internal_comment AS (
@@ -434,3 +436,5 @@ def insertInitiativeAgreement(ResultSet rs, PreparedStatement initiativeAgreemen
     def result = initiativeAgreementStmt.executeQuery()
     return result.next() ? result.getInt('initiative_agreement_id') : null
 }
+
+log.warn("**** COMPLETED INITIATIVE AGREEMENT ETL ****")
