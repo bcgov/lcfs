@@ -113,16 +113,6 @@ const AddEditFuelCodeBase = () => {
           )
       }
       setRowData([transformedData])
-    } else {
-      setRowData([
-        {
-          id: uuid(),
-          prefixId: 1,
-          fuelSuffix: optionsData?.fuelCodePrefixes?.find(
-            (item) => item.prefix === 'BCLCF'
-          ).nextFuelCode
-        }
-      ])
     }
   }, [optionsData, existingFuelCode, isGridReady])
 
