@@ -50,12 +50,13 @@ class NotionalTransferServices:
         """
         Converts data from NotionalTransferCreateSchema to NotionalTransfer data model to store into the database.
         """
-        fuel_category = await self.fuel_repo.get_fuel_category_by_name(
-            notional_transfer_data.fuel_category
+        fuel_category = await self.fuel_repo.get_fuel_category_by(
+            category=notional_transfer_data.fuel_category
         )
         return NotionalTransfer(
             **notional_transfer_data.model_dump(
-                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union({"fuel_category"})
+                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union(
+                    {"fuel_category"})
             ),
             fuel_category_id=fuel_category.fuel_category_id,
         )
@@ -155,7 +156,8 @@ class NotionalTransferServices:
         ):
             # Update existing record if compliance report ID matches
             for field, value in notional_transfer_data.model_dump(
-                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union({"fuel_category"})
+                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union(
+                    {"fuel_category"})
             ).items():
                 setattr(existing_transfer, field, value)
 
@@ -164,8 +166,8 @@ class NotionalTransferServices:
                 != notional_transfer_data.fuel_category
             ):
                 existing_transfer.fuel_category = (
-                    await self.fuel_repo.get_fuel_category_by_name(
-                        notional_transfer_data.fuel_category
+                    await self.fuel_repo.get_fuel_category_by(
+                        category=notional_transfer_data.fuel_category
                     )
                 )
 
@@ -228,7 +230,8 @@ class NotionalTransferServices:
         # Copy fields from the latest version for the deletion record
         for field in existing_transfer.__table__.columns.keys():
             if field not in NOTIONAL_TRANSFER_EXCLUDE_FIELDS:
-                setattr(deleted_entity, field, getattr(existing_transfer, field))
+                setattr(deleted_entity, field, getattr(
+                    existing_transfer, field))
 
         await self.repo.create_notional_transfer(deleted_entity)
         return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")

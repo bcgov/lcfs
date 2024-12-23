@@ -103,24 +103,16 @@ const AddEditFuelCodeBase = () => {
     if (existingFuelCode) {
       const transformedData = {
         ...existingFuelCode,
-        feedstockFuelTransportMode: existingFuelCode.feedstockFuelTransportModes.map(
-          (mode) => mode.feedstockFuelTransportMode.transportMode
-        ),
-        finishedFuelTransportMode: existingFuelCode.finishedFuelTransportModes.map(
-          (mode) => mode.finishedFuelTransportMode.transportMode
-        )
+        feedstockFuelTransportMode:
+          existingFuelCode.feedstockFuelTransportModes.map(
+            (mode) => mode.feedstockFuelTransportMode.transportMode
+          ),
+        finishedFuelTransportMode:
+          existingFuelCode.finishedFuelTransportModes.map(
+            (mode) => mode.finishedFuelTransportMode.transportMode
+          )
       }
       setRowData([transformedData])
-    } else {
-      setRowData([
-        {
-          id: uuid(),
-          prefixId: 1,
-          fuelSuffix: optionsData?.fuelCodePrefixes?.find(
-            (item) => item.prefix === 'BCLCF'
-          ).nextFuelCode
-        }
-      ])
     }
   }, [optionsData, existingFuelCode, isGridReady])
 
@@ -451,6 +443,12 @@ const AddEditFuelCodeBase = () => {
                 FUEL_CODE_STATUSES.DRAFT && t('fuelCode:editFuelCodeTitle')}
               {existingFuelCode?.fuelCodeStatus.status ===
                 FUEL_CODE_STATUSES.APPROVED && t('fuelCode:viewFuelCodeTitle')}
+            </BCTypography>
+            <BCTypography variant="body2" mt={2} mb={3}>
+              {(!existingFuelCode ||
+                existingFuelCode?.fuelCodeStatus.status ===
+                  FUEL_CODE_STATUSES.DRAFT) &&
+                t('fuelCode:fuelCodeEntryGuide')}
             </BCTypography>
           </div>
           <BCGridEditor

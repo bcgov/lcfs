@@ -158,7 +158,7 @@ async def test_get_fuel_categories(fuel_code_repo, mock_db):
 
 
 @pytest.mark.anyio
-async def test_get_fuel_category_by_name(fuel_code_repo, mock_db):
+async def test_get_fuel_category_by(fuel_code_repo, mock_db):
     mock_fc = FuelCategory(
         fuel_category_id=2, category="Fossil", default_carbon_intensity=0
     )
@@ -327,7 +327,8 @@ async def test_get_fuel_codes_paginated(fuel_code_repo, mock_db):
             unique=MagicMock(
                 return_value=MagicMock(
                     scalars=MagicMock(
-                        return_value=MagicMock(all=MagicMock(return_value=[fc]))
+                        return_value=MagicMock(
+                            all=MagicMock(return_value=[fc]))
                     )
                 )
             )
@@ -342,7 +343,8 @@ async def test_get_fuel_codes_paginated(fuel_code_repo, mock_db):
 
 @pytest.mark.anyio
 async def test_get_fuel_code_statuses(fuel_code_repo, mock_db):
-    fcs = FuelCodeStatus(fuel_code_status_id=1, status=FuelCodeStatusEnum.Approved)
+    fcs = FuelCodeStatus(fuel_code_status_id=1,
+                         status=FuelCodeStatusEnum.Approved)
     mock_result = MagicMock()
     mock_result.scalars.return_value.all.return_value = [fcs]
     mock_db.execute.return_value = mock_result
@@ -371,7 +373,8 @@ async def test_get_fuel_code(fuel_code_repo, mock_db, valid_fuel_code):
 
 @pytest.mark.anyio
 async def test_get_fuel_code_status_enum(fuel_code_repo, mock_db):
-    fcs = FuelCodeStatus(fuel_code_status_id=2, status=FuelCodeStatusEnum.Deleted)
+    fcs = FuelCodeStatus(fuel_code_status_id=2,
+                         status=FuelCodeStatusEnum.Deleted)
     mock_db.scalar.return_value = fcs
     result = await fuel_code_repo.get_fuel_code_status(FuelCodeStatusEnum.Deleted)
     assert result == fcs
@@ -403,7 +406,8 @@ async def test_delete_fuel_code(fuel_code_repo, mock_db):
 @pytest.mark.anyio
 async def test_get_distinct_company_names(fuel_code_repo, mock_db):
     mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = ["CompanyA", "CompanyB"]
+    mock_result.scalars.return_value.all.return_value = [
+        "CompanyA", "CompanyB"]
     mock_db.execute.return_value = mock_result
 
     result = await fuel_code_repo.get_distinct_company_names("Com")
@@ -413,7 +417,8 @@ async def test_get_distinct_company_names(fuel_code_repo, mock_db):
 @pytest.mark.anyio
 async def test_get_contact_names_by_company(fuel_code_repo, mock_db):
     mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = ["John Doe", "Jane Doe"]
+    mock_result.scalars.return_value.all.return_value = [
+        "John Doe", "Jane Doe"]
     mock_db.execute.return_value = mock_result
 
     result = await fuel_code_repo.get_contact_names_by_company("CompanyA", "J")
@@ -446,7 +451,8 @@ async def test_get_distinct_fuel_codes_by_code(fuel_code_repo, mock_db):
 async def test_get_fuel_code_by_code_prefix(fuel_code_repo, mock_db):
     fc = FuelCode(fuel_code_id=10, fuel_suffix="200.0")
     mock_result = MagicMock()
-    mock_result.unique.return_value.scalars.return_value.all.return_value = [fc]
+    mock_result.unique.return_value.scalars.return_value.all.return_value = [
+        fc]
     mock_db.execute.return_value = mock_result
 
     # Mock the next available suffix
@@ -612,7 +618,8 @@ async def test_get_standardized_fuel_data(fuel_code_repo, mock_db):
         MagicMock(
             scalars=MagicMock(
                 return_value=MagicMock(
-                    first=MagicMock(return_value=EnergyEffectivenessRatio(ratio=2.0))
+                    first=MagicMock(
+                        return_value=EnergyEffectivenessRatio(ratio=2.0))
                 )
             )
         ),
@@ -669,7 +676,8 @@ async def test_get_standardized_fuel_data_unrecognized(fuel_code_repo, mock_db):
     mock_db.get_one.return_value = mock_fuel_type
 
     # Mock the repo method to get the fuel category
-    fuel_code_repo.get_fuel_category_by = AsyncMock(return_value=mock_fuel_category)
+    fuel_code_repo.get_fuel_category_by = AsyncMock(
+        return_value=mock_fuel_category)
 
     # Setup side effects for subsequent queries:
     # Energy Density
@@ -684,7 +692,8 @@ async def test_get_standardized_fuel_data_unrecognized(fuel_code_repo, mock_db):
     eer_result = MagicMock(
         scalars=MagicMock(
             return_value=MagicMock(
-                first=MagicMock(return_value=EnergyEffectivenessRatio(ratio=2.0))
+                first=MagicMock(
+                    return_value=EnergyEffectivenessRatio(ratio=2.0))
             )
         )
     )
@@ -693,7 +702,8 @@ async def test_get_standardized_fuel_data_unrecognized(fuel_code_repo, mock_db):
         scalars=MagicMock(
             return_value=MagicMock(
                 all=MagicMock(
-                    return_value=[TargetCarbonIntensity(target_carbon_intensity=50.0)]
+                    return_value=[TargetCarbonIntensity(
+                        target_carbon_intensity=50.0)]
                 )
             )
         )
@@ -729,7 +739,8 @@ async def test_get_standardized_fuel_data_unrecognized(fuel_code_repo, mock_db):
     assert result.uci == 5.0
 
     # Ensure get_fuel_category_by was called once with the correct parameter
-    fuel_code_repo.get_fuel_category_by.assert_awaited_once_with(fuel_category_id=2)
+    fuel_code_repo.get_fuel_category_by.assert_awaited_once_with(
+        fuel_category_id=2)
 
 
 @pytest.mark.anyio

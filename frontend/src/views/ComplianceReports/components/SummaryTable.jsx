@@ -194,7 +194,8 @@ const SummaryTable = ({
                       {row.format && colIndex !== 0
                         ? rowFormatters[row.format](
                             row[column.id],
-                            useParenthesis
+                            useParenthesis,
+                            0
                           )
                         : row[column.id]}
                     </span>

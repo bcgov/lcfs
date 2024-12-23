@@ -32,13 +32,20 @@ import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
-const ReportDetails = ({ currentStatus = 'Draft' }) => {
+const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
+  const editSupportingDocs = useMemo(() => {
+    return isAnalystRole && (
+      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
+      currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED
+    ) || currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT;
+  }, [isAnalystRole, currentStatus]);
 
   const isArrayEmpty = useCallback((data) => {
     if (Array.isArray(data)) {
@@ -64,11 +71,22 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         },
         useFetch: useComplianceReportDocuments,
         component: (data) => (
-          <SupportingDocumentSummary
-            data={data}
-            reportID={complianceReportId}
-          />
-        )
+          <>
+            <SupportingDocumentSummary
+              data={data}
+              reportID={complianceReportId}
+            />
+            <DocumentUploadDialog
+              parentID={complianceReportId}
+              parentType="compliance_report"
+              open={isFileDialogOpen}
+              close={() => {
+                setFileDialogOpen(false)
+              }}
+            />
+          </>
+        ),
+        condition: true
       },
       {
         name: t('report:activityLists.supplyOfFuel'),
@@ -81,7 +99,9 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
           ),
         useFetch: useGetFuelSupplies,
         component: (data) =>
-          data.fuelSupplies.length > 0 && <FuelSupplySummary data={data} />
+          data.fuelSupplies.length > 0 && (
+            <FuelSupplySummary status={currentStatus} data={data} />
+          )
       },
       {
         name: t('finalSupplyEquipment:fseTitle'),
@@ -95,7 +115,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         useFetch: useGetFinalSupplyEquipments,
         component: (data) =>
           data.finalSupplyEquipments.length > 0 && (
-            <FinalSupplyEquipmentSummary data={data} />
+            <FinalSupplyEquipmentSummary status={currentStatus} data={data} />
           )
       },
       {
@@ -110,7 +130,7 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
         useFetch: useGetAllocationAgreements,
         component: (data) =>
           data.allocationAgreements.length > 0 && (
-            <AllocationAgreementSummary data={data} />
+            <AllocationAgreementSummary status={currentStatus} data={data} />
           )
       },
       {
@@ -124,7 +144,9 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
           ),
         useFetch: useGetAllNotionalTransfers,
         component: (data) =>
-          data.length > 0 && <NotionalTransferSummary data={data} />
+          data.length > 0 && (
+            <NotionalTransferSummary status={currentStatus} data={data} />
+          )
       },
       {
         name: t('otherUses:summaryTitle'),
@@ -136,7 +158,10 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
             ).replace(':complianceReportId', complianceReportId)
           ),
         useFetch: useGetAllOtherUses,
-        component: (data) => data.length > 0 && <OtherUsesSummary data={data} />
+        component: (data) =>
+          data.length > 0 && (
+            <OtherUsesSummary status={currentStatus} data={data} />
+          )
       },
       {
         name: t('fuelExport:fuelExportTitle'),
@@ -149,7 +174,9 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
           ),
         useFetch: useGetFuelExports,
         component: (data) =>
-          !isArrayEmpty(data) && <FuelExportSummary data={data} />
+          !isArrayEmpty(data) && (
+            <FuelExportSummary status={currentStatus} data={data} />
+          )
       }
     ],
     [
@@ -162,9 +189,13 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
     ]
   )
 
-  const [expanded, setExpanded] = useState(() =>
-    activityList.map((_, index) => `panel${index}`)
-  )
+  const [expanded, setExpanded] = useState(activityList.map((activity, index) => {
+    if (activity.name === t('report:supportingDocs')) {
+      return isArrayEmpty(activity.useFetch(complianceReportId).data) ? '' : `panel${index}`
+    }
+    return `panel${index}`
+  }).filter(Boolean)) // Initialize with panels that should be open by default
+
   const [allExpanded, setAllExpanded] = useState(true)
 
   const handleChange = (panel) => (event, isExpanded) => {
@@ -208,11 +239,10 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
         return (
-          data &&
-          !isArrayEmpty(data) && (
+          (data && !isArrayEmpty(data) || activity.name === t('report:supportingDocs')) && (
             <Accordion
               key={index}
-              expanded={expanded.includes(`panel${index}`)}
+              expanded={activity.name === t('report:supportingDocs') ? expanded.includes(`panel${index}`) && !isArrayEmpty(data) : expanded.includes(`panel${index}`)}
               onChange={handleChange(`panel${index}`)}
             >
               <AccordionSummary
@@ -230,13 +260,14 @@ const ReportDetails = ({ currentStatus = 'Draft' }) => {
                   component="div"
                 >
                   {activity.name}&nbsp;&nbsp;
-                  {currentStatus === 'Draft' && (
+                  {editSupportingDocs && (
                     <>
                       <Role
                         roles={[
                           roles.supplier,
                           roles.compliance_reporting,
-                          roles.compliance_reporting
+                          roles.compliance_reporting,
+                          roles.analyst
                         ]}
                       >
                         <IconButton

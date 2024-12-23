@@ -9,8 +9,9 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import i18n from '@/i18n'
 import { ROUTES } from '@/constants/routes'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
-export const FuelExportSummary = ({ data }) => {
+export const FuelExportSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { complianceReportId, compliancePeriod } = useParams()
@@ -124,13 +125,15 @@ export const FuelExportSummary = ({ data }) => {
     return params.data.fuelExportId.toString()
   }
 
-  const handleRowClicked = (params) => {
-    navigate(
-      ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
-    )
+  const handleRowClicked = () => {
+    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
+      navigate(
+        ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
+      )
+    }
   }
 
   return (

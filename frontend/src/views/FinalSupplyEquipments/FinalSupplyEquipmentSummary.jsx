@@ -9,8 +9,9 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { numberFormatter } from '@/utils/formatters.js'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
-export const FinalSupplyEquipmentSummary = ({ data }) => {
+export const FinalSupplyEquipmentSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState('final-supply-equipments-grid')
@@ -187,13 +188,15 @@ export const FinalSupplyEquipmentSummary = ({ data }) => {
     setGridKey(`final-supply-equipments-grid-${uuid()}`)
   }
 
-  const handleRowClicked = (params) => {
-    navigate(
-      ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
-    )
+  const handleRowClicked = () => {
+    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
+      navigate(
+        ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
+      )
+    }
   }
 
   return (
