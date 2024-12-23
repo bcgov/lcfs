@@ -7,9 +7,14 @@ import { ROLES_BADGE_SIZE } from '@/constants/common'
  * @param {Object|number|string|null} params - The input parameter which can be an object with a `value` property, a number, or a string.
  * @param {number|string} [params.value] - The value to be formatted, if params is an object.
  * @param {boolean} [useParentheses=false] - Whether to use parentheses for negative numbers.
+ * @param maxDecimals the max number of decimals to return
  * @returns {string} - The formatted number as a string, or the original value if it cannot be parsed as a number.
  */
-export const numberFormatter = (params, useParentheses = false) => {
+export const numberFormatter = (
+  params,
+  useParentheses = false,
+  maxDecimals = 10
+) => {
   if (params == null || (typeof params === 'object' && params.value == null))
     return ''
 
@@ -21,7 +26,7 @@ export const numberFormatter = (params, useParentheses = false) => {
   const absValue = Math.abs(parsedValue)
   const formattedValue = absValue.toLocaleString(undefined, {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 10
+    maximumFractionDigits: maxDecimals
   })
 
   if (parsedValue < 0) {

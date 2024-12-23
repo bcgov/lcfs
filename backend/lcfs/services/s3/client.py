@@ -1,5 +1,9 @@
+from fastapi import HTTPException
 import os
 import uuid
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from fastapi import Depends
 from pydantic.v1 import ValidationError
 from sqlalchemy import select
@@ -26,13 +30,34 @@ class DocumentService:
         db: AsyncSession = Depends(get_async_db_session),
         clamav_service: ClamAVService = Depends(),
         s3_client=Depends(get_s3_client),
+        compliance_report_service: ComplianceReportServices = Depends(),
     ):
         self.db = db
         self.clamav_service = clamav_service
         self.s3_client = s3_client
+        self.compliance_report_service = compliance_report_service
 
     @repo_handler
-    async def upload_file(self, file, parent_id: str, parent_type="compliance_report"):
+    async def upload_file(
+        self, file, parent_id: str, parent_type="compliance_report", user=None
+    ):
+        compliance_report = (
+            await self.compliance_report_service.get_compliance_report_by_id(parent_id)
+        )
+        if not compliance_report:
+            raise HTTPException(status_code=404, detail="Compliance report not found")
+
+        # Check if the user is a supplier and the compliance report status is different from Draft
+        if (
+            RoleEnum.SUPPLIER in user.role_names
+            and compliance_report.current_status.status
+            != ComplianceReportStatusEnum.Draft.value
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Suppliers can only upload files when the compliance report status is Draft",
+            )
+
         file_id = uuid.uuid4()
         file_key = f"{settings.s3_docs_path}/{parent_type}/{parent_id}/{file_id}"
 
