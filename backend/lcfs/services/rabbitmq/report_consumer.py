@@ -70,9 +70,9 @@ class ReportConsumer(BaseConsumer):
         Expected message structure:
         {
             "tfrs_id": int,
+            "root_report_id": int,
             "organization_id": int,
             "compliance_period": str,
-            "nickname": str,
             "action": "Created"|"Submitted"|"Approved",
             "credits": int (optional),
             "user_id": int
@@ -98,7 +98,6 @@ class ReportConsumer(BaseConsumer):
                 compliance_units=message.get("credits"),
                 root_report_id=message["root_report_id"],
                 legacy_id=message["tfrs_id"],
-                nickname=message.get("nickname"),
                 org_id=org_id,
                 user_id=message["user_id"],
             )
@@ -130,7 +129,6 @@ class ReportConsumer(BaseConsumer):
         compliance_units: Optional[int],
         root_report_id: int,
         legacy_id: int,
-        nickname: Optional[str],
         org_id: int,
         user_id: int,
     ):
