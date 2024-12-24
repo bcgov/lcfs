@@ -80,15 +80,16 @@ class ComplianceReportServices:
 
     @service_handler
     async def create_supplemental_report(
-        self, report_id: int
+        self, report_id: int, user: UserProfile = None, legacy_id: int = None
     ) -> ComplianceReportBaseSchema:
         """
         Creates a new supplemental compliance report.
         The report_id can be any report in the series (original or supplemental).
         Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
-
-        user: UserProfile = self.request.user
+        # check if we're passing a specifc user otherwise use request user
+        if not user:
+            user = self.request.user
 
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(
@@ -103,11 +104,14 @@ class ComplianceReportServices:
                 "You do not have permission to create a supplemental report for this organization."
             )
 
+        # TODO this logic to be re-instated once TFRS is shutdown
+        # TFRS allows supplementals on previously un-accepted reports
+        # so we have to support this until LCFS and TFRS are no longer synced
         # Validate that the status of the current report is 'Assessed'
-        if current_report.current_status.status != ComplianceReportStatusEnum.Assessed:
-            raise ServiceException(
-                "A supplemental report can only be created if the current report's status is 'Assessed'."
-            )
+        # if current_report.current_status.status != ComplianceReportStatusEnum.Assessed:
+        #     raise ServiceException(
+        #         "A supplemental report can only be created if the current report's status is 'Assessed'."
+        #     )
 
         # Get the group_uuid from the current report
         group_uuid = current_report.compliance_report_group_uuid
@@ -127,6 +131,7 @@ class ComplianceReportServices:
         # Create the new supplemental compliance report
         new_report = ComplianceReport(
             compliance_period_id=current_report.compliance_period_id,
+            legacy_id=legacy_id,
             organization_id=current_report.organization_id,
             current_status_id=draft_status.compliance_report_status_id,
             reporting_frequency=current_report.reporting_frequency,
