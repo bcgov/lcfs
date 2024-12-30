@@ -122,8 +122,8 @@ class FuelExportSchema(BaseSchema):
     fuel_category: FuelCategoryResponseSchema
     end_use_id: Optional[int] = None
     end_use_type: Optional[EndUseTypeSchema] = None
-    provision_of_the_act_id: Optional[int] = None
-    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
+    provision_of_the_act_id: int
+    provision_of_the_act: ProvisionOfTheActSchema
     fuel_type_other: Optional[str] = None
     quantity: int = Field(..., gt=0)
     units: str

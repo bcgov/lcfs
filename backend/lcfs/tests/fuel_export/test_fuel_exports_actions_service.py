@@ -148,6 +148,10 @@ async def test_create_fuel_export_success(
     }
     created_export.fuel_category = {"category": "Diesel"}
     created_export.units = "Litres"
+    created_export.provision_of_the_act = {
+        "provision_of_the_act_id": 3,
+        "name": "Test Provision"
+    }
     mock_repo.create_fuel_export.return_value = created_export
 
     # Call the method under test
@@ -190,6 +194,10 @@ async def test_update_fuel_export_success_existing_report(
     }
     existing_export.fuel_category = {"category": "Diesel"}
     existing_export.units = "Litres"
+    existing_export.provision_of_the_act = {
+        "provision_of_the_act_id": 123,
+        "name": "Test Provision"
+    }
     mock_repo.get_fuel_export_version_by_user.return_value = existing_export
 
     # Mock the response from get_standardized_fuel_data
@@ -214,6 +222,11 @@ async def test_update_fuel_export_success_existing_report(
     }
     updated_export.fuel_category = {"category": "Diesel"}
     updated_export.units = "Litres"
+
+    updated_export.provision_of_the_act = {
+        "provision_of_the_act_id": 123,
+        "name": "Test Provision"
+    }
     mock_repo.update_fuel_export.return_value = updated_export
 
     # Call the method under test
@@ -256,6 +269,10 @@ async def test_update_fuel_export_create_new_version(
     }
     existing_export.fuel_category = {"category": "Diesel"}
     existing_export.units = "Litres"
+    existing_export.provision_of_the_act = {
+        "provision_of_the_act_id": 123,
+        "name": "Test Provision"
+    }
     mock_repo.get_fuel_export_version_by_user.return_value = existing_export
 
     # Mock the response from get_standardized_fuel_data
@@ -281,6 +298,10 @@ async def test_update_fuel_export_create_new_version(
     }
     new_export.fuel_category = {"category": "Diesel"}
     new_export.units = "Litres"
+    new_export.provision_of_the_act = {
+        "provision_of_the_act_id": 123,
+        "name": "Test Provision"
+    }
     mock_repo.create_fuel_export.return_value = new_export
 
     # Call the method under test
@@ -458,6 +479,7 @@ async def test_compliance_units_calculation(
         group_uuid=str(uuid4()),
         version=0,
         provisionOfTheActId=123,
+        provisionOfTheAct={"provision_of_the_act_id": 123, "name": "Test Provision"},
         exportDate=datetime.now().date(),
     )
 
@@ -487,6 +509,11 @@ async def test_compliance_units_calculation(
         }
         fuel_export.fuel_category = {"category": "Diesel"}
         fuel_export.units = "Litres"
+
+        fuel_export.provision_of_the_act = {
+            "provision_of_the_act_id": fuel_export.provision_of_the_act_id,
+            "name": "Test Provision"
+        }
 
         # The service should have already calculated compliance_units
         return fuel_export
