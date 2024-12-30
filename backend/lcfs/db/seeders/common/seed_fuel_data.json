@@ -377,6 +377,11 @@
       "end_use_type_id": 23,
       "type": "Other (i.e. road transportation)",
       "intended_use": true
+    },
+    {
+      "end_use_type_id": 24,
+      "type": "Marine",
+      "intended_use": true
     }
   ],
   "unit_of_measures": [
@@ -686,6 +691,13 @@
       "fuel_type_id": 7,
       "end_use_type_id": 23,
       "ratio": 0.9
+    },
+    {
+      "eer_id": 31,
+      "fuel_category_id": 2,
+      "fuel_type_id": 3,
+      "end_use_type_id": 24,
+      "ratio": 2.5
     }
   ],
   "energy_densities": [
