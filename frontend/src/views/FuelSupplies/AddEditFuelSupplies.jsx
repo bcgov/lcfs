@@ -108,7 +108,7 @@ export const AddEditFuelSupplies = () => {
         }))
         setRowData([...updatedRowData, { id: uuid() }])
       } else {
-        setRowData([{ id: uuid() }])
+        setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
       setTimeout(() => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
@@ -145,7 +145,7 @@ export const AddEditFuelSupplies = () => {
       }))
       setRowData(updatedRowData)
     } else {
-      setRowData([{ id: uuid() }])
+      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
   }, [data, fuelSuppliesLoading, complianceReportId, compliancePeriod])
 
@@ -162,9 +162,8 @@ export const AddEditFuelSupplies = () => {
           )
 
           // Set to null if multiple options, otherwise use first item
-          const categoryValue = fuelCategoryOptions.length === 1
-            ? fuelCategoryOptions[0]
-            : null
+          const categoryValue =
+            fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
 
           params.node.setDataValue('fuelCategory', categoryValue)
         }
