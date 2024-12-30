@@ -5,7 +5,6 @@ import structlog
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from lcfs.db.seeders.common_seeder import seed_common
 from lcfs.db.seeders.dev_seeder import seed_dev
 from lcfs.db.seeders.prod_seeder import seed_prod
 from lcfs.db.seeders.test_seeder import seed_test
