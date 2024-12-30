@@ -233,6 +233,11 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
             export_date="2024-01-01",
             fuel_category_id=1,
             fuel_category=FuelCategoryResponseSchema(category="Diesel"),
+            provisionOfTheActId=1,
+            provisionOfTheAct={
+                "provision_of_the_act_id": 1,
+                "name": "Test Provision"
+            }
         )
 
         # Create update payload with all required fields
@@ -301,6 +306,11 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
             export_date="2024-01-01",
             fuel_category_id=1,
             fuel_category=FuelCategoryResponseSchema(category="Diesel"),
+            provisionOfTheActId=1,
+            provisionOfTheAct={
+                "provision_of_the_act_id": 1,
+                "name": "Section 6"
+            }
         )
 
         mock_validate_organization_access.return_value = None
