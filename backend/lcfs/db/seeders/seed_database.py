@@ -22,7 +22,6 @@ async def seed_database(environment):
         async with session.begin():
             try:
                 logger.info("Database seeding started.")
-                await seed_common(session)
 
                 if environment == "dev":
                     await seed_dev(session)
