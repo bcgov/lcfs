@@ -121,7 +121,7 @@ def upgrade() -> None:
         ON CONFLICT (initiative_agreement_status_id) DO NOTHING;
     """)
 
-    # 9. Static Fuel Data - Reordered for dependencies
+    # 9. Static Fuel Data
     # Unit of Measures first
     op.execute("""
         INSERT INTO unit_of_measure (uom_id, name, description)
@@ -165,36 +165,6 @@ def upgrade() -> None:
                
     """)
 
-    # Energy Effectiveness Ratios
-    op.execute("""
-        INSERT INTO energy_effectiveness_ratio (eer_id, end_use_type_id, ratio, effective_status)
-        VALUES
-            (1, 1, 3.4, TRUE),
-            (2, 2, 1.0, TRUE),
-            (3, 3, 2.5, TRUE),
-            (4, 4, 4.4, TRUE),
-            (5, 5, 4.4, TRUE),
-            (6, 6, 2.7, TRUE),
-            (7, 7, 2.9, TRUE),
-            (8, 8, 2.7, TRUE),
-            (9, 9, 2.7, TRUE),
-            (10, 10, 2.7, TRUE),
-            (11, 11, 2.9, TRUE),
-            (12, 12, 1.0, TRUE),
-            (13, 13, 1.0, TRUE),
-            (14, 14, 1.0, TRUE),
-            (15, 15, 1.0, TRUE),
-            (16, 16, 1.0, TRUE),
-            (17, 17, 1.0, TRUE),
-            (18, 18, 1.0, TRUE),
-            (19, 19, 1.0, TRUE),
-            (20, 20, 1.0, TRUE),
-            (21, 21, 1.0, TRUE),
-            (22, 22, 1.0, TRUE),
-            (23, 23, 1.0, TRUE)
-        ON CONFLICT (eer_id) DO NOTHING;
-    """)
-
     # Provision Acts
     op.execute("""
         INSERT INTO provision_of_the_act (provision_of_the_act_id, name, description, effective_status)
@@ -203,6 +173,16 @@ def upgrade() -> None:
             (2, 'Fuel code - section 19 (b) (i)', 'Fuel code - section 19 (b) (i)', TRUE),
             (3, 'Default carbon intensity - section 19 (b) (ii)', 'Default carbon intensity - section 19 (b) (ii)', TRUE)
         ON CONFLICT (provision_of_the_act_id) DO NOTHING;
+    """)
+
+    # Fuel Categories
+    op.execute("""
+        INSERT INTO fuel_category (fuel_category_id, category, description, default_carbon_intensity, effective_status)
+        VALUES
+            (1, 'Gasoline', 'Gasoline', 93.67, TRUE),
+            (2, 'Diesel', 'Diesel', 100.21, TRUE),
+            (3, 'Jet fuel', 'Jet fuel', 88.83, TRUE)
+        ON CONFLICT (fuel_category_id) DO NOTHING;
     """)
 
     # Fuel Types
@@ -227,6 +207,45 @@ def upgrade() -> None:
             (19, 'Other', FALSE, FALSE, 2, 3, 0, 'Litres', TRUE),
             (20, 'Other diesel', FALSE, FALSE, 1, NULL, 100.21, 'Litres', FALSE)
         ON CONFLICT (fuel_type_id) DO NOTHING;
+    """)
+
+    # Energy Effectiveness Ratios
+    op.execute("""
+        INSERT INTO energy_effectiveness_ratio (
+            eer_id, fuel_category_id, fuel_type_id, end_use_type_id, ratio, effective_status
+        )
+        VALUES
+            (1, 1, 2, NULL, 0.9, TRUE),
+            (2, 1, 3, 1, 3.5, TRUE),
+            (3, 1, 3, 2, 1.0, TRUE),
+            (4, 1, 6, 3, 2.4, TRUE),
+            (5, 1, 6, 2, 0.9, TRUE),
+            (6, 1, 13, NULL, 0.9, TRUE),
+            (7, 2, 2, NULL, 0.9, TRUE),
+            (8, 2, 3, 4, 3.8, TRUE),
+            (9, 2, 3, 5, 3.2, TRUE),
+            (10, 2, 3, 6, 2.5, TRUE),
+            (11, 2, 3, 7, 2.9, TRUE),
+            (12, 2, 3, 8, 2.5, TRUE),
+            (13, 2, 3, 9, 3.9, TRUE),
+            (14, 2, 3, 10, 2.8, TRUE),
+            (15, 2, 3, 11, 2.4, TRUE),
+            (16, 2, 3, 2, 1.0, TRUE),
+            (17, 2, 6, 3, 1.8, TRUE),
+            (18, 2, 6, 2, 0.9, TRUE),
+            (19, 2, 13, NULL, 0.9, TRUE),
+            (20, 3, 3, NULL, 2.5, TRUE),
+            (21, 3, 11, NULL, 1.0, TRUE),
+            (22, 2, 7, 15, 1.0, TRUE),
+            (23, 2, 7, 16, 1.0, TRUE),
+            (24, 2, 7, 17, 1.0, TRUE),
+            (25, 2, 7, 18, 1.0, TRUE),
+            (26, 2, 7, 19, 1.0, TRUE),
+            (27, 2, 7, 20, 1.0, TRUE),
+            (28, 2, 7, 21, 1.0, TRUE),
+            (29, 2, 7, 22, 0.9, TRUE),
+            (30, 2, 7, 23, 0.9, TRUE)
+        ON CONFLICT (eer_id) DO NOTHING;
     """)
 
     # Now Additional Carbon Intensities
@@ -267,16 +286,6 @@ def upgrade() -> None:
             (15, 7, 4, 53.54),
             (16, 20, 1, 36.51)
         ON CONFLICT (energy_density_id) DO NOTHING;
-    """)
-
-    # Fuel Categories
-    op.execute("""
-        INSERT INTO fuel_category (fuel_category_id, category, description, default_carbon_intensity, effective_status)
-        VALUES
-            (1, 'Gasoline', 'Gasoline', 93.67, TRUE),
-            (2, 'Diesel', 'Diesel', 100.21, TRUE),
-            (3, 'Jet fuel', 'Jet fuel', 88.83, TRUE)
-        ON CONFLICT (fuel_category_id) DO NOTHING;
     """)
 
     # Target Carbon Intensities
