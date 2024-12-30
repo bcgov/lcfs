@@ -70,9 +70,9 @@ class ReportConsumer(BaseConsumer):
         Expected message structure:
         {
             "tfrs_id": int,
+            "root_report_id": int,
             "organization_id": int,
             "compliance_period": str,
-            "nickname": str,
             "action": "Created"|"Submitted"|"Approved",
             "credits": int (optional),
             "user_id": int
@@ -96,8 +96,8 @@ class ReportConsumer(BaseConsumer):
                 action=action,
                 compliance_period=message.get("compliance_period"),
                 compliance_units=message.get("credits"),
+                root_report_id=message["root_report_id"],
                 legacy_id=message["tfrs_id"],
-                nickname=message.get("nickname"),
                 org_id=org_id,
                 user_id=message["user_id"],
             )
@@ -127,8 +127,8 @@ class ReportConsumer(BaseConsumer):
         action: str,
         compliance_period: str,
         compliance_units: Optional[int],
+        root_report_id: int,
         legacy_id: int,
-        nickname: Optional[str],
         org_id: int,
         user_id: int,
     ):
@@ -157,15 +157,18 @@ class ReportConsumer(BaseConsumer):
                 user = await UserRepository(db=session).get_user_by_id(user_id)
 
                 if not user:
-                    logger.error(f"Cannot parse Report {legacy_id} from TFRS, no user with ID {user_id}")
+                    logger.error(
+                        f"Cannot parse Report {legacy_id} from TFRS, no user with ID {user_id}"
+                    )
 
                 if action == "Created":
                     await self._handle_created(
                         org_id,
+                        root_report_id,
                         legacy_id,
                         compliance_period,
-                        nickname,
                         user,
+                        compliance_report_repo,
                         compliance_report_service,
                     )
                 elif action == "Submitted":
@@ -190,25 +193,41 @@ class ReportConsumer(BaseConsumer):
     async def _handle_created(
         self,
         org_id: int,
+        root_report_id: int,
         legacy_id: int,
         compliance_period: str,
-        nickname: str,
         user: UserProfile,
+        compliance_report_repo: ComplianceReportRepository,
         compliance_report_service: ComplianceReportServices,
     ):
         """
         Handle the 'Created' action by creating a new compliance report draft.
         """
-        lcfs_report = ComplianceReportCreateSchema(
-            legacy_id=legacy_id,
-            compliance_period=compliance_period,
-            organization_id=org_id,
-            nickname=nickname,
-            status=ComplianceReportStatusEnum.Draft.value,
-        )
-        await compliance_report_service.create_compliance_report(
-            org_id, lcfs_report, user
-        )
+        if root_report_id == legacy_id:  # this is a new initial report
+            lcfs_report = ComplianceReportCreateSchema(
+                legacy_id=legacy_id,
+                compliance_period=compliance_period,
+                organization_id=org_id,
+                nickname="Original Report",
+                status=ComplianceReportStatusEnum.Draft.value,
+            )
+            await compliance_report_service.create_compliance_report(
+                org_id, lcfs_report, user
+            )
+        else:
+            # Process a new supplemental report
+            root_report = (
+                await compliance_report_repo.get_compliance_report_by_legacy_id(
+                    root_report_id
+                )
+            )
+            if not root_report:
+                raise ServiceException(
+                    f"No original compliance report found for legacy ID {root_report_id}"
+                )
+            await compliance_report_service.create_supplemental_report(
+                root_report_id, user, legacy_id
+            )
 
     async def _handle_approved(
         self,

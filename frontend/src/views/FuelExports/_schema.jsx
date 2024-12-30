@@ -111,9 +111,9 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     }
   },
   {
-    field: 'fuelType',
+    field: 'fuelTypeId',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelType'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
@@ -139,12 +139,13 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
         params.data.fuelTypeId = fuelType?.fuelTypeId
         params.data.fuelTypeOther = undefined
         params.data.fuelCategory = undefined
+        params.data.fuelCategoryId = undefined
         params.data.endUseId = undefined
         params.data.endUseType = undefined
         params.data.eer = undefined
         params.data.provisionOfTheAct = undefined
+        params.data.provisionOfTheActId = undefined
         params.data.fuelCode = undefined
-        params.data.quantity = 0
         params.data.units = fuelType?.unit
       }
       return true
@@ -180,9 +181,9 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     minWidth: 250
   },
   {
-    field: 'fuelCategory',
+    field: 'fuelCategoryId',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
@@ -211,7 +212,6 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
         params.data.eer = undefined
         params.data.provisionOfTheAct = undefined
         params.data.fuelCode = undefined
-        params.data.quantity = 0
       }
       return true
     },
@@ -236,7 +236,7 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
   {
     field: 'endUseType',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.endUse'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
     options: (params) =>
       [
         ...new Set(
