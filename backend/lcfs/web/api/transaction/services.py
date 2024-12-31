@@ -121,9 +121,6 @@ class TransactionsService:
             offset, limit, conditions, pagination.sort_orders, None
         )
 
-        if not transactions:
-            raise DataNotFoundException("Transactions not found")
-
         return {
             "transactions": [
                 TransactionViewSchema.model_validate(transaction)

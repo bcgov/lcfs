@@ -72,9 +72,15 @@ async def test_get_audit_logs_paginated_no_data(audit_log_service, mock_repo):
     pagination = PaginationRequestSchema(page=1, size=10, filters=[], sort_orders=[])
     mock_repo.get_audit_logs_paginated.return_value = ([], 0)
 
-    # Act & Assert
-    with pytest.raises(DataNotFoundException):
-        await audit_log_service.get_audit_logs_paginated(pagination)
+    # Act
+    result = await audit_log_service.get_audit_logs_paginated(pagination)
+
+    # Assert
+    assert result.audit_logs == [], "Should return an empty list of audit logs"
+    assert result.pagination.total == 0, "Total should be zero if no records"
+    assert result.pagination.page == pagination.page
+    assert result.pagination.size == pagination.size
+    assert result.pagination.total_pages == 0
 
 
 @pytest.mark.anyio
