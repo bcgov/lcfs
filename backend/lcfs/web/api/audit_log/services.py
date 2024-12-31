@@ -76,9 +76,6 @@ class AuditLogService:
             offset, limit, conditions, pagination.sort_orders
         )
 
-        if not audit_logs:
-            raise DataNotFoundException("No audit logs found")
-
         processed_audit_logs = []
         for audit_log in audit_logs:
             # Extract the changed_fields as a comma-separated string

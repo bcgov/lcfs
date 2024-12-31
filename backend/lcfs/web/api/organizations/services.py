@@ -258,9 +258,6 @@ class OrganizationsService:
             offset, limit, conditions, pagination
         )
 
-        if not organizations:
-            raise DataNotFoundException("Organizations not found")
-
         return OrganizationListSchema(
             organizations=organizations,
             pagination=PaginationResponseSchema(
