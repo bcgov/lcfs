@@ -122,6 +122,15 @@ def upgrade() -> None:
     """)
 
     # 9. Static Fuel Data
+    # Expected Use Types
+    op.execute("""
+        INSERT INTO expected_use_type (expected_use_type_id, name, description, effective_status)
+        VALUES
+            (1, 'Heating oil', 'Fuel used for heating purposes', TRUE),
+            (2, 'Other', 'Other type of fuel description', TRUE)
+        ON CONFLICT (expected_use_type_id) DO NOTHING;
+    """)
+
     # Unit of Measures first
     op.execute("""
         INSERT INTO unit_of_measure (uom_id, name, description)
@@ -557,6 +566,7 @@ def downgrade() -> None:
 
         # Group 4 - Base reference tables (no dependencies)
         [
+            'expected_use_type',
             'unit_of_measure',
             'provision_of_the_act',
             'initiative_agreement_status',
