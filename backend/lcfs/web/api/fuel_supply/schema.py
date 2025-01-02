@@ -117,7 +117,7 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     compliance_period: Optional[str] = None
     fuel_type_id: int
     fuel_category_id: int
-    end_use_id: Optional[int] = None
+    end_use_id: int
     provision_of_the_act_id: int
     quantity: int
     units: str
