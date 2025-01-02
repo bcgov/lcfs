@@ -103,7 +103,7 @@ export const AddEditFuelSupplies = () => {
             item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
           provisionOfTheAct: item.provisionOfTheAct?.name,
           fuelCode: item.fuelCode?.fuelCode,
-          endUse: item.endUse?.type || 'Any',
+          endUse: item.endUse?.type,
           id: uuid()
         }))
         setRowData([...updatedRowData, { id: uuid() }])
@@ -140,7 +140,7 @@ export const AddEditFuelSupplies = () => {
           item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
         provisionOfTheAct: item.provisionOfTheAct?.name,
         fuelCode: item.fuelCode?.fuelCode,
-        endUse: item.endUse?.type || 'Any',
+        endUse: item.endUse?.type,
         id: uuid()
       }))
       setRowData(updatedRowData)
@@ -161,12 +161,39 @@ export const AddEditFuelSupplies = () => {
             (item) => item.fuelCategory
           )
 
+          const endUseTypes = selectedFuelType.eerRatios.map(
+            (item) => item.endUseType
+          )
+
           // Set to null if multiple options, otherwise use first item
-          const categoryValue = fuelCategoryOptions.length === 1
-            ? fuelCategoryOptions[0]
-            : null
+          const categoryValue =
+            fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
+          const endUseValue =
+            endUseTypes.length === 1 ? endUseTypes[0].type : null
 
           params.node.setDataValue('fuelCategory', categoryValue)
+          params.node.setDataValue('endUseType', endUseValue)
+        }
+      }
+
+      if (params.column.colId === 'fuelCategory') {
+        const selectedFuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.node.data.fuelType === obj.fuelType
+        )
+
+        if (selectedFuelType) {
+          const endUseTypes = selectedFuelType.eerRatios
+            .filter(
+              (item) =>
+                item.fuelCategory.fuelCategory === params.data.fuelCategory
+            )
+            .map((item) => item.endUseType)
+
+          // Set to null if multiple options, otherwise use first item
+          const endUseValue =
+            endUseTypes.length === 1 ? endUseTypes[0].type : null
+
+          params.node.setDataValue('endUseType', endUseValue)
         }
       }
     },

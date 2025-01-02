@@ -206,7 +206,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
             ?.map((item) => item.endUseType?.type)
             .sort()
         )
-      ].filter((item) => item != null) || ['Any'],
+      ].filter((item) => item != null),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -219,14 +219,10 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
-    valueGetter: (params) => {
-      return params.colDef?.cellEditorParams(params).options.length < 1
-        ? 'Any'
-        : params.data?.endUseType?.type
-    },
+    valueGetter: (params) => params.data.endUseType?.type,
     editable: (params) => {
       const cellParams = params.colDef?.cellEditorParams(params)
-      return cellParams.options.length > 0
+      return cellParams.options.length > 1
     },
     valueSetter: (params) => {
       if (params.newValue) {

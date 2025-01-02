@@ -67,13 +67,15 @@ class FuelSupplyServices:
         )
         eer = EnergyEffectivenessRatioSchema(
             eer_id=row_data["eer_id"],
-            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"], 2),
+            energy_effectiveness_ratio=round(
+                row_data["energy_effectiveness_ratio"], 2),
             fuel_category=fuel_category,
             end_use_type=end_use_type,
         )
         tci = TargetCarbonIntensitySchema(
             target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
-            target_carbon_intensity=round(row_data["target_carbon_intensity"], 2),
+            target_carbon_intensity=round(
+                row_data["target_carbon_intensity"], 2),
             reduction_target_percentage=round(
                 row_data["reduction_target_percentage"], 2
             ),
@@ -94,7 +96,8 @@ class FuelSupplyServices:
         )
         # Find the existing fuel type if it exists
         existing_fuel_type = next(
-            (ft for ft in fuel_types if ft.fuel_type == row_data["fuel_type"]), None
+            (ft for ft in fuel_types if ft.fuel_type ==
+             row_data["fuel_type"]), None
         )
 
         if existing_fuel_type:
@@ -135,8 +138,7 @@ class FuelSupplyServices:
                     (
                         e
                         for e in existing_fuel_type.eer_ratios
-                        if e.end_use_type == row_data["end_use_type"]
-                        and e.fuel_category == fuel_category
+                        if e.eer_id == eer.eer_id
                     ),
                     None,
                 )
@@ -258,7 +260,8 @@ class FuelSupplyServices:
                 size=pagination.size,
                 total=total_count,
                 total_pages=(
-                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
+                    math.ceil(total_count /
+                              pagination.size) if total_count > 0 else 0
                 ),
             ),
             fuel_supplies=[
