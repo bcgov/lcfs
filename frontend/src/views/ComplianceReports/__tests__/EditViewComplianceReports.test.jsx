@@ -506,7 +506,7 @@ describe('EditViewComplianceReport', () => {
     )
     await waitFor(() => {
       fireEvent.scroll(window, { target: { pageYOffset: 0 } })
-      expect(screen.getByLabelText('scroll to top')).toBeInTheDocument()
+      expect(screen.getByLabelText('scroll to bottom')).toBeInTheDocument()
     })
   })
 })

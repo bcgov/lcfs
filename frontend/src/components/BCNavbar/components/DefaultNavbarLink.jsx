@@ -66,16 +66,17 @@ function DefaultNavbarLink({
       onMouseLeave={() => setHover(false)}
       onClick={onClick}
     >
-      {icon && (
+      {icon && typeof icon === 'string' ? (
         <Icon
           sx={{
-            color: ({ palette: { secondary, primary } }) =>
-              light ? primary.main : secondary.main,
+            color: '#fff',
             verticalAlign: 'middle'
           }}
         >
           {icon}
         </Icon>
+      ) : (
+        <>{icon}</>
       )}
       <BCTypography
         variant="body2"

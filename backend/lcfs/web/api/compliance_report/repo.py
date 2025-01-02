@@ -9,7 +9,7 @@ from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
-from sqlalchemy import func, select, and_, asc, desc
+from sqlalchemy import func, select, and_, asc, desc, update
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import Depends
@@ -569,6 +569,16 @@ class ComplianceReportRepository:
         await self.db.flush()
         await self.db.refresh(summary)
         return summary
+
+    @repo_handler
+    async def reset_summary_lock(self, compliance_report_id: int):
+        query = (
+            update(ComplianceReportSummary)
+            .where(ComplianceReportSummary.compliance_report_id == compliance_report_id)
+            .values(is_locked=False)
+        )
+        await self.db.execute(query)
+        return True
 
     @repo_handler
     async def save_compliance_report_summary(

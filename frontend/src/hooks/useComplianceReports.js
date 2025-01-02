@@ -110,6 +110,8 @@ export const useUpdateComplianceReport = (reportID, options) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries(['compliance-report', reportID])
+      queryClient.invalidateQueries(['compliance-report-summary', reportID])
+      queryClient.invalidateQueries(['compliance-reports'])
     }
   })
 }
