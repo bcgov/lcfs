@@ -1,13 +1,15 @@
-import structlog
 import math
-from fastapi import Depends, Request
-from fastapi_cache.decorator import cache
 
+import structlog
+from fastapi import Depends, Request
+
+from lcfs.utils.constants import default_ci
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
-    lcfs_cache_key_builder,
 )
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_export.schema import (
     EndUseTypeSchema,
     EnergyDensitySchema,
@@ -22,13 +24,8 @@ from lcfs.web.api.fuel_export.schema import (
     TargetCarbonIntensitySchema,
     UnitOfMeasureSchema,
 )
-from lcfs.web.api.fuel_export.repo import FuelExportRepository
-from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_export.validation import FuelExportValidation
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.utils.calculations import calculate_compliance_units
-from lcfs.utils.constants import default_ci
 
 logger = structlog.get_logger(__name__)
 
