@@ -377,6 +377,10 @@
       "end_use_type_id": 23,
       "type": "Other (i.e. road transportation)",
       "intended_use": true
+    },
+    {
+      "end_use_type_id": 24,
+      "type": "Any"
     }
   ],
   "unit_of_measures": [
@@ -487,6 +491,7 @@
       "eer_id": 1,
       "fuel_category_id": 1,
       "fuel_type_id": 2,
+      "end_use_type_id": 24,
       "ratio": 0.9
     },
     {
@@ -521,12 +526,14 @@
       "eer_id": 6,
       "fuel_category_id": 1,
       "fuel_type_id": 13,
+      "end_use_type_id": 24,
       "ratio": 0.9
     },
     {
       "eer_id": 7,
       "fuel_category_id": 2,
       "fuel_type_id": 2,
+      "end_use_type_id": 24,
       "ratio": 0.9
     },
     {
@@ -610,18 +617,21 @@
       "eer_id": 19,
       "fuel_category_id": 2,
       "fuel_type_id": 13,
+      "end_use_type_id": 24,
       "ratio": 0.9
     },
     {
       "eer_id": 20,
       "fuel_category_id": 3,
       "fuel_type_id": 3,
+      "end_use_type_id": 24,
       "ratio": 2.5
     },
     {
       "eer_id": 21,
       "fuel_category_id": 3,
       "fuel_type_id": 11,
+      "end_use_type_id": 24,
       "ratio": 1.0
     },
     {
@@ -686,6 +696,97 @@
       "fuel_type_id": 7,
       "end_use_type_id": 23,
       "ratio": 0.9
+    },
+    {
+      "eer_id": 31,
+      "fuel_category_id": 2,
+      "fuel_type_id": 1,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 32,
+      "fuel_category_id": 2,
+      "fuel_type_id": 5,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 33,
+      "fuel_category_id": 3,
+      "fuel_type_id": 6,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 34,
+      "fuel_category_id": 1,
+      "fuel_type_id": 14,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 35,
+      "fuel_category_id": 1,
+      "fuel_type_id": 15,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 36,
+      "fuel_category_id": 2,
+      "fuel_type_id": 16,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 37,
+      "fuel_category_id": 1,
+      "fuel_type_id": 17,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 38,
+      "fuel_category_id": 3,
+      "fuel_type_id": 18,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 39,
+      "fuel_category_id": 1,
+      "fuel_type_id": 19,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 40,
+      "fuel_category_id": 2,
+      "fuel_type_id": 19,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 41,
+      "fuel_category_id": 3,
+      "fuel_type_id": 19,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 42,
+      "fuel_category_id": 2,
+      "fuel_type_id": 20,
+      "end_use_type_id": 24,
+      "ratio": 1.0
+    },
+    {
+      "eer_id": 43,
+      "fuel_category_id": 1,
+      "fuel_type_id": 4,
+      "end_use_type_id": 24,
+      "ratio": 1.0
     }
   ],
   "energy_densities": [
