@@ -48,6 +48,8 @@ export const usersColumnDefs = (t) => [
       suppressFilterButton: true
     },
     floatingFilterComponent: BCSelectFloatingFilter,
+    suppressFloatingFilterButton: true,
+    suppressHeaderFilterButton: true,
     floatingFilterComponentParams: {
       optionsQuery: useRoleList,
       params: 'government_roles_only=true',
@@ -98,7 +100,8 @@ export const usersColumnDefs = (t) => [
       labelKey: 'name'
     },
     minWidth: 120,
-    suppressHeaderMenuButton: false
+    suppressFloatingFilterButton: true,
+    suppressHeaderFilterButton: true
   },
   {
     colId: 'organizationId',
@@ -171,13 +174,6 @@ export const userLoginHistoryColDefs = (t) => [
     }
   },
   {
-    field: 'createDate',
-    headerName: t('admin:userLoginHistoryColLabels.createDate'),
-    cellDataType: 'dateString',
-    valueFormatter: timezoneFormatter,
-    floatingFilterComponent: BCDateFloatingFilter
-  },
-  {
     field: 'keycloakEmail',
     headerName: t('admin:userLoginHistoryColLabels.keycloakEmail'),
     cellDataType: 'string'
@@ -201,6 +197,12 @@ export const userLoginHistoryColDefs = (t) => [
     field: 'loginErrorMessage',
     headerName: t('admin:userLoginHistoryColLabels.loginErrorMessage'),
     cellDataType: 'string'
+  },
+  {
+    field: 'createDate',
+    headerName: t('admin:userLoginHistoryColLabels.createDate'),
+    cellDataType: 'dateString',
+    valueFormatter: timezoneFormatter
   }
 ]
 

@@ -129,8 +129,8 @@ const globals = {
     transition: 'border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out'
   },
   '.select-container:focus-within': {
-    borderColor: '2px solid #495057',
-    border: '0.01rem solid #495057',
+    border: '2px solid #495057',
+    borderWidth: '0px 0.01rem'
   },
   '.select-container #select-filter': {
     width: '100%',
