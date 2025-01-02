@@ -1,6 +1,6 @@
 import { numberFormatter } from '@/utils/formatters'
 import { LinkRenderer, OrgStatusRenderer } from '@/utils/grid/cellRenderers'
-import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
 import { useOrganizationStatuses } from '@/hooks/useOrganizations'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 import { t } from 'i18next'
@@ -48,15 +48,14 @@ export const organizationsColDefs = (t) => [
     valueGetter: (params) => params.data.orgStatus.status,
     cellRenderer: OrgStatusRenderer,
     cellClass: 'vertical-middle',
-    floatingFilterComponent: BCColumnSetFilter,
+    floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
-      apiOptionField: 'status',
-      apiQuery: useOrganizationStatuses,
-      key: 'org-status',
-      disableCloseOnSelect: false,
-      multiple: false
+      valueKey: 'status',
+      labelKey: 'status',
+      optionsQuery: useOrganizationStatuses
     },
-    suppressHeaderMenuButton: true
+    suppressFloatingFilterButton: true,
+    suppressHeaderFilterButton: true
   }
 ]
 
