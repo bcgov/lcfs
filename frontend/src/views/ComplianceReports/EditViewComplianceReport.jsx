@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
@@ -7,14 +7,13 @@ import BCModal from '@/components/BCModal'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import { roles } from '@/constants/roles'
+import { roles, govRoles } from '@/constants/roles'
 import { Fab, Stack, Tooltip } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import colors from '@/themes/base/colors.js'
-import { govRoles } from '@/constants/roles'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
@@ -27,6 +26,7 @@ import { ActivityListCard } from './components/ActivityListCard'
 import { AssessmentCard } from './components/AssessmentCard'
 import InternalComments from '@/components/InternalComments'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { ROUTES } from '@/constants/routes'
 
 const iconStyle = {
   width: '2rem',
@@ -42,6 +42,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
   const alertRef = useRef()
+  const navigate = useNavigate()
 
   const { compliancePeriod, complianceReportId } = useParams()
   const [isScrollingUp, setIsScrollingUp] = useState(false)
@@ -64,8 +65,16 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     setInternalComment(newComment)
   }, [])
   const handleScroll = useCallback(() => {
-    const scrollTop = window.pageYOffset || document.documentElement.scrollTop
-    setIsScrollingUp(scrollTop < lastScrollTop || scrollTop === 0)
+    const scrollTop = window.scrollY || document.documentElement.scrollTop
+    const scrollPosition = window.scrollY + window.innerHeight
+    const documentHeight = document.documentElement.scrollHeight
+    if (scrollTop === 0) {
+      setIsScrollingUp(false)
+    } else if (scrollPosition >= documentHeight - 10) {
+      setIsScrollingUp(true)
+    } else {
+      setIsScrollingUp(scrollTop < lastScrollTop || scrollTop === 0)
+    }
     setLastScrollTop(scrollTop)
   }, [lastScrollTop])
 
@@ -81,8 +90,9 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     hasRoles
   } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
-  const isAnalystRole = currentUser?.roles?.some(role => role.name === roles.analyst) || false;
-  
+  const isAnalystRole =
+    currentUser?.roles?.some((role) => role.name === roles.analyst) || false
+
   const currentStatus = reportData?.report.currentStatus?.status
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report.organizationId
@@ -92,9 +102,14 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     {
       onSuccess: (response) => {
         setModalData(null)
-        alertRef.current?.triggerAlert({
-          message: t('report:savedSuccessText'),
-          severity: 'success'
+        const updatedStatus = JSON.parse(response.config.data)?.status
+        navigate(ROUTES.REPORTS, {
+          state: {
+            message: t('report:savedSuccessText', {
+              status: updatedStatus.toLowerCase().replace('return', 'returned')
+            }),
+            severity: 'success'
+          }
         })
       },
       onError: (error) => {
@@ -117,7 +132,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         t,
         setModalData,
         updateComplianceReport,
-
+        compliancePeriod,
         isGovernmentUser,
         isSigningAuthorityDeclared
       }),
@@ -127,7 +142,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       t,
       setModalData,
       updateComplianceReport,
-
+      compliancePeriod,
       isGovernmentUser,
       isSigningAuthorityDeclared
     ]
@@ -211,7 +226,10 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
           </Stack>
           {!location.state?.newReport && (
             <>
-              <ReportDetails currentStatus={currentStatus} isAnalystRole={isAnalystRole}/>
+              <ReportDetails
+                currentStatus={currentStatus}
+                isAnalystRole={isAnalystRole}
+              />
               <ComplianceReportSummary
                 reportID={complianceReportId}
                 currentStatus={currentStatus}

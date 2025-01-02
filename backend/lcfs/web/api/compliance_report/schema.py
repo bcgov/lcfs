@@ -1,12 +1,13 @@
 from enum import Enum
-from typing import ClassVar, Optional, List, Union
+from typing import ClassVar, Optional, List
 from datetime import datetime, date
 from enum import Enum
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
-from pydantic import Field, Extra
+from pydantic import Field
 
 """
 Base - all shared attributes of a resource
@@ -15,6 +16,18 @@ Update - attributes that can be updated - used at PUT requests
 InDB - attributes present on any resource coming out of the database
 Public - attributes present on public facing resources being returned from GET, POST, and PUT requests
 """
+
+
+class ReturnStatus(Enum):
+    ANALYST = "Return to analyst"
+    MANAGER = "Return to manager"
+    SUPPLIER = "Return to supplier"
+
+RETURN_STATUS_MAPPER = {
+    ReturnStatus.ANALYST.value: ComplianceReportStatusEnum.Submitted.value,
+    ReturnStatus.MANAGER.value: ComplianceReportStatusEnum.Recommended_by_analyst.value,
+    ReturnStatus.SUPPLIER.value: ComplianceReportStatusEnum.Draft.value,
+}
 
 
 class SupplementalInitiatorType(str, Enum):
@@ -45,7 +58,7 @@ class SummarySchema(BaseSchema):
     is_locked: bool
 
     class Config:
-        extra = Extra.allow
+        extra = 'allow'
 
 
 class ComplianceReportStatusSchema(BaseSchema):
