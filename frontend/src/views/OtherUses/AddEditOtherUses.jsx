@@ -197,7 +197,12 @@ export const AddEditOtherUses = () => {
             const fuelCategoryOptions = fuelType.fuelCategories.map(
               (item) => item.category
             );
-            params.node.setDataValue('fuelCategory', fuelCategoryOptions[0] ?? null);
+
+            const categoryValue = fuelCategoryOptions.length === 1
+              ? fuelCategoryOptions[0]
+              : null
+
+            params.node.setDataValue('fuelCategory', categoryValue);
 
             // Auto-populate the "fuelCode" field
             const fuelCodeOptions = fuelType.fuelCodes.map(

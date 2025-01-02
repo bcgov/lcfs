@@ -128,13 +128,16 @@ export const AddEditFuelExports = () => {
 
   const onCellValueChanged = useCallback(
     async (params) => {
-      if (params.column.colId === 'fuelType') {
+      if (params.column.colId === 'fuelTypeId') {
         const options = optionsData?.fuelTypes
           ?.find((obj) => params.node.data.fuelType === obj.fuelType)
           ?.fuelCategories.map((item) => item.fuelCategory)
-        if (options.length === 1) {
-          params.node.setDataValue('fuelCategory', options[0])
-        }
+
+        const categoryValue = options.length === 1
+          ? options[0]
+          : null
+
+        params.node.setDataValue('fuelCategoryId', categoryValue)
       }
     },
     [optionsData]
