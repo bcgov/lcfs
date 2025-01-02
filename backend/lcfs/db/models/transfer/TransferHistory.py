@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
+
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
 

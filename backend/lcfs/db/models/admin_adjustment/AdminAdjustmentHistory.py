@@ -1,13 +1,12 @@
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy import UniqueConstraint
+
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
 
 class AdminAdjustmentHistory(BaseModel, Auditable, EffectiveDates):
     __tablename__ = "admin_adjustment_history"
     __table_args__ = (
-        UniqueConstraint("admin_adjustment_history_id"),
         {"comment": "History record for admin_adjustment status change."},
     )
 
