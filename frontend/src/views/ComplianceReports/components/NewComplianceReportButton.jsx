@@ -48,7 +48,7 @@ export const NewComplianceReportButton = ({
     const yearAhead = currentYear + 1
     return periods?.data.filter((item) => {
       const effectiveYear = new Date(item.effectiveDate).getFullYear()
-      return effectiveYear <= yearAhead && effectiveYear >= currentYear
+      return effectiveYear <= yearAhead && effectiveYear >= 2024
     })
   }
 

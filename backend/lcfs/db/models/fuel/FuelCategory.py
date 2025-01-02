@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, Text, Enum, Float, Numeric
-from lcfs.db.base import BaseModel, Auditable, DisplayOrder, EffectiveDates
+from sqlalchemy import Column, Integer, Text, Enum, Numeric
 from sqlalchemy.orm import relationship
+
+from lcfs.db.base import BaseModel, Auditable, DisplayOrder, EffectiveDates
 
 
 class FuelCategory(BaseModel, Auditable, DisplayOrder, EffectiveDates):
