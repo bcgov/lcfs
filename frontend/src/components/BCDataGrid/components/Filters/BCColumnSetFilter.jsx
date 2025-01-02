@@ -6,7 +6,9 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox'
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="small" />
 const checkedIcon = <CheckBoxIcon fontSize="small" />
-
+/**
+ * @deprecated
+ */
 export const BCColumnSetFilter = forwardRef((props, ref) => {
   const { apiQuery, params } = props
   const [options, setOptions] = useState([])

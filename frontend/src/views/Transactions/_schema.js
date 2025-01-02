@@ -5,7 +5,7 @@ import {
   spacesFormatter
 } from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/grid/cellRenderers'
-import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
 const prefixMap = {
@@ -102,12 +102,11 @@ export const transactionsColDefs = (t) => [
     headerName: t('txn:txnColLabels.status'),
     cellRenderer: TransactionStatusRenderer,
     cellClass: 'vertical-middle',
-    floatingFilterComponent: BCColumnSetFilter,
+    floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
-      apiOptionField: 'status',
-      apiQuery: useTransactionStatuses,
-      disableCloseOnSelect: false,
-      multiple: false
+      valueKey: 'status',
+      labelKey: 'status',
+      optionsQuery: useTransactionStatuses,
     },
     suppressHeaderMenuButton: true,
     minWidth: 180,
