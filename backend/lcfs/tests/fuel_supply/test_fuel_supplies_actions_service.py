@@ -1,6 +1,3 @@
-# test_fuel_supply.py
-
-from datetime import datetime
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -21,7 +18,6 @@ from lcfs.web.utils.calculations import calculate_compliance_units
 FUEL_SUPPLY_EXCLUDE_FIELDS = {
     "id",
     "fuel_supply_id",
-    "compliance_period",
     "deleted",
     "group_uuid",
     "user_type",
@@ -129,14 +125,12 @@ def create_sample_fs_data():
         fuel_category_id=1,
         end_use_id=1,
         fuel_code_id=1,
-        compliance_period="2024",  # Schema-only field
-        quantity=1000.0,
+        quantity=1000,
         units="L",
         energy_density=35.0,
         group_uuid=str(uuid4()),
         version=0,
-        provisionOfTheActId=123,
-        exportDate=datetime.now().date(),
+        provision_of_the_act_id=123,
     )
 
 
@@ -184,7 +178,9 @@ async def test_create_fuel_supply_success(
     mock_repo.create_fuel_supply.return_value = created_supply
 
     # Call the method under test
-    result = await fuel_supply_action_service.create_fuel_supply(fe_data, user_type)
+    result = await fuel_supply_action_service.create_fuel_supply(
+        fe_data, user_type, "2024"
+    )
 
     # Assign mocked related objects for schema validation
     result.fuel_type = {
@@ -201,7 +197,7 @@ async def test_create_fuel_supply_success(
         fuel_category_id=fe_data.fuel_category_id,
         end_use_id=fe_data.end_use_id,
         fuel_code_id=fe_data.fuel_code_id,
-        compliance_period=fe_data.compliance_period,
+        compliance_period="2024",
     )
     mock_repo.create_fuel_supply.assert_awaited_once()
     # Ensure compliance units were calculated correctly
@@ -266,7 +262,9 @@ async def test_update_fuel_supply_success_existing_report(
     mock_repo.update_fuel_supply.return_value = updated_supply
 
     # Call the method under test
-    result = await fuel_supply_action_service.update_fuel_supply(fe_data, user_type)
+    result = await fuel_supply_action_service.update_fuel_supply(
+        fe_data, user_type, "2024"
+    )
 
     # Assign mocked related objects for schema validation
     result.fuel_type = {
@@ -348,7 +346,9 @@ async def test_update_fuel_supply_create_new_version(
     mock_repo.create_fuel_supply.return_value = new_supply
 
     # Call the method under test
-    result = await fuel_supply_action_service.update_fuel_supply(fe_data, user_type)
+    result = await fuel_supply_action_service.update_fuel_supply(
+        fe_data, user_type, "2024"
+    )
 
     # Assign mocked related objects for schema validation
     result.fuel_type = {
@@ -489,7 +489,7 @@ async def test_populate_fuel_supply_fields(
 
     # Call the method under test
     populated_supply = await fuel_supply_action_service._populate_fuel_supply_fields(
-        fuel_supply, fe_data
+        fuel_supply, fe_data, "2024"
     )
 
     # Assertions
@@ -507,13 +507,13 @@ async def test_populate_fuel_supply_fields(
         fuel_category_id=fuel_supply.fuel_category_id,
         end_use_id=fuel_supply.end_use_id,
         fuel_code_id=fuel_supply.fuel_code_id,
-        compliance_period=fe_data.compliance_period,
+        compliance_period="2024",
     )
 
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("case", test_cases)
-async def test_compliance_units_calculation(
+async def test_create_compliance_units_calculation(
     case, fuel_supply_action_service, mock_repo, mock_fuel_code_repo
 ):
     fe_data = FuelSupplyCreateUpdateSchema(
@@ -522,14 +522,12 @@ async def test_compliance_units_calculation(
         fuel_category_id=2,  # Adjusted to match the mock fuel_category
         end_use_id=1,
         fuel_code_id=1,
-        compliance_period="2024",  # Schema-only field
         quantity=case["input"]["quantity"],
         units=case["input"]["units"],
         energy_density=case["input"]["energy_density"],
         group_uuid=str(uuid4()),
         version=0,
-        provisionOfTheActId=123,
-        exportDate=datetime.now().date(),
+        provision_of_the_act_id=123,
     )
 
     # Mock standardized fuel data
@@ -540,9 +538,6 @@ async def test_compliance_units_calculation(
         energy_density=case["input"]["energy_density"],
         uci=None,
     )
-
-    # Exclude invalid fields and set related objects
-    fe_data_dict = fe_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS)
 
     # Mock the create_fuel_supply method to perform actual calculation
     async def create_fuel_supply_side_effect(fuel_supply):
@@ -561,7 +556,7 @@ async def test_compliance_units_calculation(
 
     # Call the service to create the fuel supply
     result = await fuel_supply_action_service.create_fuel_supply(
-        fe_data, UserTypeEnum.SUPPLIER
+        fe_data, UserTypeEnum.SUPPLIER, "2024"
     )
 
     # Assign mocked related objects for schema validation
@@ -582,7 +577,7 @@ async def test_compliance_units_calculation(
         fuel_category_id=fe_data.fuel_category_id,
         end_use_id=fe_data.end_use_id,
         fuel_code_id=fe_data.fuel_code_id,
-        compliance_period=fe_data.compliance_period,
+        compliance_period="2024",
     )
     mock_repo.create_fuel_supply.assert_awaited_once()
 

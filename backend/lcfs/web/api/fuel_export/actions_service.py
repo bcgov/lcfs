@@ -1,13 +1,13 @@
 import uuid
 from logging import getLogger
-from typing import Optional
+
 from fastapi import Depends, HTTPException
 
 from lcfs.db.base import ActionTypeEnum, UserTypeEnum
-from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
-from lcfs.web.api.fuel_export.repo import FuelExportRepository
+from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_export.schema import (
     DeleteFuelExportResponseSchema,
     FuelExportCreateUpdateSchema,
