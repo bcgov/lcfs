@@ -6,7 +6,6 @@ import {
 } from '@mui/icons-material'
 import { DatePicker } from '@mui/x-date-pickers'
 import { format, isValid } from 'date-fns'
-import { getDateFromDateSections } from '@mui/x-date-pickers/internals/hooks/useField/useField.utils'
 
 export const BCDateFloatingFilter = ({
   model,
@@ -64,6 +63,8 @@ export const BCDateFloatingFilter = ({
       className="bc-column-date-filter"
       fullWidth
       size="small"
+      role="group"
+      aria-labelledby="date-picker-label"
       sx={{
         border: 'none',
         '& .MuiOutlinedInput-root': { p: 0 },
@@ -75,6 +76,9 @@ export const BCDateFloatingFilter = ({
       }}
     >
       <DatePicker
+        id="date-picker"
+        aria-label="Date Picker"
+        aria-describedby="date-picker-description"
         sx={{ border: 'none', borderBottom: '2px solid #495057' }}
         value={selectedDate}
         onChange={handleChange}
@@ -94,6 +98,7 @@ export const BCDateFloatingFilter = ({
                     size="small"
                     edge="start"
                     onClick={() => setOpen(true)}
+                    aria-label="Open calendar"
                   >
                     <CalendarIcon fontSize="small" />
                   </IconButton>
@@ -106,6 +111,7 @@ export const BCDateFloatingFilter = ({
                     onClick={handleClear}
                     onMouseDown={(event) => event.stopPropagation()}
                     edge="end"
+                    aria-label="Clear date"
                   >
                     <ClearIcon fontSize="small" />
                   </IconButton>

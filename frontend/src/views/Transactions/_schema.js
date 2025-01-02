@@ -106,9 +106,10 @@ export const transactionsColDefs = (t) => [
     floatingFilterComponentParams: {
       valueKey: 'status',
       labelKey: 'status',
-      optionsQuery: useTransactionStatuses,
+      optionsQuery: useTransactionStatuses
     },
-    suppressHeaderMenuButton: true,
+    suppressFloatingFilterButton: true,
+    suppressHeaderFilterButton: true,
     minWidth: 180,
     width: 250
   },
