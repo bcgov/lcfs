@@ -1,13 +1,12 @@
 from sqlalchemy import Column, Integer, BigInteger, ForeignKey, DateTime, String
 from sqlalchemy.orm import relationship
-from sqlalchemy import UniqueConstraint
+
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
 
 class AdminAdjustment(BaseModel, Auditable, EffectiveDates):
     __tablename__ = "admin_adjustment"
     __table_args__ = (
-        UniqueConstraint("admin_adjustment_id"),
         {"comment": "Goverment to organization compliance units admin_adjustment"},
     )
 

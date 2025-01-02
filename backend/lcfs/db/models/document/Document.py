@@ -1,5 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
@@ -11,7 +10,6 @@ from lcfs.db.models.compliance.ComplianceReport import (
 class Document(BaseModel, Auditable):
     __tablename__ = "document"
     __table_args__ = (
-        UniqueConstraint("document_id"),
         {"comment": "Main document table for storing base document information"},
     )
 
