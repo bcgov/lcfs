@@ -117,6 +117,9 @@ COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER = {
     "Return to manager": [
         NotificationTypeEnum.IDIR_COMPLIANCE_MANAGER__COMPLIANCE_REPORT__ANALYST_RECOMMENDATION
     ],
+    "Return to supplier": [
+        NotificationTypeEnum.BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT
+    ]
 }
 
 

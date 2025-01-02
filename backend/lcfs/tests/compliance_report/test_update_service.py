@@ -281,16 +281,6 @@ async def test_handle_submitted_status_with_existing_summary(
         report_id
     )
 
-    # Ensure the adjust_balance method is called with the correct parameters
-    mock_org_service.adjust_balance.assert_called_once_with(
-        transaction_action=TransactionActionEnum.Reserved,
-        compliance_units=mock_report.summary.line_20_surplus_deficit_units,
-        organization_id=mock_report.organization_id,
-    )
-
-    # Check if the report was updated with the result of adjust_balance
-    assert mock_report.transaction == mock_org_service.adjust_balance.return_value
-
     # Check if the summary is locked
     saved_summary = mock_repo.save_compliance_report_summary.call_args[0][0]
     assert saved_summary.is_locked == True

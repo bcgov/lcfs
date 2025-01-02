@@ -184,6 +184,9 @@ const globals = {
   '.ag-paging-panel': {
     justifyContent: 'flex-start'
   },
+  '.ag-popup-child:not(.ag-tooltip-custom)': {
+    boxShadow: 'none'
+  },
   '#bc-column-set-filter-listbox, #organizations-listbox, .MuiMenu-list': {
     '& > li:hover, & > li:focus, & > li:blur': {
       backgroundColor: primary.light,
