@@ -806,9 +806,9 @@ class FuelCodeRepository:
         return energy_effectiveness_ratio
 
     @repo_handler
-    async def get_target_carbon_intensities(
+    async def get_target_carbon_intensity(
         self, fuel_category_id: int, compliance_period: str
-    ) -> List[TargetCarbonIntensity]:
+    ) -> TargetCarbonIntensity:
 
         compliance_period_id_subquery = (
             select(CompliancePeriod.compliance_period_id)
@@ -830,7 +830,7 @@ class FuelCodeRepository:
         )
         result = await self.db.execute(stmt)
 
-        return result.scalars().all()
+        return result.scalar_one()
 
     @repo_handler
     async def get_standardized_fuel_data(
@@ -876,15 +876,10 @@ class FuelCodeRepository:
         eer = energy_effectiveness.ratio if energy_effectiveness else 1.0
 
         # Fetch target carbon intensity (TCI)
-        target_ci = None
-        target_carbon_intensities = await self.get_target_carbon_intensities(
+        target_carbon_intensity = await self.get_target_carbon_intensity(
             fuel_category_id, compliance_period
         )
-        if target_carbon_intensities:
-            target_ci = next(
-                (tci.target_carbon_intensity for tci in target_carbon_intensities),
-                0.0,
-            )
+        target_ci = target_carbon_intensity.target_carbon_intensity
 
         # Additional Carbon Intensity (UCI)
         uci = await self.get_additional_carbon_intensity(fuel_type_id, end_use_id)

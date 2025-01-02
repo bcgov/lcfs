@@ -60,6 +60,7 @@ export const UserActivity = () => {
           getRowId={getRowId}
           overlayNoRowsTemplate={t('admin:activitiesNotFound')}
           autoSizeStrategy={{
+            type: 'fitGridWidth',
             defaultMinWidth: 50,
             defaultMaxWidth: 600
           }}

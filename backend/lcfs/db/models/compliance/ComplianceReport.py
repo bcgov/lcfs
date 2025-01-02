@@ -1,17 +1,17 @@
-import uuid
 import enum
+import uuid
 
 from pydantic import computed_field
 from sqlalchemy import (
     Column,
     Integer,
     String,
-    ForeignKey,
     Enum,
     Table,
     ForeignKey,
 )
-from sqlalchemy.orm import relationship, backref
+from sqlalchemy.orm import relationship
+
 from lcfs.db.base import BaseModel, Auditable
 
 
