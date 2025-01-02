@@ -47,6 +47,7 @@ async def test_save_fuel_supply_row_create(
         "compliance_report_id": 1,
         "fuel_type_id": 1,
         "fuel_category_id": 1,
+        "end_use_id": 24,
         "provision_of_the_act_id": 1,
         "quantity": 1000,
         "units": "L",
@@ -104,6 +105,7 @@ async def test_save_fuel_supply_row_update(
         "fuel_supply_id": 123,
         "fuel_type_id": 1,
         "fuel_category_id": 1,
+        "end_use_id": 24,
         "provision_of_the_act_id": 1,
         "quantity": 1000,
         "units": "L",
@@ -160,6 +162,7 @@ async def test_save_fuel_supply_row_delete(
         "fuel_supply_id": 123,
         "fuel_type_id": 1,
         "fuel_category_id": 1,
+        "end_use_id": 24,
         "provision_of_the_act_id": 1,
         "quantity": 1000,
         "units": "L",
@@ -191,7 +194,8 @@ async def test_save_fuel_supply_row_delete(
 
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
-    assert data == {"success": True, "message": "Fuel supply row deleted successfully"}
+    assert data == {"success": True,
+                    "message": "Fuel supply row deleted successfully"}
 
 
 @pytest.mark.anyio
