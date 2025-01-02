@@ -14,10 +14,7 @@ class TransferCategoryEnum(enum.Enum):
 
 class TransferCategory(BaseModel, Auditable, EffectiveDates):
     __tablename__ = "transfer_category"
-    __table_args__ = (
-        UniqueConstraint("transfer_category_id"),
-        {"comment": "Transfer Category"},
-    )
+    __table_args__ = ({"comment": "Transfer Category"},)
 
     transfer_category_id = Column(
         Integer,

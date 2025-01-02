@@ -8,8 +8,11 @@ import {
   RoleRenderer,
   StatusRenderer
 } from '@/utils/grid/cellRenderers'
-import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
 import { useRoleList } from '@/hooks/useRole'
+import {
+  BCSelectFloatingFilter,
+  BCDateFloatingFilter
+} from '@/components/BCDataGrid/components/index'
 
 export const usersColumnDefs = (t) => [
   {
@@ -44,14 +47,14 @@ export const usersColumnDefs = (t) => [
       },
       suppressFilterButton: true
     },
-    floatingFilterComponent: BCColumnSetFilter,
+    floatingFilterComponent: BCSelectFloatingFilter,
+    suppressFloatingFilterButton: true,
+    suppressHeaderFilterButton: true,
     floatingFilterComponentParams: {
-      apiQuery: useRoleList, // all data returned should be an array which includes an object of key 'name'
-      // Eg: [{id: 1, name: 'EntryListItem' }] except name all others are optional
+      optionsQuery: useRoleList,
       params: 'government_roles_only=true',
-      key: 'admin-users',
-      disableCloseOnSelect: false,
-      multiple: false
+      valueKey: 'name',
+      labelKey: 'name'
     },
     cellRenderer: RoleRenderer,
     cellClass: 'vertical-middle'
@@ -84,20 +87,21 @@ export const usersColumnDefs = (t) => [
     },
     cellRenderer: StatusRenderer,
     cellClass: 'vertical-middle',
-    floatingFilterComponent: BCColumnSetFilter,
+    floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
-      apiQuery: () => ({
+      optionsQuery: () => ({
         data: [
           { id: 1, name: t('admin:userColLabels.active') },
           { id: 0, name: t('admin:userColLabels.inactive') }
         ],
         isLoading: false
       }),
-      disableCloseOnSelect: false,
-      multiple: false
+      valueKey: 'name',
+      labelKey: 'name'
     },
     minWidth: 120,
-    suppressHeaderMenuButton: false
+    suppressFloatingFilterButton: true,
+    suppressHeaderFilterButton: true
   },
   {
     colId: 'organizationId',
