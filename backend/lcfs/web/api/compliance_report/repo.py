@@ -1,47 +1,46 @@
-import structlog
-from typing import List, Optional, Dict
 from collections import defaultdict
 from datetime import datetime
+from typing import List, Optional, Dict
 
-from lcfs.db.models import UserProfile
-from lcfs.db.models.organization.Organization import Organization
-from lcfs.db.models.user.UserProfile import UserProfile
-from lcfs.db.models.fuel.FuelType import FuelType
-from lcfs.db.models.fuel.FuelCategory import FuelCategory
-from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
-from sqlalchemy import func, select, and_, asc, desc
-from sqlalchemy.orm import joinedload
-from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
 from fastapi import Depends
+from sqlalchemy import func, select, and_, asc, desc, update
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
+from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models.compliance import CompliancePeriod
+from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    ReportingFrequency,
+)
+from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
+from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
+from lcfs.db.models.fuel.FuelCategory import FuelCategory
+from lcfs.db.models.fuel.FuelType import FuelType
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     apply_filter_conditions,
     get_field_for_filter,
 )
-from lcfs.db.models.compliance import CompliancePeriod
-from lcfs.db.models.compliance.ComplianceReport import (
-    ComplianceReport,
-    ReportingFrequency,
-)
-from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-from lcfs.db.models.compliance.ComplianceReportStatus import (
-    ComplianceReportStatus,
-    ComplianceReportStatusEnum,
-)
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportSummaryUpdateSchema,
 )
-from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
-from lcfs.web.core.decorators import repo_handler
-from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.transfer.Transfer import Transfer
-from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
-from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
+from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
 
@@ -569,6 +568,16 @@ class ComplianceReportRepository:
         await self.db.flush()
         await self.db.refresh(summary)
         return summary
+
+    @repo_handler
+    async def reset_summary_lock(self, compliance_report_id: int):
+        query = (
+            update(ComplianceReportSummary)
+            .where(ComplianceReportSummary.compliance_report_id == compliance_report_id)
+            .values(is_locked=False)
+        )
+        await self.db.execute(query)
+        return True
 
     @repo_handler
     async def save_compliance_report_summary(

@@ -25,10 +25,19 @@ class ComplianceReportValidation:
             )
 
         organization_id = compliance_report.organization_id
-        user_organization_id = self.request.user.organization.organization_id if self.request.user.organization else None
+        user_organization_id = (
+            self.request.user.organization.organization_id
+            if self.request.user.organization
+            else None
+        )
 
-        if not user_has_roles(self.request.user, [RoleEnum.GOVERNMENT]) and organization_id != user_organization_id:
+        if (
+            not user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+            and organization_id != user_organization_id
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User does not have access to this compliance report.",
             )
+
+        return compliance_report

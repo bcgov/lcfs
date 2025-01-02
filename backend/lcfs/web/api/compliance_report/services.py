@@ -171,10 +171,7 @@ class ComplianceReportServices:
             pagination, organization_id
         )
 
-        if not reports:
-            raise DataNotFoundException("No compliance reports found.")
-
-        if bceid_user:
+        if bceid_user and reports:
             reports = self._mask_report_status(reports)
 
         return ComplianceReportListSchema(

@@ -108,7 +108,7 @@ export const AddEditFuelSupplies = () => {
         }))
         setRowData([...updatedRowData, { id: uuid() }])
       } else {
-        setRowData([{ id: uuid() }])
+        setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
       setTimeout(() => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
@@ -145,7 +145,7 @@ export const AddEditFuelSupplies = () => {
       }))
       setRowData(updatedRowData)
     } else {
-      setRowData([{ id: uuid() }])
+      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
   }, [data, fuelSuppliesLoading, complianceReportId, compliancePeriod])
 

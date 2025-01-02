@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Column, Integer, String
 from sqlalchemy.orm import relationship
+
 from lcfs.db.base import BaseModel, EffectiveDates
 
 

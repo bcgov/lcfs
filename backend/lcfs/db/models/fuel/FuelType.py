@@ -1,8 +1,10 @@
-from sqlalchemy import Column, Integer, Text, Boolean, Float, Enum, Numeric
-from lcfs.db.base import BaseModel, Auditable, DisplayOrder
-from sqlalchemy.orm import relationship
-from sqlalchemy import ForeignKey
 import enum
+
+from sqlalchemy import Column, Integer, Text, Boolean, Enum, Numeric
+from sqlalchemy import ForeignKey
+from sqlalchemy.orm import relationship
+
+from lcfs.db.base import BaseModel, Auditable, DisplayOrder
 
 
 # Enum for fuel quantity units

@@ -102,7 +102,7 @@ class OrganizationService:
                     # For non-date filters, use the standard filter value
                     filter_value = filter.filter
 
-                if field.description == 'transaction_type':
+                if field.description == "transaction_type":
                     filter_value = filter_value.replace(" ", "").lower()
 
                 filter_option = filter.type
@@ -168,9 +168,6 @@ class OrganizationService:
                 offset, limit, conditions, pagination.sort_orders, organization_id
             )
         )
-
-        if not transactions:
-            raise DataNotFoundException("Transactions not found")
 
         return {
             "transactions": [

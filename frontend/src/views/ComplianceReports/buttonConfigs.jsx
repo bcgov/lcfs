@@ -1,9 +1,6 @@
 // complianceReportButtonConfigs.js
 
-import {
-  faPencil,
-  faTrash
-} from '@fortawesome/free-solid-svg-icons'
+import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 
@@ -45,6 +42,7 @@ export const buttonClusterConfigFn = ({
   t,
   setModalData,
   updateComplianceReport,
+  compliancePeriod,
   isGovernmentUser,
   isSigningAuthorityDeclared
 }) => {
@@ -120,9 +118,7 @@ export const buttonClusterConfigFn = ({
       }
     },
     returnToManager: {
-      ...outlinedButton(
-        t('report:actionBtns.returnToManager')
-      ),
+      ...outlinedButton(t('report:actionBtns.returnToManager')),
       id: 'return-report-manager-btn',
       handler: (formData) => {
         setModalData({
@@ -135,6 +131,23 @@ export const buttonClusterConfigFn = ({
           secondaryButtonText: t('cancelBtn'),
           title: t('confirmation'),
           content: t('report:returnToManagerConfirmText')
+        })
+      }
+    },
+    returnToSupplier: {
+      ...outlinedButton(t('report:actionBtns.returnToSupplier')),
+      id: 'return-report-supplier-btn',
+      handler: (formData) => {
+        setModalData({
+          primaryButtonAction: () =>
+            updateComplianceReport({
+              ...formData,
+              status: COMPLIANCE_REPORT_STATUSES.RETURN_TO_SUPPLIER
+            }),
+          primaryButtonText: t('report:actionBtns.returnToSupplier'),
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:returnToSupplierConfirmText')
         })
       }
     },
@@ -174,13 +187,21 @@ export const buttonClusterConfigFn = ({
     }
   }
 
+  const canReturnToSupplier = () => {
+    const compliancePeriodYear = parseInt(compliancePeriod)
+    const deadlineDate = new Date(compliancePeriodYear + 1, 2, 31) // Month is 0-based, so 2 = March
+    const currentDate = new Date()
+    return currentDate <= deadlineDate
+  }
+
   const buttons = {
-    [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
-      reportButtons.submitReport
-    ],
+    [COMPLIANCE_REPORT_STATUSES.DRAFT]: [reportButtons.submitReport],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
       ...(isGovernmentUser && hasRoles('Analyst')
-        ? [reportButtons.recommendByAnalyst]
+        ? [
+            reportButtons.recommendByAnalyst,
+            ...(canReturnToSupplier() ? [reportButtons.returnToSupplier] : [])
+          ]
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: [
