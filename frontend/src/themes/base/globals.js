@@ -114,6 +114,36 @@ const globals = {
     fontWeight: 700,
     color: grey[700]
   },
+  '.select-container': {
+    fontFamily: "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
+    fontSize: '1.6rem',
+    width: '100%',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    border: 'none',
+    borderBottom: '2px solid #495057',
+    borderRadius: '0px',
+    padding: '0px',
+    background: '#fff',
+    transition: 'border-color 0.3s ease-in-out, box-shadow 0.3s ease-in-out'
+  },
+  '.select-container:focus-within': {
+    border: '2px solid #495057',
+    borderWidth: '0px 0.01rem'
+  },
+  '.select-container #select-filter': {
+    width: '100%',
+    padding: '11px',
+    border: 'none',
+    outline: 'none',
+    appearance: 'none',
+    background: 'transparent'
+  },
+  '.select-container option': {
+    fontSize: '1rem',
+    fontFamily: 'inherit'
+  },
   // editor theme for ag-grid quertz theme
   '.ag-theme-quartz': {
     '--ag-borders': `0.5px solid ${grey[400]} !important`,

@@ -1,4 +1,7 @@
-import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
+import {
+  BCDateFloatingFilter,
+  BCSelectFloatingFilter
+} from '@/components/BCDataGrid/components'
 import { SUMMARY } from '@/constants/common'
 import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
@@ -50,10 +53,10 @@ export const reportsColDefs = (t, bceidRole) => [
       url: ({ data }) =>
         `${data.compliancePeriod?.description}/${data.complianceReportId}`
     },
-    floatingFilterComponent: BCColumnSetFilter,
+    floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       // TODO: change this to api Query later
-      apiQuery: () => ({
+      optionsQuery: () => ({
         data: bceidRole
           ? [
               { id: 1, name: 'Draft' },
@@ -70,17 +73,15 @@ export const reportsColDefs = (t, bceidRole) => [
             ],
         isLoading: false
       }),
-      key: 'report-status',
-      label: t('report:reportColLabels.status'),
-      disableCloseOnSelect: false,
-      multiple: false
+      valueKey: 'name',
+      labelKey: 'name'
     }
   },
   {
     field: 'updateDate',
     cellDataType: 'dateString',
     headerName: t('report:reportColLabels.lastUpdated'),
-    flex: 1,
+    minWidth: '80',
     valueGetter: ({ data }) => data.updateDate || '',
     valueFormatter: timezoneFormatter,
     filter: 'agDateColumnFilter',
@@ -89,7 +90,8 @@ export const reportsColDefs = (t, bceidRole) => [
       suppressAndOrCondition: true,
       buttons: ['clear'],
       maxValidYear: 2400
-    }
+    },
+    floatingFilterComponent: BCDateFloatingFilter
   }
 ]
 
