@@ -83,12 +83,19 @@ export const BCSelectFloatingFilter = ({
   }, [model, initialSelectedValues])
 
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
+    <div
+      style={{ position: 'relative', width: '100%' }}
+      role="group"
+      aria-labelledby="select-filter-label"
+    >
       <div
         className="select-container"
         style={{
           maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP
         }}
+        role="combobox"
+        aria-expanded={selectedValues.length > 0}
+        aria-controls="select-filter"
       >
         <select
           id="select-filter"
@@ -96,6 +103,11 @@ export const BCSelectFloatingFilter = ({
           value={selectedValues}
           onChange={handleChange}
           disabled={disabled || isLoading}
+          aria-multiselectable={multiple}
+          aria-disabled={disabled || isLoading}
+          aria-describedby={
+            isError ? 'select-filter-error' : 'select-filter-description'
+          }
           style={{
             color: selectedValues.length > 0 ? '#999' : '#000'
           }}
