@@ -1,4 +1,4 @@
-import { forwardRef } from 'react'
+import { forwardRef, useEffect, useRef } from 'react'
 import { TextField } from '@mui/material'
 import InputMask from 'react-input-mask'
 
@@ -7,6 +7,15 @@ export const TextCellEditor = forwardRef(
     const handleTextFieldChange = (event) => {
       onValueChange(event.target.value)
     }
+
+    const inputRef = useRef(null)
+
+    useEffect(() => {
+      if (inputRef) {
+        inputRef.current.focus()
+      }
+    }, [])
+
     return (
       <>
         <InputMask
@@ -18,6 +27,7 @@ export const TextCellEditor = forwardRef(
         >
           {() => (
             <TextField
+              inputRef={inputRef}
               ref={ref}
               fullWidth
               margin="none"
