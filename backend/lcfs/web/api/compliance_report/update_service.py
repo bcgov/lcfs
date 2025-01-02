@@ -1,4 +1,5 @@
 import json
+from typing import Tuple
 from fastapi import Depends, HTTPException, Request
 from lcfs.web.api.notification.schema import (
     COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER,
@@ -12,7 +13,11 @@ from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportSta
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.compliance_report.schema import ComplianceReportUpdateSchema
+from lcfs.web.api.compliance_report.schema import (
+    RETURN_STATUS_MAPPER,
+    ComplianceReportUpdateSchema,
+    ReturnStatus,
+)
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
@@ -39,48 +44,67 @@ class ComplianceReportUpdateService:
         self.trx_service = trx_service
         self.notfn_service = notfn_service
 
-    async def update_compliance_report(
-        self, report_id: int, report_data: ComplianceReportUpdateSchema
-    ) -> ComplianceReport:
-        """Updates an existing compliance report."""
-        RETURN_STATUSES = ["Return to analyst", "Return to manager"]
+    async def _handle_return_status(
+        self, report_data: ComplianceReportUpdateSchema
+    ) -> Tuple[str, bool]:
+        """Handle return status logic and return new status and change flag."""
+        mapped_status = RETURN_STATUS_MAPPER.get(report_data.status)
+        return mapped_status, False
+
+    async def _check_report_exists(self, report_id: int) -> ComplianceReport:
+        """Verify report exists and return it."""
         report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
         if not report:
             raise DataNotFoundException(
                 f"Compliance report with ID {report_id} not found"
             )
+        return report
+
+    async def update_compliance_report(
+        self, report_id: int, report_data: ComplianceReportUpdateSchema
+    ) -> ComplianceReport:
+        """Updates an existing compliance report."""
+        # Get and validate report
+        report = await self._check_report_exists(report_id)
+
+        # Store original status
         current_status = report_data.status
-        # if we're just returning the compliance report back to either compliance manager or analyst,
-        # then neither history nor any updates to summary is required.
-        if report_data.status in RETURN_STATUSES:
-            status_has_changed = False
-            notifications = COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER.get(
-                report_data.status
+
+        # Handle status changes
+        if report_data.status in [status.value for status in ReturnStatus]:
+            new_status, status_has_changed = await self._handle_return_status(
+                report_data
             )
-            if report_data.status == "Return to analyst":
-                report_data.status = ComplianceReportStatusEnum.Submitted.value
-            else:
-                report_data.status = (
-                    ComplianceReportStatusEnum.Recommended_by_analyst.value
-                )
+            report_data.status = new_status
+
+            # Handle "Return to supplier"
+            if current_status == ReturnStatus.SUPPLIER.value:
+                await self.repo.reset_summary_lock(report.compliance_report_id)
         else:
+            # Handle normal status change
             status_has_changed = report.current_status.status != getattr(
                 ComplianceReportStatusEnum, report_data.status.replace(" ", "_")
             )
+
+        # Get new status object
         new_status = await self.repo.get_compliance_report_status_by_desc(
             report_data.status
         )
-        # Update fields
+
+        # Update report
         report.current_status = new_status
         report.supplemental_note = report_data.supplemental_note
-
         updated_report = await self.repo.update_compliance_report(report)
+
+        # Handle status change related actions
         if status_has_changed:
             await self.handle_status_change(report, new_status.status)
             # Add history record
             await self.repo.add_compliance_report_history(report, self.request.user)
 
+        # Handle notifications
         await self._perform_notification_call(report, current_status)
+
         return updated_report
 
     async def _perform_notification_call(self, report, status):
@@ -102,7 +126,7 @@ class ComplianceReportUpdateService:
             "status": status.lower(),
         }
         notification_data = NotificationMessageSchema(
-            type=f"Compliance report {status.lower()}",
+            type=f"Compliance report {status.lower().replace('return', 'returned')}",
             related_transaction_id=f"CR{report.compliance_report_id}",
             message=json.dumps(message_data),
             related_organization_id=report.organization_id,
@@ -228,12 +252,18 @@ class ComplianceReportUpdateService:
             report.summary = new_summary
 
         if report.summary.line_20_surplus_deficit_units != 0:
-            # Create a new reserved transaction for receiving organization
-            report.transaction = await self.org_service.adjust_balance(
-                transaction_action=TransactionActionEnum.Reserved,
-                compliance_units=report.summary.line_20_surplus_deficit_units,
-                organization_id=report.organization_id,
-            )
+            if report.transaction is not None:
+                # Update existing transaction
+                report.transaction.compliance_units = (
+                    report.summary.line_20_surplus_deficit_units
+                )
+            else:
+                # Create a new reserved transaction for receiving organization
+                report.transaction = await self.org_service.adjust_balance(
+                    transaction_action=TransactionActionEnum.Reserved,
+                    compliance_units=report.summary.line_20_surplus_deficit_units,
+                    organization_id=report.organization_id,
+                )
         await self.repo.update_compliance_report(report)
 
         return calculated_summary

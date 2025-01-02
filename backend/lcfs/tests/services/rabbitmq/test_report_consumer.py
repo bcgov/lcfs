@@ -3,14 +3,12 @@ from contextlib import ExitStack
 from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
-from pandas.io.formats.format import return_docstring
 
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum, Transaction
-from lcfs.services.rabbitmq.report_consumer import (
-    ReportConsumer,
-)
-from lcfs.tests.fuel_export.conftest import mock_compliance_report_repo
+from lcfs.services.rabbitmq.report_consumer import ReportConsumer
 from lcfs.web.api.compliance_report.schema import ComplianceReportCreateSchema
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
 
 
 @pytest.fixture
@@ -33,11 +31,11 @@ def mock_session():
 
     mock_session = AsyncMock(spec=AsyncSession)
 
-    # `async with mock_session:` should work, so we define what happens on enter/exit
+    # `async with mock_session:` should work, so define behavior for enter/exit
     mock_session.__aenter__.return_value = mock_session
     mock_session.__aexit__.return_value = None
 
-    # Now mock the transaction context manager returned by `session.begin()`
+    # Mock the transaction context manager returned by `session.begin()`
     mock_transaction = AsyncMock()
     mock_transaction.__aenter__.return_value = mock_transaction
     mock_transaction.__aexit__.return_value = None
@@ -130,27 +128,30 @@ def setup_patches(mock_redis, mock_session, mock_repositories):
 
 
 @pytest.mark.anyio
-async def test_process_message_created(mock_app, setup_patches, mock_repositories):
+async def test_process_message_created_new_initial_report(
+    mock_app, setup_patches, mock_repositories
+):
+    """Test the 'Created' action when root_report_id == legacy_id, indicating a new initial report."""
     consumer = ReportConsumer(mock_app)
 
-    # Prepare a sample message for "Created" action
+    # Prepare a sample message for "Created" action (new report)
+    # Note root_report_id == tfrs_id => new initial report
     message = {
         "tfrs_id": 123,
+        "root_report_id": 123,
         "organization_id": 1,
         "compliance_period": "2023",
-        "nickname": "Test Report",
         "action": "Created",
         "user_id": 42,
     }
     body = json.dumps(message).encode()
 
-    # Ensure correct mock setup
     mock_user = MagicMock()
     mock_repositories["user_repo"].get_user_by_id.return_value = mock_user
 
     await consumer.process_message(body)
 
-    # Assertions for "Created" action
+    # Assertions for "Created" action, new initial report
     mock_repositories[
         "compliance_service"
     ].create_compliance_report.assert_called_once_with(
@@ -159,11 +160,63 @@ async def test_process_message_created(mock_app, setup_patches, mock_repositorie
             legacy_id=123,
             compliance_period="2023",
             organization_id=1,
-            nickname="Test Report",
+            nickname="Original Report",
             status="Draft",
         ),
         mock_user,
     )
+
+
+@pytest.mark.anyio
+async def test_process_message_created_supplemental_report(
+    mock_app, setup_patches, mock_repositories
+):
+    """
+    Test the 'Created' action when root_report_id != legacy_id, indicating a supplemental report.
+    """
+    consumer = ReportConsumer(mock_app)
+
+    # Prepare a sample message for "Created" action (supplemental)
+    message = {
+        "tfrs_id": 999,  # This is the new supplemental's legacy ID
+        "root_report_id": 123,  # The original (root) report ID
+        "organization_id": 1,
+        "compliance_period": "2023",
+        "action": "Created",
+        "user_id": 42,
+    }
+    body = json.dumps(message).encode()
+
+    mock_user = MagicMock()
+    mock_repositories["user_repo"].get_user_by_id.return_value = mock_user
+
+    # Mock root report so the repository call returns a valid object
+    mock_root_report = MagicMock()
+    mock_root_report.version = 2
+    mock_root_report.compliance_report_group_uuid = "test-uuid"
+    mock_repositories[
+        "compliance_report_repo"
+    ].get_compliance_report_by_legacy_id.return_value = mock_root_report
+
+    await consumer.process_message(body)
+
+    # The code should create a supplemental report using the root report's group UUID
+    # and increment the version by 1
+    mock_repositories[
+        "compliance_service"
+    ].create_supplemental_report.assert_called_once()
+
+    called_args = mock_repositories[
+        "compliance_service"
+    ].create_supplemental_report.call_args[0]
+    root_report_id_arg = called_args[0]
+    user_arg = called_args[1]
+    legacy_id_arg = called_args[2]
+
+    assert root_report_id_arg == 123
+    assert user_arg == mock_user
+    # Check that the new supplemental report schema was built correctly
+    assert legacy_id_arg == 999
 
 
 @pytest.mark.anyio
@@ -173,9 +226,9 @@ async def test_process_message_submitted(mock_app, setup_patches, mock_repositor
     # Prepare a sample message for "Submitted" action
     message = {
         "tfrs_id": 123,
+        "root_report_id": 123,
         "organization_id": 1,
         "compliance_period": "2023",
-        "nickname": "Test Report",
         "action": "Submitted",
         "credits": 50,
         "user_id": 42,
@@ -203,6 +256,7 @@ async def test_process_message_approved(mock_app, setup_patches, mock_repositori
     # Prepare a sample message for "Approved" action
     message = {
         "tfrs_id": 123,
+        "root_report_id": 123,
         "organization_id": 1,
         "action": "Approved",
         "user_id": 42,

@@ -1,7 +1,8 @@
 import enum
+
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum, String, Numeric
 from sqlalchemy.orm import relationship
-from sqlalchemy import UniqueConstraint
+
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
 
@@ -13,7 +14,6 @@ class TransferRecommendationEnum(enum.Enum):
 class Transfer(BaseModel, Auditable, EffectiveDates):
     __tablename__ = "transfer"
     __table_args__ = (
-        UniqueConstraint("transfer_id"),
         {"comment": "Records of tranfer from Organization to Organization"},
     )
 

@@ -43,7 +43,7 @@ export const Users = () => {
     navigate(ROUTES.ADMIN_USERS_ADD)
   }
   const getRowId = useCallback((params) => {
-    return params.data.userProfileId
+    return params.data.userProfileId.toString()
   }, [])
 
   const handleRowClicked = useCallback((params) => {

@@ -1,13 +1,12 @@
 from sqlalchemy import Column, Integer, BigInteger, ForeignKey, DateTime, String
 from sqlalchemy.orm import relationship
-from sqlalchemy import UniqueConstraint
+
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
 
 
 class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     __tablename__ = "initiative_agreement"
     __table_args__ = (
-        UniqueConstraint("initiative_agreement_id"),
         {"comment": "Goverment to organization compliance units initiative agreement"},
     )
 
