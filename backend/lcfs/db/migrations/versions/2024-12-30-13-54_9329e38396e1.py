@@ -1,7 +1,7 @@
 """add update_count_transfers_in_progress db function and update existing counts
 
 Revision ID: 9329e38396e1
-Revises: ab04810d4d7c
+Revises: d9cdd9fca0ce
 Create Date: 2024-12-30 13:54:09.361644
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "9329e38396e1"
-down_revision = "ab04810d4d7c"
+down_revision = "d9cdd9fca0ce"
 branch_labels = None
 depends_on = None
 
