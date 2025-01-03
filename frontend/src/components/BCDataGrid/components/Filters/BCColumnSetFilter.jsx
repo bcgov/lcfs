@@ -6,7 +6,9 @@ import CheckBoxIcon from '@mui/icons-material/CheckBox'
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="small" />
 const checkedIcon = <CheckBoxIcon fontSize="small" />
-
+/**
+ * @deprecated
+ */
 export const BCColumnSetFilter = forwardRef((props, ref) => {
   const { apiQuery, params } = props
   const [options, setOptions] = useState([])
@@ -71,7 +73,12 @@ export const BCColumnSetFilter = forwardRef((props, ref) => {
       limitTags={1}
       className="bc-column-set-filter ag-list ag-select-list ag-ltr ag-popup-child ag-popup-positioned-under"
       role="list-box"
-      sx={{ width: '100%' }}
+      sx={{
+        width: '100%',
+        '.MuiInputBase-root': {
+          borderRadius: 'inherit'
+        }
+      }}
       options={options}
       loading={optionsIsLoading}
       autoHighlight
@@ -125,13 +132,6 @@ export const BCColumnSetFilter = forwardRef((props, ref) => {
 })
 
 BCColumnSetFilter.displayName = 'BCColumnSetFilter'
-
-BCColumnSetFilter.defaultProps = {
-  // apiQuery: () => ({ data: [], isLoading: false }),
-  apiOptionField: 'name',
-  multiple: false,
-  disableCloseOnSelect: false
-}
 
 BCColumnSetFilter.propTypes = {
   apiQuery: PropTypes.func.isRequired, // react query or a fetch query which will return data, isLoading and Error fields.

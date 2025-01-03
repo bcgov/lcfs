@@ -116,16 +116,30 @@ async def test_get_compliance_reports_paginated_success(
 async def test_get_compliance_reports_paginated_not_found(
     compliance_report_service, mock_repo
 ):
+    # Arrange
     pagination_mock = AsyncMock()
     pagination_mock.page = 1
     pagination_mock.size = 10
+    pagination_mock.filters = []
+    pagination_mock.sort_orders = []
 
+    # Mock the repository to return no records
     mock_repo.get_reports_paginated.return_value = ([], 0)
 
-    with pytest.raises(DataNotFoundException):
-        await compliance_report_service.get_compliance_reports_paginated(
-            pagination_mock
-        )
+    # Act
+    result = await compliance_report_service.get_compliance_reports_paginated(
+        pagination_mock
+    )
+
+    # Assert: Verify the service returns an empty list and correct pagination metadata
+    assert result.reports == [], "Expected no compliance reports to be returned"
+    assert result.pagination.total == 0, "Expected total=0 when there are no records"
+    assert result.pagination.page == 1, "Page should match the requested page"
+    assert result.pagination.size == 10, "Size should match the requested size"
+    assert result.pagination.total_pages == 0, "0 records should yield 0 total_pages"
+
+    # Also verify our repo was called exactly once
+    mock_repo.get_reports_paginated.assert_called_once()
 
 
 @pytest.mark.anyio

@@ -6,10 +6,10 @@ import structlog
 from fastapi import Depends
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
-from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
-from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
 from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferCreateSchema,
     NotionalTransferSchema,
@@ -19,7 +19,7 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransfersAllSchema,
     DeleteNotionalTransferResponseSchema,
 )
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
 

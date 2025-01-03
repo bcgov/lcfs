@@ -124,7 +124,9 @@ class NotificationRepository:
                     )
                 )
             elif filter.field == "transaction_id":
-                field = get_field_for_filter(NotificationMessage, 'related_transaction_id')
+                field = get_field_for_filter(
+                    NotificationMessage, "related_transaction_id"
+                )
                 conditions.append(
                     apply_filter_conditions(
                         field, filter_value, filter_option, filter_type
@@ -352,11 +354,6 @@ class NotificationRepository:
         )
         result = await self.db.execute(query)
         subscriptions = result.scalars().all()
-
-        if not subscriptions:
-            raise DataNotFoundException(
-                f"Channel subscriptions not found for user id: '{user_profile_id}'"
-            )
 
         return subscriptions
 

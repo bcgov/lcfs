@@ -1,12 +1,11 @@
 import uuid
 from logging import getLogger
-from typing import Optional
 
 from fastapi import Depends, HTTPException
 
 from lcfs.db.base import ActionTypeEnum, UserTypeEnum
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.fuel_supply.schema import (
@@ -49,7 +48,10 @@ class FuelSupplyActionService:
         self.fuel_repo = fuel_repo
 
     async def _populate_fuel_supply_fields(
-        self, fuel_supply: FuelSupply, fs_data: FuelSupplyCreateUpdateSchema
+        self,
+        fuel_supply: FuelSupply,
+        fs_data: FuelSupplyCreateUpdateSchema,
+        compliance_period: str,
     ) -> FuelSupply:
         """
         Populate additional calculated and referenced fields for a FuelSupply instance.
@@ -66,8 +68,8 @@ class FuelSupplyActionService:
             fuel_type_id=fuel_supply.fuel_type_id,
             fuel_category_id=fuel_supply.fuel_category_id,
             end_use_id=fuel_supply.end_use_id,
+            compliance_period=compliance_period,
             fuel_code_id=fuel_supply.fuel_code_id,
-            compliance_period=fs_data.compliance_period,
         )
 
         # Set units
@@ -105,7 +107,10 @@ class FuelSupplyActionService:
 
     @service_handler
     async def create_fuel_supply(
-        self, fs_data: FuelSupplyCreateUpdateSchema, user_type: UserTypeEnum
+        self,
+        fs_data: FuelSupplyCreateUpdateSchema,
+        user_type: UserTypeEnum,
+        compliance_period: str,
     ) -> FuelSupplyResponseSchema:
         """
         Create a new fuel supply record.
@@ -117,6 +122,7 @@ class FuelSupplyActionService:
         Args:
             fs_data (FuelSupplyCreateUpdateSchema): The data for the new fuel supply.
             user_type (UserTypeEnum): The type of user creating the record.
+            compliance_period (int): The compliance period for the new record.
 
         Returns:
             FuelSupplyResponseSchema: The newly created fuel supply record as a response schema.
@@ -132,7 +138,9 @@ class FuelSupplyActionService:
         )
 
         # Populate calculated and referenced fields
-        fuel_supply = await self._populate_fuel_supply_fields(fuel_supply, fs_data)
+        fuel_supply = await self._populate_fuel_supply_fields(
+            fuel_supply, fs_data, compliance_period
+        )
 
         # Save the populated fuel supply record
         created_supply = await self.repo.create_fuel_supply(fuel_supply)
@@ -140,7 +148,10 @@ class FuelSupplyActionService:
 
     @service_handler
     async def update_fuel_supply(
-        self, fs_data: FuelSupplyCreateUpdateSchema, user_type: UserTypeEnum
+        self,
+        fs_data: FuelSupplyCreateUpdateSchema,
+        user_type: UserTypeEnum,
+        compliance_period: str,
     ) -> FuelSupplyResponseSchema:
         """
         Update an existing fuel supply record or create a new version if necessary.
@@ -153,6 +164,7 @@ class FuelSupplyActionService:
         Args:
             fs_data (FuelSupplyCreateUpdateSchema): The data for the fuel supply update.
             user_type (UserTypeEnum): The type of user performing the update.
+            compliance_period (str): The compliance period for the new record.
 
         Returns:
             FuelSupplyResponseSchema: The updated or new version of the fuel supply record.
@@ -177,7 +189,7 @@ class FuelSupplyActionService:
 
             # Populate calculated fields
             existing_fuel_supply = await self._populate_fuel_supply_fields(
-                existing_fuel_supply, fs_data
+                existing_fuel_supply, fs_data, compliance_period
             )
 
             updated_supply = await self.repo.update_fuel_supply(existing_fuel_supply)
@@ -204,7 +216,9 @@ class FuelSupplyActionService:
                 setattr(fuel_supply, field, value)
 
             # Populate calculated fields
-            fuel_supply = await self._populate_fuel_supply_fields(fuel_supply, fs_data)
+            fuel_supply = await self._populate_fuel_supply_fields(
+                fuel_supply, fs_data, compliance_period
+            )
 
             # Save the new version
             new_supply = await self.repo.create_fuel_supply(fuel_supply)

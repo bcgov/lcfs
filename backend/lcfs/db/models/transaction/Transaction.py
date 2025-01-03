@@ -1,7 +1,6 @@
 import enum
 
 from sqlalchemy import Column, Integer, BigInteger, ForeignKey, Enum
-from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -16,7 +15,6 @@ class TransactionActionEnum(enum.Enum):
 class Transaction(BaseModel, Auditable, EffectiveDates):
     __tablename__ = "transaction"
     __table_args__ = (
-        UniqueConstraint("transaction_id"),
         {
             "comment": "Contains a list of all of the government to organization and Organization to Organization transaction."
         },
