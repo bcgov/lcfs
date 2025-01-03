@@ -5,6 +5,7 @@ import {
 } from '@/utils/formatters'
 import {
   LinkRenderer,
+  LoginStatusRenderer,
   RoleRenderer,
   StatusRenderer
 } from '@/utils/grid/cellRenderers'
@@ -113,15 +114,6 @@ export const usersColumnDefs = (t) => [
   }
 ]
 
-export const usersDefaultColDef = {
-  resizable: true,
-  sortable: true,
-  filter: true,
-  minWidth: 300,
-  floatingFilter: true, // enables the filter boxes under the header label
-  suppressHeaderMenuButton: true // suppresses the menu button appearing next to the Header Label
-}
-
 export const idirUserDefaultFilter = [
   { filterType: 'text', type: 'blank', field: 'organizationId', filter: '' }
 ]
@@ -175,28 +167,24 @@ export const userLoginHistoryColDefs = (t) => [
   },
   {
     field: 'keycloakEmail',
-    headerName: t('admin:userLoginHistoryColLabels.keycloakEmail'),
-    cellDataType: 'string'
+    headerName: t('admin:userLoginHistoryColLabels.keycloakEmail')
   },
   {
     field: 'keycloakUserId',
-    headerName: t('admin:userLoginHistoryColLabels.keycloakUserId'),
-    cellDataType: 'string'
+    headerName: t('admin:userLoginHistoryColLabels.keycloakUserId')
   },
   {
     field: 'externalUsername',
-    headerName: t('admin:userLoginHistoryColLabels.externalUsername'),
-    cellDataType: 'string'
+    headerName: t('admin:userLoginHistoryColLabels.externalUsername')
   },
   {
     field: 'isLoginSuccessful',
     headerName: t('admin:userLoginHistoryColLabels.isLoginSuccessful'),
-    cellDataType: 'boolean'
+    cellRenderer: LoginStatusRenderer
   },
   {
     field: 'loginErrorMessage',
-    headerName: t('admin:userLoginHistoryColLabels.loginErrorMessage'),
-    cellDataType: 'string'
+    headerName: t('admin:userLoginHistoryColLabels.loginErrorMessage')
   },
   {
     field: 'createDate',

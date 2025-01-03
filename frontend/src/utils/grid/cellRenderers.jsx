@@ -65,6 +65,35 @@ export const StatusRenderer = (props) => {
   )
 }
 
+export const LoginStatusRenderer = (props) => {
+  return (
+    <BCBox
+      component={props.isView ? 'span' : 'div'}
+      mt={1}
+      sx={{ width: '100%', height: '100%' }}
+    >
+      <BCBadge
+        badgeContent={props.data.isLoginSuccessful ? 'True' : 'False'}
+        color={props.data.isLoginSuccessful ? 'success' : 'smoky'}
+        variant="gradient"
+        size="md"
+        sx={{
+          ...(!props.isView
+            ? { display: 'flex', justifyContent: 'center' }
+            : {}),
+          '& .MuiBadge-badge': {
+            minWidth: '120px',
+            fontWeight: 'regular',
+            textTransform: 'capitalize',
+            fontSize: '0.875rem',
+            padding: '0.4em 0.6em'
+          }
+        }}
+      />
+    </BCBox>
+  )
+}
+
 export const OrgStatusRenderer = (props) => {
   const location = useLocation()
   const statusArr = getAllOrganizationStatuses()
