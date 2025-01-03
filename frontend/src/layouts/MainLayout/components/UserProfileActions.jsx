@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
+import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNotificationsCount } from '@/hooks/useNotifications'
 import {
@@ -15,14 +16,13 @@ import {
   Tooltip
 } from '@mui/material'
 import NotificationsIcon from '@mui/icons-material/Notifications'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 
 export const UserProfileActions = () => {
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const { keycloak } = useKeycloak()
-  const navigate = useNavigate()
   const location = useLocation()
 
   // TODO:
@@ -43,6 +43,22 @@ export const UserProfileActions = () => {
   useEffect(() => {
     refetch()
   }, [location, refetch])
+
+  const iconBtn = (
+    <IconButton
+      color="inherit"
+      className="small-icon"
+      sx={{ mx: 1 }}
+      aria-label={t('Notifications')}
+    >
+      <Badge
+        badgeContent={notificationsCount > 0 ? notificationsCount : null}
+        color="error"
+      >
+        <NotificationsIcon />
+      </Badge>
+    </IconButton>
+  )
 
   return (
     keycloak.authenticated && (
@@ -87,21 +103,13 @@ export const UserProfileActions = () => {
             <CircularProgress size={24} sx={{ color: '#fff', mx: 2 }} />
           ) : (
             <Tooltip title={t('Notifications')}>
-              <IconButton
-                color="inherit"
-                sx={{ mx: 1 }}
-                onClick={() => navigate(ROUTES.NOTIFICATIONS)}
-                aria-label={t('Notifications')}
-              >
-                <Badge
-                  badgeContent={
-                    notificationsCount > 0 ? notificationsCount : null
-                  }
-                  color="error"
-                >
-                  <NotificationsIcon />
-                </Badge>
-              </IconButton>
+              <DefaultNavbarLink
+                icon={iconBtn}
+                name={''}
+                route={ROUTES.NOTIFICATIONS}
+                light={false}
+                isMobileView={false}
+              />
             </Tooltip>
           )}
           <Divider
