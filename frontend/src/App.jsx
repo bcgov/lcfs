@@ -24,9 +24,7 @@ import { AddEditUser } from './views/Users'
 import { ApiDocs } from './components/ApiDocs'
 import { Login } from './components/Login'
 import { NotFound } from './components/NotFound'
-import ContactUs from './components/ContactUs'
 import PublicLayout from './layouts/PublicLayout'
-import { EditViewComplianceReport } from './views/ComplianceReports/EditViewComplianceReport'
 import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
 import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
@@ -35,7 +33,6 @@ import { AddEditFuelExports } from './views/FuelExports/AddEditFuelExports'
 import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddEditAllocationAgreements'
 import { logout } from '@/utils/keycloak.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
-import { ViewLegacyComplianceReport } from '@/views/ComplianceReports/ViewLegacyComplianceReport.jsx'
 import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector.jsx'
 
 const router = createBrowserRouter([
@@ -148,7 +145,7 @@ const router = createBrowserRouter([
       {
         path: ROUTES.ORGANIZATIONS,
         element: <Organizations />,
-        handle: { title: 'Organizations', crumb: () => `Organizations` }
+        handle: { title: 'Organizations', crumb: () => 'Organizations' }
       },
       {
         path: ROUTES.ORGANIZATIONS_ADD,
@@ -384,11 +381,6 @@ const router = createBrowserRouter([
     path: ROUTES.APIDOCS,
     element: <ApiDocs />,
     handle: { crumb: () => 'API Docs' }
-  },
-  {
-    path: ROUTES.CONTACT_US,
-    element: <ContactUs />,
-    handle: { crumb: () => 'Contact Us' }
   },
   {
     path: ROUTES.LOG_OUT,
