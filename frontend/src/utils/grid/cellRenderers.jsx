@@ -74,7 +74,7 @@ export const LoginStatusRenderer = (props) => {
     >
       <BCBadge
         badgeContent={props.data.isLoginSuccessful ? 'True' : 'False'}
-        color={props.data.isLoginSuccessful ? 'success' : 'smoky'}
+        color={props.data.isLoginSuccessful ? 'success' : 'error'}
         variant="gradient"
         size="md"
         sx={{
