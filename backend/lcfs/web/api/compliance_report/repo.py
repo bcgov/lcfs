@@ -54,6 +54,20 @@ class ComplianceReportRepository:
         self.db = db
         self.fuel_supply_repo = fuel_supply_repo
 
+    def _convert_status_to_enum(self, value: str) -> ComplianceReportStatusEnum:
+        """Helper to convert status string to enum value"""
+        enum_value_map = {
+            enum_val.value.lower(): enum_val for enum_val in ComplianceReportStatusEnum
+        }
+
+        # Handle both string and enum inputs
+        if isinstance(value, ComplianceReportStatusEnum):
+            return value
+
+        # Convert display value to enum name format
+        normalized_value = value.replace(" ", "_").lower()
+        return enum_value_map.get(normalized_value)
+
     def apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
             filter_value = filter.filter
@@ -74,12 +88,15 @@ class ComplianceReportRepository:
             filter_type = filter.filter_type
             if filter.field == "status":
                 field = get_field_for_filter(ComplianceReportStatus, "status")
-                normalized_value = filter_value.lower()
-                enum_value_map = {
-                    enum_val.value.lower(): enum_val
-                    for enum_val in ComplianceReportStatusEnum
-                }
-                filter_value = enum_value_map.get(normalized_value)
+                if isinstance(filter_value, str):
+                    enum_value = self._convert_status_to_enum(filter_value)
+                    filter_value = enum_value.name if enum_value else filter_value
+                elif isinstance(filter_value, list):
+                    filter_value = [
+                        val.name if isinstance(val, ComplianceReportStatusEnum)
+                        else (self._convert_status_to_enum(val).name if self._convert_status_to_enum(val) else val)
+                        for val in filter_value
+                    ]
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":

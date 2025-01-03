@@ -232,7 +232,7 @@ export const ReportsStatusRenderer = (props) => {
     'Recommended by analyst',
     'Recommended by manager',
     'Assessed',
-    'RecoReassessedrded'
+    'ReAssessed'
   ]
   const statusColorArr = ['info', 'info', 'info', 'info', 'success', 'success']
   const statusIndex = statusArr.indexOf(props.data.currentStatus.status)
