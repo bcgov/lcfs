@@ -1,15 +1,8 @@
 import PropTypes from 'prop-types'
-
-// @mui material components
 import { Link } from '@mui/material'
-
-// BCGov React components
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-// Icons
 import GitHubIcon from '@mui/icons-material/GitHub'
-
-// BCGov React base styles
 import typography from '@/themes/base/typography'
 
 function Footer({

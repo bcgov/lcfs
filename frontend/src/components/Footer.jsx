@@ -7,13 +7,13 @@ const Footer = (props) => {
   const links = useMemo(
     () => [
       {
-        href: '/',
+        href: 'https://gov.bc.ca/',
         name: 'Home',
         id: 'footer-home',
         label: 'Home page of LCFS'
       },
       {
-        href: 'https://www2.gov.bc.ca/gov/content/industry/electricity-alternative-energy/transportation-energies/renewable-low-carbon-fuels/transportation-fuels-reporting-system',
+        href: 'https://www.gov.bc.ca/aboutgov',
         name: 'About this site',
         id: 'footer-about-this-site',
         label: 'About this site'
@@ -43,7 +43,7 @@ const Footer = (props) => {
         label: 'BC gov copyright information'
       },
       {
-        href: '/contact-us',
+        href: 'https://gov.bc.ca/contactus',
         name: 'Contact Us',
         id: 'footer-contact-us',
         label: 'Contact Us information for LCFS application'
