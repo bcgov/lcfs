@@ -1,25 +1,20 @@
-// mui components
 import { Stack } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-// react components
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
-// Services
 import { Role } from '@/components/Role'
-// constants
 import { roles } from '@/constants/roles'
 import { apiRoutes, ROUTES } from '@/constants/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-// hooks
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
-// internal components
 import { defaultSortModel, reportsColDefs } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import BCTypography from '@/components/BCTypography'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
@@ -44,19 +39,9 @@ export const ComplianceReports = () => {
     (params) => params.data.complianceReportId.toString(),
     []
   )
-  const handleRowClicked = useCallback(
-    ({ data }) => {
-      const mappedRoute = ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        data.compliancePeriod.description
-      ).replace(':complianceReportId', data.complianceReportId)
-      navigate(mappedRoute)
-    },
-    [navigate]
-  )
 
   const handleGridKey = useCallback(() => {
-    setGridKey(`reports-grid`)
+    setGridKey('reports-grid')
   }, [])
 
   useEffect(() => {
@@ -66,42 +51,53 @@ export const ComplianceReports = () => {
     }
   }, [location.state])
 
-  const {
-    mutate: createComplianceReport,
-    isLoading: isCreating,
-    isError
-  } = useCreateComplianceReport(currentUser?.organization?.organizationId, {
-    onSuccess: (response, variables) => {
-      setAlertMessage(
-        t('report:actionMsgs.successText', {
-          status: 'created'
-        })
-      )
-      setIsButtonLoading(false)
-      setAlertSeverity('success')
-      navigate(
-        ROUTES.REPORTS_VIEW.replace(
-          ':compliancePeriod',
-          response.data.compliancePeriod.description
-        ).replace(':complianceReportId', response.data.complianceReportId),
-        { state: { data: response.data, newReport: true } }
-      )
-      alertRef.current.triggerAlert()
-    },
-    onError: (_error, _variables) => {
-      setIsButtonLoading(false)
-      const errorMsg = _error.response.data?.detail
-      setAlertMessage(errorMsg)
-      setAlertSeverity('error')
-      alertRef.current.triggerAlert()
-    }
-  })
+  const { mutate: createComplianceReport, isLoading: isCreating } =
+    useCreateComplianceReport(currentUser?.organization?.organizationId, {
+      onSuccess: (response, variables) => {
+        setAlertMessage(
+          t('report:actionMsgs.successText', {
+            status: 'created'
+          })
+        )
+        setIsButtonLoading(false)
+        setAlertSeverity('success')
+        navigate(
+          ROUTES.REPORTS_VIEW.replace(
+            ':compliancePeriod',
+            response.data.compliancePeriod.description
+          ).replace(':complianceReportId', response.data.complianceReportId),
+          { state: { data: response.data, newReport: true } }
+        )
+        alertRef.current.triggerAlert()
+      },
+      onError: (_error, _variables) => {
+        setIsButtonLoading(false)
+        const errorMsg = _error.response.data?.detail
+        setAlertMessage(errorMsg)
+        setAlertSeverity('error')
+        alertRef.current.triggerAlert()
+      }
+    })
 
   useEffect(() => {
     if (isCreating) {
       setIsButtonLoading(true)
     }
   }, [isCreating])
+
+  const defaultColDef = useMemo(
+    () => ({
+      floatingFilter: false,
+      filter: false,
+      cellRenderer: LinkRenderer,
+      cellRendererParams: {
+        url: (data) =>
+          `${data.data.compliancePeriod.description}/${data.data.complianceReportId}`
+      }
+    }),
+    []
+  )
+
   return (
     <>
       <div>
@@ -159,8 +155,8 @@ export const ComplianceReports = () => {
             defaultFilterModel={location.state?.filters}
             gridOptions={gridOptions}
             handleGridKey={handleGridKey}
-            handleRowClicked={handleRowClicked}
             enableCopyButton={false}
+            defaultColDef={defaultColDef}
           />
         </BCBox>
       </Stack>

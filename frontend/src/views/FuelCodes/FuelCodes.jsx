@@ -14,10 +14,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { fuelCodeColDefs } from './_schema'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 const FuelCodesBase = () => {
   const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
@@ -40,11 +41,15 @@ const FuelCodesBase = () => {
     return params.data.fuelCodeId.toString()
   }
 
-  const handleRowClicked = (params) => {
-    navigate(
-      ROUTES.FUELCODES_EDIT.replace(':fuelCodeID', params.data.fuelCodeId)
-    )
-  }
+  const defaultColDef = useMemo(
+    () => ({
+      cellRenderer: LinkRenderer,
+      cellRendererParams: {
+        url: (data) => data.data.fuelCodeId
+      }
+    }),
+    []
+  )
 
   const handleDownloadFuelCodes = async () => {
     setIsDownloadingFuelCodes(true)
@@ -110,14 +115,10 @@ const FuelCodesBase = () => {
           columnDefs={fuelCodeColDefs(t)}
           query={useGetFuelCodes}
           queryParams={{ cacheTime: 0, staleTime: 0 }}
-          dataKey={'fuelCodes'}
+          dataKey="fuelCodes"
           getRowId={getRowId}
-          onRowClicked={handleRowClicked}
           overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
-          autoSizeStrategy={{
-            defaultMinWidth: 50,
-            defaultMaxWidth: 600
-          }}
+          defaultColDef={defaultColDef}
         />
       </BCBox>
     </Grid2>

@@ -1,6 +1,6 @@
 import {
   CommonArrayRenderer,
-  FuelCodeStatusTextRenderer,
+  FuelCodeStatusRenderer,
   TextRenderer
 } from '@/utils/grid/cellRenderers'
 import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
@@ -23,19 +23,17 @@ export const fuelCodeColDefs = (t) => [
     },
     suppressFloatingFilterButton: true,
     valueGetter: (params) => params.data.fuelCodeStatus.status,
-    cellRenderer: FuelCodeStatusTextRenderer
+    cellRenderer: FuelCodeStatusRenderer
   },
   {
     field: 'prefix',
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
-    valueGetter: (params) => params.data.fuelCodePrefix.prefix,
     suppressFloatingFilterButton: true,
-    cellRenderer: TextRenderer
+    valueGetter: (params) => params.data.fuelCodePrefix.prefix
   },
   {
     field: 'fuelSuffix',
     headerName: t('fuelCode:fuelCodeColLabels.fuelSuffix'),
-    cellRenderer: TextRenderer,
     type: 'numericColumn',
     filter: 'agNumberColumnFilter',
     suppressFloatingFilterButton: true,
@@ -47,7 +45,6 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'carbonIntensity',
     headerName: t('fuelCode:fuelCodeColLabels.carbonIntensity'),
-    cellRenderer: TextRenderer,
     type: 'numericColumn',
     filter: 'agNumberColumnFilter',
     filterParams: {
@@ -57,86 +54,65 @@ export const fuelCodeColDefs = (t) => [
   },
   {
     field: 'edrms',
-    headerName: t('fuelCode:fuelCodeColLabels.edrms'),
-    cellRenderer: TextRenderer
+    headerName: t('fuelCode:fuelCodeColLabels.edrms')
   },
   {
     field: 'company',
     headerName: t('fuelCode:fuelCodeColLabels.company'),
-    cellRenderer: TextRenderer,
     minWidth: 300
   },
   {
     field: 'contactName',
     headerName: t('fuelCode:fuelCodeColLabels.contactName'),
-    cellRenderer: TextRenderer,
     minWidth: 300
   },
   {
     field: 'contactEmail',
     headerName: t('fuelCode:fuelCodeColLabels.contactEmail'),
-    cellRenderer: TextRenderer,
     minWidth: 300
   },
   {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
-    floatingFilterComponent: BCDateFloatingFilter,
-    suppressFloatingFilterButton: true,
-    minWidth: 250,
-    cellRenderer: TextRenderer
+    filter: false
   },
   {
     field: 'approvalDate',
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
-    cellRenderer: TextRenderer,
-    floatingFilterComponent: BCDateFloatingFilter,
-    suppressFloatingFilterButton: true,
-    minWidth: 250
+    filter: false
   },
   {
     field: 'effectiveDate',
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
-    cellRenderer: TextRenderer,
-    floatingFilterComponent: BCDateFloatingFilter,
-    suppressFloatingFilterButton: true,
-    minWidth: 250
+    filter: false
   },
   {
     field: 'expirationDate',
     headerName: t('fuelCode:fuelCodeColLabels.expirationDate'),
-    cellRenderer: TextRenderer,
-    floatingFilterComponent: BCDateFloatingFilter,
-    suppressFloatingFilterButton: true,
-    minWidth: 250
+    filter: false
   },
   {
     field: 'fuelType',
     headerName: t('fuelCode:fuelCodeColLabels.fuelType'),
-    cellRenderer: TextRenderer,
     valueGetter: (params) => params.data.fuelType.fuelType
   },
   {
     field: 'feedstock',
-    headerName: t('fuelCode:fuelCodeColLabels.feedstock'),
-    cellRenderer: TextRenderer
+    headerName: t('fuelCode:fuelCodeColLabels.feedstock')
   },
   {
     field: 'feedstockLocation',
     headerName: t('fuelCode:fuelCodeColLabels.feedstockLocation'),
-    cellRenderer: TextRenderer,
     minWidth: 300
   },
   {
     field: 'feedstockMisc',
     headerName: t('fuelCode:fuelCodeColLabels.misc'),
-    cellRenderer: TextRenderer,
     minWidth: 495
   },
   {
     field: 'fuelProductionFacilityCity',
     headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
-    cellRenderer: TextRenderer,
     minWidth: 325
   },
   {
@@ -144,27 +120,23 @@ export const fuelCodeColDefs = (t) => [
     headerName: t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
     ),
-    cellRenderer: TextRenderer,
     minWidth: 325
   },
   {
     field: 'fuelProductionFacilityCountry',
     headerName: t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'),
-    cellRenderer: TextRenderer,
     minWidth: 325
   },
   {
     field: 'facilityNameplateCapacity',
     headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacity'),
     valueFormatter: numberFormatter,
-    cellRenderer: TextRenderer,
     minWidth: 290,
     type: 'numericColumn'
   },
   {
     field: 'facilityNameplateCapacityUnit',
     headerName: t('fuelCode:fuelCodeColLabels.facilityNameplateCapacityUnit'),
-    cellRenderer: TextRenderer,
     minWidth: 290
   },
   {
@@ -183,7 +155,7 @@ export const fuelCodeColDefs = (t) => [
       params.data.feedstockFuelTransportModes.map(
         (item) => item.feedstockFuelTransportMode.transportMode
       ),
-    cellRenderer: (props) => <CommonArrayRenderer disableLink {...props} />
+    cellRenderer: (props) => <CommonArrayRenderer {...props} />
   },
   {
     field: 'finishedFuelTransportMode',
@@ -201,12 +173,11 @@ export const fuelCodeColDefs = (t) => [
       params.data.finishedFuelTransportModes.map(
         (item) => item.finishedFuelTransportMode.transportMode
       ),
-    cellRenderer: (props) => <CommonArrayRenderer disableLink {...props} />
+    cellRenderer: (props) => <CommonArrayRenderer {...props} />
   },
   {
     field: 'formerCompany',
     headerName: t('fuelCode:fuelCodeColLabels.formerCompany'),
-    cellRenderer: TextRenderer,
     minWidth: 300
   },
   {
@@ -225,7 +196,6 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'notes',
     headerName: t('fuelCode:fuelCodeColLabels.notes'),
-    cellRenderer: TextRenderer,
     minWidth: 600
   }
 ]

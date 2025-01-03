@@ -1,19 +1,23 @@
 import Loading from '@/components/Loading'
 import BCTypography from '@/components/BCTypography'
-import { FloatingAlert, BCAlert2 } from '@/components/BCAlert'
+import { BCAlert2, FloatingAlert } from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { useRef, useCallback, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { useUser } from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
 import { phoneNumberFormatter } from '@/utils/formatters'
-import { RoleSpanRenderer, StatusRenderer } from '@/utils/grid/cellRenderers'
 import {
-  userActivityColDefs,
-  defaultSortModel
+  LinkRenderer,
+  RoleSpanRenderer,
+  StatusRenderer
+} from '@/utils/grid/cellRenderers'
+import {
+  defaultSortModel,
+  userActivityColDefs
 } from '@/views/Admin/AdminMenu/components/_schema'
-import { ROUTES, apiRoutes } from '@/constants/routes'
+import { apiRoutes, ROUTES } from '@/constants/routes'
 import { roles } from '@/constants/roles'
 import { useOrganizationUser } from '@/hooks/useOrganization'
 import { Role } from '@/components/Role'
@@ -33,7 +37,6 @@ export const ViewUser = () => {
 
   const { userID, orgID } = useParams()
   const { data: currentUser, hasRoles } = useCurrentUser()
-  const navigate = useNavigate()
   const [editButtonRoute, setEditButtonRoute] = useState(null)
 
   const { data, isLoading, isLoadingError, isError, error } = hasRoles(
@@ -73,35 +76,31 @@ export const ViewUser = () => {
     }`
   }, [])
 
-  const handleRowClicked = useCallback(
-    (params) => {
-      const { transactionType, transactionId } = params.data
-      let route
-      switch (transactionType) {
-        case 'Transfer':
-          route = ROUTES.TRANSFERS_VIEW.replace(':transferId', transactionId)
-          break
-        case 'AdminAdjustment':
-          route = ROUTES.ADMIN_ADJUSTMENT_VIEW.replace(
-            ':transactionId',
-            transactionId
-          )
-          break
-        case 'InitiativeAgreement':
-          route = ROUTES.INITIATIVE_AGREEMENT_VIEW.replace(
-            ':transactionId',
-            transactionId
-          )
-          break
-        default:
-          route = null
+  const defaultColDef = useMemo(
+    () => ({
+      cellRenderer: LinkRenderer,
+      cellRendererParams: {
+        isAbsolute: true,
+        url: (data) => {
+          const { transactionType, transactionId } = data.data
+          switch (transactionType) {
+            case 'Transfer':
+              return ROUTES.TRANSFERS_VIEW.replace(':transferId', transactionId)
+            case 'AdminAdjustment':
+              return ROUTES.ADMIN_ADJUSTMENT_VIEW.replace(
+                ':transactionId',
+                transactionId
+              )
+            case 'InitiativeAgreement':
+              return ROUTES.INITIATIVE_AGREEMENT_VIEW.replace(
+                ':transactionId',
+                transactionId
+              )
+          }
+        }
       }
-
-      if (route) {
-        navigate(route)
-      }
-    },
-    [navigate]
+    }),
+    []
   )
 
   useEffect(() => {
@@ -208,7 +207,7 @@ export const ViewUser = () => {
               gridOptions={gridOptions}
               defaultSortModel={defaultSortModel}
               enableCopyButton={false}
-              handleRowClicked={handleRowClicked}
+              defaultColDef={defaultColDef}
             />
           </Role>
         </>

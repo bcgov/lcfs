@@ -1,83 +1,132 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { UserActivity } from '../UserActivity'
 import { wrapper } from '@/tests/utils/wrapper'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 
-// Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key) => key
   })
 }))
 
-// Mock react-router-dom
 const mockUseNavigate = vi.fn()
-vi.mock('react-router-dom', () => ({
-  ...vi.importActual('react-router-dom'),
-  useNavigate: () => mockUseNavigate
-}))
-
-// Mock constants
-vi.mock('@/constants/routes', () => ({
-  ROUTES: {
-    TRANSFERS_VIEW: '/transfers/:transferId',
-    ADMIN_ADJUSTMENT_VIEW: '/admin-adjustment/:transactionId',
-    INITIATIVE_AGREEMENT_VIEW: '/initiative-agreement/:transactionId'
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => mockUseNavigate
   }
-}))
+})
 
-// Mock userActivityColDefs
 vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
-  userActivityColDefs: () => [
+  userActivityColDefs: [
     { headerName: 'Column 1', field: 'col1' },
     { headerName: 'Column 2', field: 'col2' }
   ]
 }))
 
-// Variable to hold the onRowClicked function
-let onRowClickedMock
-
-// Mock BCGridViewer
+// -- Mock BCGridViewer so we can inspect its props --
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: (props) => {
-    onRowClickedMock = props.onRowClicked
-    return <div data-test="bc-grid-viewer">BCGridViewer</div>
-  }
+  BCGridViewer: vi.fn(() => <div data-test="bc-grid-viewer">BCGridViewer</div>)
+}))
+
+vi.mock('@/hooks/useUser', () => ({
+  useGetUserActivities: () => ({
+    data: { activities: [] }, // or mock real data if needed
+    isLoading: false,
+    isError: false
+  })
 }))
 
 describe('UserActivity', () => {
   beforeEach(() => {
-    vi.resetAllMocks()
+    vi.clearAllMocks()
   })
 
-  it('renders the component', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('renders the heading and the grid', () => {
     render(<UserActivity />, { wrapper })
+
+    // 1. Heading check
     expect(screen.getByText('admin:UserActivity')).toBeInTheDocument()
+
+    // 2. BCGridViewer check
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
-  it('navigates to the correct route when transactionType is Transfer', () => {
+  it('passes the correct props to BCGridViewer', () => {
     render(<UserActivity />, { wrapper })
-    onRowClickedMock({
-      data: { transactionType: 'Transfer', transactionId: '123' }
-    })
-    expect(mockUseNavigate).toHaveBeenCalledWith('/transfers/123')
+
+    // BCGridViewer has been mocked, so we can inspect its calls
+    expect(BCGridViewer).toHaveBeenCalledTimes(1)
+    const gridProps = BCGridViewer.mock.calls[0][0]
+
+    // 1) gridKey
+    expect(gridProps.gridKey).toBe('all-user-activities-grid')
+
+    // 2) columnDefs
+    expect(gridProps.columnDefs).toEqual([
+      { headerName: 'Column 1', field: 'col1' },
+      { headerName: 'Column 2', field: 'col2' }
+    ])
+
+    // 3) dataKey
+    expect(gridProps.dataKey).toBe('activities')
+
+    // 4) getRowId
+    expect(gridProps.getRowId).toBeDefined()
+    // Optionally check the logic of getRowId
+    // This is a unit-style check; you can do something like:
+    const mockParams = {
+      data: { transactionType: 'AdminAdjustment', transactionId: '123' }
+    }
+    expect(gridProps.getRowId(mockParams)).toBe('adminadjustment-123')
+
+    // 5) defaultColDef
+    expect(gridProps.defaultColDef).toBeDefined()
+    expect(typeof gridProps.defaultColDef.cellRendererParams.url).toBe(
+      'function'
+    )
   })
 
-  it('navigates to the correct route when transactionType is AdminAdjustment', () => {
+  it('generates correct URLs for each transaction type', () => {
     render(<UserActivity />, { wrapper })
-    onRowClickedMock({
-      data: { transactionType: 'AdminAdjustment', transactionId: '456' }
+
+    // Extract the defaultColDef from BCGridViewer props
+    const gridProps = BCGridViewer.mock.calls[0][0]
+    const { url } = gridProps.defaultColDef.cellRendererParams
+
+    // Test different transaction types
+    const mockData = (transactionType, transactionId) => ({
+      data: { transactionType, transactionId }
     })
-    expect(mockUseNavigate).toHaveBeenCalledWith('/admin-adjustment/456')
+
+    // Transfer
+    expect(url(mockData('Transfer', 'ABC123'))).toBe('/transfers/ABC123')
+
+    // AdminAdjustment
+    expect(url(mockData('AdminAdjustment', 'XYZ789'))).toBe(
+      '/admin-adjustment/XYZ789'
+    )
+
+    // InitiativeAgreement
+    expect(url(mockData('InitiativeAgreement', 'IA555'))).toBe(
+      '/initiative-agreement/IA555'
+    )
   })
 
-  it('navigates to the correct route when transactionType is InitiativeAgreement', () => {
+  // If you want to verify that no rows found message is shown if data is empty
+  it('shows the overlayNoRowsTemplate when there are no activities', () => {
     render(<UserActivity />, { wrapper })
-    onRowClickedMock({
-      data: { transactionType: 'InitiativeAgreement', transactionId: '789' }
-    })
-    expect(mockUseNavigate).toHaveBeenCalledWith('/initiative-agreement/789')
+
+    // BCGridViewer props
+    const gridProps = BCGridViewer.mock.calls[0][0]
+    // Because data is mocked to []
+    expect(gridProps.overlayNoRowsTemplate).toBe('admin:activitiesNotFound')
   })
 })
