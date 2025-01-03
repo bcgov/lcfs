@@ -426,7 +426,9 @@ class ComplianceReportRepository:
             .scalars()
             .all()
         )
-        total_count = len(query_result)
+        # Calculate total number of compliance reports available
+        total_count_query = select(func.count()).select_from(query)
+        total_count = (await self.db.execute(total_count_query)).scalar()
 
         # Transform results into Pydantic schemas
         reports = [
