@@ -22,7 +22,6 @@ from lcfs.db.seeders.dev.finished_fuel_transfer_mode_seeder import (
 from lcfs.db.seeders.dev.feedstock_fuel_transfer_mode_seeder import (
     seed_feedstock_fuel_transfer_modes,
 )
-from lcfs.db.seeders.dev.expected_use_types_seeder import seed_expected_use_types
 
 logger = structlog.get_logger(__name__)
 
@@ -44,7 +43,8 @@ async def update_sequences(session):
     for table, column in sequences.items():
         sequence_name = f"{table}_{column}_seq"
         max_value_query = text(
-            f"SELECT setval('{sequence_name}', COALESCE((SELECT MAX({column}) + 1 FROM {table}), 1), false)"
+            f"""SELECT setval('{sequence_name}', COALESCE((SELECT MAX({
+                column}) + 1 FROM {table}), 1), false)"""
         )
         await session.execute(max_value_query)
 
@@ -63,7 +63,6 @@ async def seed_dev(session: AsyncSession):
     await seed_fuel_codes(session)
     await seed_finished_fuel_transfer_modes(session)
     await seed_feedstock_fuel_transfer_modes(session)
-    await seed_expected_use_types(session)
 
     # Update sequences after all seeders have run
     await update_sequences(session)
