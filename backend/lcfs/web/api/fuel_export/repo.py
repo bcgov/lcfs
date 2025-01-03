@@ -52,13 +52,13 @@ class FuelExportRepository:
         )
 
     @repo_handler
-    async def get_fuel_export_table_options(self, compliancePeriod: str):
+    async def get_fuel_export_table_options(self, compliance_period: str):
         """
         Retrieve Fuel Type and other static data to use them while populating fuel supply form.
         """
         subquery_compliance_period_id = (
             select(CompliancePeriod.compliance_period_id)
-            .where(CompliancePeriod.description == compliancePeriod)
+            .where(CompliancePeriod.description == compliance_period)
             .scalar_subquery()
         )
 
@@ -163,6 +163,10 @@ class FuelExportRepository:
                 FuelCodePrefix, FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id
             )
         )
+
+        include_legacy = compliance_period < "2024"
+        if not include_legacy:
+            query = query.where(FuelType.is_legacy == False)
 
         results = (await self.db.execute(query)).all()
         return results

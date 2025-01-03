@@ -1,4 +1,3 @@
-
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import Loading from '@/components/Loading'
 import {
@@ -33,7 +32,7 @@ export const AddEditOtherUses = () => {
     data: optionsData,
     isLoading: optionsLoading,
     isFetched
-  } = useOtherUsesOptions()
+  } = useOtherUsesOptions({ compliancePeriod })
   const { data: otherUses, isLoading: usesLoading } =
     useGetAllOtherUses(complianceReportId)
   const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
@@ -81,22 +80,28 @@ export const AddEditOtherUses = () => {
     return ciOfFuel
   }, [])
 
-  const validate = (params, validationFn, errorMessage, alertRef, field = null) => {
-    const value = field ? params.node?.data[field] : params;
+  const validate = (
+    params,
+    validationFn,
+    errorMessage,
+    alertRef,
+    field = null
+  ) => {
+    const value = field ? params.node?.data[field] : params
 
     if (field && params.colDef.field !== field) {
-      return true;
+      return true
     }
 
     if (!validationFn(value)) {
       alertRef.current?.triggerAlert({
         message: errorMessage,
-        severity: 'error',
-      });
-      return false;
+        severity: 'error'
+      })
+      return false
     }
-    return true; // Proceed with the update
-  };
+    return true // Proceed with the update
+  }
 
   const onGridReady = (params) => {
     const ensureRowIds = (rows) => {
@@ -184,35 +189,34 @@ export const AddEditOtherUses = () => {
         if (params.colDef.field === 'fuelType') {
           const fuelType = optionsData?.fuelTypes?.find(
             (obj) => params.data.fuelType === obj.fuelType
-          );
+          )
           if (fuelType) {
             // Auto-populate the "units" field
             if (fuelType.units) {
-              params.node.setDataValue('units', fuelType.units);
+              params.node.setDataValue('units', fuelType.units)
             } else {
-              params.node.setDataValue('units', '');
+              params.node.setDataValue('units', '')
             }
 
             // Auto-populate the "fuelCategory" field
             const fuelCategoryOptions = fuelType.fuelCategories.map(
               (item) => item.category
-            );
+            )
 
-            const categoryValue = fuelCategoryOptions.length === 1
-              ? fuelCategoryOptions[0]
-              : null
+            const categoryValue =
+              fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
 
-            params.node.setDataValue('fuelCategory', categoryValue);
+            params.node.setDataValue('fuelCategory', categoryValue)
 
             // Auto-populate the "fuelCode" field
             const fuelCodeOptions = fuelType.fuelCodes.map(
               (code) => code.fuelCode
-            );
-            params.node.setDataValue('fuelCode', fuelCodeOptions[0] ?? null);
+            )
+            params.node.setDataValue('fuelCode', fuelCodeOptions[0] ?? null)
             params.node.setDataValue(
               'fuelCodeId',
               fuelType.fuelCodes[0]?.fuelCodeId ?? null
-            );
+            )
           }
         }
       }
@@ -227,12 +231,12 @@ export const AddEditOtherUses = () => {
       const isValid = validate(
         params,
         (value) => {
-          return value !== null && !isNaN(value) && value > 0;
+          return value !== null && !isNaN(value) && value > 0
         },
         'Quantity supplied must be greater than 0.',
         alertRef,
-        'quantitySupplied',
-      );
+        'quantitySupplied'
+      )
 
       if (!isValid) {
         return

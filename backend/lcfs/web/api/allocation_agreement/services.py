@@ -87,11 +87,13 @@ class AllocationAgreementServices:
         )
 
     @service_handler
-    async def get_table_options(self) -> AllocationAgreementTableOptionsSchema:
+    async def get_table_options(
+        self, compliance_period: str
+    ) -> AllocationAgreementTableOptionsSchema:
         """
         Gets the list of table options related to allocation agreements.
         """
-        table_options = await self.repo.get_table_options()
+        table_options = await self.repo.get_table_options(compliance_period)
         fuel_types = [
             {
                 **fuel_type,

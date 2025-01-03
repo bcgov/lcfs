@@ -184,6 +184,10 @@ class FuelSupplyRepository:
             )
         )
 
+        include_legacy = compliance_period < "2024"
+        if not include_legacy:
+            query.where(FuelType.is_legacy == False)
+
         fuel_type_results = (await self.db.execute(query)).all()
 
         return {

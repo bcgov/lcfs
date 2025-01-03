@@ -6,7 +6,10 @@ from unittest.mock import MagicMock, AsyncMock, patch
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import ComplianceReportRequestSchema
-from lcfs.web.api.other_uses.schema import PaginatedOtherUsesRequestSchema, OtherUsesSchema
+from lcfs.web.api.other_uses.schema import (
+    PaginatedOtherUsesRequestSchema,
+    OtherUsesSchema,
+)
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
 from lcfs.tests.other_uses.conftest import create_mock_schema, create_mock_entity
@@ -47,7 +50,7 @@ async def test_get_table_options(
         lambda: mock_other_uses_service
     )
 
-    response = await client.get(url)
+    response = await client.get(url + "?compliancePeriod=2024")
 
     assert response.status_code == 200
     data = response.json()

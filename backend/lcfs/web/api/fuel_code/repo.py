@@ -51,23 +51,23 @@ class FuelCodeRepository:
         self.db = db
 
     @repo_handler
-    async def get_fuel_types(self) -> List[FuelType]:
-        """Get all fuel type options"""
-        return (
-            (
-                await self.db.execute(
-                    select(FuelType).options(
-                        joinedload(FuelType.provision_1),
-                        joinedload(FuelType.provision_2),
-                    )
-                )
-            )
-            .scalars()
-            .all()
+    async def get_fuel_types(self, include_legacy=False) -> List[FuelType]:
+        stmt = select(FuelType).options(
+            joinedload(FuelType.provision_1),
+            joinedload(FuelType.provision_2),
         )
 
+        # Conditionally add the legacy filter
+        if not include_legacy:
+            stmt = stmt.where(FuelType.is_legacy == False)
+
+        result = await self.db.execute(stmt)
+        return result.scalars().all()
+
     @repo_handler
-    async def get_formatted_fuel_types(self) -> List[Dict[str, Any]]:
+    async def get_formatted_fuel_types(
+        self, include_legacy=False
+    ) -> List[Dict[str, Any]]:
         """Get all fuel type options with their associated fuel categories and fuel codes"""
         # Define the filtering conditions for fuel codes
         current_date = date.today()
@@ -77,13 +77,21 @@ class FuelCodeRepository:
             FuelCode.expiration_date == None, FuelCode.expiration_date > current_date
         )
 
+        conditions = [fuel_code_filters]
+
+        # If we don't want to include legacy fuel types, filter them out
+        if not include_legacy:
+            conditions.append(FuelType.is_legacy == False)
+
+        combined_conditions = and_(*conditions)
+
         # Build the query with filtered fuel_codes
         query = (
             select(FuelType)
             .outerjoin(FuelType.fuel_instances)
             .outerjoin(FuelInstance.fuel_category)
             .outerjoin(FuelType.fuel_codes)
-            .where(fuel_code_filters)
+            .where(combined_conditions)
             .options(
                 contains_eager(FuelType.fuel_instances).contains_eager(
                     FuelInstance.fuel_category

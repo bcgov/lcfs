@@ -34,10 +34,12 @@ class AllocationAgreementRepository:
         self.fuel_code_repo = fuel_repo
 
     @repo_handler
-    async def get_table_options(self) -> dict:
+    async def get_table_options(self, compliance_period: str) -> dict:
         """Get all table options"""
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
-        fuel_types = await self.fuel_code_repo.get_formatted_fuel_types()
+        fuel_types = await self.fuel_code_repo.get_formatted_fuel_types(
+            include_legacy=compliance_period < "2024"
+        )
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
         allocation_transaction_types = (
             (await self.db.execute(select(AllocationTransactionType))).scalars().all()

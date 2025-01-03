@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Column, Integer, Text, Boolean, Enum, Numeric
+from sqlalchemy import Column, Integer, Text, Boolean, Enum, Numeric, text
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
 
@@ -53,6 +53,12 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
         default=False,
         nullable=False,
         comment="Indicates if the fuel type is unrecognized",
+    )
+    is_legacy = Column(
+        Boolean,
+        server_default=text("FALSE"),
+        nullable=False,
+        comment="Indicates if the fuel type is legacy and should not be used for new reports",
     )
 
     # Relationships

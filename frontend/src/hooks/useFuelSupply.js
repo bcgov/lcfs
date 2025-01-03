@@ -8,7 +8,7 @@ export const useFuelSupplyOptions = (params, options) => {
   const path =
     apiRoutes.fuelSupplyOptions + 'compliancePeriod=' + params.compliancePeriod
   return useQuery({
-    queryKey: ['fuel-supply-options'],
+    queryKey: ['fuel-supply-options', params.compliancePeriod],
     queryFn: async () => (await client.get(path)).data,
     ...options
   })
