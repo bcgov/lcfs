@@ -45,12 +45,6 @@ Default.args = {
       name: 'Copyright',
       id: 'footer-copyright',
       label: 'BC gov copyright information'
-    },
-    {
-      href: '/contact-us',
-      name: 'Contact Us',
-      id: 'footer-contact-us',
-      label: 'Contact Us information for LCFS application'
     }
   ],
   repoDetails: {
