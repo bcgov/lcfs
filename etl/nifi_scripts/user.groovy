@@ -60,7 +60,7 @@ def userRoleQuery = """
         GROUP BY user_profile_id, organization_id
     ),
     ProcessedRoles AS (
-        SELECT 
+        SELECT
             user_profile_id,
             CASE
                 -- Rule 1: Government Users
@@ -88,9 +88,9 @@ def userRoleQuery = """
                 -- Rule 2: Supplier Users
                 WHEN organization_id > 1 THEN
                     CASE
-                        -- Remove government roles and retain Read Only if it exists
+                        -- Return empty array if READ_ONLY exists
                         WHEN 'READ_ONLY' = ANY(roles) THEN
-                            ARRAY['READ_ONLY']
+                            ARRAY[]::text[]
                         ELSE ARRAY(
                             SELECT UNNEST(roles)
                             EXCEPT
