@@ -23,7 +23,7 @@ import Grid from '@mui/material/Grid'
 import { useKeycloak } from '@react-keycloak/web'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import Snowfall from 'react-snowfall'
 
 const currentDate = new Date()
@@ -243,22 +243,6 @@ export const Login = () => {
                       <BCTypography variant="h6" mr={3} className="idir-name">
                         IDIR
                       </BCTypography>
-                    </BCButton>
-                  </BCBox>
-                  <BCBox mt={3} mb={1} textAlign="center">
-                    <BCButton variant="contained" color="dark" size="small">
-                      {' '}
-                      <Link
-                        data-test="login-help-link"
-                        component="button"
-                        variant="button"
-                        to="/contact-us"
-                        fontWeight="medium"
-                      >
-                        <BCTypography variant="body2" color="light">
-                          {t('login.troubleMessage')}
-                        </BCTypography>
-                      </Link>
                     </BCButton>
                   </BCBox>
                 </BCBox>
