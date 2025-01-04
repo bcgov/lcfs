@@ -3,7 +3,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { TransactionDetails } from '../TransactionDetails'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
-import { useRegExtOrgs } from '@/hooks/useOrganizations'
+import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
 import theme from '@/themes'
 import { FormProvider, useForm } from 'react-hook-form'
@@ -65,7 +65,7 @@ describe('TransactionDetails Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
-    useRegExtOrgs.mockReturnValue({
+    useOrganizationNames.mockReturnValue({
       data: mockOrganizations,
       isLoading: false
     })
