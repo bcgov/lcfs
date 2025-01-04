@@ -19,7 +19,7 @@ import {
   useCreateUpdateInitiativeAgreement,
   useInitiativeAgreement
 } from '@/hooks/useInitiativeAgreement'
-import { useRegExtOrgs } from '@/hooks/useOrganizations'
+import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
 import { useTransactionMutation } from '../transactionMutation'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
@@ -110,7 +110,7 @@ vi.mock('@fortawesome/react-fontawesome', () => ({
 
 // Mock the hooks
 vi.mock('@/hooks/useOrganizations', () => ({
-  useRegExtOrgs: vi.fn().mockReturnValue({
+  useOrganizationNames: vi.fn().mockReturnValue({
     data: [
       {
         organizationId: 1,
@@ -281,7 +281,7 @@ describe('AddEditViewTransaction Component Tests', () => {
       state: null
     })
 
-    useRegExtOrgs.mockReturnValue({
+    useOrganizationNames.mockReturnValue({
       data: [
         {
           organizationId: 1,
@@ -356,7 +356,7 @@ describe('AddEditViewTransaction Component Tests', () => {
       mutate: vi.fn(),
       isLoading: false
     })
-    useRegExtOrgs.mockReturnValue({
+    useOrganizationNames.mockReturnValue({
       data: [],
       isLoading: false,
       isFetched: true,
@@ -425,7 +425,7 @@ describe('AddEditViewTransaction Component Tests', () => {
       isLoadingError: false
     })
 
-    useRegExtOrgs.mockReturnValue({
+    useOrganizationNames.mockReturnValue({
       data: [],
       isLoading: false,
       isFetched: true,
@@ -500,7 +500,7 @@ describe('AddEditViewTransaction Component Tests', () => {
       isLoading: false
     })
 
-    useRegExtOrgs.mockReturnValue({
+    useOrganizationNames.mockReturnValue({
       data: [],
       isLoading: false,
       isFetched: true,

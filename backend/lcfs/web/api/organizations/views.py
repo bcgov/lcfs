@@ -162,25 +162,23 @@ async def get_organization_types(
     return await service.get_organization_types()
 
 
-# TODO review security of this endpoint around returning balances
-# for all organizations
 @router.get(
     "/names/",
     response_model=List[OrganizationSummaryResponseSchema],
     status_code=status.HTTP_200_OK,
 )
-@cache(expire=1)  # cache for 1 hour
-@view_handler(["*"])
+@cache(expire=1)  # Cache for 1 hour
+@view_handler(
+    [RoleEnum.GOVERNMENT]
+)  # Ensure only government can access this endpoint because it returns balances
 async def get_organization_names(
-    request: Request, service: OrganizationsService = Depends()
+    request: Request,
+    only_registered: bool = Query(True),
+    service: OrganizationsService = Depends(),
 ):
-    """Fetch all organization names"""
-
-    # Set the default sorting order
+    """Fetch all organization names."""
     order_by = ("name", "asc")
-
-    # Call the service with only_registered set to True to fetch only registered organizations
-    return await service.get_organization_names(True, order_by)
+    return await service.get_organization_names(only_registered, order_by)
 
 
 @router.get(
