@@ -16,7 +16,7 @@ import {
 } from '@mui/material'
 import { dateFormatter, numberFormatter } from '@/utils/formatters'
 import { useFormContext, Controller } from 'react-hook-form'
-import { useRegExtOrgs } from '@/hooks/useOrganizations'
+import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
 import Loading from '@/components/Loading'
 import {
@@ -34,7 +34,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
     control
   } = useFormContext()
 
-  const { data: orgData } = useRegExtOrgs()
+  const { data: orgData } = useOrganizationNames(false)
   const organizations =
     orgData?.map((org) => ({
       value: parseInt(org.organizationId),
