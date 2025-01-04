@@ -337,7 +337,7 @@ class ComplianceReportRepository:
         Retrieve a paginated list of the latest compliance reports from each compliance_report_group_uuid.
         Supports pagination, filtering, and sorting.
         """
-        # Base query conditions
+        # Collect filter conditions
         conditions = []
         if organization_id:
             conditions.append(ComplianceReport.organization_id == organization_id)
@@ -345,29 +345,43 @@ class ComplianceReportRepository:
         if pagination.filters and len(pagination.filters) > 0:
             self.apply_filters(pagination, conditions)
 
-        # Pagination and offset setup
+        # Configure offset and limit for pagination
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
-        # Build the main query
-        subquery = (
+        # Build the subquery
+        # To allow filtering by CompliancePeriod and status, join them in the subquery
+        subquery_base = (
             select(
                 ComplianceReport.compliance_report_group_uuid,
                 func.max(ComplianceReport.version).label("latest_version"),
             )
+            .select_from(ComplianceReport)
             .where(and_(*conditions))
-            .group_by(ComplianceReport.compliance_report_group_uuid)
         )
 
+        # Join CompliancePeriod if the user filtered by period or sorts by period.
+        subquery_base = subquery_base.join(
+            CompliancePeriod,
+            ComplianceReport.compliance_period_id
+            == CompliancePeriod.compliance_period_id,
+            isouter=True,
+        )
+
+        # If not filtering by organization, also allow status-based joins in the subquery
         if not organization_id:
-            subquery = subquery.join(
+            subquery_base = subquery_base.join(
                 ComplianceReportStatus,
                 ComplianceReport.current_status_id
                 == ComplianceReportStatus.compliance_report_status_id,
+                isouter=True,
             )
 
-        subquery = subquery.subquery()
-        # Join the main ComplianceReport table with the subquery to get the latest version per group
+        subquery = subquery_base.group_by(
+            ComplianceReport.compliance_report_group_uuid
+        ).subquery()
+
+        # Construct the main query that brings back only the latest version for each group_uuid
         query = (
             select(ComplianceReport)
             .join(
@@ -417,20 +431,24 @@ class ComplianceReportRepository:
                 )
             else:
                 order.field = get_field_for_filter(ComplianceReport, order.field)
+
             query = query.order_by(sort_method(order.field))
 
-        # Execute query with offset and limit for pagination
+        # Retrieve records with offset and limit
         query_result = (
             (await self.db.execute(query.offset(offset).limit(limit)))
             .unique()
             .scalars()
             .all()
         )
-        # Calculate total number of compliance reports available
-        total_count_query = select(func.count()).select_from(query)
+
+        # Calculate total count from the same query (without offset/limit)
+        total_count_query = query.with_only_columns(
+            func.count(ComplianceReport.compliance_report_id)
+        ).order_by(None)
         total_count = (await self.db.execute(total_count_query)).scalar()
 
-        # Transform results into Pydantic schemas
+        # Convert results into Pydantic schemas
         reports = [
             ComplianceReportBaseSchema.model_validate(report) for report in query_result
         ]
