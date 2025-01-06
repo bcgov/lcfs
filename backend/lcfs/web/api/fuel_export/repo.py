@@ -17,6 +17,7 @@ from lcfs.db.models.fuel import (
 )
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
 from sqlalchemy import and_, or_, select, func, delete
 from sqlalchemy.orm import joinedload, selectinload
@@ -164,7 +165,7 @@ class FuelExportRepository:
             )
         )
 
-        include_legacy = compliance_period < "2024"
+        include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         if not include_legacy:
             query = query.where(FuelType.is_legacy == False)
 

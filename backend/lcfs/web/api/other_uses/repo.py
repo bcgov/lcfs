@@ -16,6 +16,7 @@ from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.fuel.FuelInstance import FuelInstance
+from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.base import PaginationRequestSchema
@@ -39,7 +40,8 @@ class OtherUsesRepository:
         """Get all table options"""
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
         fuel_types = await self.get_formatted_fuel_types(
-            include_legacy=compliance_period < "2024"
+            include_legacy=compliance_period
+            < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         )
         expected_uses = await self.fuel_code_repo.get_expected_use_types()
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
