@@ -52,7 +52,7 @@ export const BCDateFloatingFilter = ({
       return
     }
 
-    if (model.filter) {
+    if (model.dateFrom) {
       const date = new Date(model.dateFrom)
       setSelectedDate(isValid(date) ? date : null)
     }
