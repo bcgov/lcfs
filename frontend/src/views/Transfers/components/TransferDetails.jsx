@@ -14,6 +14,7 @@ import { Controller, useFormContext } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { LabelBox } from './LabelBox'
 import { calculateTotalValue } from '@/utils/formatters'
+import { NumericFormat } from 'react-number-format'
 
 export const TransferDetails = () => {
   const { t } = useTranslation(['common', 'transfer', 'organization'])
@@ -22,10 +23,12 @@ export const TransferDetails = () => {
     register,
     control,
     watch,
-    formState: { errors }
+    formState: { errors },
+    setValue
   } = useFormContext()
   const { data: currentUser } = useCurrentUser()
   const { data: orgData } = useRegExtOrgs()
+
   const organizations =
     orgData?.map((org) => ({
       value: parseInt(org.organizationId),
@@ -65,6 +68,7 @@ export const TransferDetails = () => {
       )
     )
   }
+
   return (
     <BCBox data-test="transfer-details">
       <LabelBox label={t('transfer:detailsLabel')}>
@@ -73,15 +77,29 @@ export const TransferDetails = () => {
             {currentUser?.organization?.name}
           </BCTypography>
           {` ${t('transfer:transfers')} `}
-          <TextField
-            inputProps={{ 'data-test': 'quantity' }}
-            {...register('quantity')}
-            placeholder={t('common:quantity')}
-            size="small"
-            error={!!errors.quantity}
-            helperText={errors.quantity?.message}
-            sx={{ width: '6rem', marginInline: '0.2rem', bottom: '0.2rem' }}
+
+          <Controller
+            name="quantity"
+            control={control}
+            render={({ field: { onChange, onBlur, value, name, ref } }) => (
+              <NumericFormat
+                customInput={TextField}
+                thousandSeparator
+                value={value}
+                onValueChange={(vals) => onChange(vals.floatValue)}
+                onBlur={onBlur}
+                name={name}
+                inputRef={ref}
+                inputProps={{ 'data-test': 'quantity' }}
+                placeholder={t('common:quantity')}
+                size="small"
+                error={!!errors.quantity}
+                helperText={errors.quantity?.message}
+                sx={{ width: '6rem', marginInline: '0.2rem', bottom: '0.2rem' }}
+              />
+            )}
           />
+
           {t('transfer:complianceUnitsTo')}
           <FormControl
             sx={{
@@ -149,30 +167,48 @@ export const TransferDetails = () => {
             />
             {renderError('toOrganizationId')}
           </FormControl>
+
           {t('transfer:for')}
-          <TextField
-            id="price-per-unit"
-            {...register('pricePerUnit')}
-            placeholder={t('transfer:fairMarketText')}
-            size="small"
-            error={!!errors.pricePerUnit}
-            helperText={errors.pricePerUnit?.message}
-            sx={{
-              minWidth: '25rem',
-              marginInline: '0.2rem',
-              bottom: '0.2rem'
-            }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">$</InputAdornment>
-              ),
-              style: { textAlign: 'right' }
-            }}
-            inputProps={{
-              maxLength: 13,
-              'data-test': 'price-per-unit'
-            }}
+
+          <Controller
+            name="pricePerUnit"
+            control={control}
+            render={({ field: { onChange, onBlur, value, name, ref } }) => (
+              <NumericFormat
+                id="price-per-unit"
+                customInput={TextField}
+                thousandSeparator
+                decimalScale={2}
+                fixedDecimalScale={false}
+                prefix=""
+                value={value}
+                onValueChange={(vals) => onChange(vals.floatValue)}
+                onBlur={onBlur}
+                name={name}
+                inputRef={ref}
+                placeholder={t('transfer:fairMarketText')}
+                size="small"
+                error={!!errors.pricePerUnit}
+                helperText={errors.pricePerUnit?.message}
+                sx={{
+                  minWidth: '25rem',
+                  marginInline: '0.2rem',
+                  bottom: '0.2rem'
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">$</InputAdornment>
+                  ),
+                  style: { textAlign: 'right' }
+                }}
+                inputProps={{
+                  maxLength: 13,
+                  'data-test': 'price-per-unit'
+                }}
+              />
+            )}
           />
+
           {t('transfer:totalValueText')}
           <BCTypography
             variant="body4"
@@ -187,6 +223,7 @@ export const TransferDetails = () => {
             })} CAD.`}
           </BCTypography>
         </BCTypography>
+
         <BCTypography
           variant="body4"
           component="div"
