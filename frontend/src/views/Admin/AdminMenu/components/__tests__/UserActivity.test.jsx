@@ -83,9 +83,13 @@ describe('UserActivity', () => {
     // Optionally check the logic of getRowId
     // This is a unit-style check; you can do something like:
     const mockParams = {
-      data: { transactionType: 'AdminAdjustment', transactionId: '123' }
+      data: {
+        transactionType: 'AdminAdjustment',
+        transactionId: '123',
+        actionTaken: 'CREATE'
+      }
     }
-    expect(gridProps.getRowId(mockParams)).toBe('adminadjustment-123')
+    expect(gridProps.getRowId(mockParams)).toBe('CREATE-AdminAdjustment-123')
 
     // 5) defaultColDef
     expect(gridProps.defaultColDef).toBeDefined()

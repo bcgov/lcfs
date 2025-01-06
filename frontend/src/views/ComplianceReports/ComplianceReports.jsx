@@ -87,8 +87,6 @@ export const ComplianceReports = () => {
 
   const defaultColDef = useMemo(
     () => ({
-      floatingFilter: false,
-      filter: false,
       cellRenderer: LinkRenderer,
       cellRendererParams: {
         url: (data) =>
