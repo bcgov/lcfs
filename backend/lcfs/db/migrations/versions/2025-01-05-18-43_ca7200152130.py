@@ -1,8 +1,8 @@
 """Add is_legacy to fuel_type
 
 Revision ID: ca7200152130
-Revises: 9329e38396e1
-Create Date: 2025-01-03 18:43:43.638740
+Revises: bfa7bbb1eea3
+Create Date: 2025-01-05 18:43:43.638740
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "ca7200152130"
-down_revision = "9329e38396e1"
+down_revision = "bfa7bbb1eea3"
 branch_labels = None
 depends_on = None
 
