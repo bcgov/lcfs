@@ -11,13 +11,16 @@ export const useOrganizationStatuses = (options) => {
   })
 }
 
-export const useOrganizationNames = (options) => {
+export const useOrganizationNames = (onlyRegistered = true, options) => {
   const client = useApiService()
 
   return useQuery({
-    queryKey: ['organization-names'],
-    queryFn: async () => (await client.get('/organizations/names/')).data,
-    ...options
+    queryKey: ['organization-names', onlyRegistered],
+    queryFn: async () => {
+      const response = await client.get(`/organizations/names/?only_registered=${onlyRegistered}`)
+      return response.data
+    },
+    ...options,
   })
 }
 
