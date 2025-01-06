@@ -69,6 +69,12 @@ export const HistoryCard = ({ report }) => {
       })
       .filter((item) => item.status.status !== COMPLIANCE_REPORT_STATUSES.DRAFT)
   }, [isGovernmentUser, report.history])
+
+  // If there's no content to show, return null
+  if (filteredHistory.length === 0) {
+    return null
+  }
+
   return (
     <Accordion>
       <AccordionSummary

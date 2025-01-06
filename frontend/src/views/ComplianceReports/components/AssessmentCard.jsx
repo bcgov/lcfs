@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -23,7 +24,7 @@ export const AssessmentCard = ({
   currentStatus,
   complianceReportId,
   alertRef,
-  chain
+  chain = []
 }) => {
   const { t } = useTranslation(['report'])
   const navigate = useNavigate()
@@ -51,6 +52,14 @@ export const AssessmentCard = ({
         })
       }
     })
+
+  const filteredChain = useMemo(() => {
+    return chain.filter((report) => {
+      const isDraft = report.currentStatus.status === COMPLIANCE_REPORT_STATUSES.DRAFT
+      const hasHistory = report.history && report.history.length > 0
+      return !isDraft && hasHistory
+    })
+  }, [chain])
 
   return (
     <BCWidgetCard
@@ -108,13 +117,13 @@ export const AssessmentCard = ({
                   <StyledListItem>
                     <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
                       <span
-                        dangerouslySetInnerHTML={{
-                          __html: t('report:assessmentLn1', {
-                            name: orgData.name,
-                            hasMet: hasMet ? 'has met' : 'has not met'
-                          })
-                        }}
-                      />
+                      dangerouslySetInnerHTML={{
+                        __html: t('report:assessmentLn1', {
+                          name: orgData.name,
+                          hasMet: hasMet ? 'has met' : 'has not met'
+                        })
+                      }}
+                    />
                     </ListItemText>
                   </StyledListItem>
                 </List>
@@ -129,19 +138,19 @@ export const AssessmentCard = ({
                   <StyledListItem>
                     <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
                       <span
-                        dangerouslySetInnerHTML={{
-                          __html: t('report:assessmentLn2', {
-                            name: orgData.name,
-                            hasMet: hasMet ? 'has met' : 'has not met'
-                          })
-                        }}
-                      />
+                      dangerouslySetInnerHTML={{
+                        __html: t('report:assessmentLn2', {
+                          name: orgData.name,
+                          hasMet: hasMet ? 'has met' : 'has not met'
+                        })
+                      }}
+                    />
                     </ListItemText>
                   </StyledListItem>
                 </List>
               </>
             )}
-            {!!chain.length && (
+            {filteredChain.length > 0 && (
               <>
                 <BCTypography
                   sx={{ paddingTop: '16px' }}
@@ -151,7 +160,7 @@ export const AssessmentCard = ({
                 >
                   {t('report:reportHistory')}
                 </BCTypography>
-                {chain.map((report) => (
+                {filteredChain.map((report) => (
                   <HistoryCard key={report.version} report={report} />
                 ))}
               </>
@@ -165,7 +174,7 @@ export const AssessmentCard = ({
                       sx={{ paddingTop: '16px' }}
                       component="div"
                       variant="body4"
-                    >
+                      >
                       {t('report:supplementalWarning')}
                     </BCTypography>
                     <Box>
