@@ -70,11 +70,6 @@ export const HistoryCard = ({ report }) => {
       .filter((item) => item.status.status !== COMPLIANCE_REPORT_STATUSES.DRAFT)
   }, [isGovernmentUser, report.history])
 
-  // If there's no content to show, return null
-  if (filteredHistory.length === 0) {
-    return null
-  }
-
   return (
     <Accordion>
       <AccordionSummary
@@ -88,33 +83,35 @@ export const HistoryCard = ({ report }) => {
           : {report.currentStatus.status}
         </BCTypography>
       </AccordionSummary>
-      <AccordionDetails>
-        <List>
-          {filteredHistory.map((item, index) => (
-            <StyledListItem key={index} disablePadding>
-              <ListItemText
-                data-test="list-item"
-                primaryTypographyProps={{ variant: 'body4' }}
-              >
-                <span
-                  dangerouslySetInnerHTML={{
-                    __html: t(
-                      `report:complianceReportHistory.${item.status.status}`,
-                      {
-                        createDate: timezoneFormatter({
-                          value: item?.createDate
-                        }),
-                        firstName: item.userProfile.firstName,
-                        lastName: item.userProfile.lastName
-                      }
-                    )
-                  }}
-                />
-              </ListItemText>
-            </StyledListItem>
-          ))}
-        </List>
-      </AccordionDetails>
+      {filteredHistory.length > 0 && (
+        <AccordionDetails>
+          <List>
+            {filteredHistory.map((item, index) => (
+              <StyledListItem key={index} disablePadding>
+                <ListItemText
+                  data-test="list-item"
+                  primaryTypographyProps={{ variant: 'body4' }}
+                >
+                  <span
+                    dangerouslySetInnerHTML={{
+                      __html: t(
+                        `report:complianceReportHistory.${item.status.status}`,
+                        {
+                          createDate: timezoneFormatter({
+                            value: item?.createDate
+                          }),
+                          firstName: item.userProfile.firstName,
+                          lastName: item.userProfile.lastName
+                        }
+                      )
+                    }}
+                  />
+                </ListItemText>
+              </StyledListItem>
+            ))}
+          </List>
+        </AccordionDetails>
+      )}
     </Accordion>
   )
 }
