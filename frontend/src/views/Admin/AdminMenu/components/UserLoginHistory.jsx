@@ -10,7 +10,7 @@ export const UserLoginHistory = () => {
   const { t } = useTranslation(['common', 'admin'])
 
   const getRowId = useCallback((params) => {
-    return params.data.userLoginHistoryId
+    return params.data.userLoginHistoryId.toString()
   }, [])
 
   return (

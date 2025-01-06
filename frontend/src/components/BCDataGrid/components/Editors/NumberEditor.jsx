@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { TextField } from '@mui/material'
 import { styled } from '@mui/material/styles'
 
@@ -23,6 +23,12 @@ const StyledTextField = styled(TextField)(({ theme }) => ({
 export const NumberEditor = forwardRef(
   ({ value, onValueChange, eventKey, rowIndex, column, ...props }, ref) => {
     const inputRef = useRef(null)
+
+    useEffect(() => {
+      if (inputRef) {
+        inputRef.current.focus()
+      }
+    }, [])
 
     useImperativeHandle(ref, () => {
       return {
@@ -58,7 +64,7 @@ export const NumberEditor = forwardRef(
 
     return (
       <StyledTextField
-        ref={inputRef}
+        inputRef={inputRef}
         value={formatNumber(value)}
         onChange={onInputChange}
         variant="outlined"
