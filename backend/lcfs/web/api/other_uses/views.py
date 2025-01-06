@@ -42,10 +42,11 @@ get_async_db = dependencies.get_async_db_session
 # @cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_table_options(
     request: Request,
+    compliancePeriod: str,
     service: OtherUsesServices = Depends(),
 ):
     """Endpoint to retrieve table options related to other uses"""
-    return await service.get_table_options()
+    return await service.get_table_options(compliancePeriod)
 
 
 @router.post(
