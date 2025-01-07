@@ -150,7 +150,7 @@ class ComplianceReportUpdateService:
             ComplianceReportStatusEnum.Recommended_by_analyst: self.handle_recommended_by_analyst_status,
             ComplianceReportStatusEnum.Recommended_by_manager: self.handle_recommended_by_manager_status,
             ComplianceReportStatusEnum.Assessed: self.handle_assessed_status,
-            ComplianceReportStatusEnum.ReAssessed: self.handle_reassessed_status,
+            ComplianceReportStatusEnum.Reassessed: self.handle_reassessed_status,
         }
 
         handler = status_handlers.get(new_status)

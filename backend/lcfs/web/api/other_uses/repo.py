@@ -16,6 +16,7 @@ from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.fuel.FuelInstance import FuelInstance
+from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.base import PaginationRequestSchema
@@ -35,15 +36,23 @@ class OtherUsesRepository:
         self.fuel_code_repo = fuel_repo
 
     @repo_handler
-    async def get_table_options(self) -> dict:
+    async def get_table_options(self, compliance_period: str) -> dict:
         """Get all table options"""
+        include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
-        fuel_types = await self.get_formatted_fuel_types()
+        fuel_types = await self.get_formatted_fuel_types(include_legacy=include_legacy)
         expected_uses = await self.fuel_code_repo.get_expected_use_types()
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
+
+        provisions_select = select(ProvisionOfTheAct)
+        if include_legacy:
+            provisions_select = provisions_select.where(
+                ProvisionOfTheAct.is_legacy == True
+            )
         provisions_of_the_act = (
-            (await self.db.execute(select(ProvisionOfTheAct))).scalars().all()
+            (await self.db.execute(provisions_select)).scalars().all()
         )
+
         fuel_codes = (await self.db.execute(select(FuelCode))).scalars().all()
 
         return {
@@ -305,28 +314,34 @@ class OtherUsesRepository:
         return result.scalars().first()
 
     @repo_handler
-    async def get_formatted_fuel_types(self) -> List[Dict[str, Any]]:
+    async def get_formatted_fuel_types(
+        self, include_legacy=False
+    ) -> List[Dict[str, Any]]:
         """Get all fuel type options with their associated fuel categories and fuel codes for other uses"""
-        # Define the filtering conditions for fuel codes
         current_date = date.today()
-        fuel_code_filters = (
+        base_conditions = [
             or_(
                 FuelCode.effective_date == None, FuelCode.effective_date <= current_date
-            )
-            & or_(
+            ),
+            or_(
                 FuelCode.expiration_date == None,
                 FuelCode.expiration_date > current_date,
-            )
-            & (FuelType.other_uses_fossil_derived == True)
-        )
+            ),
+            FuelType.other_uses_fossil_derived == True,
+        ]
 
-        # Build the query with filtered fuel_codes
+        # Conditionally add the is_legacy filter
+        if not include_legacy:
+            base_conditions.append(FuelType.is_legacy == False)
+
+        combined_conditions = and_(*base_conditions)
+
         query = (
             select(FuelType)
             .outerjoin(FuelType.fuel_instances)
             .outerjoin(FuelInstance.fuel_category)
             .outerjoin(FuelType.fuel_codes)
-            .where(fuel_code_filters)
+            .where(combined_conditions)
             .options(
                 contains_eager(FuelType.fuel_instances).contains_eager(
                     FuelInstance.fuel_category

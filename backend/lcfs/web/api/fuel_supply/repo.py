@@ -25,6 +25,7 @@ from lcfs.db.models.fuel import (
     UnitOfMeasure,
     EndUseType,
 )
+from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
 from lcfs.web.core.decorators import repo_handler
@@ -183,6 +184,12 @@ class FuelSupplyRepository:
                 FuelCodePrefix, FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id
             )
         )
+
+        include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
+        if not include_legacy:
+            query = query.where(
+                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
+            )
 
         fuel_type_results = (await self.db.execute(query)).all()
 
@@ -470,7 +477,7 @@ class FuelSupplyRepository:
                     FuelSupply.version == valid_fuel_supplies_subq.c.max_version,
                     user_type_priority == valid_fuel_supplies_subq.c.max_role_priority,
                 ),
-                isouter=False # Explicit inner join
+                isouter=False,  # Explicit inner join
             )
             .order_by(FuelSupply.create_date.asc())
         )
