@@ -31,7 +31,7 @@ jobs:
         id: cache
         uses: actions/cache@v4.2.0
         with:
-          path: /usr/local/bin/oc  # Path where the `oc` binary will be installed
+          path: /usr/local/bin/oc # Path where the `oc` binary will be installed
           key: oc-cli-${{ runner.os }}
 
       - name: Install OpenShift CLI (if not cached)
@@ -57,7 +57,6 @@ jobs:
       output1: ${{ steps.get-version.outputs.VERSION }}
 
     steps:
-
       - name: Restore oc command from Cache
         uses: actions/cache@v4.2.0
         with:
@@ -168,7 +167,7 @@ jobs:
         with:
           path: /usr/local/bin/oc
           key: oc-cli-${{ runner.os }}
-          
+
       - name: Log in to Openshift
         uses: redhat-actions/oc-login@v1.3
         with:
@@ -186,6 +185,7 @@ jobs:
             yq -i '.volumes[0].configMap.name = "lcfs-frontend-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
             yq -i '.apiBase = "https://lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/api"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
             yq -i '.keycloak.postLogoutUrl = "https://lcfs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.tfrsBase = "https://tfrs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
             yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
             yq -i '.route.host = "lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
             yq -i eval '(.env[] | select(.name == "LCFS_DB_HOST") | .value) = "lcfs-postgres-dev-${{ env.PR_NUMBER }}-postgresql.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
