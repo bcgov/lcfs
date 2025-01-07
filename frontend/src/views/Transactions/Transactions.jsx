@@ -23,6 +23,7 @@ import {
 import { roles, govRoles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
 import Loading from '@/components/Loading'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -40,9 +41,9 @@ export const Transactions = () => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
 
-  const [gridKey, setGridKey] = useState(`transactions-grid`)
+  const [gridKey, setGridKey] = useState('transactions-grid')
   const handleGridKey = useCallback(() => {
-    setGridKey(`transactions-grid`)
+    setGridKey('transactions-grid')
   }, [])
   const gridOptions = {
     overlayNoRowsTemplate: t('txn:noTxnsFound')
@@ -57,56 +58,62 @@ export const Transactions = () => {
 
   const [selectedOrgId, setSelectedOrgId] = useState(null)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleRowClicked = useCallback(
-    (params) => {
-      const { transactionId, transactionType, fromOrganization, status } =
-        params.data
-      const userOrgName = currentUser?.organization?.name
+  const defaultColDef = useMemo(
+    () => ({
+      cellRenderer: LinkRenderer,
+      cellRendererParams: {
+        isAbsolute: true,
+        url: (
+          data // Based on the user Type (BCeID or IDIR) navigate to specific view
+        ) => {
+          const { transactionId, transactionType, fromOrganization, status } =
+            data.data
+          const userOrgName = currentUser?.organization?.name
 
-      // Define routes mapping for transaction types
-      const routesMapping = {
-        Transfer: {
-          view: ROUTES.TRANSFERS_VIEW,
-          edit: ROUTES.TRANSFERS_EDIT
-        },
-        AdminAdjustment: {
-          view: currentUser.isGovernmentUser
-            ? ROUTES.ADMIN_ADJUSTMENT_VIEW
-            : ROUTES.ORG_ADMIN_ADJUSTMENT_VIEW,
-          edit: ROUTES.ADMIN_ADJUSTMENT_EDIT
-        },
-        InitiativeAgreement: {
-          view: currentUser.isGovernmentUser
-            ? ROUTES.INITIATIVE_AGREEMENT_VIEW
-            : ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
-          edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
+          // Define routes mapping for transaction types
+          const routesMapping = {
+            Transfer: {
+              view: ROUTES.TRANSFERS_VIEW,
+              edit: ROUTES.TRANSFERS_EDIT
+            },
+            AdminAdjustment: {
+              view: currentUser.isGovernmentUser
+                ? ROUTES.ADMIN_ADJUSTMENT_VIEW
+                : ROUTES.ORG_ADMIN_ADJUSTMENT_VIEW,
+              edit: ROUTES.ADMIN_ADJUSTMENT_EDIT
+            },
+            InitiativeAgreement: {
+              view: currentUser.isGovernmentUser
+                ? ROUTES.INITIATIVE_AGREEMENT_VIEW
+                : ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
+              edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
+            }
+          }
+
+          // Determine if it's an edit scenario
+          const isEditScenario =
+            (userOrgName === fromOrganization &&
+              status === TRANSFER_STATUSES.DRAFT) ||
+            (!fromOrganization && status === TRANSACTION_STATUSES.DRAFT)
+
+          const routeType = isEditScenario ? 'edit' : 'view'
+
+          // Select the appropriate route based on the transaction type and scenario
+          const routeTemplate = routesMapping[transactionType]?.[routeType]
+
+          if (routeTemplate) {
+            return routeTemplate
+              .replace(':transactionId', transactionId)
+              .replace(':transferId', transactionId)
+          } else {
+            console.error(
+              'No route defined for this transaction type and scenario'
+            )
+          }
         }
       }
-
-      // Determine if it's an edit scenario
-      const isEditScenario =
-        (userOrgName === fromOrganization &&
-          status === TRANSFER_STATUSES.DRAFT) ||
-        (!fromOrganization && status === TRANSACTION_STATUSES.DRAFT)
-
-      const routeType = isEditScenario ? 'edit' : 'view'
-
-      // Select the appropriate route based on the transaction type and scenario
-      const routeTemplate = routesMapping[transactionType]?.[routeType]
-
-      if (routeTemplate) {
-        navigate(
-          // replace any matching query params by chaining these replace methods
-          routeTemplate
-            .replace(':transactionId', transactionId)
-            .replace(':transferId', transactionId)
-        )
-      } else {
-        console.error('No route defined for this transaction type and scenario')
-      }
-    },
-    [currentUser, navigate]
+    }),
+    [currentUser]
   )
 
   // Determine the appropriate API endpoint
@@ -259,9 +266,9 @@ export const Transactions = () => {
           defaultFilterModel={location.state?.filters}
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
-          handleRowClicked={handleRowClicked}
           enableCopyButton={false}
           highlightedRowId={highlightedId}
+          defaultColDef={defaultColDef}
         />
       </BCBox>
     </>

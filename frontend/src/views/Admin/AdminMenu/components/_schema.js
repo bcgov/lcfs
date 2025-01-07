@@ -1,6 +1,6 @@
 import {
-  phoneNumberFormatter,
   dateFormatter,
+  phoneNumberFormatter,
   timezoneFormatter
 } from '@/utils/formatters'
 import {
@@ -26,7 +26,6 @@ export const usersColumnDefs = (t) => [
     field: 'firstName',
     minWidth: 250,
     headerName: t('admin:userColLabels.userName'),
-    cellRenderer: LinkRenderer,
     valueGetter: (params) => params.data.firstName + ' ' + params.data.lastName
   },
   {
@@ -68,14 +67,12 @@ export const usersColumnDefs = (t) => [
     colId: 'email',
     field: 'keycloakEmail',
     headerName: t('admin:userColLabels.email'),
-    cellRenderer: LinkRenderer,
     minWidth: 300
   },
   {
     colId: 'phone',
     field: 'phone',
     headerName: t('admin:userColLabels.phone'),
-    cellRenderer: LinkRenderer,
     valueFormatter: phoneNumberFormatter,
     filter: 'agTextColumnFilter',
     minWidth: 120
