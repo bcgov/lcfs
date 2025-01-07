@@ -6,9 +6,6 @@ import {
 } from '@mui/icons-material'
 import { DatePicker } from '@mui/x-date-pickers'
 import { format, isValid } from 'date-fns'
-import dayjs from 'dayjs'
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 
 export const BCDateFloatingFilter = ({
   model,
@@ -25,11 +22,10 @@ export const BCDateFloatingFilter = ({
   const handleChange = useCallback((newDate) => {
     setSelectedDate(newDate)
 
-    if (newDate && newDate.isValid()) {
-      // Validate with dayjs
+    if (newDate && isValid(newDate)) {
       onModelChange({
         type: initialFilterType,
-        dateFrom: newDate.format('YYYY-MM-DD'),
+        dateFrom: format(newDate, 'yyyy-MM-dd'),
         dateTo: null,
         filterType: 'date'
       })
@@ -59,8 +55,8 @@ export const BCDateFloatingFilter = ({
     }
 
     if (model?.dateFrom) {
-      const date = dayjs(model.dateFrom)
-      setSelectedDate(date.isValid() ? date : null)
+      const date = new Date(model.dateFrom)
+      setSelectedDate(isValid(date) ? date : null)
     }
   }, [model])
 
@@ -80,61 +76,59 @@ export const BCDateFloatingFilter = ({
         }
       }}
     >
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
-        <DatePicker
-          id="date-picker"
-          aria-label="Date Picker"
-          aria-describedby="date-picker-description"
-          sx={{
-            border: 'none',
-            borderBottom: '4px solid #495057'
-          }}
-          value={selectedDate}
-          minDate={dayjs(minDate)}
-          maxDate={dayjs(maxDate)}
-          onChange={handleChange}
-          open={open}
-          onOpen={handleOpen}
-          onClose={handleClose}
-          disabled={disabled}
-          format="YYYY-MM-DD"
-          slotProps={{
-            textField: {
-              size: 'small',
-              label,
-              InputProps: {
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <IconButton
-                      sx={{ marginLeft: 0, paddingLeft: '6px' }}
-                      size="small"
-                      edge="start"
-                      onClick={() => setOpen(true)}
-                      aria-label="Open calendar"
-                    >
-                      <CalendarIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                ),
-                endAdornment: selectedDate && (
-                  <InputAdornment position="end">
-                    <IconButton
-                      sx={{ marginRight: 0, paddingRight: '6px' }}
-                      size="small"
-                      onClick={handleClear}
-                      onMouseDown={(event) => event.stopPropagation()}
-                      edge="end"
-                      aria-label="Clear date"
-                    >
-                      <ClearIcon fontSize="small" />
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }
+      <DatePicker
+        id="date-picker"
+        aria-label="Date Picker"
+        aria-describedby="date-picker-description"
+        sx={{
+          border: 'none',
+          borderBottom: '4px solid #495057'
+        }}
+        value={selectedDate}
+        minDate={new Date(minDate)}
+        maxDate={new Date(maxDate)}
+        onChange={handleChange}
+        open={open}
+        onOpen={handleOpen}
+        onClose={handleClose}
+        disabled={disabled}
+        format="yyyy-MM-dd"
+        slotProps={{
+          textField: {
+            size: 'small',
+            label,
+            InputProps: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <IconButton
+                    sx={{ marginLeft: 0, paddingLeft: '6px' }}
+                    size="small"
+                    edge="start"
+                    onClick={() => setOpen(true)}
+                    aria-label="Open calendar"
+                  >
+                    <CalendarIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+              endAdornment: selectedDate && (
+                <InputAdornment position="end">
+                  <IconButton
+                    sx={{ marginRight: 0, paddingRight: '6px' }}
+                    size="small"
+                    onClick={handleClear}
+                    onMouseDown={(event) => event.stopPropagation()}
+                    edge="end"
+                    aria-label="Clear date"
+                  >
+                    <ClearIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              )
             }
-          }}
-        />
-      </LocalizationProvider>
+          }
+        }}
+      />
     </FormControl>
   )
 }
