@@ -55,6 +55,7 @@ class LCFS_Constants:
     ]
     TRANSACTIONS_EXPORT_SHEETNAME = "Transactions"
     TRANSACTIONS_EXPORT_FILENAME = "BC-LCFS-transactions"
+    LEGISLATION_TRANSITION_YEAR = "2024" # First year that the new LCFS Legislation takes effect
 
 
 class FILE_MEDIA_TYPE(Enum):
@@ -93,5 +94,5 @@ RENEWABLE_FUEL_TYPES = [
     "HDRD",
     "Other diesel",
     "Alternative jet fuel",
-    "Other"
+    "Other",
 ]

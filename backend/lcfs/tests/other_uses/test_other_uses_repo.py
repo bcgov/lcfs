@@ -36,7 +36,7 @@ def other_uses_repo(mock_db_session):
     repo.fuel_code_repo.get_expected_use_types = AsyncMock(return_value=[])
 
     # Mock for local get_formatted_fuel_types method
-    async def mock_get_formatted_fuel_types():
+    async def mock_get_formatted_fuel_types(include_legacy=False):
         mock_result = await mock_db_session.execute(AsyncMock())
         return mock_result.unique().scalars().all()
 
@@ -116,7 +116,7 @@ async def test_get_table_options(other_uses_repo):
     )
 
     # Execute the method under test
-    result = await other_uses_repo.get_table_options()
+    result = await other_uses_repo.get_table_options("2024")
 
     # Assertions
     assert isinstance(result, dict)
@@ -221,6 +221,7 @@ async def test_get_latest_other_uses_by_group_uuid(other_uses_repo, mock_db_sess
 
     assert result.user_type == UserTypeEnum.GOVERNMENT
     assert result.version == 2
+
 
 @pytest.mark.anyio
 async def test_get_other_use_version_by_user(other_uses_repo, mock_db_session):

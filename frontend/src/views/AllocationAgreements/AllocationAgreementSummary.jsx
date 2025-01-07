@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const AllocationAgreementSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -47,9 +48,14 @@ export const AllocationAgreementSummary = ({ data, status }) => {
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
-      filter: false
+      filter: false,
+      cellRenderer:
+        status === COMPLIANCE_REPORT_STATUSES.DRAFT ? LinkRenderer : undefined,
+      cellRendererParams: {
+        url: () => 'allocation-agreements'
+      }
     }),
-    []
+    [status]
   )
 
   const columns = useMemo(
@@ -137,17 +143,6 @@ export const AllocationAgreementSummary = ({ data, status }) => {
     setGridKey(`allocation-agreements-grid-${uuid()}`)
   }
 
-  const handleRowClicked = (params) => {
-    if (status === COMPLIANCE_REPORT_STATUSES.DRAFT) {
-      navigate(
-        ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
-          ':compliancePeriod',
-          compliancePeriod
-        ).replace(':complianceReportId', complianceReportId)
-      )
-    }
-  }
-
   return (
     <Grid2 className="allocation-agreement-container" mx={-1}>
       <div>
@@ -172,7 +167,6 @@ export const AllocationAgreementSummary = ({ data, status }) => {
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={data.allocationAgreements.length <= 10}
-          handleRowClicked={handleRowClicked}
         />
       </BCBox>
     </Grid2>

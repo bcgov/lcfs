@@ -74,6 +74,7 @@ async def test_check_duplicate(fuel_supply_repo, mock_db_session):
         compliance_report_id=1,
         fuel_type_id=1,
         fuel_category_id=1,
+        end_use_id=24,
         provision_of_the_act_id=1,
         quantity=1000,
         units="L",
@@ -82,7 +83,8 @@ async def test_check_duplicate(fuel_supply_repo, mock_db_session):
     # Set up the mock chain using regular MagicMock since the chained methods are sync
     mock_result_chain = MagicMock()
     mock_result_chain.scalars = MagicMock(return_value=mock_result_chain)
-    mock_result_chain.first = MagicMock(return_value=MagicMock(spec=FuelSupply))
+    mock_result_chain.first = MagicMock(
+        return_value=MagicMock(spec=FuelSupply))
 
     # Define an async execute function that returns our mock chain
     async def mock_execute(*args, **kwargs):

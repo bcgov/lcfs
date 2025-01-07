@@ -29,6 +29,7 @@ async def test_check_duplicate(fuel_supply_validation):
         compliance_report_id=1,
         fuel_type_id=1,
         fuel_category_id=1,
+        end_use_id=24,
         provision_of_the_act_id=1,
         quantity=2000,
         units="L",
@@ -54,6 +55,7 @@ async def test_validate_other_recognized_type(fuel_supply_validation):
         compliance_report_id=1,
         fuel_type_id=1,  # Some recognized type ID
         fuel_category_id=1,
+        end_use_id=24,
         provision_of_the_act_id=1,
         quantity=2000,
         units="L",
@@ -76,6 +78,7 @@ async def test_validate_other_unrecognized_type_with_other(fuel_supply_validatio
         compliance_report_id=1,
         fuel_type_id=99,  # Assume 99 is unrecognized "Other" type
         fuel_category_id=1,
+        end_use_id=24,
         provision_of_the_act_id=1,
         quantity=2000,
         units="L",
@@ -99,6 +102,7 @@ async def test_validate_other_unrecognized_type_missing_other(fuel_supply_valida
         compliance_report_id=1,
         fuel_type_id=99,  # Assume 99 is unrecognized "Other" type
         fuel_category_id=1,
+        end_use_id=24,
         provision_of_the_act_id=1,
         quantity=2000,
         units="L",

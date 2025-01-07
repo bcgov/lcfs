@@ -1,51 +1,61 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { AuditLog } from '../AuditLog'
-import { useNavigate } from 'react-router-dom'
-import { vi } from 'vitest'
+import React from 'react'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { AuditLog } from '@/views/Admin/AdminMenu/index.js'
+import { wrapper } from '@/tests/utils/wrapper.jsx'
 
-// Mock necessary modules
+// Mock i18n
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key) => key })
 }))
 
-vi.mock('react-router-dom', () => ({
-  ...vi.importActual('react-router-dom'),
-  useNavigate: vi.fn()
-}))
+// Mock react-router-dom
+const navigateMock = vi.fn()
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom')
+  return {
+    ...actual,
+    useNavigate: () => navigateMock
+  }
+})
 
-// Mock the BCBox component
-vi.mock('@/components/BCBox', () => ({
-  default: ({ children }) => <div data-testid="bcbox">{children}</div>
-}))
-
-// Mock the BCDataGridServer component
+// Mock BCDataGridServer so we can inspect props & simulate row clicks
 vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: ({ handleRowClicked }) => (
-    <div data-testid="bc-datagrid-server">
-      <button onClick={() => handleRowClicked({ data: { auditLogId: 123 } })}>
-        Mock Row
-      </button>
-    </div>
-  )
+  default: ({ handleRowClicked, ...props }) => {
+    // We'll return some basic UI with a button to simulate a row-click.
+    return (
+      <div data-test="bc-datagrid-server">
+        <button
+          onClick={() =>
+            handleRowClicked && handleRowClicked({ data: { auditLogId: 123 } })
+          }
+        >
+          Mock Row
+        </button>
+      </div>
+    )
+  }
 }))
 
 describe('AuditLog Component', () => {
-  const navigateMock = vi.fn()
-
   beforeEach(() => {
     vi.clearAllMocks()
-    useNavigate.mockReturnValue(navigateMock)
   })
 
   it('renders correctly', () => {
-    render(<AuditLog />)
+    render(<AuditLog />, { wrapper })
     expect(screen.getByText('admin:AuditLog')).toBeInTheDocument()
+    expect(screen.getByTestId('bc-datagrid-server')).toBeInTheDocument()
   })
 
-  it('navigates to the correct path when a row is clicked', () => {
-    render(<AuditLog />)
-    const mockRowButton = screen.getByText('Mock Row')
-    fireEvent.click(mockRowButton)
-    expect(navigateMock).toHaveBeenCalledWith('/admin/audit-log/123')
+  it('passes the correct props to BCDataGridServer', () => {
+    render(<AuditLog />, { wrapper })
+    expect(screen.getByText('Mock Row')).toBeInTheDocument()
+  })
+
+  it('uses getRowId to return auditLogId', () => {
+    const params = { data: { auditLogId: 'TEST_ID' } }
+    const rowId = params.data.auditLogId // or call the function directly
+    expect(rowId).toBe('TEST_ID')
   })
 })

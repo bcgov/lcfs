@@ -34,7 +34,7 @@ export const apiRoutes = {
   saveOtherUses: '/other-uses/save',
   getOtherUses: '/other-uses/list',
   getAllOtherUses: '/other-uses/list-all',
-  otherUsesOptions: '/other-uses/table-options',
+  otherUsesOptions: '/other-uses/table-options?',
   getComplianceReport: '/reports/:reportID',
   updateComplianceReport: '/reports/:reportID',
   getComplianceReportSummary: '/reports/:reportID/summary',

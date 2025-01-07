@@ -48,10 +48,11 @@ get_async_db = dependencies.get_async_db_session
 @view_handler(["*"])
 async def get_table_options(
     request: Request,
+    compliancePeriod: str,
     service: AllocationAgreementServices = Depends(),
 ):
     """Endpoint to retrieve table options related to allocation agreements"""
-    return await service.get_table_options()
+    return await service.get_table_options(compliancePeriod)
 
 
 @router.post(

@@ -4,9 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export const useOtherUsesOptions = (params, options) => {
   const client = useApiService()
-  const path = apiRoutes.otherUsesOptions
+  const path =
+    apiRoutes.otherUsesOptions + 'compliancePeriod=' + params.compliancePeriod
   return useQuery({
-    queryKey: ['other-uses-options'],
+    queryKey: ['other-uses-options', params.compliancePeriod],
     queryFn: async () => (await client.get(path)).data,
     ...options
   })

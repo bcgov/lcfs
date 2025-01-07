@@ -1,8 +1,8 @@
 export const RequiredHeader = (props) => {
   return (
-    <div>
+    <div role="columnheader" aria-label={props.column.colDef.headerName}>
       <span style={{ color: 'red' }}>*</span>
-      <span>{props.column.colDef.headerName}</span>
+      <span className="ag-header-cell-text">{props.column.colDef.headerName}</span>
     </div>
   )
 }
