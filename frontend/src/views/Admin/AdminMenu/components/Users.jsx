@@ -15,7 +15,6 @@ import { useTranslation } from 'react-i18next'
 
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { usersColumnDefs, idirUserDefaultFilter } from './_schema'
-import { calculateRowHeight } from '@/utils/formatters'
 
 export const Users = () => {
   const { t } = useTranslation(['common', 'admin'])

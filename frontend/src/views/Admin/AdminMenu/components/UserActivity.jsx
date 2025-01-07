@@ -13,9 +13,9 @@ export const UserActivity = () => {
   const navigate = useNavigate()
 
   const getRowId = useCallback((params) => {
-    return `${params.data.transactionType.toLowerCase()}-${
-      params.data.transactionId
-    }`
+    return `${
+      params.data.actionTaken
+    }-${params.data.transactionType}-${params.data.transactionId}`
   }, [])
 
   const handleRowClicked = useCallback(
@@ -64,7 +64,6 @@ export const UserActivity = () => {
             defaultMinWidth: 50,
             defaultMaxWidth: 600
           }}
-          rowSelection={{ isRowSelectable: false }}
           onRowClicked={handleRowClicked}
         />
       </BCBox>

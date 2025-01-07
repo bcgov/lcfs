@@ -16,7 +16,7 @@ import { useApiService } from '@/services/useApiService'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import DataGridLoading from '@/components/DataGridLoading'
-import { BCPagination } from './components'
+import { AccessibleHeader, BCPagination } from './components'
 import { useTranslation } from 'react-i18next' // Import useTranslation
 // Register the required AG Grid modules for row model and CSV export functionality
 ModuleRegistry.registerModules([ClientSideRowModelModule, CsvExportModule])
@@ -122,7 +122,7 @@ const BCDataGridServer = ({
     [apiService, apiEndpoint, page, size, sortModel]
   )
 
-  // Hanlde page change
+  // Handle page change
   const handleChangePage = useCallback((event, newPage) => {
     setLoading(true)
     setPage(newPage + 1)
@@ -189,7 +189,7 @@ const BCDataGridServer = ({
     let localFilteredData = [...rowData]
 
     // Handle the 'type' filter locally
-    const typeFilter = filterModel['type']
+    const typeFilter = filterModel.type
 
     if (typeFilter) {
       const filterText = typeFilter.filter?.toLowerCase() || ''
@@ -199,7 +199,7 @@ const BCDataGridServer = ({
       })
 
       // Remove 'type' from the filter model to prevent backend filtering
-      delete filterModel['type']
+      delete filterModel.type
     }
 
     // Handle other filters (backend filters)
@@ -269,10 +269,11 @@ const BCDataGridServer = ({
     suppressDragLeaveHidesColumns: true,
     suppressMovableColumns: true,
     suppressColumnMoveAnimation: false,
-    rowSelection: 'multiple',
     animateRows: true,
     suppressPaginationPanel: true,
     suppressScrollOnNewData: true,
+    suppressColumnVirtualisation: true,
+    enableBrowserTooltips: true,
     suppressCsvExport: false,
     // enableCellTextSelection: true, // enables text selection on the grid
     // ensureDomOrder: true,
@@ -288,6 +289,8 @@ const BCDataGridServer = ({
 
   // Memorized default column definition parameters
   const defaultColDefParams = useMemo(() => ({
+    headerComponent: AccessibleHeader,
+    suppressHeaderFilterButton: true,
     resizable: true,
     sortable: true,
     filter: true,

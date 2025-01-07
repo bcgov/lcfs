@@ -84,9 +84,23 @@ class TransactionsService:
             else:
                 # Handle other filters
                 field = get_field_for_filter(TransactionView, filter.field)
+                filter_value = filter.filter
+                # check if the date string is selected for filter
+                if filter.filter is None:
+                    filter_value = [
+                        datetime.strptime(filter.date_from, "%Y-%m-%d %H:%M:%S").strftime(
+                            "%Y-%m-%d"
+                        )
+                    ]
+                    if filter.date_to:
+                        filter_value.append(
+                            datetime.strptime(filter.date_to, "%Y-%m-%d %H:%M:%S").strftime(
+                                "%Y-%m-%d"
+                            )
+                        )
                 conditions.append(
                     apply_filter_conditions(
-                        field, filter.filter, filter.type, filter.filter_type
+                        field, filter_value, filter.type, filter.filter_type
                     )
                 )
 
