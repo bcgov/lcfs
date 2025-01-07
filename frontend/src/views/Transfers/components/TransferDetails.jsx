@@ -23,8 +23,7 @@ export const TransferDetails = () => {
     register,
     control,
     watch,
-    formState: { errors },
-    setValue
+    formState: { errors }
   } = useFormContext()
   const { data: currentUser } = useCurrentUser()
   const { data: orgData } = useRegExtOrgs()
