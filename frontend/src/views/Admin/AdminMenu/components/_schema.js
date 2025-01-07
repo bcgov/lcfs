@@ -164,12 +164,13 @@ export const userActivityColDefs = [
     headerName: 'Transaction Type',
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
-      valueKey: 'action',
-      labelKey: 'action',
+      valueKey: 'value',
+      labelKey: 'label',
       optionsQuery: () => ({
         data: [
           ...Object.values(TRANSACTION_TYPES).map((value) => ({
-            action: value
+            label: value.replace(/([A-Z])/g, ' $1').trim(),
+            value
           }))
         ],
         isLoading: false
