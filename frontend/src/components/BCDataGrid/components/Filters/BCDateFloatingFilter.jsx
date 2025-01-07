@@ -25,10 +25,11 @@ export const BCDateFloatingFilter = ({
   const handleChange = useCallback((newDate) => {
     setSelectedDate(newDate)
 
-    if (newDate && isValid(newDate)) {
+    if (newDate && newDate.isValid()) {
+      // Validate with dayjs
       onModelChange({
         type: initialFilterType,
-        dateFrom: format(newDate, 'yyyy-MM-dd'),
+        dateFrom: newDate.format('YYYY-MM-DD'),
         dateTo: null,
         filterType: 'date'
       })
@@ -58,8 +59,8 @@ export const BCDateFloatingFilter = ({
     }
 
     if (model?.dateFrom) {
-      const date = new Date(model.dateFrom)
-      setSelectedDate(isValid(date) ? date : null)
+      const date = dayjs(model.dateFrom)
+      setSelectedDate(date.isValid() ? date : null)
     }
   }, [model])
 
@@ -86,7 +87,7 @@ export const BCDateFloatingFilter = ({
           aria-describedby="date-picker-description"
           sx={{
             border: 'none',
-            borderBottom: '4px solid #495057',
+            borderBottom: '4px solid #495057'
           }}
           value={selectedDate}
           minDate={dayjs(minDate)}
