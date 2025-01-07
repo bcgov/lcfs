@@ -5,20 +5,23 @@ import {
 } from '@/utils/grid/cellRenderers'
 import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
-import { BCColumnSetFilter } from '@/components/BCDataGrid/components'
+import {
+  BCSelectFloatingFilter,
+  BCDateFloatingFilter
+} from '@/components/BCDataGrid/components'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
 
 export const fuelCodeColDefs = (t) => [
   {
     field: 'status',
     headerName: t('fuelCode:fuelCodeColLabels.status'),
-    floatingFilterComponent: BCColumnSetFilter,
+    floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
-      apiOptionField: 'status',
-      apiQuery: useFuelCodeStatuses,
-      disableCloseOnSelect: false,
-      multiple: false
+      valueKey: 'status',
+      labelKey: 'status',
+      optionsQuery: useFuelCodeStatuses
     },
+    suppressFloatingFilterButton: true,
     valueGetter: (params) => params.data.fuelCodeStatus.status,
     cellRenderer: FuelCodeStatusTextRenderer
   },
@@ -26,6 +29,7 @@ export const fuelCodeColDefs = (t) => [
     field: 'prefix',
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
     valueGetter: (params) => params.data.fuelCodePrefix.prefix,
+    suppressFloatingFilterButton: true,
     cellRenderer: TextRenderer
   },
   {
@@ -34,6 +38,7 @@ export const fuelCodeColDefs = (t) => [
     cellRenderer: TextRenderer,
     type: 'numericColumn',
     filter: 'agNumberColumnFilter',
+    suppressFloatingFilterButton: true,
     filterParams: {
       filterOptions: ['startsWith'],
       buttons: ['clear']
@@ -76,26 +81,34 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
-    filter: false,
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true,
+    minWidth: 250,
     cellRenderer: TextRenderer
   },
   {
     field: 'approvalDate',
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
-    filter: false,
-    cellRenderer: TextRenderer
+    cellRenderer: TextRenderer,
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true,
+    minWidth: 250
   },
   {
     field: 'effectiveDate',
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
-    filter: false,
-    cellRenderer: TextRenderer
+    cellRenderer: TextRenderer,
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true,
+    minWidth: 250
   },
   {
     field: 'expirationDate',
     headerName: t('fuelCode:fuelCodeColLabels.expirationDate'),
-    filter: false,
-    cellRenderer: TextRenderer
+    cellRenderer: TextRenderer,
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true,
+    minWidth: 250
   },
   {
     field: 'fuelType',
@@ -158,13 +171,13 @@ export const fuelCodeColDefs = (t) => [
     field: 'feedstockFuelTransportMode',
     headerName: t('fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'),
     sortable: false,
-    floatingFilterComponent: BCColumnSetFilter,
+    floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
-      apiOptionField: 'transportMode',
-      apiQuery: useTransportModes,
-      disableCloseOnSelect: false,
-      multiple: false
+      valueKey: 'transportMode',
+      labelKey: 'transportMode',
+      optionsQuery: useTransportModes
     },
+    suppressFloatingFilterButton: true,
     minWidth: 335,
     valueGetter: (params) =>
       params.data.feedstockFuelTransportModes.map(
@@ -176,13 +189,13 @@ export const fuelCodeColDefs = (t) => [
     field: 'finishedFuelTransportMode',
     headerName: t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
     sortable: false,
-    floatingFilterComponent: BCColumnSetFilter,
+    floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
-      apiOptionField: 'transportMode',
-      apiQuery: useTransportModes,
-      disableCloseOnSelect: false,
-      multiple: false
+      valueKey: 'transportMode',
+      labelKey: 'transportMode',
+      optionsQuery: useTransportModes
     },
+    suppressFloatingFilterButton: true,
     minWidth: 335,
     valueGetter: (params) =>
       params.data.finishedFuelTransportModes.map(

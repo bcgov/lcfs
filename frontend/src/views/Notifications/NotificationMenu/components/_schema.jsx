@@ -1,6 +1,7 @@
 import { dateFormatter } from '@/utils/formatters'
 import { actions } from '@/components/BCDataGrid/columns'
 import { ROUTES } from '@/constants/routes'
+import { BCDateFloatingFilter } from '@/components/BCDataGrid/components'
 
 export const columnDefs = (t, currentUser) => [
   {
@@ -16,7 +17,8 @@ export const columnDefs = (t, currentUser) => [
   {
     colId: 'date',
     field: 'date',
-    cellDataType: 'date',
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true,
     headerName: t('notifications:notificationColLabels.date'),
     valueGetter: (params) => params.data.createDate,
     valueFormatter: dateFormatter

@@ -66,3 +66,10 @@ export const FUEL_CODE_STATUSES = {
 export function getAllFuelCodeStatuses() {
   return Object.values(FUEL_CODE_STATUSES)
 }
+
+export const TRANSACTION_TYPES = {
+  TRANSFER: 'Transfer',
+  INITIATIVE_AGREEMENT: 'InitiativeAgreement',
+  COMPLIANCE_REPORT: 'ComplianceReport',
+  ADMINISTRATIVE_ADJUSTMENT: 'AdminAdjustment'
+}

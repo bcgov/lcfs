@@ -54,8 +54,7 @@ export const organizationsColDefs = (t) => [
       labelKey: 'status',
       optionsQuery: useOrganizationStatuses
     },
-    suppressFloatingFilterButton: true,
-    suppressHeaderFilterButton: true
+    suppressFloatingFilterButton: true
   }
 ]
 

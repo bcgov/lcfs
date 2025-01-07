@@ -33,13 +33,14 @@ export const BCGridBase = forwardRef(({ autoSizeStrategy, ...props }, ref) => {
         suppressDragLeaveHidesColumns
         suppressMovableColumns
         suppressColumnMoveAnimation={false}
-        reactiveCustomComponents
         suppressCsvExport={false}
+        suppressColumnVirtualisation={true}
+        enableBrowserTooltips={true}
         suppressPaginationPanel
         suppressScrollOnNewData
         getRowStyle={getRowStyle}
         rowHeight={45}
-        headerHeight={45}
+        headerHeight={40}
         {...props}
       />
     </>

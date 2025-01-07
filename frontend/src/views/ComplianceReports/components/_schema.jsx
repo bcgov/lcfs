@@ -75,7 +75,8 @@ export const reportsColDefs = (t, bceidRole) => [
       }),
       valueKey: 'name',
       labelKey: 'name'
-    }
+    },
+    suppressFloatingFilterButton: true
   },
   {
     field: 'updateDate',
@@ -91,7 +92,8 @@ export const reportsColDefs = (t, bceidRole) => [
       buttons: ['clear'],
       maxValidYear: 2400
     },
-    floatingFilterComponent: BCDateFloatingFilter
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true
   }
 ]
 

@@ -11,6 +11,8 @@ export const BCDateFloatingFilter = ({
   model,
   onModelChange,
   disabled = false,
+  minDate = '2013-01-01',
+  maxDate = '2040-01-01',
   initialFilterType = 'equals',
   label = 'Select Date'
 }) => {
@@ -52,7 +54,7 @@ export const BCDateFloatingFilter = ({
       return
     }
 
-    if (model.dateFrom) {
+    if (model?.dateFrom) {
       const date = new Date(model.dateFrom)
       setSelectedDate(isValid(date) ? date : null)
     }
@@ -67,7 +69,6 @@ export const BCDateFloatingFilter = ({
       aria-labelledby="date-picker-label"
       sx={{
         border: 'none',
-        '& .MuiOutlinedInput-root': { p: 0 },
         '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
         '& .Mui-focused': {
           border: '1px solid #495057',
@@ -79,8 +80,13 @@ export const BCDateFloatingFilter = ({
         id="date-picker"
         aria-label="Date Picker"
         aria-describedby="date-picker-description"
-        sx={{ border: 'none', borderBottom: '2px solid #495057' }}
+        sx={{
+          border: 'none',
+          borderBottom: '4px solid #495057'
+        }}
         value={selectedDate}
+        minDate={new Date(minDate)}
+        maxDate={new Date(maxDate)}
         onChange={handleChange}
         open={open}
         onOpen={handleOpen}
@@ -95,6 +101,7 @@ export const BCDateFloatingFilter = ({
               startAdornment: (
                 <InputAdornment position="start">
                   <IconButton
+                    sx={{ marginLeft: 0, paddingLeft: '6px' }}
                     size="small"
                     edge="start"
                     onClick={() => setOpen(true)}
@@ -107,6 +114,7 @@ export const BCDateFloatingFilter = ({
               endAdornment: selectedDate && (
                 <InputAdornment position="end">
                   <IconButton
+                    sx={{ marginRight: 0, paddingRight: '6px' }}
                     size="small"
                     onClick={handleClear}
                     onMouseDown={(event) => event.stopPropagation()}
