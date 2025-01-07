@@ -55,7 +55,7 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
     field: 'allocationTransactionType',
     headerComponent: RequiredHeader,
     headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.transaction'
+      'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
     ),
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {

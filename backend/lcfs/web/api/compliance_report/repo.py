@@ -73,13 +73,14 @@ class ComplianceReportRepository:
             filter_option = filter.type
             filter_type = filter.filter_type
             if filter.field == "status":
-                field = get_field_for_filter(ComplianceReportStatus, "status")
-                normalized_value = filter_value.lower()
-                enum_value_map = {
-                    enum_val.value.lower(): enum_val
-                    for enum_val in ComplianceReportStatusEnum
-                }
-                filter_value = enum_value_map.get(normalized_value)
+                field = get_field_for_filter(ComplianceReportStatus, filter.field)
+                if isinstance(filter_value, list):
+                    filter_value = [
+                        ComplianceReportStatusEnum(value) for value in filter_value
+                    ]
+                    filter_type = "set"
+                else:
+                    filter_value = ComplianceReportStatusEnum(filter_value)
             elif filter.field == "organization":
                 field = get_field_for_filter(Organization, "name")
             elif filter.field == "type":

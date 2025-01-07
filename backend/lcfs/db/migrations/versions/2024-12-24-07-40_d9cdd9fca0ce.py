@@ -169,7 +169,8 @@ def upgrade() -> None:
             (20, 'Compression-ignition engine- Marine, with methane slip reduction kit- Operated within 76 to 100% of load range', TRUE),
             (21, 'Compression-ignition engine- Marine, unknown whether kit is installed or average operating load range', TRUE),
             (22, 'Unknown engine type', TRUE),
-            (23, 'Other (i.e. road transportation)', TRUE)
+            (23, 'Other (i.e. road transportation)', TRUE),
+            (24, 'Any', TRUE)
         ON CONFLICT (end_use_type_id) DO NOTHING;
                
     """)
@@ -224,13 +225,13 @@ def upgrade() -> None:
             eer_id, fuel_category_id, fuel_type_id, end_use_type_id, ratio, effective_status
         )
         VALUES
-            (1, 1, 2, NULL, 0.9, TRUE),
+            (1, 1, 2, 24, 0.9, TRUE),
             (2, 1, 3, 1, 3.5, TRUE),
             (3, 1, 3, 2, 1.0, TRUE),
             (4, 1, 6, 3, 2.4, TRUE),
             (5, 1, 6, 2, 0.9, TRUE),
-            (6, 1, 13, NULL, 0.9, TRUE),
-            (7, 2, 2, NULL, 0.9, TRUE),
+            (6, 1, 13, 24, 0.9, TRUE),
+            (7, 2, 2, 24, 0.9, TRUE),
             (8, 2, 3, 4, 3.8, TRUE),
             (9, 2, 3, 5, 3.2, TRUE),
             (10, 2, 3, 6, 2.5, TRUE),
@@ -242,9 +243,9 @@ def upgrade() -> None:
             (16, 2, 3, 2, 1.0, TRUE),
             (17, 2, 6, 3, 1.8, TRUE),
             (18, 2, 6, 2, 0.9, TRUE),
-            (19, 2, 13, NULL, 0.9, TRUE),
-            (20, 3, 3, NULL, 2.5, TRUE),
-            (21, 3, 11, NULL, 1.0, TRUE),
+            (19, 2, 13, 24, 0.9, TRUE),
+            (20, 3, 3, 24, 2.5, TRUE),
+            (21, 3, 11, 24, 1.0, TRUE),
             (22, 2, 7, 15, 1.0, TRUE),
             (23, 2, 7, 16, 1.0, TRUE),
             (24, 2, 7, 17, 1.0, TRUE),
@@ -253,7 +254,20 @@ def upgrade() -> None:
             (27, 2, 7, 20, 1.0, TRUE),
             (28, 2, 7, 21, 1.0, TRUE),
             (29, 2, 7, 22, 0.9, TRUE),
-            (30, 2, 7, 23, 0.9, TRUE)
+            (30, 2, 7, 23, 0.9, TRUE),
+            (31, 2, 1, 24, 1.0, TRUE),
+            (32, 2, 5, 24, 1.0, TRUE),
+            (33, 3, 6, 24, 1.0, TRUE),
+            (34, 1, 14, 24, 1.0, TRUE),
+            (35, 1, 15, 24, 1.0, TRUE),
+            (36, 2, 16, 24, 1.0, TRUE),
+            (37, 1, 17, 24, 1.0, TRUE),
+            (38, 3, 18, 24, 1.0, TRUE),
+            (39, 1, 19, 24, 1.0, TRUE),
+            (40, 2, 19, 24, 1.0, TRUE),
+            (41, 3, 7, 24, 1.0, TRUE),
+            (42, 2, 20, 24, 1.0, TRUE),
+            (43, 1, 4, 24, 1.0, TRUE)
         ON CONFLICT (eer_id) DO NOTHING;
     """)
 
