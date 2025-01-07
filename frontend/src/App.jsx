@@ -34,6 +34,8 @@ import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddEdi
 import { logout } from '@/utils/keycloak.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector.jsx'
+import { useCurrentUser } from './hooks/useCurrentUser'
+import Loading from './components/Loading'
 
 const router = createBrowserRouter([
   {
@@ -395,6 +397,14 @@ const router = createBrowserRouter([
   }
 ])
 
-const App = () => <RouterProvider router={router} />
+const App = () => {
+  const { isLoading } = useCurrentUser()
+
+  if (isLoading) {
+    return <Loading />
+  }
+
+  return <RouterProvider router={router} />
+}
 
 export default App
