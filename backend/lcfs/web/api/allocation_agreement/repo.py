@@ -37,17 +37,25 @@ class AllocationAgreementRepository:
     @repo_handler
     async def get_table_options(self, compliance_period: str) -> dict:
         """Get all table options"""
+        include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
+
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
         fuel_types = await self.fuel_code_repo.get_formatted_fuel_types(
-            include_legacy=compliance_period
-            < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
+            include_legacy=include_legacy
         )
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
         allocation_transaction_types = (
             (await self.db.execute(select(AllocationTransactionType))).scalars().all()
         )
+
+        provisions_select = select(ProvisionOfTheAct)
+        if include_legacy:
+            provisions_select = provisions_select.where(
+                ProvisionOfTheAct.is_legacy == True
+            )
+
         provisions_of_the_act = (
-            (await self.db.execute(select(ProvisionOfTheAct))).scalars().all()
+            (await self.db.execute(provisions_select)).scalars().all()
         )
         fuel_codes = (await self.db.execute(select(FuelCode))).scalars().all()
 
