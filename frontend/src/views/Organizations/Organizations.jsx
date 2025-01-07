@@ -12,7 +12,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { organizationsColDefs } from './ViewOrganization/_schema'
 // react components
 import { ROUTES, apiRoutes } from '@/constants/routes'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 // Services
@@ -20,6 +20,7 @@ import { DownloadButton } from '@/components/DownloadButton'
 import { useApiService } from '@/services/useApiService'
 import { roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const Organizations = () => {
   const { t } = useTranslation(['common', 'org'])
@@ -39,12 +40,7 @@ export const Organizations = () => {
   const location = useLocation()
 
   const defaultSortModel = [{ field: 'name', direction: 'asc' }]
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const handleRowClicked = useCallback((params) => {
-    navigate(
-      ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', params.data.organizationId)
-    )
-  })
+
   const apiService = useApiService()
   const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
   const [isDownloadingUsers, setIsDownloadingUsers] = useState(false)
@@ -84,6 +80,16 @@ export const Organizations = () => {
       setAlertSeverity('error')
     }
   }
+
+  const defaultColDef = useMemo(
+    () => ({
+      cellRenderer: LinkRenderer,
+      cellRendererParams: {
+        url: (data) => data.data.organizationId
+      }
+    }),
+    []
+  )
 
   return (
     <>
@@ -137,16 +143,16 @@ export const Organizations = () => {
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={'organizations/'}
-          apiData={'organizations'}
+          apiEndpoint="organizations/"
+          apiData="organizations"
           columnDefs={organizationsColDefs(t)}
           gridKey={gridKey}
           getRowId={getRowId}
           defaultSortModel={defaultSortModel}
           gridOptions={gridOptions}
           handleGridKey={handleGridKey}
-          handleRowClicked={handleRowClicked}
           enableCopyButton={false}
+          defaultColDef={defaultColDef}
         />
       </BCBox>
     </>
