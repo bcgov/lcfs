@@ -19,25 +19,25 @@ const Footer = (props) => {
         label: 'About this site'
       },
       {
-        href: 'http://gov.bc.ca/disclaimer/',
+        href: 'https://gov.bc.ca/disclaimer/',
         name: 'Disclaimer',
         id: 'footer-disclaimer',
         label: 'BC gov disclaimer information'
       },
       {
-        href: 'http://gov.bc.ca/privacy/',
+        href: 'https://gov.bc.ca/privacy/',
         name: 'Privacy',
         id: 'footer-privacy',
         label: 'BC gov privacy information'
       },
       {
-        href: 'http://gov.bc.ca/webaccessibility/',
+        href: 'https://gov.bc.ca/webaccessibility/',
         name: 'Accessibility',
         id: 'footer-accessibility',
         label: 'BC gov accessibility information'
       },
       {
-        href: 'http://gov.bc.ca/copyright',
+        href: 'https://gov.bc.ca/copyright',
         name: 'Copyright',
         id: 'footer-copyright',
         label: 'BC gov copyright information'
