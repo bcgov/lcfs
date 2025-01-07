@@ -5,7 +5,10 @@ import {
   spacesFormatter
 } from '@/utils/formatters'
 import { TransactionStatusRenderer } from '@/utils/grid/cellRenderers'
-import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
+import {
+  BCSelectFloatingFilter,
+  BCDateFloatingFilter
+} from '@/components/BCDataGrid/components'
 import { useTransactionStatuses } from '@/hooks/useTransactions'
 
 const prefixMap = {
@@ -109,7 +112,6 @@ export const transactionsColDefs = (t) => [
       optionsQuery: useTransactionStatuses
     },
     suppressFloatingFilterButton: true,
-    suppressHeaderFilterButton: true,
     minWidth: 180,
     width: 250
   },
@@ -118,7 +120,7 @@ export const transactionsColDefs = (t) => [
     field: 'updateDate',
     headerName: t('txn:txnColLabels.updateDate'),
     valueFormatter: dateFormatter,
-    width: 190,
+    minWidth: 250,
     filter: 'agDateColumnFilter',
     filterParams: {
       filterOptions: ['inRange', 'equals', 'lessThan', 'greaterThan'],
@@ -137,7 +139,9 @@ export const transactionsColDefs = (t) => [
       },
       browserDatePicker: true, // Uses the browser's date picker if available
       buttons: ['clear']
-    }
+    },
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true
   }
 ]
 

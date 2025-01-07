@@ -35,64 +35,55 @@ export const LinkRenderer = (props) => {
     </Link>
   )
 }
+const BaseStatusRenderer = ({
+  isView = false,
+  value = false,
+  successText = 'Active',
+  failureText = 'Inactive',
+  successColor = 'success',
+  failureColor = 'smoky'
+}) => {
+  const badgeStyles = {
+    ...(!isView ? { display: 'flex', justifyContent: 'center' } : {}),
+    '& .MuiBadge-badge': {
+      minWidth: '120px',
+      fontWeight: 'regular',
+      textTransform: 'capitalize',
+      fontSize: '0.875rem',
+      padding: '0.4em 0.6em'
+    }
+  }
 
-export const StatusRenderer = (props) => {
   return (
     <BCBox
-      component={props.isView ? 'span' : 'div'}
+      component={isView ? 'span' : 'div'}
       mt={1}
       sx={{ width: '100%', height: '100%' }}
     >
       <BCBadge
-        badgeContent={props.data.isActive ? 'Active' : 'Inactive'}
-        color={props.data.isActive ? 'success' : 'smoky'}
+        badgeContent={value ? successText : failureText}
+        color={value ? successColor : failureColor}
         variant="gradient"
         size="md"
-        sx={{
-          ...(!props.isView
-            ? { display: 'flex', justifyContent: 'center' }
-            : {}),
-          '& .MuiBadge-badge': {
-            minWidth: '120px',
-            fontWeight: 'regular',
-            textTransform: 'capitalize',
-            fontSize: '0.875rem',
-            padding: '0.4em 0.6em'
-          }
-        }}
+        sx={badgeStyles}
       />
     </BCBox>
   )
 }
 
-export const LoginStatusRenderer = (props) => {
-  return (
-    <BCBox
-      component={props.isView ? 'span' : 'div'}
-      mt={1}
-      sx={{ width: '100%', height: '100%' }}
-    >
-      <BCBadge
-        badgeContent={props.data.isLoginSuccessful ? 'True' : 'False'}
-        color={props.data.isLoginSuccessful ? 'success' : 'error'}
-        variant="gradient"
-        size="md"
-        sx={{
-          ...(!props.isView
-            ? { display: 'flex', justifyContent: 'center' }
-            : {}),
-          '& .MuiBadge-badge': {
-            minWidth: '120px',
-            fontWeight: 'regular',
-            textTransform: 'capitalize',
-            fontSize: '0.875rem',
-            padding: '0.4em 0.6em'
-          }
-        }}
-      />
-    </BCBox>
-  )
-}
+export const StatusRenderer = (props) => (
+  <BaseStatusRenderer isView={props.isView} value={props.data.isActive} />
+)
+
+export const LoginStatusRenderer = (props) => (
+  <BaseStatusRenderer
+    isView={props.isView}
+    value={props.data.isLoginSuccessful}
+    successText="Success"
+    failureText="Failed"
+    failureColor="error"
+  />
+)
 
 export const OrgStatusRenderer = (props) => {
   const location = useLocation()
