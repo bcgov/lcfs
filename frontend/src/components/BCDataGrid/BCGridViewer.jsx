@@ -161,7 +161,7 @@ export const BCGridViewer = ({
 
   const defaultColDefParams = useMemo(
     () => ({
-      headerComponent: AccessibleHeader,
+      // headerComponent: AccessibleHeader,
       suppressHeaderFilterButton: true,
       resizable: true,
       sortable: true,

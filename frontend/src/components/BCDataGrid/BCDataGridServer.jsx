@@ -289,7 +289,7 @@ const BCDataGridServer = ({
 
   // Memorized default column definition parameters
   const defaultColDefParams = useMemo(() => ({
-    headerComponent: AccessibleHeader,
+    // headerComponent: AccessibleHeader,
     suppressHeaderFilterButton: true,
     resizable: true,
     sortable: true,
