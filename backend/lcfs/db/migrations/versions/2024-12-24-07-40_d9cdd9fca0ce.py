@@ -4,6 +4,7 @@ Revision ID: d9cdd9fca0ce
 Revises: 5fbcb508c1be
 Create Date: 2024-12-24 07:40:08.332121
 """
+
 from alembic import op
 import sqlalchemy as sa
 from datetime import datetime
@@ -17,10 +18,10 @@ depends_on = None
 
 def upgrade() -> None:
     # 1. Compliance Periods
-    dates = [(year, f"{year}-01-01", f"{year}-12-31")
-             for year in range(2010, 2033)]
+    dates = [(year, f"{year}-01-01", f"{year}-12-31") for year in range(2010, 2033)]
     for i, (year, start_date, end_date) in enumerate(dates, 1):
-        op.execute(f"""
+        op.execute(
+            f"""
             INSERT INTO compliance_period (
                 compliance_period_id, description, display_order,
                 effective_date, expiration_date, effective_status
@@ -30,10 +31,12 @@ def upgrade() -> None:
                 '{start_date}', '{end_date}', TRUE
             )
             ON CONFLICT (compliance_period_id) DO NOTHING;
-        """)
+        """
+        )
 
     # 2. Organization Types
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO organization_type (organization_type_id, org_type, description)
         VALUES
             (1, 'fuel_supplier', 'Fuel Supplier'),
@@ -41,10 +44,12 @@ def upgrade() -> None:
             (3, 'broker', 'Broker'),
             (4, 'utilities', 'Utilities (local or public)')
         ON CONFLICT (organization_type_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 3. Organization Statuses
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO organization_status (organization_status_id, status, description)
         VALUES
             (1, 'Unregistered', 'Unregistered'),
@@ -52,10 +57,12 @@ def upgrade() -> None:
             (3, 'Suspended', 'Suspended'),
             (4, 'Canceled', 'Canceled')
         ON CONFLICT (organization_status_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 4. Roles
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO role (role_id, name, description, is_government_role, display_order)
         VALUES
             (1, 'GOVERNMENT', 'Identifies a government user in the system.', TRUE, 1),
@@ -70,10 +77,12 @@ def upgrade() -> None:
             (10, 'SIGNING_AUTHORITY', 'Can sign and submit compliance reports to government and transfers to trade partners/government', FALSE, 10),
             (11, 'READ_ONLY', 'Can view transactions, compliance reports, and files', FALSE, 11)
         ON CONFLICT (role_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 5. Transfer Statuses
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO transfer_status (transfer_status_id, status, visible_to_transferor, visible_to_transferee, visible_to_government)
         VALUES
             (1, 'Draft', TRUE, FALSE, FALSE),
@@ -86,10 +95,12 @@ def upgrade() -> None:
             (8, 'Declined', TRUE, TRUE, FALSE),
             (9, 'Rescinded', TRUE, TRUE, TRUE)
         ON CONFLICT (transfer_status_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 6. Transfer Categories
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO transfer_category (transfer_category_id, category, effective_status)
         VALUES
             (1, 'A', TRUE),
@@ -97,10 +108,12 @@ def upgrade() -> None:
             (3, 'C', TRUE),
             (4, 'D', TRUE)
         ON CONFLICT (transfer_category_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 7. Admin Adjustment Statuses
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO admin_adjustment_status (admin_adjustment_status_id, status)
         VALUES
             (1, 'Draft'),
@@ -108,10 +121,12 @@ def upgrade() -> None:
             (3, 'Approved'),
             (4, 'Deleted')
         ON CONFLICT (admin_adjustment_status_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 8. Initiative Agreement Statuses
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO initiative_agreement_status (initiative_agreement_status_id, status)
         VALUES
             (1, 'Draft'),
@@ -119,20 +134,24 @@ def upgrade() -> None:
             (3, 'Approved'),
             (4, 'Deleted')
         ON CONFLICT (initiative_agreement_status_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 9. Static Fuel Data
     # Expected Use Types
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO expected_use_type (expected_use_type_id, name, description, effective_status)
         VALUES
             (1, 'Heating oil', 'Fuel used for heating purposes', TRUE),
             (2, 'Other', 'Other type of fuel description', TRUE)
         ON CONFLICT (expected_use_type_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Unit of Measures first
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO unit_of_measure (uom_id, name, description)
         VALUES
             (1, 'MJ/L', 'Megajoules per litre'),
@@ -141,10 +160,12 @@ def upgrade() -> None:
             (4, 'MJ/kg', 'Megajoules per kilogram'),
             (5, 'gCO²e/MJ', 'grams of carbon dioxide equivalent per megajoule')
         ON CONFLICT (uom_id) DO NOTHING;
-    """)
+    """
+    )
 
     # End Use Types
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO end_use_type (end_use_type_id, type, intended_use)
         VALUES 
             (1, 'Light duty motor vehicles', TRUE),
@@ -170,33 +191,40 @@ def upgrade() -> None:
             (21, 'Compression-ignition engine- Marine, unknown whether kit is installed or average operating load range', TRUE),
             (22, 'Unknown engine type', TRUE),
             (23, 'Other (i.e. road transportation)', TRUE),
-            (24, 'Any', TRUE)
+            (24, 'Any', TRUE),
+            (25, 'Marine', TRUE)
         ON CONFLICT (end_use_type_id) DO NOTHING;
                
-    """)
+    """
+    )
 
     # Provision Acts
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO provision_of_the_act (provision_of_the_act_id, name, description, effective_status)
         VALUES
             (1, 'Prescribed carbon intensity - section 19 (a)', 'Prescribed carbon intensity - section 19 (a)', TRUE),
             (2, 'Fuel code - section 19 (b) (i)', 'Fuel code - section 19 (b) (i)', TRUE),
             (3, 'Default carbon intensity - section 19 (b) (ii)', 'Default carbon intensity - section 19 (b) (ii)', TRUE)
         ON CONFLICT (provision_of_the_act_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Fuel Categories
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO fuel_category (fuel_category_id, category, description, default_carbon_intensity, effective_status)
         VALUES
             (1, 'Gasoline', 'Gasoline', 93.67, TRUE),
             (2, 'Diesel', 'Diesel', 100.21, TRUE),
             (3, 'Jet fuel', 'Jet fuel', 88.83, TRUE)
         ON CONFLICT (fuel_category_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Fuel Types
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO fuel_type (fuel_type_id, fuel_type, fossil_derived, other_uses_fossil_derived,
             provision_1_id, provision_2_id, default_carbon_intensity, units, unrecognized)
         VALUES
@@ -217,10 +245,12 @@ def upgrade() -> None:
             (19, 'Other', FALSE, FALSE, 2, 3, 0, 'Litres', TRUE),
             (20, 'Other diesel', FALSE, FALSE, 1, NULL, 100.21, 'Litres', FALSE)
         ON CONFLICT (fuel_type_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Energy Effectiveness Ratios
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO energy_effectiveness_ratio (
             eer_id, fuel_category_id, fuel_type_id, end_use_type_id, ratio, effective_status
         )
@@ -267,12 +297,15 @@ def upgrade() -> None:
             (40, 2, 19, 24, 1.0, TRUE),
             (41, 3, 7, 24, 1.0, TRUE),
             (42, 2, 20, 24, 1.0, TRUE),
-            (43, 1, 4, 24, 1.0, TRUE)
+            (43, 1, 4, 24, 1.0, TRUE),
+            (44, 2, 3, 24, 2.5, TRUE)
         ON CONFLICT (eer_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Now Additional Carbon Intensities
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO additional_carbon_intensity (additional_uci_id, fuel_type_id, uom_id, end_use_type_id, intensity)
         VALUES
             (1, 7, 5, NULL, 0),
@@ -287,10 +320,12 @@ def upgrade() -> None:
             (10, 7, 5, 22, 27.3),
             (11, 7, 5, 23, 0)
         ON CONFLICT (additional_uci_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Energy Densities
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO energy_density (energy_density_id, fuel_type_id, uom_id, density)
         VALUES 
             (1, 17, 1, 34.69),
@@ -309,10 +344,12 @@ def upgrade() -> None:
             (15, 7, 4, 53.54),
             (16, 20, 1, 36.51)
         ON CONFLICT (energy_density_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Target Carbon Intensities
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO target_carbon_intensity (
             target_carbon_intensity_id, 
             compliance_period_id, 
@@ -344,10 +381,12 @@ def upgrade() -> None:
             (20, 20, 3, 81.72, 8.0, TRUE),
             (21, 21, 3, 79.95, 10.0, TRUE)
         ON CONFLICT (target_carbon_intensity_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Fuel Instances
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO fuel_instance (fuel_instance_id, fuel_type_id, fuel_category_id)
         VALUES 
             (1, 1, 2),
@@ -375,10 +414,12 @@ def upgrade() -> None:
             (27, 19, 3),
             (28, 20, 2)
         ON CONFLICT (fuel_instance_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Transport Modes
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO transport_mode (transport_mode_id, transport_mode)
         VALUES
             (1, 'Truck'),
@@ -387,29 +428,35 @@ def upgrade() -> None:
             (4, 'Adjacent'),
             (5, 'Pipeline')
         ON CONFLICT (transport_mode_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Fuel Code Prefixes
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO fuel_code_prefix (fuel_code_prefix_id, prefix)
         VALUES
             (1, 'BCLCF'),
             (2, 'PROXY')
         ON CONFLICT (fuel_code_prefix_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Fuel Code Statuses
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO fuel_code_status (fuel_code_status_id, status, description, display_order)
         VALUES
             (1, 'Draft', 'Initial state of the fuel code', 1),
             (2, 'Approved', 'Fuel code has been approved', 2),
             (3, 'Deleted', 'Fuel code has been deleted', 3)
         ON CONFLICT (fuel_code_status_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Level of Equipment
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO level_of_equipment (level_of_equipment_id, name, display_order)
         VALUES
             (1, 'Level 3 - Direct current fast charging', 1),
@@ -417,10 +464,12 @@ def upgrade() -> None:
             (3, 'Level 1 - Low voltage, operating at 120V AC or less', 3),
             (4, 'Other - Additional information provided in notes field', 4)
         ON CONFLICT (level_of_equipment_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Fuel Measurement Types
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO fuel_measurement_type (fuel_measurement_type_id, type, display_order)
         VALUES
             (1, 'Separate utility meter', 1),
@@ -428,10 +477,12 @@ def upgrade() -> None:
             (3, 'Equipment meter (physical access)', 3),
             (4, 'No meter or estimated', 4)
         ON CONFLICT (fuel_measurement_type_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 10. Compliance Report Statuses
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO compliance_report_status (compliance_report_status_id, status, effective_status)
         VALUES
             (1, 'Draft', TRUE),
@@ -441,10 +492,12 @@ def upgrade() -> None:
             (5, 'Assessed', TRUE),
             (6, 'ReAssessed', TRUE)
         ON CONFLICT (compliance_report_status_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 11. Allocation Transaction Types
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO allocation_transaction_type (
             allocation_transaction_type_id, type, description,
             display_order, effective_date, effective_status
@@ -453,10 +506,12 @@ def upgrade() -> None:
             (1, 'Allocated from', 'Fuel allocated from another supplier under an allocation agreement', 1, '2012-01-01', TRUE),
             (2, 'Allocated to', 'Fuel allocated to another supplier under an allocation agreement', 2, '2012-01-01', TRUE)
         ON CONFLICT (allocation_transaction_type_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 12. End User Types
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO end_user_type (type_name, intended_use)
         VALUES
             ('Multi-unit residential building', TRUE),
@@ -464,10 +519,12 @@ def upgrade() -> None:
             ('Public', TRUE),
             ('Employee', TRUE)
         ON CONFLICT (type_name) DO NOTHING;
-    """)
+    """
+    )
 
     # 13. Notification Types
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO notification_type (notification_type_id, name, description, email_content, create_user, update_user)
         VALUES
             (1, 'BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT', 'Director assessed a compliance report or supplemental report.', 'Email content', 'system', 'system'),
@@ -488,60 +545,67 @@ def upgrade() -> None:
             (16, 'IDIR_DIRECTOR__INITIATIVE_AGREEMENT__ANALYST_RECOMMENDATION', 'Analyst recommendation provided for the initiative agreement', 'Email content', 'system', 'system'),
             (17, 'IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION', 'Analyst recommendation provided for the transfer request', 'Email content', 'system', 'system')
         ON CONFLICT (notification_type_id) DO NOTHING;
-    """)
+    """
+    )
 
     # 14. Notification Channels
-    op.execute("""
+    op.execute(
+        """
         INSERT INTO notification_channel (notification_channel_id, channel_name, enabled, subscribe_by_default)
         VALUES
             (1, 'EMAIL', TRUE, TRUE),
             (2, 'IN_APP', TRUE, FALSE)
         ON CONFLICT (notification_channel_id) DO NOTHING;
-    """)
+    """
+    )
 
     # Update sequences
     sequence_mappings = {
-        'transfer_status': 'transfer_status_id',
-        'transfer_category': 'transfer_category_id',
-        'role': 'role_id',
-        'organization_type': 'organization_type_id',
-        'organization_status': 'organization_status_id',
-        'initiative_agreement_status': 'initiative_agreement_status_id',
-        'compliance_period': 'compliance_period_id',
-        'admin_adjustment_status': 'admin_adjustment_status_id',
-        'notification_channel': 'notification_channel_id',
-        'notification_type': 'notification_type_id',
-        'end_user_type': 'end_user_type_id',
-        'compliance_report_status': 'compliance_report_status_id',
-        'allocation_transaction_type': 'allocation_transaction_type_id',
-        'provision_of_the_act': 'provision_of_the_act_id',
-        'transport_mode': 'transport_mode_id',
-        'fuel_code_prefix': 'fuel_code_prefix_id',
-        'fuel_code_status': 'fuel_code_status_id',
-        'fuel_category': 'fuel_category_id',
-        'fuel_type': 'fuel_type_id',
-        'unit_of_measure': 'uom_id',  # Both column and sequence use uom_id
-        'additional_carbon_intensity': 'additional_uci_id',
-        'energy_effectiveness_ratio': 'eer_id',
-        'energy_density': 'energy_density_id',
-        'target_carbon_intensity': 'target_carbon_intensity_id',
-        'fuel_instance': 'fuel_instance_id',
-        'level_of_equipment': 'level_of_equipment_id',
-        'fuel_measurement_type': 'fuel_measurement_type_id'
+        "transfer_status": "transfer_status_id",
+        "transfer_category": "transfer_category_id",
+        "role": "role_id",
+        "organization_type": "organization_type_id",
+        "organization_status": "organization_status_id",
+        "initiative_agreement_status": "initiative_agreement_status_id",
+        "compliance_period": "compliance_period_id",
+        "admin_adjustment_status": "admin_adjustment_status_id",
+        "notification_channel": "notification_channel_id",
+        "notification_type": "notification_type_id",
+        "end_user_type": "end_user_type_id",
+        "compliance_report_status": "compliance_report_status_id",
+        "allocation_transaction_type": "allocation_transaction_type_id",
+        "provision_of_the_act": "provision_of_the_act_id",
+        "transport_mode": "transport_mode_id",
+        "fuel_code_prefix": "fuel_code_prefix_id",
+        "fuel_code_status": "fuel_code_status_id",
+        "fuel_category": "fuel_category_id",
+        "fuel_type": "fuel_type_id",
+        "unit_of_measure": "uom_id",  # Both column and sequence use uom_id
+        "additional_carbon_intensity": "additional_uci_id",
+        "energy_effectiveness_ratio": "eer_id",
+        "energy_density": "energy_density_id",
+        "target_carbon_intensity": "target_carbon_intensity_id",
+        "fuel_instance": "fuel_instance_id",
+        "level_of_equipment": "level_of_equipment_id",
+        "fuel_measurement_type": "fuel_measurement_type_id",
     }
 
     for table, id_column in sequence_mappings.items():
-        if table == 'unit_of_measure':
+        if table == "unit_of_measure":
             # Special case for unit_of_measure table
-            op.execute(f"""
+            op.execute(
+                f"""
                 SELECT setval('unit_of_measure_uom_id_seq',
                     (SELECT MAX(uom_id) FROM unit_of_measure), true);
-            """)
+            """
+            )
         else:
-            op.execute(f"""
+            op.execute(
+                f"""
                 SELECT setval('{table}_{id_column}_seq',
                     (SELECT MAX({id_column}) FROM {table}), true);
-            """)
+            """
+            )
 
 
 def downgrade() -> None:
@@ -549,52 +613,49 @@ def downgrade() -> None:
     table_groups = [
         # Group 1 - Most dependent tables (records with multiple foreign keys)
         [
-            'fuel_instance',  # Depends on fuel_type and fuel_category
-            'target_carbon_intensity',  # Depends on compliance_period and fuel_category
-            'additional_carbon_intensity',  # Depends on fuel_type and end_use_type
-            'energy_density',  # Depends on fuel_type and uom
-            'energy_effectiveness_ratio',  # Added here since it depends on end_use_type
-            'fuel_code',  # If exists, depends on several tables
+            "fuel_instance",  # Depends on fuel_type and fuel_category
+            "target_carbon_intensity",  # Depends on compliance_period and fuel_category
+            "additional_carbon_intensity",  # Depends on fuel_type and end_use_type
+            "energy_density",  # Depends on fuel_type and uom
+            "energy_effectiveness_ratio",  # Added here since it depends on end_use_type
+            "fuel_code",  # If exists, depends on several tables
         ],
-
         # Group 2 - Tables with single foreign key dependencies
         [
-            'notification_channel',
-            'notification_type',
-            'end_user_type',
-            'allocation_transaction_type',
-            'compliance_report_status',
-            'fuel_measurement_type',
-            'level_of_equipment',
+            "notification_channel",
+            "notification_type",
+            "end_user_type",
+            "allocation_transaction_type",
+            "compliance_report_status",
+            "fuel_measurement_type",
+            "level_of_equipment",
         ],
-
         # Group 3 - Core reference tables with dependencies
         [
-            'fuel_type',  # Depends on provision_of_the_act
-            'fuel_category',
-            'transport_mode',
-            'fuel_code_prefix',
-            'fuel_code_status',
-            'end_use_type',
+            "fuel_type",  # Depends on provision_of_the_act
+            "fuel_category",
+            "transport_mode",
+            "fuel_code_prefix",
+            "fuel_code_status",
+            "end_use_type",
         ],
-
         # Group 4 - Base reference tables (no dependencies)
         [
-            'expected_use_type',
-            'unit_of_measure',
-            'provision_of_the_act',
-            'initiative_agreement_status',
-            'admin_adjustment_status',
-            'transfer_category',
-            'transfer_status',
-            'role',
-            'organization_status',
-            'organization_type',
-            'compliance_period'
-        ]
+            "expected_use_type",
+            "unit_of_measure",
+            "provision_of_the_act",
+            "initiative_agreement_status",
+            "admin_adjustment_status",
+            "transfer_category",
+            "transfer_status",
+            "role",
+            "organization_status",
+            "organization_type",
+            "compliance_period",
+        ],
     ]
 
     # Execute TRUNCATE for each group
     for group in table_groups:
-        tables_list = ', '.join(group)
+        tables_list = ", ".join(group)
         op.execute(f"TRUNCATE TABLE {tables_list} CASCADE;")
