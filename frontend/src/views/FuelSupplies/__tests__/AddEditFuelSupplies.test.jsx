@@ -25,9 +25,14 @@ vi.mock('react-router-dom', () => ({
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
-  })
-}))
+    t: vi.fn((key, { returnObjects }) => {
+      if (key === 'fuelSupplies:allocationAgreementGuides' && returnObjects) {
+        return ['Guide 1', 'Guide 2', 'Guide 3']; // Mocked guide objects
+      }
+      return key;
+    }),
+  }),
+}));
 
 // Mock all hooks related to fuel supply
 vi.mock('@/hooks/useFuelSupply')
@@ -92,7 +97,7 @@ describe('AddEditFuelSupplies', () => {
     render(<AddEditFuelSupplies />, { wrapper })
     // Check for a title or any text that indicates successful rendering
     expect(
-      screen.getByText('fuelSupply:addFuelSupplyRowsTitle')
+      screen.getByText('fuelSupply:fuelSupplyTitle')
     ).toBeInTheDocument()
   })
 
