@@ -42,12 +42,9 @@ export const ViewOrganization = () => {
     orgID ?? currentUser?.organization?.organizationId
   )
 
-  let orgBalance = {}
-  if (hasRoles(roles.government)) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    orgBalance = useOrganizationBalance(orgID)
-  }
-  const { data: orgBalaceInfo } = orgBalance
+  const { data: orgBalanceInfo } = useOrganizationBalance(
+    orgID ?? currentUser?.organization?.organizationId
+  )
 
   const canEdit = hasRoles(roles.administrator)
   const editButtonRoute = canEdit
@@ -174,9 +171,9 @@ export const ViewOrganization = () => {
                   <Role roles={[roles.government]}>
                     <BCTypography variant="body4">
                       <strong>{t('org:complianceUnitBalance')}:</strong>{' '}
-                      {orgBalaceInfo?.totalBalance.toLocaleString()} (
+                      {orgBalanceInfo?.totalBalance?.toLocaleString()} (
                       {Math.abs(
-                        orgBalaceInfo?.reservedBalance
+                        orgBalanceInfo?.reservedBalance || 0
                       ).toLocaleString()}
                       )
                     </BCTypography>
