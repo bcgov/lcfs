@@ -44,16 +44,7 @@ vi.mock('react-i18next', () => ({
       ) {
         return ['Guide 1', 'Guide 2', 'Guide 3'] // Mocked guide objects
       }
-
-      // Handle other keys with or without options
-      switch (key) {
-        case 'allocationAgreement:allocationAgreementTitle':
-          return 'Add Allocation Agreement Rows'
-        case 'allocationAgreement:noAllocationAgreementsFound':
-          return 'No Allocation Agreements Found'
-        default:
-          return key // Fallback to returning the key
-      }
+      return key
     })
   })
 }))
