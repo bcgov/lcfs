@@ -124,11 +124,11 @@ const prefixMap = {
   InitiativeAgreement: 'IA'
 }
 
-export const userActivityColDefs = [
+export const userActivityColDefs = (t) => [
   {
     colId: 'actionTaken',
     field: 'actionTaken',
-    headerName: 'Action Taken',
+    headerName: t('admin:userActivity:actionTaken'),
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       valueKey: 'action',
@@ -158,7 +158,7 @@ export const userActivityColDefs = [
   {
     colId: 'transactionType',
     field: 'transactionType',
-    headerName: 'Transaction Type',
+    headerName: t('admin:userActivity:transactionType'),
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       valueKey: 'value',
@@ -178,7 +178,7 @@ export const userActivityColDefs = [
   {
     colId: 'transactionId',
     field: 'transactionId',
-    headerName: 'Transaction ID',
+    headerName: t('admin:userActivity:transactionId'),
     valueGetter: (params) => {
       const transactionType = params.data.transactionType
       const prefix = prefixMap[transactionType] || ''
@@ -188,7 +188,7 @@ export const userActivityColDefs = [
   {
     colId: 'createDate',
     field: 'createDate',
-    headerName: 'Date',
+    headerName: t('admin:userActivity:date'),
     valueFormatter: dateFormatter,
     floatingFilterComponent: BCDateFloatingFilter,
     suppressFloatingFilterButton: true
