@@ -28,7 +28,7 @@ describe('OrganizationsSummaryCards', () => {
   it('renders correctly with default values', () => {
     render(<OrganizationsSummaryCard />, { wrapper })
 
-    expect(screen.getByText('2,500')).toBeInTheDocument() // Initial total balance
+    expect(screen.getByText('2,000')).toBeInTheDocument() // Initial total balance
     expect(screen.getByText('compliance units')).toBeInTheDocument()
     expect(screen.getByText('(500 in reserve)')).toBeInTheDocument() // Initial reserved balance
   })
@@ -51,7 +51,7 @@ describe('OrganizationsSummaryCards', () => {
     fireEvent.mouseDown(select)
     fireEvent.click(screen.getByRole('option', { name: 'Org A' })) // Select All organizations
 
-    expect(screen.getByText('1,000')).toBeInTheDocument() // Total balance for Org A
+    expect(screen.getByText('800')).toBeInTheDocument() // Total balance for Org A
     expect(screen.getByText('(200 in reserve)')).toBeInTheDocument() // Reserved balance for Org A
   })
 
@@ -65,7 +65,7 @@ describe('OrganizationsSummaryCards', () => {
     ) // Select All organizations
 
     const totalBalance = mockOrganizations.reduce(
-      (total, org) => total + org.totalBalance,
+      (total, org) => total + org.totalBalance - org.reservedBalance,
       0
     )
     const totalReserved = mockOrganizations.reduce(

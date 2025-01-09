@@ -21,7 +21,8 @@ export const organizationsColDefs = (t) => [
     valueFormatter: numberFormatter,
     cellRenderer: LinkRenderer,
     width: 300,
-    valueGetter: (params) => params.data.totalBalance,
+    valueGetter: (params) =>
+      params.data.totalBalance - Math.abs(params.data.reservedBalance),
     // Temporary measures
     // filter: 'agNumberColumnFilter',
     filter: false,
