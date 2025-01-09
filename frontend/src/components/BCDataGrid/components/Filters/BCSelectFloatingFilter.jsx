@@ -80,7 +80,7 @@ export const BCSelectFloatingFilter = ({
     } else {
       setSelectedValues([model?.filter])
     }
-  }, [model, initialSelectedValues])
+  }, [model])
 
   return (
     <div
@@ -128,6 +128,7 @@ export const BCSelectFloatingFilter = ({
             onClick={handleClear}
             onMouseDown={(event) => event.stopPropagation()}
             aria-label="Clear selection"
+            tabIndex={-1}
           >
             <ClearIcon fontSize="small" />
           </IconButton>

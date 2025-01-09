@@ -622,14 +622,17 @@ class UserRepository:
                 filter_value = filter.filter
                 filter_option = filter.type
                 filter_type = filter.filter_type
-                if filter.field is not None:
+                if filter.field == "is_login_successful":
+                    filter_option = "true" if filter_value == "Success" else "false"
+                    field = get_field_for_filter(UserLoginHistory, "is_login_successful")
+                elif filter.field is not None:
                     field = get_field_for_filter(UserLoginHistory, filter.field)
-                    if field is not None:
-                        condition = apply_filter_conditions(
-                            field, filter_value, filter_option, filter_type
-                        )
-                        if condition is not None:
-                            conditions.append(condition)
+                if field is not None:
+                    condition = apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
+                    if condition is not None:
+                        conditions.append(condition)
 
         query = query.where(and_(*conditions))
         # Apply ordering

@@ -188,6 +188,7 @@ export const Login = () => {
                     <BCButton
                       variant="contained"
                       color="primary"
+                      aria-label="Login with BCeID"
                       onClick={() => {
                         keycloak.login({
                           idpHint: IDENTITY_PROVIDERS.BCEID_BUSINESS,
@@ -221,6 +222,7 @@ export const Login = () => {
                     <BCButton
                       variant="outlined"
                       color="white"
+                      aria-label="Login with IDIR"
                       onClick={() => {
                         keycloak.login({
                           idpHint: IDENTITY_PROVIDERS.IDIR,

@@ -5,24 +5,24 @@ import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import Loading from '@/components/Loading'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
-import colors from '@/themes/base/colors.js'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ROUTES, apiRoutes } from '@/constants/routes'
+import { apiRoutes, ROUTES } from '@/constants/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useOrganization,
   useOrganizationBalance
 } from '@/hooks/useOrganization'
 import { constructAddress } from '@/utils/constructAddress'
-import { calculateRowHeight, phoneNumberFormatter } from '@/utils/formatters'
+import { phoneNumberFormatter } from '@/utils/formatters'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { defaultSortModel, getUserColumnDefs } from './_schema'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const ViewOrganization = () => {
   const { t } = useTranslation(['common', 'org'])
@@ -42,12 +42,9 @@ export const ViewOrganization = () => {
     orgID ?? currentUser?.organization?.organizationId
   )
 
-  let orgBalance = {}
-  if (hasRoles(roles.government)) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    orgBalance = useOrganizationBalance(orgID)
-  }
-  const { data: orgBalaceInfo } = orgBalance
+  const { data: orgBalanceInfo } = useOrganizationBalance(
+    orgID ?? currentUser?.organization?.organizationId
+  )
 
   const canEdit = hasRoles(roles.administrator)
   const editButtonRoute = canEdit
@@ -71,23 +68,26 @@ export const ViewOrganization = () => {
     includeHiddenColumnsInQuickFilter: true
   }
 
-  const handleRowClicked = useCallback(
-    (params) =>
-      // Based on the user Type (BCeID or IDIR) navigate to specific view
-      hasRoles(roles.supplier)
-        ? navigate(
-            ROUTES.ORGANIZATION_VIEWUSER.replace(
-              ':userID',
-              params.data.userProfileId
-            )
-          )
-        : navigate(
-            ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
-              ':userID',
-              params.data.userProfileId
-            )
-          ),
-    [hasRoles, navigate, orgID]
+  const defaultColDef = useMemo(
+    () => ({
+      cellRenderer: LinkRenderer,
+      cellRendererParams: {
+        isAbsolute: true,
+        url: (
+          data // Based on the user Type (BCeID or IDIR) navigate to specific view
+        ) =>
+          hasRoles(roles.supplier)
+            ? ROUTES.ORGANIZATION_VIEWUSER.replace(
+                ':userID',
+                data.data.userProfileId
+              )
+            : ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
+                ':userID',
+                data.data.userProfileId
+              )
+      }
+    }),
+    [hasRoles, orgID]
   )
 
   const getRowId = useCallback((params) => params.data.userProfileId, [])
@@ -171,9 +171,9 @@ export const ViewOrganization = () => {
                   <Role roles={[roles.government]}>
                     <BCTypography variant="body4">
                       <strong>{t('org:complianceUnitBalance')}:</strong>{' '}
-                      {orgBalaceInfo?.totalBalance.toLocaleString()} (
+                      {orgBalanceInfo?.totalBalance?.toLocaleString()} (
                       {Math.abs(
-                        orgBalaceInfo?.reservedBalance
+                        orgBalanceInfo?.reservedBalance || 0
                       ).toLocaleString()}
                       )
                     </BCTypography>
@@ -331,7 +331,7 @@ export const ViewOrganization = () => {
           gridOptions={gridOptions}
           defaultSortModel={defaultSortModel}
           handleGridKey={handleGridKey}
-          handleRowClicked={handleRowClicked}
+          defaultColDef={defaultColDef}
           enableCopyButton={false}
           enableResetButton={false}
         />

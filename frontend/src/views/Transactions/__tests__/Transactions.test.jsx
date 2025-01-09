@@ -220,17 +220,4 @@ describe('Transactions', () => {
       expect(errorMessage).toBeInTheDocument()
     })
   })
-
-  it('handles row click correctly', async () => {
-    render(
-      <WrapperComponent>
-        <Transactions />
-      </WrapperComponent>
-    )
-
-    const mockedDataGrid = screen.getByTestId('mocked-data-grid')
-    fireEvent.click(mockedDataGrid)
-
-    expect(mockNavigate).toHaveBeenCalledWith('/transfers/123')
-  })
 })

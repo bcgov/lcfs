@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, text
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder, EffectiveDates
 
@@ -27,6 +27,12 @@ class ProvisionOfTheAct(BaseModel, Auditable, DisplayOrder, EffectiveDates):
         String(1000),
         nullable=False,
         comment="Description of the provision. This is the displayed name. e.g. Prescribed Carbon Intensity, Approved Fuel Code.",
+    )
+    is_legacy = Column(
+        Boolean,
+        server_default=text("FALSE"),
+        nullable=False,
+        comment="Indicates if the fuel type is legacy and should not be used for new reports",
     )
 
     # relationships
