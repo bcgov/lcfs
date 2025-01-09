@@ -26,7 +26,6 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const ViewOrganization = () => {
   const { t } = useTranslation(['common', 'org'])
-  const [showActive, setShowActive] = useState(true)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
 
@@ -42,12 +41,9 @@ export const ViewOrganization = () => {
     orgID ?? currentUser?.organization?.organizationId
   )
 
-  let orgBalance = {}
-  if (hasRoles(roles.government)) {
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    orgBalance = useOrganizationBalance(orgID)
-  }
-  const { data: orgBalaceInfo } = orgBalance
+  const { data: orgBalanceInfo } = useOrganizationBalance(
+    orgID ?? currentUser?.organization?.organizationId
+  )
 
   const canEdit = hasRoles(roles.administrator)
   const editButtonRoute = canEdit
@@ -59,12 +55,8 @@ export const ViewOrganization = () => {
 
   const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
   const handleGridKey = useCallback(() => {
-    if (showActive) {
-      setGridKey(`users-grid-${orgID}-active`)
-    } else {
-      setGridKey(`users-grid-${orgID}-inactive`)
-    }
-  }, [showActive, orgID])
+    setGridKey(`users-grid-${orgID}`)
+  }, [orgID])
 
   const gridOptions = {
     overlayNoRowsTemplate: 'No users found',
@@ -96,21 +88,6 @@ export const ViewOrganization = () => {
   const getRowId = useCallback((params) => params.data.userProfileId, [])
 
   const gridRef = useRef()
-
-  useEffect(() => {
-    if (gridRef.current) {
-      // clear any previous filters
-      localStorage.removeItem(`${gridKey}-filter`)
-      const statusFilter = gridRef?.current?.api?.getFilterInstance('isActive')
-      if (statusFilter) {
-        statusFilter.setModel({
-          type: 'equals',
-          filter: showActive ? 'Active' : 'Inactive'
-        })
-      }
-      gridRef?.current?.api?.onFilterChanged()
-    }
-  }, [showActive, gridKey])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -174,9 +151,9 @@ export const ViewOrganization = () => {
                   <Role roles={[roles.government]}>
                     <BCTypography variant="body4">
                       <strong>{t('org:complianceUnitBalance')}:</strong>{' '}
-                      {orgBalaceInfo?.totalBalance.toLocaleString()} (
+                      {orgBalanceInfo?.totalBalance?.toLocaleString()} (
                       {Math.abs(
-                        orgBalaceInfo?.reservedBalance
+                        orgBalanceInfo?.reservedBalance || 0
                       ).toLocaleString()}
                       )
                     </BCTypography>
@@ -229,105 +206,49 @@ export const ViewOrganization = () => {
         }}
         my={2}
       >
-        {showActive ? (
-          <>
-            <BCBox component="div">
-              <Role roles={[roles.administrator, roles.manage_users]}>
-                <BCButton
-                  variant="contained"
-                  size="small"
-                  color="primary"
-                  sx={{
-                    textTransform: 'none',
-                    marginRight: '8px',
-                    marginBottom: '8px'
-                  }}
-                  startIcon={
-                    <FontAwesomeIcon
-                      icon={faCirclePlus}
-                      className="small-icon"
-                    />
-                  }
-                  onClick={() =>
-                    !isCurrentUserLoading && hasRoles(roles.government)
-                      ? navigate(
-                          ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgID)
-                        )
-                      : navigate(ROUTES.ORGANIZATION_ADDUSER)
-                  }
-                >
-                  <BCTypography variant="button">
-                    {t('org:newUsrBtn')}
-                  </BCTypography>
-                </BCButton>
-              </Role>
-              <BCButton
-                variant="outlined"
-                size="small"
-                color="primary"
-                data-test="show-inactive-btn"
-                sx={{
-                  textTransform: 'none',
-                  marginRight: '8px',
-                  marginBottom: '8px',
-                  whiteSpace: 'nowrap'
-                }}
-                onClick={() => setShowActive(false)}
-              >
-                <BCTypography variant="button">
-                  {t('org:showInactiveUsersBtn')}
-                </BCTypography>
-              </BCButton>
-            </BCBox>
-            <BCTypography
-              variant="h5"
-              mt={1}
-              color="primary"
-              data-test="active-users-heading"
-            >
-              {t('org:activeUsersBtn')}
-            </BCTypography>
-          </>
-        ) : (
-          <>
+        <BCBox component="div">
+          <Role roles={[roles.administrator, roles.manage_users]}>
             <BCButton
-              variant="outlined"
+              variant="contained"
               size="small"
               color="primary"
-              data-test="show-active-btn"
               sx={{
                 textTransform: 'none',
                 marginRight: '8px',
-                marginBottom: '8px',
-                whiteSpace: 'nowrap'
+                marginBottom: '8px'
               }}
-              onClick={() => setShowActive(true)}
+              startIcon={
+                <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
+              }
+              onClick={() =>
+                !isCurrentUserLoading && hasRoles(roles.government)
+                  ? navigate(
+                      ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgID)
+                    )
+                  : navigate(ROUTES.ORGANIZATION_ADDUSER)
+              }
             >
-              <BCTypography variant="subtitle2">
-                {t('org:showActiveUsersBtn')}
-              </BCTypography>
+              <BCTypography variant="button">{t('org:newUsrBtn')}</BCTypography>
             </BCButton>
-            <BCTypography
-              variant="h5"
-              mt={1}
-              color="primary"
-              data-test="inactive-users-heading"
-            >
-              {t('org:inactiveUsersBtn')}
-            </BCTypography>
-          </>
-        )}
+          </Role>
+        </BCBox>
+        <BCTypography
+          variant="h5"
+          mt={1}
+          color="primary"
+          data-test="active-users-heading"
+        >
+          {t('org:usersLabel')}
+        </BCTypography>
       </BCBox>
       <BCBox sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={apiRoutes.orgUsers
-            .replace(
-              ':orgID',
-              orgID || currentUser?.organization?.organizationId
-            )
-            .concat(showActive ? '?status=Active' : '?status=Inactive')}
-          apiData={'users'}
+          apiEndpoint={apiRoutes.orgUsers.replace(
+            ':orgID',
+            orgID || currentUser?.organization?.organizationId
+          )}
+          apiData="users"
           columnDefs={getUserColumnDefs(t)}
           gridKey={gridKey}
           getRowId={getRowId}

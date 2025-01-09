@@ -1,21 +1,16 @@
-// mui components
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { Stack } from '@mui/material'
-// Icons
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-// Internal components
 import { organizationsColDefs } from './ViewOrganization/_schema'
-// react components
-import { ROUTES, apiRoutes } from '@/constants/routes'
+import { apiRoutes, ROUTES } from '@/constants/routes'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-// Services
 import { DownloadButton } from '@/components/DownloadButton'
 import { useApiService } from '@/services/useApiService'
 import { roles } from '@/constants/roles'
@@ -25,9 +20,9 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 export const Organizations = () => {
   const { t } = useTranslation(['common', 'org'])
   const gridRef = useRef()
-  const [gridKey, setGridKey] = useState(`organizations-grid`)
+  const [gridKey, setGridKey] = useState('organizations-grid')
   const handleGridKey = useCallback(() => {
-    setGridKey(`organizations-grid`)
+    setGridKey('organizations-grid')
   }, [])
   const gridOptions = {
     overlayNoRowsTemplate: t('org:noOrgsFound')
