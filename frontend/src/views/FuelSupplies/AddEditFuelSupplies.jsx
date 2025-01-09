@@ -360,12 +360,12 @@ export const AddEditFuelSupplies = () => {
       <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">
-            {t('fuelSupply:addFuelSupplyRowsTitle')}
+            {t('fuelSupply:fuelSupplyTitle')}
           </BCTypography>
           <BCTypography
             variant="body4"
             color="primary"
-            sx={{ marginY: '2rem' }}
+            my={2}
             component="div"
           >
             {t('fuelSupply:fuelSupplySubtitle')}
