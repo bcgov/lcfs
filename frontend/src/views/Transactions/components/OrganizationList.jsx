@@ -18,7 +18,9 @@ const OrganizationList = ({ onOrgChange }) => {
         ...org,
         label: `${org.name} ${t(
           'txn:complianceUnitsBalance'
-        )}: ${numberFormatter({ value: org.totalBalance })} (${numberFormatter({
+        )}: ${numberFormatter({
+          value: org.totalBalance - Math.abs(org.reservedBalance)
+        })} (${numberFormatter({
           value: Math.abs(org.reservedBalance)
         })} ${t('txn:inReserve')})`
       }))

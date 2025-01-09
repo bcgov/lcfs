@@ -83,7 +83,7 @@ export const usersColumnDefs = (t) => [
     headerName: t('admin:userColLabels.status'),
     valueGetter: (params) => params.data.isActive,
     filterParams: {
-      textMatcher: (filter) => {
+      textMatcher: () => {
         return true
       }
     },
@@ -209,10 +209,6 @@ export const userLoginHistoryColDefs = (t) => [
   {
     field: 'keycloakEmail',
     headerName: t('admin:userLoginHistoryColLabels.keycloakEmail')
-  },
-  {
-    field: 'keycloakUserId',
-    headerName: t('admin:userLoginHistoryColLabels.keycloakUserId')
   },
   {
     field: 'externalUsername',
