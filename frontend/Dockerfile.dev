@@ -5,10 +5,11 @@ FROM node:20
 WORKDIR /app
 
 # Copy package files and install dependencies
-COPY package*.json ./
+COPY package.json ./
+COPY package-lock.json ./
 RUN npm install
 
-# Copy other source files
+# Copy other source files - node modules is excluded in .dockerignore
 COPY . .
 
 # Expose port 3000 for the app
