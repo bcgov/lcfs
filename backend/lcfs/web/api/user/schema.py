@@ -85,7 +85,6 @@ class UserLoginHistorySchema(BaseSchema):
     user_login_history_id: int
     keycloak_email: str
     external_username: str
-    keycloak_user_id: str
     is_login_successful: bool
     login_error_message: Optional[str] = None
     create_date: datetime

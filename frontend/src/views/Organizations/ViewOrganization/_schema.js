@@ -3,7 +3,6 @@ import { LinkRenderer, OrgStatusRenderer } from '@/utils/grid/cellRenderers'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
 import { useOrganizationStatuses } from '@/hooks/useOrganizations'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
-import { t } from 'i18next'
 
 export const organizationsColDefs = (t) => [
   {
@@ -23,8 +22,6 @@ export const organizationsColDefs = (t) => [
     width: 300,
     valueGetter: (params) =>
       params.data.totalBalance - Math.abs(params.data.reservedBalance),
-    // Temporary measures
-    // filter: 'agNumberColumnFilter',
     filter: false,
     sortable: false
   },
@@ -36,8 +33,6 @@ export const organizationsColDefs = (t) => [
     valueGetter: (params) => Math.abs(params.data.reservedBalance),
     width: 300,
     cellRenderer: LinkRenderer,
-    // Temporary measures
-    // filter: 'agNumberColumnFilter',
     filter: false,
     sortable: false
   },
@@ -49,6 +44,7 @@ export const organizationsColDefs = (t) => [
     valueGetter: (params) => params.data.orgStatus.status,
     cellRenderer: OrgStatusRenderer,
     cellClass: 'vertical-middle',
+    filter: true,
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       valueKey: 'status',
@@ -60,13 +56,11 @@ export const organizationsColDefs = (t) => [
 ]
 
 export const getUserColumnDefs = (t) => {
-  const colDefs = usersColumnDefs(t).map((colDef) => {
+  return usersColumnDefs(t).map((colDef) => {
     if (colDef.field === 'isActive') {
       return {
         ...colDef,
-        sortable: false,
-        suppressHeaderMenuButton: true,
-        floatingFilter: false
+        sortable: false
       }
     } else if (colDef.field === 'role') {
       // pick only supplier roles
@@ -76,11 +70,6 @@ export const getUserColumnDefs = (t) => {
     }
     return colDef
   })
-  return colDefs
 }
 
-export const usersColDefs = getUserColumnDefs(t)
 export const defaultSortModel = [{ field: 'firstName', direction: 'asc' }]
-export const defaultFilterModel = [
-  { filterType: 'text', type: 'equals', field: 'isActive', filter: 'Active' }
-]
