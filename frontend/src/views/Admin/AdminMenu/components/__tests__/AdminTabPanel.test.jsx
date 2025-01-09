@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { ThemeProvider } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import theme from '@/themes' // Make sure this path is correct
-import { AdminTabPanel } from '../AdminMenu/components/AdminTabPanel'
+import theme from '@/themes/index.js' // Make sure this path is correct
+import { AdminTabPanel } from '../AdminTabPanel.jsx'
 
 // Custom render function with all necessary providers
 const customRender = (ui, options = {}) => {

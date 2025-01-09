@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
 import { roles } from '@/constants/roles'
@@ -7,7 +6,7 @@ import {
   getAllOrganizationStatuses
 } from '@/constants/statuses'
 import { Link, useLocation } from 'react-router-dom'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import colors from '@/themes/base/colors'
 
 export const TextRenderer = (props) => {
@@ -20,79 +19,83 @@ export const TextRenderer = (props) => {
 
 export const LinkRenderer = (props) => {
   const location = useLocation()
+
+  const baseUrl = props.isAbsolute ? '' : `${location.pathname}/`
+  const targetUrl =
+    baseUrl +
+    ((props.url && props.url({ data: props.data })) || props?.node?.id)
   return (
-    <Link
-      to={
-        location.pathname +
-        '/' +
-        ((props.url && props.url({ data: props.data })) || props?.node?.id)
-      }
-      style={{ color: '#000' }}
-    >
+    <Link to={targetUrl} style={{ color: '#000' }}>
       <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
         {props.valueFormatted || props.value}
       </BCBox>
     </Link>
   )
 }
+const BaseStatusRenderer = ({
+  isView = false,
+  value = false,
+  successText = 'Active',
+  failureText = 'Inactive',
+  successColor = 'success',
+  failureColor = 'smoky'
+}) => {
+  const badgeStyles = {
+    ...(!isView ? { display: 'flex', justifyContent: 'center' } : {}),
+    '& .MuiBadge-badge': {
+      minWidth: '120px',
+      fontWeight: 'regular',
+      textTransform: 'capitalize',
+      fontSize: '0.875rem',
+      padding: '0.4em 0.6em'
+    }
+  }
 
-export const StatusRenderer = (props) => {
   return (
     <BCBox
-      component={props.isView ? 'span' : 'div'}
+      component={isView ? 'span' : 'div'}
       mt={1}
       sx={{ width: '100%', height: '100%' }}
     >
       <BCBadge
-        badgeContent={props.data.isActive ? 'Active' : 'Inactive'}
-        color={props.data.isActive ? 'success' : 'smoky'}
+        badgeContent={value ? successText : failureText}
+        color={value ? successColor : failureColor}
         variant="gradient"
         size="md"
-        sx={{
-          ...(!props.isView
-            ? { display: 'flex', justifyContent: 'center' }
-            : {}),
-          '& .MuiBadge-badge': {
-            minWidth: '120px',
-            fontWeight: 'regular',
-            textTransform: 'capitalize',
-            fontSize: '0.875rem',
-            padding: '0.4em 0.6em'
-          }
-        }}
+        sx={badgeStyles}
       />
     </BCBox>
   )
+
+  if (props.url) {
+    const baseUrl = props.isAbsolute ? '' : `${location.pathname}/`
+    const targetUrl =
+      baseUrl +
+      ((props.url && props.url({ data: props.data })) || props?.node?.id)
+
+    return (
+      <Link to={targetUrl} style={{ color: '#000' }}>
+        {component}
+      </Link>
+    )
+  } else {
+    return component
+  }
 }
 
-export const LoginStatusRenderer = (props) => {
-  return (
-    <BCBox
-      component={props.isView ? 'span' : 'div'}
-      mt={1}
-      sx={{ width: '100%', height: '100%' }}
-    >
-      <BCBadge
-        badgeContent={props.data.isLoginSuccessful ? 'True' : 'False'}
-        color={props.data.isLoginSuccessful ? 'success' : 'error'}
-        variant="gradient"
-        size="md"
-        sx={{
-          ...(!props.isView
-            ? { display: 'flex', justifyContent: 'center' }
-            : {}),
-          '& .MuiBadge-badge': {
-            minWidth: '120px',
-            fontWeight: 'regular',
-            textTransform: 'capitalize',
-            fontSize: '0.875rem',
-            padding: '0.4em 0.6em'
-          }
-        }}
-      />
-    </BCBox>
-  )
-}
+export const StatusRenderer = (props) => (
+  <BaseStatusRenderer isView={props.isView} value={props.data.isActive} />
+)
+
+export const LoginStatusRenderer = (props) => (
+  <BaseStatusRenderer
+    isView={props.isView}
+    value={props.data.isLoginSuccessful}
+    successText="Success"
+    failureText="Failed"
+    failureColor="error"
+  />
+)
 
 export const OrgStatusRenderer = (props) => {
   const location = useLocation()
@@ -170,38 +173,6 @@ export const FuelCodeStatusRenderer = (props) => {
     </Link>
   )
 }
-export const FuelCodeStatusTextRenderer = (props) => {
-  const statusArr = getAllFuelCodeStatuses()
-  const statusColorArr = ['info', 'success', 'error']
-  const statusIndex = statusArr.indexOf(props.data.fuelCodeStatus.status)
-  return (
-    <BCBox sx={{ width: '100%', height: '100%' }}>
-      <BCBox
-        mt={1}
-        sx={{
-          display: 'flex',
-          justifyContent: 'center'
-        }}
-      >
-        <BCBadge
-          badgeContent={statusArr[statusIndex]}
-          color={statusColorArr[statusIndex]}
-          variant="contained"
-          size="lg"
-          sx={{
-            '& .MuiBadge-badge': {
-              minWidth: '120px',
-              fontWeight: 'regular',
-              textTransform: 'capitalize',
-              fontSize: '0.875rem',
-              padding: '0.4em 0.6em'
-            }
-          }}
-        />
-      </BCBox>
-    </BCBox>
-  )
-}
 
 export const TransactionStatusRenderer = (props) => {
   const statusArr = [
@@ -229,7 +200,7 @@ export const TransactionStatusRenderer = (props) => {
     'error'
   ]
   const statusIndex = statusArr.indexOf(props.data.status)
-  return (
+  const component = (
     <BCBox
       m={1}
       sx={{
@@ -253,6 +224,20 @@ export const TransactionStatusRenderer = (props) => {
       />
     </BCBox>
   )
+  if (props.url) {
+    const baseUrl = props.isAbsolute ? '' : `${location.pathname}/`
+    const targetUrl =
+      baseUrl +
+      ((props.url && props.url({ data: props.data })) || props?.node?.id)
+
+    return (
+      <Link to={targetUrl} style={{ color: '#000' }}>
+        {component}
+      </Link>
+    )
+  } else {
+    return component
+  }
 }
 export const ReportsStatusRenderer = (props) => {
   const statusArr = [
@@ -437,16 +422,16 @@ const GenericChipRenderer = ({
       {renderOverflowChip(hiddenChipsCount)}
     </div>
   )
-
+  const baseUrl = props.isAbsolute ? '' : `${location.pathname}/`
+  const targetUrl =
+    baseUrl +
+    ((props.url && props.url({ data: props.data })) || props?.node?.id)
   return disableLink ? (
     chipContent
   ) : (
-    <a
-      href={`${location.pathname}?filter=${options.join(',')}`}
-      style={{ textDecoration: 'none', color: 'inherit' }}
-    >
+    <Link to={targetUrl} style={{ color: '#000' }}>
       {chipContent}
-    </a>
+    </Link>
   )
 }
 

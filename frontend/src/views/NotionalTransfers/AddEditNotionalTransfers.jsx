@@ -1,9 +1,8 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import Loading from '@/components/Loading'
 import { defaultColDef, notionalTransferColDefs } from './_schema'
@@ -15,7 +14,6 @@ import {
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import { useApiService } from '@/services/useApiService'
 import * as ROUTES from '@/constants/routes/routes.js'
 
 export const AddEditNotionalTransfers = () => {
@@ -26,7 +24,6 @@ export const AddEditNotionalTransfers = () => {
   const gridRef = useRef(null)
   const alertRef = useRef()
   const location = useLocation()
-  const apiService = useApiService()
   const { t } = useTranslation(['common', 'notionalTransfer', 'reports'])
   const { complianceReportId, compliancePeriod } = useParams()
   const {

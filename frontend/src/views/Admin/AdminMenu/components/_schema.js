@@ -1,6 +1,6 @@
 import {
-  phoneNumberFormatter,
   dateFormatter,
+  phoneNumberFormatter,
   timezoneFormatter
 } from '@/utils/formatters'
 import {
@@ -14,6 +14,11 @@ import {
   BCSelectFloatingFilter,
   BCDateFloatingFilter
 } from '@/components/BCDataGrid/components/index'
+import {
+  COMPLIANCE_REPORT_STATUSES,
+  TRANSACTION_TYPES,
+  TRANSFER_STATUSES
+} from '@/constants/statuses'
 
 export const usersColumnDefs = (t) => [
   {
@@ -21,7 +26,6 @@ export const usersColumnDefs = (t) => [
     field: 'firstName',
     minWidth: 250,
     headerName: t('admin:userColLabels.userName'),
-    cellRenderer: LinkRenderer,
     valueGetter: (params) => params.data.firstName + ' ' + params.data.lastName
   },
   {
@@ -50,7 +54,6 @@ export const usersColumnDefs = (t) => [
     },
     floatingFilterComponent: BCSelectFloatingFilter,
     suppressFloatingFilterButton: true,
-    suppressHeaderFilterButton: true,
     floatingFilterComponentParams: {
       optionsQuery: useRoleList,
       params: 'government_roles_only=true',
@@ -64,14 +67,12 @@ export const usersColumnDefs = (t) => [
     colId: 'email',
     field: 'keycloakEmail',
     headerName: t('admin:userColLabels.email'),
-    cellRenderer: LinkRenderer,
     minWidth: 300
   },
   {
     colId: 'phone',
     field: 'phone',
     headerName: t('admin:userColLabels.phone'),
-    cellRenderer: LinkRenderer,
     valueFormatter: phoneNumberFormatter,
     filter: 'agTextColumnFilter',
     minWidth: 120
@@ -101,8 +102,7 @@ export const usersColumnDefs = (t) => [
       labelKey: 'name'
     },
     minWidth: 120,
-    suppressFloatingFilterButton: true,
-    suppressHeaderFilterButton: true
+    suppressFloatingFilterButton: true
   },
   {
     colId: 'organizationId',
@@ -128,12 +128,52 @@ export const userActivityColDefs = [
   {
     colId: 'actionTaken',
     field: 'actionTaken',
-    headerName: 'Action Taken'
+    headerName: 'Action Taken',
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'action',
+      labelKey: 'action',
+      optionsQuery: () => {
+        const allStatuses = [
+          ...Object.values(TRANSFER_STATUSES).map((value) => ({
+            action: value
+          }))
+          // ...Object.values(COMPLIANCE_REPORT_STATUSES).map((value) => ({
+          //   action: value
+          // }))
+        ]
+
+        const deduplicatedStatuses = Array.from(
+          new Set(allStatuses.map((item) => item.action))
+        ).map((action) => ({ action }))
+
+        return {
+          data: deduplicatedStatuses,
+          isLoading: false
+        }
+      }
+    },
+    suppressFloatingFilterButton: true
   },
   {
     colId: 'transactionType',
     field: 'transactionType',
-    headerName: 'Transaction Type'
+    headerName: 'Transaction Type',
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'value',
+      labelKey: 'label',
+      optionsQuery: () => ({
+        data: [
+          ...Object.values(TRANSACTION_TYPES).map((value) => ({
+            label: value.replace(/([A-Z])/g, ' $1').trim(),
+            value
+          }))
+        ],
+        isLoading: false
+      })
+    },
+    suppressFloatingFilterButton: true
   },
   {
     colId: 'transactionId',
@@ -150,7 +190,8 @@ export const userActivityColDefs = [
     field: 'createDate',
     headerName: 'Date',
     valueFormatter: dateFormatter,
-    filter: false
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true
   }
 ]
 
@@ -180,7 +221,26 @@ export const userLoginHistoryColDefs = (t) => [
   {
     field: 'isLoginSuccessful',
     headerName: t('admin:userLoginHistoryColLabels.isLoginSuccessful'),
-    cellRenderer: LoginStatusRenderer
+    cellRenderer: LoginStatusRenderer,
+    valueGetter: (params) => params.data.isLoginSuccessful,
+    filterParams: {
+      textMatcher: (filter) => {
+        return true
+      }
+    },
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      optionsQuery: () => ({
+        data: [
+          { id: 1, name: 'Success' },
+          { id: 0, name: 'Failed' }
+        ],
+        isLoading: false
+      }),
+      valueKey: 'name',
+      labelKey: 'name'
+    },
+    suppressFloatingFilterButton: true
   },
   {
     field: 'loginErrorMessage',
@@ -190,7 +250,9 @@ export const userLoginHistoryColDefs = (t) => [
     field: 'createDate',
     headerName: t('admin:userLoginHistoryColLabels.createDate'),
     cellDataType: 'dateString',
-    valueFormatter: timezoneFormatter
+    valueFormatter: timezoneFormatter,
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true
   }
 ]
 
@@ -255,7 +317,9 @@ export const auditLogColDefs = (t) => [
       filterOptions: ['equals', 'lessThan', 'greaterThan', 'inRange'],
       suppressAndOrCondition: true,
       buttons: ['clear']
-    }
+    },
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true
   }
 ]
 

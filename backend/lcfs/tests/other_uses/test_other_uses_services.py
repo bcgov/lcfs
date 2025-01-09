@@ -36,7 +36,7 @@ async def test_get_table_options(other_uses_service):
         }
     )
 
-    response = await service.get_table_options()
+    response = await service.get_table_options("2024")
 
     assert isinstance(response, OtherUsesTableOptionsSchema)
     mock_repo.get_table_options.assert_awaited_once()
@@ -66,16 +66,15 @@ async def test_create_other_use(other_uses_service):
     mock_fuel_code.fuel_code = "FuelCode123"
 
     # Mock fuel repository methods
-    mock_fuel_repo.get_fuel_category_by = AsyncMock(
-        return_value=mock_fuel_category)
-    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(
-        return_value=mock_fuel_type)
+    mock_fuel_repo.get_fuel_category_by = AsyncMock(return_value=mock_fuel_category)
+    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(return_value=mock_fuel_type)
     mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(
-        return_value=mock_expected_use)
+        return_value=mock_expected_use
+    )
     mock_fuel_repo.get_provision_of_the_act_by_name = AsyncMock(
-        return_value=mock_provision_of_the_act)
-    mock_fuel_repo.get_fuel_code_by_name = AsyncMock(
-        return_value=mock_fuel_code)
+        return_value=mock_provision_of_the_act
+    )
+    mock_fuel_repo.get_fuel_code_by_name = AsyncMock(return_value=mock_fuel_code)
 
     # Create a mock for the created other use
     mock_created_use = create_mock_entity({})
@@ -120,8 +119,7 @@ async def test_update_other_use(other_uses_service):
     mock_existing_use = create_mock_entity({})
 
     # Configure repository methods to return these mocked objects
-    mock_repo.get_other_use_version_by_user = AsyncMock(
-        return_value=mock_existing_use)
+    mock_repo.get_other_use_version_by_user = AsyncMock(return_value=mock_existing_use)
 
     # Mock related entities with proper string attributes
     mock_fuel_type = MagicMock()
@@ -140,17 +138,15 @@ async def test_update_other_use(other_uses_service):
     mock_fuel_code.fuel_code = "NewFuelCode"
 
     # Mock fuel repository methods
-    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(
-        return_value=mock_fuel_type)
-    mock_fuel_repo.get_fuel_category_by = AsyncMock(
-        return_value=mock_fuel_category)
+    mock_fuel_repo.get_fuel_type_by_name = AsyncMock(return_value=mock_fuel_type)
+    mock_fuel_repo.get_fuel_category_by = AsyncMock(return_value=mock_fuel_category)
     mock_fuel_repo.get_expected_use_type_by_name = AsyncMock(
-        return_value=mock_expected_use)
+        return_value=mock_expected_use
+    )
     mock_fuel_repo.get_provision_of_the_act_by_name = AsyncMock(
         return_value=mock_provision_of_the_act
     )
-    mock_fuel_repo.get_fuel_code_by_name = AsyncMock(
-        return_value=mock_fuel_code)
+    mock_fuel_repo.get_fuel_code_by_name = AsyncMock(return_value=mock_fuel_code)
 
     # Mock the updated use returned after the update
     mock_updated_use = MagicMock()

@@ -2,12 +2,12 @@ import React from 'react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { useLocation } from 'react-router-dom'
-import * as useUserHook from '@/hooks/useUser'
-import * as useCurrentUserHook from '@/hooks/useCurrentUser'
-import * as useOrganizationHook from '@/hooks/useOrganization'
-import * as formatters from '@/utils/formatters'
-import { wrapper } from '@/tests/utils/wrapper'
-import { ViewUser } from '../AdminMenu/components/ViewUser'
+import * as useUserHook from '@/hooks/useUser.js'
+import * as useCurrentUserHook from '@/hooks/useCurrentUser.js'
+import * as useOrganizationHook from '@/hooks/useOrganization.js'
+import * as formatters from '@/utils/formatters.js'
+import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { ViewUser } from '../ViewUser.jsx'
 
 // Mocks
 vi.mock('@react-keycloak/web', () => ({
@@ -153,7 +153,7 @@ describe('ViewUser Component', () => {
           wrapper({ children, initialEntries: ['/admin/users/1'] })
       }
     )
-    
+
     const editButton = screen.getByRole('button', { name: /admin:editBtn/i })
     fireEvent.click(editButton)
 
