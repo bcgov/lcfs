@@ -211,10 +211,6 @@ export const userLoginHistoryColDefs = (t) => [
     headerName: t('admin:userLoginHistoryColLabels.keycloakEmail')
   },
   {
-    field: 'keycloakUserId',
-    headerName: t('admin:userLoginHistoryColLabels.keycloakUserId')
-  },
-  {
     field: 'externalUsername',
     headerName: t('admin:userLoginHistoryColLabels.externalUsername')
   },
