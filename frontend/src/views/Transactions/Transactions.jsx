@@ -4,6 +4,7 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { DownloadButton } from '@/components/DownloadButton'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { ROUTES, apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
@@ -42,6 +43,7 @@ export const Transactions = () => {
   const [alertSeverity, setAlertSeverity] = useState('info')
 
   const [gridKey, setGridKey] = useState('transactions-grid')
+  const [resetGridFn, setResetGridFn] = useState(null)
   const handleGridKey = useCallback(() => {
     setGridKey('transactions-grid')
   }, [])
@@ -170,6 +172,12 @@ export const Transactions = () => {
     return <Loading />
   }
 
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
+
   return (
     <>
       <div>
@@ -184,7 +192,7 @@ export const Transactions = () => {
           <BCTypography variant="h5" mb={2} color="primary">
             {t('txn:title')}
           </BCTypography>
-          <Box display={'flex'} gap={2} mb={2}>
+          <Box display={'flex'} gap={1} mb={2}>
             {currentUser?.organization?.orgStatus?.status ===
               ORGANIZATION_STATUSES.REGISTERED && (
               <Role roles={[roles.transfers]}>
@@ -235,6 +243,9 @@ export const Transactions = () => {
               downloadLabel={t('txn:downloadingTxnInfo')}
               dataTest="download-transactions-button"
             />
+            <ClearFiltersButton
+              onClick={handleClearFilters}
+            />
           </Box>
         </Grid>
         <Grid
@@ -269,6 +280,9 @@ export const Transactions = () => {
           enableCopyButton={false}
           highlightedRowId={highlightedId}
           defaultColDef={defaultColDef}
+          onSetResetGrid={(fn) => {
+            setResetGridFn(() => fn) // Preserves function reference
+          }}
         />
       </BCBox>
     </>

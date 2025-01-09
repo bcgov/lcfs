@@ -14,12 +14,14 @@ import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 import { defaultSortModel, reportsColDefs } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import BCTypography from '@/components/BCTypography'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [alertMessage, setAlertMessage] = useState('')
   const [isButtonLoading, setIsButtonLoading] = useState(false)
+  const [resetGridFn, setResetGridFn] = useState(null)
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`compliance-reports-grid`)
 
@@ -96,6 +98,12 @@ export const ComplianceReports = () => {
     []
   )
 
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
+
   return (
     <>
       <div>
@@ -134,6 +142,9 @@ export const ComplianceReports = () => {
             setIsButtonLoading={setIsButtonLoading}
           />
         </Role>
+        <ClearFiltersButton
+          onClick={handleClearFilters}
+        />
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
           <BCDataGridServer
             gridRef={gridRef}
@@ -155,6 +166,9 @@ export const ComplianceReports = () => {
             handleGridKey={handleGridKey}
             enableCopyButton={false}
             defaultColDef={defaultColDef}
+            onSetResetGrid={(fn) => {
+              setResetGridFn(() => fn) // Preserves function reference
+            }}
           />
         </BCBox>
       </Stack>

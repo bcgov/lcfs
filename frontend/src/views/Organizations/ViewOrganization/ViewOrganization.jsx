@@ -5,6 +5,7 @@ import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import Loading from '@/components/Loading'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -28,6 +29,7 @@ export const ViewOrganization = () => {
   const { t } = useTranslation(['common', 'org'])
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [resetGridFn, setResetGridFn] = useState(null)
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -258,6 +260,9 @@ export const ViewOrganization = () => {
           defaultColDef={defaultColDef}
           enableCopyButton={false}
           enableResetButton={false}
+          onSetResetGrid={(fn) => {
+            setResetGridFn(() => fn)
+          }}
         />
       </BCBox>
     </>

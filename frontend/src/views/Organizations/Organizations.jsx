@@ -41,6 +41,7 @@ export const Organizations = () => {
   const [isDownloadingUsers, setIsDownloadingUsers] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [resetGridFn, setResetGridFn] = useState(null)
 
   useEffect(() => {
     if (location.state?.message) {
@@ -85,6 +86,12 @@ export const Organizations = () => {
     }),
     []
   )
+
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
 
   return (
     <>
@@ -134,6 +141,9 @@ export const Organizations = () => {
           downloadLabel={`${t('org:userDownloadBtn')}...`}
           dataTest="download-user-button"
         />
+        <ClearFiltersButton
+          onClick={handleClearFilters}
+        />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
@@ -148,6 +158,9 @@ export const Organizations = () => {
           handleGridKey={handleGridKey}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
+          onSetResetGrid={(fn) => {
+            setResetGridFn(() => fn) // Preserves function reference
+          }}
         />
       </BCBox>
     </>

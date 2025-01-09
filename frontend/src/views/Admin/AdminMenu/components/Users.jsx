@@ -3,6 +3,7 @@ import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -18,6 +19,7 @@ export const Users = () => {
   const [gridKey, setGridKey] = useState('users-grid')
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [resetGridFn, setResetGridFn] = useState(null)
 
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
@@ -59,6 +61,12 @@ export const Users = () => {
     }
   }, [location.state])
 
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
+
   return (
     <>
       {alertMessage && (
@@ -70,19 +78,29 @@ export const Users = () => {
         <BCTypography variant="h5" my={1} color="primary">
           {t('admin:Users')}
         </BCTypography>
-        <BCButton
-          variant="contained"
-          size="small"
-          color="primary"
-          startIcon={
-            <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
-          }
-          onClick={handleNewUserClick}
+        <BCBox
+          display="flex"
+          alignItems="center"
+          gap={2}
+          mt={1}
         >
-          <BCTypography variant="subtitle2">
-            {t('admin:newUserBtn')}
-          </BCTypography>
-        </BCButton>
+          <BCButton
+            variant="contained"
+            size="small"
+            color="primary"
+            startIcon={
+              <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
+            }
+            onClick={handleNewUserClick}
+          >
+            <BCTypography variant="subtitle2">
+              {t('admin:newUserBtn')}
+            </BCTypography>
+          </BCButton>
+          <ClearFiltersButton
+            onClick={handleClearFilters}
+          />
+        </BCBox>
         <BCBox
           my={2}
           component="div"
@@ -103,6 +121,9 @@ export const Users = () => {
             enableResetButton={false}
             enableCopyButton={false}
             defaultColDef={defaultColDef}
+            onSetResetGrid={(fn) => {
+              setResetGridFn(() => fn) // Preserves function reference
+            }}
           />
         </BCBox>
       </BCBox>
