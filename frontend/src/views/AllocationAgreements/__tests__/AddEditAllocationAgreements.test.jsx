@@ -47,7 +47,7 @@ vi.mock('react-i18next', () => ({
 
       // Handle other keys with or without options
       switch (key) {
-        case 'allocationAgreement:addAllocationAgreementRowsTitle':
+        case 'allocationAgreement:allocationAgreementTitle':
           return 'Add Allocation Agreement Rows'
         case 'allocationAgreement:noAllocationAgreementsFound':
           return 'No Allocation Agreements Found'
@@ -126,7 +126,7 @@ describe('AddEditAllocationAgreements', () => {
   it('renders the component', () => {
     render(<AddEditAllocationAgreements />, { wrapper })
     expect(
-      screen.getByText('allocationAgreement:addAllocationAgreementRowsTitle')
+      screen.getByText('allocationAgreement:allocationAgreementTitle')
     ).toBeInTheDocument()
   })
 
