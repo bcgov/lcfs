@@ -67,7 +67,7 @@ describe('OrganizationBadge Component', () => {
       />,
       { wrapper }
     )
-    expect(screen.getByText('Balance: 1,000 (200)')).toBeInTheDocument()
+    expect(screen.getByText('Balance: 800 (200)')).toBeInTheDocument()
     expect(screen.getByText('Registered: Yes')).toBeInTheDocument()
   })
 
@@ -103,7 +103,7 @@ describe('OrganizationBadge Component', () => {
     useOrganizationBalance.mockReturnValue({
       data: null,
       isLoading: true,
-      isLoadingError: false,
+      isLoadingError: false
     })
 
     render(
@@ -124,7 +124,7 @@ describe('OrganizationBadge Component', () => {
     useOrganizationBalance.mockReturnValue({
       data: null,
       isLoading: false,
-      isLoadingError: true,
+      isLoadingError: true
     })
 
     render(
@@ -146,10 +146,10 @@ describe('OrganizationBadge Component', () => {
       data: {
         totalBalance: 1234567.89,
         reservedBalance: -123456.78,
-        registered: false,
+        registered: false
       },
       isLoading: false,
-      isLoadingError: false,
+      isLoadingError: false
     })
 
     render(
@@ -161,7 +161,9 @@ describe('OrganizationBadge Component', () => {
       />,
       { wrapper }
     )
-    expect(screen.getByText('Balance: 1,234,567.89 (123,456.78)')).toBeInTheDocument()
+    expect(
+      screen.getByText('Balance: 1,111,111.11 (123,456.78)')
+    ).toBeInTheDocument()
     expect(screen.getByText('Registered: No')).toBeInTheDocument()
   })
 })
