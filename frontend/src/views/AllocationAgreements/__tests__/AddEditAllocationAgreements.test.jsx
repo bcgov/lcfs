@@ -33,16 +33,30 @@ vi.mock('react-router-dom', () => ({
 }))
 
 // Mock react-i18next
+// Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: vi.fn((key, { returnObjects }) => {
-      if (key === 'allocationAgreement:allocationAgreementGuides' && returnObjects) {
-        return ['Guide 1', 'Guide 2', 'Guide 3']; // Mocked guide objects
+    t: vi.fn((key, options = {}) => {
+      // Handle specific keys with returnObjects
+      if (
+        key === 'allocationAgreement:allocationAgreementGuides' &&
+        options.returnObjects
+      ) {
+        return ['Guide 1', 'Guide 2', 'Guide 3'] // Mocked guide objects
       }
-      return key;
-    }),
-  }),
-}));
+
+      // Handle other keys with or without options
+      switch (key) {
+        case 'allocationAgreement:addAllocationAgreementRowsTitle':
+          return 'Add Allocation Agreement Rows'
+        case 'allocationAgreement:noAllocationAgreementsFound':
+          return 'No Allocation Agreements Found'
+        default:
+          return key // Fallback to returning the key
+      }
+    })
+  })
+}))
 
 // Mock hooks related to allocation agreements
 vi.mock('@/hooks/useAllocationAgreement')

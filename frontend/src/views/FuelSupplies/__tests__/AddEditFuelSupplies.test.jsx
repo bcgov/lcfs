@@ -25,14 +25,9 @@ vi.mock('react-router-dom', () => ({
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: vi.fn((key, { returnObjects }) => {
-      if (key === 'fuelSupplies:allocationAgreementGuides' && returnObjects) {
-        return ['Guide 1', 'Guide 2', 'Guide 3']; // Mocked guide objects
-      }
-      return key;
-    }),
-  }),
-}));
+    t: (key) => key
+  })
+}))
 
 // Mock all hooks related to fuel supply
 vi.mock('@/hooks/useFuelSupply')
