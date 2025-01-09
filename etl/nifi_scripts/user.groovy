@@ -5,22 +5,82 @@ import groovy.json.JsonSlurper
 
 log.warn('**** STARTING USER ETL ****')
 
-// SQL query to extract user profiles
 def userProfileQuery = """
-    SELECT id as user_profile_id,
-           keycloak_user_id,
-           COALESCE(NULLIF(email, ''), 'test@gov.bc.ca') as keycloak_email,
-           username as keycloak_username,
-           COALESCE(NULLIF(email, ''), 'test@gov.bc.ca') as email,
-           title,
-           phone,
-           cell_phone as mobile_phone,
-           first_name,
-           last_name,
-           is_active,
-           CASE WHEN organization_id = 1 THEN NULL ELSE organization_id END as organization_id
-    FROM public.user;
+    WITH ranked_users AS (
+        SELECT 
+            u.id AS user_profile_id,
+            u.keycloak_user_id,
+            
+            -- If external_username is empty or null, make it null for easier handling
+            CASE WHEN COALESCE(NULLIF(ucr.external_username, ''), NULL) IS NULL THEN NULL
+                ELSE ucr.external_username
+            END AS raw_external_username,
+
+            -- Use a window function to identify duplicates within each external_username group
+            ROW_NUMBER() OVER (
+                PARTITION BY COALESCE(NULLIF(ucr.external_username, ''), '___EMPTY___')
+                ORDER BY 
+                    CASE WHEN u.keycloak_user_id IS NOT NULL THEN 0 ELSE 1 END, 
+                    u.id
+            ) AS occurrence,
+
+            COALESCE(NULLIF(ucr.keycloak_email, ''), u.email) AS keycloak_email,
+            COALESCE(NULLIF(u.email, ''), '') AS email,
+            u.title,
+            u.phone,
+            u.cell_phone AS mobile_phone,
+            u.first_name,
+            u.last_name,
+            u.is_active,
+            CASE WHEN u.organization_id = 1 THEN NULL ELSE u.organization_id END AS organization_id
+        FROM public.user u
+        LEFT JOIN user_creation_request ucr ON ucr.user_id = u.id
+    ),
+    resolved_users AS (
+        SELECT
+            user_profile_id,
+            keycloak_user_id,
+
+            CASE 
+                -- 1) No external_username => "FIXME<n>"
+                WHEN raw_external_username IS NULL THEN 
+                    CONCAT('FIXME', occurrence)
+
+                -- 2) Duplicate external_username => add "_<occurrence>"
+                WHEN occurrence > 1 THEN
+                    CONCAT(raw_external_username, '_', occurrence)
+
+                -- 3) Unique or first occurrence => use raw_external_username
+                ELSE raw_external_username
+            END AS keycloak_username,
+
+            keycloak_email,
+            email,
+            title,
+            phone,
+            mobile_phone,
+            first_name,
+            last_name,
+            is_active,
+            organization_id
+        FROM ranked_users
+    )
+    SELECT
+        user_profile_id,
+        keycloak_user_id,
+        keycloak_username,
+        keycloak_email,
+        email,
+        title,
+        phone,
+        mobile_phone,
+        first_name,
+        last_name,
+        is_active,
+        organization_id
+    FROM resolved_users;
 """
+
 
 // SQL query to extract user roles
 def userRoleQuery = """
