@@ -25,6 +25,9 @@ export const AddEditFinalSupplyEquipments = () => {
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'finalSupplyEquipment', 'reports'])
+  const subTitles = t('finalSupplyEquipment:reportingResponsibilityInfo', {
+    returnObjects: true
+  })
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
@@ -277,24 +280,20 @@ export const AddEditFinalSupplyEquipments = () => {
       <Grid2 className="add-edit-final-supply-equipment-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">
-            {t('finalSupplyEquipment:addFSErowsTitle')}
+            {t('finalSupplyEquipment:fseTitle')}
           </BCTypography>
-          <BCTypography
-            variant="body4"
-            color="primary"
-            sx={{ marginTop: '2rem' }}
-            component="div"
-          >
-            {t('finalSupplyEquipment:fseSubtitle')}
-          </BCTypography>
-          <BCTypography
-            variant="body4"
-            color="primary"
-            sx={{ marginBottom: '2rem', marginTop: '1rem' }}
-            component="div"
-          >
-            {t('finalSupplyEquipment:reportingResponsibilityInfo')}
-          </BCTypography>
+          <BCBox my={2.5} component="div">
+            {subTitles.map((v, i) => (
+              <BCTypography
+                key={i}
+                variant="body4"
+                color="primary"
+                mt={0.5}
+                component="div"
+                dangerouslySetInnerHTML={{ __html: v }}
+              />
+            ))}
+          </BCBox>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
