@@ -31,7 +31,7 @@
     "company": "Company",
     "contactName": "Contact name",
     "contactEmail": "Contact email",
-    "carbonIntensity": "Carbon intensity (gCO²e/MJ)",
+    "carbonIntensity": "Carbon intensity (gCO₂e/MJ)",
     "edrms": "EDRMS#",
     "applicationDate": "Application date",
     "approvalDate": "Approval date",

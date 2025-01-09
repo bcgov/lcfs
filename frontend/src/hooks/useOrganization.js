@@ -2,6 +2,7 @@ import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useQuery } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
+import { roles } from '@/constants/roles'
 
 export const useOrganization = (orgID, options) => {
   const client = useApiService()
@@ -29,14 +30,24 @@ export const useOrganizationUser = (orgID, userID, options) => {
 
 export const useOrganizationBalance = (orgID, options) => {
   const client = useApiService()
+  const { hasRoles } = useCurrentUser()
+  const hasAccess = hasRoles(roles.government)
 
   return useQuery({
     queryKey: ['organization-balance', orgID],
-    queryFn: async () =>
-      orgID ? (await client.get(`/organizations/balances/${orgID}`)).data : {},
+    queryFn: async () => {
+      if (!hasAccess) {
+        return null
+      }
+      return orgID
+        ? (await client.get(`/organizations/balances/${orgID}`)).data
+        : {}
+    },
+    enabled: hasAccess && !!orgID,
     ...options
   })
 }
+
 export const useCurrentOrgBalance = (options) => {
   const client = useApiService()
 
