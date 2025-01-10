@@ -20,8 +20,7 @@ export const organizationsColDefs = (t) => [
     valueFormatter: numberFormatter,
     cellRenderer: LinkRenderer,
     width: 300,
-    valueGetter: (params) =>
-      params.data.totalBalance - Math.abs(params.data.reservedBalance),
+    valueGetter: (params) => params.data.totalBalance,
     filter: false,
     sortable: false
   },
