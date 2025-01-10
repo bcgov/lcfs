@@ -33,7 +33,9 @@ exclude_tables = [
     "mv_director_review_transaction_count",
     "mv_org_compliance_report_count",
     "transaction_status_view",
+    "mv_compliance_report_count",
 ]
+
 
 def include_object(object, name, type_, reflected, compare_to):
     if type_ == "table" and name in exclude_tables:
@@ -41,6 +43,7 @@ def include_object(object, name, type_, reflected, compare_to):
         return False
     else:
         return True
+
 
 async def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -65,6 +68,7 @@ async def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 def do_run_migrations(connection: Connection) -> None:
     """
     Run actual sync migrations.
@@ -79,6 +83,7 @@ def do_run_migrations(connection: Connection) -> None:
 
     with context.begin_transaction():
         context.run_migrations()
+
 
 async def run_migrations_online() -> None:
     """
