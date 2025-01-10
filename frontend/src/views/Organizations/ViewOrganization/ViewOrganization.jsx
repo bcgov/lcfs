@@ -260,9 +260,7 @@ export const ViewOrganization = () => {
           defaultColDef={defaultColDef}
           enableCopyButton={false}
           enableResetButton={false}
-          onSetResetGrid={(fn) => {
-            setResetGridFn(() => fn)
-          }}
+          onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
     </>

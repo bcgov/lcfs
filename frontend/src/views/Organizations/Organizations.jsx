@@ -87,6 +87,10 @@ export const Organizations = () => {
     []
   )
 
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
   const handleClearFilters = useCallback(() => {
     if (resetGridFn) {
       resetGridFn()
@@ -158,9 +162,7 @@ export const Organizations = () => {
           handleGridKey={handleGridKey}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
-          onSetResetGrid={(fn) => {
-            setResetGridFn(() => fn) // Preserves function reference
-          }}
+          onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
     </>

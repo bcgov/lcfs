@@ -172,6 +172,10 @@ export const Transactions = () => {
     return <Loading />
   }
 
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
   const handleClearFilters = useCallback(() => {
     if (resetGridFn) {
       resetGridFn()
@@ -280,9 +284,7 @@ export const Transactions = () => {
           enableCopyButton={false}
           highlightedRowId={highlightedId}
           defaultColDef={defaultColDef}
-          onSetResetGrid={(fn) => {
-            setResetGridFn(() => fn) // Preserves function reference
-          }}
+          onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
     </>

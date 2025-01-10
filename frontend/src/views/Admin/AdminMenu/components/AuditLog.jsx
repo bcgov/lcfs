@@ -35,6 +35,10 @@ export const AuditLog = () => {
     []
   )
 
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
   const handleClearFilters = useCallback(() => {
     if (resetGridFn) {
       resetGridFn()
@@ -64,9 +68,7 @@ export const AuditLog = () => {
         enableExportButton={true}
         exportName="AuditLog"
         defaultColDef={defaultColDef}
-        onSetResetGrid={(fn) => {
-          setResetGridFn(() => fn) // Preserve function reference
-        }}
+        onSetResetGrid={handleSetResetGrid}
       />
     </BCBox>
   )
