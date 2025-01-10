@@ -55,7 +55,6 @@ export const UserActivity = () => {
     []
   )
 
-  // Define handleSetResetGrid with useCallback
   const handleSetResetGrid = useCallback((fn) => {
     setResetGridFn(() => fn)
   }, [])
@@ -63,13 +62,6 @@ export const UserActivity = () => {
   const handleClearFilters = useCallback(() => {
     if (resetGridFn) {
       resetGridFn()
-
-      // Force grid refresh
-      if (gridRef.current?.api) {
-        console.log('Refreshing grid')
-        gridRef.current.api.setFilterModel(null)
-        gridRef.current.api.onFilterChanged()
-      }
     }
   }, [resetGridFn])
 

@@ -15,6 +15,10 @@ export const UserLoginHistory = () => {
     return params.data.userLoginHistoryId.toString()
   }, [])
 
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
   const handleClearFilters = useCallback(() => {
     if (resetGridFn) {
       resetGridFn()
@@ -44,9 +48,7 @@ export const UserLoginHistory = () => {
             defaultMinWidth: 50,
             defaultMaxWidth: 600
           }}
-          onSetResetGrid={(fn) => {
-            setResetGridFn(() => fn) // Preserve function reference
-          }}
+          onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
     </BCBox>

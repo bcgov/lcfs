@@ -98,10 +98,7 @@ export const BCGridViewer = ({
 
     // Clear UI filters
     if (ref.current?.api) {
-      ref.current.api.setFilterModel(null)
-      ref.current.api.applyColumnState({
-        defaultState: { sort: null }
-      })
+      ref.current.clearFilters()
     }
 
     // Re-fetch the data by calling the query function

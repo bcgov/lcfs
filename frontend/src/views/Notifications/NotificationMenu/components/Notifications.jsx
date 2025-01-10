@@ -7,6 +7,7 @@ import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
 
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { columnDefs, routesMapping } from './_schema'
 import {
   useGetNotificationMessages,
@@ -20,6 +21,7 @@ export const Notifications = () => {
   const alertRef = useRef(null)
   const [isAllSelected, setIsAllSelected] = useState(false)
   const [selectedRowCount, setSelectedRowCount] = useState(0)
+  const [resetGridFn, setResetGridFn] = useState(null)
 
   const { t } = useTranslation(['notifications'])
   const navigate = useNavigate()
@@ -175,6 +177,16 @@ export const Notifications = () => {
     )
   }, [])
 
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
+
   return (
     <Grid>
       <Stack direction="row" spacing={1} component="div" mb={2}>
@@ -212,6 +224,9 @@ export const Notifications = () => {
         >
           {t('notifications:buttonStack.deleteSelected')}
         </BCButton>
+        <ClearFiltersButton 
+          onClick={handleClearFilters}
+        />
       </Stack>
       <BCGridViewer
         gridKey="notifications-grid"
@@ -232,6 +247,7 @@ export const Notifications = () => {
         selectionColumnDef={selectionColumnDef}
         onSelectionChanged={onSelectionChanged}
         onRowClicked={handleRowClicked}
+        onSetResetGrid={handleSetResetGrid}
       />
     </Grid>
   )

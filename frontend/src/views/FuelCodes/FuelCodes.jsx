@@ -67,8 +67,11 @@ const FuelCodesBase = () => {
     }
   }
 
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
   const handleClearFilters = useCallback(() => {
-    console.log('Clearing filters')
     if (resetGridFn) {
       resetGridFn()
     }
@@ -131,9 +134,7 @@ const FuelCodesBase = () => {
           getRowId={getRowId}
           overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
           defaultColDef={defaultColDef}
-          onSetResetGrid={(fn) => {
-            setResetGridFn(() => fn) // Preserve function reference
-          }}
+          onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
     </Grid2>
