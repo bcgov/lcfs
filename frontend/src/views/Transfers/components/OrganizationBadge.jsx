@@ -28,11 +28,8 @@ export const OrganizationBadge = ({
             {['Submitted', 'Recommended'].includes(transferStatus) && (
               <Role roles={[roles.government]}>
                 <BCTypography variant="body4">
-                  Balance:{' '}
-                  {(
-                    orgInfo?.totalBalance - Math.abs(orgInfo?.reservedBalance)
-                  ).toLocaleString()}{' '}
-                  ({Math.abs(orgInfo?.reservedBalance).toLocaleString()})
+                  Balance: {orgInfo?.totalBalance.toLocaleString()} (
+                  {Math.abs(orgInfo?.reservedBalance).toLocaleString()})
                 </BCTypography>
                 <BCTypography variant="body4">
                   Registered: {orgInfo?.registered ? 'Yes' : 'No'}

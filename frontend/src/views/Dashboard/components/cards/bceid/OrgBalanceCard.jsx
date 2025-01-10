@@ -35,9 +35,6 @@ const OrgBalanceCard = () => {
         orgBalance.reservedBalance
       ).toLocaleString()
 
-      const availableCredits =
-        orgBalance.totalBalance - Math.abs(orgBalance.reservedBalance)
-
       return (
         <>
           <BCTypography
@@ -57,7 +54,7 @@ const OrgBalanceCard = () => {
             style={{ fontSize: '32px', color: '#578260', marginBottom: '-4px' }}
             component="span"
           >
-            {availableCredits.toLocaleString()}
+            {orgBalance.totalBalance.toLocaleString()}
           </BCTypography>
           <BCTypography
             style={{ fontSize: '18px', color: '#003366', marginBottom: '-5px' }}
