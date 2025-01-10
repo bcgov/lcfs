@@ -19,7 +19,9 @@ const SupplierBalance = () => {
   const { data: orgBalance } = useCurrentOrgBalance()
   const formattedTotalBalance =
     orgBalance?.totalBalance != null
-      ? numberFormatter({ value: orgBalance.totalBalance })
+      ? numberFormatter({
+          value: orgBalance.totalBalance - Math.abs(orgBalance.reservedBalance)
+        })
       : 'N/A'
   const formattedReservedBalance =
     orgBalance?.reservedBalance != null

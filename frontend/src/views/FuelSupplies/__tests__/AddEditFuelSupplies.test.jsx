@@ -92,7 +92,7 @@ describe('AddEditFuelSupplies', () => {
     render(<AddEditFuelSupplies />, { wrapper })
     // Check for a title or any text that indicates successful rendering
     expect(
-      screen.getByText('fuelSupply:addFuelSupplyRowsTitle')
+      screen.getByText('fuelSupply:fuelSupplyTitle')
     ).toBeInTheDocument()
   })
 
