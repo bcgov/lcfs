@@ -5,7 +5,8 @@ import { useTranslation } from 'react-i18next'
 import {
   decimalFormatter,
   calculateTotalValue,
-  dateFormatter
+  dateFormatter,
+  formatNumberWithCommas
 } from '@/utils/formatters'
 
 export const TransferSummary = ({
@@ -34,7 +35,7 @@ export const TransferSummary = ({
       </BCTypography>
       <BCTypography variant="body5">
         {t('transfer:numberOfUnitsToTrns')}
-        {`: ${formData.quantity}`}
+        {`: ${formatNumberWithCommas({ value: formData.quantity })}`}
       </BCTypography>
       <BCTypography variant="body5">
         {t('transfer:valuePerUnit')}
