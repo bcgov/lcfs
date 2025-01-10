@@ -344,6 +344,14 @@ export const AddEditOtherUses = () => {
           <BCTypography variant="h5" color="primary">
             {t('otherUses:newOtherUsesTitle')}
           </BCTypography>
+          <BCTypography
+            variant="body4"
+            color="primary"
+            my={2}
+            component="div"
+          >
+            {t('otherUses:newOtherUsesGuide')}
+          </BCTypography>
         </div>
 
         <BCGridEditor

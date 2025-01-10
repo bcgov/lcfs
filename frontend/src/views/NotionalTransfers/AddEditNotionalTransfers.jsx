@@ -44,24 +44,30 @@ export const AddEditNotionalTransfers = () => {
         severity: location.state.severity || 'info'
       })
     }
-  }, [location?.state?.message, location?.state?.severity]);
+  }, [location?.state?.message, location?.state?.severity])
 
-  const validate = (params, validationFn, errorMessage, alertRef, field = null) => {
-    const value = field ? params.node?.data[field] : params;
+  const validate = (
+    params,
+    validationFn,
+    errorMessage,
+    alertRef,
+    field = null
+  ) => {
+    const value = field ? params.node?.data[field] : params
 
     if (field && params.colDef.field !== field) {
-      return true;
+      return true
     }
 
     if (!validationFn(value)) {
       alertRef.current?.triggerAlert({
         message: errorMessage,
-        severity: 'error',
-      });
-      return false;
+        severity: 'error'
+      })
+      return false
     }
-    return true; // Proceed with the update
-  };
+    return true // Proceed with the update
+  }
 
   const onGridReady = (params) => {
     const ensureRowIds = (rows) => {
@@ -118,7 +124,8 @@ export const AddEditNotionalTransfers = () => {
       if (params.colDef.field === 'legalName') {
         if (params.newValue === currentUser.organization.name) {
           alertRef.current?.triggerAlert({
-            message: 'You cannot select your own organization as the transaction partner.',
+            message:
+              'You cannot select your own organization as the transaction partner.',
             severity: 'error'
           })
           params.node.setDataValue('legalName', '')
@@ -129,12 +136,12 @@ export const AddEditNotionalTransfers = () => {
       const isValid = validate(
         params,
         (value) => {
-          return value !== null && !isNaN(value) && value > 0;
+          return value !== null && !isNaN(value) && value > 0
         },
         'Quantity supplied must be greater than 0.',
         alertRef,
-        'quantity',
-      );
+        'quantity'
+      )
 
       if (!isValid) {
         return
@@ -234,7 +241,11 @@ export const AddEditNotionalTransfers = () => {
 
   useEffect(() => {
     if (!optionsLoading) {
-      const updatedColumnDefs = notionalTransferColDefs(optionsData, errors, currentUser)
+      const updatedColumnDefs = notionalTransferColDefs(
+        optionsData,
+        errors,
+        currentUser
+      )
       setColumnDefs(updatedColumnDefs)
     }
   }, [errors, optionsData, optionsLoading, currentUser])
@@ -259,6 +270,14 @@ export const AddEditNotionalTransfers = () => {
         <div className="header">
           <BCTypography variant="h5" color="primary">
             {t('notionalTransfer:newNotionalTransferTitle')}
+          </BCTypography>
+          <BCTypography
+            variant="body4"
+            color="primary"
+            my={2}
+            component="div"
+          >
+            {t('notionalTransfer:newNotionalTransferGuide')}
           </BCTypography>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>

@@ -1,9 +1,7 @@
-import structlog
 from typing import List
 
+import structlog
 from fastapi import Depends
-from fastapi_cache.decorator import cache
-from lcfs.db.models.user import UserLoginHistory
 from sqlalchemy import (
     and_,
     select,
@@ -14,42 +12,40 @@ from sqlalchemy import (
     func,
     cast,
     String,
-    update,
 )
-from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from lcfs.web.exception.exceptions import DataNotFoundException
+from sqlalchemy.orm import joinedload
 
-from lcfs.services.keycloak.dependencies import parse_external_username
-from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models.user.UserProfile import UserProfile
-from lcfs.db.models.user.UserRole import UserRole
-from lcfs.db.models.organization.Organization import Organization
-from lcfs.db.models.user.Role import Role, RoleEnum
-from lcfs.db.models.transfer.TransferHistory import TransferHistory
-from lcfs.db.models.transfer.TransferStatus import TransferStatus
+from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import (
+    AdminAdjustmentHistory,
+)
+from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatus
 from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import (
     InitiativeAgreementHistory,
 )
 from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatus,
 )
-from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import (
-    AdminAdjustmentHistory,
-)
-from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmentStatus
-from lcfs.web.api.user.schema import (
-    UserCreateSchema,
-    UserBaseSchema,
-    UserLoginHistorySchema,
-)
+from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.transfer.TransferHistory import TransferHistory
+from lcfs.db.models.transfer.TransferStatus import TransferStatus
+from lcfs.db.models.user import UserLoginHistory
+from lcfs.db.models.user.Role import Role, RoleEnum
+from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.db.models.user.UserRole import UserRole
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     camel_to_snake,
     apply_filter_conditions,
     get_field_for_filter,
 )
+from lcfs.web.api.user.schema import (
+    UserCreateSchema,
+    UserBaseSchema,
+    UserLoginHistorySchema,
+)
+from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
 
@@ -68,7 +64,6 @@ class UserRepository:
             filter_type = filter.filter_type
 
             if filter.field == "role":
-                field = get_field_for_filter(Role, "name")
                 role_filter_present = True
                 conditions.append(
                     Role.name.in_(
@@ -624,7 +619,9 @@ class UserRepository:
                 filter_type = filter.filter_type
                 if filter.field == "is_login_successful":
                     filter_option = "true" if filter_value == "Success" else "false"
-                    field = get_field_for_filter(UserLoginHistory, "is_login_successful")
+                    field = get_field_for_filter(
+                        UserLoginHistory, "is_login_successful"
+                    )
                 elif filter.field is not None:
                     field = get_field_for_filter(UserLoginHistory, filter.field)
                 if field is not None:
