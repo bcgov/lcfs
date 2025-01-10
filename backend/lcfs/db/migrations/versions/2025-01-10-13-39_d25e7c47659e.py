@@ -16,7 +16,11 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Create or replace the function with updated reserved balance logic
+    # Create or replace the function with updated logic:
+    # 1) total_balance now sums:
+    #    - All compliance_units from 'Adjustment'
+    #    - Negative compliance_units from 'Reserved'
+    # 2) reserved_balance sums only negative compliance_units from 'Reserved'
     op.execute(
         """
         CREATE OR REPLACE FUNCTION update_organization_balance()
@@ -26,20 +30,30 @@ def upgrade() -> None:
             new_reserved_balance BIGINT;
             org_id INT := COALESCE(NEW.organization_id, OLD.organization_id);
         BEGIN
-            -- Calculate new total balance for specific organization_id
-            SELECT COALESCE(SUM(compliance_units), 0) INTO new_total_balance
+            -- Calculate new total balance:
+            --   adjustments + negative reserved units
+            SELECT COALESCE(
+                SUM(
+                    CASE 
+                        WHEN transaction_action = 'Adjustment' THEN compliance_units
+                        WHEN transaction_action = 'Reserved' AND compliance_units < 0 THEN compliance_units
+                        ELSE 0
+                    END
+                ), 
+                0
+            )
+            INTO new_total_balance
+            FROM "transaction"
+            WHERE organization_id = org_id;
+
+            -- Calculate new reserved balance from negative compliance_units
+            SELECT COALESCE(SUM(compliance_units), 0)
+            INTO new_reserved_balance
             FROM "transaction"
             WHERE organization_id = org_id
-            AND transaction_action = 'Adjustment';
+              AND transaction_action = 'Reserved'
+              AND compliance_units < 0;
 
-            -- Calculate new reserved balance ONLY from negative compliance_units
-            SELECT COALESCE(SUM(compliance_units), 0) INTO new_reserved_balance
-            FROM "transaction"
-            WHERE organization_id = org_id
-            AND transaction_action = 'Reserved'
-            AND compliance_units < 0;
-
-            -- Update the organization with the new balances
             UPDATE organization
             SET total_balance = new_total_balance,
                 reserved_balance = new_reserved_balance
@@ -51,7 +65,6 @@ def upgrade() -> None:
         """
     )
 
-    # Drop existing trigger if it exists, then recreate to ensure it uses the new function
     op.execute(
         """
         DROP TRIGGER IF EXISTS update_organization_balance_trigger ON "transaction";
@@ -63,7 +76,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    # Revert to the original calculation, which included both negative and positive values
+    # Revert to the original logic:
+    # 1) total_balance sums only 'Adjustment'
+    # 2) reserved_balance sums all (positive and negative) 'Reserved'
     op.execute(
         """
         CREATE OR REPLACE FUNCTION update_organization_balance()
@@ -73,17 +88,17 @@ def downgrade() -> None:
             new_reserved_balance BIGINT;
             org_id INT := COALESCE(NEW.organization_id, OLD.organization_id);
         BEGIN
-            -- Calculate new total balance for specific organization_id
-            SELECT COALESCE(SUM(compliance_units), 0) INTO new_total_balance
+            SELECT COALESCE(SUM(compliance_units), 0)
+            INTO new_total_balance
             FROM "transaction"
             WHERE organization_id = org_id
-            AND transaction_action = 'Adjustment';
+              AND transaction_action = 'Adjustment';
 
-            -- Revert to calculating reserved balance from all compliance_units (no < 0 restriction)
-            SELECT COALESCE(SUM(compliance_units), 0) INTO new_reserved_balance
+            SELECT COALESCE(SUM(compliance_units), 0)
+            INTO new_reserved_balance
             FROM "transaction"
             WHERE organization_id = org_id
-            AND transaction_action = 'Reserved';
+              AND transaction_action = 'Reserved';
 
             UPDATE organization
             SET total_balance = new_total_balance,
