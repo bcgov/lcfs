@@ -30,23 +30,23 @@ def upgrade() -> None:
             new_reserved_balance BIGINT;
             org_id INT := COALESCE(NEW.organization_id, OLD.organization_id);
         BEGIN
-            -- Calculate new total balance:
+            -- Calculate new total_balance:
             --   adjustments + negative reserved units
             SELECT COALESCE(
                 SUM(
-                    CASE 
+                    CASE
                         WHEN transaction_action = 'Adjustment' THEN compliance_units
                         WHEN transaction_action = 'Reserved' AND compliance_units < 0 THEN compliance_units
                         ELSE 0
                     END
-                ), 
+                ),
                 0
             )
             INTO new_total_balance
             FROM "transaction"
             WHERE organization_id = org_id;
 
-            -- Calculate new reserved balance from negative compliance_units
+            -- Calculate new reserved_balance from negative compliance_units
             SELECT COALESCE(SUM(compliance_units), 0)
             INTO new_reserved_balance
             FROM "transaction"
@@ -68,6 +68,10 @@ def upgrade() -> None:
     op.execute(
         """
         DROP TRIGGER IF EXISTS update_organization_balance_trigger ON "transaction";
+        """
+    )
+    op.execute(
+        """
         CREATE TRIGGER update_organization_balance_trigger
         AFTER INSERT OR UPDATE OR DELETE ON "transaction"
         FOR EACH ROW EXECUTE FUNCTION update_organization_balance();
@@ -114,6 +118,10 @@ def downgrade() -> None:
     op.execute(
         """
         DROP TRIGGER IF EXISTS update_organization_balance_trigger ON "transaction";
+        """
+    )
+    op.execute(
+        """
         CREATE TRIGGER update_organization_balance_trigger
         AFTER INSERT OR UPDATE OR DELETE ON "transaction"
         FOR EACH ROW EXECUTE FUNCTION update_organization_balance();
