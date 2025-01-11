@@ -30,6 +30,7 @@ export const ViewOrganization = () => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [resetGridFn, setResetGridFn] = useState(null)
+  const newUserButtonRef = useRef(null);
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -97,6 +98,16 @@ export const ViewOrganization = () => {
       setAlertSeverity(location.state.severity || 'info')
     }
   }, [location.state])
+
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
 
   if (isLoading) {
     return <Loading />
@@ -211,6 +222,7 @@ export const ViewOrganization = () => {
         <BCBox component="div">
           <Role roles={[roles.administrator, roles.manage_users]}>
             <BCButton
+              ref= {newUserButtonRef}
               variant="contained"
               size="small"
               color="primary"
@@ -233,6 +245,16 @@ export const ViewOrganization = () => {
               <BCTypography variant="button">{t('org:newUsrBtn')}</BCTypography>
             </BCButton>
           </Role>
+          <ClearFiltersButton
+              onClick={handleClearFilters}
+              sx={{
+                height: newUserButtonRef.current?.offsetHeight || '36px',
+                marginRight: '8px',
+                marginBottom: '8px',
+                minWidth: 'fit-content',
+                whiteSpace: 'nowrap'
+              }}
+            />
         </BCBox>
         <BCTypography
           variant="h5"

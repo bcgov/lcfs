@@ -31,10 +31,10 @@ export const UserLoginHistory = () => {
         {t('admin:UserLoginHistory')}
       </BCTypography>
       <BCBox mb={2}>
-              <ClearFiltersButton
-                onClick={handleClearFilters}
-              />
-            </BCBox>
+        <ClearFiltersButton
+          onClick={handleClearFilters}
+        />
+      </BCBox>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridKey={'user-login-history-grid'}

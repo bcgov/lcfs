@@ -14,14 +14,6 @@ export const UserActivity = () => {
   const [resetGridFn, setResetGridFn] = useState(null)
   const gridRef = useRef(null)
 
-  // Memoize columnDefs with translation
-  const columnDefs = useMemo(() => {
-    const defs = userActivityColDefs(t)
-    console.log('Column Definitions:', defs)
-    return defs
-  }, [t])
-
-
   const getRowId = useCallback((params) => {
     return `${
       params.data.actionTaken
@@ -79,7 +71,7 @@ export const UserActivity = () => {
         <BCGridViewer
           gridRef={gridRef}
           gridKey={'all-user-activities-grid'}
-          columnDefs={columnDefs}
+          columnDefs={userActivityColDefs}
           query={useGetUserActivities}
           queryParams={{ cacheTime: 0, staleTime: 0 }}
           dataKey={'activities'}
