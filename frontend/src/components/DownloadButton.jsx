@@ -1,17 +1,19 @@
+import { forwardRef  } from 'react'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { faFileExcel } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { CircularProgress } from '@mui/material'
 
-export const DownloadButton = ({
+export const DownloadButton = forwardRef(({
   onDownload,
   isDownloading,
   label,
   downloadLabel,
   dataTest
-}) => (
+}, ref) => (
   <BCButton
+    ref={ref}
     data-test={dataTest}
     variant="outlined"
     size="small"
@@ -31,4 +33,4 @@ export const DownloadButton = ({
       {isDownloading ? downloadLabel : label}
     </BCTypography>
   </BCButton>
-)
+))

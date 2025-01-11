@@ -20,6 +20,7 @@ export const Users = () => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [resetGridFn, setResetGridFn] = useState(null)
+  const newUserButtonRef = useRef(null);
 
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
@@ -89,6 +90,7 @@ export const Users = () => {
           mt={1}
         >
           <BCButton
+            ref= {newUserButtonRef}
             variant="contained"
             size="small"
             color="primary"
@@ -103,6 +105,11 @@ export const Users = () => {
           </BCButton>
           <ClearFiltersButton
             onClick={handleClearFilters}
+            sx={{
+              height: newUserButtonRef.current?.offsetHeight || '36px',
+              minWidth: 'fit-content',
+              whiteSpace: 'nowrap'
+            }}
           />
         </BCBox>
         <BCBox

@@ -20,7 +20,8 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 export const Organizations = () => {
   const { t } = useTranslation(['common', 'org'])
   const gridRef = useRef()
-  const [gridKey, setGridKey] = useState('organizations-grid')
+  const downloadButtonRef = useRef(null);
+  const [gridKey, setGridKey] = useState(`organizations-grid`)
   const handleGridKey = useCallback(() => {
     setGridKey('organizations-grid')
   }, [])
@@ -139,6 +140,7 @@ export const Organizations = () => {
           dataTest="download-org-button"
         />
         <DownloadButton
+          ref={downloadButtonRef}
           onDownload={handleDownloadUsers}
           isDownloading={isDownloadingUsers}
           label={t('org:userDownloadBtn')}
@@ -147,6 +149,11 @@ export const Organizations = () => {
         />
         <ClearFiltersButton
           onClick={handleClearFilters}
+          sx={{
+            height: downloadButtonRef.current?.offsetHeight || '36px',
+            minWidth: 'fit-content',
+            whiteSpace: 'nowrap'
+          }}
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>

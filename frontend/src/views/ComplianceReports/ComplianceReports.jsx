@@ -2,7 +2,7 @@ import { Stack } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState  } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Role } from '@/components/Role'
@@ -29,6 +29,7 @@ export const ComplianceReports = () => {
   const alertRef = useRef()
   const navigate = useNavigate()
   const location = useLocation()
+  const newButtonRef = useRef(null);
   const { hasRoles, data: currentUser } = useCurrentUser()
 
   const gridOptions = useMemo(
@@ -135,6 +136,7 @@ export const ComplianceReports = () => {
       >
         <Role roles={[roles.supplier]}>
           <NewComplianceReportButton
+            ref={newButtonRef}
             handleNewReport={(option) => {
               createComplianceReport({
                 compliancePeriod: option.description,
@@ -148,6 +150,11 @@ export const ComplianceReports = () => {
         </Role>
         <ClearFiltersButton
           onClick={handleClearFilters}
+          sx={{
+            height: newButtonRef.current?.offsetHeight || '36px',
+            display: 'flex',
+            alignItems: 'center'
+          }}
         />
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
           <BCDataGridServer
