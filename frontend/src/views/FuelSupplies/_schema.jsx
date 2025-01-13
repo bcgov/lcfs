@@ -193,7 +193,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   {
     field: 'endUseType',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUse'),
     cellEditorParams: (params) => ({
       options: [
         ...new Set(

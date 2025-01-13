@@ -71,5 +71,17 @@
     "inProgress": "Compliance report(s) in progress",
     "awaitingGovReview": "Compliance report(s) awaiting government review",
     "noActionRequired": "There are no reports that require any action."
+  },
+  "userSettings": {
+    "title": "User settings",
+    "notifications": "Notifications",
+    "configureNotifications": "Configure your notifications",
+    "help": "Help"
+  },
+  "orgUserSettings": {
+    "title": "User settings",
+    "notifications": "Notifications",
+    "configureNotifications": "Configure your notifications",
+    "help": "Help"
   }
 }

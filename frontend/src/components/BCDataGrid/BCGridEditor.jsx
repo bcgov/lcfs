@@ -299,84 +299,89 @@ export const BCGridEditor = ({
         getRowId={(params) => params.data.id}
         onCellClicked={onCellClicked}
         onCellEditingStopped={handleOnCellEditingStopped}
+        autoHeight={true}
         {...props}
       />
-      <BCBox sx={{ height: '40px', marginTop: '15px', width: '100%' }}>
+      <BCBox sx={{ height: '40px', margin: '15px 0', width: '100%' }}>
         <BCAlert2 ref={alertRef} data-test="alert-box" />
       </BCBox>
-      {showAddRowsButton && (
-        <BCBox mt={2}>
-          <BCButton
-            ref={buttonRef}
-            variant="outlined"
-            color="dark"
-            size="small"
-            startIcon={<FontAwesomeIcon icon={faPlus} className="small-icon" />}
-            endIcon={
-              addMultiRow && (
-                <FontAwesomeIcon icon={faCaretDown} className="small-icon" />
-              )
-            }
-            onClick={
-              addMultiRow ? handleAddRowsClick : () => handleAddRowsInternal(1)
-            }
-          >
-            Add row
-          </BCButton>
-          {addMultiRow && (
-            <Menu
-              anchorEl={anchorEl}
-              open={Boolean(anchorEl)}
-              onClose={handleAddRowsClose}
-              slotProps={{
-                paper: {
-                  style: {
-                    width: buttonRef.current?.offsetWidth
+      <BCBox flex={1}>
+        {showAddRowsButton && (
+          <>
+            <BCButton
+              ref={buttonRef}
+              variant="outlined"
+              color="dark"
+              startIcon={
+                <FontAwesomeIcon icon={faPlus} className="small-icon" />
+              }
+              endIcon={
+                addMultiRow && (
+                  <FontAwesomeIcon icon={faCaretDown} className="small-icon" />
+                )
+              }
+              onClick={
+                addMultiRow
+                  ? handleAddRowsClick
+                  : () => handleAddRowsInternal(1)
+              }
+            >
+              Add row
+            </BCButton>
+            {addMultiRow && (
+              <Menu
+                anchorEl={anchorEl}
+                open={Boolean(anchorEl)}
+                onClose={handleAddRowsClose}
+                slotProps={{
+                  paper: {
+                    style: {
+                      width: buttonRef.current?.offsetWidth
+                    }
                   }
-                }
+                }}
+              >
+                <MenuItem onClick={() => handleAddRowsInternal(1)}>
+                  1 row
+                </MenuItem>
+                <MenuItem onClick={() => handleAddRowsInternal(5)}>
+                  5 rows
+                </MenuItem>
+                <MenuItem onClick={() => handleAddRowsInternal(10)}>
+                  10 rows
+                </MenuItem>
+              </Menu>
+            )}
+          </>
+        )}
+        {saveButtonProps.enabled && (
+          <>
+            <BCButton
+              onClick={onSaveExit}
+              variant="contained"
+              color="primary"
+              style={{
+                marginLeft: 20
               }}
             >
-              <MenuItem onClick={() => handleAddRowsInternal(1)}>
-                1 row
-              </MenuItem>
-              <MenuItem onClick={() => handleAddRowsInternal(5)}>
-                5 rows
-              </MenuItem>
-              <MenuItem onClick={() => handleAddRowsInternal(10)}>
-                10 rows
-              </MenuItem>
-            </Menu>
-          )}
-        </BCBox>
-      )}
-      {saveButtonProps.enabled && (
-        <>
-          <BCButton
-            onClick={onSaveExit}
-            variant="contained"
-            color="primary"
-            style={{
-              gap: 8,
-              marginTop: 20
-            }}
-          >
-            {saveButtonProps.text}
-          </BCButton>
-          <BCModal
-            open={showCloseModal}
-            onClose={() => {
-              setShowCloseModal(false)
-            }}
-            data={{
-              title: saveButtonProps.text,
-              content: saveButtonProps.confirmText,
-              primaryButtonAction: saveButtonProps.onSave,
-              primaryButtonText: saveButtonProps.confirmLabel,
-              secondaryButtonText: t('cancelBtn')
-            }}
-          />
-        </>
-      )}
+              {saveButtonProps.text}
+            </BCButton>
+            <BCModal
+              open={showCloseModal}
+              onClose={() => {
+                setShowCloseModal(false)
+              }}
+              data={{
+                title: saveButtonProps.text,
+                content: saveButtonProps.confirmText,
+                primaryButtonAction: saveButtonProps.onSave,
+                primaryButtonText: saveButtonProps.confirmLabel,
+                secondaryButtonText: t('cancelBtn')
+              }}
+            />
+          </>
+        )}
+      </BCBox>
     </BCBox>
   )
 }

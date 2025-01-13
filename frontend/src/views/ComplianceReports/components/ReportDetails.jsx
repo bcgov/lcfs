@@ -34,18 +34,40 @@ import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
-const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
+const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
+  const isAnalystRole = userRoles.some(role => role.name === roles.analyst) || false;
+  const isSupplierRole = userRoles.some(role => role.name === roles.supplier) || false;
+
   const editSupportingDocs = useMemo(() => {
     return isAnalystRole && (
       currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
       currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED
-    ) || currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT;
+    )
   }, [isAnalystRole, currentStatus]);
+
+  const editAnalyst = useMemo(() => {
+    return isAnalystRole && (
+      currentStatus === COMPLIANCE_REPORT_STATUSES.REASSESSED
+    )
+  }, [isAnalystRole, currentStatus]);
+
+  const editSupplier = useMemo(() => {
+    return isSupplierRole && (
+      currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
+    )
+  }, [isSupplierRole, currentStatus]);
+
+  const shouldShowEditIcon = (activityName) => {
+    if (activityName === t('report:supportingDocs')) {
+      return editSupportingDocs;
+    }
+    return editAnalyst || editSupplier;
+  };
 
   const isArrayEmpty = useCallback((data) => {
     if (Array.isArray(data)) {
@@ -260,12 +282,11 @@ const ReportDetails = ({ currentStatus = 'Draft', isAnalystRole }) => {
                   component="div"
                 >
                   {activity.name}&nbsp;&nbsp;
-                  {editSupportingDocs && (
+                  {shouldShowEditIcon(activity.name) && (
                     <>
                       <Role
                         roles={[
                           roles.supplier,
-                          roles.compliance_reporting,
                           roles.compliance_reporting,
                           roles.analyst
                         ]}

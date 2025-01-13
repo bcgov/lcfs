@@ -15,7 +15,8 @@ vi.mock('@/utils/formatters', () => ({
   calculateTotalValue: vi.fn(
     (quantity, pricePerUnit) => quantity * pricePerUnit
   ),
-  dateFormatter: vi.fn((date) => '2022-12-31')
+  dateFormatter: vi.fn((date) => '2022-12-31'),
+  formatNumberWithCommas: vi.fn(({ value }) => value.toString())
 }))
 
 describe('TransferSummary Component', () => {
