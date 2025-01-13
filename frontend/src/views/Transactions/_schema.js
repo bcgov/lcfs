@@ -14,7 +14,8 @@ import { useTransactionStatuses } from '@/hooks/useTransactions'
 const prefixMap = {
   Transfer: 'CT',
   AdminAdjustment: 'AA',
-  InitiativeAgreement: 'IA'
+  InitiativeAgreement: 'IA',
+  ComplianceReport: 'CR'
 }
 
 export const transactionsColDefs = (t) => [
@@ -36,7 +37,16 @@ export const transactionsColDefs = (t) => [
     colId: 'transactionType',
     field: 'transactionType',
     headerName: t('txn:txnColLabels.type'),
-    valueFormatter: spacesFormatter,
+    valueGetter: (params) => {
+      const value = spacesFormatter({ value: params.data.transactionType })
+      const suffix = params.data.description
+
+      if (suffix) {
+        debugger
+        return `${value} - ${suffix}`
+      }
+      return value
+    },
     filter: true, // Enable filtering
     filterParams: {
       textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
@@ -56,6 +66,9 @@ export const transactionsColDefs = (t) => [
     headerName: t('txn:txnColLabels.organizationFrom'),
     minWidth: 300,
     flex: 2,
+    valueGetter: (params) => {
+      return params.fromOrganization || 'N/A'
+    },
     filterParams: {
       buttons: ['clear']
     }
@@ -91,7 +104,7 @@ export const transactionsColDefs = (t) => [
     width: 190,
     valueGetter: (params) => {
       const value = params.data?.pricePerUnit
-      return value !== null && value !== undefined ? value : null
+      return value !== null && value !== undefined ? value : 'N/A'
     },
     filter: 'agNumberColumnFilter',
     filterParams: {
