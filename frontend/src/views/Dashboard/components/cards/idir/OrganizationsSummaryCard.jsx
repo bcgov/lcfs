@@ -86,10 +86,7 @@ const OrganizationsSummaryCard = () => {
             style={{ fontSize: '32px', color: '#578260', marginBottom: '-2px' }}
             component="span"
           >
-            {numberFormatter(
-              selectedOrganization.totalBalance -
-                Math.abs(selectedOrganization.reservedBalance)
-            )}
+            {numberFormatter(selectedOrganization.totalBalance)}
           </BCTypography>
           <BCTypography
             style={{ fontSize: '18px', color: '#003366', marginBottom: '-4px' }}

@@ -89,12 +89,7 @@ def SOURCE_QUERY = """
           WHEN cts.status = 'Refused' THEN 'Declined'
           WHEN cts.status = 'Submitted' THEN 'Sent'
           ELSE cts.status
-        END AS current_status,
-        CASE
-          WHEN cts.status = 'Not Recommended' THEN 'Refuse'
-          WHEN cts.status = 'Recommended' THEN 'Record'
-          ELSE NULL
-        END AS recommendation
+        END AS current_status
       FROM
         credit_trade ct
         JOIN credit_trade_type ctt ON ct.type_id = ctt.id
@@ -203,13 +198,21 @@ try {
             continue
         }
 
+        // Identify if the history ever contained "Recommended" or "Not Recommended"
+        def recommendationValue = null
+        if (creditTradeHistoryJson.any { it.transfer_status == 'Recommended' }) {
+            recommendationValue = 'Record'  // matches "Record" in the transfer_recommendation_enum
+        } else if (creditTradeHistoryJson.any { it.transfer_status == 'Not Recommended' }) {
+            recommendationValue = 'Refuse'  // matches "Refuse" in the transfer_recommendation_enum
+        }
+
         // Only if transfer does not exist, proceed to create transactions and then insert the transfer.
         def (fromTransactionId, toTransactionId) = processTransactions(resultSet.getString('current_status'),
                 resultSet,
                 statements.transactionStmt)
 
         def transferId = insertTransfer(resultSet, statements.transferStmt,
-                fromTransactionId, toTransactionId, preparedData, destinationConn)
+                fromTransactionId, toTransactionId, preparedData, destinationConn, recommendationValue)
 
         if (transferId) {
             processHistory(transferId, creditTradeHistoryJson, statements.historyStmt, preparedData)
@@ -398,23 +401,26 @@ def transferExists(Connection conn, int transferId) {
 def processHistory(Integer transferId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData) {
     if (!creditTradeHistory) return
 
+    // Sort the records by create_timestamp to preserve chronological order
+    def sortedHistory = creditTradeHistory.sort { a, b ->
+        toSqlTimestamp(a.create_timestamp ?: '2013-01-01T00:00:00Z') <=> toSqlTimestamp(b.create_timestamp ?: '2013-01-01T00:00:00Z')
+    }
+
     // Use a Set to track unique combinations of transfer_id and transfer_status
     def processedEntries = new HashSet<String>()
 
-    creditTradeHistory.each { historyItem ->
+    sortedHistory.each { historyItem ->
         try {
             def statusId = getStatusId(historyItem.transfer_status, preparedData)
             def uniqueKey = "${transferId}_${statusId}"
 
             // Check if this combination has already been processed
             if (!processedEntries.contains(uniqueKey)) {
-                // If not processed, add to batch and mark as processed
                 historyStmt.setInt(1, transferId)
                 historyStmt.setInt(2, statusId)
                 historyStmt.setInt(3, historyItem.user_profile_id)
                 historyStmt.setTimestamp(4, toSqlTimestamp(historyItem.create_timestamp ?: '2013-01-01T00:00:00Z'))
                 historyStmt.addBatch()
-
                 processedEntries.add(uniqueKey)
             }
         } catch (Exception e) {
@@ -425,7 +431,6 @@ def processHistory(Integer transferId, List creditTradeHistory, PreparedStatemen
     // Execute batch
     historyStmt.executeBatch()
 }
-
 
 def processInternalComments(Integer transferId, List internalComments,
                             PreparedStatement internalCommentStmt,
@@ -475,7 +480,7 @@ def getAudienceScope(String roleNames) {
 }
 
 def insertTransfer(ResultSet rs, PreparedStatement transferStmt, Long fromTransactionId,
-                   Long toTransactionId, Map preparedData, Connection conn) {
+                   Long toTransactionId, Map preparedData, Connection conn, String recommendationValue) {
     // Check for duplicates in the `transfer` table
     def transferId = rs.getInt('transfer_id')
     def duplicateCheckStmt = conn.prepareStatement('SELECT COUNT(*) FROM transfer WHERE transfer_id = ?')
@@ -507,7 +512,7 @@ def insertTransfer(ResultSet rs, PreparedStatement transferStmt, Long fromTransa
     transferStmt.setString(11, rs.getString('gov_comment'))
     transferStmt.setObject(12, categoryId)
     transferStmt.setObject(13, statusId)
-    transferStmt.setString(14, rs.getString('recommendation'))
+    transferStmt.setString(14, recommendationValue)
     transferStmt.setTimestamp(15, rs.getTimestamp('create_date'))
     transferStmt.setTimestamp(16, rs.getTimestamp('update_date'))
     transferStmt.setInt(17, rs.getInt('create_user'))
