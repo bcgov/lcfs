@@ -7,6 +7,7 @@ import xlwt
 
 
 logger = structlog.get_logger(__name__)
+MAX_XLS_WIDTH = 65535
 
 
 class SpreadsheetBuilder:
@@ -118,23 +119,6 @@ class SpreadsheetBuilder:
             for cell in worksheet[1]:
                 cell.font = styles.Font(bold=True)
 
-    def _auto_adjust_column_width_xlsx(self, writer, sheet_data):
-        worksheet = writer.sheets[sheet_data["sheet_name"]]
-        for column in worksheet.columns:
-            max_length = 0
-            column_letter = get_column_letter(column[0].column)
-
-            for cell in column:
-                try:
-                    cell_length = len(str(cell.value))
-                    if cell_length > max_length:
-                        max_length = cell_length
-                except:
-                    pass
-
-            adjusted_width = max_length + 2  # Adding 2 for a little extra space
-            worksheet.column_dimensions[column_letter].width = adjusted_width
-
     def _write_xls(self, output):
         book = xlwt.Workbook()
 
@@ -159,6 +143,8 @@ class SpreadsheetBuilder:
         alignment.horz = xlwt.Alignment.HORZ_LEFT
         left_aligned_num_style.alignment = alignment
 
+        plain_style = xlwt.XFStyle()
+
         # Apply bold style for headers if required
         header_style = (
             bold_style if sheet_data["styles"].get("bold_headers") else default_style
@@ -176,9 +162,26 @@ class SpreadsheetBuilder:
                 cell_style = (
                     left_aligned_num_style
                     if isinstance(value, (int, float))
-                    else xlwt.XFStyle()
+                    else plain_style
                 )
                 sheet.write(row_index, col_index, value, cell_style)
+
+    def _auto_adjust_column_width_xlsx(self, writer, sheet_data):
+        worksheet = writer.sheets[sheet_data["sheet_name"]]
+        for column in worksheet.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+
+            for cell in column:
+                try:
+                    cell_length = len(str(cell.value))
+                    if cell_length > max_length:
+                        max_length = cell_length
+                except:
+                    pass
+
+            adjusted_width = max_length + 2  # Adding 2 for a little extra space
+            worksheet.column_dimensions[column_letter].width = adjusted_width
 
     def _auto_adjust_column_width_xls(self, sheet, sheet_data):
         column_widths = [
@@ -186,7 +189,7 @@ class SpreadsheetBuilder:
             for column in zip(*sheet_data["rows"], sheet_data["columns"])
         ]
         for i, width in enumerate(column_widths):
-            sheet.col(i).width = 256 * width
+            sheet.col(i).width = min(256 * width, MAX_XLS_WIDTH)
 
     def _write_csv(self, output):
         if self.sheets_data:
