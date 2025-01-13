@@ -44,28 +44,10 @@ jobs:
             backend-service
 
       - name: Wait for DB to be Ready
-        run: |
-          for i in {1..30}; do
-            nc -z localhost 5432 && echo "DB is up" && break
-            echo "Waiting for DB..."
-            sleep 1
-          done
+        run: sleep 20
 
-      - name: Wait for Redis to be Ready
-        run: |
-          for i in {1..30}; do
-            nc -z localhost 6379 && echo "Redis is up" && break
-            echo "Waiting for Redis..."
-            sleep 1
-          done
-
-      - name: Wait for RabbitMQ to be Ready
-        run: |
-          for i in {1..30}; do
-            nc -z localhost 15672 && echo "RabbitMQ is up" && break
-            echo "Waiting for RabbitMQ..."
-            sleep 1
-          done
+      - name: Run Alembic Migrations
+        run: docker exec backend poetry run alembic upgrade head
 
       - name: Data Seeding
         run: docker exec backend poetry run python /app/lcfs/db/seeders/seed_database.py
