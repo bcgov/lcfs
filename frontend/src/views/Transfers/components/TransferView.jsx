@@ -1,12 +1,15 @@
 import BCBox from '@/components/BCBox'
-
 import { roles } from '@/constants/roles'
 import {
   TRANSFER_STATUSES,
   getAllTerminalTransferStatuses
 } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { decimalFormatter } from '@/utils/formatters'
+import {
+  formatNumberWithCommas,
+  currencyFormatter,
+  calculateTotalValue
+} from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
 import { useTranslation } from 'react-i18next'
@@ -20,6 +23,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
   const { data: currentUser, sameOrganization, hasAnyRole } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const isAnalyst = hasAnyRole(roles.analyst)
+
   const {
     currentStatus: { status: transferStatus } = {},
     toOrganization: { name: toOrganization, organizationId: toOrgId } = {},
@@ -32,7 +36,7 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
     transferHistory
   } = transferData || {}
 
-  const totalValue = quantity * pricePerUnit
+  const totalValue = calculateTotalValue(quantity, pricePerUnit)
 
   return (
     <>
@@ -57,13 +61,13 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
       >
         <BCTypography variant="body4">
           <b>{fromOrganization}</b>
-          {t('transfer:transfers')}
-          <b>{quantity}</b>
-          {t('transfer:complianceUnitsTo')} <b>{toOrganization}</b>
-          {t('transfer:for')}
-          <b>${decimalFormatter({ value: pricePerUnit })}</b>
-          {t('transfer:complianceUnitsPerTvo')}
-          <b>${decimalFormatter(totalValue)}</b> CAD.
+          {t('transfer:transfers')}{' '}
+          <b>{formatNumberWithCommas({ value: quantity })}</b>{' '}
+          {t('transfer:complianceUnitsTo')} <b>{toOrganization}</b>{' '}
+          {t('transfer:for')}{' '}
+          <b>{currencyFormatter({ value: pricePerUnit })}</b>{' '}
+          {t('transfer:complianceUnitsPerTvo')}{' '}
+          <b>{currencyFormatter({ value: totalValue })}</b> CAD.
         </BCTypography>
       </BCBox>
       {/* Comments */}
