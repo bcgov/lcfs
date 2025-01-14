@@ -28,6 +28,12 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
+
 describe('Navbar', () => {
   const mockUser = {
     isGovernmentUser: true,
