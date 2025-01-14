@@ -1,4 +1,5 @@
 from lcfs.web.api.base import BaseSchema
+from pydantic import Field
 
 
 class DirectorReviewCountsSchema(BaseSchema):
@@ -21,3 +22,7 @@ class OrganizarionTransactionCountsSchema(BaseSchema):
 class OrgComplianceReportCountsSchema(BaseSchema):
     in_progress: int
     awaiting_gov_review: int
+
+
+class ComplianceReportCountsSchema(BaseSchema):
+    pending_reviews: int = Field(default=0)
