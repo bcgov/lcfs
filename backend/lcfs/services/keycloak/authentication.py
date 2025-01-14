@@ -3,7 +3,7 @@ import json
 import httpx
 import jwt
 from fastapi import HTTPException
-from redis.asyncio import Redis, ConnectionPool
+from redis.asyncio import Redis
 from sqlalchemy import func
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import async_sessionmaker
@@ -16,7 +16,6 @@ from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
 from lcfs.services.keycloak.dependencies import parse_external_username
 from lcfs.settings import Settings
-from lcfs.web.api.user.repo import UserRepository
 
 
 class UserAuthentication(AuthenticationBackend):
@@ -130,10 +129,12 @@ class UserAuthentication(AuthenticationBackend):
         else:
             user_token = self.test_keycloak_user
 
-        # Normalize the username and email to lowercase
+        # Normalize
         preferred_username = user_token.get("preferred_username", "").lower()
         email = user_token.get("email", "").lower()
 
+        # Attempt #1: look up by keycloak_user_id
+        user = None
         if preferred_username:
             try:
                 async with self.session_factory() as session:
@@ -152,21 +153,23 @@ class UserAuthentication(AuthenticationBackend):
                     )
                     user = result.unique().scalar_one_or_none()
 
-                    if user is None:
-                        # Handle the case where no user is found
-                        pass
-                    # Check if the user is active
-                    elif not user.is_active:
-                        error_text = "The account is currently inactive."
-                        await self.create_login_history(user_token, False, error_text)
-                        raise HTTPException(status_code=401, detail=error_text)
-                    else:
-                        return AuthCredentials(["authenticated"]), user
+                    if user:
+                        # Check if the user is active
+                        if not user.is_active:
+                            error_text = "The account is currently inactive."
+                            await self.create_login_history(
+                                user_token, False, error_text
+                            )
+                            raise HTTPException(status_code=401, detail=error_text)
+                        else:
+                            # Already found by keycloak_user_id => return
+                            return AuthCredentials(["authenticated"]), user
 
             except NoResultFound:
                 pass
 
-        if email:
+        # Attempt #2: if user was not found by keycloak_user_id, look up by email + username
+        if email and not user:
             user_query = (
                 select(UserProfile)
                 .options(
@@ -191,10 +194,11 @@ class UserAuthentication(AuthenticationBackend):
             async with self.session_factory() as session:
                 user_result = await session.execute(user_query)
                 user = user_result.unique().scalar_one_or_none()
+
                 if user is None:
                     error_text = "No User with that configuration exists."
                     await self.create_login_history(user_token, False, error_text)
-                    raise HTTPException(status_code=401, detail=error_text)
+                    raise HTTPException(status_code=403, detail=error_text)
 
                 # Check if the user is active
                 if not user.is_active:

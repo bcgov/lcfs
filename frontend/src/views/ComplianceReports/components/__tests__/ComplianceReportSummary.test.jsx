@@ -50,6 +50,12 @@ vi.mock('@mui/material', async (importOriginal) => {
   }
 })
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
+
 describe('ComplianceReportSummary', () => {
   const mockReportID = '123'
   const mockSetHasMet = vi.fn() // Mock setHasMet function

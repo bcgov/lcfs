@@ -11,6 +11,12 @@ import {
 } from '@testing-library/react'
 import { describe, vi } from 'vitest'
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
+
 const keycloak = vi.hoisted(() => ({
   useKeycloak: vi.fn()
 }))

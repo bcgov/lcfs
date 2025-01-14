@@ -368,7 +368,7 @@ export const AddEditFuelSupplies = () => {
             my={2}
             component="div"
           >
-            {t('fuelSupply:fuelSupplySubtitle')}
+            {t('fuelSupply:fuelSupplyGuide')}
           </BCTypography>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>

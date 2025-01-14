@@ -17,7 +17,7 @@ services:
   redis:
     container_name: redis
     restart: "no"
-    image: bitnami/redis:6.2.5
+    image: bitnami/redis:7.4.2
     environment:
       REDIS_PASSWORD: development_only
     ports:
