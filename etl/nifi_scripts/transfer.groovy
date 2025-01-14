@@ -5,7 +5,7 @@ import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.sql.Timestamp
 
-log.warn("**** STARTING TRANSFER ETL ****")
+log.warn('**** STARTING TRANSFER ETL ****')
 
 def SOURCE_QUERY = """
 SELECT
@@ -73,7 +73,7 @@ SELECT
         cts.status;
       """
 
-def COMMENT_QUERY = """
+def COMMENT_QUERY = '''
     SELECT
         ct.id AS credit_trade_id,
         MAX(CASE
@@ -93,7 +93,7 @@ def COMMENT_QUERY = """
         ct.id = ?
     GROUP BY
         ct.id;
-"""
+'''
 
 def INTERNAL_COMMENT_QUERY = """
     SELECT
@@ -307,13 +307,16 @@ def prepareStatements(Connection conn) {
             transactionStmt            : conn.prepareStatement(INSERT_TRANSACTION_SQL)]
 }
 
-def toSqlTimestamp(String timestampString) {
+def toSqlTimestamp(Object timestamp) {
     try {
-        // Parse the ISO 8601 timestamp and convert to java.sql.Timestamp
-        def offsetDateTime = OffsetDateTime.parse(timestampString)
-        return Timestamp.from(offsetDateTime.toInstant())
+        if (timestamp instanceof String) {
+            def offsetDateTime = OffsetDateTime.parse(timestamp)
+            return Timestamp.from(offsetDateTime.toInstant())
+        } else if (timestamp instanceof java.sql.Timestamp) {
+            return timestamp
+        }
     } catch (Exception e) {
-        log.error("Invalid timestamp format: ${timestampString}, defaulting to '1970-01-01T00:00:00Z'")
+        log.error("Invalid timestamp format: ${timestamp}, defaulting to '1970-01-01T00:00:00Z'")
         return Timestamp.valueOf('1970-01-01 00:00:00')
     }
 }
@@ -404,28 +407,16 @@ def processInternalComments(Integer transferId, PreparedStatement sourceInternal
                             PreparedStatement internalCommentStmt,
                             PreparedStatement transferInternalCommentStmt) {
     // Fetch internal comments
-    ResultSet internalCommentResult = sourceInternalCommentStmt.executeQuery(transferId)
-    def internalComments = []
+    sourceInternalCommentStmt.setInt(1, transferId)
+    ResultSet internalCommentResult = sourceInternalCommentStmt.executeQuery()
     while (internalCommentResult.next()) {
-        internalComments << [
-            id: internalCommentResult.getInt('id'),
-            comment: internalCommentResult.getString('credit_trade_comment'),
-            roleNames: internalCommentResult.getString('role_names'),
-            createUserId: internalCommentResult.getInt('create_user_id'),
-            createTimestamp: internalCommentResult.getTimestamp('create_timestamp')
-        ]
-    }
-    if (!internalComments) return
-
-    internalComments.each { comment ->
-        if (!comment) return // Skip null comments
-
         try {
             // Insert the internal comment
-            internalCommentStmt.setString(1, comment.credit_trade_comment ?: '')
-            internalCommentStmt.setString(2, getAudienceScope(comment.role_names ?: ''))
-            internalCommentStmt.setInt(3, comment.create_user_id ?: null)
-            internalCommentStmt.setTimestamp(4, toSqlTimestamp(comment.create_timestamp ?: '2013-01-01T00:00:00Z'))
+            internalCommentStmt.setString(1, internalCommentResult.getString('credit_trade_comment') ?: '')
+            internalCommentStmt.setString(2, getAudienceScope(internalCommentResult.getString('role_names') ?: ''))
+            internalCommentStmt.setInt(3, internalCommentResult.getInt('create_user_id') ?: null)
+            def timestamp = internalCommentResult.getTimestamp('create_timestamp')
+            internalCommentStmt.setTimestamp(4, timestamp ?: toSqlTimestamp('2013-01-01T00:00:00Z'))
 
             def internalCommentId = null
             def commentResult = internalCommentStmt.executeQuery()
@@ -443,7 +434,7 @@ def processInternalComments(Integer transferId, PreparedStatement sourceInternal
             log.error("Error processing internal comment for transfer ${transferId}: ${e.getMessage()}", e)
         }
     }
-                            }
+}
 
 // Helper function to determine audience scope based on role names
 def getAudienceScope(String roleNames) {
@@ -513,6 +504,6 @@ def insertTransfer(ResultSet rs, PreparedStatement transferStmt, PreparedStateme
     transferStmt.setInt(19, rs.getInt('transfer_id'))
     def result = transferStmt.executeQuery()
     return result.next() ? result.getInt('transfer_id') : null
-}
+                   }
 
-log.warn("**** COMPLETED TRANSFER ETL ****")
+log.warn('**** COMPLETED TRANSFER ETL ****')
