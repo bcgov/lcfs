@@ -49,6 +49,12 @@ vi.mock('@mui/material', async (importOriginal) => {
   }
 })
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
+
 describe('TransferDetailsCard Component', () => {
   const mockUseTheme = {
     breakpoints: {
