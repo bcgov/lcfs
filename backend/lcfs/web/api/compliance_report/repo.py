@@ -601,6 +601,7 @@ class ComplianceReportRepository:
                 f"No summary found with report ID {summary.compliance_report_id}"
             )
 
+        summary_obj.is_locked = summary.is_locked
         # Update renewable fuel target summary
         for row in summary.renewable_fuel_target_summary:
             line_number = row.line

@@ -65,6 +65,7 @@ export const apiRoutes = {
   saveAllocationAgreements: '/allocation-agreement/save',
   allocationAgreementSearch: '/allocation-agreement/search?',
   OrgComplianceReportCounts: '/dashboard/org-compliance-report-counts',
+  complianceReportCounts: '/dashboard/compliance-report-counts',
   organizationSearch: '/organizations/search?',
   getUserActivities: '/users/:userID/activity',
   getAllUserActivities: '/users/activities/all',

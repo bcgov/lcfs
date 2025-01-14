@@ -8,6 +8,7 @@ from lcfs.web.api.dashboard.schema import (
     TransactionCountsSchema,
     OrganizarionTransactionCountsSchema,
     OrgComplianceReportCountsSchema,
+    ComplianceReportCountsSchema
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -59,3 +60,16 @@ async def get_org_compliance_report_counts(
     """Endpoint to retrieve counts for organization compliance report items"""
     organization_id = request.user.organization.organization_id
     return await service.get_org_compliance_report_counts(organization_id)
+
+
+@router.get(
+    "/compliance-report-counts",
+    response_model=ComplianceReportCountsSchema
+)
+@view_handler([RoleEnum.ANALYST, RoleEnum.COMPLIANCE_MANAGER])
+async def get_compliance_report_counts(
+    request: Request,
+    service: DashboardServices = Depends(),
+):
+    """Endpoint to retrieve count of compliance reports pending review"""
+    return await service.get_compliance_report_counts()

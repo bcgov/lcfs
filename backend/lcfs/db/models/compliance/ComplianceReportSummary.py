@@ -1,8 +1,7 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey, Boolean, CheckConstraint
-from sqlalchemy.exc import InvalidRequestError
+from sqlalchemy import Column, Integer, Float, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
+
 from lcfs.db.base import BaseModel, Auditable
-from datetime import datetime
 
 
 class ComplianceReportSummary(BaseModel, Auditable):
@@ -111,12 +110,6 @@ class ComplianceReportSummary(BaseModel, Auditable):
     total_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
 
     compliance_report = relationship("ComplianceReport", back_populates="summary")
-
-    def lock_summary(self):
-        if not self.is_locked:
-            self.is_locked = True
-        else:
-            raise InvalidRequestError("ComplianceReportSummary is already locked")
 
     def __repr__(self):
         return f"<ComplianceReportSummary(id={self.summary_id}, quarter={self.quarter}, version={self.version})>"
