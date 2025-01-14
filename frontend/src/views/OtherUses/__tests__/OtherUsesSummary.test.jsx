@@ -47,6 +47,12 @@ vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
   default: () => <div data-test="mockedBCDataGridServer"></div>
 }))
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
+
 const WrapperComponent = (props) => {
   const queryClient = new QueryClient()
   return (

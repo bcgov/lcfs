@@ -74,6 +74,12 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   )
 }))
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
+
 describe('AddEditAllocationAgreements', () => {
   beforeEach(() => {
     vi.resetAllMocks()
