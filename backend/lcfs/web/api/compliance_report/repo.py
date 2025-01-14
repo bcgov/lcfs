@@ -6,7 +6,7 @@ import structlog
 from fastapi import Depends
 from sqlalchemy import func, select, and_, asc, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, contains_eager
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import CompliancePeriod
@@ -57,6 +57,27 @@ class ComplianceReportRepository:
     def apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
             filter_value = filter.filter
+
+            filter_option = filter.type
+            filter_type = filter.filter_type
+            if filter.field == "organization":
+                field = get_field_for_filter(Organization, "name")
+                conditions.append(
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
+                )
+            elif filter.field == "compliance_period":
+                field = get_field_for_filter(CompliancePeriod, "description")
+                conditions.append(
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
+                )
+
+    def apply_sub_filters(self, pagination, conditions):
+        for filter in pagination.filters:
+            filter_value = filter.filter
             # check if the date string is selected for filter
             if filter.filter is None:
                 filter_value = [
@@ -82,7 +103,7 @@ class ComplianceReportRepository:
                 else:
                     filter_value = ComplianceReportStatusEnum(filter_value)
             elif filter.field == "organization":
-                field = get_field_for_filter(Organization, "name")
+                continue
             elif filter.field == "type":
                 field = get_field_for_filter(ComplianceReport, "reporting_frequency")
                 filter_value = (
@@ -91,7 +112,7 @@ class ComplianceReportRepository:
                     else ReportingFrequency.QUARTERLY.value
                 )
             elif filter.field == "compliance_period":
-                field = get_field_for_filter(CompliancePeriod, "description")
+                continue
             else:
                 field = get_field_for_filter(ComplianceReport, filter.field)
 
@@ -340,10 +361,12 @@ class ComplianceReportRepository:
         """
         # Base query conditions
         conditions = []
+        sub_conditions = []
         if organization_id:
-            conditions.append(ComplianceReport.organization_id == organization_id)
+            sub_conditions.append(ComplianceReport.organization_id == organization_id)
 
         if pagination.filters and len(pagination.filters) > 0:
+            self.apply_sub_filters(pagination, sub_conditions)
             self.apply_filters(pagination, conditions)
 
         # Pagination and offset setup
@@ -356,7 +379,7 @@ class ComplianceReportRepository:
                 ComplianceReport.compliance_report_group_uuid,
                 func.max(ComplianceReport.version).label("latest_version"),
             )
-            .where(and_(*conditions))
+            .where(and_(*sub_conditions))
             .group_by(ComplianceReport.compliance_report_group_uuid)
         )
 
@@ -378,9 +401,19 @@ class ComplianceReportRepository:
                     ComplianceReport.version == subquery.c.latest_version,
                 ),
             )
+            .join(
+                Organization,
+                ComplianceReport.organization_id == Organization.organization_id,
+            )
+            .join(
+                CompliancePeriod,
+                ComplianceReport.compliance_period_id
+                == CompliancePeriod.compliance_period_id,
+            )
+            .where(and_(*conditions))
             .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
+                contains_eager(ComplianceReport.organization),
+                contains_eager(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
                 joinedload(ComplianceReport.summary),
                 joinedload(ComplianceReport.history).joinedload(
@@ -404,17 +437,8 @@ class ComplianceReportRepository:
                 )
             elif order.field == "compliance_period":
                 order.field = get_field_for_filter(CompliancePeriod, "description")
-                query = query.join(
-                    CompliancePeriod,
-                    ComplianceReport.compliance_period_id
-                    == CompliancePeriod.compliance_period_id,
-                )
             elif order.field == "organization":
                 order.field = get_field_for_filter(Organization, "name")
-                query = query.join(
-                    Organization,
-                    ComplianceReport.organization_id == Organization.organization_id,
-                )
             else:
                 order.field = get_field_for_filter(ComplianceReport, order.field)
             query = query.order_by(sort_method(order.field))
@@ -601,6 +625,7 @@ class ComplianceReportRepository:
                 f"No summary found with report ID {summary.compliance_report_id}"
             )
 
+        summary_obj.is_locked = summary.is_locked
         # Update renewable fuel target summary
         for row in summary.renewable_fuel_target_summary:
             line_number = row.line

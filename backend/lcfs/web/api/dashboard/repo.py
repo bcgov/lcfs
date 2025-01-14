@@ -12,6 +12,9 @@ from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.compliance.OrgComplianceReportCountView import (
     OrgComplianceReportCountView,
 )
+from lcfs.db.models.compliance.ComplianceReportCountView import (
+    ComplianceReportCountView,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -69,4 +72,20 @@ class DashboardRepository:
         return {
             "in_progress": getattr(counts, "count_in_progress", 0),
             "awaiting_gov_review": getattr(counts, "count_awaiting_gov_review", 0),
+        }
+
+    @repo_handler
+    async def get_compliance_report_counts(self):
+        query = select(
+            func.coalesce(
+                func.sum(ComplianceReportCountView.count),
+                0
+            ).label('pending_reviews')
+        )
+
+        result = await self.db.execute(query)
+        row = result.fetchone()
+
+        return {
+            "pending_reviews": row.pending_reviews
         }
