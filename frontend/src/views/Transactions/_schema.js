@@ -42,7 +42,6 @@ export const transactionsColDefs = (t) => [
       const suffix = params.data.description
 
       if (suffix) {
-        debugger
         return `${value} - ${suffix}`
       }
       return value
