@@ -36,6 +36,7 @@ import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector.jsx'
 import { useCurrentUser } from './hooks/useCurrentUser'
 import Loading from './components/Loading'
+import { Unauthorized } from './components/Unauthorized'
 
 const router = createBrowserRouter([
   {
@@ -47,6 +48,10 @@ const router = createBrowserRouter([
         path: ROUTES.LOGIN,
         element: <Login />,
         handle: { title: 'Login' }
+      },
+      {
+        path: '/unauthorized',
+        element: <Unauthorized />
       }
     ]
   },

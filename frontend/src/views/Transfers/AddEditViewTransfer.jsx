@@ -441,7 +441,9 @@ export const AddEditViewTransfer = () => {
               hasAnyRole(roles.analyst) && (
                 <>
                   <Recommendation currentStatus={currentStatus} />
-                  <CategoryCheckbox />
+                  <CategoryCheckbox
+                    isDisabled={currentStatus === TRANSFER_STATUSES.RECOMMENDED}
+                  />
                 </>
               )}
 
