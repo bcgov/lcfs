@@ -9,6 +9,7 @@ import { getKeycloak } from '@/utils/keycloak'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
 import { SnackbarProvider } from 'notistack'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 const queryClient = new QueryClient()
 const keycloak = getKeycloak()
@@ -18,16 +19,18 @@ if (root) {
   createRoot(root).render(
     <main>
       <KeycloakProvider authClient={keycloak}>
-        <QueryClientProvider client={queryClient}>
-          <ThemeProvider theme={theme}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <SnackbarProvider>
-                <CssBaseline />
-                <App />
-              </SnackbarProvider>
-            </LocalizationProvider>
-          </ThemeProvider>
-        </QueryClientProvider>
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider theme={theme}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <SnackbarProvider>
+                  <CssBaseline />
+                  <App />
+                </SnackbarProvider>
+              </LocalizationProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </AuthProvider>
       </KeycloakProvider>
     </main>
   )

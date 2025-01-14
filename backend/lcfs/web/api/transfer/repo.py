@@ -66,6 +66,7 @@ class TransferRepository:
         """
         Queries the database for a transfer by its ID and returns the ORM model.
         Eagerly loads related entities to prevent lazy loading issues.
+        Orders the transfer history by create_date.
         """
         query = (
             select(Transfer)
@@ -88,6 +89,11 @@ class TransferRepository:
 
         result = await self.db.execute(query)
         transfer = result.scalars().first()
+
+        # Ensure transfer_history is ordered by create_date
+        if transfer and transfer.transfer_history:
+            transfer.transfer_history.sort(key=lambda history: history.create_date)
+
         return transfer
 
     @repo_handler

@@ -24,6 +24,12 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
+
 const renderComponent = (props) => {
   const queryClient = new QueryClient()
   return render(

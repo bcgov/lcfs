@@ -1,4 +1,3 @@
-import Loading from '@/components/Loading'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useKeycloak } from '@react-keycloak/web'
 import { Navigate } from 'react-router-dom'

@@ -33,9 +33,19 @@ vi.mock('react-router-dom', () => ({
 }))
 
 // Mock react-i18next
+// Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => key
+    t: vi.fn((key, options = {}) => {
+      // Handle specific keys with returnObjects
+      if (
+        key === 'allocationAgreement:allocationAgreementGuides' &&
+        options.returnObjects
+      ) {
+        return ['Guide 1', 'Guide 2', 'Guide 3'] // Mocked guide objects
+      }
+      return key
+    })
   })
 }))
 
@@ -62,6 +72,12 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
       </div>
     </div>
   )
+}))
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
 }))
 
 describe('AddEditAllocationAgreements', () => {
@@ -107,7 +123,7 @@ describe('AddEditAllocationAgreements', () => {
   it('renders the component', () => {
     render(<AddEditAllocationAgreements />, { wrapper })
     expect(
-      screen.getByText('allocationAgreement:addAllocationAgreementRowsTitle')
+      screen.getByText('allocationAgreement:allocationAgreementTitle')
     ).toBeInTheDocument()
   })
 

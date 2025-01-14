@@ -52,6 +52,12 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
+
 describe('AssessmentCard', () => {
   const mockHistory = [
     {

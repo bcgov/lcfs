@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { TransferDetailsCard } from '../TransferDetailsCard'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useMediaQuery, useTheme } from '@mui/material'
-import { decimalFormatter } from '@/utils/formatters'
+import { currencyFormatter } from '@/utils/formatters'
 import { wrapper } from '@/tests/utils/wrapper'
 
 global.XMLHttpRequest = vi.fn(() => ({
@@ -48,6 +48,12 @@ vi.mock('@mui/material', async (importOriginal) => {
     useTheme: vi.fn()
   }
 })
+
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
 
 describe('TransferDetailsCard Component', () => {
   const mockUseTheme = {
@@ -96,7 +102,7 @@ describe('TransferDetailsCard Component', () => {
     )
     const totalValue = (10 * 5).toFixed(2)
     expect(
-      screen.getByText(`$${decimalFormatter(totalValue)}`)
+      screen.getByText(currencyFormatter({ value: totalValue }))
     ).toBeInTheDocument()
   })
 
@@ -168,6 +174,8 @@ describe('TransferDetailsCard Component', () => {
       { wrapper }
     )
     const totalValue = (1000000 * 5000).toFixed(2)
-    expect(screen.getByText(`$${decimalFormatter(totalValue)}`)).toBeInTheDocument()
+    expect(
+      screen.getByText(currencyFormatter({ value: totalValue }))
+    ).toBeInTheDocument()
   })
 })

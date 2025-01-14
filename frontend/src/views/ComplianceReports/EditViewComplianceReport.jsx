@@ -90,8 +90,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     hasRoles
   } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
-  const isAnalystRole =
-    currentUser?.roles?.some((role) => role.name === roles.analyst) || false
+  const userRoles = currentUser?.roles
 
   const currentStatus = reportData?.report.currentStatus?.status
   const { data: orgData, isLoading } = useOrganization(
@@ -228,7 +227,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             <>
               <ReportDetails
                 currentStatus={currentStatus}
-                isAnalystRole={isAnalystRole}
+                userRoles={userRoles}
               />
               <ComplianceReportSummary
                 reportID={complianceReportId}

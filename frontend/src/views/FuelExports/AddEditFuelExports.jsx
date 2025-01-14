@@ -281,10 +281,10 @@ export const AddEditFuelExports = () => {
           <BCTypography
             variant="body4"
             color="primary"
-            sx={{ marginY: '2rem' }}
+            my={2}
             component="div"
           >
-            {t('fuelExport:fuelExportSubtitle')}
+            {t('fuelExport:fuelExportGuide')}
           </BCTypography>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>

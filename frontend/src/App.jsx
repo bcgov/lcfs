@@ -36,6 +36,7 @@ import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector.jsx'
 import { useCurrentUser } from './hooks/useCurrentUser'
 import Loading from './components/Loading'
+import { Unauthorized } from './components/Unauthorized'
 
 const router = createBrowserRouter([
   {
@@ -47,6 +48,10 @@ const router = createBrowserRouter([
         path: ROUTES.LOGIN,
         element: <Login />,
         handle: { title: 'Login' }
+      },
+      {
+        path: '/unauthorized',
+        element: <Unauthorized />
       }
     ]
   },
@@ -333,7 +338,7 @@ const router = createBrowserRouter([
         path: ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS,
         element: <AddEditNotionalTransfers />,
         handle: {
-          title: 'New Notional Transfer',
+          title: 'Notional transfer of eligible renewable fuels',
           mode: 'add'
         }
       },
@@ -341,7 +346,7 @@ const router = createBrowserRouter([
         path: ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS,
         element: <AddEditAllocationAgreements />,
         handle: {
-          title: 'New Allocation Agreement',
+          title: 'Allocation agreements',
           mode: 'add'
         }
       },
@@ -349,7 +354,7 @@ const router = createBrowserRouter([
         path: ROUTES.REPORTS_ADD_OTHER_USE_FUELS,
         element: <AddEditOtherUses />,
         handle: {
-          title: 'New Fuel for Other Use',
+          title: 'Fuels for other use',
           mode: 'add'
         }
       },
@@ -357,7 +362,7 @@ const router = createBrowserRouter([
         path: ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS,
         element: <AddEditFinalSupplyEquipments />,
         handle: {
-          title: 'Final Supply Equipment',
+          title: 'Final supply equipment',
           mode: 'add'
         }
       },
@@ -365,7 +370,7 @@ const router = createBrowserRouter([
         path: ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL,
         element: <AddEditFuelSupplies />,
         handle: {
-          title: 'Supply of fuels',
+          title: 'Supply of fuel',
           mode: 'add'
         }
       },

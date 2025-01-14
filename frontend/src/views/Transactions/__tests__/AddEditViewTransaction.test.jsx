@@ -155,6 +155,12 @@ vi.mock('@/hooks/useOrganization', () => ({
   })
 }))
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
+
 const renderComponent = (
   handleMode = 'edit',
   txnType = INITIATIVE_AGREEMENT

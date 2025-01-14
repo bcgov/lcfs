@@ -3,17 +3,23 @@ import { Grid, Box } from '@mui/material'
 import { Role } from '@/components/Role'
 import { roles, govRoles, nonGovRoles } from '@/constants/roles'
 import {
+  // IDIR Cards
   AdminLinksCard,
+  DirectorReviewCard,
+  TransactionsCard,
+  UserSettingsCard,
+
+  // BCeID Cards
   OrgDetailsCard,
   OrgBalanceCard,
   FeedbackCard,
   WebsiteCard,
-  DirectorReviewCard,
-  TransactionsCard,
   OrgTransactionsCard,
-  OrgComplianceReportsCard
+  OrgComplianceReportsCard,
+  OrgUserSettingsCard
 } from './components/cards'
 import OrganizationsSummaryCard from './components/cards/idir/OrganizationsSummaryCard'
+import { ComplianceReportCard } from './components/cards/idir/ComplianceReportCard'
 
 export const Dashboard = () => {
   return (
@@ -64,6 +70,7 @@ export const Dashboard = () => {
           >
             <Role roles={[roles.analyst, roles.compliance_manager]}>
               <TransactionsCard />
+              <ComplianceReportCard />
             </Role>
             <Role roles={[roles.transfers]}>
               <OrgTransactionsCard />
@@ -92,6 +99,14 @@ export const Dashboard = () => {
             </Role>
             <Role roles={[govRoles, roles.administrator]}>
               <AdminLinksCard />
+            </Role>
+
+            {/* User settings */}
+            <Role roles={nonGovRoles}>
+              <OrgUserSettingsCard />
+            </Role>
+            <Role roles={govRoles}>
+              <UserSettingsCard />
             </Role>
           </Box>
         </Grid>

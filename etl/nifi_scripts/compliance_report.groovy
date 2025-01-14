@@ -849,6 +849,9 @@ def prepareStatements(Connection conn) {
  * @return Inserted compliance_report_id.
  */
 def insertComplianceReport(PreparedStatement stmt, Map report, String groupUuid, int version, String supplementalInitiator, String reportingFrequency, Integer currentStatusId, String createUser, String updateUser) {
+    // Generate nickname based on version
+    def nickname = (version == 0) ? "Original Report" : "Supplemental Report ${version}"
+    
     stmt.setInt(1, report.compliance_period_id)
     stmt.setInt(2, report.organization_id)
 
@@ -862,7 +865,7 @@ def insertComplianceReport(PreparedStatement stmt, Map report, String groupUuid,
     stmt.setInt(5, version)
     stmt.setObject(6, supplementalInitiator)
     stmt.setString(7, reportingFrequency)
-    stmt.setString(8, report.nickname)
+    stmt.setString(8, nickname)
     stmt.setString(9, report.supplemental_note)
     stmt.setString(10, createUser)
     stmt.setTimestamp(11, report.create_timestamp ?: Timestamp.valueOf("1970-01-01 00:00:00"))

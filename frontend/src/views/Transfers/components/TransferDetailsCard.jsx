@@ -6,7 +6,11 @@ import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
 import { OrganizationBadge } from '@/views/Transfers/components'
 import { useTranslation } from 'react-i18next'
-import { decimalFormatter } from '@/utils/formatters'
+import {
+  calculateTotalValue,
+  currencyFormatter,
+  formatNumberWithCommas
+} from '@/utils/formatters'
 
 export const TransferDetailsCard = ({
   fromOrgId,
@@ -28,7 +32,8 @@ export const TransferDetailsCard = ({
     marginBottom: '-25px'
   }
 
-  const totalValue = (quantity * pricePerUnit).toFixed(2)
+  const totalValue = calculateTotalValue(quantity, pricePerUnit)
+
   return (
     <BCBox data-test="transfer-details-card">
       <Stack
@@ -45,8 +50,8 @@ export const TransferDetailsCard = ({
         <Stack spacing={1} direction="column" justifyContent="center" pl={2}>
           <BCTypography variant="caption1" textAlign="center">
             {isMobileSize
-              ? `$${decimalFormatter(totalValue)}`
-              : `${quantity} ${t('transfer:complianceUnits')}`}
+              ? currencyFormatter({ value: totalValue })
+              : `${formatNumberWithCommas({ value: quantity })} ${t('transfer:complianceUnits')}`}
           </BCTypography>
           <BCBox
             display="flex"
@@ -71,8 +76,8 @@ export const TransferDetailsCard = ({
           </BCBox>
           <BCTypography variant="caption1" textAlign="center">
             {!isMobileSize
-              ? `$${decimalFormatter(totalValue)}`
-              : `${quantity} ${t('transfer:complianceUnits')}`}
+              ? currencyFormatter({ value: totalValue })
+              : `${formatNumberWithCommas({ value: quantity })} ${t('transfer:complianceUnits')}`}
           </BCTypography>
         </Stack>
         <OrganizationBadge

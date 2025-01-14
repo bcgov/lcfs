@@ -29,6 +29,9 @@ export const AddEditAllocationAgreements = () => {
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'allocationAgreement', 'reports'])
+  const guides = useMemo(() =>
+    t('allocationAgreement:allocationAgreementGuides', { returnObjects: true })
+  )
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
@@ -69,22 +72,28 @@ export const AddEditAllocationAgreements = () => {
     }
   }, [location.state?.message, location.state?.severity])
 
-  const validate = (params, validationFn, errorMessage, alertRef, field = null) => {
-    const value = field ? params.node?.data[field] : params;
+  const validate = (
+    params,
+    validationFn,
+    errorMessage,
+    alertRef,
+    field = null
+  ) => {
+    const value = field ? params.node?.data[field] : params
 
     if (field && params.colDef.field !== field) {
-      return true;
+      return true
     }
 
     if (!validationFn(value)) {
       alertRef.current?.triggerAlert({
         message: errorMessage,
-        severity: 'error',
-      });
-      return false;
+        severity: 'error'
+      })
+      return false
     }
-    return true; // Proceed with the update
-  };
+    return true // Proceed with the update
+  }
 
   const onGridReady = useCallback(
     async (params) => {
@@ -119,7 +128,11 @@ export const AddEditAllocationAgreements = () => {
   )
 
   useEffect(() => {
-    const updatedColumnDefs = allocationAgreementColDefs(optionsData, errors, currentUser)
+    const updatedColumnDefs = allocationAgreementColDefs(
+      optionsData,
+      errors,
+      currentUser
+    )
     setColumnDefs(updatedColumnDefs)
   }, [errors, optionsData, currentUser])
 
@@ -179,7 +192,8 @@ export const AddEditAllocationAgreements = () => {
       if (params.colDef.field === 'transactionPartner') {
         if (params.newValue === currentUser.organization.name) {
           alertRef.current?.triggerAlert({
-            message: 'You cannot select your own organization as the transaction partner.',
+            message:
+              'You cannot select your own organization as the transaction partner.',
             severity: 'error'
           })
           params.node.setDataValue('transactionPartner', '')
@@ -190,12 +204,12 @@ export const AddEditAllocationAgreements = () => {
       const isValid = validate(
         params,
         (value) => {
-          return value !== null && !isNaN(value) && value > 0;
+          return value !== null && !isNaN(value) && value > 0
         },
         'Quantity supplied must be greater than 0.',
         alertRef,
-        'quantity',
-      );
+        'quantity'
+      )
 
       if (!isValid) {
         return
@@ -332,16 +346,21 @@ export const AddEditAllocationAgreements = () => {
       <Grid2 className="add-edit-allocation-agreement-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">
-            {t('allocationAgreement:addAllocationAgreementRowsTitle')}
+            {t('allocationAgreement:allocationAgreementTitle')}
           </BCTypography>
-          <BCTypography
-            variant="body4"
-            color="primary"
-            sx={{ marginY: '2rem' }}
-            component="div"
-          >
-            {t('allocationAgreement:allocationAgreementSubtitle')}
-          </BCTypography>
+          <BCBox my={2}>
+            {guides.map((v, i) => (
+              <BCTypography
+                key={i}
+                variant="body4"
+                color="primary"
+                my={0.5}
+                component="div"
+              >
+                {v}
+              </BCTypography>
+            ))}
+          </BCBox>
         </div>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
