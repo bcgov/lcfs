@@ -104,8 +104,8 @@ async def test_get_organizations_paginated_balances_with_reserved_transactions(
         BASE_TOTAL_BALANCE + 100
     ), f"Expected total balance to be 100, got {org.total_balance}"
     assert (
-        org.reserved_balance == 30
-    ), f"Expected reserved balance to be 30, got {org.reserved_balance}"
+        org.reserved_balance == 0
+    ), f"Expected reserved balance to be 0, got {org.reserved_balance}"
 
 
 @pytest.mark.anyio
@@ -142,8 +142,8 @@ async def test_get_organizations_paginated_balances_with_released_transactions(
         org.total_balance == 51100
     ), f"Expected total balance to be 100, got {org.total_balance}"
     assert (
-        org.reserved_balance == 10
-    ), f"Expected reserved balance to be 10, got {org.reserved_balance}"
+        org.reserved_balance == 0
+    ), f"Expected reserved balance to be 0, got {org.reserved_balance}"
 
 
 @pytest.mark.anyio

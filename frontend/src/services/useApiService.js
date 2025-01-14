@@ -3,10 +3,12 @@ import axios from 'axios'
 import { useKeycloak } from '@react-keycloak/web'
 import { CONFIG } from '@/constants/config'
 import { useSnackbar } from 'notistack'
+import { useAuth } from '@/contexts/AuthContext'
 
 export const useApiService = (opts = {}) => {
   const { keycloak } = useKeycloak()
   const { enqueueSnackbar } = useSnackbar()
+  const { setForbidden } = useAuth()
 
   // useMemo to memoize the apiService instance
   const apiService = useMemo(() => {
@@ -31,7 +33,7 @@ export const useApiService = (opts = {}) => {
     instance.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status >= 400) {
+        if (error.response?.status >= 400 && error.response?.status !== 403) {
           console.error(
             'API Error:',
             error.response.status,
@@ -41,6 +43,10 @@ export const useApiService = (opts = {}) => {
             autoHideDuration: 5000,
             variant: 'error'
           })
+        }
+
+        if (error.response?.status === 403) {
+          setForbidden(true)
         }
 
         return Promise.reject(error)

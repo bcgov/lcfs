@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -51,6 +52,13 @@ export const AssessmentCard = ({
         })
       }
     })
+
+  const filteredChain = useMemo(() => {
+    return chain.filter((report) => {
+      const hasHistory = report.history && report.history.length > 0
+      return hasHistory
+    })
+  }, [chain])
 
   return (
     <BCWidgetCard
@@ -141,21 +149,22 @@ export const AssessmentCard = ({
                 </List>
               </>
             )}
-            {!!chain.length && (
-              <>
-                <BCTypography
-                  sx={{ paddingTop: '16px' }}
-                  component="div"
-                  variant="h6"
-                  color="primary"
-                >
-                  {t('report:reportHistory')}
-                </BCTypography>
-                {chain.map((report) => (
-                  <HistoryCard key={report.version} report={report} />
-                ))}
-              </>
-            )}
+            {filteredChain.length > 0 &&
+              currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
+                <>
+                  <BCTypography
+                    sx={{ paddingTop: '16px' }}
+                    component="div"
+                    variant="h6"
+                    color="primary"
+                  >
+                    {t('report:reportHistory')}
+                  </BCTypography>
+                  {filteredChain.map((report) => (
+                    <HistoryCard key={report.version} report={report} />
+                  ))}
+                </>
+              )}
 
             <Role roles={[roles.supplier]}>
               {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&

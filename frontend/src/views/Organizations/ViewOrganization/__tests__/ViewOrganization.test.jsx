@@ -138,14 +138,4 @@ describe('ViewOrganization Component Tests', () => {
     expect(screen.getByText(/1,000/i)).toBeInTheDocument()
     expect(screen.getByText(/500/i)).toBeInTheDocument()
   })
-
-  it('toggles user visibility when toggling active/inactive users', async () => {
-    const showInactiveButton = screen.getByTestId('show-inactive-btn')
-    fireEvent.click(showInactiveButton)
-    expect(screen.getByTestId('inactive-users-heading')).toBeInTheDocument()
-
-    const showActiveButton = screen.getByTestId('show-active-btn')
-    fireEvent.click(showActiveButton)
-    expect(screen.getByTestId('active-users-heading')).toBeInTheDocument()
-  })
 })

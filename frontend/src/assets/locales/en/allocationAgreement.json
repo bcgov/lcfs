@@ -1,8 +1,11 @@
 {
-  "allocationAgreementTitle": "Allocation Agreement",
+  "allocationAgreementTitle": "Allocation agreements",
   "noAllocationAgreementsFound": "No allocation agreements found",
   "addAllocationAgreementRowsTitle": "Allocation agreements (e.g., allocating responsibility for fuel)",
-  "allocationAgreementSubtitle": "Enter allocation agreement details below",
+  "allocationAgreementGuides": [
+    "Report fuel volumes for which you have an allocation agreement. Report both fuels that you have allocated responsibility to another organization, and fuels you have received responsibly from another organization.",
+    "Fuels that you have received responsibility for must also be reported in fuel supply."
+  ],
   "fuelCodeFieldRequiredError": "Error updating row: Fuel code field required",
   "allocationAgreementColLabels": {
     "allocationTransactionType": "Responsibility",
