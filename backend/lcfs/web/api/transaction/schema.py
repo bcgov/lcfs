@@ -69,10 +69,12 @@ class TransactionBaseSchema(BaseSchema):
 class TransactionViewSchema(BaseSchema):
     transaction_id: int
     transaction_type: str
+    description: Optional[str] = None
     from_organization: Optional[str] = None
     to_organization: str
     quantity: int
     price_per_unit: Optional[float] = None
+    compliance_period: Optional[str] = None
     status: str
     create_date: datetime
     update_date: datetime

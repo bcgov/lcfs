@@ -69,8 +69,13 @@ export const Transactions = () => {
         url: (
           data // Based on the user Type (BCeID or IDIR) navigate to specific view
         ) => {
-          const { transactionId, transactionType, fromOrganization, status } =
-            data.data
+          const {
+            transactionId,
+            transactionType,
+            fromOrganization,
+            status,
+            compliancePeriod
+          } = data.data
           const userOrgName = currentUser?.organization?.name
 
           // Define routes mapping for transaction types
@@ -90,6 +95,10 @@ export const Transactions = () => {
                 ? ROUTES.INITIATIVE_AGREEMENT_VIEW
                 : ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
               edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
+            },
+            ComplianceReport: {
+              view: ROUTES.REPORTS_VIEW,
+              edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
             }
           }
 
@@ -108,6 +117,8 @@ export const Transactions = () => {
             return routeTemplate
               .replace(':transactionId', transactionId)
               .replace(':transferId', transactionId)
+              .replace(':compliancePeriod', compliancePeriod)
+              .replace(':complianceReportId', transactionId)
           } else {
             console.error(
               'No route defined for this transaction type and scenario'
