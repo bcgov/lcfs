@@ -43,5 +43,11 @@
   "lcfsEmail": "lcfs@gov.bc.ca",
   "scrollToTop": "Scroll to top",
   "scrollToBottom": "Scroll to bottom",
-  "Notifications": "Notifications"
+  "Notifications": "Notifications",
+  "unauthorized": {
+    "title": "403 / Unauthorized",
+    "message": "Sorry, you do not have permission to access this page.",
+    "contact": "Contact your LCFS or BCeID administrator or contact",
+    "email": "lcfs@gov.bc.ca"
+  }
 }
