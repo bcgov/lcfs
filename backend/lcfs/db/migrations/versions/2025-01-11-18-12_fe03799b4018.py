@@ -2,7 +2,7 @@
 
 Revision ID: fe03799b4018
 Revises: fa98709e7952
-Create Date: 2025-01-09 18:12:43.683691
+Create Date: 2025-01-11 18:12:43.683691
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "fe03799b4018"
-down_revision = "fa98709e7952"
+down_revision = "d25e7c47659e"
 branch_labels = None
 depends_on = None
 
