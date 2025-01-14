@@ -1,4 +1,5 @@
-import { Outlet, useMatches } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { Outlet, useMatches, useNavigate } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 import { Container } from '@mui/material'
 import Grid from '@mui/material/Unstable_Grid2'
@@ -13,16 +14,25 @@ import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import { useLoadingStore } from '@/stores/useLoadingStore'
 import Loading from '@/components/Loading'
+import { useAuth } from '@/contexts/AuthContext'
 
 export const MainLayout = () => {
   const loading = useLoadingStore((state) => state.loading)
-
+  const navigate = useNavigate()
+  const { forbidden } = useAuth()
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const isGovernmentRole =
     currentUser?.roles?.some(({ name }) => name === t('gov')) ?? false
   const matches = useMatches()
   const pageTitle = matches[matches.length - 1]?.handle?.title || 'LCFS'
+
+  useEffect(() => {
+    // If "forbidden" is set, go to unauthorized page (unless we're already there)
+    if (forbidden && window.location.pathname !== ROUTES.UNAUTHORIZED) {
+      navigate(ROUTES.UNAUTHORIZED)
+    }
+  }, [forbidden, navigate])
 
   return (
     <RequireAuth redirectTo={ROUTES.LOGIN}>
