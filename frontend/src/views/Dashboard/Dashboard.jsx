@@ -19,6 +19,7 @@ import {
   OrgUserSettingsCard
 } from './components/cards'
 import OrganizationsSummaryCard from './components/cards/idir/OrganizationsSummaryCard'
+import { FuelCodeCard } from './components/cards/idir/FuelCodeCard'
 
 export const Dashboard = () => {
   return (
@@ -67,9 +68,15 @@ export const Dashboard = () => {
           <Box
             sx={{ mx: { lg: 2 }, mt: { lg: 5 }, mb: { lg: 3 }, px: { lg: 1 } }}
           >
-            <Role roles={[roles.analyst, roles.compliance_manager]}>
-              <TransactionsCard />
+            <Role roles={govRoles}>
+              <Role roles={[roles.analyst, roles.compliance_manager]}>
+                <TransactionsCard />
+              </Role>
+              <Role roles={[roles.analyst]}>
+                <FuelCodeCard />
+              </Role>
             </Role>
+
             <Role roles={[roles.transfers]}>
               <OrgTransactionsCard />
             </Role>
