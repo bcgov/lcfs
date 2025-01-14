@@ -12,6 +12,12 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
+vi.mock('@/contexts/AuthContext', () => ({
+  useAuth: () => ({
+    setForbidden: vi.fn()
+  })
+}))
+
 describe('Role.jsx', () => {
   describe('currentUser is null', () => {
     it('should render loading', () => {
