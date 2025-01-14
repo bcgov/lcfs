@@ -4,6 +4,7 @@ import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
 import { Fab, Stack, Tooltip } from '@mui/material'
+import withComplianceReportAccess from '@/utils/withComplianceReportAcess'
 import BCTypography from '@/components/BCTypography'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
@@ -18,7 +19,7 @@ const iconStyle = {
   height: '2rem',
   color: colors.white.main
 }
-export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
+const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
   const { t } = useTranslation(['common', 'report'])
   const [modalData, setModalData] = useState(null)
   const alertRef = useRef()
@@ -141,3 +142,7 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
     </>
   )
 }
+
+const ViewLegacyComplianceReportWithAccess = withComplianceReportAccess(ViewLegacyComplianceReport);
+
+export default ViewLegacyComplianceReportWithAccess

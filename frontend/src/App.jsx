@@ -25,12 +25,12 @@ import { ApiDocs } from './components/ApiDocs'
 import { Login } from './components/Login'
 import { NotFound } from './components/NotFound'
 import PublicLayout from './layouts/PublicLayout'
-import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
-import { AddEditOtherUses } from './views/OtherUses/AddEditOtherUses'
-import { AddEditFinalSupplyEquipments } from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
-import { AddEditFuelSupplies } from './views/FuelSupplies/AddEditFuelSupplies'
-import { AddEditFuelExports } from './views/FuelExports/AddEditFuelExports'
-import { AddEditAllocationAgreements } from './views/AllocationAgreements/AddEditAllocationAgreements'
+import AddEditNotionalTransfersWithAccess from './views/NotionalTransfers/AddEditNotionalTransfers'
+import AddEditOtherUsesWithAccess from './views/OtherUses/AddEditOtherUses'
+import AddEditFinalSupplyEquipmentsWithAccess from './views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
+import AddEditFuelSuppliesWithAccess from './views/FuelSupplies/AddEditFuelSupplies'
+import AddEditFuelExportsWithAccess from './views/FuelExports/AddEditFuelExports'
+import AddEditAllocationAgreementsWithAccess from './views/AllocationAgreements/AddEditAllocationAgreements'
 import { logout } from '@/utils/keycloak.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector.jsx'
@@ -336,7 +336,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS,
-        element: <AddEditNotionalTransfers />,
+        element: <AddEditNotionalTransfersWithAccess />,
         handle: {
           title: 'Notional transfer of eligible renewable fuels',
           mode: 'add'
@@ -344,7 +344,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS,
-        element: <AddEditAllocationAgreements />,
+        element: <AddEditAllocationAgreementsWithAccess />,
         handle: {
           title: 'Allocation agreements',
           mode: 'add'
@@ -352,7 +352,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS_ADD_OTHER_USE_FUELS,
-        element: <AddEditOtherUses />,
+        element: <AddEditOtherUsesWithAccess />,
         handle: {
           title: 'Fuels for other use',
           mode: 'add'
@@ -360,7 +360,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS,
-        element: <AddEditFinalSupplyEquipments />,
+        element: <AddEditFinalSupplyEquipmentsWithAccess />,
         handle: {
           title: 'Final supply equipment',
           mode: 'add'
@@ -368,7 +368,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL,
-        element: <AddEditFuelSupplies />,
+        element: <AddEditFuelSuppliesWithAccess />,
         handle: {
           title: 'Supply of fuel',
           mode: 'add'
@@ -376,7 +376,7 @@ const router = createBrowserRouter([
       },
       {
         path: ROUTES.REPORTS_ADD_FUEL_EXPORTS,
-        element: <AddEditFuelExports />,
+        element: <AddEditFuelExportsWithAccess />,
         handle: {
           title: 'Export fuels',
           mode: 'add'

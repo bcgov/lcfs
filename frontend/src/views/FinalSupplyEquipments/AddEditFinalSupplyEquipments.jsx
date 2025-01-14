@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
+import withComplianceReportAccess from '@/utils/withComplianceReportAcess'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { defaultColDef, finalSupplyEquipmentColDefs } from './_schema'
 import {
@@ -16,7 +17,7 @@ import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { isArrayEmpty } from '@/utils/formatters'
 
-export const AddEditFinalSupplyEquipments = () => {
+const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
   const [gridApi, setGridApi] = useState(null)
@@ -323,3 +324,7 @@ export const AddEditFinalSupplyEquipments = () => {
     )
   )
 }
+
+const AddEditFinalSupplyEquipmentsWithAccess = withComplianceReportAccess(AddEditFinalSupplyEquipments)
+
+export default AddEditFinalSupplyEquipmentsWithAccess

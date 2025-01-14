@@ -6,6 +6,7 @@ import {
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
 import { cleanEmptyStringValues } from '@/utils/formatters'
+import withComplianceReportAccess from '@/utils/withComplianceReportAcess'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -19,7 +20,7 @@ import {
 } from './_schema'
 import * as ROUTES from '@/constants/routes/routes.js'
 
-export const AddEditOtherUses = () => {
+const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
   const [errors, setErrors] = useState({})
 
@@ -395,3 +396,7 @@ export const AddEditOtherUses = () => {
     )
   )
 }
+
+const AddEditOtherUsesWithAccess = withComplianceReportAccess(AddEditOtherUses)
+
+export default AddEditOtherUsesWithAccess

@@ -7,6 +7,7 @@ import {
   useSaveFuelExport
 } from '@/hooks/useFuelExport'
 import { isArrayEmpty } from '@/utils/formatters'
+import withComplianceReportAccess from '@/utils/withComplianceReportAcess'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -19,7 +20,7 @@ import {
   PROVISION_APPROVED_FUEL_CODE
 } from './_schema'
 
-export const AddEditFuelExports = () => {
+const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
   const [, setGridApi] = useState()
@@ -316,3 +317,7 @@ export const AddEditFuelExports = () => {
     )
   )
 }
+
+const AddEditFuelExportsWithAccess = withComplianceReportAccess(AddEditFuelExports)
+
+export default AddEditFuelExportsWithAccess

@@ -1,9 +1,9 @@
 import { useGetComplianceReport } from '@/hooks/useComplianceReports.js'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import Loading from '@/components/Loading.jsx'
-import { ViewLegacyComplianceReport } from '@/views/ComplianceReports/ViewLegacyComplianceReport.jsx'
+import ViewLegacyComplianceReportWithAccess  from '@/views/ComplianceReports/ViewLegacyComplianceReport.jsx'
 import { useParams } from 'react-router-dom'
-import { EditViewComplianceReport } from '@/views/ComplianceReports/EditViewComplianceReport.jsx'
+import EditViewComplianceReportWithAccess from '@/views/ComplianceReports/EditViewComplianceReport.jsx'
 
 export const ComplianceReportViewSelector = () => {
   const { complianceReportId } = useParams()
@@ -25,13 +25,13 @@ export const ComplianceReportViewSelector = () => {
   }
 
   return reportData.report.legacyId ? (
-    <ViewLegacyComplianceReport
+    <ViewLegacyComplianceReportWithAccess
       reportData={reportData}
       error={error}
       isError={isError}
     />
   ) : (
-    <EditViewComplianceReport
+    <EditViewComplianceReportWithAccess
       reportData={reportData}
       error={error}
       isError={isError}
