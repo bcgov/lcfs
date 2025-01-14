@@ -1,5 +1,6 @@
 export const DASHBOARD = '/'
 export const LOGIN = '/login'
+export const UNAUTHORIZED = '/unauthorized'
 
 export const TRANSACTIONS = '/transactions'
 export const TRANSACTIONS_ADD = `${TRANSACTIONS}/add`

@@ -20,6 +20,7 @@ import {
 } from './components/cards'
 import OrganizationsSummaryCard from './components/cards/idir/OrganizationsSummaryCard'
 import { FuelCodeCard } from './components/cards/idir/FuelCodeCard'
+import { ComplianceReportCard } from './components/cards/idir/ComplianceReportCard'
 
 export const Dashboard = () => {
   return (
@@ -71,6 +72,7 @@ export const Dashboard = () => {
             <Role roles={govRoles}>
               <Role roles={[roles.analyst, roles.compliance_manager]}>
                 <TransactionsCard />
+                <ComplianceReportCard />
               </Role>
               <Role roles={[roles.analyst]}>
                 <FuelCodeCard />
