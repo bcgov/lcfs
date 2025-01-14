@@ -5,8 +5,10 @@ import { Checkbox, FormControlLabel } from '@mui/material'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 
-export const CategoryCheckbox = () => {
+export const CategoryCheckbox = ({ isDisabled = false }) => {
+  const { t } = useTranslation(['transfer'])
   const { transferId } = useParams()
   const queryClient = useQueryClient()
   const setLoading = useLoadingStore((state) => state.setLoading)
@@ -36,15 +38,14 @@ export const CategoryCheckbox = () => {
             data-test="checkbox"
             checked={transferData?.transferCategory?.category === 'D'}
             onClick={(e) => updateCategory(e.target.checked ? 'D' : null)}
+            disabled={isDisabled}
           />
         }
         label={
-          <BCTypography variant="body2">
-            Select the checkbox to set the transfer as{' '}
-            <strong>Category D</strong> if the price is significantly less than
-            fair market value. This will override the default category
-            determined by the agreement and approval dates indicated above.
-          </BCTypography>
+          <BCTypography
+            variant="body2"
+            dangerouslySetInnerHTML={{ __html: t('categoryCheckbox') }}
+          />
         }
       />
     </div>
