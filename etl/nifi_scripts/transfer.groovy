@@ -41,6 +41,7 @@ def SOURCE_QUERY = """
         ct.date_of_written_agreement AS agreement_date,
         ct.trade_effective_date AS transaction_effective_date,
         ct.fair_market_value_per_credit AS price_per_unit,
+        ctt.the_type as the_type,
         ct.number_of_credits AS quantity,
         ct.create_user_id as create_user,
         ct.update_user_id as update_user,
@@ -146,6 +147,7 @@ def SOURCE_QUERY = """
         ctc.category,
         cts.status,
         ctzr.description,
+        ctt.the_type,
         internal_comment.role_names;
       """
 
@@ -354,15 +356,27 @@ def processTransactions(String currentStatus, ResultSet rs, PreparedStatement st
     def fromTransactionId = null
     def toTransactionId = null
 
+    def transferType = rs.getString('the_type')
+    def isBuy = (transferType == 'Buy')
+
     switch (currentStatus) {
         case ['Draft', 'Deleted', 'Refused', 'Declined', 'Rescinded']:
             break
         case ['Sent', 'Submitted', 'Recommended']:
-            fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), true)
+            if (isBuy) {
+                fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), false)
+            } else {
+                fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), true)
+            }
             break
         case 'Recorded':
-            fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), true)
-            toTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), false)
+            if (isBuy) {
+                fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), false)
+                toTransactionId   = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), true)
+            } else {
+                fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), true)
+                toTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), false)
+            }
             break
     }
 
