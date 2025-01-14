@@ -23,7 +23,7 @@
   "addRow": "Add row",
   "rows": "rows",
   "fuelCodeColLabels": {
-    "fuelCodeId": "Fuel Code Id",
+    "fuelCodeId": "Fuel Code ID",
     "status": "Status",
     "prefix": "Prefix",
     "fuelSuffix": "Iteration",
