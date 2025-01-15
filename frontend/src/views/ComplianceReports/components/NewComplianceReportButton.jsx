@@ -8,14 +8,11 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Menu, MenuItem } from '@mui/material'
-import { useRef, useState } from 'react'
+import { useRef, useState, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 
-export const NewComplianceReportButton = ({
-  handleNewReport,
-  isButtonLoading,
-  setIsButtonLoading
-}) => {
+export const NewComplianceReportButton = forwardRef((props, ref) => {
+  const { handleNewReport, isButtonLoading, setIsButtonLoading } = props
   const { data: periods, isLoading, isFetched } = useCompliancePeriod()
   const { data: reportedPeriods } = useGetOrgComplianceReportReportedYears()
 
@@ -55,7 +52,7 @@ export const NewComplianceReportButton = ({
   return (
     <div>
       <BCButton
-        ref={buttonRef}
+        ref={ref}
         isLoading={isLoading || isButtonLoading}
         variant="contained"
         size="small"
@@ -110,6 +107,6 @@ export const NewComplianceReportButton = ({
       )}
     </div>
   )
-}
+})
 
 NewComplianceReportButton.displayName = 'NewComplianceReportButton'
