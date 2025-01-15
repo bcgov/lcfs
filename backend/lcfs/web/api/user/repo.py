@@ -56,7 +56,7 @@ class UserRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
 
-    def apply_filters(self, pagination, conditions):
+    def apply_filters(self, pagination, conditions, full_name):
         role_filter_present = False
         for filter in pagination.filters:
             filter_value = filter.filter
@@ -83,25 +83,8 @@ class UserRepository:
                     )
                 )
             elif filter.field == "first_name":
-                txt = filter_value.split(" ")
-                field1 = get_field_for_filter(UserProfile, "first_name")
-                conditions.append(
-                    apply_filter_conditions(
-                        field1,
-                        txt[0],
-                        filter_option,
-                        filter_type,
-                    )
-                )
-                field2 = get_field_for_filter(UserProfile, "last_name")
-                conditions.append(
-                    apply_filter_conditions(
-                        field2,
-                        txt[1] if len(txt) > 1 else "",
-                        filter_option,
-                        filter_type,
-                    )
-                )
+                name_filter = full_name.ilike(f"%{filter_value}%")
+                conditions.append(name_filter)
             else:
                 field = get_field_for_filter(UserProfile, filter.field)
                 conditions.append(
@@ -215,7 +198,7 @@ class UserRepository:
     async def get_users_paginated(
         self,
         pagination: PaginationRequestSchema,
-    ) -> List[UserBaseSchema]:
+    ) -> tuple[list[UserBaseSchema], int]:
         """
         Queries users from the database with optional filters for username, surname,
         organization, and active status. Supports pagination and sorting.
@@ -233,9 +216,13 @@ class UserRepository:
         # Build the base query statement
         conditions = []
         role_filter_present = False
+        full_name = func.concat_ws(" ", UserProfile.first_name, UserProfile.last_name)
+
         if pagination.filters and len(pagination.filters) > 0:
             try:
-                role_filter_present = self.apply_filters(pagination, conditions)
+                role_filter_present = self.apply_filters(
+                    pagination, conditions, full_name
+                )
             except Exception as e:
                 raise ValueError(f"Invalid filter provided: {pagination.filters}.")
 
@@ -243,7 +230,10 @@ class UserRepository:
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
         # get distinct profile ids from UserProfile
-        unique_ids_query = select(UserProfile).where(and_(*conditions))
+        unique_ids_query = select(
+            UserProfile,
+            full_name,
+        ).where(and_(*conditions))
         if role_filter_present:
             unique_ids_query = unique_ids_query.join(
                 UserRole, UserProfile.user_profile_id == UserRole.user_profile_id
