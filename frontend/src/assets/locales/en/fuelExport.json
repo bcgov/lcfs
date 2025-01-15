@@ -23,7 +23,7 @@
     "units": "Units",
     "complianceUnits": "Compliance units",
     "targetCI": "Target CI",
-    "ciOfFuel": "CI of fuel",
+    "ciOfFuel": "RCI",
     "uci": "UCI",
     "energyDensity": "Energy density",
     "eer": "EER",
