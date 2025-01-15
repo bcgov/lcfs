@@ -2,7 +2,7 @@ import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
 import { ROUTES } from '@/constants/routes'
-import { useTransactionCounts } from '@/hooks/useDashboard'
+import { useFuelCodeCounts } from '@/hooks/useDashboard'
 import { List, ListItemButton, Stack } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -23,7 +23,7 @@ const CountDisplay = ({ count }) => (
 export const FuelCodeCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
-  const { data: counts, isLoading } = useTransactionCounts()
+  const { data: counts, isLoading } = useFuelCodeCounts()
 
   const handleNavigation = () => {
     navigate(ROUTES.FUELCODES, {
@@ -86,7 +86,7 @@ export const FuelCodeCard = () => {
               <ListItemButton component="a" onClick={handleNavigation}>
                 {renderLinkWithCount(
                   t('dashboard:fuelCodes.fcInProgress'),
-                  counts?.transfers || 0,
+                  counts?.draftFuelCodes || 0,
                   handleNavigation
                 )}
               </ListItemButton>

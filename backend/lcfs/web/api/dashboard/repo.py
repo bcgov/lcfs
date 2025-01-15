@@ -15,6 +15,7 @@ from lcfs.db.models.compliance.OrgComplianceReportCountView import (
 from lcfs.db.models.compliance.ComplianceReportCountView import (
     ComplianceReportCountView,
 )
+from lcfs.db.models.fuel.FuelCodeCountView import FuelCodeCountView
 
 logger = structlog.get_logger(__name__)
 
@@ -88,4 +89,17 @@ class DashboardRepository:
 
         return {
             "pending_reviews": row.pending_reviews
+        }
+
+    @repo_handler
+    async def get_fuel_code_counts(self):
+        query = select(
+            FuelCodeCountView.count
+        ).where(FuelCodeCountView.status == "Draft")
+
+        result = await self.db.execute(query)
+        row = result.fetchone()
+
+        return {
+            "draft_fuel_codes": getattr(row, "count", 0)
         }
