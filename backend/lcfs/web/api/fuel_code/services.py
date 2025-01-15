@@ -68,14 +68,20 @@ class FuelCodeServices:
         fp_locations = await self.repo.get_fp_locations()
         facility_nameplate_capacity_units = [unit.value for unit in QuantityUnitsEnum]
 
-        field_options_results_dict = {}
+        # Use a set to remove duplicates
+        field_options_results_dict = {
+            "company": set(),
+            "feedstock": set(),
+            "feedstock_location": set(),
+            "feedstock_misc": set(),
+            "former_company": set(),
+            "contact_name": set(),
+            "contact_email": set(),
+        }
         for row in field_options_results:
             for key, value in row._mapping.items():
                 if value is None or value == "":  # Skip empty strings or null values
                     continue
-                if key not in field_options_results_dict:
-                    # Use a set to remove duplicates
-                    field_options_results_dict[key] = set()
                 field_options_results_dict[key].add(value)
 
         field_options = {
