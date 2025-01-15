@@ -15,6 +15,7 @@ SELECT
         ct.date_of_written_agreement AS agreement_date,
         ct.trade_effective_date AS transaction_effective_date,
         ct.fair_market_value_per_credit AS price_per_unit,
+        ctt.the_type as the_type,
         ct.number_of_credits AS quantity,
         ct.create_user_id as create_user,
         ct.update_user_id as update_user,
@@ -70,7 +71,10 @@ SELECT
         ct.fair_market_value_per_credit,
         ct.number_of_credits,
         ctc.category,
-        cts.status;
+        cts.status,
+        ctzr.description,
+        ctt.the_type,
+        internal_comment.role_names;
       """
 
 def COMMENT_QUERY = '''
@@ -368,15 +372,27 @@ def processTransactions(String currentStatus, ResultSet rs, PreparedStatement st
     def fromTransactionId = null
     def toTransactionId = null
 
+    def transferType = rs.getString('the_type')
+    def isBuy = (transferType == 'Buy')
+
     switch (currentStatus) {
         case ['Draft', 'Deleted', 'Refused', 'Declined', 'Rescinded']:
             break
         case ['Sent', 'Submitted', 'Recommended']:
-            fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), true, getUserNameStmt)
+            if (isBuy) {
+                fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), false, getUserNameStmt)
+            } else {
+                fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), true, getUserNameStmt)
+            }
             break
         case 'Recorded':
-            fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), true, getUserNameStmt)
-            toTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), false, getUserNameStmt)
+            if (isBuy) {
+                fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), false, getUserNameStmt)
+                toTransactionId   = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), true, getUserNameStmt)
+            } else {
+                fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), true, getUserNameStmt)
+                toTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), false, getUserNameStmt)
+            }
             break
     }
 
