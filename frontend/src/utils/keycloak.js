@@ -35,28 +35,14 @@ export const logout = () => {
 }
 
 export const refreshToken = () => {
-  // Attempt to update the token if it will expire in the next 60 seconds
   keycloak
     .updateToken(60) // Minimum validity in seconds
     .then((refreshed) => {
       if (refreshed) {
-        // Token was refreshed successfully
         console.log('Token refreshed')
-      } else {
-        // Token is still valid, log the remaining time
-        // console.log(
-        //   'Token not refreshed, valid for',
-        //   Math.round(
-        //     keycloak.tokenParsed.exp +
-        //       keycloak.timeSkew -
-        //       new Date().getTime() / 1000
-        //   ),
-        //   'seconds'
-        // )
       }
     })
     .catch(() => {
-      // Failed to refresh the token, log the error and logout the user
       console.error('Failed to refresh token')
       logout()
     })
