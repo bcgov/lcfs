@@ -12,6 +12,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { DownloadButton } from '@/components/DownloadButton'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useApiService } from '@/services/useApiService'
 import { roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
@@ -20,7 +21,8 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 export const Organizations = () => {
   const { t } = useTranslation(['common', 'org'])
   const gridRef = useRef()
-  const [gridKey, setGridKey] = useState('organizations-grid')
+  const downloadButtonRef = useRef(null);
+  const [gridKey, setGridKey] = useState(`organizations-grid`)
   const handleGridKey = useCallback(() => {
     setGridKey('organizations-grid')
   }, [])
@@ -41,6 +43,7 @@ export const Organizations = () => {
   const [isDownloadingUsers, setIsDownloadingUsers] = useState(false)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [resetGridFn, setResetGridFn] = useState(null)
 
   useEffect(() => {
     if (location.state?.message) {
@@ -86,6 +89,16 @@ export const Organizations = () => {
     []
   )
 
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
+
   return (
     <>
       <div>
@@ -128,11 +141,20 @@ export const Organizations = () => {
           dataTest="download-org-button"
         />
         <DownloadButton
+          ref={downloadButtonRef}
           onDownload={handleDownloadUsers}
           isDownloading={isDownloadingUsers}
           label={t('org:userDownloadBtn')}
           downloadLabel={`${t('org:userDownloadBtn')}...`}
           dataTest="download-user-button"
+        />
+        <ClearFiltersButton
+          onClick={handleClearFilters}
+          sx={{
+            height: downloadButtonRef.current?.offsetHeight || '36px',
+            minWidth: 'fit-content',
+            whiteSpace: 'nowrap'
+          }}
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
@@ -148,6 +170,7 @@ export const Organizations = () => {
           handleGridKey={handleGridKey}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
+          onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
     </>
