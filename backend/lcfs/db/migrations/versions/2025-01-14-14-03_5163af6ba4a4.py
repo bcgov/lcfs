@@ -2,7 +2,7 @@
 
 
 Revision ID: 5163af6ba4a4
-Revises: d25e7c47659e
+Revises: f78e53370ed2
 Create Date: 2025-01-14 14:03:50.975682
 
 """
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "5163af6ba4a4"
-down_revision = "d25e7c47659e"
+down_revision = "f78e53370ed2"
 branch_labels = None
 depends_on = None
 
