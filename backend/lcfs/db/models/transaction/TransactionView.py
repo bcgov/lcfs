@@ -26,6 +26,7 @@ class TransactionView(BaseModel):
     # id and type columns are defined as a composite primary key.
     transaction_id = Column(Integer, primary_key=True)
     transaction_type = Column(String, primary_key=True)
+    description = Column(String)
     from_organization_id = Column(Integer)
     from_organization = Column(String)
     to_organization_id = Column(Integer)

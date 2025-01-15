@@ -49,5 +49,6 @@
     "message": "Sorry, you do not have permission to access this page.",
     "contact": "Contact your LCFS or BCeID administrator or contact",
     "email": "lcfs@gov.bc.ca"
-  }
+  },
+  "ClearFilters": "Clear filters"
 }

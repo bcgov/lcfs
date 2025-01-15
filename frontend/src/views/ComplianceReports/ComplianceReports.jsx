@@ -2,7 +2,7 @@ import { Stack } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState  } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Role } from '@/components/Role'
@@ -14,12 +14,14 @@ import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
 import { defaultSortModel, reportsColDefs } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import BCTypography from '@/components/BCTypography'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [alertMessage, setAlertMessage] = useState('')
   const [isButtonLoading, setIsButtonLoading] = useState(false)
+  const [resetGridFn, setResetGridFn] = useState(null)
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`compliance-reports-grid`)
 
@@ -27,6 +29,7 @@ export const ComplianceReports = () => {
   const alertRef = useRef()
   const navigate = useNavigate()
   const location = useLocation()
+  const newButtonRef = useRef(null);
   const { hasRoles, data: currentUser } = useCurrentUser()
 
   const gridOptions = useMemo(
@@ -96,6 +99,16 @@ export const ComplianceReports = () => {
     []
   )
 
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
+
   return (
     <>
       <div>
@@ -123,6 +136,7 @@ export const ComplianceReports = () => {
       >
         <Role roles={[roles.supplier]}>
           <NewComplianceReportButton
+            ref={newButtonRef}
             handleNewReport={(option) => {
               createComplianceReport({
                 compliancePeriod: option.description,
@@ -134,6 +148,14 @@ export const ComplianceReports = () => {
             setIsButtonLoading={setIsButtonLoading}
           />
         </Role>
+        <ClearFiltersButton
+          onClick={handleClearFilters}
+          sx={{
+            height: newButtonRef.current?.offsetHeight || '36px',
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        />
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
           <BCDataGridServer
             gridRef={gridRef}
@@ -155,6 +177,7 @@ export const ComplianceReports = () => {
             handleGridKey={handleGridKey}
             enableCopyButton={false}
             defaultColDef={defaultColDef}
+            onSetResetGrid={handleSetResetGrid}
           />
         </BCBox>
       </Stack>
