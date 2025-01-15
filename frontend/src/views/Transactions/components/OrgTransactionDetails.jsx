@@ -74,12 +74,7 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
   return (
     <Grid container spacing={2}>
       <Grid item xs={12} sm={11} md={8} lg={6}>
-        <BCWidgetCard
-          component="div"
-          disableHover={true}
-          title={title}
-          content={content}
-        />
+        <BCWidgetCard component="div" title={title} content={content} />
       </Grid>
     </Grid>
   )
