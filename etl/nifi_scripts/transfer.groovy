@@ -5,36 +5,10 @@ import java.sql.ResultSet
 import java.time.OffsetDateTime
 import java.sql.Timestamp
 
-log.warn("**** STARTING TRANSFER ETL ****")
+log.warn('**** STARTING TRANSFER ETL ****')
 
 def SOURCE_QUERY = """
-          WITH
-        internal_comment AS (
-          SELECT
-            ctc.id,
-            ctc.credit_trade_id,
-            ctc.credit_trade_comment,
-            ctc.create_user_id,
-            ctc.create_timestamp,
-            STRING_AGG (r."name", '; ') AS role_names
-          FROM
-            credit_trade_comment ctc
-            JOIN "user" u ON u.id = ctc.create_user_id
-            AND u.organization_id = 1
-            AND ctc.is_privileged_access = TRUE
-            JOIN user_role ur ON ur.user_id = u.id
-            JOIN "role" r ON ur.role_id = r.id
-          GROUP BY
-            ctc.id,
-            ctc.credit_trade_id,
-            ctc.credit_trade_comment,
-            ctc.create_user_id,
-            ctc.create_timestamp
-          ORDER BY
-            ctc.credit_trade_id,
-            ctc.create_timestamp
-        )
-      SELECT
+SELECT
         ct.id AS transfer_id,
         ct.initiator_id AS from_organization_id,
         ct.respondent_id AS to_organization_id,
@@ -47,18 +21,6 @@ def SOURCE_QUERY = """
         ct.update_user_id as update_user,
         ct.update_timestamp as update_date,
         ct.create_timestamp  as create_date,
-        -- Aggregate comments from initiator's organization
-        COALESCE(
-          ctzr.description,
-          STRING_AGG (DISTINCT from_ctc.credit_trade_comment, '; ')
-        ) AS from_org_comment,
-        -- Aggregate comments from respondent's organization
-        STRING_AGG (DISTINCT to_ctc.credit_trade_comment, '; ') AS to_org_comment,
-        -- Aggregate comments from government with internal comment handling
-        STRING_AGG (DISTINCT gov_ctc.credit_trade_comment, '; ') AS gov_comment,
-        -- JSON aggregation for internal comments
-        json_agg (row_to_json (internal_comment)) AS internal_comments,
-        -- JSON aggregation for credit trade history
         json_agg (
           json_build_object (
             'transfer_id',
@@ -96,42 +58,6 @@ def SOURCE_QUERY = """
         JOIN credit_trade_type ctt ON ct.type_id = ctt.id
         LEFT OUTER JOIN credit_trade_category ctc ON ct.trade_category_id = ctc.id
         JOIN credit_trade_status cts ON ct.status_id = cts.id
-        LEFT JOIN credit_trade_zero_reason ctzr ON ctzr.id = ct.zero_reason_id
-        AND ctzr.reason = 'Internal'
-        -- Join for Initiator Comments
-        LEFT JOIN credit_trade_comment from_ctc ON from_ctc.credit_trade_id = ct.id
-        AND from_ctc.create_user_id IN (
-          SELECT
-            u.id
-          FROM
-            "user" u
-          WHERE
-            u.organization_id = ct.initiator_id
-        )
-        -- Join for Respondent Comments
-        LEFT JOIN credit_trade_comment to_ctc ON to_ctc.credit_trade_id = ct.id
-        AND to_ctc.create_user_id IN (
-          SELECT
-            u.id
-          FROM
-            "user" u
-          WHERE
-            u.organization_id = ct.respondent_id
-        )
-        -- Join for Government Comments
-        LEFT JOIN credit_trade_comment gov_ctc ON gov_ctc.credit_trade_id = ct.id
-        AND gov_ctc.create_user_id IN (
-          SELECT
-            u.id
-          FROM
-            "user" u
-          WHERE
-            u.organization_id = 1
-            AND gov_ctc.is_privileged_access = FALSE
-        )
-        -- Join the internal comment logic for role-based filtering and audience_scope
-        LEFT JOIN internal_comment ON internal_comment.credit_trade_id = ct.id
-        -- Join for credit trade history
         LEFT JOIN credit_trade_history cth ON cth.credit_trade_id = ct.id
         JOIN credit_trade_status cts_history ON cth.status_id = cts_history.id
       WHERE
@@ -151,6 +77,54 @@ def SOURCE_QUERY = """
         internal_comment.role_names;
       """
 
+def COMMENT_QUERY = '''
+    SELECT
+        ct.id AS credit_trade_id,
+        MAX(CASE
+            WHEN u.organization_id = ct.initiator_id THEN ctc.credit_trade_comment
+        END) AS from_org_comment,
+        MAX(CASE
+            WHEN u.organization_id = ct.respondent_id THEN ctc.credit_trade_comment
+        END) AS to_org_comment,
+        MAX(CASE
+            WHEN u.organization_id = 1 AND ctc.is_privileged_access = FALSE THEN ctc.credit_trade_comment
+        END) AS gov_comment
+    FROM
+        credit_trade ct
+        LEFT JOIN credit_trade_comment ctc ON ctc.credit_trade_id = ct.id
+        LEFT JOIN "user" u ON ctc.create_user_id = u.id
+    WHERE
+        ct.id = ?
+    GROUP BY
+        ct.id;
+'''
+
+def INTERNAL_COMMENT_QUERY = """
+    SELECT
+        ctc.id,
+        ctc.credit_trade_id,
+        ctc.credit_trade_comment,
+        ctc.create_user_id,
+        ctc.create_timestamp,
+        ctc.update_timestamp,
+        STRING_AGG (r."name", '; ') AS role_names
+    FROM
+        credit_trade_comment ctc
+        JOIN "user" u ON u.id = ctc.create_user_id
+        AND u.organization_id = 1
+        AND ctc.is_privileged_access = TRUE
+        JOIN user_role ur ON ur.user_id = u.id
+        JOIN "role" r ON ur.role_id = r.id
+    WHERE ctc.credit_trade_id = ?
+    GROUP BY
+        ctc.id, ctc.credit_trade_id, ctc.credit_trade_comment,
+        ctc.create_user_id, ctc.create_timestamp
+    ORDER BY
+        ctc.credit_trade_id, ctc.create_timestamp;
+"""
+
+def USER_ID_QUERY = 'select keycloak_username from user_profile up where user_profile_id = ? limit 1'
+
 // Fetch connections to both the source and destination databases
 def sourceDbcpService = context.controllerServiceLookup.getControllerService('3245b078-0192-1000-ffff-ffffba20c1eb')
 def destinationDbcpService = context.controllerServiceLookup.getControllerService('3244bf63-0192-1000-ffff-ffffc8ec6d93')
@@ -169,6 +143,7 @@ try {
     def statements = prepareStatements(destinationConn)
 
     destinationConn.createStatement().execute('DROP FUNCTION IF EXISTS refresh_transaction_aggregate() CASCADE;')
+    destinationConn.createStatement().execute('DROP FUNCTION IF EXISTS refresh_mv_transaction_count() CASCADE;')
     destinationConn.createStatement().execute("""
         CREATE OR REPLACE FUNCTION refresh_transaction_aggregate()
         RETURNS void AS \$\$
@@ -177,8 +152,19 @@ try {
         END;
         \$\$ LANGUAGE plpgsql;
     """)
+    destinationConn.createStatement().execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_transaction_count()
+        RETURNS void AS \$\$
+        BEGIN
+            -- Temporarily disable the materialized view refresh
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
 
     PreparedStatement sourceStmt = sourceConn.prepareStatement(SOURCE_QUERY)
+    PreparedStatement commentStmt = sourceConn.prepareStatement(COMMENT_QUERY)
+    PreparedStatement internalCommentStmt = sourceConn.prepareStatement(INTERNAL_COMMENT_QUERY)
+    PreparedStatement getUserNameStmt = destinationConn.prepareStatement(USER_ID_QUERY)
     ResultSet resultSet = sourceStmt.executeQuery()
 
     int recordCount = 0
@@ -186,10 +172,7 @@ try {
     while (resultSet.next()) {
         recordCount++
         def jsonSlurper = new JsonSlurper()
-        def internalComments = resultSet.getString('internal_comments')
         def creditTradeHistory = resultSet.getString('credit_trade_history')
-
-        def internalCommentsJson = internalComments ? jsonSlurper.parseText(internalComments) : []
         def creditTradeHistoryJson = creditTradeHistory ? jsonSlurper.parseText(creditTradeHistory) : []
 
         // First, determine if the transfer already exists
@@ -206,30 +189,38 @@ try {
             recommendationValue = 'Record'  // matches "Record" in the transfer_recommendation_enum
         } else if (creditTradeHistoryJson.any { it.transfer_status == 'Not Recommended' }) {
             recommendationValue = 'Refuse'  // matches "Refuse" in the transfer_recommendation_enum
-        }
+    }
 
         // Only if transfer does not exist, proceed to create transactions and then insert the transfer.
         def (fromTransactionId, toTransactionId) = processTransactions(resultSet.getString('current_status'),
                 resultSet,
-                statements.transactionStmt)
+                statements.transactionStmt, getUserNameStmt)
 
-        def transferId = insertTransfer(resultSet, statements.transferStmt,
-                fromTransactionId, toTransactionId, preparedData, destinationConn, recommendationValue)
+        def transferId = insertTransfer(resultSet, statements.transferStmt, commentStmt,
+                fromTransactionId, toTransactionId, preparedData, destinationConn, recommendationValue, getUserNameStmt)
 
         if (transferId) {
-            processHistory(transferId, creditTradeHistoryJson, statements.historyStmt, preparedData)
-            processInternalComments(transferId, internalCommentsJson, statements.internalCommentStmt,
-                    statements.transferInternalCommentStmt)
+            processHistory(transferId, creditTradeHistoryJson, statements.historyStmt, preparedData, getUserNameStmt)
+            processInternalComments(transferId, internalCommentStmt, statements.internalCommentStmt,
+                    getUserNameStmt, statements.transferInternalCommentStmt)
         } else {
             log.warn("Transfer not inserted for record: ${transferIdFromSource}")
         }
-    }
+}
     resultSet.close()
     destinationConn.createStatement().execute("""
         CREATE OR REPLACE FUNCTION refresh_transaction_aggregate()
         RETURNS void AS \$\$
         BEGIN
             REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate;
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    destinationConn.createStatement().execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_transaction_count()
+        RETURNS void AS \$\$
+        BEGIN
+            REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_count;
         END;
         \$\$ LANGUAGE plpgsql;
     """)
@@ -319,8 +310,8 @@ def prepareStatements(Connection conn) {
       '''
     def INSERT_INTERNAL_COMMENT_SQL = '''
           INSERT INTO internal_comment (
-              internal_comment_id, comment, audience_scope, create_user, create_date
-          ) VALUES (DEFAULT, ?, ?::audience_scope, ?, ?)
+              internal_comment_id, comment, audience_scope, create_user, create_date, update_date
+          ) VALUES (DEFAULT, ?, ?::audience_scope, ?, ?, ?)
           RETURNING internal_comment_id
       '''
     def INSERT_TRANSFER_INTERNAL_COMMENT_SQL = '''
@@ -341,18 +332,43 @@ def prepareStatements(Connection conn) {
             transactionStmt            : conn.prepareStatement(INSERT_TRANSACTION_SQL)]
 }
 
-def toSqlTimestamp(String timestampString) {
+def toSqlTimestamp(Object timestamp) {
     try {
-        // Parse the ISO 8601 timestamp and convert to java.sql.Timestamp
-        def offsetDateTime = OffsetDateTime.parse(timestampString)
-        return Timestamp.from(offsetDateTime.toInstant())
+        if (timestamp instanceof String) {
+            def offsetDateTime = OffsetDateTime.parse(timestamp)
+            return Timestamp.from(offsetDateTime.toInstant())
+        } else if (timestamp instanceof java.sql.Timestamp) {
+            return timestamp
+        }
     } catch (Exception e) {
-        log.error("Invalid timestamp format: ${timestampString}, defaulting to '1970-01-01T00:00:00Z'")
+        log.error("Invalid timestamp format: ${timestamp}, defaulting to '1970-01-01T00:00:00Z'")
         return Timestamp.valueOf('1970-01-01 00:00:00')
     }
 }
 
-def processTransactions(String currentStatus, ResultSet rs, PreparedStatement stmt) {
+def getUserName(PreparedStatement stmt, int userId) {
+    ResultSet rs = null
+    String userName = null
+
+    try {
+        stmt.setInt(1, userId)
+        rs = stmt.executeQuery()
+
+        if (rs.next()) {
+            userName = rs.getString('keycloak_username')
+        } else {
+            log.warn("No username found for user_id: ${userId}")
+        }
+    } catch (Exception e) {
+        log.error("Error while fetching username for user_id: ${userId}", e)
+    } finally {
+        if (rs != null) rs.close()
+    }
+
+    return userName
+}
+
+def processTransactions(String currentStatus, ResultSet rs, PreparedStatement stmt, PreparedStatement getUserNameStmt) {
     def fromTransactionId = null
     def toTransactionId = null
 
@@ -364,18 +380,18 @@ def processTransactions(String currentStatus, ResultSet rs, PreparedStatement st
             break
         case ['Sent', 'Submitted', 'Recommended']:
             if (isBuy) {
-                fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), false)
+                fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), false, getUserNameStmt)
             } else {
-                fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), true)
+                fromTransactionId = insertTransaction(stmt, rs, 'Reserved', rs.getInt('from_organization_id'), true, getUserNameStmt)
             }
             break
         case 'Recorded':
             if (isBuy) {
-                fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), false)
-                toTransactionId   = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), true)
+                fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), false, getUserNameStmt)
+                toTransactionId   = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), true, getUserNameStmt)
             } else {
-                fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), true)
-                toTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), false)
+                fromTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('from_organization_id'), true, getUserNameStmt)
+                toTransactionId = insertTransaction(stmt, rs, 'Adjustment', rs.getInt('to_organization_id'), false, getUserNameStmt)
             }
             break
     }
@@ -383,7 +399,7 @@ def processTransactions(String currentStatus, ResultSet rs, PreparedStatement st
     return [fromTransactionId, toTransactionId]
 }
 
-def insertTransaction(PreparedStatement stmt, ResultSet rs, String action, int orgId, boolean isDebit) {
+def insertTransaction(PreparedStatement stmt, ResultSet rs, String action, int orgId, boolean isDebit, PreparedStatement getUserNameStmt) {
     def quantity = rs.getInt('quantity')
     if (isDebit) {
         quantity *= -1 // Make the transaction negative for the sender
@@ -393,7 +409,7 @@ def insertTransaction(PreparedStatement stmt, ResultSet rs, String action, int o
     stmt.setInt(2, orgId)
     stmt.setString(3, action)
     stmt.setDate(4, rs.getDate('transaction_effective_date') ?: rs.getDate('agreement_date'))
-    stmt.setInt(5, rs.getInt('create_user'))
+    stmt.setString(5, getUserName(getUserNameStmt, rs.getInt('create_user')))
     stmt.setTimestamp(6, rs.getTimestamp('create_date'))
 
     def result = stmt.executeQuery()
@@ -412,7 +428,7 @@ def transferExists(Connection conn, int transferId) {
     return count > 0
 }
 
-def processHistory(Integer transferId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData) {
+def processHistory(Integer transferId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData, PreparedStatement getUserNameStmt) {
     if (!creditTradeHistory) return
 
     // Sort the records by create_timestamp to preserve chronological order
@@ -434,6 +450,7 @@ def processHistory(Integer transferId, List creditTradeHistory, PreparedStatemen
                 historyStmt.setInt(2, statusId)
                 historyStmt.setInt(3, historyItem.user_profile_id)
                 historyStmt.setTimestamp(4, toSqlTimestamp(historyItem.create_timestamp ?: '2013-01-01T00:00:00Z'))
+                historyStmt.setTimestamp(4, toSqlTimestamp(historyItem.create_timestamp ?: '2013-01-01T00:00:00Z'))
                 historyStmt.addBatch()
                 processedEntries.add(uniqueKey)
             }
@@ -446,20 +463,24 @@ def processHistory(Integer transferId, List creditTradeHistory, PreparedStatemen
     historyStmt.executeBatch()
 }
 
-def processInternalComments(Integer transferId, List internalComments,
+def processInternalComments(Integer transferId, PreparedStatement sourceInternalCommentStmt,
                             PreparedStatement internalCommentStmt,
+                            PreparedStatement getUserNameStmt,
                             PreparedStatement transferInternalCommentStmt) {
-    if (!internalComments) return
-
-    internalComments.each { comment ->
-        if (!comment) return // Skip null comments
-
+    // Fetch internal comments
+    sourceInternalCommentStmt.setInt(1, transferId)
+    ResultSet internalCommentResult = sourceInternalCommentStmt.executeQuery()
+    while (internalCommentResult.next()) {
         try {
             // Insert the internal comment
-            internalCommentStmt.setString(1, comment.credit_trade_comment ?: '')
-            internalCommentStmt.setString(2, getAudienceScope(comment.role_names ?: ''))
-            internalCommentStmt.setInt(3, comment.create_user_id ?: null)
-            internalCommentStmt.setTimestamp(4, toSqlTimestamp(comment.create_timestamp ?: '2013-01-01T00:00:00Z'))
+            internalCommentStmt.setString(1, internalCommentResult.getString('credit_trade_comment') ?: '')
+            internalCommentStmt.setString(2, getAudienceScope(internalCommentResult.getString('role_names') ?: ''))
+            internalCommentStmt.setString(3,
+                getUserName(getUserNameStmt, internalCommentResult.getInt('create_user_id') ?: null))
+            internalCommentStmt.setTimestamp(4,
+                internalCommentResult.getTimestamp('create_timestamp') ?: null)
+            internalCommentStmt.setTimestamp(5,
+                internalCommentResult.getTimestamp('update_timestamp') ?: null)
 
             def internalCommentId = null
             def commentResult = internalCommentStmt.executeQuery()
@@ -477,6 +498,7 @@ def processInternalComments(Integer transferId, List internalComments,
             log.error("Error processing internal comment for transfer ${transferId}: ${e.getMessage()}", e)
         }
     }
+    internalCommentResult.close()
                             }
 
 // Helper function to determine audience scope based on role names
@@ -493,8 +515,8 @@ def getAudienceScope(String roleNames) {
     }
 }
 
-def insertTransfer(ResultSet rs, PreparedStatement transferStmt, Long fromTransactionId,
-                   Long toTransactionId, Map preparedData, Connection conn, String recommendationValue) {
+def insertTransfer(ResultSet rs, PreparedStatement transferStmt, PreparedStatement commentStmt, Long fromTransactionId,
+                   Long toTransactionId, Map preparedData, Connection conn, String recommendationValue, PreparedStatement getUserNameStmt) {
     // Check for duplicates in the `transfer` table
     def transferId = rs.getInt('transfer_id')
     def duplicateCheckStmt = conn.prepareStatement('SELECT COUNT(*) FROM transfer WHERE transfer_id = ?')
@@ -509,6 +531,19 @@ def insertTransfer(ResultSet rs, PreparedStatement transferStmt, Long fromTransa
         log.warn("Duplicate transfer detected with transfer_id: ${transferId}, skipping insertion.")
         return null
     }
+    // Fetch comments
+    commentStmt.setInt(1, transferId)
+    ResultSet commentResult = commentStmt.executeQuery()
+    def comments = [
+        fromOrgComment: null,
+        toOrgComment: null,
+        govComment: null
+    ]
+    if (commentResult.next()) {
+        comments.fromOrgComment = commentResult.getString('from_org_comment')
+        comments.toOrgComment = commentResult.getString('to_org_comment')
+        comments.govComment = commentResult.getString('gov_comment')
+    }
 
     // Proceed with insertion if no duplicate exists
     def categoryId = getTransferCategoryId(rs.getString('transfer_category'), preparedData)
@@ -521,19 +556,19 @@ def insertTransfer(ResultSet rs, PreparedStatement transferStmt, Long fromTransa
     transferStmt.setTimestamp(6, rs.getTimestamp('transaction_effective_date'))
     transferStmt.setBigDecimal(7, rs.getBigDecimal('price_per_unit'))
     transferStmt.setInt(8, rs.getInt('quantity'))
-    transferStmt.setString(9, rs.getString('from_org_comment'))
-    transferStmt.setString(10, rs.getString('to_org_comment'))
-    transferStmt.setString(11, rs.getString('gov_comment'))
+    transferStmt.setString(9, comments.fromOrgComment)
+    transferStmt.setString(10, comments.toOrgComment)
+    transferStmt.setString(11, comments.govComment)
     transferStmt.setObject(12, categoryId)
     transferStmt.setObject(13, statusId)
     transferStmt.setString(14, recommendationValue)
     transferStmt.setTimestamp(15, rs.getTimestamp('create_date'))
     transferStmt.setTimestamp(16, rs.getTimestamp('update_date'))
-    transferStmt.setInt(17, rs.getInt('create_user'))
-    transferStmt.setInt(18, rs.getInt('update_user'))
+    transferStmt.setString(17, getUserName(getUserNameStmt, rs.getInt('create_user')))
+    transferStmt.setString(18, getUserName(getUserNameStmt, rs.getInt('update_user')))
     transferStmt.setInt(19, rs.getInt('transfer_id'))
     def result = transferStmt.executeQuery()
     return result.next() ? result.getInt('transfer_id') : null
-}
+                   }
 
-log.warn("**** COMPLETED TRANSFER ETL ****")
+log.warn('**** COMPLETED TRANSFER ETL ****')
