@@ -1,8 +1,9 @@
 import structlog
 import math
-from fastapi import Depends, Request, HTTPException
+from fastapi import Depends, Request, HTTPException, status
 
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.schema import (
     EndUseTypeSchema,
@@ -33,10 +34,12 @@ class FuelSupplyServices:
         request: Request = None,
         repo: FuelSupplyRepository = Depends(),
         fuel_repo: FuelCodeRepository = Depends(),
+        compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
         self.request = request
         self.repo = repo
         self.fuel_repo = fuel_repo
+        self.compliance_report_repo = compliance_report_repo
 
     def fuel_type_row_mapper(self, compliance_period, fuel_types, row):
         column_names = row._fields
@@ -268,3 +271,18 @@ class FuelSupplyServices:
                 FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supplies
             ],
         )
+
+    @service_handler
+    async def get_compliance_report_by_id(self, compliance_report_id: int):
+        """Get compliance report by period with status"""
+        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
+            compliance_report_id,
+        )
+
+        if not compliance_report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found for this period"
+            )
+
+        return compliance_report

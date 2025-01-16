@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, AsyncMock, patch
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.tests.compliance_report.conftest import compliance_report_base_schema
 from lcfs.web.api.base import ComplianceReportRequestSchema
 from lcfs.web.api.other_uses.schema import (
     PaginatedOtherUsesRequestSchema,
@@ -69,12 +70,21 @@ async def test_get_other_uses(
 ):
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access, patch(
+        "lcfs.web.api.notional_transfer.views.NotionalTransferServices.get_compliance_report_by_id"
+    ) as mock_get_compliance_report_by_id:
+
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
         url = fastapi_app.url_path_for("get_other_uses")
         payload = ComplianceReportRequestSchema(compliance_report_id=1).model_dump()
 
         mock_validate_organization_access.return_value = True
+
+        mock_get_compliance_report_by_id.return_value = compliance_report_base_schema
+        mock_validate_compliance_report_access.return_value = True
+
         mock_other_uses_service.get_other_uses.return_value = {"otherUses": []}
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (

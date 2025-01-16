@@ -1,5 +1,6 @@
 from fastapi import Depends, HTTPException, Request
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from fastapi import status
 from lcfs.web.api.role.schema import user_has_roles
@@ -41,3 +42,17 @@ class ComplianceReportValidation:
             )
 
         return compliance_report
+
+    async def validate_compliance_report_access(self, compliance_report):
+        """Validates government user access to draft reports"""
+        is_government = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+
+        if compliance_report:
+            status_enum = ComplianceReportStatusEnum(compliance_report.current_status.status)
+            is_draft = status_enum == ComplianceReportStatusEnum.Draft
+
+            if is_government and is_draft:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Government users cannot access draft compliance reports"
+                )

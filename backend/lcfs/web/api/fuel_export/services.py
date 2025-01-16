@@ -1,7 +1,7 @@
 import math
 
 import structlog
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request, status
 
 from lcfs.utils.constants import default_ci
 from lcfs.web.api.base import (
@@ -259,3 +259,18 @@ class FuelExportServices:
             ),
             fuel_exports=[FuelExportSchema.model_validate(fs) for fs in fuel_exports],
         )
+
+    @service_handler
+    async def get_compliance_report_by_id(self, compliance_report_id: int):
+        """Get compliance report by period with status"""
+        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
+            compliance_report_id,
+        )
+
+        if not compliance_report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found for this period"
+            )
+
+        return compliance_report

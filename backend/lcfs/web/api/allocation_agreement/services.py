@@ -1,10 +1,11 @@
 import math
 import structlog
 from typing import List
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from datetime import datetime
 
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
@@ -34,9 +35,11 @@ class AllocationAgreementServices:
         self,
         repo: AllocationAgreementRepository = Depends(AllocationAgreementRepository),
         fuel_repo: FuelCodeRepository = Depends(),
+         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
         self.repo = repo
         self.fuel_repo = fuel_repo
+        self.compliance_report_repo = compliance_report_repo
 
     async def convert_to_model(
         self, allocation_agreement: AllocationAgreementCreateSchema
@@ -350,3 +353,18 @@ class AllocationAgreementServices:
     async def delete_allocation_agreement(self, allocation_agreement_id: int) -> str:
         """Delete an Allocation agreement"""
         return await self.repo.delete_allocation_agreement(allocation_agreement_id)
+
+    @service_handler
+    async def get_compliance_report_by_id(self, compliance_report_id: int):
+        """Get compliance report by period with status"""
+        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
+            compliance_report_id,
+        )
+
+        if not compliance_report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found for this period"
+            )
+
+        return compliance_report

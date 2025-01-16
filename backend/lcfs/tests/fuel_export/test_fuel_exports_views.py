@@ -6,6 +6,8 @@ from httpx import AsyncClient
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 
+from lcfs.tests.compliance_report.conftest import compliance_report_base_schema
+from lcfs.web.api.compliance_report.schema import ChainedComplianceReportSchema
 from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
     FuelExportCreateUpdateSchema,
@@ -68,18 +70,24 @@ async def test_get_fuel_exports_invalid_payload(
 
 @pytest.mark.anyio
 async def test_get_fuel_exports_paginated_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, compliance_report_base_schema
 ):
     with patch(
         "lcfs.web.api.fuel_export.views.FuelExportServices.get_fuel_exports_paginated"
     ) as mock_get_fuel_exports_paginated, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.FuelExportServices.get_compliance_report_by_id"
+    ) as mock_get_compliance_report_by_id:
 
         mock_get_fuel_exports_paginated.return_value = FuelExportsSchema(
             fuel_exports=[]
         )
         mock_validate_organization_access.return_value = True
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_get_compliance_report_by_id.return_value = mock_compliance_report
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         url = fastapi_app.url_path_for("get_fuel_exports")
@@ -98,16 +106,23 @@ async def test_get_fuel_exports_paginated_success(
 
 @pytest.mark.anyio
 async def test_get_fuel_exports_list_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user, compliance_report_base_schema
 ):
     with patch(
         "lcfs.web.api.fuel_export.views.FuelExportServices.get_fuel_export_list"
     ) as mock_get_fuel_export_list, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.FuelExportServices.get_compliance_report_by_id"
+    ) as mock_get_compliance_report_by_id:
 
         mock_get_fuel_export_list.return_value = FuelExportsSchema(fuel_exports=[])
         mock_validate_organization_access.return_value = True
+
+        mock_compliance_report = compliance_report_base_schema()
+
+        mock_get_compliance_report_by_id.return_value = mock_compliance_report
+
         set_mock_user(fastapi_app, [RoleEnum.ANALYST])
 
         url = fastapi_app.url_path_for("get_fuel_exports")
