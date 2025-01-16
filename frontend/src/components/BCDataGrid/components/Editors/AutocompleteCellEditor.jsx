@@ -47,6 +47,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
     }
   })
 
+  const [isOpen, setIsOpen] = useState(false)
   const inputRef = useRef()
 
   useImperativeHandle(ref, () => ({
@@ -71,32 +72,40 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
     onValueChange(newValue)
   }
 
+  const navigateToNextCell = () => {
+    const focusedCell = api.getFocusedCell()
+    if (focusedCell) {
+      api.startEditingCell({
+        rowIndex: focusedCell.rowIndex,
+        colKey: focusedCell.column.getId()
+      })
+    }
+  }
+
   const handleKeyDown = (event) => {
     if (onKeyDownCapture) {
       onKeyDownCapture(event)
-    } else if (event.key === 'Tab') {
-      onValueChange(selectedValues)
+    }
+
+    // Handle Enter key to toggle dropdown
+    if (event.key === 'Enter') {
       event.preventDefault()
+      setIsOpen(!isOpen)
+      return
+    }
+
+    // Handle Tab key navigation - directly move to next/previous cell
+    if (event.key === 'Tab') {
+      event.preventDefault()
+      onValueChange(selectedValues)
       api.stopEditing()
 
-      const navigateToNextCell = () => {
-        const focusedCell = api.getFocusedCell()
-        if (focusedCell) {
-          api.startEditingCell({
-            rowIndex: focusedCell.rowIndex,
-            colKey: focusedCell.column.getId()
-          })
-        }
-      }
-
       if (event.shiftKey) {
-        // Shift + Tab: Move to the previous cell
         api.tabToPreviousCell()
-        setTimeout(navigateToNextCell, 0) // Ensure editing starts after navigation
+        setTimeout(navigateToNextCell, 0)
       } else {
-        // Tab: Move to the next cell
         api.tabToNextCell()
-        setTimeout(navigateToNextCell, 0) // Ensure editing starts after navigation
+        setTimeout(navigateToNextCell, 0)
       }
     }
   }
@@ -125,6 +134,9 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
             padding: '2px 0px 2px 0px'
           }
         }}
+        open={isOpen}
+        onOpen={() => setIsOpen(true)}
+        onClose={() => setIsOpen(false)}
         openOnFocus={openOnFocus}
         value={selectedValues}
         onInputChange={freeSolo ? handleChange : null}

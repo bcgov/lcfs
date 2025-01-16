@@ -18,7 +18,11 @@ export const getKeycloak = () => {
 
 export const logout = () => {
   sessionStorage.removeItem('keycloak-logged-in')
-
+  const idToken = keycloak.idToken || keycloak.tokenParsed?.idToken;
+  if (!idToken) {
+    console.error('idToken is not available');
+    return;
+  }
   const keycloakLogoutUrl =
     keycloak.endpoints.logout() +
     '?post_logout_redirect_uri=' +
@@ -26,10 +30,24 @@ export const logout = () => {
     '&client_id=' +
     keycloak.clientId +
     '&id_token_hint=' +
-    keycloak.idToken
+    idToken
 
   const url =
     CONFIG.KEYCLOAK.SM_LOGOUT_URL + encodeURIComponent(keycloakLogoutUrl)
 
   window.location = url
+}
+
+export const refreshToken = () => {
+  keycloak
+    .updateToken(60) // Minimum validity in seconds
+    .then((refreshed) => {
+      if (refreshed) {
+        console.log('Token refreshed')
+      }
+    })
+    .catch(() => {
+      console.error('Failed to refresh token')
+      logout()
+    })
 }

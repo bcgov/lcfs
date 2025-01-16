@@ -37,7 +37,6 @@ const UserSettingsCard = () => {
   return (
     <BCWidgetCard
       component="div"
-      disableHover={true}
       color="nav"
       icon="user"
       title={t('dashboard:userSettings.title')}

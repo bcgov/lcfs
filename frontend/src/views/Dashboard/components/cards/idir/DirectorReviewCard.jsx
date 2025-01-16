@@ -70,7 +70,6 @@ const DirectorReviewCard = () => {
   return (
     <BCWidgetCard
       component="div"
-      disableHover={true}
       title={t('dashboard:directorReview.title')}
       sx={{ '& .MuiCardContent-root': { padding: '16px' } }} // Reduce padding of the card content
       content={

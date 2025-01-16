@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useRef } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import BCTypography from '@/components/BCTypography'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useTranslation } from 'react-i18next'
 import { auditLogColDefs, defaultAuditLogSortModel } from './_schema'
 import { apiRoutes } from '@/constants/routes'
@@ -9,6 +10,7 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const AuditLog = () => {
   const { t } = useTranslation(['common', 'admin'])
+  const [resetGridFn, setResetGridFn] = useState(null)
   const gridRef = useRef()
 
   const gridOptions = {
@@ -18,7 +20,7 @@ export const AuditLog = () => {
   }
 
   const getRowId = useCallback((params) => {
-    return params.data.auditLogId
+    return params.data.auditLogId.toString()
   }, [])
 
   const apiEndpoint = apiRoutes.getAuditLogs
@@ -33,12 +35,26 @@ export const AuditLog = () => {
     []
   )
 
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
+
   return (
     <BCBox>
       <BCTypography variant="h5" color="primary" mb={2}>
         {t('admin:AuditLog')}
       </BCTypography>
-
+      <BCBox mb={2}>
+        <ClearFiltersButton
+          onClick={handleClearFilters}
+        />
+      </BCBox>
       <BCDataGridServer
         gridRef={gridRef}
         apiEndpoint={apiEndpoint}
@@ -52,6 +68,7 @@ export const AuditLog = () => {
         enableExportButton={true}
         exportName="AuditLog"
         defaultColDef={defaultColDef}
+        onSetResetGrid={handleSetResetGrid}
       />
     </BCBox>
   )

@@ -30,7 +30,7 @@ const OrgTransactionsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
 
-  const { data: orgData, isLoading: orgLoading } = useOrganization()
+  const { data: orgData } = useOrganization()
   const { data: counts, isLoading } = useOrgTransactionCounts()
 
   const handleNavigation = (route, transactionType, statuses) => {
