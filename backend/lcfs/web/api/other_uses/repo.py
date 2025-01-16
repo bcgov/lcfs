@@ -350,6 +350,7 @@ class OtherUsesRepository:
                 joinedload(FuelType.provision_1),
                 joinedload(FuelType.provision_2),
             )
+            .order_by(FuelType.fuel_type)
         )
 
         result = await self.db.execute(query)

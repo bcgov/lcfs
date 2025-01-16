@@ -89,7 +89,7 @@ export const OtherUsesSummary = ({ data, status }) => {
       minWidth: 200
     },
     {
-      headerName: t('otherUses:otherUsesColLabels.rationale'),
+      headerName: t('otherUses:otherUsesColLabels.otherExpectedUse'),
       field: 'rationale',
       floatingFilter: false,
       flex: 1,
