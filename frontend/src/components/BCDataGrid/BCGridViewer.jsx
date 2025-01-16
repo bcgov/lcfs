@@ -94,7 +94,7 @@ export const BCGridViewer = ({
     setPage(1)
     setSize(paginationPageSize)
     setSortModel(defaultSortModel || [])
-    setFilterModel(defaultFilterModel || [])
+    setFilterModel([])
 
     // Clear UI filters
     if (ref.current?.api) {
@@ -122,13 +122,11 @@ export const BCGridViewer = ({
     ref
   ])
 
-
   useEffect(() => {
     if (onSetResetGrid) {
       onSetResetGrid(resetGrid)
     }
-  }, [onSetResetGrid, resetGrid])
-
+  }, [onSetResetGrid])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api.hideOverlay()
