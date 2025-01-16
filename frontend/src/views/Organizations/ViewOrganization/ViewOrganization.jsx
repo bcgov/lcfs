@@ -5,6 +5,7 @@ import BCAlert from '@/components/BCAlert'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import Loading from '@/components/Loading'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -28,6 +29,8 @@ export const ViewOrganization = () => {
   const { t } = useTranslation(['common', 'org'])
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const [resetGridFn, setResetGridFn] = useState(null)
+  const newUserButtonRef = useRef(null);
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -95,6 +98,16 @@ export const ViewOrganization = () => {
       setAlertSeverity(location.state.severity || 'info')
     }
   }, [location.state])
+
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
 
   if (isLoading) {
     return <Loading />
@@ -212,6 +225,7 @@ export const ViewOrganization = () => {
         <BCBox component="div">
           <Role roles={[roles.administrator, roles.manage_users]}>
             <BCButton
+              ref= {newUserButtonRef}
               variant="contained"
               size="small"
               color="primary"
@@ -234,6 +248,16 @@ export const ViewOrganization = () => {
               <BCTypography variant="button">{t('org:newUsrBtn')}</BCTypography>
             </BCButton>
           </Role>
+          <ClearFiltersButton
+              onClick={handleClearFilters}
+              sx={{
+                height: newUserButtonRef.current?.offsetHeight || '36px',
+                marginRight: '8px',
+                marginBottom: '8px',
+                minWidth: 'fit-content',
+                whiteSpace: 'nowrap'
+              }}
+            />
         </BCBox>
         <BCTypography
           variant="h5"
@@ -261,6 +285,7 @@ export const ViewOrganization = () => {
           defaultColDef={defaultColDef}
           enableCopyButton={false}
           enableResetButton={false}
+          onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
     </>
