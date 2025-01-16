@@ -1,7 +1,7 @@
 """add marine end use
 
 Revision ID: 998929392c8b
-Revises: 5163af6ba4a4
+Revises: 5bc0ef48739a
 Create Date: 2025-01-07 19:35:00.064999
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "998929392c8b"
-down_revision = "5163af6ba4a4"
+down_revision = "5bc0ef48739a"
 branch_labels = None
 depends_on = None
 
