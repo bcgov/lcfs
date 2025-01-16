@@ -208,6 +208,15 @@ export const AddEditOtherUses = () => {
 
             params.node.setDataValue('fuelCategory', categoryValue)
 
+            // Auto populate the "provisionOfTheAct" field
+            const provisions = fuelType.provisionOfTheAct.map(
+              (provision) => provision.name
+            )
+
+            const provisionValue =
+            provisions.length === 1 ? provisions[0] : null
+            params.node.setDataValue('provisionOfTheAct', provisionValue)
+
             // Auto-populate the "fuelCode" field
             const fuelCodeOptions = fuelType.fuelCodes.map(
               (code) => code.fuelCode
