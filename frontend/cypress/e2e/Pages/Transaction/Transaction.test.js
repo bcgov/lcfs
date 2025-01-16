@@ -58,11 +58,12 @@ When('the analyst starts a new initiative agreement transaction', () => {
 
 When(
   'the analyst enters {string} units to organization {string} with effective date {string} and comment {string}',
-  (units, orgId, effetiveDate, comment) => {
+  (units, orgId, effectiveDate, comment) => {
     cy.get('#to-organization-id').click()
     cy.get(`[data-value="${orgId}"]`).click()
     cy.get('input[name="complianceUnits"]').type(units)
-    cy.get('input[name="transactionEffectiveDate"]').type(effetiveDate)
+    cy.get('input[name="transactionEffectiveDate"]').type(effectiveDate)
+    cy.get(':nth-child(2) > :nth-child(5)').click()
     cy.get('textarea[name="govComment"]').type(comment)
   }
 )

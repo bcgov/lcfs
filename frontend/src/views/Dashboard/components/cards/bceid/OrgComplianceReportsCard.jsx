@@ -62,7 +62,6 @@ const OrgComplianceReportsCard = () => {
   return (
     <BCWidgetCard
       component="div"
-      disableHover={true}
       title={t('dashboard:orgComplianceReports.title')}
       sx={{ '& .MuiCardContent-root': { padding: '16px' } }}
       content={

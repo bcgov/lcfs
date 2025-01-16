@@ -113,7 +113,6 @@ export const ActivityLinksList = () => {
           </StyledListItem>
           {activity.children && (
             <List
-              data-test="schedule-list"
               component="div"
               sx={{
                 maxWidth: '100%',
