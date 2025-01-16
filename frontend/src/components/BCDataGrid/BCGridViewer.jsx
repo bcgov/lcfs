@@ -94,7 +94,7 @@ export const BCGridViewer = ({
     setPage(1)
     setSize(paginationPageSize)
     setSortModel(defaultSortModel || [])
-    setFilterModel(defaultFilterModel || [])
+    setFilterModel([])
 
     // Clear UI filters
     if (ref.current?.api) {
