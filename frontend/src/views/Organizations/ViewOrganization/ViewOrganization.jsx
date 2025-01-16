@@ -131,8 +131,11 @@ export const ViewOrganization = () => {
         <BCWidgetCard
           title={t('org:orgDetails')}
           color="nav"
-          editButtonText={canEdit ? t('org:editBtn') : null}
-          editButtonRoute={editButtonRoute}
+          editButton={{
+            text: canEdit ? t('org:editBtn') : null,
+            route: editButtonRoute,
+            id: 'edit-org-button'
+          }}
           content={
             <BCBox p={1}>
               <BCBox

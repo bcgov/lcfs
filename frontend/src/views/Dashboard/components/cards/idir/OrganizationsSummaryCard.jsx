@@ -58,7 +58,6 @@ const OrganizationsSummaryCard = () => {
   return (
     <BCWidgetCard
       component="div"
-      disableHover={true}
       title="Summary"
       sx={{
         '& .MuiCardContent-root': { padding: '16px' },

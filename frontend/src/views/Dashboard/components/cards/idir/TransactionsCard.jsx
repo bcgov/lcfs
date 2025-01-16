@@ -63,7 +63,6 @@ const TransactionsCard = () => {
   return (
     <BCWidgetCard
       component="div"
-      disableHover={true}
       title={t('dashboard:transactions.title')}
       sx={{ '& .MuiCardContent-root': { padding: '16px' } }}
       content={
