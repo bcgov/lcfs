@@ -16,7 +16,6 @@ def sourceQuery = """
         coalesce(o.edrms_record, '') as edrms_record,
         (
             case
-                when os.status = 'Archived' then 'Suspended'
                 when oat.the_type = 'Buy And Sell' or oat.the_type = 'Sell Only' then 'Registered'
                 else 'Unregistered'
             end
