@@ -2,7 +2,7 @@ import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
 import { ROUTES } from '@/constants/routes'
-import { useComplianceReportCounts } from '@/hooks/useDashboard'
+import { useFuelCodeCounts } from '@/hooks/useDashboard'
 import { List, ListItemButton, Stack } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -20,24 +20,20 @@ const CountDisplay = ({ count }) => (
   </BCTypography>
 )
 
-export const ComplianceReportCard = () => {
+export const FuelCodeCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
-  const { data: counts, isLoading } = useComplianceReportCounts()
+  const { data: counts, isLoading } = useFuelCodeCounts()
 
   const handleNavigation = () => {
-    navigate(ROUTES.REPORTS, {
+    navigate(ROUTES.FUELCODES, {
       state: {
         filters: [
           {
             field: 'status',
-            filter: [
-              'Submitted',
-              'Recommended by analyst',
-              'Recommended by manager'
-            ],
+            filter: 'Draft',
             filterType: 'text',
-            type: 'set'
+            type: 'equals'
           }
         ]
       }
@@ -67,15 +63,15 @@ export const ComplianceReportCard = () => {
     <BCWidgetCard
       component="div"
       disableHover={true}
-      title={t('dashboard:complianceReports.title')}
+      title={t('dashboard:fuelCodes.title')}
       sx={{ '& .MuiCardContent-root': { padding: '16px' } }}
       content={
         isLoading ? (
-          <Loading message={t('dashboard:complianceReports.loadingMessage')} />
+          <Loading message={t('dashboard:fuelCodes.loadingMessage')} />
         ) : (
           <Stack spacing={1}>
             <BCTypography variant="body2" sx={{ marginBottom: 0 }}>
-              {t('dashboard:complianceReports.thereAre')}
+              {t('dashboard:fuelCodes.thereAre')}
             </BCTypography>
             <List
               component="div"
@@ -89,8 +85,8 @@ export const ComplianceReportCard = () => {
             >
               <ListItemButton component="a" onClick={handleNavigation}>
                 {renderLinkWithCount(
-                  t('dashboard:complianceReports.crInProgress'),
-                  counts?.pendingReviews || 0,
+                  t('dashboard:fuelCodes.fcInProgress'),
+                  counts?.draftFuelCodes || 0,
                   handleNavigation
                 )}
               </ListItemButton>
