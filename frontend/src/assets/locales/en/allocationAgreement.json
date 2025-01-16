@@ -17,7 +17,7 @@
     "fuelCategory": "Fuel category",
     "carbonIntensity": "Determining carbon intensity",
     "fuelCode": "Fuel code",
-    "ciOfFuel": "CI of fuel",
+    "ciOfFuel": "RCI",
     "quantity": "Quantity",
     "units": "Units",
     "agreementType": "Agreement Type",

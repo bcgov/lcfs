@@ -13,8 +13,9 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { fuelCodeColDefs } from './_schema'
@@ -22,8 +23,10 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 const FuelCodesBase = () => {
   const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
+  const [resetGridFn, setResetGridFn] = useState(null)
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const downloadButtonRef = useRef(null);
 
   const apiService = useApiService()
   const { t } = useTranslation(['common', 'fuelCodes'])
@@ -65,6 +68,16 @@ const FuelCodesBase = () => {
     }
   }
 
+  const handleSetResetGrid = useCallback((fn) => {
+    setResetGridFn(() => fn)
+  }, [])
+
+  const handleClearFilters = useCallback(() => {
+    if (resetGridFn) {
+      resetGridFn()
+    }
+  }, [resetGridFn])
+
   return (
     <Grid2 className="fuel-code-container" mx={-1}>
       <div>
@@ -102,11 +115,20 @@ const FuelCodesBase = () => {
           </BCButton>
         </Role>
         <DownloadButton
+          ref={downloadButtonRef}
           onDownload={handleDownloadFuelCodes}
           isDownloading={isDownloadingFuelCodes}
           label={t('fuelCode:fuelCodeDownloadBtn')}
           downloadLabel={`${t('fuelCode:fuelCodeDownloadingMsg')}...`}
           dataTest="fuel-code-download-btn"
+        />
+        <ClearFiltersButton
+          onClick={handleClearFilters}
+          sx={{
+            height: downloadButtonRef.current?.offsetHeight || '36px',
+            minWidth: 'fit-content',
+            whiteSpace: 'nowrap'
+          }}
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
@@ -120,6 +142,7 @@ const FuelCodesBase = () => {
           overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
           defaultColDef={defaultColDef}
           defaultFilterModel={location.state?.filters}
+          onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
     </Grid2>

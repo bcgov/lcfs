@@ -1,7 +1,7 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { ReactKeycloakProvider } from '@react-keycloak/web'
 import Loading from '@/components/Loading'
-import { keycloakInitOptions } from '@/utils/keycloak'
+import { keycloakInitOptions, refreshToken } from '@/utils/keycloak'
 import { apiRoutes } from '@/constants/routes'
 import axios from 'axios'
 import { CONFIG } from '@/constants/config'
@@ -19,6 +19,14 @@ export const KeycloakProvider = ({ authClient, children }) => {
       }
     )
   }
+
+  useEffect(() => {
+    window.addEventListener('click', refreshToken)
+
+    return () => {
+      window.removeEventListener('click', refreshToken)
+    }
+  }, [])
 
   const handleOnEvent = async (event) => {
     if (event === 'onAuthSuccess') {

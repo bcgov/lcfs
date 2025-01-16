@@ -76,6 +76,7 @@ const BCDataGridServer = ({
   paginationPageSizeSelector,
   highlightedRowId,
   suppressPagination,
+  onSetResetGrid,
   ...others
 }) => {
   const { t } = useTranslation(['report'])
@@ -178,6 +179,38 @@ const BCDataGridServer = ({
     setLoading(false)
     params.api.hideOverlay()
   })
+
+  const resetGrid = useCallback(() => {
+    // Clear localStorage
+    localStorage.removeItem(`${gridKey}-filter`)
+    localStorage.removeItem(`${gridKey}-column`)
+
+    // Reset states
+    setPage(1)
+    setSize(paginationPageSize)
+    setSortModel(defaultSortModel || [])
+    setFilterModel([])
+
+    // Clear UI filters
+    if (gridRef.current?.api) {
+      gridRef.current.api.setFilterModel(null)
+      gridRef.current.api.applyColumnState({
+        defaultState: { sort: null }
+      })
+    }
+  }, [
+    gridKey,
+    paginationPageSize,
+    defaultSortModel,
+    defaultFilterModel,
+    gridRef
+  ])
+
+  useEffect(() => {
+    if (onSetResetGrid) {
+      onSetResetGrid(resetGrid)
+    }
+  }, [onSetResetGrid, resetGrid])
 
   // Callback for grid filter changes.
   const onFilterChanged = useCallback(() => {

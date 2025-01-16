@@ -7,8 +7,7 @@ import {
 } from '@/components/BCDataGrid/components'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
-import { useCallback, useMemo, useRef, useState } from 'react'
-import BCButton from '../BCButton'
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
 
 export const BCGridViewer = ({
   gridRef,
@@ -33,6 +32,7 @@ export const BCGridViewer = ({
   getRowId,
   onRowClicked,
   autoSizeStrategy,
+  onSetResetGrid,
   ...props
 }) => {
   const localRef = useRef(null)
@@ -86,20 +86,28 @@ export const BCGridViewer = ({
     [defaultSortModel, gridKey]
   )
   const resetGrid = useCallback(() => {
+    // Clear localStorage
     localStorage.removeItem(`${gridKey}-filter`)
     localStorage.removeItem(`${gridKey}-column`)
+
+    // Reset states
     setPage(1)
     setSize(paginationPageSize)
-    setSortModel(defaultSortModel)
-    setFilterModel(defaultFilterModel)
+    setSortModel(defaultSortModel || [])
+    setFilterModel([])
+
+    // Clear UI filters
+    if (ref.current?.api) {
+      ref.current.clearFilters()
+    }
 
     // Re-fetch the data by calling the query function
     query(
       {
         page: 1,
         size: paginationPageSize,
-        sortOrders: defaultSortModel,
-        filters: defaultFilterModel,
+        sortOrders: defaultSortModel || [],
+        filters: defaultFilterModel || [],
         ...queryParams
       },
       { retry: false }
@@ -110,8 +118,15 @@ export const BCGridViewer = ({
     defaultSortModel,
     defaultFilterModel,
     query,
-    queryParams
+    queryParams,
+    ref
   ])
+
+  useEffect(() => {
+    if (onSetResetGrid) {
+      onSetResetGrid(resetGrid)
+    }
+  }, [onSetResetGrid])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api.hideOverlay()
@@ -188,15 +203,6 @@ export const BCGridViewer = ({
         <BCAlert severity="error">
           {error.message}. Please contact your administrator.
         </BCAlert>
-        <BCButton
-          onClick={resetGrid}
-          variant="contained"
-          id="grid-reset-btn"
-          color="primary"
-          autoFocus
-        >
-          Clear filter & sort
-        </BCButton>
       </div>
     </div>
   ) : (

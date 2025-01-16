@@ -33,7 +33,7 @@
     "addressForService": "Address for service",
     "legalName": "Legal name",
     "units": "Units",
-    "ciOfFuel": "CI of fuel",
+    "ciOfFuel": "RCI",
     "expectedUse": "Expected use",
     "otherExpectedUse": "If other, enter expected use",
     "rationale": "Rationale",
