@@ -34,6 +34,7 @@ exclude_tables = [
     "mv_org_compliance_report_count",
     "transaction_status_view",
     "mv_compliance_report_count",
+    "mv_fuel_code_count",
 ]
 
 

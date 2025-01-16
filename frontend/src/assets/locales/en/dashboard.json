@@ -26,6 +26,12 @@
     "viewAllTransactions": "View all transactions",
     "loadingMessage": "Loading transactions card..."
   },
+  "fuelCodes": {
+    "title": "Fuel Codes",
+    "thereAre": "There are:",
+    "fcInProgress": "Fuel Code(s) in progress",
+    "loadingMessage": "Loading fuel codes card..."
+  },
   "complianceReports": {
     "title": "Compliance reports",
     "thereAre": "There are:",

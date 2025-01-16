@@ -34,9 +34,11 @@ def create_fuel_entry(
     effective_date,
     expiration_date,
     fuel_type_id,
+    fuel_status_id=2,
 ):
     return {
         **base_fuel_data,  # Extend with the base fields
+        "fuel_status_id": fuel_status_id,
         "fuel_suffix": fuel_suffix,
         "company": company,
         "carbon_intensity": carbon_intensity,
@@ -49,6 +51,7 @@ def create_fuel_entry(
 async def seed_fuel_codes(session):
     fuel_codes_to_seed = [
         create_fuel_entry(
+            fuel_status_id=1,
             fuel_suffix="102.5",
             company="Neste Oil Singapore",
             carbon_intensity=37.21,
@@ -57,6 +60,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=5,
         ),
         create_fuel_entry(
+            fuel_status_id=1,
             fuel_suffix="124.4",
             company="Ag Processing Inc.",
             carbon_intensity=3.62,
@@ -65,6 +69,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=1,
         ),
         create_fuel_entry(
+            fuel_status_id=1,
             fuel_suffix="125.4",
             company="Archer Daniels Midland",
             carbon_intensity=-2.14,
@@ -73,6 +78,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=1,
         ),
         create_fuel_entry(
+            fuel_status_id=3,
             fuel_suffix="138.5",
             company="ADM Agri-Industries Company",
             carbon_intensity=4.26,
@@ -81,6 +87,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=1,
         ),
         create_fuel_entry(
+            fuel_status_id=3,
             fuel_suffix="143.4",
             company="Green Plains Otter Tail LLC",
             carbon_intensity=44.06,
@@ -89,6 +96,7 @@ async def seed_fuel_codes(session):
             fuel_type_id=4,
         ),
         create_fuel_entry(
+            fuel_status_id=3,
             fuel_suffix="251.2",
             company="Incobrasa Industries, Ltd.",
             carbon_intensity=0.35,
