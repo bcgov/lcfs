@@ -33,3 +33,17 @@ export const logout = () => {
 
   window.location = url
 }
+
+export const refreshToken = () => {
+  keycloak
+    .updateToken(60) // Minimum validity in seconds
+    .then((refreshed) => {
+      if (refreshed) {
+        console.log('Token refreshed')
+      }
+    })
+    .catch(() => {
+      console.error('Failed to refresh token')
+      logout()
+    })
+}
