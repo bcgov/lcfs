@@ -189,7 +189,7 @@ const BCDataGridServer = ({
     setPage(1)
     setSize(paginationPageSize)
     setSortModel(defaultSortModel || [])
-    setFilterModel(defaultFilterModel || [])
+    setFilterModel([])
 
     // Clear UI filters
     if (gridRef.current?.api) {
