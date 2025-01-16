@@ -8,7 +8,6 @@ import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { roles, govRoles } from '@/constants/roles'
-import withComplianceReportAccess from '@/utils/withComplianceReportAcess'
 import { Fab, Stack, Tooltip } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -34,7 +33,7 @@ const iconStyle = {
   height: '2rem',
   color: colors.white.main
 }
-const EditViewComplianceReport = ({ reportData, isError, error }) => {
+export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
@@ -322,7 +321,3 @@ const EditViewComplianceReport = ({ reportData, isError, error }) => {
     </>
   )
 }
-
-const EditViewComplianceReportWithAccess = withComplianceReportAccess(EditViewComplianceReport)
-
-export default EditViewComplianceReportWithAccess

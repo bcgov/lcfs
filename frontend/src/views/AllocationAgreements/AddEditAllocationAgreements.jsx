@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import withComplianceReportAccess from '@/utils/withComplianceReportAcess'
 import {
   defaultColDef,
   allocationAgreementColDefs,
@@ -21,7 +20,7 @@ import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { DEFAULT_CI_FUEL } from '@/constants/common'
 
-const AddEditAllocationAgreements = () => {
+export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
   const [gridApi, setGridApi] = useState()
@@ -391,7 +390,3 @@ const AddEditAllocationAgreements = () => {
     )
   )
 }
-
-const AddEditAllocationAgreementsWithAccess = withComplianceReportAccess(AddEditAllocationAgreements)
-
-export default AddEditAllocationAgreementsWithAccess

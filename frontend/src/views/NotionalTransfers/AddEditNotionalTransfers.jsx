@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
-import withComplianceReportAccess from '@/utils/withComplianceReportAcess'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
 import Loading from '@/components/Loading'
@@ -17,7 +16,7 @@ import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import * as ROUTES from '@/constants/routes/routes.js'
 
-const AddEditNotionalTransfers = () => {
+export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
   const [errors, setErrors] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
@@ -315,7 +314,3 @@ const AddEditNotionalTransfers = () => {
     )
   )
 }
-
-const AddEditNotionalTransfersWithAccess = withComplianceReportAccess(AddEditNotionalTransfers)
-
-export default AddEditNotionalTransfersWithAccess
