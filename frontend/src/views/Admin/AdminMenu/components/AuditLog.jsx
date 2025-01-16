@@ -20,7 +20,7 @@ export const AuditLog = () => {
   }
 
   const getRowId = useCallback((params) => {
-    return params.data.auditLogId
+    return params.data.auditLogId.toString()
   }, [])
 
   const apiEndpoint = apiRoutes.getAuditLogs

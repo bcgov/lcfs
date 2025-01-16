@@ -141,6 +141,7 @@ const FuelCodesBase = () => {
           getRowId={getRowId}
           overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
           defaultColDef={defaultColDef}
+          defaultFilterModel={location.state?.filters}
           onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
