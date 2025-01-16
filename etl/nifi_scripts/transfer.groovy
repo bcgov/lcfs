@@ -72,9 +72,7 @@ SELECT
         ct.number_of_credits,
         ctc.category,
         cts.status,
-        ctzr.description,
-        ctt.the_type,
-        internal_comment.role_names;
+        ctt.the_type;
       """
 
 def COMMENT_QUERY = '''
@@ -189,7 +187,7 @@ try {
             recommendationValue = 'Record'  // matches "Record" in the transfer_recommendation_enum
         } else if (creditTradeHistoryJson.any { it.transfer_status == 'Not Recommended' }) {
             recommendationValue = 'Refuse'  // matches "Refuse" in the transfer_recommendation_enum
-    }
+        }
 
         // Only if transfer does not exist, proceed to create transactions and then insert the transfer.
         def (fromTransactionId, toTransactionId) = processTransactions(resultSet.getString('current_status'),
@@ -200,7 +198,7 @@ try {
                 fromTransactionId, toTransactionId, preparedData, destinationConn, recommendationValue, getUserNameStmt)
 
         if (transferId) {
-            processHistory(transferId, creditTradeHistoryJson, statements.historyStmt, preparedData, getUserNameStmt)
+            processHistory(transferId, creditTradeHistoryJson, statements.historyStmt, preparedData)
             processInternalComments(transferId, internalCommentStmt, statements.internalCommentStmt,
                     getUserNameStmt, statements.transferInternalCommentStmt)
         } else {
@@ -225,6 +223,7 @@ try {
         \$\$ LANGUAGE plpgsql;
     """)
     destinationConn.createStatement().execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate')
+    destinationConn.createStatement().execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_count')
 
     destinationConn.commit()
     log.debug("Processed ${recordCount} records successfully.")
@@ -428,7 +427,7 @@ def transferExists(Connection conn, int transferId) {
     return count > 0
 }
 
-def processHistory(Integer transferId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData, PreparedStatement getUserNameStmt) {
+def processHistory(Integer transferId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData) {
     if (!creditTradeHistory) return
 
     // Sort the records by create_timestamp to preserve chronological order
@@ -499,7 +498,7 @@ def processInternalComments(Integer transferId, PreparedStatement sourceInternal
         }
     }
     internalCommentResult.close()
-                            }
+}
 
 // Helper function to determine audience scope based on role names
 def getAudienceScope(String roleNames) {
@@ -569,6 +568,6 @@ def insertTransfer(ResultSet rs, PreparedStatement transferStmt, PreparedStateme
     transferStmt.setInt(19, rs.getInt('transfer_id'))
     def result = transferStmt.executeQuery()
     return result.next() ? result.getInt('transfer_id') : null
-                   }
+}
 
 log.warn('**** COMPLETED TRANSFER ETL ****')
