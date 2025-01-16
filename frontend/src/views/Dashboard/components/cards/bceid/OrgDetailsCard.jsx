@@ -24,7 +24,6 @@ const OrgDetailsCard = () => {
   return (
     <BCWidgetCard
       component="div"
-      disableHover={true}
       title={t('dashboard:orgDetails.orgDetailsLabel')}
       content={
         orgLoading ? (

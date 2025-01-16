@@ -34,7 +34,7 @@ When(
   (qty, orgId, pricePerUnit, agreementDate) => {
     cy.get('a[href="/transactions"]').click()
     cy.get('#new-transfer-button').click()
-    cy.get("[data-testid='quantity']").type(qty)
+    cy.get("[data-test='quantity']").type(qty)
     cy.get('#to-organization-id').click()
     cy.get(`[data-value="${orgId}"]`).click()
     cy.get('#price-per-unit').type(pricePerUnit)
@@ -175,7 +175,10 @@ When('I login as analyst and recommend', () => {
     Cypress.env(`admin_idir_username`),
     Cypress.env(`admin_idir_password`)
   )
+
   cy.wait(5000)
+  cy.setIDIRRoles('analyst')
+  cy.visit('/')
   cy.getByDataTest('dashboard-container').should('exist')
 
   cy.get('a[href="/transactions"]').click()
@@ -205,8 +208,9 @@ When('I login as director and records transfer', () => {
     Cypress.env(`admin_idir_password`)
   )
   cy.wait(5000)
+  cy.setIDIRRoles('director')
+  cy.visit('/')
   cy.getByDataTest('dashboard-container').should('exist')
-
   cy.get('a[href="/transactions"]').click()
   cy.wait(5000)
   cy.get('div[row-index="0"]').click()
@@ -232,6 +236,8 @@ When('I login as director and refuse transfer', () => {
     Cypress.env(`admin_idir_password`)
   )
   cy.wait(5000)
+  cy.setIDIRRoles('director')
+  cy.visit('/')
   cy.getByDataTest('dashboard-container').should('exist')
 
   cy.get('a[href="/transactions"]').click()

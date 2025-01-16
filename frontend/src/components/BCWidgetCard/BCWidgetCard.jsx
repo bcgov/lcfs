@@ -11,15 +11,13 @@ function BCWidgetCard({
   title = 'Title',
   content,
   style,
-  disableHover = false,
-  editButtonText = null,
-  editButtonRoute = null
+  editButton
 }) {
   const navigate = useNavigate()
 
   const handleButtonClick = () => {
-    if (editButtonRoute) {
-      navigate(editButtonRoute)
+    if (editButton?.route) {
+      navigate(editButton.route)
     }
   }
 
@@ -50,8 +48,9 @@ function BCWidgetCard({
           <BCTypography variant="subtitle2" fontWeight="light" color="inherit">
             {title}
           </BCTypography>
-          {editButtonRoute && (
+          {editButton && (
             <BCButton
+              id={editButton.id}
               variant="outlined"
               size="small"
               color="primay"
@@ -63,7 +62,7 @@ function BCWidgetCard({
                 }
               }}
             >
-              {editButtonText}
+              {editButton.text}
             </BCButton>
           )}
         </BCBox>
@@ -93,10 +92,12 @@ BCWidgetCard.propTypes = {
   ]),
   title: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
   content: PropTypes.node.isRequired,
-  disableHover: PropTypes.bool,
   subHeader: PropTypes.node,
-  editButtonText: PropTypes.string,
-  editButtonRoute: PropTypes.string
+  editButton: {
+    text: PropTypes.string,
+    route: PropTypes.string,
+    id: PropTypes.string
+  }
 }
 
 export default BCWidgetCard

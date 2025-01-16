@@ -110,7 +110,7 @@ Cypress.Commands.add('setIDIRRoles', (role) => {
   cy.url().should('match', /\/admin\/users\/\d+/)
 
   // click edit button
-  cy.get('button[aria-label="edit"]').click()
+  cy.get('#edit-user-button').click()
 
   // Ensure the URL has changed to the user edit page
   cy.url().should('include', '/edit-user')
