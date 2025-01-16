@@ -122,13 +122,11 @@ export const BCGridViewer = ({
     ref
   ])
 
-
   useEffect(() => {
     if (onSetResetGrid) {
       onSetResetGrid(resetGrid)
     }
-  }, [onSetResetGrid, resetGrid])
-
+  }, [onSetResetGrid])
 
   const onFirstDataRendered = useCallback((params) => {
     params.api.hideOverlay()
