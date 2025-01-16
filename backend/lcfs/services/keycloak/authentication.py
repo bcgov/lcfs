@@ -160,7 +160,7 @@ class UserAuthentication(AuthenticationBackend):
                             await self.create_login_history(
                                 user_token, False, error_text
                             )
-                            raise HTTPException(status_code=401, detail=error_text)
+                            raise HTTPException(status_code=403, detail=error_text)
                         else:
                             # Already found by keycloak_user_id => return
                             return AuthCredentials(["authenticated"]), user
@@ -204,7 +204,7 @@ class UserAuthentication(AuthenticationBackend):
                 if not user.is_active:
                     error_text = "The account is currently inactive."
                     await self.create_login_history(user_token, False, error_text)
-                    raise HTTPException(status_code=401, detail=error_text)
+                    raise HTTPException(status_code=403, detail=error_text)
         else:
             error_text = "preferred_username or email is required in JWT payload."
             raise HTTPException(status_code=401, detail=error_text)
