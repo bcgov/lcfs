@@ -10,9 +10,12 @@ import {
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import moment from 'moment'
+import dayjs from 'dayjs'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
-import { StandardCellWarningAndErrors, StandardCellErrors } from '@/utils/grid/errorRenderers'
+import {
+  StandardCellWarningAndErrors,
+  StandardCellErrors
+} from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
 
@@ -56,26 +59,29 @@ export const finalSupplyEquipmentColDefs = (
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: true,
-      openOnFocus: true,
+      openOnFocus: true
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors),
+    cellStyle: (params) => StandardCellWarningAndErrors(params, errors),
     suppressKeyboardEvent,
     minWidth: 260,
     editable: true,
     valueGetter: (params) => {
-      return params.data?.organizationName || '';
+      return params.data?.organizationName || ''
     },
     valueSetter: (params) => {
       if (params.newValue) {
-        const isValidOrganizationName = optionsData?.organizationNames.includes(params.newValue);
+        const isValidOrganizationName = optionsData?.organizationNames.includes(
+          params.newValue
+        )
 
-        params.data.organizationName = isValidOrganizationName ? params.newValue : params.newValue;
-        return true;
+        params.data.organizationName = isValidOrganizationName
+          ? params.newValue
+          : params.newValue
+        return true
       }
-      return false;
+      return false
     },
-  tooltipValueGetter: (params) => "Select the organization name from the list"
+    tooltipValueGetter: (params) => 'Select the organization name from the list'
   },
   {
     field: 'supplyFrom',
@@ -95,8 +101,8 @@ export const finalSupplyEquipmentColDefs = (
     cellStyle: (params) => StandardCellErrors(params, errors),
     cellEditor: DateRangeCellEditor,
     cellEditorParams: {
-      minDate: moment(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
-      maxDate: moment(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate()
+      minDate: dayjs(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
+      maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate()
     },
     cellEditorPopup: true,
     valueGetter: (params) => {

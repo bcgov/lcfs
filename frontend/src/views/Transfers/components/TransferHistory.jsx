@@ -53,6 +53,21 @@ function TransferHistory({ transferHistory }) {
   const diffMonths = diff?.months() || 0
   const diffDays = diff?.days() || 0
 
+  const formatWithTimezoneAbbr = (dateInput) => {
+    const time = dayjs(dateInput)
+    const formattedDate = time.format('LLL')
+
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZoneName: 'short'
+    })
+    const parts = formatter.formatToParts(time.toDate())
+    const timeZoneName = parts.find(
+      (part) => part.type === 'timeZoneName'
+    ).value
+
+    return `${formattedDate} ${timeZoneName}`
+  }
+
   let category = 'A'
   if (
     (diffYears === 0 && diffMonths >= 6 && diffDays > 0) ||
@@ -74,7 +89,7 @@ function TransferHistory({ transferHistory }) {
             TRANSFER_STATUSES.SENT,
             TRANSFER_STATUSES.SUBMITTED,
             TRANSFER_STATUSES.RECOMMENDED,
-            TRANSFER_STATUSES.RECORDED,
+            TRANSFER_STATUSES.RECORDED
           ].includes(currentStatus) &&
             agreementDate && (
               <li>
@@ -109,7 +124,7 @@ function TransferHistory({ transferHistory }) {
               <BCTypography variant="body2" component="div">
                 <b>{getTransferStatusLabel(item.transferStatus?.status)}</b>{' '}
                 <span> on </span>
-                {dayjs(item.createDate).format('LL')}
+                {formatWithTimezoneAbbr(item.createDate)}
                 <span> by </span>
                 <strong>
                   {' '}
