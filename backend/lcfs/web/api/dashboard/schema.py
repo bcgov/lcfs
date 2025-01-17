@@ -26,3 +26,7 @@ class OrgComplianceReportCountsSchema(BaseSchema):
 
 class ComplianceReportCountsSchema(BaseSchema):
     pending_reviews: int = Field(default=0)
+
+
+class FuelCodeCountsSchema(BaseSchema):
+    draft_fuel_codes: int = Field(default=0)

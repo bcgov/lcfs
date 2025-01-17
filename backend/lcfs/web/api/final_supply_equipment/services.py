@@ -1,10 +1,11 @@
 import structlog
 import math
 import re
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request, status
 
 from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentCreateSchema,
@@ -21,41 +22,52 @@ logger = structlog.get_logger(__name__)
 
 class FinalSupplyEquipmentServices:
     def __init__(
-        self, request: Request = None, repo: FinalSupplyEquipmentRepository = Depends()
+        self,
+        request: Request = None,
+        repo: FinalSupplyEquipmentRepository = Depends(),
+        compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
         self.request = request
         self.repo = repo
+        self.compliance_report_repo = compliance_report_repo
 
     @service_handler
     async def get_fse_options(self):
         """Fetches all FSE options concurrently."""
-        organization = self.request.user.organization
-        (
-            intended_use_types,
-            levels_of_equipment,
-            fuel_measurement_types,
-            intended_user_types,
-            ports,
-            organization_names,
-        ) = await self.repo.get_fse_options(organization)
+        try:
+            organization = getattr(self.request.user, 'organization', None)
+            (
+                intended_use_types,
+                levels_of_equipment,
+                fuel_measurement_types,
+                intended_user_types,
+                ports,
+                organization_names,
+            ) = await self.repo.get_fse_options(organization)
 
-        return {
-            "intended_use_types": [
-                EndUseTypeSchema.model_validate(t) for t in intended_use_types
-            ],
-            "levels_of_equipment": [
-                LevelOfEquipmentSchema.model_validate(l) for l in levels_of_equipment
-            ],
-            "fuel_measurement_types": [
-                FuelMeasurementTypeSchema.model_validate(f)
-                for f in fuel_measurement_types
-            ],
-            "intended_user_types": [
-                EndUserTypeSchema.model_validate(u) for u in intended_user_types
-            ],
-            "ports": [port.value for port in ports],
-            "organization_names": organization_names,
-        }
+            return {
+                "intended_use_types": [
+                    EndUseTypeSchema.model_validate(t) for t in intended_use_types
+                ],
+                "levels_of_equipment": [
+                    LevelOfEquipmentSchema.model_validate(l) for l in levels_of_equipment
+                ],
+                "fuel_measurement_types": [
+                    FuelMeasurementTypeSchema.model_validate(f)
+                    for f in fuel_measurement_types
+                ],
+                "intended_user_types": [
+                    EndUserTypeSchema.model_validate(u) for u in intended_user_types
+                ],
+                "ports": [port.value for port in ports],
+                "organization_names": organization_names,
+            }
+        except Exception as e:
+            logger.error("Error getting FSE options", error=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Error retrieving FSE options"
+            )
 
     async def convert_to_fse_model(self, fse: FinalSupplyEquipmentCreateSchema):
         fse_model = FinalSupplyEquipment(
@@ -296,3 +308,18 @@ class FinalSupplyEquipmentServices:
     async def search_manufacturers(self, query: str) -> list[str]:
         """Search for manufacturers based on the provided query."""
         return await self.repo.search_manufacturers(query)
+
+    @service_handler
+    async def get_compliance_report_by_id(self, compliance_report_id: int):
+        """Get compliance report by period with status"""
+        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
+            compliance_report_id,
+        )
+
+        if not compliance_report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found for this period"
+            )
+
+        return compliance_report

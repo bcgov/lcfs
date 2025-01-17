@@ -83,8 +83,9 @@ class TransactionRepository:
             non_transfer_condition = and_(
                 TransactionView.transaction_type != "Transfer",
                 TransactionView.to_organization_id == organization_id,
-                TransactionView.status
-                == "Approved",  # This status includes InitiativeAgreement and AdminAdjustment
+                TransactionView.status.in_(
+                    ["Approved", "Assessed"]
+                ),
             )
 
             # Combine conditions since an organization can be both transferor and transferee, or neither for non-"Transfer" transactions

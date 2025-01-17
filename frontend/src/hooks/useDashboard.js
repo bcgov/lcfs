@@ -70,3 +70,15 @@ export const useComplianceReportCounts = () => {
     }
   })
 }
+export const useFuelCodeCounts = () => {
+  const client = useApiService()
+  const path = apiRoutes.fuelCodeCounts
+
+  return useQuery({
+    queryKey: ['fuel-code-counts'],
+    queryFn: async () => {
+      const response = await client.get(path)
+      return response.data
+    }
+  })
+}
