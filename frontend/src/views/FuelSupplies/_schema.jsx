@@ -103,6 +103,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         params.data.endUseType = null
         params.data.eer = null
         params.data.provisionOfTheAct = null
+        params.data.provisionOfTheActId = null
         params.data.fuelCode = null
         params.data.fuelCodeId = null
         params.data.units = fuelType?.unit
@@ -177,6 +178,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         params.data.endUseType = null
         params.data.eer = null
         params.data.provisionOfTheAct = null
+        params.data.provisionOfTheActId = null
         params.data.fuelCode = null
       }
       return true
@@ -193,7 +195,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   {
     field: 'endUseType',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUse'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
     cellEditorParams: (params) => ({
       options: [
         ...new Set(
