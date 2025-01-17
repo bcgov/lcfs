@@ -290,15 +290,19 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     field: 'provisionOfTheAct',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.provisionOfTheActId'),
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellEditorParams: (params) => ({
-      values: optionsData?.fuelTypes
+      options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
         ?.provisions.map((item) => item.name)
-        .sort()
+        .sort(),
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true
     }),
     cellStyle: (params) => cellErrorStyle(params, errors),
     suppressKeyboardEvent,
@@ -322,7 +326,7 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
   {
     field: 'fuelCode',
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     minWidth: 135,
     cellEditorParams: (params) => {
@@ -330,7 +334,11 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
         (obj) => params.data.fuelType === obj.fuelType
       )
       return {
-        values: fuelTypeObj?.fuelCodes?.map((item) => item.fuelCode) || []
+        options: fuelTypeObj?.fuelCodes?.map((item) => item.fuelCode) || [],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
       }
     },
     cellStyle: (params) => {
