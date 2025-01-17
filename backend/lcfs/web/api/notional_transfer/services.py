@@ -3,10 +3,11 @@ import uuid
 from typing import Optional
 
 import structlog
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
@@ -40,9 +41,11 @@ class NotionalTransferServices:
         self,
         repo: NotionalTransferRepository = Depends(NotionalTransferRepository),
         fuel_repo: FuelCodeRepository = Depends(),
+        compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
         self.repo = repo
         self.fuel_repo = fuel_repo
+        self.compliance_report_repo = compliance_report_repo
 
     async def convert_to_model(
         self, notional_transfer_data: NotionalTransferCreateSchema
@@ -235,3 +238,18 @@ class NotionalTransferServices:
 
         await self.repo.create_notional_transfer(deleted_entity)
         return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")
+
+    @service_handler
+    async def get_compliance_report_by_id(self, compliance_report_id: int):
+        """Get compliance report by period with status"""
+        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
+            compliance_report_id,
+        )
+
+        if not compliance_report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found for this period"
+            )
+
+        return compliance_report

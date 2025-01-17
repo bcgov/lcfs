@@ -1,5 +1,7 @@
+from datetime import datetime
 import pytest
 from unittest.mock import AsyncMock, MagicMock
+from lcfs.web.api.compliance_report.schema import CompliancePeriodSchema, ComplianceReportHistorySchema, ComplianceReportOrganizationSchema, ComplianceReportStatusSchema, ComplianceReportUserSchema, SummarySchema
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_export.services import FuelExportServices
@@ -45,6 +47,49 @@ def mock_compliance_report_repo():
     repo = AsyncMock(spec=ComplianceReportRepository)
     return repo
 
+@pytest.fixture
+def compliance_period_schema():
+    return CompliancePeriodSchema(
+        compliance_period_id=1,
+        description="2024",
+        effective_date=datetime(2024, 1, 1),
+        expiration_date=datetime(2024, 3, 31),
+        display_order=1,
+    )
+
+@pytest.fixture
+def compliance_report_organization_schema():
+    return ComplianceReportOrganizationSchema(
+        organization_id=1, name="Acme Corporation"
+    )
+
+@pytest.fixture
+def summary_schema():
+    return SummarySchema(summary_id=1, is_locked=False)
+
+@pytest.fixture
+def compliance_report_status_schema():
+    return ComplianceReportStatusSchema(compliance_report_status_id=1, status="Draft")
+
+@pytest.fixture
+def compliance_report_user_schema(compliance_report_organization_schema):
+    return ComplianceReportUserSchema(
+        first_name="John",
+        last_name="Doe",
+        organization=compliance_report_organization_schema,
+    )
+
+@pytest.fixture
+def compliance_report_history_schema(
+    compliance_report_status_schema, compliance_report_user_schema
+):
+    return ComplianceReportHistorySchema(
+        compliance_report_history_id=1,
+        compliance_report_id=1,
+        status=compliance_report_status_schema,
+        user_profile=compliance_report_user_schema,
+        create_date=datetime(2024, 4, 1, 12, 0, 0),
+    )
 
 @pytest.fixture
 def mock_fuel_code_repo():

@@ -8,6 +8,7 @@ from typing import List, Optional, Union
 from fastapi import (
     APIRouter,
     Body,
+    HTTPException,
     status,
     Request,
     Response,
@@ -69,10 +70,31 @@ async def get_allocation_agreements(
     report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to get list of allocation agreements for a compliance report"""
-    await report_validate.validate_organization_access(
-        request_data.compliance_report_id
-    )
-    return await service.get_allocation_agreements(request_data.compliance_report_id)
+    try:
+        compliance_report_id = request_data.compliance_report_id
+
+        compliance_report = await service.get_compliance_report_by_id(compliance_report_id)
+        if not compliance_report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found"
+            )
+
+        await report_validate.validate_compliance_report_access(compliance_report)
+        await report_validate.validate_organization_access(
+            request_data.compliance_report_id
+        )
+        return await service.get_allocation_agreements(request_data.compliance_report_id)
+    except HTTPException as http_ex:
+        # Re-raise HTTP exceptions to preserve status code and message
+        raise http_ex
+    except Exception as e:
+        # Log and handle unexpected errors
+        logger.exception("Error occurred", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while processing your request"
+        )
 
 
 @router.post(
