@@ -2,7 +2,7 @@ import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.SQLException
 
-log.warn('**** STARTING TRANSFER UPDATE SQL ****')
+log.warn('**** STARTING CLEAN UPS UPDATE SQL ****')
 
 // SQL query to update transaction_effective_date
 def updateTransferEffectiveDateSQL = """
@@ -25,11 +25,11 @@ def cleanUpQueries = [
     -- 273
     UPDATE compliance_report
     SET transaction_id = null
-    WHERE compliance_report_id = 764;
+    WHERE transaction_id IN (1920, 5046, 5071, 5315);
     """,
     """
     DELETE FROM "transaction"
-    WHERE transaction_id = 1920;
+    WHERE transaction_id IN (1920, 5046, 5071, 5315);
     """
 ]
 
@@ -84,4 +84,4 @@ try {
     }
 }
 
-log.warn('**** COMPLETED TRANSFER UPDATE SQL ****')
+log.warn('**** COMPLETED CLEAN UPS UPDATE SQL ****')
