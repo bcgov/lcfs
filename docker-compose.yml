@@ -162,4 +162,3 @@ volumes:
 networks:
   shared_network:
     name: shared_network
-    external: true
