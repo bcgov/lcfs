@@ -21,64 +21,15 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 export const Organizations = () => {
   const { t } = useTranslation(['common', 'org'])
   const gridRef = useRef()
-  const downloadButtonRef = useRef(null);
-  const [gridKey, setGridKey] = useState(`organizations-grid`)
-  const handleGridKey = useCallback(() => {
-    setGridKey('organizations-grid')
-  }, [])
-  const gridOptions = {
-    overlayNoRowsTemplate: t('org:noOrgsFound')
-  }
-  const getRowId = useCallback((params) => {
-    return params.data.organizationId
-  }, [])
-
-  const navigate = useNavigate()
-  const location = useLocation()
-
-  const defaultSortModel = [{ field: 'name', direction: 'asc' }]
-
-  const apiService = useApiService()
-  const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
-  const [isDownloadingUsers, setIsDownloadingUsers] = useState(false)
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
-  const [resetGridFn, setResetGridFn] = useState(null)
-
-  useEffect(() => {
-    if (location.state?.message) {
-      setAlertMessage(location.state.message)
-      setAlertSeverity(location.state.severity || 'info')
-    }
-  }, [location.state])
-
-  const handleDownloadOrgs = async () => {
-    setIsDownloadingOrgs(true)
-    setAlertMessage('')
-    try {
-      await apiService.download('/organizations/export')
-      setIsDownloadingOrgs(false)
-    } catch (error) {
-      console.error('Error downloading organization information:', error)
-      setIsDownloadingOrgs(false)
-      setAlertMessage(t('org:orgDownloadFailMsg'))
-      setAlertSeverity('error')
-    }
-  }
-
-  const handleDownloadUsers = async () => {
-    setIsDownloadingUsers(true)
-    try {
-      await apiService.download(apiRoutes.exportUsers)
-      setIsDownloadingUsers(false)
-    } catch (error) {
-      console.error('Error downloading user information:', error)
-      setIsDownloadingUsers(false)
-      setAlertMessage(t('org:userDownloadFailMsg'))
-      setAlertSeverity('error')
-    }
-  }
-
+  const downloadButtonRef = useRef(null)
+  const [gridKey] = useState('organizations-grid')
+  const apiEndpoint = useMemo(() => 'organizations/', [])
+  const gridOptions = useMemo(
+    () => ({
+      overlayNoRowsTemplate: t('org:noOrgsFound')
+    }),
+    [t]
+  )
   const defaultColDef = useMemo(
     () => ({
       cellRenderer: LinkRenderer,
@@ -89,9 +40,31 @@ export const Organizations = () => {
     []
   )
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
+  // Sorting
+  const defaultSortModel = useMemo(
+    () => [{ field: 'name', direction: 'asc' }],
+    []
+  )
+
+  // For alert messages
+  const [alertMessage, setAlertMessage] = useState('')
+  const [alertSeverity, setAlertSeverity] = useState('info')
+
+  // For downloads
+  const apiService = useApiService()
+  const [isDownloadingOrgs, setIsDownloadingOrgs] = useState(false)
+  const [isDownloadingUsers, setIsDownloadingUsers] = useState(false)
+
+  // For clearing filters
+  const [resetGridFn, setResetGridFn] = useState(null)
+  const handleSetResetGrid = useCallback(
+    (fn) => {
+      if (resetGridFn !== fn) {
+        setResetGridFn(() => fn)
+      }
+    },
+    [resetGridFn]
+  )
 
   const handleClearFilters = useCallback(() => {
     if (resetGridFn) {
@@ -99,20 +72,59 @@ export const Organizations = () => {
     }
   }, [resetGridFn])
 
+  // Router navigation
+  const navigate = useNavigate()
+  const location = useLocation()
+  useEffect(() => {
+    if (location.state?.message) {
+      setAlertMessage(location.state.message)
+      setAlertSeverity(location.state.severity || 'info')
+    }
+  }, [location.state])
+
+  // Download handlers
+  const handleDownloadOrgs = async () => {
+    setIsDownloadingOrgs(true)
+    setAlertMessage('')
+    try {
+      await apiService.download('/organizations/export')
+    } catch (error) {
+      console.error('Error downloading organization information:', error)
+      setAlertMessage(t('org:orgDownloadFailMsg'))
+      setAlertSeverity('error')
+    } finally {
+      setIsDownloadingOrgs(false)
+    }
+  }
+
+  const handleDownloadUsers = async () => {
+    setIsDownloadingUsers(true)
+    try {
+      await apiService.download(apiRoutes.exportUsers)
+    } catch (error) {
+      console.error('Error downloading user information:', error)
+      setAlertMessage(t('org:userDownloadFailMsg'))
+      setAlertSeverity('error')
+    } finally {
+      setIsDownloadingUsers(false)
+    }
+  }
+
+  // Row ID
+  const getRowId = useCallback((params) => params.data.organizationId, [])
+
   return (
     <>
-      <div>
-        {alertMessage && (
-          <BCAlert data-test="alert-box" severity={alertSeverity}>
-            {alertMessage}
-          </BCAlert>
-        )}
-      </div>
+      {alertMessage && (
+        <BCAlert data-test="alert-box" severity={alertSeverity}>
+          {alertMessage}
+        </BCAlert>
+      )}
       <BCTypography variant="h5" color="primary">
         {t('org:title')}
       </BCTypography>
       <Stack
-        direction={{ md: 'coloumn', lg: 'row' }}
+        direction={{ xs: 'column', lg: 'row' }}
         spacing={{ xs: 2, sm: 2, md: 3 }}
         useFlexGap
         flexWrap="wrap"
@@ -151,7 +163,7 @@ export const Organizations = () => {
         <ClearFiltersButton
           onClick={handleClearFilters}
           sx={{
-            height: downloadButtonRef.current?.offsetHeight || '36px',
+            height: '36px',
             minWidth: 'fit-content',
             whiteSpace: 'nowrap'
           }}
@@ -160,14 +172,13 @@ export const Organizations = () => {
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint="organizations/"
+          apiEndpoint={apiEndpoint}
           apiData="organizations"
           columnDefs={organizationsColDefs(t)}
           gridKey={gridKey}
           getRowId={getRowId}
           defaultSortModel={defaultSortModel}
           gridOptions={gridOptions}
-          handleGridKey={handleGridKey}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           onSetResetGrid={handleSetResetGrid}
