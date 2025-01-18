@@ -113,17 +113,23 @@ class FinalSupplyEquipmentRepository:
         Returns:
             List[str]: A list of unique organization names.
         """
-        organization_names = (
-            await self.db.execute(
-                select(distinct(FinalSupplyEquipment.organization_name))
-                .join(ComplianceReport, FinalSupplyEquipment.compliance_report_id == ComplianceReport.compliance_report_id)
-                .filter(ComplianceReport.organization_id == organization.organization_id)
-                .filter(FinalSupplyEquipment.organization_name.isnot(None))
-            )
-        ).all()
+        try:
+            if not organization or not organization.organization_id:
+                return []
 
-        # Extract strings from the list of tuples
-        return [name[0] for name in organization_names]
+            organization_names = (
+                await self.db.execute(
+                    select(distinct(FinalSupplyEquipment.organization_name))
+                    .join(ComplianceReport, FinalSupplyEquipment.compliance_report_id == ComplianceReport.compliance_report_id)
+                    .filter(ComplianceReport.organization_id == organization.organization_id)
+                    .filter(FinalSupplyEquipment.organization_name.isnot(None))
+                )
+            ).all()
+
+            return [name[0] for name in organization_names]
+        except Exception as e:
+            logger.error("Error getting organization names", error=str(e))
+            return []
 
     @repo_handler
     async def get_intended_user_by_name(self, intended_user: str) -> EndUseType:

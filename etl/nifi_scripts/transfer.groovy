@@ -21,6 +21,7 @@ SELECT
         ct.update_user_id as update_user,
         ct.update_timestamp as update_date,
         ct.create_timestamp  as create_date,
+        ctzr.description,
         json_agg (
           json_build_object (
             'transfer_id',
@@ -60,6 +61,7 @@ SELECT
         JOIN credit_trade_status cts ON ct.status_id = cts.id
         LEFT JOIN credit_trade_history cth ON cth.credit_trade_id = ct.id
         JOIN credit_trade_status cts_history ON cth.status_id = cts_history.id
+        LEFT JOIN credit_trade_zero_reason ctzr ON ctzr.id = ct.zero_reason_id
       WHERE
         ctt.the_type IN ('Buy', 'Sell')
       GROUP BY
@@ -73,8 +75,7 @@ SELECT
         ctc.category,
         cts.status,
         ctzr.description,
-        ctt.the_type,
-        internal_comment.role_names;
+        ctt.the_type;
       """
 
 def COMMENT_QUERY = '''
@@ -123,6 +124,74 @@ def INTERNAL_COMMENT_QUERY = """
         ctc.credit_trade_id, ctc.create_timestamp;
 """
 
+
+// Temporarily remove (drop) all audit triggers on listed tables
+// so no audit_log entries occur during this data load.
+def dropAuditTriggers = """
+DO \$\$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN SELECT tablename
+             FROM pg_tables
+             WHERE schemaname = 'public'
+               AND tablename IN (
+                 'transaction', 'compliance_report', 'compliance_report_history',
+                 'compliance_report_status', 'compliance_report_summary', 'compliance_period',
+                 'initiative_agreement', 'initiative_agreement_status', 'initiative_agreement_history',
+                 'allocation_agreement', 'allocation_transaction_type', 'custom_fuel_type', 'fuel_code',
+                 'fuel_code_prefix', 'fuel_code_status', 'fuel_category', 'fuel_instance', 'fuel_type',
+                 'fuel_export', 'organization', 'organization_address', 'organization_attorney_address',
+                 'organization_status', 'organization_type', 'transfer', 'transfer_category', 'transfer_history',
+                 'transfer_status', 'internal_comment', 'user_profile', 'user_role', 'role', 'notification_message',
+                 'notification_type', 'admin_adjustment', 'admin_adjustment_status', 'admin_adjustment_history',
+                 'provision_of_the_act', 'supplemental_report', 'final_supply_equipment', 'notional_transfer',
+                 'fuel_supply', 'additional_carbon_intensity', 'document', 'end_use_type', 'energy_density',
+                 'energy_effectiveness_ratio', 'transport_mode', 'final_supply_equipment', 'level_of_equipment',
+                 'user_login_history', 'unit_of_measure', 'target_carbon_intensity'
+               )
+    LOOP
+        EXECUTE format('DROP TRIGGER IF EXISTS audit_%I_insert_update_delete ON %I;', r.tablename, r.tablename);
+    END LOOP;
+END;
+\$\$;
+"""
+
+// Re-add the audit triggers to each table in the list
+def reAddAuditTriggers = """
+DO \$\$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN SELECT tablename
+             FROM pg_tables
+             WHERE schemaname = 'public'
+               AND tablename IN (
+                 'transaction', 'compliance_report', 'compliance_report_history',
+                 'compliance_report_status', 'compliance_report_summary', 'compliance_period',
+                 'initiative_agreement', 'initiative_agreement_status', 'initiative_agreement_history',
+                 'allocation_agreement', 'allocation_transaction_type', 'custom_fuel_type', 'fuel_code',
+                 'fuel_code_prefix', 'fuel_code_status', 'fuel_category', 'fuel_instance', 'fuel_type',
+                 'fuel_export', 'organization', 'organization_address', 'organization_attorney_address',
+                 'organization_status', 'organization_type', 'transfer', 'transfer_category', 'transfer_history',
+                 'transfer_status', 'internal_comment', 'user_profile', 'user_role', 'role', 'notification_message',
+                 'notification_type', 'admin_adjustment', 'admin_adjustment_status', 'admin_adjustment_history',
+                 'provision_of_the_act', 'supplemental_report', 'final_supply_equipment', 'notional_transfer',
+                 'fuel_supply', 'additional_carbon_intensity', 'document', 'end_use_type', 'energy_density',
+                 'energy_effectiveness_ratio', 'transport_mode', 'final_supply_equipment', 'level_of_equipment',
+                 'user_login_history', 'unit_of_measure', 'target_carbon_intensity'
+               )
+    LOOP
+        EXECUTE format('
+            CREATE TRIGGER audit_%I_insert_update_delete
+            AFTER INSERT OR UPDATE OR DELETE ON %I
+            FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();',
+            r.tablename, r.tablename);
+    END LOOP;
+END;
+\$\$;
+"""
+
 def USER_ID_QUERY = 'select keycloak_username from user_profile up where user_profile_id = ? limit 1'
 
 // Fetch connections to both the source and destination databases
@@ -142,8 +211,12 @@ try {
 
     def statements = prepareStatements(destinationConn)
 
+    destinationConn.createStatement().execute(dropAuditTriggers)
+
     destinationConn.createStatement().execute('DROP FUNCTION IF EXISTS refresh_transaction_aggregate() CASCADE;')
     destinationConn.createStatement().execute('DROP FUNCTION IF EXISTS refresh_mv_transaction_count() CASCADE;')
+    destinationConn.createStatement().execute('DROP FUNCTION IF EXISTS refresh_mv_director_review_transaction_count() CASCADE;')
+    destinationConn.createStatement().execute('DROP FUNCTION IF EXISTS refresh_mv_org_compliance_report_count() CASCADE;')
     destinationConn.createStatement().execute("""
         CREATE OR REPLACE FUNCTION refresh_transaction_aggregate()
         RETURNS void AS \$\$
@@ -154,6 +227,22 @@ try {
     """)
     destinationConn.createStatement().execute("""
         CREATE OR REPLACE FUNCTION refresh_mv_transaction_count()
+        RETURNS void AS \$\$
+        BEGIN
+            -- Temporarily disable the materialized view refresh
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    destinationConn.createStatement().execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_director_review_transaction_count()
+        RETURNS void AS \$\$
+        BEGIN
+            -- Temporarily disable the materialized view refresh
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    destinationConn.createStatement().execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_org_compliance_report_count()
         RETURNS void AS \$\$
         BEGIN
             -- Temporarily disable the materialized view refresh
@@ -189,7 +278,7 @@ try {
             recommendationValue = 'Record'  // matches "Record" in the transfer_recommendation_enum
         } else if (creditTradeHistoryJson.any { it.transfer_status == 'Not Recommended' }) {
             recommendationValue = 'Refuse'  // matches "Refuse" in the transfer_recommendation_enum
-    }
+        }
 
         // Only if transfer does not exist, proceed to create transactions and then insert the transfer.
         def (fromTransactionId, toTransactionId) = processTransactions(resultSet.getString('current_status'),
@@ -200,7 +289,7 @@ try {
                 fromTransactionId, toTransactionId, preparedData, destinationConn, recommendationValue, getUserNameStmt)
 
         if (transferId) {
-            processHistory(transferId, creditTradeHistoryJson, statements.historyStmt, preparedData, getUserNameStmt)
+            processHistory(transferId, creditTradeHistoryJson, statements.historyStmt, preparedData)
             processInternalComments(transferId, internalCommentStmt, statements.internalCommentStmt,
                     getUserNameStmt, statements.transferInternalCommentStmt)
         } else {
@@ -224,7 +313,27 @@ try {
         END;
         \$\$ LANGUAGE plpgsql;
     """)
+    destinationConn.createStatement().execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_director_review_transaction_count()
+        RETURNS void AS \$\$
+        BEGIN
+            REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count;
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    destinationConn.createStatement().execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_org_compliance_report_count()
+        RETURNS void AS \$\$
+        BEGIN
+            REFRESH MATERIALIZED VIEW CONCURRENTLY mv_org_compliance_report_count;
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    destinationConn.createStatement().execute(reAddAuditTriggers)
     destinationConn.createStatement().execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate')
+    destinationConn.createStatement().execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count')
+    destinationConn.createStatement().execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_org_compliance_report_count')
+    destinationConn.createStatement().execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_count')
 
     destinationConn.commit()
     log.debug("Processed ${recordCount} records successfully.")
@@ -428,7 +537,7 @@ def transferExists(Connection conn, int transferId) {
     return count > 0
 }
 
-def processHistory(Integer transferId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData, PreparedStatement getUserNameStmt) {
+def processHistory(Integer transferId, List creditTradeHistory, PreparedStatement historyStmt, Map preparedData) {
     if (!creditTradeHistory) return
 
     // Sort the records by create_timestamp to preserve chronological order
@@ -499,7 +608,7 @@ def processInternalComments(Integer transferId, PreparedStatement sourceInternal
         }
     }
     internalCommentResult.close()
-                            }
+}
 
 // Helper function to determine audience scope based on role names
 def getAudienceScope(String roleNames) {
@@ -569,6 +678,6 @@ def insertTransfer(ResultSet rs, PreparedStatement transferStmt, PreparedStateme
     transferStmt.setInt(19, rs.getInt('transfer_id'))
     def result = transferStmt.executeQuery()
     return result.next() ? result.getInt('transfer_id') : null
-                   }
+}
 
 log.warn('**** COMPLETED TRANSFER ETL ****')

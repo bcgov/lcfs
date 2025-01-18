@@ -1,9 +1,8 @@
 import java.sql.Connection
 import java.sql.PreparedStatement
-import java.sql.ResultSet
-import groovy.json.JsonSlurper
+import java.sql.SQLException
 
-log.warn('**** STARTING TRANSFER UPDATE SQL ****')
+log.warn('**** STARTING CLEAN UPS UPDATE SQL ****')
 
 // SQL query to update transaction_effective_date
 def updateTransferEffectiveDateSQL = """
@@ -14,41 +13,75 @@ def updateTransferEffectiveDateSQL = """
       AND update_date::date = transaction_effective_date::date; -- On the same day as transaction_effective_date
 """
 
-// Fetch connections to both source and destination databases
-// Replace the UUIDs with your actual Controller Service identifiers
-// For this UPDATE, only the destination database connection is required
-def destinationDbcpService = context.controllerServiceLookup.getControllerService('3244bf63-0192-1000-ffff-ffffc8ec6d93')
+// Cleanup queries
+def cleanUpQueries = [
+    """
+    -- 105
+    UPDATE "transaction"
+    SET compliance_units = -6994
+    WHERE transaction_id = 1491;
+    """,
+    """
+    -- 273
+    UPDATE compliance_report
+    SET transaction_id = null
+    WHERE transaction_id IN (1920, 5046, 5071, 5315);
+    """,
+    """
+    DELETE FROM "transaction"
+    WHERE transaction_id IN (1920, 5046, 5071, 5315);
+    """
+]
 
-// Initialize database connections
+// Fetch connection to the destination database
+def destinationDbcpService = context.controllerServiceLookup.getControllerService('3244bf63-0192-1000-ffff-ffffc8ec6d93')
 Connection destinationConn = null
 
 try {
-    // Get a connection from the Destination DBCP Connection Pool
+    // Obtain a connection from the Destination DBCP Connection Pool
     destinationConn = destinationDbcpService.getConnection()
+    destinationConn.setAutoCommit(false)  // Begin transaction
 
-    // Step 1: Execute the UPDATE statement
-    PreparedStatement updateStmt = destinationConn.prepareStatement(updateTransferEffectiveDateSQL)
+    // Step 1: Execute the UPDATE on public.transfer
+    try (PreparedStatement updateStmt = destinationConn.prepareStatement(updateTransferEffectiveDateSQL)) {
+        int rowsUpdated = updateStmt.executeUpdate()
+        log.info("Successfully executed UPDATE on 'public.transfer'. Rows affected: ${rowsUpdated}")
+    }
 
-    // Execute the UPDATE statement
-    int rowsUpdated = updateStmt.executeUpdate()
+    // Step 2: Execute the cleanup queries in sequence
+    cleanUpQueries.each { query ->
+        try (PreparedStatement stmt = destinationConn.prepareStatement(query)) {
+            stmt.executeUpdate()
+        }
+    }
+    log.info("Cleanup queries executed successfully.")
 
-    log.info("Successfully executed UPDATE on 'public.transfer'. Rows affected: ${rowsUpdated}")
-
-    // Close the UPDATE statement
-    updateStmt.close()
+    // Commit transaction
+    destinationConn.commit()
+    log.info("Transaction committed successfully.")
 
 } catch (Exception e) {
-    log.error('Error occurred while executing TRANSFER UPDATE SQL', e)
-    throw new ProcessException(e)
+    // Rollback transaction on error
+    if (destinationConn != null) {
+        try {
+            destinationConn.rollback()
+            log.warn("Transaction rolled back due to error.")
+        } catch (SQLException rollbackEx) {
+            log.error("Error occurred during transaction rollback", rollbackEx)
+        }
+    }
+    log.error('Error occurred during SQL operations', e)
+    throw new RuntimeException(e)
 } finally {
     // Ensure the connection is closed
     if (destinationConn != null) {
         try {
             destinationConn.close()
-        } catch (SQLException ignore) {
-            // Ignored
+            log.info("Database connection closed.")
+        } catch (SQLException closeEx) {
+            log.warn("Error occurred while closing the database connection", closeEx)
         }
     }
 }
 
-log.warn('**** COMPLETED TRANSFER UPDATE SQL ****')
+log.warn('**** COMPLETED CLEAN UPS UPDATE SQL ****')

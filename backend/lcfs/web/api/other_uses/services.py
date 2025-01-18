@@ -3,9 +3,10 @@ import uuid
 from typing import Optional
 
 import structlog
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.compliance.OtherUses import OtherUses
@@ -44,9 +45,11 @@ class OtherUsesServices:
         self,
         repo: OtherUsesRepository = Depends(OtherUsesRepository),
         fuel_repo: FuelCodeRepository = Depends(),
+        compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
         self.repo = repo
         self.fuel_repo = fuel_repo
+        self.compliance_report_repo = compliance_report_repo
 
     async def schema_to_model(self, other_use: OtherUsesCreateSchema) -> OtherUses:
         """
@@ -294,3 +297,18 @@ class OtherUsesServices:
 
         await self.repo.create_other_use(deleted_entity)
         return DeleteOtherUsesResponseSchema(success=True, message="Marked as deleted.")
+
+    @service_handler
+    async def get_compliance_report_by_id(self, compliance_report_id: int):
+        """Get compliance report by period with status"""
+        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
+            compliance_report_id,
+        )
+
+        if not compliance_report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found for this period"
+            )
+
+        return compliance_report

@@ -83,7 +83,8 @@ async def get_compliance_report_by_id(
     service: ComplianceReportServices = Depends(),
     validate: ComplianceReportValidation = Depends(),
 ) -> ChainedComplianceReportSchema:
-    await validate.validate_organization_access(report_id)
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
 
     mask_statuses = not user_has_roles(request.user, [RoleEnum.GOVERNMENT])
 
