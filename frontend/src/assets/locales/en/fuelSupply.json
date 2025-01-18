@@ -16,7 +16,7 @@
     "fuelType": "Fuel type",
     "fuelTypeOther": "Fuel type other",
     "fuelCategoryId": "Fuel category",
-    "endUse": "End use",
+    "endUseId": "End use",
     "provisionOfTheActId": "Determining carbon intensity",
     "fuelCode": "Fuel code",
     "quantity": "Quantity supplied",
