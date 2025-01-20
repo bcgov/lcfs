@@ -24,8 +24,8 @@ def userProfileQuery = """
                     u.id
             ) AS occurrence,
 
-            COALESCE(NULLIF(ucr.keycloak_email, ''), u.email) AS keycloak_email,
-            COALESCE(NULLIF(u.email, ''), '') AS email,
+            COALESCE(NULLIF(ucr.keycloak_email, ''), NULLIF(u.email, ''), 'user@gov.bc.ca') AS keycloak_email,
+            COALESCE(NULLIF(u.email, ''), NULLIF(ucr.keycloak_email, ''), 'user@gov.bc.ca') AS email,
             u.title,
             u.phone,
             u.cell_phone AS mobile_phone,
