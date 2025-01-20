@@ -1102,7 +1102,8 @@ def recreate_mv_transaction_aggregate_with_compliance_report():
         JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
         JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
         JOIN "transaction" tr ON cr.transaction_id = tr.transaction_id
-           AND cr.transaction_id IS NOT NULL;
+           AND cr.transaction_id IS NOT NULL
+        WHERE crs.status = 'Assessed';
         """
     )
     op.execute(
