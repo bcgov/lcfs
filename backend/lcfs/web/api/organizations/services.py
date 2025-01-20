@@ -88,20 +88,7 @@ class OrganizationsService:
         """
         Prepares a list of organizations in a .xls file that is downloadable
         """
-        organizations = await self.repo.get_organizations()
-
-        data = [
-            [
-                organization.organization_id,
-                organization.name,
-                # TODO: Update this section with actual data retrieval
-                # once the Compliance Units models are implemented.
-                123456,
-                123456,
-                organization.org_status.status.value,
-            ]
-            for organization in organizations
-        ]
+        data = await self.repo.get_organizations_with_balances()
 
         export_format = "xls"
 
