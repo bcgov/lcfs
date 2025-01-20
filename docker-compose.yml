@@ -153,7 +153,7 @@ volumes:
   node_modules:
     name: lcfs_node_data
   s3:
-    name: lfcs_s3_data
+    name: lcfs_s3_data
   clamav:
     name: clamav
   clamsocket:

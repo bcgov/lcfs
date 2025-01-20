@@ -12,7 +12,8 @@ import {
   Checkbox,
   Box,
   Chip,
-  Stack
+  Stack,
+  Divider
 } from '@mui/material'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
@@ -37,21 +38,30 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
     onPaste
   } = props
 
-  const [selectedValues, setSelectedValues] = useState(() => {
-    if (!value) {
-      return []
-    } else if (Array.isArray(value)) {
-      return value
-    } else {
-      return value.split(',').map((v) => v.trim)
+  // Fix initial value parsing
+  const parseInitialValue = (initialValue) => {
+    if (!initialValue) return multiple ? [] : null
+    if (Array.isArray(initialValue)) return initialValue
+    if (typeof initialValue === 'string') {
+      const values = initialValue.split(',').map((v) => v.trim())
+      return multiple ? values : values[0]
     }
-  })
+    return multiple ? [initialValue] : initialValue
+  }
 
+  const [selectedValues, setSelectedValues] = useState(() =>
+    parseInitialValue(value)
+  )
   const [isOpen, setIsOpen] = useState(false)
   const inputRef = useRef()
 
   useImperativeHandle(ref, () => ({
-    getValue: () => selectedValues,
+    getValue: () => {
+      if (multiple) {
+        return Array.isArray(selectedValues) ? selectedValues : []
+      }
+      return selectedValues || ''
+    },
     isCancelBeforeStart: () => false,
     isCancelAfterEnd: () => false,
     afterGuiAttached: () => {
@@ -68,8 +78,11 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
   }, [])
 
   const handleChange = (event, newValue) => {
-    setSelectedValues(newValue)
-    onValueChange(newValue)
+    const processedValue = multiple ? newValue : newValue || ''
+    setSelectedValues(processedValue)
+    if (onValueChange) {
+      onValueChange(processedValue)
+    }
   }
 
   const navigateToNextCell = () => {
@@ -87,14 +100,12 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
       onKeyDownCapture(event)
     }
 
-    // Handle Enter key to toggle dropdown
     if (event.key === 'Enter') {
       event.preventDefault()
       setIsOpen(!isOpen)
       return
     }
 
-    // Handle Tab key navigation - directly move to next/previous cell
     if (event.key === 'Tab') {
       event.preventDefault()
       onValueChange(selectedValues)
@@ -115,6 +126,28 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
       onBlur(event)
     }
     api.stopEditing()
+  }
+
+  const isOptionEqualToValue = (option, value) => {
+    if (!option || !value) return false
+
+    if (typeof option === 'string' && typeof value === 'string') {
+      return option === value
+    }
+
+    if (typeof option === 'object' && typeof value === 'object') {
+      return option.label === value.label
+    }
+
+    if (typeof option === 'object' && typeof value === 'string') {
+      return option.label === value
+    }
+
+    if (typeof option === 'string' && typeof value === 'object') {
+      return option === value.label
+    }
+
+    return false
   }
 
   return (
@@ -150,45 +183,54 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
         autoHighlight
         size="medium"
         freeSolo={freeSolo}
-        getOptionLabel={(option) =>
-          typeof option === 'string' ? option : option.label || ''
-        }
-        renderOption={({ key, ...propsIn }, option, { selected }) => {
-          const isOptionSelected =
-            Array.isArray(selectedValues) && selectedValues.includes(option)
+        isOptionEqualToValue={isOptionEqualToValue}
+        getOptionLabel={(option) => {
+          if (!option) return ''
+          return typeof option === 'string' ? option : option.label || ''
+        }}
+        renderOption={(props, option, { selected }) => {
+          const isOptionSelected = multiple
+            ? Array.isArray(selectedValues) &&
+              selectedValues.some((val) => isOptionEqualToValue(val, option))
+            : isOptionEqualToValue(selectedValues, option)
+
           return (
-            <Box
-              component="li"
-              key={key}
-              className={`${
-                selected || isOptionSelected ? 'selected' : ''
-              } ag-custom-component-popup`}
-              role="option"
-              sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
-              aria-label={`select ${
-                typeof option === 'string' ? option : option.label
-              }`}
-              data-testid={`select-${
-                typeof option === 'string' ? option : option.label
-              }`}
-              {...propsIn}
-              tabIndex={0}
+            <React.Fragment
+              key={typeof option === 'string' ? option : option.label}
             >
-              {multiple && (
-                <Checkbox
-                  color="primary"
-                  role="presentation"
-                  sx={{ border: '2px solid primary' }}
-                  icon={icon}
-                  checkedIcon={checkedIcon}
-                  style={{ marginRight: 8 }}
-                  checked={selected || isOptionSelected}
-                  inputProps={{ 'aria-label': 'controlled' }}
-                  tabIndex={-1}
-                />
-              )}
-              {typeof option === 'string' ? option : option.label}
-            </Box>
+              <Box
+                component="li"
+                className={`${
+                  selected || isOptionSelected ? 'selected' : ''
+                } ag-custom-component-popup`}
+                role="option"
+                sx={{ '& > img': { mr: 2, flexShrink: 0 } }}
+                aria-label={`select ${
+                  typeof option === 'string' ? option : option.label
+                }`}
+                data-testid={`select-${
+                  typeof option === 'string' ? option : option.label
+                }`}
+                {...props}
+                tabIndex={0}
+              >
+                {multiple && (
+                  <Checkbox
+                    color="primary"
+                    role="presentation"
+                    sx={{ border: '2px solid primary' }}
+                    icon={icon}
+                    checkedIcon={checkedIcon}
+                    style={{ marginRight: 8 }}
+                    checked={selected || isOptionSelected}
+                    inputProps={{ 'aria-label': 'controlled' }}
+                    tabIndex={-1}
+                  />
+                )}
+                {typeof option === 'string' ? option : option.label}
+              </Box>
+              <Divider />
+            </React.Fragment>
           )
         }}
         renderInput={(params) => (
@@ -205,7 +247,7 @@ export const AutocompleteCellEditor = forwardRef((props, ref) => {
             onBlur={handleBlur}
             inputProps={{
               ...params.inputProps,
-              autoComplete: 'off' // disable autocomplete and autofill
+              autoComplete: 'off'
             }}
           />
         )}
