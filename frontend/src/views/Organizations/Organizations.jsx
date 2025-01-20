@@ -111,7 +111,10 @@ export const Organizations = () => {
   }
 
   // Row ID
-  const getRowId = useCallback((params) => params.data.organizationId, [])
+  const getRowId = useCallback(
+    (params) => String(params.data.organizationId),
+    []
+  )
 
   return (
     <>
