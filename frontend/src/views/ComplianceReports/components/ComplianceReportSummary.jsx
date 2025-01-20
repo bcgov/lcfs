@@ -25,6 +25,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import Loading from '@/components/Loading'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
+import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 
 const ComplianceReportSummary = ({
   reportID,
@@ -37,8 +38,11 @@ const ComplianceReportSummary = ({
   alertRef
 }) => {
   const [summaryData, setSummaryData] = useState(null)
-  const [canSign, setCanSign] = useState(false)
+  const [hasRecords, setHasRecords] = useState(false)
+  const [hasValidAddress, setHasValidAddress] = useState(false)
   const { t } = useTranslation(['report'])
+
+  const { data: snapshotData } = useOrganizationSnapshot(reportID)
 
   const { hasRoles } = useCurrentUser()
 
@@ -67,7 +71,7 @@ const ComplianceReportSummary = ({
         data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 ||
           data?.nonCompliancePenaltySummary[1].totalValue <= 0
       )
-      setCanSign(data && data.canSign)
+      setHasRecords(data && data.canSign)
     }
     if (isError) {
       alertRef.current?.triggerAlert({
@@ -76,6 +80,17 @@ const ComplianceReportSummary = ({
       })
     }
   }, [alertRef, data, error, isError, setHasMet])
+
+  useEffect(() => {
+    if (snapshotData) {
+      const hasValidAddress = Object.values(snapshotData).reduce(
+        (previousValue, currentValue) => {
+          return currentValue && !!previousValue
+        }
+      )
+      setHasValidAddress(hasValidAddress)
+    }
+  }, [snapshotData])
 
   const handleCellEdit = useCallback(
     (data) => {
@@ -92,7 +107,9 @@ const ComplianceReportSummary = ({
   }
 
   if (isError) {
-    return <BCTypography color="error">{t('report:errorRetrieving')}</BCTypography>
+    return (
+      <BCTypography color="error">{t('report:errorRetrieving')}</BCTypography>
+    )
   }
 
   return (
@@ -145,7 +162,9 @@ const ComplianceReportSummary = ({
             <>
               <SigningAuthorityDeclaration
                 onChange={setIsSigningAuthorityDeclared}
-                disabled={!hasRoles(roles.signing_authority)}
+                hasAuthority={hasRoles(roles.signing_authority)}
+                hasRecords={hasRecords}
+                hasValidAddress={hasValidAddress}
               />
               <Stack direction="row" justifyContent="flex-start" mt={2} gap={2}>
                 {buttonClusterConfig[currentStatus]?.map(
