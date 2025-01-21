@@ -1,5 +1,8 @@
 from unittest.mock import MagicMock, AsyncMock, Mock
 
+from lcfs.web.api.initiative_agreement.schema import (
+    CreateInitiativeAgreementHistorySchema,
+)
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -105,7 +108,14 @@ async def test_get_initiative_agreement_status_by_name_not_found(
 
 @pytest.mark.anyio
 async def test_add_initiative_agreement_history(repository, mock_db_session):
-    result = await repository.add_initiative_agreement_history(1, 1, 1)
+    result = await repository.add_initiative_agreement_history(
+        CreateInitiativeAgreementHistorySchema(
+            initiative_agreement_id=1,
+            initiative_agreement_status_id=1,
+            user_profile_id=1,
+            display_ame="History User",
+        )
+    )
 
     assert isinstance(result, InitiativeAgreementHistory)
     mock_db_session.add.assert_called_once()
@@ -119,7 +129,14 @@ async def test_update_initiative_agreement_history(repository, mock_db_session):
     )
     mock_db_session.scalar.return_value = mock_history
 
-    result = await repository.update_initiative_agreement_history(1, 1, 2)
+    result = await repository.update_initiative_agreement_history(
+        CreateInitiativeAgreementHistorySchema(
+            initiative_agreement_id=1,
+            initiative_agreement_status_id=1,
+            user_profile_id=2,
+            display_name="History User",
+        )
+    )
 
     assert result.user_profile_id == 2
     mock_db_session.add.assert_called_once_with(mock_history)

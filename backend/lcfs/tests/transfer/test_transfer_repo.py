@@ -117,12 +117,14 @@ async def test_update_transfer_success(transfer_repo):
 
 @pytest.mark.anyio
 async def test_add_transfer_history_success(transfer_repo):
-    transfer_id = 1
-    transfer_status_id = 1
-    user_profile_id = 1
 
     result = await transfer_repo.add_transfer_history(
-        transfer_id, transfer_status_id, user_profile_id
+        CreateTransferHistorySchema(
+            transfer_id=1,
+            transfer_status_id=1,
+            user_profile_id=1,
+            display_name="History User",
+        )
     )
 
     assert isinstance(result, TransferHistory)
