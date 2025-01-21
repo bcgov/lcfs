@@ -8,13 +8,6 @@ from pydantic import Field
 from enum import Enum
 
 
-class FuelMeasurementTypeSchema(BaseSchema):
-    fuel_measurement_type_id: int
-    type: str
-    description: Optional[str] = None
-    display_order: int
-
-
 class LevelOfEquipmentSchema(BaseSchema):
     level_of_equipment_id: int
     name: str
@@ -29,7 +22,6 @@ class PortsEnum(str, Enum):
 
 class FSEOptionsSchema(BaseSchema):
     intended_use_types: List[EndUseTypeSchema]
-    fuel_measurement_types: List[FuelMeasurementTypeSchema]
     levels_of_equipment: List[LevelOfEquipmentSchema]
     intended_user_types: List[EndUserTypeSchema]
     ports: List[PortsEnum]
@@ -48,7 +40,6 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     model: Optional[str] = None
     level_of_equipment: str
     ports: Optional[PortsEnum] = None
-    fuel_measurement_type: str
     intended_uses: List[str]
     intended_users: List[str]
     street_address: str
