@@ -30,7 +30,7 @@ spec:
     contextDir: "openshift/templates/maintenance-page"
     git:
       uri: https://github.com/bcgov/lcfs.git
-      ref: master
+      ref: add-maintenance-page
   strategy:
     dockerStrategy:
       pullSecret:
