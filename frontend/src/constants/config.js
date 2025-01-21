@@ -40,6 +40,7 @@ export const FEATURE_FLAGS = {
 export const CONFIG = {
   API_BASE: getApiBaseUrl(),
   TFRS_BASE: window.lcfs_config.tfrs_base,
+  ENVIRONMENT: window.lcfs_config.environment,
   KEYCLOAK: {
     REALM: window.lcfs_config.keycloak.REALM ?? 'standard',
     CLIENT_ID:
