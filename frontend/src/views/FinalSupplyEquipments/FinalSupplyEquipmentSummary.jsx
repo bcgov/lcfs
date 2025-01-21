@@ -120,13 +120,6 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
       },
       {
         headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.fuelMeasurementType'
-        ),
-        field: 'fuelMeasurementType',
-        valueGetter: (params) => params.data.fuelMeasurementType.type
-      },
-      {
-        headerName: t(
           'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
         ),
         field: 'intendedUses',

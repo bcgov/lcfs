@@ -30,7 +30,8 @@ final_supply_intended_user_association = Table(
     Column(
         "final_supply_equipment_id",
         Integer,
-        ForeignKey("final_supply_equipment.final_supply_equipment_id", ondelete="CASCADE"),
+        ForeignKey("final_supply_equipment.final_supply_equipment_id",
+                   ondelete="CASCADE"),
         primary_key=True,
     ),
     Column(
@@ -102,17 +103,11 @@ class FinalSupplyEquipment(BaseModel, Auditable):
         nullable=True,
         comment="Port type with options 'Single port' and 'Dual port.'"
     )
-    fuel_measurement_type_id = Column(
-        Integer,
-        ForeignKey("fuel_measurement_type.fuel_measurement_type_id"),
-        nullable=False,
-        comment="The foreign key referencing the fuel measurement type.",
-        index=True,
-    )
     street_address = Column(
         String, nullable=False, comment="The street address of the equipment location."
     )
-    city = Column(String, nullable=False, comment="The city of the equipment location.")
+    city = Column(String, nullable=False,
+                  comment="The city of the equipment location.")
     postal_code = Column(
         String, nullable=False, comment="The postcode of the equipment location."
     )
@@ -122,7 +117,8 @@ class FinalSupplyEquipment(BaseModel, Auditable):
     longitude = Column(
         Double, nullable=False, comment="The longitude of the equipment location."
     )
-    notes = Column(Text, comment="Any additional notes related to the equipment.")
+    notes = Column(
+        Text, comment="Any additional notes related to the equipment.")
     organization_name = Column(Text, comment="External organization name.")
 
     # relationships
@@ -131,9 +127,6 @@ class FinalSupplyEquipment(BaseModel, Auditable):
     )
     level_of_equipment = relationship(
         "LevelOfEquipment", back_populates="final_supply_equipment"
-    )
-    fuel_measurement_type = relationship(
-        "FuelMeasurementType", back_populates="final_supply_equipment"
     )
     intended_use_types = relationship(
         "EndUseType",

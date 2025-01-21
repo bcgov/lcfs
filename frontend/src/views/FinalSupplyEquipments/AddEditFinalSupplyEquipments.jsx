@@ -37,6 +37,7 @@ export const AddEditFinalSupplyEquipments = () => {
     isLoading: optionsLoading,
     isFetched
   } = useFinalSupplyEquipmentOptions()
+
   const { mutateAsync: saveRow } =
     useSaveFinalSupplyEquipment(complianceReportId)
   const { data, isLoading: equipmentsLoading } =
@@ -82,7 +83,6 @@ export const AddEditFinalSupplyEquipments = () => {
           ...data.finalSupplyEquipments.map((item) => ({
             ...item,
             levelOfEquipment: item.levelOfEquipment.name,
-            fuelMeasurementType: item.fuelMeasurementType.type,
             intendedUses: item.intendedUseTypes.map((i) => i.type),
             intendedUsers: item.intendedUserTypes.map((i) => i.typeName),
             id: uuid()
