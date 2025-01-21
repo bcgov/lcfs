@@ -87,7 +87,7 @@ class TransferUpdate(BaseSchema):
 
 
 class CreateTransferHistorySchema(BaseSchema):
-    transfer_history_id: Optional[int]
+    transfer_history_id: Optional[int] = None
     transfer_id: int
     transfer_status_id: int
     user_profile_id: int
