@@ -32,6 +32,7 @@ class InitiativeAgreementHistorySchema(BaseSchema):
     create_date: datetime
     initiative_agreement_status: InitiativeAgreementStatusSchema
     user_profile: HistoryUserSchema
+    display_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -70,3 +71,9 @@ class InitiativeAgreementCreateSchema(InitiativeAgreementBaseSchema):
 class InitiativeAgreementUpdateSchema(InitiativeAgreementBaseSchema):
     initiative_agreement_id: int
     current_status: str
+
+class CreateInitiativeAgreementHistorySchema(BaseSchema):
+    initiative_agreement_id: int
+    initiative_agreement_status_id: int
+    user_profile_id: int
+    display_name: str

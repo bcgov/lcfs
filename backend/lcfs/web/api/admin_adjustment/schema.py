@@ -31,6 +31,7 @@ class AdminAdjustmentHistorySchema(BaseSchema):
     create_date: datetime
     admin_adjustment_status: AdminAdjustmentStatusSchema
     user_profile: HistoryUserSchema
+    display_name: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -63,3 +64,9 @@ class AdminAdjustmentCreateSchema(AdminAdjustmentBaseSchema):
 class AdminAdjustmentUpdateSchema(AdminAdjustmentBaseSchema):
     admin_adjustment_id: int
     current_status: str
+
+class CreateAdminAdjustmentHistorySchema(BaseSchema):
+    admin_adjustment_id: int
+    admin_adjustment_status_id: int
+    user_profile_id: int
+    display_name: str

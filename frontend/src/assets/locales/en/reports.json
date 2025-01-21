@@ -140,11 +140,11 @@
   "saveReturn": "Save & return to report",
   "reportHistory": "Report history",
   "complianceReportHistory": {
-    "Draft": "Draft {{createDate}} by {{firstName}} {{lastName}}.",
-    "Submitted": "Signed and submitted {{createDate}} by {{firstName}} {{lastName}}.",
-    "Recommended by analyst": "Recommended {{createDate}} by {{firstName}} {{lastName}}.",
-    "Recommended by manager": "Recommended {{createDate}} by {{firstName}} {{lastName}}.",
-    "Assessed": "Assessed {{createDate}} by {{firstName}} {{lastName}}.",
+    "Draft": "Draft {{createDate}} by {{displayName}}.",
+    "Submitted": "Signed and submitted {{createDate}} by {{displayName}}.",
+    "Recommended by analyst": "Recommended {{createDate}} by {{displayName}}.",
+    "Recommended by manager": "Recommended {{createDate}} by {{displayName}}.",
+    "Assessed": "Assessed {{createDate}} by {{displayName}}.",
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
     "ReAssessed": "Re-assessed"
   },

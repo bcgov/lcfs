@@ -12,7 +12,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
 from lcfs.db.models.initiative_agreement.InitiativeAgreementHistory import (
     InitiativeAgreementHistory,
 )
-from lcfs.web.api.initiative_agreement.schema import InitiativeAgreementCreateSchema
+from lcfs.web.api.initiative_agreement.schema import CreateInitiativeAgreementHistorySchema
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
@@ -89,10 +89,7 @@ class InitiativeAgreementRepository:
 
     @repo_handler
     async def add_initiative_agreement_history(
-        self,
-        initiative_agreement_id: int,
-        initiative_agreement_status_id: int,
-        user_profile_id: int,
+        self, history: CreateInitiativeAgreementHistorySchema
     ) -> InitiativeAgreementHistory:
         """
         Adds a new record to the initiative agreement history in the database.
@@ -106,9 +103,10 @@ class InitiativeAgreementRepository:
             InitiativeAgreementHistory: The newly created initiative agreement history record.
         """
         new_history_record = InitiativeAgreementHistory(
-            initiative_agreement_id=initiative_agreement_id,
-            initiative_agreement_status_id=initiative_agreement_status_id,
-            user_profile_id=user_profile_id,
+            initiative_agreement_id=history.initiative_agreement_id,
+            initiative_agreement_status_id=history.initiative_agreement_status_id,
+            user_profile_id=history.user_profile_id,
+            display_name=history.display_name
         )
         self.db.add(new_history_record)
         await self.db.flush()
@@ -116,10 +114,7 @@ class InitiativeAgreementRepository:
 
     @repo_handler
     async def update_initiative_agreement_history(
-        self,
-        initiative_agreement_id: int,
-        initiative_agreement_status_id: int,
-        user_profile_id: int,
+        self, history: CreateInitiativeAgreementHistorySchema
     ) -> InitiativeAgreementHistory:
         """
         Updates an initiative agreement history record in the database.
@@ -136,15 +131,16 @@ class InitiativeAgreementRepository:
             select(InitiativeAgreementHistory).where(
                 and_(
                     InitiativeAgreementHistory.initiative_agreement_id
-                    == initiative_agreement_id,
+                    == history.initiative_agreement_id,
                     InitiativeAgreementHistory.initiative_agreement_status_id
-                    == initiative_agreement_status_id,
+                    == history.initiative_agreement_status_id,
                 )
             )
         )
         existing_history.create_date = datetime.now()
         existing_history.update_date = datetime.now()
-        existing_history.user_profile_id = user_profile_id
+        existing_history.user_profile_id = history.user_profile_id
+        existing_history.display_name = history.display_name
         self.db.add(existing_history)
         await self.db.flush()
         return existing_history
