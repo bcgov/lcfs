@@ -1,11 +1,13 @@
+from unittest.mock import MagicMock, AsyncMock, patch
+
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
-from unittest.mock import MagicMock, AsyncMock, patch
 
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.base import UserTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.tests.compliance_report.conftest import compliance_report_base_schema
+from lcfs.tests.other_uses.conftest import create_mock_schema
 from lcfs.web.api.base import ComplianceReportRequestSchema
 from lcfs.web.api.other_uses.schema import (
     PaginatedOtherUsesRequestSchema,
@@ -13,7 +15,6 @@ from lcfs.web.api.other_uses.schema import (
 )
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
-from lcfs.tests.other_uses.conftest import create_mock_schema, create_mock_entity
 
 
 @pytest.fixture

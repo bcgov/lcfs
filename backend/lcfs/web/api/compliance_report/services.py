@@ -1,8 +1,9 @@
-import structlog
 import math
 import uuid
 from typing import List
-from fastapi import Depends, Request
+
+import structlog
+from fastapi import Depends
 
 from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,
@@ -20,6 +21,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
 )
+from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
@@ -27,8 +29,13 @@ logger = structlog.get_logger(__name__)
 
 
 class ComplianceReportServices:
-    def __init__(self, repo: ComplianceReportRepository = Depends()) -> None:
+    def __init__(
+        self,
+        repo: ComplianceReportRepository = Depends(),
+        snapshot_services: OrganizationSnapshotService = Depends(),
+    ) -> None:
         self.repo = repo
+        self.snapshot_services = snapshot_services
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:
@@ -72,6 +79,11 @@ class ComplianceReportServices:
 
         # Add the new compliance report
         report = await self.repo.create_compliance_report(report)
+
+        # Snapshot the Organization Details
+        await self.snapshot_services.create_organization_snapshot(
+            report.compliance_report_id, organization_id
+        )
 
         # Create the history record
         await self.repo.add_compliance_report_history(report, user)
@@ -144,6 +156,11 @@ class ComplianceReportServices:
 
         # Add the new supplemental report
         new_report = await self.repo.create_compliance_report(new_report)
+
+        # Snapshot the Organization Details
+        await self.snapshot_services.create_organization_snapshot(
+            new_report.compliance_report_id, current_report.organization_id
+        )
 
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
