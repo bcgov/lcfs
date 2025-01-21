@@ -62,7 +62,7 @@ export const AllocationAgreementSummary = ({ data, status }) => {
     () => [
       {
         headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.transaction'
+          'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
         ),
         field: 'allocationTransactionType'
       },

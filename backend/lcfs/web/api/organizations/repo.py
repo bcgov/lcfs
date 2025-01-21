@@ -1,10 +1,12 @@
+from lcfs.db.models.transaction import Transaction
+from lcfs.web.api.transaction.schema import TransactionActionEnum
 import structlog
 from typing import List
 
 from fastapi import Depends
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_, func, select, asc, desc, distinct, or_
+from sqlalchemy import and_, case, func, select, asc, desc, distinct, or_
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
@@ -48,6 +50,65 @@ class OrganizationsRepository:
         return result.scalars().all()
 
     @repo_handler
+    async def get_organizations_with_balances(self) -> List[dict]:
+        """
+        Fetch organization_id, name, status, and their reserved and available balances.
+        """
+        result = await self.db.execute(
+            select(
+                Organization.organization_id,
+                Organization.name,
+                OrganizationStatus.status,
+                func.sum(
+                    case(
+                        (
+                            Transaction.transaction_action
+                            == TransactionActionEnum.Reserved,
+                            Transaction.compliance_units,
+                        ),
+                        else_=0,
+                    )
+                ).label("reserved_balance"),
+                (
+                    func.sum(
+                        case(
+                            (
+                                Transaction.transaction_action
+                                == TransactionActionEnum.Adjustment,
+                                Transaction.compliance_units,
+                            ),
+                            else_=0,
+                        )
+                    )
+                ).label("total_balance"),
+            )
+            .outerjoin(
+                Transaction, Organization.organization_id == Transaction.organization_id
+            )
+            .outerjoin(
+                OrganizationStatus,
+                Organization.organization_status_id
+                == OrganizationStatus.organization_status_id,
+            )
+            .group_by(
+                Organization.organization_id,
+                Organization.name,
+                OrganizationStatus.status,
+            )
+            .order_by(Organization.organization_id)
+        )
+        return [
+            [
+                org_id,
+                name,
+                total_balance or 0,
+                ((reserved_balance or 0) * -1),
+                status.value,
+            ]
+            for org_id, name, status, reserved_balance, total_balance in result
+        ]
+
+    @repo_handler
     async def create_organization(self, org_model: Organization):
         """
         save an organization in the database
@@ -74,7 +135,6 @@ class OrganizationsRepository:
         )
         return await self.db.scalar(query)
 
-
     @repo_handler
     async def update_organization(self, organization: Organization) -> Organization:
         """
@@ -85,7 +145,6 @@ class OrganizationsRepository:
         await self.db.refresh(organization)
 
         return OrganizationResponseSchema.model_validate(organization)
-
 
     @repo_handler
     async def get_organization_lite(self, organization_id: int) -> Organization:

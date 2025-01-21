@@ -23,6 +23,7 @@ class ReturnStatus(Enum):
     MANAGER = "Return to manager"
     SUPPLIER = "Return to supplier"
 
+
 RETURN_STATUS_MAPPER = {
     ReturnStatus.ANALYST.value: ComplianceReportStatusEnum.Submitted.value,
     ReturnStatus.MANAGER.value: ComplianceReportStatusEnum.Recommended_by_analyst.value,
@@ -101,13 +102,6 @@ class AllocationAgreementSchema(BaseSchema):
     pass
 
 
-class FuelMeasurementTypeSchema(BaseSchema):
-    fuel_measurement_type_id: int
-    type: str
-    description: Optional[str] = None
-    display_order: int
-
-
 class LevelOfEquipmentSchema(BaseSchema):
     level_of_equipment_id: int
     name: str
@@ -118,7 +112,6 @@ class LevelOfEquipmentSchema(BaseSchema):
 class FSEOptionsSchema(BaseSchema):
     intended_use_types: List[EndUseTypeSchema]
     intended_user_types: List[EndUserTypeSchema]
-    fuel_measurement_types: List[FuelMeasurementTypeSchema]
     levels_of_equipment: List[LevelOfEquipmentSchema]
     ports: ClassVar[List[str]] = [port.value for port in PortsEnum]
 
@@ -135,7 +128,6 @@ class FinalSupplyEquipmentSchema(BaseSchema):
     manufacturer: str
     model: Optional[str] = None
     level_of_equipment: LevelOfEquipmentSchema
-    fuel_measurement_type: FuelMeasurementTypeSchema
     ports: Optional[PortsEnum] = None
     intended_use_types: List[EndUseTypeSchema]
     intended_user_types: List[EndUserTypeSchema]
