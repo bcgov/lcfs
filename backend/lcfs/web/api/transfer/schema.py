@@ -36,6 +36,7 @@ class TransferHistorySchema(BaseSchema):
     create_date: datetime
     transfer_status: TransferStatusSchema
     user_profile: TransferHistoryUserSchema
+    display_name: Optional[str] = None
 
 
 class TransferCommentSchema(BaseSchema):
@@ -85,6 +86,9 @@ class TransferUpdate(BaseSchema):
     recommendation: Optional[str] = None
 
 
-# class TransferHistory(BaseSchema):
-#     transfer_history_id: int
-#     transfer_id: int
+class CreateTransferHistorySchema(BaseSchema):
+    transfer_history_id: Optional[int] = None
+    transfer_id: int
+    transfer_status_id: int
+    user_profile_id: int
+    display_name: str

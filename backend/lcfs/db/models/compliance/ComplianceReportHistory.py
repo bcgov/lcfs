@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey, String
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
 
@@ -29,6 +29,11 @@ class ComplianceReportHistory(BaseModel, Auditable):
         Integer,
         ForeignKey("user_profile.user_profile_id"),
         comment="Identifier for the user associated with the status change",
+    )
+    display_name = Column(
+        String(255),
+        comment="Display name for the compliance report history",
+        nullable=True
     )
 
     compliance_report = relationship("ComplianceReport", back_populates="history")

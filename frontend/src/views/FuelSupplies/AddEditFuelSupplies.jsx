@@ -102,6 +102,7 @@ export const AddEditFuelSupplies = () => {
           fuelTypeOther:
             item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
           provisionOfTheAct: item.provisionOfTheAct?.name,
+          provisionOfTheActId: item.provisionOfTheActId,
           fuelCode: item.fuelCode?.fuelCode,
           endUse: item.endUse?.type,
           id: uuid()
@@ -139,6 +140,7 @@ export const AddEditFuelSupplies = () => {
         fuelTypeOther:
           item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
         provisionOfTheAct: item.provisionOfTheAct?.name,
+        provisionOfTheActId: item.provisionOfTheAct?.provisionOfTheActId,
         fuelCode: item.fuelCode?.fuelCode,
         endUse: item.endUse?.type,
         id: uuid()
@@ -173,6 +175,16 @@ export const AddEditFuelSupplies = () => {
 
           params.node.setDataValue('fuelCategory', categoryValue)
           params.node.setDataValue('endUseType', endUseValue)
+
+          // Reset provisionOfTheAct and provisionOfTheActId fields
+          if (selectedFuelType.provisions.length === 1) {
+            params.node.setDataValue('provisionOfTheAct', selectedFuelType.provisions[0].name)
+            params.node.setDataValue('provisionOfTheActId', selectedFuelType.provisions[0].provisionOfTheActId)
+          } else {
+            params.node.setDataValue('provisionOfTheAct', null)
+            params.node.setDataValue('provisionOfTheActId', null)
+          }
+
         }
       }
 

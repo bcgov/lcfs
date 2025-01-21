@@ -268,7 +268,7 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
     ),
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (type) => type.fuelType === params.data.fuelType
@@ -279,7 +279,11 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
         : []
 
       return {
-        values: provisionsOfTheAct.sort()
+        options: provisionsOfTheAct.sort(),
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
       }
     },
     cellRenderer: (params) =>

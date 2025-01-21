@@ -100,6 +100,73 @@ WHERE cr.type_id = 1
 ORDER BY cr.root_report_id NULLS FIRST, cr.traversal, cr.id;
 """
 
+// Temporarily remove (drop) all audit triggers on listed tables
+// so no audit_log entries occur during this data load.
+def dropAuditTriggers = """
+DO \$\$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN SELECT tablename
+             FROM pg_tables
+             WHERE schemaname = 'public'
+               AND tablename IN (
+                 'transaction', 'compliance_report', 'compliance_report_history',
+                 'compliance_report_status', 'compliance_report_summary', 'compliance_period',
+                 'initiative_agreement', 'initiative_agreement_status', 'initiative_agreement_history',
+                 'allocation_agreement', 'allocation_transaction_type', 'custom_fuel_type', 'fuel_code',
+                 'fuel_code_prefix', 'fuel_code_status', 'fuel_category', 'fuel_instance', 'fuel_type',
+                 'fuel_export', 'organization', 'organization_address', 'organization_attorney_address',
+                 'organization_status', 'organization_type', 'transfer', 'transfer_category', 'transfer_history',
+                 'transfer_status', 'internal_comment', 'user_profile', 'user_role', 'role', 'notification_message',
+                 'notification_type', 'admin_adjustment', 'admin_adjustment_status', 'admin_adjustment_history',
+                 'provision_of_the_act', 'supplemental_report', 'final_supply_equipment', 'notional_transfer',
+                 'fuel_supply', 'additional_carbon_intensity', 'document', 'end_use_type', 'energy_density',
+                 'energy_effectiveness_ratio', 'transport_mode', 'final_supply_equipment', 'level_of_equipment',
+                 'user_login_history', 'unit_of_measure', 'target_carbon_intensity'
+               )
+    LOOP
+        EXECUTE format('DROP TRIGGER IF EXISTS audit_%I_insert_update_delete ON %I;', r.tablename, r.tablename);
+    END LOOP;
+END;
+\$\$;
+"""
+
+// Re-add the audit triggers to each table in the list
+def reAddAuditTriggers = """
+DO \$\$
+DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN SELECT tablename
+             FROM pg_tables
+             WHERE schemaname = 'public'
+               AND tablename IN (
+                 'transaction', 'compliance_report', 'compliance_report_history',
+                 'compliance_report_status', 'compliance_report_summary', 'compliance_period',
+                 'initiative_agreement', 'initiative_agreement_status', 'initiative_agreement_history',
+                 'allocation_agreement', 'allocation_transaction_type', 'custom_fuel_type', 'fuel_code',
+                 'fuel_code_prefix', 'fuel_code_status', 'fuel_category', 'fuel_instance', 'fuel_type',
+                 'fuel_export', 'organization', 'organization_address', 'organization_attorney_address',
+                 'organization_status', 'organization_type', 'transfer', 'transfer_category', 'transfer_history',
+                 'transfer_status', 'internal_comment', 'user_profile', 'user_role', 'role', 'notification_message',
+                 'notification_type', 'admin_adjustment', 'admin_adjustment_status', 'admin_adjustment_history',
+                 'provision_of_the_act', 'supplemental_report', 'final_supply_equipment', 'notional_transfer',
+                 'fuel_supply', 'additional_carbon_intensity', 'document', 'end_use_type', 'energy_density',
+                 'energy_effectiveness_ratio', 'transport_mode', 'final_supply_equipment', 'level_of_equipment',
+                 'user_login_history', 'unit_of_measure', 'target_carbon_intensity'
+               )
+    LOOP
+        EXECUTE format('
+            CREATE TRIGGER audit_%I_insert_update_delete
+            AFTER INSERT OR UPDATE OR DELETE ON %I
+            FOR EACH ROW EXECUTE FUNCTION audit_trigger_func();',
+            r.tablename, r.tablename);
+    END LOOP;
+END;
+\$\$;
+"""
+
 // =========================================
 // NiFi Controller Services
 // =========================================
@@ -120,6 +187,9 @@ try {
 
     // Disable refresh of the materialized views
     def stmt = destinationConn.createStatement()
+
+    stmt.execute(dropAuditTriggers)
+
     stmt.execute('DROP FUNCTION IF EXISTS refresh_transaction_aggregate() CASCADE;')
     stmt.execute("""
         CREATE OR REPLACE FUNCTION refresh_transaction_aggregate()
@@ -133,6 +203,24 @@ try {
     stmt.execute('DROP FUNCTION IF EXISTS refresh_mv_director_review_transaction_count() CASCADE;')
     stmt.execute("""
         CREATE OR REPLACE FUNCTION refresh_mv_director_review_transaction_count()
+        RETURNS void AS \$\$
+        BEGIN
+            -- Temporarily disable the materialized view refresh
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    stmt.execute('DROP FUNCTION IF EXISTS refresh_mv_org_compliance_report_count() CASCADE;')
+    destinationConn.createStatement().execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_org_compliance_report_count()
+        RETURNS void AS \$\$
+        BEGIN
+            -- Temporarily disable the materialized view refresh
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    stmt.execute('DROP FUNCTION IF EXISTS refresh_mv_compliance_report_count() CASCADE;')
+    destinationConn.createStatement().execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_compliance_report_count()
         RETURNS void AS \$\$
         BEGIN
             -- Temporarily disable the materialized view refresh
@@ -520,7 +608,30 @@ try {
         END;
         \$\$ LANGUAGE plpgsql;
     """)
-    stmt.execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count')
+    // stmt.execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count')
+
+    stmt.execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_org_compliance_report_count()
+        RETURNS void AS \$\$
+        BEGIN
+            REFRESH MATERIALIZED VIEW CONCURRENTLY mv_org_compliance_report_count;
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    // stmt.execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_org_compliance_report_count')
+
+    stmt.execute("""
+        CREATE OR REPLACE FUNCTION refresh_mv_compliance_report_count()
+        RETURNS void AS \$\$
+        BEGIN
+            REFRESH MATERIALIZED VIEW CONCURRENTLY mv_compliance_report_count;
+        END;
+        \$\$ LANGUAGE plpgsql;
+    """)
+    // stmt.execute('REFRESH MATERIALIZED VIEW CONCURRENTLY mv_compliance_report_count')
+
+    stmt.execute(reAddAuditTriggers)
+
     stmt.close()
 
     log.warn("Inserted ${totalInserted} compliance reports, ${totalHistoryInserted} history records, and ${totalTransactionsInserted} transactions into LCFS.")

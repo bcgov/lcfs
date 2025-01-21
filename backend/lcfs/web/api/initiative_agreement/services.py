@@ -14,6 +14,7 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
 )
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.initiative_agreement.schema import (
+    CreateInitiativeAgreementHistorySchema,
     InitiativeAgreementCreateSchema,
     InitiativeAgreementSchema,
 )
@@ -117,9 +118,14 @@ class InitiativeAgreementServices:
             # We only track history changes on Recommended and Approved, not Draft
             if new_status.status != InitiativeAgreementStatusEnum.Draft:
                 await history_method(
-                    initiative_agreement.initiative_agreement_id,
-                    new_status.initiative_agreement_status_id,
-                    self.request.user.user_profile_id,
+                    CreateInitiativeAgreementHistorySchema(
+                        initiative_agreement_id=initiative_agreement.initiative_agreement_id,
+                        initiative_agreement_status_id=new_status.initiative_agreement_status_id,
+                        user_profile_id=self.request.user.user_profile_id,
+                        display_name=(
+                            f"{self.request.user.first_name} {self.request.user.last_name}"
+                        ),
+                    )
                 )
 
         # Save the updated initiative agreement
@@ -159,9 +165,14 @@ class InitiativeAgreementServices:
         # If we skip draft on create and recommend then add history record
         if current_status.status == InitiativeAgreementStatusEnum.Recommended:
             await self.repo.add_initiative_agreement_history(
-                initiative_agreement.initiative_agreement_id,
-                current_status.initiative_agreement_status_id,
-                self.request.user.user_profile_id,
+                CreateInitiativeAgreementHistorySchema(
+                    initiative_agreement_id=initiative_agreement.initiative_agreement_id,
+                    initiative_agreement_status_id=current_status.initiative_agreement_status_id,
+                    user_profile_id=self.request.user.user_profile_id,
+                    display_name=(
+                        f"{self.request.user.first_name} {self.request.user.last_name}"
+                    ),
+                )
             )
 
         # Create internal comment if provided

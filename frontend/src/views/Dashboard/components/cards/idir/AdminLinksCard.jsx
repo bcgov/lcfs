@@ -32,7 +32,6 @@ const AdminLinksCard = () => {
   return (
     <BCWidgetCard
       component="div"
-      disableHover={true}
       color="nav"
       icon="admin"
       title={t('dashboard:adminLinks.administration')}

@@ -4,6 +4,7 @@ from typing import List, Optional, Union
 from fastapi import (
     APIRouter,
     Body,
+    HTTPException,
     Query,
     status,
     Request,
@@ -13,6 +14,7 @@ from fastapi import (
 
 from lcfs.db import dependencies
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
     FinalSupplyEquipmentSchema,
@@ -59,22 +61,46 @@ async def get_final_supply_equipments(
     service: FinalSupplyEquipmentServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
 ) -> FinalSupplyEquipmentsSchema:
-    """Endpoint to get list of final supply equipments for a compliance report"""
-    compliance_report_id = request_data.compliance_report_id
-    await report_validate.validate_organization_access(compliance_report_id)
-    if hasattr(request_data, "page") and request_data.page is not None:
-        # handle pagination.
-        pagination = PaginationRequestSchema(
-            page=request_data.page,
-            size=request_data.size,
-            sort_orders=request_data.sort_orders,
-            filters=request_data.filters,
+    """
+    Endpoint to get list of final supply equipments for a compliance report
+    """
+    try:
+        compliance_report_id = request_data.compliance_report_id
+
+        compliance_report = await service.get_compliance_report_by_id(compliance_report_id)
+        if not compliance_report:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Compliance report not found"
+            )
+
+        await report_validate.validate_compliance_report_access(compliance_report)
+        await report_validate.validate_organization_access(compliance_report_id)
+
+        if hasattr(request_data, "page") and request_data.page is not None:
+            # Handle pagination
+            pagination = PaginationRequestSchema(
+                page=request_data.page,
+                size=request_data.size,
+                sort_orders=request_data.sort_orders,
+                filters=request_data.filters,
+            )
+            return await service.get_final_supply_equipments_paginated(
+                pagination, compliance_report_id
+            )
+        else:
+            return await service.get_fse_list(compliance_report_id)
+    except HTTPException as http_ex:
+        # Re-raise HTTP exceptions to preserve status code and message
+        raise http_ex
+    except Exception as e:
+        # Log and handle unexpected errors
+        logger.exception("Error occurred", error=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while processing your request"
         )
-        return await service.get_final_supply_equipments_paginated(
-            pagination, compliance_report_id
-        )
-    else:
-        return await service.get_fse_list(compliance_report_id)
+
 
 
 @router.post(

@@ -24,7 +24,6 @@ export const ComplianceReportCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
   const { data: counts, isLoading } = useComplianceReportCounts()
-  console.log('ComplianceReportCard counts:', counts)
 
   const handleNavigation = () => {
     navigate(ROUTES.REPORTS, {
