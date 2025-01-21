@@ -10,7 +10,6 @@ from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentCreateSchema,
     FinalSupplyEquipmentsSchema,
-    FuelMeasurementTypeSchema,
     LevelOfEquipmentSchema,
 )
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
@@ -39,7 +38,6 @@ class FinalSupplyEquipmentServices:
             (
                 intended_use_types,
                 levels_of_equipment,
-                fuel_measurement_types,
                 intended_user_types,
                 ports,
                 organization_names,
@@ -51,10 +49,6 @@ class FinalSupplyEquipmentServices:
                 ],
                 "levels_of_equipment": [
                     LevelOfEquipmentSchema.model_validate(l) for l in levels_of_equipment
-                ],
-                "fuel_measurement_types": [
-                    FuelMeasurementTypeSchema.model_validate(f)
-                    for f in fuel_measurement_types
                 ],
                 "intended_user_types": [
                     EndUserTypeSchema.model_validate(u) for u in intended_user_types
@@ -75,7 +69,6 @@ class FinalSupplyEquipmentServices:
                 exclude={
                     "id",
                     "level_of_equipment",
-                    "fuel_measurement_type",
                     "intended_uses",
                     "intended_users",
                     "deleted",
@@ -84,9 +77,6 @@ class FinalSupplyEquipmentServices:
         )
         fse_model.level_of_equipment = await self.repo.get_level_of_equipment_by_name(
             fse.level_of_equipment
-        )
-        fse_model.fuel_measurement_type = (
-            await self.repo.get_fuel_measurement_type_by_type(fse.fuel_measurement_type)
         )
         for intended_use in fse.intended_uses:
             fse_model.intended_use_types.append(
@@ -161,11 +151,7 @@ class FinalSupplyEquipmentServices:
         existing_fse.serial_nbr = fse_data.serial_nbr
         existing_fse.manufacturer = fse_data.manufacturer
         existing_fse.model = fse_data.model
-        if existing_fse.fuel_measurement_type.type != fse_data.fuel_measurement_type:
-            fuel_measurement_type = await self.repo.get_fuel_measurement_type_by_type(
-                fse_data.fuel_measurement_type
-            )
-            existing_fse.fuel_measurement_type = fuel_measurement_type
+
         if existing_fse.level_of_equipment.name != fse_data.level_of_equipment:
             level_of_equipment = await self.repo.get_level_of_equipment_by_name(
                 fse_data.level_of_equipment
