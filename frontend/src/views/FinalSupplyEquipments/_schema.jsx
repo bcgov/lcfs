@@ -119,7 +119,6 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'kwhUsage',
-    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
     ),
