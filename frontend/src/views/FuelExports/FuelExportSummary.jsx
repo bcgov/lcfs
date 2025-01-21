@@ -67,17 +67,17 @@ export const FuelExportSummary = ({ data, status }) => {
         field: 'exportDate'
       },
       {
-        headerName: t('fuelExport:fuelExportColLabels.fuelType'),
+        headerName: t('fuelExport:fuelExportColLabels.fuelTypeId'),
         field: 'fuelType',
         valueGetter: (params) => params.data.fuelType?.fuelType
       },
       {
-        headerName: t('fuelExport:fuelExportColLabels.fuelCategory'),
+        headerName: t('fuelExport:fuelExportColLabels.fuelCategoryId'),
         field: 'fuelCategory',
         valueGetter: (params) => params.data.fuelCategory?.category
       },
       {
-        headerName: t('fuelExport:fuelExportColLabels.endUse'),
+        headerName: t('fuelExport:fuelExportColLabels.endUseId'),
         field: 'endUse',
         valueGetter: (params) => params.data.endUseType?.type || 'Any'
       },

@@ -46,7 +46,8 @@ export const TransactionHistory = ({ transactionHistory }) => {
                 {dayjs(item.createDate).format('LL')}
                 <span> by </span>
                 <strong>
-                  {item.userProfile.firstName} {item.userProfile.lastName}
+                  {item.displayName ||
+                    `${item.userProfile.firstName} ${item.userProfile.lastName}`}
                 </strong>
                 <span> of </span>
                 <strong>{t('govOrg')}</strong>

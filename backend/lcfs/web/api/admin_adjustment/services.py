@@ -9,6 +9,7 @@ from lcfs.web.api.admin_adjustment.schema import (
     AdminAdjustmentCreateSchema,
     AdminAdjustmentSchema,
     AdminAdjustmentUpdateSchema,
+    CreateAdminAdjustmentHistorySchema,
 )
 from lcfs.web.api.admin_adjustment.repo import AdminAdjustmentRepository
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -106,11 +107,12 @@ class AdminAdjustmentServices:
             )
             # We only track history changes on Recommended and Approved, not Draft
             if new_status.status != AdminAdjustmentStatusEnum.Draft:
-                await history_method(
-                    admin_adjustment.admin_adjustment_id,
-                    new_status.admin_adjustment_status_id,
-                    self.request.user.user_profile_id,
-                )
+                await history_method(CreateAdminAdjustmentHistorySchema(
+                    admin_adjustment_id=admin_adjustment.admin_adjustment_id,
+                    admin_adjustment_status_id=new_status.admin_adjustment_status_id,
+                    user_profile_id=self.request.user.user_profile_id,
+                    display_name=(f"{self.request.user.first_name} {self.request.user.last_name}")
+                ))
 
         # Save the updated admin adjustment
         updated_admin_adjustment = await self.repo.update_admin_adjustment(
@@ -148,11 +150,12 @@ class AdminAdjustmentServices:
         admin_adjustment = await self.repo.create_admin_adjustment(admin_adjustment)
 
         if current_status.status == AdminAdjustmentStatusEnum.Recommended:
-            await self.repo.add_admin_adjustment_history(
-                admin_adjustment.admin_adjustment_id,
-                current_status.admin_adjustment_status_id,
-                self.request.user.user_profile_id,
-            )
+            await self.repo.add_admin_adjustment_history(CreateAdminAdjustmentHistorySchema(
+                admin_adjustment_id=admin_adjustment.admin_adjustment_id,
+                admin_adjustment_status_id=current_status.admin_adjustment_status_id,
+                user_profile_id=self.request.user.user_profile_id,
+                display_name=(f"{self.request.user.first_name} {self.request.user.last_name}")
+            ))
 
         # Create internal comment if provided
         if admin_adjustment_data.internal_comment:
