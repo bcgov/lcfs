@@ -4,7 +4,7 @@ from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.transfer.TransferHistory import TransferHistory
 
 from unittest.mock import MagicMock, AsyncMock
-from lcfs.web.api.transfer.schema import TransferSchema
+from lcfs.web.api.transfer.schema import CreateTransferHistorySchema, TransferSchema
 from datetime import date
 from lcfs.db.models.organization import Organization
 from lcfs.db.models.transfer import TransferStatus, TransferCategory

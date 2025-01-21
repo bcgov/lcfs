@@ -113,7 +113,7 @@ async def test_add_initiative_agreement_history(repository, mock_db_session):
             initiative_agreement_id=1,
             initiative_agreement_status_id=1,
             user_profile_id=1,
-            display_ame="History User",
+            display_name="History User",
         )
     )
 
