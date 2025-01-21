@@ -128,9 +128,9 @@ async def test_add_transfer_history_success(transfer_repo):
     )
 
     assert isinstance(result, TransferHistory)
-    assert result.transfer_id == transfer_id
-    assert result.transfer_status_id == transfer_status_id
-    assert result.user_profile_id == user_profile_id
+    assert result.transfer_id == 1
+    assert result.transfer_status_id == 1
+    assert result.user_profile_id == 1
 
 
 @pytest.mark.anyio
