@@ -20,7 +20,17 @@ import BCAlertRoot from '@/components/BCAlert/BCAlertRoot'
 import { CircularProgress } from '@mui/material'
 
 export const BCAlert = forwardRef(
-  ({ severity, dismissible, noFade, delay, children, ...rest }, ref) => {
+  (
+    {
+      severity = 'info',
+      dismissible = false,
+      noFade = false,
+      delay = 5000,
+      children,
+      ...rest
+    },
+    ref
+  ) => {
     const [alertStatus, setAlertStatus] = useState('mount')
     const [triggerCount, setTriggerCount] = useState(0)
     const [isOverflowing, setIsOverflowing] = useState(false)
@@ -28,7 +38,6 @@ export const BCAlert = forwardRef(
     const textContainerRef = useRef(null)
 
     const color = severity
-    const canDismiss = noFade || severity === 'error' ? true : dismissible
 
     const checkOverflow = () => {
       const textContainer = textContainerRef.current
@@ -108,7 +117,7 @@ export const BCAlert = forwardRef(
                 onClick={toggleText}
               />
             )}
-            {canDismiss && (
+            {dismissible && (
               <CloseIcon
                 onClick={mount ? handleAlertStatus : undefined}
                 sx={{ cursor: 'pointer' }}
@@ -136,16 +145,10 @@ export const BCAlert = forwardRef(
 
 BCAlert.displayName = 'BCAlert'
 
-BCAlert.defaultProps = {
-  severity: 'info',
-  dismissible: false,
-  delay: 5000 // default fade out in 5s
-}
-
 BCAlert.propTypes = {
   severity: PropTypes.oneOf(['info', 'success', 'warning', 'error', 'pending']),
   dismissible: PropTypes.bool,
   delay: PropTypes.number,
-  children: PropTypes.node.isRequired,
-  noFade: PropTypes.bool
+  cats: PropTypes.bool,
+  children: PropTypes.node.isRequired
 }

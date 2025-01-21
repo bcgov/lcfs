@@ -170,6 +170,9 @@ class ComplianceReport(BaseModel, Auditable):
     final_supply_equipment = relationship(
         "FinalSupplyEquipment", back_populates="compliance_report"
     )
+    organization_snapshot = relationship(
+        "ComplianceReportOrganizationSnapshot", back_populates="compliance_report"
+    )
 
     def __repr__(self):
         return f"<ComplianceReport(id={self.compliance_report_id}, version={self.version})>"

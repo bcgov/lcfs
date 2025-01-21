@@ -26,6 +26,7 @@ from lcfs.web.api import (
     fuel_type,
     audit_log,
     email,
+    organization_snapshot,
 )
 
 api_router = APIRouter()
@@ -86,3 +87,8 @@ api_router.include_router(document.router, prefix="/documents", tags=["documents
 api_router.include_router(fuel_type.router, prefix="/fuel-type", tags=["fuel_type"])
 api_router.include_router(audit_log.router, prefix="/audit-log", tags=["audit_log"])
 api_router.include_router(email.router, prefix="/email", tags=["emails"])
+api_router.include_router(
+    organization_snapshot.router,
+    prefix="/organization_snapshot",
+    tags=["organization_snapshot"],
+)

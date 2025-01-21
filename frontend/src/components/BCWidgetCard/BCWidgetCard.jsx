@@ -19,6 +19,9 @@ function BCWidgetCard({
     if (editButton?.route) {
       navigate(editButton.route)
     }
+    if (editButton?.onClick) {
+      editButton.onClick()
+    }
   }
 
   return (
@@ -53,9 +56,10 @@ function BCWidgetCard({
               id={editButton.id}
               variant="outlined"
               size="small"
+              style={{ maxHeight: '25px', minHeight: '25px' }}
               color="primay"
               onClick={handleButtonClick}
-              startIcon={<EditIcon sx={{ width: '17px', height: '17px' }} />}
+              startIcon={<EditIcon sx={{ width: '14px', height: '14px' }} />}
               sx={{
                 '&:hover': {
                   backgroundColor: 'rgba(255, 255, 255, 0.1)'
@@ -93,11 +97,7 @@ BCWidgetCard.propTypes = {
   title: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
   content: PropTypes.node.isRequired,
   subHeader: PropTypes.node,
-  editButton: {
-    text: PropTypes.string,
-    route: PropTypes.string,
-    id: PropTypes.string
-  }
+  editButton: PropTypes.object
 }
 
 export default BCWidgetCard
