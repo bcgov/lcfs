@@ -62,8 +62,8 @@ try {
                 tfrsBalances[respondent] = tfrsBalances[respondent] + credits
                 break
             case 2: // Buy
-                tfrsBalances[initiator] = tfrsBalances[initiator] - credits
-                tfrsBalances[respondent] = tfrsBalances[respondent] + credits
+                tfrsBalances[initiator] = tfrsBalances[initiator] + credits
+                tfrsBalances[respondent] = tfrsBalances[respondent] - credits
                 break
             case 3: // Credit Validation
                 tfrsBalances[respondent] = tfrsBalances[respondent] + credits
