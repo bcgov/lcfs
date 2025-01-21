@@ -16,7 +16,7 @@ import {
   Tooltip
 } from '@mui/material'
 import NotificationsIcon from '@mui/icons-material/Notifications'
-import { useLocation } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
 
 export const UserProfileActions = () => {
@@ -71,6 +71,11 @@ export const UserProfileActions = () => {
         {currentUser?.firstName && (
           <>
             <BCTypography
+              component={NavLink}
+              to={(currentUser?.isGovernmentUser
+                ? ROUTES.ADMIN_USERS_VIEW
+                : ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', currentUser?.organization?.organizationId)
+              ).replace(':userID', currentUser?.userProfileId)}
               style={{
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
