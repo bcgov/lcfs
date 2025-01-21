@@ -103,6 +103,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         params.data.endUseType = null
         params.data.eer = null
         params.data.provisionOfTheAct = null
+        params.data.provisionOfTheActId = null
         params.data.fuelCode = null
         params.data.fuelCodeId = null
         params.data.units = fuelType?.unit
@@ -177,6 +178,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         params.data.endUseType = null
         params.data.eer = null
         params.data.provisionOfTheAct = null
+        params.data.provisionOfTheActId = null
         params.data.fuelCode = null
       }
       return true
@@ -193,7 +195,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   {
     field: 'endUseType',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUse'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
     cellEditorParams: (params) => ({
       options: [
         ...new Set(
@@ -245,15 +247,19 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'provisionOfTheAct',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.provisionOfTheActId'),
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: AutocompleteCellEditor,
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellEditorParams: (params) => ({
-      values: optionsData?.fuelTypes
+      options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
         ?.provisions.map((item) => item.name)
-        .sort()
+        .sort(),
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true
     }),
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
@@ -279,13 +285,17 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   {
     field: 'fuelCode',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
       return {
-        values: fuelType?.fuelCodes.map((item) => item.fuelCode) || []
+        options: fuelType?.fuelCodes.map((item) => item.fuelCode) || [],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
       }
     },
     cellStyle: (params) => {

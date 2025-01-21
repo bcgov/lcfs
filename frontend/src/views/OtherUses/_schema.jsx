@@ -81,7 +81,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
     field: 'provisionOfTheAct',
     headerComponent: RequiredHeader,
     headerName: i18n.t('otherUses:otherUsesColLabels.provisionOfTheAct'),
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (type) => type.fuelType === params.data.fuelType
@@ -92,7 +92,11 @@ export const otherUsesColDefs = (optionsData, errors) => [
         : []
 
       return {
-        values: provisionsOfTheAct.sort()
+        options: provisionsOfTheAct.sort(),
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
       }
     },
     cellRenderer: (params) =>
@@ -219,14 +223,18 @@ export const otherUsesColDefs = (optionsData, errors) => [
   {
     field: 'units',
     headerName: i18n.t('otherUses:otherUsesColLabels.units'),
-    cellEditor: 'agSelectCellEditor',
+    cellEditor: AutocompleteCellEditor,
     cellEditorParams: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
       const values = fuelType ? [fuelType.units] : []
       return {
-        values: values
+        options: values,
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
       }
     },
     cellRenderer: (params) => {

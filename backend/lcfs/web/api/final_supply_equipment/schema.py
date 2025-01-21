@@ -42,7 +42,7 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     organization_name: str
     supply_from_date: date
     supply_to_date: date
-    kwh_usage: float
+    kwh_usage: Optional[float] = None
     serial_nbr: str
     manufacturer: str
     model: Optional[str] = None
