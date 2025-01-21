@@ -32,6 +32,7 @@
   "poLabel": "Postal / ZIP code",
   "cntryLabel": "Country",
   "bcAddrLabel": "Address in B.C. (at which records are maintained)",
+  "bcAddrLabelShort": "Address in B.C. (at which records are maintained)",
   "sameAddrLabel": "Same as address for service",
   "contactMsg": "to update address information.",
   "usersLabel": "Users",

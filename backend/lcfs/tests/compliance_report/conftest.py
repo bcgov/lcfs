@@ -25,6 +25,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportCreateSchema,
 )
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
+from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
@@ -195,7 +196,7 @@ def compliance_report_summary_schema(
         version=1,
         is_locked=False,
         quarter=None,
-        can_sign=False
+        can_sign=False,
     ):
 
         return ComplianceReportSummarySchema(
@@ -207,7 +208,7 @@ def compliance_report_summary_schema(
             version=version,
             is_locked=is_locked,
             quarter=quarter,
-            can_sign=can_sign
+            can_sign=can_sign,
         )
 
     return _create_compliance_report_summary
@@ -235,6 +236,12 @@ def compliance_report_create_schema():
 def mock_repo():
     repo = AsyncMock(spec=ComplianceReportRepository)
     return repo
+
+
+@pytest.fixture
+def mock_snapshot_service():
+    service = AsyncMock(spec=OrganizationSnapshotService)
+    return service
 
 
 @pytest.fixture
@@ -285,11 +292,16 @@ def compliance_report_update_service(
 
 
 @pytest.fixture
-def compliance_report_service(mock_user_profile, mock_repo):
+def compliance_report_service(
+    mock_user_profile,
+    mock_repo,
+    mock_snapshot_service,
+):
     service = ComplianceReportServices()
     service.repo = mock_repo
     service.request = MagicMock()
     service.request.user = mock_user_profile
+    service.snapshot_services = mock_snapshot_service
     return service
 
 

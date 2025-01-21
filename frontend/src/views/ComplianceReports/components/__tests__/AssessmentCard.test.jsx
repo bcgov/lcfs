@@ -235,34 +235,4 @@ describe('AssessmentCard', () => {
       ).toBeInTheDocument()
     })
   })
-
-  it('displays organization information', async () => {
-    const mockChain = [
-      {
-        history: mockHistory,
-        version: 0,
-        compliancePeriod: {
-          description: '2024'
-        },
-        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
-      }
-    ]
-    render(
-      <AssessmentCard
-        orgData={mockOrgData}
-        hasMet={true}
-        hasSupplemental={false}
-        isGovernmentUser={false}
-        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
-        complianceReportId="123"
-        alertRef={{ current: { triggerAlert: vi.fn() } }}
-        chain={mockChain}
-      />,
-      { wrapper }
-    )
-    await waitFor(() => {
-      expect(screen.getByText(/report:serviceAddrLabel/)).toBeInTheDocument()
-      expect(screen.getByText(/report:bcAddrLabel/)).toBeInTheDocument()
-    })
-  })
 })

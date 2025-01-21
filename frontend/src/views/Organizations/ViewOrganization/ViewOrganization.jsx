@@ -30,7 +30,7 @@ export const ViewOrganization = () => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [resetGridFn, setResetGridFn] = useState(null)
-  const newUserButtonRef = useRef(null);
+  const newUserButtonRef = useRef(null)
 
   const navigate = useNavigate()
   const location = useLocation()
@@ -131,11 +131,15 @@ export const ViewOrganization = () => {
         <BCWidgetCard
           title={t('org:orgDetails')}
           color="nav"
-          editButton={{
-            text: canEdit ? t('org:editBtn') : null,
-            route: editButtonRoute,
-            id: 'edit-org-button'
-          }}
+          editButton={
+            canEdit
+              ? {
+                  text: t('org:editBtn'),
+                  route: editButtonRoute,
+                  id: 'edit-org-button'
+                }
+              : undefined
+          }
           content={
             <BCBox p={1}>
               <BCBox
@@ -225,7 +229,7 @@ export const ViewOrganization = () => {
         <BCBox component="div">
           <Role roles={[roles.administrator, roles.manage_users]}>
             <BCButton
-              ref= {newUserButtonRef}
+              ref={newUserButtonRef}
               variant="contained"
               size="small"
               color="primary"
@@ -249,15 +253,15 @@ export const ViewOrganization = () => {
             </BCButton>
           </Role>
           <ClearFiltersButton
-              onClick={handleClearFilters}
-              sx={{
-                height: newUserButtonRef.current?.offsetHeight || '36px',
-                marginRight: '8px',
-                marginBottom: '8px',
-                minWidth: 'fit-content',
-                whiteSpace: 'nowrap'
-              }}
-            />
+            onClick={handleClearFilters}
+            sx={{
+              height: newUserButtonRef.current?.offsetHeight || '36px',
+              marginRight: '8px',
+              marginBottom: '8px',
+              minWidth: 'fit-content',
+              whiteSpace: 'nowrap'
+            }}
+          />
         </BCBox>
         <BCTypography
           variant="h5"
