@@ -100,8 +100,9 @@ export const HistoryCard = ({ report }) => {
                           createDate: timezoneFormatter({
                             value: item?.createDate
                           }),
-                          firstName: item.userProfile.firstName,
-                          lastName: item.userProfile.lastName
+                          displayName:
+                            item.displayName ||
+                            `${item.userProfile.firstName} ${item.userProfile.lastName}`
                         }
                       )
                     }}
