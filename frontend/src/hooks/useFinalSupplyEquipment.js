@@ -41,8 +41,6 @@ export const useSaveFinalSupplyEquipment = (complianceReportId, options) => {
       const modifedData = {
         ...data,
         levelOfEquipment: data.levelOfEquipment?.name || data.levelOfEquipment,
-        fuelMeasurementType:
-          data.fuelMeasurementType?.type || data.fuelMeasurementType,
         complianceReportId
       }
       return await client.post(apiRoutes.saveFinalSupplyEquipments, modifedData)

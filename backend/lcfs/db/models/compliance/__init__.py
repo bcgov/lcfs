@@ -6,7 +6,6 @@ from .ComplianceReportHistory import ComplianceReportHistory
 from .ComplianceReportStatus import ComplianceReportStatus
 from .ComplianceReportSummary import ComplianceReportSummary
 from .FinalSupplyEquipment import FinalSupplyEquipment
-from .FuelMeasurementType import FuelMeasurementType
 from .FuelSupply import FuelSupply
 from .FuelExport import FuelExport
 from .LevelOfEquipment import LevelOfEquipment
@@ -23,7 +22,6 @@ __all__ = [
     "ComplianceReportStatus",
     "ComplianceReportSummary",
     "FinalSupplyEquipment",
-    "FuelMeasurementType",
     "FuelSupply",
     "FuelExport",
     "LevelOfEquipment",
