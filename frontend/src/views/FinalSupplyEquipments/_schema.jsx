@@ -119,7 +119,6 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'kwhUsage',
-    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
     ),
@@ -221,27 +220,6 @@ export const finalSupplyEquipmentColDefs = (
       freeSolo: false,
       openOnFocus: true,
       clearable: true
-    },
-    cellStyle: (params) => StandardCellErrors(params, errors),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
-  },
-  {
-    field: 'fuelMeasurementType',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.fuelMeasurementType'
-    ),
-    cellEditor: AutocompleteCellEditor,
-    suppressKeyboardEvent,
-    minWidth: 315,
-    cellEditorParams: {
-      options: optionsData?.fuelMeasurementTypes.map((obj) => obj.type) || [],
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false,
-      openOnFocus: true
     },
     cellStyle: (params) => StandardCellErrors(params, errors),
     cellRenderer: (params) =>

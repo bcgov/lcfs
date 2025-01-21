@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -7,7 +7,6 @@ import { StyledListItem } from '@/components/StyledListItem'
 import { roles } from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
-import { constructAddress } from '@/utils/constructAddress'
 import AssignmentIcon from '@mui/icons-material/Assignment'
 import { List, ListItemText, Stack } from '@mui/material'
 import Box from '@mui/material/Box'
@@ -15,6 +14,9 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
+import { OrganizationAddress } from '@/views/ComplianceReports/components/OrganizationAddress.jsx'
+import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
+import Loading from '@/components/Loading.jsx'
 
 export const AssessmentCard = ({
   orgData,
@@ -26,8 +28,17 @@ export const AssessmentCard = ({
   alertRef,
   chain
 }) => {
-  const { t } = useTranslation(['report'])
+  const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
+
+  const [isEditing, setIsEditing] = React.useState(false)
+
+  const onEdit = () => {
+    setIsEditing(true)
+  }
+
+  const { data: snapshotData, isLoading: snapshotLoading } =
+    useOrganizationSnapshot(complianceReportId)
 
   const { mutate: createSupplementalReport, isLoading } =
     useCreateSupplementalReport(complianceReportId, {
@@ -55,8 +66,7 @@ export const AssessmentCard = ({
 
   const filteredChain = useMemo(() => {
     return chain.filter((report) => {
-      const hasHistory = report.history && report.history.length > 0
-      return hasHistory
+      return report.history && report.history.length > 0
     })
   }, [chain])
 
@@ -71,36 +81,31 @@ export const AssessmentCard = ({
           ? t('report:assessment')
           : t('report:orgDetails')
       }
+      editButton={
+        !isEditing && {
+          onClick: onEdit,
+          text: 'Edit',
+          id: 'edit'
+        }
+      }
       content={
         <>
           <Stack direction="column" spacing={0.5}>
             <BCTypography variant="h6" color="primary">
-              {orgData?.name}
+              {orgData?.name}{' '}
+              {snapshotData?.isEdited && t('report:addressEdited')}
             </BCTypography>
-            <List sx={{ padding: 0 }}>
-              <StyledListItem>
-                <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
-                  {t('report:serviceAddrLabel')}:
-                  {orgData && constructAddress(orgData.orgAddress)}
-                </ListItemText>
-              </StyledListItem>
-              <StyledListItem>
-                <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
-                  {t('report:bcAddrLabel')}:{' '}
-                  {orgData && constructAddress(orgData.orgAttorneyAddress)}
-                </ListItemText>
-              </StyledListItem>
-            </List>
 
-            {!isGovernmentUser && (
-              <BCTypography
-                component="div"
-                variant="body4"
-                dangerouslySetInnerHTML={{
-                  __html: t('report:contactForAddrChange')
-                }}
+            {snapshotLoading && <Loading />}
+            {!snapshotLoading && (
+              <OrganizationAddress
+                snapshotData={snapshotData}
+                complianceReportId={complianceReportId}
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
               />
             )}
+
             {(isGovernmentUser ||
               hasSupplemental ||
               currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED) && (

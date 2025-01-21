@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey
+from sqlalchemy import Column, Integer, ForeignKey, String
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
@@ -28,7 +28,11 @@ class InitiativeAgreementHistory(BaseModel, Auditable, EffectiveDates):
         ForeignKey("user_profile.user_profile_id"),
         comment="Foreign key to user_profile",
     )
-
+    display_name = Column(
+        String(255),
+        comment="Display name for the initiative agreement history record",
+        nullable=True
+    )
     initiative_agreement = relationship("InitiativeAgreement", back_populates="history")
     initiative_agreement_status = relationship("InitiativeAgreementStatus")
     user_profile = relationship("UserProfile")

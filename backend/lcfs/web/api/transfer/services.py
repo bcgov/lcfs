@@ -28,6 +28,7 @@ from lcfs.web.api.organizations.services import OrganizationsService
 # schema
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transfer.schema import (
+    CreateTransferHistorySchema,
     TransferCommentSchema,
     TransferSchema,
     TransferCreateSchema,
@@ -162,9 +163,13 @@ class TransferServices:
         transfer = await self.repo.create_transfer(transfer)
         # Add a new transfer history record if the status has changed
         await self.repo.add_transfer_history(
-            transfer.transfer_id,
-            current_status.transfer_status_id,
-            self.request.user.user_profile_id,
+            CreateTransferHistorySchema(
+                transfer_history_id=None,
+                transfer_id=transfer.transfer_id,
+                transfer_status_id=current_status.transfer_status_id,
+                user_profile_id=self.request.user.user_profile_id,
+                display_name=(f"{self.request.user.first_name} {self.request.user.last_name}"),
+            )
         )
         await self._perform_notification_call(transfer, current_status.status)
         return transfer
@@ -256,9 +261,15 @@ class TransferServices:
             )
             # Add a new transfer history record to reflect the status change
             await self.repo.add_transfer_history(
-                transfer_data.transfer_id,
-                new_status.transfer_status_id,
-                self.request.user.user_profile_id,
+                CreateTransferHistorySchema(
+                    transfer_history_id=None,
+                    transfer_id=transfer_data.transfer_id,
+                    transfer_status_id=new_status.transfer_status_id,
+                    user_profile_id=self.request.user.user_profile_id,
+                    display_name=self.request.user.first_name
+                    + " "
+                    + self.request.user.last_name,
+                )
             )
 
         # Finally, update the transfer's status and save the changes
