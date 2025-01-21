@@ -10,7 +10,7 @@ from lcfs.db.models.admin_adjustment.AdminAdjustmentStatus import AdminAdjustmen
 from lcfs.db.models.admin_adjustment.AdminAdjustmentHistory import (
     AdminAdjustmentHistory,
 )
-from lcfs.web.api.admin_adjustment.schema import AdminAdjustmentSchema
+from lcfs.web.api.admin_adjustment.schema import CreateAdminAdjustmentHistorySchema
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
@@ -88,10 +88,7 @@ class AdminAdjustmentRepository:
 
     @repo_handler
     async def add_admin_adjustment_history(
-        self,
-        admin_adjustment_id: int,
-        admin_adjustment_status_id: int,
-        user_profile_id: int,
+        self, history: CreateAdminAdjustmentHistorySchema
     ) -> AdminAdjustmentHistory:
         """
         Adds a new record to the admin adjustment history in the database.
@@ -105,9 +102,10 @@ class AdminAdjustmentRepository:
             AdminAdjustmentHistory: The newly created admin adjustment history record.
         """
         new_history_record = AdminAdjustmentHistory(
-            admin_adjustment_id=admin_adjustment_id,
-            admin_adjustment_status_id=admin_adjustment_status_id,
-            user_profile_id=user_profile_id,
+            admin_adjustment_id=history.admin_adjustment_id,
+            admin_adjustment_status_id=history.admin_adjustment_status_id,
+            user_profile_id=history.user_profile_id,
+            display_name=history.display_name,
         )
         self.db.add(new_history_record)
         await self.db.flush()
@@ -115,10 +113,7 @@ class AdminAdjustmentRepository:
 
     @repo_handler
     async def update_admin_adjustment_history(
-        self,
-        admin_adjustment_id: int,
-        admin_adjustment_status_id: int,
-        user_profile_id: int,
+        self, history: CreateAdminAdjustmentHistorySchema
     ) -> AdminAdjustmentHistory:
         """
         Updates an admin adjustment history record in the database.
@@ -134,15 +129,17 @@ class AdminAdjustmentRepository:
         existing_history = await self.db.scalar(
             select(AdminAdjustmentHistory).where(
                 and_(
-                    AdminAdjustmentHistory.admin_adjustment_id == admin_adjustment_id,
+                    AdminAdjustmentHistory.admin_adjustment_id
+                    == history.admin_adjustment_id,
                     AdminAdjustmentHistory.admin_adjustment_status_id
-                    == admin_adjustment_status_id,
+                    == history.admin_adjustment_status_id,
                 )
             )
         )
         existing_history.create_date = datetime.now()
         existing_history.update_date = datetime.now()
-        existing_history.user_profile_id = user_profile_id
+        existing_history.user_profile_id = history.user_profile_id
+        existing_history.display_name = history.display_name
         self.db.add(existing_history)
         await self.db.flush()
         return existing_history

@@ -1,8 +1,8 @@
 """Initial Migration: All base models and enums
 
-Revision ID: ed3b4d40b324
+Revision ID: 32d9a649c8aa
 Revises: 
-Create Date: 2025-01-20 14:35:28.309082
+Create Date: 2025-01-20 14:20:01.997710
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = "ed3b4d40b324"
+revision = "32d9a649c8aa"
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -79,12 +79,12 @@ def upgrade() -> None:
     sa.Enum("Received", "Transferred", name="receivedortransferredenum").create(
         op.get_bind()
     )
-    sa.Enum("Q1", "Q2", "Q3", "Q4", name="quarter").create(op.get_bind())
     sa.Enum("CREATE", "UPDATE", "DELETE", name="actiontypeenum").create(op.get_bind())
     sa.Enum("SUPPLIER", "GOVERNMENT", name="usertypeenum").create(op.get_bind())
     sa.Enum(
         "Litres", "Kilograms", "Kilowatt_hour", "Cubic_metres", name="quantityunitsenum"
     ).create(op.get_bind())
+    sa.Enum("Q1", "Q2", "Q3", "Q4", name="quarter").create(op.get_bind())
     sa.Enum("Single port", "Dual port", name="ports_enum").create(op.get_bind())
     sa.Enum(
         "Draft",
@@ -862,64 +862,6 @@ def upgrade() -> None:
             "fuel_code_status_id", name=op.f("pk_fuel_code_status")
         ),
         comment="Represents fuel code status",
-    )
-    op.create_table(
-        "fuel_measurement_type",
-        sa.Column(
-            "fuel_measurement_type_id",
-            sa.Integer(),
-            autoincrement=True,
-            nullable=False,
-            comment="Unique identifier for the fuel measurement type",
-        ),
-        sa.Column(
-            "type",
-            sa.String(),
-            nullable=False,
-            comment="Name of the fuel measurement type",
-        ),
-        sa.Column(
-            "description",
-            sa.Text(),
-            nullable=True,
-            comment="Description of the fuel measurement type",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was created in the database.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who created this record in the database.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="The user who last updated this record in the database.",
-        ),
-        sa.Column(
-            "display_order",
-            sa.Integer(),
-            nullable=True,
-            comment="Relative rank in display sorting order",
-        ),
-        sa.PrimaryKeyConstraint(
-            "fuel_measurement_type_id", name=op.f("pk_fuel_measurement_type")
-        ),
-        comment="Fuel measurement type",
     )
     op.create_table(
         "initiative_agreement_status",
@@ -3598,6 +3540,12 @@ def upgrade() -> None:
             comment="Foreign key to user_profile",
         ),
         sa.Column(
+            "display_name",
+            sa.String(length=255),
+            nullable=True,
+            comment="Display name for the admin_adjustment history record",
+        ),
+        sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
             server_default=sa.text("now()"),
@@ -3929,6 +3877,12 @@ def upgrade() -> None:
             comment="Identifier for the user associated with the status change",
         ),
         sa.Column(
+            "display_name",
+            sa.String(length=255),
+            nullable=True,
+            comment="Display name for the compliance report history",
+        ),
+        sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
             server_default=sa.text("now()"),
@@ -4026,6 +3980,97 @@ def upgrade() -> None:
             name=op.f("pk_compliance_report_internal_comment"),
         ),
         comment="Associates internal comments with compliance report.",
+    )
+    op.create_table(
+        "compliance_report_organization_snapshot",
+        sa.Column(
+            "organization_snapshot_id",
+            sa.Integer(),
+            autoincrement=True,
+            nullable=False,
+            comment="Unique identifier for the organization",
+        ),
+        sa.Column("compliance_report_id", sa.Integer(), nullable=True),
+        sa.Column(
+            "name",
+            sa.String(length=500),
+            nullable=True,
+            comment="Organization's legal name",
+        ),
+        sa.Column(
+            "operating_name",
+            sa.String(length=500),
+            nullable=True,
+            comment="Organization's Operating name",
+        ),
+        sa.Column(
+            "email",
+            sa.String(length=255),
+            nullable=True,
+            comment="Organization's email address",
+        ),
+        sa.Column(
+            "phone",
+            sa.String(length=50),
+            nullable=True,
+            comment="Organization's phone number",
+        ),
+        sa.Column(
+            "bc_address",
+            sa.String(length=500),
+            nullable=True,
+            comment="Organization's address in BC",
+        ),
+        sa.Column(
+            "service_address",
+            sa.String(length=500),
+            nullable=True,
+            comment="Organization's address for Postal Service",
+        ),
+        sa.Column(
+            "is_edited",
+            sa.Boolean(),
+            nullable=False,
+            comment="Organization's address for Postal Service",
+        ),
+        sa.Column(
+            "create_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was created in the database.",
+        ),
+        sa.Column(
+            "update_date",
+            sa.TIMESTAMP(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=True,
+            comment="Date and time (UTC) when the physical record was updated in the database. It will be the same as the create_date until the record is first updated after creation.",
+        ),
+        sa.Column(
+            "create_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who created this record in the database.",
+        ),
+        sa.Column(
+            "update_user",
+            sa.String(),
+            nullable=True,
+            comment="The user who last updated this record in the database.",
+        ),
+        sa.ForeignKeyConstraint(
+            ["compliance_report_id"],
+            ["compliance_report.compliance_report_id"],
+            name=op.f(
+                "fk_compliance_report_organization_snapshot_compliance_report_id_compliance_report"
+            ),
+        ),
+        sa.PrimaryKeyConstraint(
+            "organization_snapshot_id",
+            name=op.f("pk_compliance_report_organization_snapshot"),
+        ),
+        comment="Contains organization snapshots that are attached to each compliance report for audit purposes.",
     )
     op.create_table(
         "compliance_report_summary",
@@ -4248,12 +4293,6 @@ def upgrade() -> None:
             comment="Port type with options 'Single port' and 'Dual port.'",
         ),
         sa.Column(
-            "fuel_measurement_type_id",
-            sa.Integer(),
-            nullable=False,
-            comment="The foreign key referencing the fuel measurement type.",
-        ),
-        sa.Column(
             "street_address",
             sa.String(),
             nullable=False,
@@ -4329,13 +4368,6 @@ def upgrade() -> None:
             ),
         ),
         sa.ForeignKeyConstraint(
-            ["fuel_measurement_type_id"],
-            ["fuel_measurement_type.fuel_measurement_type_id"],
-            name=op.f(
-                "fk_final_supply_equipment_fuel_measurement_type_id_fuel_measurement_type"
-            ),
-        ),
-        sa.ForeignKeyConstraint(
             ["level_of_equipment_id"],
             ["level_of_equipment.level_of_equipment_id"],
             name=op.f(
@@ -4351,12 +4383,6 @@ def upgrade() -> None:
         op.f("ix_final_supply_equipment_compliance_report_id"),
         "final_supply_equipment",
         ["compliance_report_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_final_supply_equipment_fuel_measurement_type_id"),
-        "final_supply_equipment",
-        ["fuel_measurement_type_id"],
         unique=False,
     )
     op.create_index(
@@ -4790,6 +4816,12 @@ def upgrade() -> None:
             comment="Foreign key to user_profile",
         ),
         sa.Column(
+            "display_name",
+            sa.String(length=255),
+            nullable=True,
+            comment="Display name for the initiative agreement history record",
+        ),
+        sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
             server_default=sa.text("now()"),
@@ -5202,6 +5234,12 @@ def upgrade() -> None:
             comment="Foreign key to user_profile",
         ),
         sa.Column(
+            "display_name",
+            sa.String(length=255),
+            nullable=True,
+            comment="Display name for the transfer history record",
+        ),
+        sa.Column(
             "create_date",
             sa.TIMESTAMP(timezone=True),
             server_default=sa.text("now()"),
@@ -5386,15 +5424,12 @@ def downgrade() -> None:
         table_name="final_supply_equipment",
     )
     op.drop_index(
-        op.f("ix_final_supply_equipment_fuel_measurement_type_id"),
-        table_name="final_supply_equipment",
-    )
-    op.drop_index(
         op.f("ix_final_supply_equipment_compliance_report_id"),
         table_name="final_supply_equipment",
     )
     op.drop_table("final_supply_equipment")
     op.drop_table("compliance_report_summary")
+    op.drop_table("compliance_report_organization_snapshot")
     op.drop_table("compliance_report_internal_comment")
     op.drop_table("compliance_report_history")
     op.drop_table("compliance_report_document_association")
@@ -5436,7 +5471,6 @@ def downgrade() -> None:
     op.drop_table("level_of_equipment")
     op.drop_table("internal_comment")
     op.drop_table("initiative_agreement_status")
-    op.drop_table("fuel_measurement_type")
     op.drop_table("fuel_code_status")
     op.drop_table("fuel_code_prefix")
     op.drop_table("fuel_category")
@@ -5476,12 +5510,12 @@ def downgrade() -> None:
         name="compliancereportstatusenum",
     ).drop(op.get_bind())
     sa.Enum("Single port", "Dual port", name="ports_enum").drop(op.get_bind())
+    sa.Enum("Q1", "Q2", "Q3", "Q4", name="quarter").drop(op.get_bind())
     sa.Enum(
         "Litres", "Kilograms", "Kilowatt_hour", "Cubic_metres", name="quantityunitsenum"
     ).drop(op.get_bind())
     sa.Enum("SUPPLIER", "GOVERNMENT", name="usertypeenum").drop(op.get_bind())
     sa.Enum("CREATE", "UPDATE", "DELETE", name="actiontypeenum").drop(op.get_bind())
-    sa.Enum("Q1", "Q2", "Q3", "Q4", name="quarter").drop(op.get_bind())
     sa.Enum("Received", "Transferred", name="receivedortransferredenum").drop(
         op.get_bind()
     )

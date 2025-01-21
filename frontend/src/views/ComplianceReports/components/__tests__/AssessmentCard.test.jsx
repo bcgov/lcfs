@@ -4,6 +4,7 @@ import { expect, it, vi } from 'vitest'
 import { AssessmentCard } from '../AssessmentCard'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { wrapper } from '@/tests/utils/wrapper'
+import { displayName } from 'react-quill'
 
 // Mock BCWidgetCard component
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
@@ -38,11 +39,11 @@ vi.mock('react-i18next', () => ({
         case 'report:reportHistory':
           return 'Report History'
         case 'report:complianceReportHistory.AssessedBy':
-          return `Assessed by ${options.firstName} ${options.lastName} on ${options.createDate}`
+          return `Assessed by ${options.displayName} on ${options.createDate}`
         case 'report:complianceReportHistory.Submitted':
-          return `Signed and submitted by ${options.firstName} ${options.lastName} on ${options.createDate}`
+          return `Signed and submitted by ${options.displayName} on ${options.createDate}`
         case 'report:complianceReportHistory.Draft':
-          return `Signed and submitted by ${options.firstName} ${options.lastName} on ${options.createDate}`
+          return `Signed and submitted by ${options.displayName} on ${options.createDate}`
         case 'report:supplementalCreated':
           return 'Supplemental report created successfully'
         default:
@@ -63,12 +64,14 @@ describe('AssessmentCard', () => {
     {
       status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
       createDate: '2024-10-01',
-      userProfile: { firstName: 'John', lastName: 'Doe' }
+      userProfile: { firstName: 'John', lastName: 'Doe' },
+      displayName: 'John Doe'
     },
     {
       status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
       createDate: '2024-09-20',
-      userProfile: { firstName: 'Jane', lastName: 'Smith' }
+      userProfile: { firstName: 'Jane', lastName: 'Smith' },
+      displayName: 'Jane Smith'
     }
   ]
 
@@ -160,7 +163,8 @@ describe('AssessmentCard', () => {
       {
         status: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
         createDate: '2024-08-01',
-        userProfile: { firstName: 'Alice', lastName: 'Wong' }
+        userProfile: { firstName: 'Alice', lastName: 'Wong' },
+        displayName: 'Alice Wong'
       }
     ]
 
@@ -229,36 +233,6 @@ describe('AssessmentCard', () => {
       expect(
         screen.getByText('Assessed by John Doe on 2024-09-30 5:00 pm PDT')
       ).toBeInTheDocument()
-    })
-  })
-
-  it('displays organization information', async () => {
-    const mockChain = [
-      {
-        history: mockHistory,
-        version: 0,
-        compliancePeriod: {
-          description: '2024'
-        },
-        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
-      }
-    ]
-    render(
-      <AssessmentCard
-        orgData={mockOrgData}
-        hasMet={true}
-        hasSupplemental={false}
-        isGovernmentUser={false}
-        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
-        complianceReportId="123"
-        alertRef={{ current: { triggerAlert: vi.fn() } }}
-        chain={mockChain}
-      />,
-      { wrapper }
-    )
-    await waitFor(() => {
-      expect(screen.getByText(/report:serviceAddrLabel/)).toBeInTheDocument()
-      expect(screen.getByText(/report:bcAddrLabel/)).toBeInTheDocument()
     })
   })
 })

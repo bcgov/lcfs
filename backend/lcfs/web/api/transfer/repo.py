@@ -9,7 +9,7 @@ from datetime import datetime
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
-from lcfs.web.api.transfer.schema import TransferSchema
+from lcfs.web.api.transfer.schema import CreateTransferHistorySchema, TransferSchema
 
 from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
@@ -174,7 +174,7 @@ class TransferRepository:
 
     @repo_handler
     async def add_transfer_history(
-        self, transfer_id: int, transfer_status_id: int, user_profile_id: int
+        self, transfer_history: CreateTransferHistorySchema
     ) -> TransferHistory:
         """
         Adds a new record to the transfer history in the database.
@@ -187,9 +187,10 @@ class TransferRepository:
             TransferHistory: The newly created transfer history record.
         """
         new_history_record = TransferHistory(
-            transfer_id=transfer_id,
-            transfer_status_id=transfer_status_id,
-            user_profile_id=user_profile_id,
+            transfer_id=transfer_history.transfer_id,
+            transfer_status_id=transfer_history.transfer_status_id,
+            user_profile_id=transfer_history.user_profile_id,
+            display_name=transfer_history.display_name,
         )
         self.db.add(new_history_record)
         await self.db.flush()

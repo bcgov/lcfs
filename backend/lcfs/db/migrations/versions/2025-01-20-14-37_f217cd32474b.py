@@ -12,7 +12,7 @@ plus follow-up migrations in chronological order:
 6) 8119d12538df (2025-01-14):   mv_fuel_code_count
 
 Revision ID: f217cd32474b
-Revises: ed3b4d40b324
+Revises: 32d9a649c8aa
 Create Date: 2025-01-20 14:37:57.157152
 """
 
@@ -22,7 +22,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "f217cd32474b"
-down_revision = "ed3b4d40b324"
+down_revision = "32d9a649c8aa"
 branch_labels = None
 depends_on = None
 

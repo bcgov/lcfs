@@ -811,18 +811,6 @@ def upgrade():
 
     op.execute(
         """
-        INSERT INTO fuel_measurement_type (fuel_measurement_type_id, type, display_order)
-        VALUES
-            (1, 'Separate utility meter', 1),
-            (2, 'Equipment meter (remote access)', 2),
-            (3, 'Equipment meter (physical access)', 3),
-            (4, 'No meter or estimated', 4)
-        ON CONFLICT (fuel_measurement_type_id) DO NOTHING;
-    """
-    )
-
-    op.execute(
-        """
         INSERT INTO compliance_report_status (compliance_report_status_id, status, effective_status)
         VALUES
             (1, 'Draft', TRUE),
@@ -923,7 +911,6 @@ def upgrade():
         "target_carbon_intensity": "target_carbon_intensity_id",
         "fuel_instance": "fuel_instance_id",
         "level_of_equipment": "level_of_equipment_id",
-        "fuel_measurement_type": "fuel_measurement_type_id",
     }
     for table, id_column in sequence_mappings.items():
         if table == "unit_of_measure":
@@ -1340,7 +1327,6 @@ def downgrade():
             "end_user_type",
             "allocation_transaction_type",
             "compliance_report_status",
-            "fuel_measurement_type",
             "level_of_equipment",
         ],
         [

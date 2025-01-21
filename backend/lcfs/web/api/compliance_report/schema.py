@@ -87,6 +87,7 @@ class ComplianceReportHistorySchema(BaseSchema):
     compliance_report_id: int
     status: ComplianceReportStatusSchema
     user_profile: ComplianceReportUserSchema
+    display_name: Optional[str] = None
     create_date: datetime
 
 

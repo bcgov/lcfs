@@ -6,6 +6,7 @@ import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.js
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
+import { displayName } from 'react-quill'
 
 // Mock useCurrentUser
 vi.mock('@/hooks/useCurrentUser', () => ({
@@ -19,8 +20,8 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key, opts) => {
-      if (opts && opts.createDate && opts.firstName && opts.lastName) {
-        return `${key}: ${opts.firstName} ${opts.lastName} - ${opts.createDate}`
+      if (opts && opts.createDate && opts.displayName) {
+        return `${key}: ${opts.displayName} - ${opts.createDate}`
       }
       return key
     }
@@ -88,17 +89,20 @@ describe('HistoryCard', () => {
       {
         status: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
         createDate: '2024-10-02',
-        userProfile: { firstName: 'Draft', lastName: 'User' }
+        userProfile: { firstName: 'Draft', lastName: 'User' },
+        displayName: 'Draft User'
       },
       {
         status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
         createDate: '2024-10-01T10:00:00Z',
-        userProfile: { firstName: 'John', lastName: 'Doe' }
+        userProfile: { firstName: 'John', lastName: 'Doe' },
+        displayName: 'John Doe'
       },
       {
         status: { status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST },
         createDate: '2024-10-03T15:00:00Z',
-        userProfile: { firstName: 'Jane', lastName: 'Smith' }
+        userProfile: { firstName: 'Jane', lastName: 'Smith' },
+        displayName: 'Jane Smith'
       }
     ]
     renderComponent({
@@ -126,7 +130,8 @@ describe('HistoryCard', () => {
       {
         status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
         createDate: '2024-10-01T10:00:00Z',
-        userProfile: { firstName: 'John', lastName: 'Doe' }
+        userProfile: { firstName: 'John', lastName: 'Doe' },
+        displayName: 'John Doe'
       }
     ]
     renderComponent({
@@ -152,7 +157,8 @@ describe('HistoryCard', () => {
       {
         status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
         createDate: '2024-10-01T10:00:00Z',
-        userProfile: { firstName: 'John', lastName: 'Doe' }
+        userProfile: { firstName: 'John', lastName: 'Doe' },
+        displayName: 'John Doe'
       }
     ]
     renderComponent({

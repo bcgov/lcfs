@@ -57,3 +57,6 @@ export const DEFAULT_CI_FUEL = {
   Diesel: 100.21,
   'Jet fuel': 88.83
 }
+
+export const PHONE_REGEX =
+  /^((\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})?$/
