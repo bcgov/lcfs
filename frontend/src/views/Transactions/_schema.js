@@ -66,7 +66,7 @@ export const transactionsColDefs = (t) => [
     minWidth: 300,
     flex: 2,
     valueGetter: (params) => {
-      return params.fromOrganization || 'N/A'
+      return params.data.fromOrganization || 'N/A'
     },
     filterParams: {
       buttons: ['clear']
