@@ -38,7 +38,7 @@ async def test_get_table_options(
     set_mock_user,
     mock_notional_transfer_service,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
     url = "/api/notional-transfers/table-options"
 
     # Mock the service's get_table_options method to return the expected schema instance
@@ -71,12 +71,12 @@ async def test_get_notional_transfers(
 ):
     with patch(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access,patch(
+    ) as mock_validate_organization_access, patch(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_compliance_report_access"
     ) as mock_validate_compliance_report_access, patch(
         "lcfs.web.api.notional_transfer.views.NotionalTransferServices.get_compliance_report_by_id"
     ) as mock_get_compliance_report_by_id:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("get_notional_transfers")
         payload = ComplianceReportRequestSchema(compliance_report_id=1).model_dump()
 
@@ -110,7 +110,7 @@ async def test_get_notional_transfers_paginated(
     with patch(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("get_notional_transfers_paginated")
         payload = PaginatedNotionalTransferRequestSchema(
             compliance_report_id=1,
@@ -149,7 +149,7 @@ async def test_save_notional_transfer_row_create(
     with patch(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_notional_transfer_row")
         payload = create_mock_schema({}).model_dump()
 
@@ -183,7 +183,7 @@ async def test_save_notional_transfer_row_update(
     with patch(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_notional_transfer_row")
         payload = create_mock_schema(
             {
@@ -223,7 +223,7 @@ async def test_save_notional_transfer_row_delete(
     with patch(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = "/api/notional-transfers/save"
         mock_schema = create_mock_schema(
             {
@@ -257,7 +257,7 @@ async def test_save_notional_transfer_row_delete(
         data = response.json()
         assert data == {"message": "Notional transfer deleted successfully"}
 
-        # Adjusted to use UserTypeEnum.SUPPLIER
+        # Adjusted to use UserTypeEnum.COMPLIANCE_REPORTING
         mock_notional_transfer_service.delete_notional_transfer.assert_called_once_with(
             mock_schema, UserTypeEnum.SUPPLIER
         )

@@ -37,7 +37,7 @@ async def test_get_table_options(
     set_mock_user,
     mock_other_uses_service,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
     url = fastapi_app.url_path_for("get_table_options")
 
     mock_other_uses_service.get_table_options.return_value = {
@@ -77,7 +77,7 @@ async def test_get_other_uses(
         "lcfs.web.api.notional_transfer.views.NotionalTransferServices.get_compliance_report_by_id"
     ) as mock_get_compliance_report_by_id:
 
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("get_other_uses")
         payload = ComplianceReportRequestSchema(compliance_report_id=1).model_dump()
 
@@ -109,7 +109,7 @@ async def test_get_other_uses_paginated(
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("get_other_uses_paginated")
         payload = PaginatedOtherUsesRequestSchema(
             compliance_report_id=1,
@@ -148,7 +148,7 @@ async def test_save_other_uses_row_create(
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_other_uses_row")
         payload = create_mock_schema({}).model_dump()
 
@@ -186,7 +186,7 @@ async def test_save_other_uses_row_update(
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_other_uses_row")
         payload = create_mock_schema(
             {
@@ -226,7 +226,7 @@ async def test_save_other_uses_row_delete(
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_other_uses_row")
         mock_schema = create_mock_schema(
             {

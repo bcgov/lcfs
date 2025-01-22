@@ -51,7 +51,12 @@ describe('Navbar', () => {
     useCurrentUser.mockReturnValue({
       data: mockUser,
       hasRoles: (role) =>
-        mockUser.roles.some((userRole) => userRole.name === role)
+        mockUser.roles.some((userRole) => userRole.name === role),
+      hasAnyRole: (...roleNames) => {
+        return roleNames.some((roleName) =>
+          mockUser.roles.some((role) => role.name === roleName)
+        )
+      }
     })
     useMediaQuery.mockReturnValue(false) // Set to false for desktop tests
     useTheme.mockReturnValue({
@@ -79,6 +84,25 @@ describe('Navbar', () => {
 
   it('displays the correct navigation menu items for non-government users', () => {
     mockUser.isGovernmentUser = false
+    render(<Navbar />, { wrapper })
+
+    expect(screen.getByText('Dashboard')).toBeInTheDocument()
+    expect(screen.queryByText('Organizations')).not.toBeInTheDocument() // Should not be present
+    expect(screen.getByText('Transactions')).toBeInTheDocument()
+    expect(screen.getByText('Organization')).toBeInTheDocument()
+  })
+
+  it('displays compliance reporting for non-government users with compliance reporting role', () => {
+    mockUser.isGovernmentUser = false
+    mockUser.roles = [
+      {
+        name: roles.supplier
+      },
+      {
+        name: roles.compliance_reporting
+      }
+    ]
+
     render(<Navbar />, { wrapper })
 
     expect(screen.getByText('Dashboard')).toBeInTheDocument()

@@ -100,7 +100,9 @@ async def get_compliance_report_by_id(
     response_model=ComplianceReportSummarySchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_compliance_report_summary(
     request: Request,
     report_id: int,
@@ -119,7 +121,7 @@ async def get_compliance_report_summary(
     response_model=ComplianceReportSummarySchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def update_compliance_report_summary(
     request: Request,
     report_id: int,
@@ -136,7 +138,9 @@ async def update_compliance_report_summary(
     )
 
 
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 @router.put(
     "/{report_id}",
     response_model=ComplianceReportBaseSchema,
@@ -160,7 +164,7 @@ async def update_compliance_report(
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def create_supplemental_report(
     request: Request,
     report_id: int,
