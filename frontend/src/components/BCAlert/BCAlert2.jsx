@@ -58,7 +58,9 @@ export const BCAlert2 = forwardRef(
 
     useEffect(() => {
       setAlertStatus('mount')
-      if (noFade || severity === 'error' || severity === 'pending') return
+      if (noFade || ['error', 'pending', 'warning'].includes(severity)) {
+        return
+      }
       const timer = setTimeout(() => {
         setAlertStatus('fadeOut')
       }, delay)
