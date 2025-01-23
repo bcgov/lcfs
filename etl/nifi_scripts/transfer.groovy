@@ -107,7 +107,11 @@ def INTERNAL_COMMENT_QUERY = """
         ctc.credit_trade_comment,
         ctc.create_user_id,
         ctc.create_timestamp,
-        ctc.update_timestamp,
+        CASE
+            WHEN DATE_TRUNC('minute', ctc.update_timestamp) != DATE_TRUNC('minute', ctc.create_timestamp)
+                THEN ctc.update_timestamp
+            ELSE NULL
+        END AS update_timestamp,
         STRING_AGG (r."name", '; ') AS role_names
     FROM
         credit_trade_comment ctc
