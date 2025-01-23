@@ -107,7 +107,7 @@ export const Users = () => {
           <ClearFiltersButton
             onClick={handleClearFilters}
             sx={{
-              height: newUserButtonRef.current?.offsetHeight || '36px',
+              // height: newUserButtonRef.current?.offsetHeight || '36px',
               minWidth: 'fit-content',
               whiteSpace: 'nowrap'
             }}

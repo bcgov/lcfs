@@ -5,7 +5,16 @@ import { CircularProgress } from '@mui/material'
 
 const BCButton = forwardRef(
   (
-    { color, variant, size, circular, iconOnly, isLoading, children, ...rest },
+    {
+      color = 'white',
+      variant = 'contained',
+      size = 'medium',
+      circular = false,
+      iconOnly = false,
+      isLoading,
+      children,
+      ...rest
+    },
     ref
   ) => {
     return (
@@ -24,15 +33,6 @@ const BCButton = forwardRef(
 )
 
 BCButton.displayName = 'BCButton'
-
-// Setting default values for the props of BCButton
-BCButton.defaultProps = {
-  size: 'medium',
-  variant: 'contained',
-  color: 'white',
-  circular: false,
-  iconOnly: false
-}
 
 // Typechecking props for the BCButton
 BCButton.propTypes = {

@@ -62,6 +62,7 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
     }
 
     return {
+      border: '1px solid rgba(0, 51, 102)',
       background: backgroundValue,
       color: colorValue,
       boxShadow: boxShadowValue,
