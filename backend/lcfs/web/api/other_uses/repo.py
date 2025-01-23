@@ -320,13 +320,6 @@ class OtherUsesRepository:
         """Get all fuel type options with their associated fuel categories and fuel codes for other uses"""
         current_date = date.today()
         base_conditions = [
-            or_(
-                FuelCode.effective_date == None, FuelCode.effective_date <= current_date
-            ),
-            or_(
-                FuelCode.expiration_date == None,
-                FuelCode.expiration_date > current_date,
-            ),
             FuelType.other_uses_fossil_derived == True,
         ]
 
@@ -359,6 +352,12 @@ class OtherUsesRepository:
         # Prepare the data in the format matching your schema
         formatted_fuel_types = []
         for fuel_type in fuel_types:
+            valid_fuel_codes = [
+                fc for fc in fuel_type.fuel_codes
+                if (fc.effective_date is None or fc.effective_date <= current_date) and
+                (fc.expiration_date is None or fc.expiration_date > current_date)
+            ]
+
             formatted_fuel_type = {
                 "fuel_type_id": fuel_type.fuel_type_id,
                 "fuel_type": fuel_type.fuel_type,
@@ -379,25 +378,32 @@ class OtherUsesRepository:
                         "carbon_intensity": fc.carbon_intensity,
                     }
                     for fc in fuel_type.fuel_codes
-                ],
+                    if (fc.effective_date is None or fc.effective_date <= current_date) and
+                    (fc.expiration_date is None or fc.expiration_date > current_date)
+                    ],
                 "provision_of_the_act": [],
             }
 
             if fuel_type.provision_1:
-                formatted_fuel_type["provision_of_the_act"].append(
-                    {
-                        "provision_of_the_act_id": fuel_type.provision_1_id,
-                        "name": fuel_type.provision_1.name,
-                    }
-                )
+                is_fuel_code = "fuel code" in fuel_type.provision_1.name.lower().strip()
+                if not is_fuel_code or (is_fuel_code and valid_fuel_codes):
+                    formatted_fuel_type["provision_of_the_act"].append(
+                        {
+                            "provision_of_the_act_id": fuel_type.provision_1_id,
+                            "name": fuel_type.provision_1.name,
+                        }
+                    )
 
             if fuel_type.provision_2:
-                formatted_fuel_type["provision_of_the_act"].append(
-                    {
-                        "provision_of_the_act_id": fuel_type.provision_2_id,
-                        "name": fuel_type.provision_2.name,
-                    }
-                )
+                is_fuel_code = "fuel code" in fuel_type.provision_2.name.lower().strip()
+                if not is_fuel_code or (is_fuel_code and valid_fuel_codes):
+                    formatted_fuel_type["provision_of_the_act"].append(
+                        {
+                            "provision_of_the_act_id": fuel_type.provision_2_id,
+                            "name": fuel_type.provision_2.name,
+                        }
+                    )
+
             formatted_fuel_types.append(formatted_fuel_type)
 
         return formatted_fuel_types
