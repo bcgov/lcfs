@@ -235,7 +235,6 @@ class ComplianceReportSummaryService:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
-
         await self.repo.save_compliance_report_summary(summary_data)
         summary_data = await self.calculate_compliance_report_summary(report_id)
 
@@ -450,9 +449,9 @@ class ComplianceReportSummaryService:
             jet_fuel_percentage = 3 / 100
 
         eligible_renewable_fuel_required = {
-            "gasoline": tracked_totals["gasoline"] * 0.05,
-            "diesel": tracked_totals["diesel"] * 0.04,
-            "jet_fuel": tracked_totals["jet_fuel"] * jet_fuel_percentage,
+            "gasoline": round(tracked_totals["gasoline"] * 0.05),
+            "diesel": round(tracked_totals["diesel"] * 0.04),
+            "jet_fuel": round(tracked_totals["jet_fuel"] * jet_fuel_percentage),
         }
 
         # line 6
