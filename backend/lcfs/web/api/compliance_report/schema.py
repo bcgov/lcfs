@@ -23,6 +23,7 @@ class ReturnStatus(Enum):
     MANAGER = "Return to manager"
     SUPPLIER = "Return to supplier"
 
+
 RETURN_STATUS_MAPPER = {
     ReturnStatus.ANALYST.value: ComplianceReportStatusEnum.Submitted.value,
     ReturnStatus.MANAGER.value: ComplianceReportStatusEnum.Recommended_by_analyst.value,
@@ -86,6 +87,7 @@ class ComplianceReportHistorySchema(BaseSchema):
     compliance_report_id: int
     status: ComplianceReportStatusSchema
     user_profile: ComplianceReportUserSchema
+    display_name: Optional[str] = None
     create_date: datetime
 
 
@@ -101,13 +103,6 @@ class AllocationAgreementSchema(BaseSchema):
     pass
 
 
-class FuelMeasurementTypeSchema(BaseSchema):
-    fuel_measurement_type_id: int
-    type: str
-    description: Optional[str] = None
-    display_order: int
-
-
 class LevelOfEquipmentSchema(BaseSchema):
     level_of_equipment_id: int
     name: str
@@ -118,7 +113,6 @@ class LevelOfEquipmentSchema(BaseSchema):
 class FSEOptionsSchema(BaseSchema):
     intended_use_types: List[EndUseTypeSchema]
     intended_user_types: List[EndUserTypeSchema]
-    fuel_measurement_types: List[FuelMeasurementTypeSchema]
     levels_of_equipment: List[LevelOfEquipmentSchema]
     ports: ClassVar[List[str]] = [port.value for port in PortsEnum]
 
@@ -135,7 +129,6 @@ class FinalSupplyEquipmentSchema(BaseSchema):
     manufacturer: str
     model: Optional[str] = None
     level_of_equipment: LevelOfEquipmentSchema
-    fuel_measurement_type: FuelMeasurementTypeSchema
     ports: Optional[PortsEnum] = None
     intended_use_types: List[EndUseTypeSchema]
     intended_user_types: List[EndUserTypeSchema]
@@ -213,6 +206,7 @@ class ComplianceReportSummarySchema(BaseSchema):
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):
     compliance_report_id: int
+    is_locked: Optional[bool] = False
     renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
     low_carbon_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]

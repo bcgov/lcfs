@@ -5,14 +5,19 @@ import i18n from '@/i18n'
 import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
-  RequiredHeader,
-  NumberEditor
+  NumberEditor,
+  RequiredHeader
 } from '@/components/BCDataGrid/components'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { apiRoutes } from '@/constants/routes'
-import { StandardCellErrors } from '@/utils/grid/errorRenderers'
+import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 
-export const notionalTransferColDefs = (optionsData, errors, currentUser) => [
+export const notionalTransferColDefs = (
+  optionsData,
+  currentUser,
+  errors,
+  warnings
+) => [
   validation,
   actions({
     enableDuplicate: false,
@@ -79,7 +84,8 @@ export const notionalTransferColDefs = (optionsData, errors, currentUser) => [
       }
       return true
     },
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'addressForService',
@@ -89,7 +95,8 @@ export const notionalTransferColDefs = (optionsData, errors, currentUser) => [
     headerComponent: RequiredHeader,
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'fuelCategory',
@@ -107,7 +114,8 @@ export const notionalTransferColDefs = (optionsData, errors, currentUser) => [
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>)
@@ -128,7 +136,8 @@ export const notionalTransferColDefs = (optionsData, errors, currentUser) => [
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>)
@@ -144,7 +153,8 @@ export const notionalTransferColDefs = (optionsData, errors, currentUser) => [
       showStepperButtons: false
     },
     valueFormatter: (params) => valueFormatter({ value: params.value }),
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   }
 ]
 

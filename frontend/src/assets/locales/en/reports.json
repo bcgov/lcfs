@@ -112,7 +112,6 @@
     }
   ],
   "questions": "Questions?",
-  "contactForAddrChange": "If you need to change your address, please contact <a href='mailto:lcfs@gov.bc.ca'>lcfs@gov.bc.ca</a>",
   "contact": "<p>Please contact <a href='mailto:lcfs@gov.bc.ca'>lcfs@gov.bc.ca</a> with any questions you may have about this form.</p>",
   "reportDetails": "Report details",
   "summaryAndDeclaration": "Summary & declaration",
@@ -128,7 +127,6 @@
   "compareReports": "Compare summary data between the following 2 report versions",
   "fuelType": "Fuel Type",
   "signingAuthorityDeclaration": "Signing authority declaration",
-  "cannotSubmit": "You must report fuel activity information to sign and submit a report (FSE data alone is not sufficient)",
   "declarationText": "I certify that the information in this report is true and complete to the best of my knowledge and I understand that I may be required to provide to the Director records evidencing the truth of that information.",
   "submitReport": "Submit Report",
   "pleaseCheckDeclaration": "Please certify the information before submitting",
@@ -140,13 +138,13 @@
   "saveReturn": "Save & return to report",
   "reportHistory": "Report history",
   "complianceReportHistory": {
-    "Draft": "Draft {{createDate}} by {{firstName}} {{lastName}}.",
-    "Submitted": "Signed and submitted {{createDate}} by {{firstName}} {{lastName}}.",
-    "Recommended by analyst": "Recommended {{createDate}} by {{firstName}} {{lastName}}.",
-    "Recommended by manager": "Recommended {{createDate}} by {{firstName}} {{lastName}}.",
-    "Assessed": "Assessed {{createDate}} by {{firstName}} {{lastName}}.",
+    "Draft": "Draft {{createDate}} by {{displayName}}.",
+    "Submitted": "Signed and submitted {{createDate}} by {{displayName}}.",
+    "Recommended by analyst": "Recommended {{createDate}} by {{displayName}}.",
+    "Recommended by manager": "Recommended {{createDate}} by {{displayName}}.",
+    "Assessed": "Assessed {{createDate}} by {{displayName}}.",
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
-    "ReAssessed": "Re-assessed"
+    "Reassessed": "Re-assessed"
   },
   "internalComments": "Internal comments",
   "fuelLabels": {
@@ -160,6 +158,9 @@
     "totalValue": "Total Value"
   },
   "summaryLoadingMsg": "Loading compliance report summary...",
-  "noSigningAuthorityTooltip": "Signing authority role required.",
+  "noSigningAuthorityTooltip": "Cannot submit: Signing authority role required.",
+  "noRecords": "Cannot submit: You must report fuel activity information (FSE data alone is not sufficient)",
+  "invalidAddress": "Cannot submit: Please fill out all required address fields",
+  "addressEdited": " - edited",
   "viewLegacyBtn": "View Full Historical Report in TFRS"
 }

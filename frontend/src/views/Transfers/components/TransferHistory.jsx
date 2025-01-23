@@ -128,7 +128,8 @@ function TransferHistory({ transferHistory }) {
                 <span> by </span>
                 <strong>
                   {' '}
-                  {item.userProfile?.firstName} {item.userProfile?.lastName}
+                  {item.displayName ||
+                    `${item.userProfile?.firstName} ${item.userProfile?.lastName}`}
                 </strong>{' '}
                 <span> of </span>
                 <strong>

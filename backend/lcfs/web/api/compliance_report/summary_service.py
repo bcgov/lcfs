@@ -32,8 +32,6 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.utils.calculations import calculate_compliance_units
 
-from lcfs.utils.constants import RENEWABLE_FUEL_TYPES
-
 logger = logging.getLogger(__name__)
 
 
@@ -237,17 +235,10 @@ class ComplianceReportSummaryService:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
-
         await self.repo.save_compliance_report_summary(summary_data)
         summary_data = await self.calculate_compliance_report_summary(report_id)
 
         return summary_data
-
-    def filter_renewable_fuel_supplies(self, fuel_supplies: List[FuelSupply]) -> List[FuelSupply]:
-        return [
-            supply for supply in fuel_supplies
-            if supply.fuel_type and supply.fuel_type.fuel_type in RENEWABLE_FUEL_TYPES
-        ]
 
     @service_handler
     async def calculate_compliance_report_summary(
@@ -338,16 +329,17 @@ class ComplianceReportSummaryService:
         fossil_quantities = await self.calculate_fuel_quantities(
             compliance_report.compliance_report_id,
             effective_fuel_supplies,
-            fossil_derived=True
+            fossil_derived=True,
         )
         # line 2
-        filtered_renewable_fuel_supplies = self.filter_renewable_fuel_supplies(
-            effective_fuel_supplies)
+        filtered_renewable_fuel_supplies = [
+            fs for fs in effective_fuel_supplies if fs.fuel_type.renewable
+        ]
 
         renewable_quantities = await self.calculate_fuel_quantities(
             compliance_report.compliance_report_id,
             filtered_renewable_fuel_supplies,
-            fossil_derived=False
+            fossil_derived=False,
         )
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
@@ -457,9 +449,9 @@ class ComplianceReportSummaryService:
             jet_fuel_percentage = 3 / 100
 
         eligible_renewable_fuel_required = {
-            "gasoline": tracked_totals["gasoline"] * 0.05,
-            "diesel": tracked_totals["diesel"] * 0.04,
-            "jet_fuel": tracked_totals["jet_fuel"] * jet_fuel_percentage,
+            "gasoline": round(tracked_totals["gasoline"] * 0.05),
+            "diesel": round(tracked_totals["diesel"] * 0.04),
+            "jet_fuel": round(tracked_totals["jet_fuel"] * jet_fuel_percentage),
         }
 
         # line 6

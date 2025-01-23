@@ -3,16 +3,16 @@ from .AllocationTransactionType import AllocationTransactionType
 from .CompliancePeriod import CompliancePeriod
 from .ComplianceReport import ComplianceReport
 from .ComplianceReportHistory import ComplianceReportHistory
+from .ComplianceReportOrganizationSnapshot import ComplianceReportOrganizationSnapshot
 from .ComplianceReportStatus import ComplianceReportStatus
 from .ComplianceReportSummary import ComplianceReportSummary
+from .EndUserType import EndUserType
 from .FinalSupplyEquipment import FinalSupplyEquipment
-from .FuelMeasurementType import FuelMeasurementType
-from .FuelSupply import FuelSupply
 from .FuelExport import FuelExport
+from .FuelSupply import FuelSupply
 from .LevelOfEquipment import LevelOfEquipment
 from .NotionalTransfer import NotionalTransfer
 from .OtherUses import OtherUses
-from .EndUserType import EndUserType
 
 __all__ = [
     "AllocationAgreement",
@@ -22,8 +22,8 @@ __all__ = [
     "ComplianceReportHistory",
     "ComplianceReportStatus",
     "ComplianceReportSummary",
+    "ComplianceReportOrganizationSnapshot",
     "FinalSupplyEquipment",
-    "FuelMeasurementType",
     "FuelSupply",
     "FuelExport",
     "LevelOfEquipment",

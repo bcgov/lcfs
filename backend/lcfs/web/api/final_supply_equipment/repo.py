@@ -4,7 +4,6 @@ from lcfs.db.models.compliance import EndUserType, FinalSupplyEquipment, Complia
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
     FinalSupplyEquipmentRegNumber,
 )
-from lcfs.db.models.compliance.FuelMeasurementType import FuelMeasurementType
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.web.api.base import PaginationRequestSchema
@@ -31,7 +30,6 @@ class FinalSupplyEquipmentRepository:
     ) -> Tuple[
         List[EndUseType],
         List[LevelOfEquipment],
-        List[FuelMeasurementType],
         List[PortsEnum],
         List[str],
     ]:
@@ -41,14 +39,12 @@ class FinalSupplyEquipmentRepository:
         async with self.db.begin_nested():
             intended_use_types = await self.get_intended_use_types()
             levels_of_equipment = await self.get_levels_of_equipment()
-            fuel_measurement_types = await self.get_fuel_measurement_types()
             intended_user_types = await self.get_intended_user_types()
             organization_names = await self.get_organization_names(organization)
         ports = list(PortsEnum)
         return (
             intended_use_types,
             levels_of_equipment,
-            fuel_measurement_types,
             intended_user_types,
             ports,
             organization_names,
@@ -165,28 +161,8 @@ class FinalSupplyEquipmentRepository:
         return (
             (
                 await self.db.execute(
-                    select(LevelOfEquipment).where(LevelOfEquipment.name == name)
-                )
-            )
-            .unique()
-            .scalar_one_or_none()
-        )
-
-    async def get_fuel_measurement_types(self) -> List[FuelMeasurementType]:
-        """
-        Retrieve a list of levels of equipment from the database
-        """
-        return (await self.db.execute(select(FuelMeasurementType))).scalars().all()
-
-    @repo_handler
-    async def get_fuel_measurement_type_by_type(self, type: str) -> FuelMeasurementType:
-        """
-        Get the levels of equipment by name
-        """
-        return (
-            (
-                await self.db.execute(
-                    select(FuelMeasurementType).where(FuelMeasurementType.type == type)
+                    select(LevelOfEquipment).where(
+                        LevelOfEquipment.name == name)
                 )
             )
             .unique()
@@ -201,7 +177,6 @@ class FinalSupplyEquipmentRepository:
         result = await self.db.execute(
             select(FinalSupplyEquipment)
             .options(
-                joinedload(FinalSupplyEquipment.fuel_measurement_type),
                 joinedload(FinalSupplyEquipment.intended_use_types),
                 joinedload(FinalSupplyEquipment.intended_user_types),
                 joinedload(FinalSupplyEquipment.level_of_equipment),
@@ -218,13 +193,14 @@ class FinalSupplyEquipmentRepository:
         """
         Retrieve a list of final supply equipment from the database with pagination
         """
-        conditions = [FinalSupplyEquipment.compliance_report_id == compliance_report_id]
-        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
+        conditions = [
+            FinalSupplyEquipment.compliance_report_id == compliance_report_id]
+        offset = 0 if pagination.page < 1 else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
         query = (
             select(FinalSupplyEquipment)
             .options(
-                joinedload(FinalSupplyEquipment.fuel_measurement_type),
                 joinedload(FinalSupplyEquipment.intended_use_types),
                 joinedload(FinalSupplyEquipment.intended_user_types),
                 joinedload(FinalSupplyEquipment.level_of_equipment),
@@ -253,7 +229,6 @@ class FinalSupplyEquipmentRepository:
         result = await self.db.execute(
             select(FinalSupplyEquipment)
             .options(
-                joinedload(FinalSupplyEquipment.fuel_measurement_type),
                 joinedload(FinalSupplyEquipment.intended_use_types),
                 joinedload(FinalSupplyEquipment.intended_user_types),
                 joinedload(FinalSupplyEquipment.level_of_equipment),
@@ -276,7 +251,8 @@ class FinalSupplyEquipmentRepository:
         await self.db.flush()
         await self.db.refresh(
             final_supply_equipment,
-            ["fuel_measurement_type", "level_of_equipment", "intended_use_types","intended_user_types"],
+            ["level_of_equipment",
+                "intended_use_types", "intended_user_types"],
         )
         return updated_final_supply_equipment
 
@@ -291,7 +267,7 @@ class FinalSupplyEquipmentRepository:
         await self.db.flush()
         await self.db.refresh(
             final_supply_equipment,
-            ["fuel_measurement_type", "level_of_equipment", "intended_use_types"],
+            ["level_of_equipment", "intended_use_types"],
         )
         return final_supply_equipment
 

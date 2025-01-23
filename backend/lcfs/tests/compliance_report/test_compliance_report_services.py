@@ -41,6 +41,7 @@ async def test_create_compliance_report_success(
     mock_repo,
     compliance_report_base_schema,
     compliance_report_create_schema,
+    mock_snapshot_service,
 ):
     mock_user = MagicMock()
 
@@ -74,6 +75,7 @@ async def test_create_compliance_report_success(
         compliance_report_create_schema.status
     )
     mock_repo.create_compliance_report.assert_called_once()
+    mock_snapshot_service.create_organization_snapshot.assert_called_once()
 
 
 @pytest.mark.anyio

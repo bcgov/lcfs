@@ -40,34 +40,35 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   const navigate = useNavigate()
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
-  const isAnalystRole = userRoles.some(role => role.name === roles.analyst) || false;
-  const isSupplierRole = userRoles.some(role => role.name === roles.supplier) || false;
+  const isAnalystRole =
+    userRoles.some((role) => role.name === roles.analyst) || false
+  const isSupplierRole =
+    userRoles.some((role) => role.name === roles.supplier) || false
 
   const editSupportingDocs = useMemo(() => {
-    return isAnalystRole && (
-      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
-      currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED
+    return (
+      isAnalystRole &&
+      (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
+        currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED)
     )
-  }, [isAnalystRole, currentStatus]);
+  }, [isAnalystRole, currentStatus])
 
   const editAnalyst = useMemo(() => {
-    return isAnalystRole && (
-      currentStatus === COMPLIANCE_REPORT_STATUSES.REASSESSED
+    return (
+      isAnalystRole && currentStatus === COMPLIANCE_REPORT_STATUSES.REASSESSED
     )
-  }, [isAnalystRole, currentStatus]);
+  }, [isAnalystRole, currentStatus])
 
   const editSupplier = useMemo(() => {
-    return isSupplierRole && (
-      currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
-    )
-  }, [isSupplierRole, currentStatus]);
+    return isSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
+  }, [isSupplierRole, currentStatus])
 
   const shouldShowEditIcon = (activityName) => {
     if (activityName === t('report:supportingDocs')) {
-      return editSupportingDocs;
+      return editSupportingDocs
     }
-    return editAnalyst || editSupplier;
-  };
+    return editAnalyst || editSupplier
+  }
 
   const isArrayEmpty = useCallback((data) => {
     if (Array.isArray(data)) {
@@ -211,29 +212,31 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
     ]
   )
 
-  const [expanded, setExpanded] = useState(activityList.map((activity, index) => {
-    if (activity.name === t('report:supportingDocs')) {
-      return isArrayEmpty(activity.useFetch(complianceReportId).data) ? '' : `panel${index}`
-    }
-    return `panel${index}`
-  }).filter(Boolean)) // Initialize with panels that should be open by default
+  const [expanded, setExpanded] = useState(
+    activityList
+      .map((activity, index) => {
+        if (activity.name === t('report:supportingDocs')) {
+          return isArrayEmpty(activity.useFetch(complianceReportId).data)
+            ? ''
+            : `panel${index}`
+        }
+        return `panel${index}`
+      })
+      .filter(Boolean)
+  )
 
-  const [allExpanded, setAllExpanded] = useState(true)
-
-  const handleChange = (panel) => (event, isExpanded) => {
+  const onExpand = (panel) => (event, isExpanded) => {
     setExpanded((prev) =>
       isExpanded ? [...prev, panel] : prev.filter((p) => p !== panel)
     )
   }
 
-  const handleExpandAll = () => {
+  const onExpandAll = () => {
     setExpanded(activityList.map((_, index) => `panel${index}`))
-    setAllExpanded(true)
   }
 
-  const handleCollapseAll = () => {
+  const onCollapseAll = () => {
     setExpanded([])
-    setAllExpanded(false)
   }
 
   return (
@@ -243,7 +246,7 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         <Link
           component="button"
           variant="body2"
-          onClick={handleExpandAll}
+          onClick={onExpandAll}
           sx={{ ml: 2, mr: 1, textDecoration: 'underline' }}
         >
           {t('report:expandAll')}
@@ -252,7 +255,7 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         <Link
           component="button"
           variant="body2"
-          onClick={handleCollapseAll}
+          onClick={onCollapseAll}
           sx={{ ml: 1, textDecoration: 'underline' }}
         >
           {t('report:collapseAll')}
@@ -261,11 +264,16 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
         return (
-          (data && !isArrayEmpty(data) || activity.name === t('report:supportingDocs')) && (
+          ((data && !isArrayEmpty(data)) ||
+            activity.name === t('report:supportingDocs')) && (
             <Accordion
               key={index}
-              expanded={activity.name === t('report:supportingDocs') ? expanded.includes(`panel${index}`) && !isArrayEmpty(data) : expanded.includes(`panel${index}`)}
-              onChange={handleChange(`panel${index}`)}
+              expanded={
+                activity.name === t('report:supportingDocs')
+                  ? expanded.includes(`panel${index}`) && !isArrayEmpty(data)
+                  : expanded.includes(`panel${index}`)
+              }
+              onChange={onExpand(`panel${index}`)}
             >
               <AccordionSummary
                 expandIcon={

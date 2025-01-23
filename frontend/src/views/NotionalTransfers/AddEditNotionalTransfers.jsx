@@ -15,10 +15,12 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import * as ROUTES from '@/constants/routes/routes.js'
+import { handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
   const [errors, setErrors] = useState({})
+  const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
 
   const gridRef = useRef(null)
@@ -167,50 +169,17 @@ export const AddEditNotionalTransfers = () => {
           return acc
         }, {})
 
-      try {
-        setErrors({})
-        await saveRow(updatedData)
-        updatedData = {
-          ...updatedData,
-          complianceReportId,
-          validationStatus: 'success',
-          modified: false
-        }
-        alertRef.current?.triggerAlert({
-          message: 'Row updated successfully.',
-          severity: 'success'
-        })
-      } catch (error) {
-        setErrors({
-          [params.node.data.id]: error.response.data.errors[0].fields
-        })
-
-        updatedData = {
-          ...updatedData,
-          complianceReportId,
-          validationStatus: 'error'
-        }
-
-        if (error.code === 'ERR_BAD_REQUEST') {
-          const { fields, message } = error.response.data.errors[0]
-          const fieldLabels = fields.map((field) =>
-            t(`notionalTransfer:notionalTransferColLabels.${field}`)
-          )
-          const errMsg = `Error updating row: ${
-            fieldLabels.length === 1 ? fieldLabels[0] : ''
-          } ${message}`
-
-          alertRef.current?.triggerAlert({
-            message: errMsg,
-            severity: 'error'
-          })
-        } else {
-          alertRef.current?.triggerAlert({
-            message: `Error updating row: ${error.message}`,
-            severity: 'error'
-          })
-        }
-      }
+      updatedData = await handleScheduleSave({
+        alertRef,
+        idField: 'notionalTransferId',
+        labelPrefix: 'notionalTransfer:notionalTransferColLabels',
+        params,
+        setErrors,
+        setWarnings,
+        saveRow,
+        t,
+        updatedData
+      })
 
       params.node.updateData(updatedData)
     },
@@ -243,12 +212,13 @@ export const AddEditNotionalTransfers = () => {
     if (!optionsLoading) {
       const updatedColumnDefs = notionalTransferColDefs(
         optionsData,
+        currentUser,
         errors,
-        currentUser
+        warnings
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, optionsData, optionsLoading, currentUser])
+  }, [optionsData, currentUser, errors, warnings, optionsLoading])
 
   const handleNavigateBack = useCallback(() => {
     navigate(
@@ -271,12 +241,7 @@ export const AddEditNotionalTransfers = () => {
           <BCTypography variant="h5" color="primary">
             {t('notionalTransfer:newNotionalTransferTitle')}
           </BCTypography>
-          <BCTypography
-            variant="body4"
-            color="primary"
-            my={2}
-            component="div"
-          >
+          <BCTypography variant="body4" color="primary" my={2} component="div">
             {t('notionalTransfer:newNotionalTransferGuide')}
           </BCTypography>
         </div>

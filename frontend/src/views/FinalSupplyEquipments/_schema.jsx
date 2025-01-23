@@ -1,28 +1,26 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import {
-  AutocompleteCellEditor,
-  RequiredHeader,
-  DateRangeCellEditor,
-  TextCellEditor,
   AsyncSuggestionEditor,
-  NumberEditor
+  AutocompleteCellEditor,
+  DateRangeCellEditor,
+  NumberEditor,
+  RequiredHeader,
+  TextCellEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import dayjs from 'dayjs'
 import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
-import {
-  StandardCellWarningAndErrors,
-  StandardCellErrors
-} from '@/utils/grid/errorRenderers'
+import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
 
 export const finalSupplyEquipmentColDefs = (
   optionsData,
   compliancePeriod,
-  errors
+  errors,
+  warnings
 ) => [
   validation,
   actions({
@@ -61,7 +59,8 @@ export const finalSupplyEquipmentColDefs = (
       freeSolo: true,
       openOnFocus: true
     },
-    cellStyle: (params) => StandardCellWarningAndErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 260,
     editable: true,
@@ -98,7 +97,8 @@ export const finalSupplyEquipmentColDefs = (
       </BCTypography>
     ),
     suppressKeyboardEvent,
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     cellEditor: DateRangeCellEditor,
     cellEditorParams: {
       minDate: dayjs(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
@@ -119,7 +119,6 @@ export const finalSupplyEquipmentColDefs = (
   },
   {
     field: 'kwhUsage',
-    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
     ),
@@ -132,7 +131,8 @@ export const finalSupplyEquipmentColDefs = (
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'serialNbr',
@@ -143,7 +143,8 @@ export const finalSupplyEquipmentColDefs = (
     minWidth: 220,
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'manufacturer',
@@ -173,7 +174,8 @@ export const finalSupplyEquipmentColDefs = (
     }),
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'model',
@@ -183,7 +185,8 @@ export const finalSupplyEquipmentColDefs = (
     minWidth: 220,
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => StandardCellErrors(params, errors)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'levelOfEquipment',
@@ -201,7 +204,8 @@ export const finalSupplyEquipmentColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>)
@@ -222,28 +226,8 @@ export const finalSupplyEquipmentColDefs = (
       openOnFocus: true,
       clearable: true
     },
-    cellStyle: (params) => StandardCellErrors(params, errors),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
-  },
-  {
-    field: 'fuelMeasurementType',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.fuelMeasurementType'
-    ),
-    cellEditor: AutocompleteCellEditor,
-    suppressKeyboardEvent,
-    minWidth: 315,
-    cellEditorParams: {
-      options: optionsData?.fuelMeasurementTypes.map((obj) => obj.type) || [],
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false,
-      openOnFocus: true
-    },
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>)
@@ -261,7 +245,8 @@ export const finalSupplyEquipmentColDefs = (
       disableCloseOnSelect: true,
       openOnFocus: true
     },
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     cellRenderer: (params) =>
       (params.value && params.value !== '' && (
         <CommonArrayRenderer disableLink {...params} />
@@ -283,7 +268,8 @@ export const finalSupplyEquipmentColDefs = (
       disableCloseOnSelect: true,
       openOnFocus: true
     },
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     cellRenderer: (params) =>
       (params.value && params.value !== '' && (
         <CommonArrayRenderer disableLink {...params} />
@@ -300,7 +286,8 @@ export const finalSupplyEquipmentColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 260
   },
   {
@@ -311,7 +298,8 @@ export const finalSupplyEquipmentColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 260
   },
   {
@@ -335,7 +323,8 @@ export const finalSupplyEquipmentColDefs = (
     },
     suppressKeyboardEvent,
     cellDataType: 'text',
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 150
   },
   {
@@ -350,7 +339,8 @@ export const finalSupplyEquipmentColDefs = (
       showStepperButtons: false
     },
     cellDataType: 'number',
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 150
   },
   {
@@ -365,7 +355,8 @@ export const finalSupplyEquipmentColDefs = (
       showStepperButtons: false
     },
     cellDataType: 'number',
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 150
   },
   {

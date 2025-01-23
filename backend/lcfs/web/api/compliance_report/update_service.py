@@ -302,6 +302,6 @@ class ComplianceReportUpdateService:
         await self.repo.update_compliance_report(report)
 
     async def handle_reassessed_status(self, report: ComplianceReport):
-        """Handle actions when a report is ReAssessed."""
-        # Implement logic for ReAssessed status
+        """Handle actions when a report is Reassessed."""
+        # Implement logic for Reassessed status
         pass
