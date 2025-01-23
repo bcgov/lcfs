@@ -18,12 +18,14 @@ import {
   fuelExportColDefs,
   PROVISION_APPROVED_FUEL_CODE
 } from './_schema'
+import { handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
-  const [, setGridApi] = useState()
+
   const [errors, setErrors] = useState({})
+  const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
   const [gridReady, setGridReady] = useState(false)
   const alertRef = useRef()
@@ -67,7 +69,6 @@ export const AddEditFuelExports = () => {
 
   const onGridReady = useCallback(
     async (params) => {
-      setGridApi(params.api)
       if (!isArrayEmpty(data)) {
         const updatedRowData = data.fuelExports.map((item) => ({
           ...item,
@@ -102,11 +103,12 @@ export const AddEditFuelExports = () => {
       const updatedColumnDefs = fuelExportColDefs(
         optionsData,
         errors,
+        warnings,
         gridReady
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, gridReady, optionsData])
+  }, [optionsData, errors, warnings, gridReady])
 
   useEffect(() => {
     if (!fuelExportsLoading && !isArrayEmpty(data)) {
@@ -133,9 +135,7 @@ export const AddEditFuelExports = () => {
           ?.find((obj) => params.node.data.fuelType === obj.fuelType)
           ?.fuelCategories.map((item) => item.fuelCategory)
 
-        const categoryValue = options.length === 1
-          ? options[0]
-          : null
+        const categoryValue = options.length === 1 ? options[0] : null
 
         params.node.setDataValue('fuelCategoryId', categoryValue)
       }
@@ -191,48 +191,17 @@ export const AddEditFuelExports = () => {
         return // Don't proceed with save
       }
 
-      try {
-        setErrors({})
-        await saveRow(updatedData)
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'success',
-          modified: false
-        }
-        alertRef.current?.triggerAlert({
-          message: 'Row updated successfully.',
-          severity: 'success'
-        })
-      } catch (error) {
-        setErrors({
-          [params.node.data.id]: error.response.data.errors[0].fields
-        })
-
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'error'
-        }
-
-        if (error.code === 'ERR_BAD_REQUEST') {
-          const { fields, message } = error.response.data.errors[0]
-          const fieldLabels = fields.map((field) =>
-            t(`fuelExport:fuelExportColLabels.${field}`)
-          )
-          const errMsg = `Error updating row: ${
-            fieldLabels.length === 1 ? fieldLabels[0] : ''
-          } ${message}`
-
-          alertRef.current?.triggerAlert({
-            message: errMsg,
-            severity: 'error'
-          })
-        } else {
-          alertRef.current?.triggerAlert({
-            message: `Error updating row: ${error.message}`,
-            severity: 'error'
-          })
-        }
-      }
+      updatedData = await handleScheduleSave({
+        alertRef,
+        idField: 'fuelExportId',
+        labelPrefix: 'fuelExport:fuelExportColLabels',
+        params,
+        setErrors,
+        setWarnings,
+        saveRow,
+        t,
+        updatedData
+      })
 
       params.node.updateData(updatedData)
     },
@@ -278,12 +247,7 @@ export const AddEditFuelExports = () => {
           <BCTypography variant="h5" color="primary">
             {t('fuelExport:addFuelExportRowsTitle')}
           </BCTypography>
-          <BCTypography
-            variant="body4"
-            color="primary"
-            my={2}
-            component="div"
-          >
+          <BCTypography variant="body4" color="primary" my={2} component="div">
             {t('fuelExport:fuelExportGuide')}
           </BCTypography>
         </div>

@@ -19,6 +19,7 @@ import {
   fuelSupplyColDefs,
   PROVISION_APPROVED_FUEL_CODE
 } from './_schema'
+import { handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -178,13 +179,18 @@ export const AddEditFuelSupplies = () => {
 
           // Reset provisionOfTheAct and provisionOfTheActId fields
           if (selectedFuelType.provisions.length === 1) {
-            params.node.setDataValue('provisionOfTheAct', selectedFuelType.provisions[0].name)
-            params.node.setDataValue('provisionOfTheActId', selectedFuelType.provisions[0].provisionOfTheActId)
+            params.node.setDataValue(
+              'provisionOfTheAct',
+              selectedFuelType.provisions[0].name
+            )
+            params.node.setDataValue(
+              'provisionOfTheActId',
+              selectedFuelType.provisions[0].provisionOfTheActId
+            )
           } else {
             params.node.setDataValue('provisionOfTheAct', null)
             params.node.setDataValue('provisionOfTheActId', null)
           }
-
         }
       }
 
@@ -268,67 +274,17 @@ export const AddEditFuelSupplies = () => {
         return // Stop saving further
       }
 
-      try {
-        setErrors({})
-        await saveRow(updatedData)
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'success',
-          modified: false
-        }
-        alertRef.current?.triggerAlert({
-          message: 'Row updated successfully.',
-          severity: 'success'
-        })
-      } catch (error) {
-        const newWarnings = error.response.data.warnings
-        if (newWarnings && newWarnings.length > 0) {
-          setWarnings({
-            [newWarnings[0].id]: newWarnings[0].fields
-          })
-
-          params.api.forEachNode((rowNode) => {
-            if (rowNode.data.fuelSupplyId === newWarnings[0].id) {
-              rowNode.updateData({
-                ...rowNode.data,
-                validationStatus: 'warning'
-              })
-            }
-          })
-        }
-
-        const newErrors = error.response.data.errors
-        setErrors({
-          [params.node.data.id]: newErrors[0].fields
-        })
-
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'error'
-        }
-
-        if (error.code === 'ERR_BAD_REQUEST') {
-          const { fields, message } = newErrors[0]
-          const fieldLabels = fields.map((field) =>
-            t(`fuelSupply:fuelSupplyColLabels.${field}`)
-          )
-
-          // Only show field label if there is one
-          const errMsg = `Error updating row: ${
-            fieldLabels.length === 1 ? fieldLabels[0] : ''
-          } ${message}`
-
-          alertRef.current?.triggerAlert({
-            message: errMsg,
-            severity: 'error'
-          })
-        } else {
-          alertRef.current?.triggerAlert({
-            message: `Error updating row: ${error.message}`,
-            severity: 'error'
-          })
-        }
-      }
+      updatedData = await handleScheduleSave({
+        alertRef,
+        idField: 'fuelSupplyId',
+        labelPrefix: 'fuelSupply:fuelSupplyColLabels',
+        params,
+        setErrors,
+        setWarnings,
+        saveRow,
+        t,
+        updatedData
+      })
 
       params.node.updateData(updatedData)
     },
@@ -374,12 +330,7 @@ export const AddEditFuelSupplies = () => {
           <BCTypography variant="h5" color="primary">
             {t('fuelSupply:fuelSupplyTitle')}
           </BCTypography>
-          <BCTypography
-            variant="body4"
-            color="primary"
-            my={2}
-            component="div"
-          >
+          <BCTypography variant="body4" color="primary" my={2} component="div">
             {t('fuelSupply:fuelSupplyGuide')}
           </BCTypography>
         </div>
