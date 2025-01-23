@@ -1,10 +1,12 @@
 import pytest
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock, Mock
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.base import UserTypeEnum
 from lcfs.db.models.compliance import OtherUses
-from lcfs.db.models.fuel import ProvisionOfTheAct, FuelCode
+from lcfs.db.models.fuel import ExpectedUseType, FuelType, ProvisionOfTheAct, FuelCode
+from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.tests.other_uses.conftest import create_mock_entity
@@ -34,98 +36,110 @@ def other_uses_repo(mock_db_session):
     repo.fuel_code_repo.get_fuel_categories = AsyncMock(return_value=[])
     repo.fuel_code_repo.get_fuel_types = AsyncMock(return_value=[])
     repo.fuel_code_repo.get_expected_use_types = AsyncMock(return_value=[])
-
-    # Mock for local get_formatted_fuel_types method
-    async def mock_get_formatted_fuel_types(include_legacy=False):
-        mock_result = await mock_db_session.execute(AsyncMock())
-        return mock_result.unique().scalars().all()
-
-    repo.get_formatted_fuel_types = AsyncMock(side_effect=mock_get_formatted_fuel_types)
-
     return repo
 
 
 @pytest.mark.anyio
-async def test_get_table_options(other_uses_repo):
-    # Mock the database session
-    mock_db_session = AsyncMock()
+async def test_get_table_options(other_uses_repo, mock_db_session):
+    """Test get_table_options with properly spec'd mocks"""
+    
+    # Create mock models with proper specs
+    mock_fuel_category = MagicMock(spec=FuelCategory)
+    mock_fuel_category.fuel_category_id = 1
+    mock_fuel_category.category = "Petroleum-based"
 
-    # Mock the return value of the `execute` calls
-    mock_fuel_categories = [
-        MagicMock(fuel_category_id=1, category="Petroleum-based"),
-    ]
-    mock_fuel_types = [
-        MagicMock(
-            fuel_type_id=1,
-            fuel_type="Gasoline",
-            default_carbon_intensity=12.34,
-            units="L",
-            unrecognized=False,
-            fuel_instances=[
-                MagicMock(
-                    fuel_category=MagicMock(
-                        fuel_category_id=1, category="Petroleum-based"
-                    )
-                )
-            ],
-            fuel_codes=[
-                MagicMock(fuel_code_id=1, fuel_code="FC123", carbon_intensity=10.5)
-            ],
-            provision_1=MagicMock(provision_of_the_act_id=1, name="Provision A"),
-            provision_2=None,
-        )
-    ]
-    mock_expected_uses = [MagicMock(expected_use_id=1, name="Transportation")]
-    mock_provisions_of_the_act = [
-        MagicMock(provision_of_the_act_id=1, name="Provision A")
-    ]
-    mock_fuel_codes = [MagicMock(fuel_code_id=1, fuel_code="FuelCode123")]
+    mock_fuel_code = MagicMock(spec=FuelCode)
+    mock_fuel_code.fuel_code_id = 1
+    mock_fuel_code.fuel_code = "FC123"
+    mock_fuel_code.carbon_intensity = 10.5
+    mock_fuel_code.effective_date = date.today() - timedelta(days=1)  # Past date
+    mock_fuel_code.expiration_date = date.today() + timedelta(days=1)  # Future date
 
+    mock_provision = MagicMock(spec=ProvisionOfTheAct)
+    mock_provision.provision_of_the_act_id = 1
+    mock_provision.name = "Provision A"
+    mock_provision.is_legacy = False
+
+    mock_expected_use = MagicMock(spec=ExpectedUseType)
+    mock_expected_use.expected_use_id = 1
+    mock_expected_use.name = "Transportation"
+
+    mock_fuel_type = MagicMock(spec=FuelType)
+    mock_fuel_type.fuel_type_id = 1
+    mock_fuel_type.fuel_type = "Gasoline"
+    mock_fuel_type.default_carbon_intensity = 12.34
+    mock_fuel_type.units = "L"
+    mock_fuel_type.unrecognized = False
+    mock_fuel_type.other_uses_fossil_derived = True
+    mock_fuel_type.is_legacy = False
+    mock_fuel_type.fuel_instances = []
+    mock_fuel_type.fuel_codes = [mock_fuel_code]
+    mock_fuel_type.provision_1 = mock_provision
+    mock_fuel_type.provision_2 = None
+
+    # Configure mock database responses
     def mock_execute_side_effect(*args, **kwargs):
-        query = args[0]  # Extract the query object
+        query = args[0]
+        query_str = str(query)
+        
+        # Default mock result setup
+        mock_result = MagicMock()
+        mock_result.unique.return_value = mock_result
+        mock_result.scalars.return_value = mock_result
 
-        # Match the ProvisionOfTheAct table
-        if ProvisionOfTheAct.__tablename__ in str(query):
-            return AsyncMock(scalars=MagicMock(all=lambda: mock_provisions_of_the_act))
+        if "select" in query_str.lower() and "fuel_type" in query_str.lower():
+            mock_result.all.return_value = [mock_fuel_type]
+        elif "provision_of_the_act" in query_str:
+            mock_result.all.return_value = [mock_provision]
+        elif "fuel_code" in query_str:
+            mock_result.all.return_value = [mock_fuel_code]
+        else:
+            mock_result.all.return_value = []
 
-        # Match the FuelCode table
-        elif FuelCode.__tablename__ in str(query):
-            return AsyncMock(scalars=MagicMock(all=lambda: mock_fuel_codes))
+        return mock_result
 
-        # If no match, raise an informative error
-        raise ValueError(f"Unexpected query: {query}")
+    mock_db_session.execute = AsyncMock(side_effect=mock_execute_side_effect)
+    other_uses_repo.db = mock_db_session
 
-    mock_db_session.execute.side_effect = mock_execute_side_effect
-
-    # Create async mock for the fuel_code_repo's methods
-    mock_fuel_code_repo = AsyncMock()
-    mock_fuel_code_repo.get_fuel_categories = AsyncMock(
-        return_value=mock_fuel_categories
-    )
-    mock_fuel_code_repo.get_formatted_fuel_types = AsyncMock(
-        return_value=mock_fuel_types
-    )
-    mock_fuel_code_repo.get_expected_use_types = AsyncMock(
-        return_value=mock_expected_uses
-    )
-
-    # Mock the repository's fuel_code_repo dependency
+    # Setup fuel code repo with direct mock responses
+    mock_fuel_code_repo = MagicMock()
+    mock_fuel_code_repo.get_fuel_categories = AsyncMock(return_value=[mock_fuel_category])
+    mock_fuel_code_repo.get_expected_use_types = AsyncMock(return_value=[mock_expected_use])
+    
+    formatted_fuel_type = {
+        "fuel_type_id": 1,
+        "fuel_type": "Gasoline",
+        "default_carbon_intensity": 12.34,
+        "units": "L",
+        "unrecognized": False,
+        "fuel_categories": [{
+            "fuel_category_id": mock_fuel_category.fuel_category_id,
+            "category": mock_fuel_category.category
+        }],
+        "fuel_codes": [{
+            "fuel_code_id": mock_fuel_code.fuel_code_id,
+            "fuel_code": mock_fuel_code.fuel_code,
+            "carbon_intensity": mock_fuel_code.carbon_intensity
+        }]
+    }
+    
+    mock_fuel_code_repo.get_formatted_fuel_types = AsyncMock(return_value=[formatted_fuel_type])
     other_uses_repo.fuel_code_repo = mock_fuel_code_repo
-    other_uses_repo.db = (
-        mock_db_session  # Assign the mock database session to the repository
-    )
 
-    # Execute the method under test
+    # Execute test
     result = await other_uses_repo.get_table_options("2024")
 
-    # Assertions
+    # Verify content
     assert isinstance(result, dict)
-    assert "fuel_categories" in result
-    assert "fuel_types" in result
-    assert "units_of_measure" in result
-    assert "expected_uses" in result
-    assert "provisions_of_the_act" in result
-    assert "fuel_codes" in result
+    assert len(result["fuel_categories"]) == 1
+    assert len(result["fuel_types"]) == 1
+    assert len(result["provisions_of_the_act"]) == 1
+    assert len(result["expected_uses"]) == 1
+
+    # Verify specific values
+    fuel_type = result["fuel_types"][0]
+    assert fuel_type["fuel_type_id"] == 1
+    assert fuel_type["fuel_type"] == "Gasoline"
 
 
 @pytest.mark.anyio
@@ -268,3 +282,159 @@ async def test_update_other_use(other_uses_repo, mock_db_session):
     # Assertions
     assert isinstance(result, OtherUses)
     assert mock_db_session.flush.call_count == 1
+
+@pytest.mark.anyio
+async def test_get_formatted_fuel_types_all_fuel_codes_invalid(other_uses_repo, mock_db_session):
+    """
+    Test that get_formatted_fuel_types returns fuel_types with empty fuel_codes
+    when all associated fuel_codes are either expired or not yet effective.
+    """
+    today = date.today()
+    past_date = today - timedelta(days=30)
+    future_date = today + timedelta(days=30)
+
+    mock_fuel_type = MagicMock(spec=FuelType)
+    mock_fuel_type.fuel_type_id = 1
+    mock_fuel_type.fuel_type = "Hydrogen"
+    mock_fuel_type.default_carbon_intensity = 10.0
+    mock_fuel_type.units = "Kg"
+    mock_fuel_type.unrecognized = False
+    mock_fuel_type.fuel_instances = []
+
+    # Create expired and future fuel codes
+    mock_fuel_code_expired = MagicMock(spec=FuelCode)
+    mock_fuel_code_expired.fuel_code_id = 1
+    mock_fuel_code_expired.fuel_code = "FC_EXPIRED"
+    mock_fuel_code_expired.effective_date = None
+    mock_fuel_code_expired.expiration_date = past_date
+    mock_fuel_code_expired.carbon_intensity = 10.0
+
+    mock_fuel_code_future = MagicMock(spec=FuelCode)
+    mock_fuel_code_future.fuel_code_id = 2
+    mock_fuel_code_future.fuel_code = "FC_FUTURE"
+    mock_fuel_code_future.effective_date = future_date
+    mock_fuel_code_future.expiration_date = None
+    mock_fuel_code_future.carbon_intensity = 12.0
+
+    mock_fuel_category = MagicMock(spec=FuelCategory)
+    mock_fuel_category.fuel_category_id = 1
+    mock_fuel_category.category = "Alternative"
+    
+   
+    # Set up relationships
+    mock_fuel_type.fuel_codes = [mock_fuel_code_expired, mock_fuel_code_future]
+    mock_fuel_type.fuel_categories = mock_fuel_category
+   
+    # Configure the mock to return the mock fuel types
+    mock_query_result = MagicMock()
+    mock_query_result.unique.return_value = mock_query_result
+    mock_query_result.scalars.return_value = mock_query_result
+    mock_query_result.all.return_value = [mock_fuel_type]
+
+    mock_db_session.execute = AsyncMock(return_value=mock_query_result)
+    other_uses_repo.db = mock_db_session
+
+    result = await other_uses_repo.get_formatted_fuel_types(include_legacy=False)
+
+    assert isinstance(result, list), "Result should be a list"
+    assert len(result) == 1, "Result should contain exactly one fuel type"
+
+    returned_fuel_type = result[0]
+    assert returned_fuel_type["fuel_type_id"] == mock_fuel_type.fuel_type_id
+    assert returned_fuel_type["fuel_type"] == mock_fuel_type.fuel_type
+    assert returned_fuel_type["default_carbon_intensity"] == mock_fuel_type.default_carbon_intensity
+    assert returned_fuel_type["units"] == mock_fuel_type.units
+    assert returned_fuel_type["unrecognized"] == mock_fuel_type.unrecognized
+    assert returned_fuel_type["fuel_categories"] == []  # Empty since no fuel instances
+    assert returned_fuel_type["fuel_codes"] == []  # Empty since all codes are invalid
+   
+    assert not returned_fuel_type['fuel_codes'], "Fuel codes should be empty when all are invalid."
+
+
+
+@pytest.mark.anyio
+async def test_get_formatted_fuel_types_mixed_fuel_codes(other_uses_repo, mock_db_session):
+    """Test get_formatted_fuel_types with mix of valid and invalid fuel codes"""
+    today = date.today()
+    past_date = today - timedelta(days=30)
+    future_date = today + timedelta(days=30)
+
+    mock_fuel_type = MagicMock(spec=FuelType)
+    mock_fuel_type.fuel_type_id = 1
+    mock_fuel_type.fuel_type = "Hydrogen"
+    mock_fuel_type.default_carbon_intensity = 10.0
+    mock_fuel_type.units = "Kg"
+    mock_fuel_type.unrecognized = False
+    mock_fuel_type.fuel_instances = []
+
+    # Create mix of valid and invalid fuel codes
+    mock_fuel_code_expired = MagicMock(spec=FuelCode)
+    mock_fuel_code_expired.fuel_code_id = 1
+    mock_fuel_code_expired.fuel_code = "FC_EXPIRED"
+    mock_fuel_code_expired.effective_date = None
+    mock_fuel_code_expired.expiration_date = past_date
+    mock_fuel_code_expired.carbon_intensity = 10.0
+
+    mock_fuel_code_active = MagicMock(spec=FuelCode)
+    mock_fuel_code_active.fuel_code_id = 2
+    mock_fuel_code_active.fuel_code = "FC_ACTIVE"
+    mock_fuel_code_active.effective_date = None
+    mock_fuel_code_active.expiration_date = None
+    mock_fuel_code_active.carbon_intensity = 12.0
+
+    mock_fuel_code_valid = MagicMock(spec=FuelCode)
+    mock_fuel_code_valid.fuel_code_id = 3
+    mock_fuel_code_valid.fuel_code = "FC_VALID"
+    mock_fuel_code_valid.effective_date = today - timedelta(days=10)
+    mock_fuel_code_valid.expiration_date = future_date
+    mock_fuel_code_valid.carbon_intensity = 15.0
+
+    mock_fuel_code_future = MagicMock(spec=FuelCode)
+    mock_fuel_code_future.fuel_code_id = 4
+    mock_fuel_code_future.fuel_code = "FC_FUTURE"
+    mock_fuel_code_future.effective_date = future_date
+    mock_fuel_code_future.expiration_date = None
+    mock_fuel_code_future.carbon_intensity = 18.0
+
+    mock_fuel_category = MagicMock(spec=FuelCategory)
+    mock_fuel_category.fuel_category_id = 1
+    mock_fuel_category.category = "Alternative"
+    
+    # Set up relationships with all fuel codes
+    mock_fuel_type.fuel_codes = [
+        mock_fuel_code_expired,
+        mock_fuel_code_active,
+        mock_fuel_code_valid,
+        mock_fuel_code_future
+    ]
+    mock_fuel_type.fuel_categories = mock_fuel_category
+    
+    mock_query_result = MagicMock()
+    mock_query_result.unique.return_value = mock_query_result
+    mock_query_result.scalars.return_value = mock_query_result
+    mock_query_result.all.return_value = [mock_fuel_type]
+    
+    mock_db_session.execute = AsyncMock(return_value=mock_query_result)
+    other_uses_repo.db = mock_db_session
+
+    result = await other_uses_repo.get_formatted_fuel_types(include_legacy=False)
+
+    assert isinstance(result, list), "Result should be a list"
+    assert len(result) == 1, "Result should contain exactly one fuel type"
+
+    returned_fuel_type = result[0]
+    assert returned_fuel_type["fuel_type_id"] == mock_fuel_type.fuel_type_id
+    assert returned_fuel_type["fuel_type"] == mock_fuel_type.fuel_type
+    assert returned_fuel_type["default_carbon_intensity"] == mock_fuel_type.default_carbon_intensity
+    assert returned_fuel_type["units"] == mock_fuel_type.units
+    assert returned_fuel_type["unrecognized"] == mock_fuel_type.unrecognized
+
+    # Verify valid fuel codes are included and invalid ones are filtered out
+    valid_fuel_codes = returned_fuel_type["fuel_codes"]
+    assert len(valid_fuel_codes) == 2, "Should have exactly 2 valid fuel codes"
+    
+    fuel_code_ids = [fc["fuel_code_id"] for fc in valid_fuel_codes]
+    assert mock_fuel_code_active.fuel_code_id in fuel_code_ids, "Active fuel code should be included"
+    assert mock_fuel_code_valid.fuel_code_id in fuel_code_ids, "Valid fuel code should be included"
+    assert mock_fuel_code_expired.fuel_code_id not in fuel_code_ids, "Expired fuel code should be excluded"
+    assert mock_fuel_code_future.fuel_code_id not in fuel_code_ids, "Future fuel code should be excluded"

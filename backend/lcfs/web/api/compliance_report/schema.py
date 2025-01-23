@@ -206,6 +206,7 @@ class ComplianceReportSummarySchema(BaseSchema):
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):
     compliance_report_id: int
+    is_locked: Optional[bool] = False
     renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
     low_carbon_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
