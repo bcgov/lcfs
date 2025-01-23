@@ -649,11 +649,11 @@ class ComplianceReportRepository:
         # Update non-compliance penalty summary
         non_compliance_summary = summary.non_compliance_penalty_summary
         for row in non_compliance_summary:
-            if row.line == "11":
+            if row.line == 11:
                 summary_obj.line_11_fossil_derived_base_fuel_total = row.total_value
-            elif row.line == "21":
+            elif row.line == 21:
                 summary_obj.line_21_non_compliance_penalty_payable = row.total_value
-            elif row.line == "":  # Total row
+            elif row.line is None:  # Total row
                 summary_obj.total_non_compliance_penalty_payable = row.total_value
 
         self.db.add(summary_obj)

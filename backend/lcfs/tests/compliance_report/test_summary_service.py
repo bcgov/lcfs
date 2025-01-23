@@ -59,20 +59,19 @@ async def test_calculate_low_carbon_fuel_target_summary(
 
     # Assertions
     assert isinstance(summary, list)
-    assert all(isinstance(item, ComplianceReportSummaryRowSchema)
-               for item in summary)
+    assert all(isinstance(item, ComplianceReportSummaryRowSchema) for item in summary)
     assert len(summary) == 11  # Ensure all 11 lines are present
 
     # Check specific line values
     line_values = {item.line: item.value for item in summary}
-    assert line_values["12"] == 500  # Transferred out
-    assert line_values["13"] == 300  # Received
-    assert line_values["14"] == 200  # Issued
-    assert line_values["18"] == 100
-    assert line_values["19"] == 100
-    assert line_values["20"] == 200
-    assert line_values["21"] == 0  # Not calculated yet
-    assert line_values["22"] == 1200  # Add all the above
+    assert line_values[12] == 500  # Transferred out
+    assert line_values[13] == 300  # Received
+    assert line_values[14] == 200  # Issued
+    assert line_values[18] == 100
+    assert line_values[19] == 100
+    assert line_values[20] == 200
+    assert line_values[21] == 0  # Not calculated yet
+    assert line_values[22] == 1200  # Add all the above
 
     # Verify method calls
     mock_repo.get_transferred_out_compliance_units.assert_called_once_with(
@@ -817,8 +816,7 @@ async def test_calculate_fuel_quantities_renewable(
 ):
     # Create a mock repository
     mock_repo.aggregate_fuel_supplies.return_value = {"gasoline": 200.0}
-    mock_repo.aggregate_other_uses.return_value = {
-        "diesel": 75.0, "jet-fuel": 25.0}
+    mock_repo.aggregate_other_uses.return_value = {"diesel": 75.0, "jet-fuel": 25.0}
 
     # Define test inputs
     compliance_report_id = 2
