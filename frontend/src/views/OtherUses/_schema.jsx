@@ -8,11 +8,11 @@ import i18n from '@/i18n'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import { StandardCellErrors } from '@/utils/grid/errorRenderers.jsx'
+import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
-export const otherUsesColDefs = (optionsData, errors) => [
+export const otherUsesColDefs = (optionsData, errors, warnings) => [
   validation,
   actions({
     enableDuplicate: false,
@@ -42,7 +42,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     cellRenderer: (params) =>
       params.value || <BCTypography variant="body4">Select</BCTypography>,
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     valueSetter: (params) => {
       if (params.newValue) {
         // TODO: Evaluate if additional fields need to be reset when fuel type changes
@@ -74,7 +75,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     cellRenderer: (params) =>
       params.value || <BCTypography variant="body4">Select</BCTypography>,
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 200
   },
   {
@@ -102,7 +104,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     valueSetter: (params) => {
       if (params.newValue !== params.oldValue) {
@@ -149,7 +152,7 @@ export const otherUsesColDefs = (optionsData, errors) => [
       return null
     },
     cellStyle: (params) => {
-      const style = StandardCellErrors(params, errors)
+      const style = StandardCellWarningAndErrors(params, errors, warnings)
       const isFuelCodeScenario =
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
       const fuelType = optionsData?.fuelTypes?.find(
@@ -217,7 +220,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
       precision: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 200
   },
   {
@@ -244,7 +248,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
         <BCTypography variant="body4">Select</BCTypography>
       )
     },
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     editable: true,
     minWidth: 100
   },
@@ -252,7 +257,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
     field: 'ciOfFuel',
     headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
     valueFormatter: (params) => parseFloat(params.value).toFixed(2),
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     editable: false,
     valueGetter: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
@@ -299,7 +305,8 @@ export const otherUsesColDefs = (optionsData, errors) => [
     suppressKeyboardEvent,
     cellRenderer: (params) =>
       params.value || <BCTypography variant="body4">Select</BCTypography>,
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 200
   },
   {

@@ -235,7 +235,7 @@ class FuelExportServices:
     async def get_fuel_export_list(
         self, compliance_report_id: int
     ) -> FuelExportsSchema:
-        """Get fuel supply list for a compliance report"""
+        """Get fuel export list for a compliance report"""
         fuel_export_models = await self.repo.get_fuel_export_list(compliance_report_id)
         fs_list = [FuelExportSchema.model_validate(fs) for fs in fuel_export_models]
         return FuelExportsSchema(fuel_exports=fs_list if fs_list else [])
@@ -244,7 +244,7 @@ class FuelExportServices:
     async def get_fuel_exports_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ):
-        """Get paginated fuel supply list for a compliance report"""
+        """Get paginated fuel export list for a compliance report"""
         fuel_exports, total_count = await self.repo.get_fuel_exports_paginated(
             pagination, compliance_report_id
         )

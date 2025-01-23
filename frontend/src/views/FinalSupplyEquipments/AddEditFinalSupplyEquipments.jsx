@@ -3,7 +3,6 @@ import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { BCAlert2 } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import { defaultColDef, finalSupplyEquipmentColDefs } from './_schema'
@@ -15,13 +14,16 @@ import {
 import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { isArrayEmpty } from '@/utils/formatters'
+import { handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
-  const [gridApi, setGridApi] = useState(null)
+
   const [errors, setErrors] = useState({})
+  const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
+
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'finalSupplyEquipment', 'reports'])
@@ -113,11 +115,12 @@ export const AddEditFinalSupplyEquipments = () => {
       const updatedColumnDefs = finalSupplyEquipmentColDefs(
         optionsData,
         compliancePeriod,
-        errors
+        errors,
+        warnings
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [compliancePeriod, errors, optionsData])
+  }, [compliancePeriod, errors, warnings, optionsData])
 
   const onCellEditingStopped = useCallback(
     async (params) => {
@@ -141,58 +144,17 @@ export const AddEditFinalSupplyEquipments = () => {
           return acc
         }, {})
 
-      try {
-        setErrors({})
-        const response = await saveRow(updatedData)
-        updatedData = {
-          ...updatedData,
-          finalSupplyEquipmentId: response.data.finalSupplyEquipmentId,
-          validationStatus: 'success',
-          modified: false
-        }
-        alertRef.current?.triggerAlert({
-          message: 'Row updated successfully.',
-          severity: 'success'
-        })
-      } catch (error) {
-        const newErrors = error.response.data.errors
-        let errMsg = ''
-        if (newErrors) {
-          setErrors({
-            [params.node.data.id]: newErrors[0].fields[0]
-          })
-          const { fields, message } = newErrors[0]
-          const fieldLabels = fields.map((field) =>
-            t(`finalSupplyEquipment:finalSupplyEquipmentColLabels.${field}`)
-          )
-          if (fields[0] === 'postalCode') {
-            errMsg = t('finalSupplyEquipment:postalCodeError')
-          } else {
-            errMsg = `Error updating row: ${
-              fieldLabels.length === 1 ? fieldLabels[0] : ''
-            } ${String(message).toLowerCase()}`
-          }
-        } else {
-          errMsg = error.response.data?.detail
-        }
-
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'error'
-        }
-
-        if (error.code === 'ERR_BAD_REQUEST') {
-          alertRef.current?.triggerAlert({
-            message: errMsg,
-            severity: 'error'
-          })
-        } else {
-          alertRef.current?.triggerAlert({
-            message: `Error updating row: ${error.message}`,
-            severity: 'error'
-          })
-        }
-      }
+      updatedData = await handleScheduleSave({
+        alertRef,
+        idField: 'finalSupplyEquipmentId',
+        labelPrefix: 'finalSupplyEquipment:finalSupplyEquipmentColLabels',
+        params,
+        setErrors,
+        setWarnings,
+        saveRow,
+        t,
+        updatedData
+      })
 
       params.node.updateData(updatedData)
     },
@@ -242,7 +204,7 @@ export const AddEditFinalSupplyEquipments = () => {
       setErrors({ [newRowID]: 'finalSupplyEquipment' })
 
       alertRef.current?.triggerAlert({
-        message: 'Error updating row: Fuel supply equipment Fields required',
+        message: 'Unable to save row: Fuel supply equipment fields required',
         severity: 'error'
       })
       return transaction
