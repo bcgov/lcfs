@@ -74,7 +74,7 @@ export const UserProfileActions = () => {
               component={NavLink}
               to={(currentUser?.isGovernmentUser
                 ? ROUTES.ADMIN_USERS_VIEW
-                : ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', currentUser?.organization?.organizationId)
+                : ROUTES.ORGANIZATION_VIEWUSER.replace(':orgID', currentUser?.organization?.organizationId)
               ).replace(':userID', currentUser?.userProfileId)}
               style={{
                 whiteSpace: 'nowrap',
