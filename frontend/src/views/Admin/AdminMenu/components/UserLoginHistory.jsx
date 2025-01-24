@@ -31,9 +31,7 @@ export const UserLoginHistory = () => {
         {t('admin:UserLoginHistory')}
       </BCTypography>
       <BCBox mb={2}>
-        <ClearFiltersButton
-          onClick={handleClearFilters}
-        />
+        <ClearFiltersButton onClick={handleClearFilters} />
       </BCBox>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
@@ -46,7 +44,8 @@ export const UserLoginHistory = () => {
           overlayNoRowsTemplate={t('admin:historiesNotFound')}
           autoSizeStrategy={{
             defaultMinWidth: 50,
-            defaultMaxWidth: 600
+            defaultMaxWidth: 600,
+            type: 'fitGridWidth'
           }}
           onSetResetGrid={handleSetResetGrid}
         />
