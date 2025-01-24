@@ -283,3 +283,19 @@ class NotificationService:
                 notification.notification_context,
                 notification.notification_data.related_organization_id,
             )
+
+    @service_handler
+    async def delete_subscriptions_for_user_role(
+        self, user_profile_id: int, role_id: int
+    ):
+        """
+        Deletes all notification subscriptions for a user with a given role.
+        """
+        await self.repo.delete_subscriptions_for_user_role(user_profile_id, role_id)
+
+    @service_handler
+    async def add_subscriptions_for_user_role(self, user_profile_id: int, role_id: int):
+        """
+        Adds subscriptions for a user based on their role.
+        """
+        await self.repo.add_subscriptions_for_user_role(user_profile_id, role_id)
