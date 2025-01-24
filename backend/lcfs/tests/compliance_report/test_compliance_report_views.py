@@ -17,9 +17,11 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.services.s3.client import DocumentService
 
+
 @pytest.fixture
 def mock_email_repo():
     return AsyncMock(spec=CHESEmailRepository)
+
 
 @pytest.fixture
 def mock_environment_vars():
@@ -31,6 +33,7 @@ def mock_environment_vars():
         mock_settings.ches_sender_email = "noreply@gov.bc.ca"
         mock_settings.ches_sender_name = "Mock Notification System"
         yield mock_settings
+
 
 # get_compliance_periods
 @pytest.mark.anyio
@@ -410,6 +413,7 @@ async def test_update_compliance_report_summary_success(
         mock_compliance_report_summary = compliance_report_summary_schema()
         request_schema = ComplianceReportSummaryUpdateSchema(
             compliance_report_id=1,
+            is_locked=False,
             renewable_fuel_target_summary=mock_compliance_report_summary.renewable_fuel_target_summary,
             low_carbon_fuel_target_summary=mock_compliance_report_summary.low_carbon_fuel_target_summary,
             non_compliance_penalty_summary=mock_compliance_report_summary.non_compliance_penalty_summary,
