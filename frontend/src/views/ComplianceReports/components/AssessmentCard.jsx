@@ -82,7 +82,7 @@ export const AssessmentCard = ({
           : t('report:orgDetails')
       }
       editButton={
-        !isEditing && {
+        !isEditing && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && {
           onClick: onEdit,
           text: 'Edit',
           id: 'edit'
