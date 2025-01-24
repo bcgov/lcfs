@@ -1,21 +1,21 @@
-from fastapi import HTTPException
-from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
-from lcfs.web.api.notification.services import NotificationService
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+from fastapi import HTTPException
+
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
 )
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-from lcfs.db.models.transaction.Transaction import TransactionActionEnum
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
 )
+from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 
@@ -230,27 +230,27 @@ async def test_handle_submitted_status_with_existing_summary(
         compliance_report_id=report_id,
         renewable_fuel_target_summary=[
             ComplianceReportSummaryRowSchema(
-                line="6",
+                line=6,
                 field="renewable_fuel_retained",
                 gasoline=0,
                 diesel=0,
                 jet_fuel=0,
             ),
             ComplianceReportSummaryRowSchema(
-                line="7", field="previously_retained", gasoline=0, diesel=0, jet_fuel=0
+                line=7, field="previously_retained", gasoline=0, diesel=0, jet_fuel=0
             ),
             ComplianceReportSummaryRowSchema(
-                line="8", field="obligation_deferred", gasoline=0, diesel=0, jet_fuel=0
+                line=8, field="obligation_deferred", gasoline=0, diesel=0, jet_fuel=0
             ),
         ],
         low_carbon_fuel_target_summary=[
             ComplianceReportSummaryRowSchema(
-                line="12", field="low_carbon_fuel_required", value=0
+                line=12, field="low_carbon_fuel_required", value=0
             ),
         ],
         non_compliance_penalty_summary=[
             ComplianceReportSummaryRowSchema(
-                line="21", field="non_compliance_penalty_payable", value=0
+                line=21, field="non_compliance_penalty_payable", value=0
             ),
         ],
         can_sign=True,
@@ -308,21 +308,21 @@ async def test_handle_submitted_status_without_existing_summary(
         compliance_report_id=report_id,
         renewable_fuel_target_summary=[
             ComplianceReportSummaryRowSchema(
-                line="6",
+                line=6,
                 field="renewable_fuel_retained",
                 gasoline=100,
                 diesel=200,
                 jet_fuel=300,
             ),
             ComplianceReportSummaryRowSchema(
-                line="7",
+                line=7,
                 field="previously_retained",
                 gasoline=400,
                 diesel=500,
                 jet_fuel=600,
             ),
             ComplianceReportSummaryRowSchema(
-                line="8",
+                line=8,
                 field="obligation_deferred",
                 gasoline=700,
                 diesel=800,
@@ -331,12 +331,12 @@ async def test_handle_submitted_status_without_existing_summary(
         ],
         low_carbon_fuel_target_summary=[
             ComplianceReportSummaryRowSchema(
-                line="12", field="low_carbon_fuel_required", value=0
+                line=12, field="low_carbon_fuel_required", value=0
             ),
         ],
         non_compliance_penalty_summary=[
             ComplianceReportSummaryRowSchema(
-                line="21", field="non_compliance_penalty_payable", value=0
+                line=21, field="non_compliance_penalty_payable", value=0
             ),
         ],
         can_sign=True,
@@ -407,31 +407,31 @@ async def test_handle_submitted_status_partial_existing_values(
         compliance_report_id=report_id,
         renewable_fuel_target_summary=[
             ComplianceReportSummaryRowSchema(
-                line="6",
+                line=6,
                 field="renewable_fuel_retained",
                 gasoline=0,
                 diesel=0,
                 jet_fuel=0,
             ),
             ComplianceReportSummaryRowSchema(
-                line="7",
+                line=7,
                 field="previously_retained",
                 gasoline=0,
                 diesel=2000,
                 jet_fuel=0,
             ),
             ComplianceReportSummaryRowSchema(
-                line="8", field="obligation_deferred", gasoline=0, diesel=0, jet_fuel=0
+                line=8, field="obligation_deferred", gasoline=0, diesel=0, jet_fuel=0
             ),
         ],
         low_carbon_fuel_target_summary=[
             ComplianceReportSummaryRowSchema(
-                line="12", field="low_carbon_fuel_required", value=0
+                line=12, field="low_carbon_fuel_required", value=0
             ),
         ],
         non_compliance_penalty_summary=[
             ComplianceReportSummaryRowSchema(
-                line="21", field="non_compliance_penalty_payable", value=0
+                line=21, field="non_compliance_penalty_payable", value=0
             ),
         ],
         can_sign=True,
@@ -493,21 +493,21 @@ async def test_handle_submitted_status_no_user_edits(
         compliance_report_id=report_id,
         renewable_fuel_target_summary=[
             ComplianceReportSummaryRowSchema(
-                line="6",
+                line=6,
                 field="renewable_fuel_retained",
                 gasoline=100,
                 diesel=200,
                 jet_fuel=300,
             ),
             ComplianceReportSummaryRowSchema(
-                line="7",
+                line=7,
                 field="previously_retained",
                 gasoline=400,
                 diesel=500,
                 jet_fuel=600,
             ),
             ComplianceReportSummaryRowSchema(
-                line="8",
+                line=8,
                 field="obligation_deferred",
                 gasoline=700,
                 diesel=800,
@@ -516,12 +516,12 @@ async def test_handle_submitted_status_no_user_edits(
         ],
         low_carbon_fuel_target_summary=[
             ComplianceReportSummaryRowSchema(
-                line="12", field="low_carbon_fuel_required", value=0
+                line=12, field="low_carbon_fuel_required", value=0
             ),
         ],
         non_compliance_penalty_summary=[
             ComplianceReportSummaryRowSchema(
-                line="21", field="non_compliance_penalty_payable", value=0
+                line=21, field="non_compliance_penalty_payable", value=0
             ),
         ],
         can_sign=True,
