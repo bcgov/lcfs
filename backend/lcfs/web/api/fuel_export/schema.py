@@ -111,6 +111,7 @@ class FuelCategoryResponseSchema(BaseSchema):
 class FuelExportSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
+    export_date: date
     group_uuid: Optional[str] = None
     version: Optional[int] = None
     user_type: Optional[str] = None
@@ -127,7 +128,6 @@ class FuelExportSchema(BaseSchema):
     fuel_type_other: Optional[str] = None
     quantity: int = Field(..., gt=0)
     units: str
-    export_date: date
     compliance_units: Optional[int] = 0
     target_ci: Optional[float] = None
     ci_of_fuel: Optional[float] = None
@@ -149,6 +149,7 @@ class FuelExportSchema(BaseSchema):
 class FuelExportCreateUpdateSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
+    export_date: date
     group_uuid: Optional[str] = None
     version: Optional[int] = None
     user_type: Optional[str] = None
@@ -162,7 +163,6 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     quantity: int = Field(..., gt=0)
     units: str
-    export_date: date
     compliance_units: Optional[int] = 0
     target_ci: Optional[float] = 0
     ci_of_fuel: Optional[float] = 0

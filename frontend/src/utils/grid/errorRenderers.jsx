@@ -4,10 +4,11 @@ export const StandardCellErrors = (params, errors) => {
     errors[params.data.id] &&
     errors[params.data.id].includes(params.colDef.field)
   ) {
-    style = { ...style, borderColor: 'red' }
+    style = { ...style, borderColor: 'red', border: '2px solid red' }
   } else {
     style = { ...style, borderColor: 'unset' }
   }
+
   if (
     params.colDef.editable ||
     (typeof params.colDef.editable === 'function' &&
@@ -26,12 +27,13 @@ export const StandardCellErrors = (params, errors) => {
 
 export const StandardCellWarningAndErrors = (params, errors, warnings) => {
   let style = StandardCellErrors(params, errors)
+
   if (
     warnings &&
-    warnings[params.data.fuelSupplyId] &&
-    warnings[params.data.fuelSupplyId].includes(params.colDef.field)
+    warnings[params.data.id] &&
+    warnings[params.data.id].includes(params.colDef.field)
   ) {
-    style = { ...style, borderColor: '#fcba19' }
+    style = { ...style, borderColor: '#fcba19', border: '2px solid #fcba19' }
   }
   return style
 }

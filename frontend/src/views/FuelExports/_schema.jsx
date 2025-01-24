@@ -11,7 +11,10 @@ import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { apiRoutes } from '@/constants/routes'
-import { StandardCellStyle } from '@/utils/grid/errorRenderers'
+import {
+  StandardCellStyle,
+  StandardCellWarningAndErrors
+} from '@/utils/grid/errorRenderers'
 import {
   isFuelTypeOther,
   fuelTypeOtherConditionalStyle
@@ -46,7 +49,7 @@ const cellErrorStyle = (params, errors) => {
   return style
 }
 
-export const fuelExportColDefs = (optionsData, errors, gridReady) => [
+export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
   validation,
   actions({
     enableDuplicate: false,
@@ -90,7 +93,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     minWidth: 100,
     valueFormatter,
     editable: false,
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'exportDate',
@@ -103,6 +107,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
         {params.value ? params.value : 'YYYY-MM-DD'}
       </BCTypography>
     ),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     cellEditor: DateEditor,
     cellEditorPopup: true,
@@ -125,7 +131,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 260,
     editable: true,
@@ -198,7 +205,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCategory = params.newValue
@@ -261,7 +269,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     valueGetter: (params) => {
       return params.colDef?.cellEditorParams(params).options.length < 1
@@ -304,7 +313,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 370,
     valueSetter: (params) => {
@@ -435,7 +445,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => cellErrorStyle(params, errors)
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'units',
@@ -463,7 +474,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
     editable: false,
     minWidth: 100,
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     valueGetter: (params) =>
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -476,7 +488,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.ciOfFuel'),
     editable: false,
     minWidth: 100,
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     valueGetter: (params) => {
       if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
         return optionsData?.fuelTypes
@@ -510,7 +523,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     field: 'uci',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
     editable: false,
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 100
   },
   {
@@ -543,7 +557,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.eer'),
     editable: false,
     minWidth: 100,
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     valueGetter: (params) => {
       const eerOptions = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -567,7 +582,8 @@ export const fuelExportColDefs = (optionsData, errors, gridReady) => [
   },
   {
     field: 'energy',
-    cellStyle: (params) => cellErrorStyle(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
     valueFormatter,
     minWidth: 100,
