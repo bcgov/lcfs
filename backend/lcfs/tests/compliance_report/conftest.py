@@ -2,6 +2,8 @@ import uuid
 import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
+
+from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
@@ -154,7 +156,7 @@ def compliance_report_base_schema(
 @pytest.fixture
 def compliance_report_summary_row_schema():
     def _create_compliance_report_summary_row(
-        line="",
+        line=None,
         description="",
         field="",
         gasoline=0,
@@ -162,7 +164,7 @@ def compliance_report_summary_row_schema():
         jet_fuel=0,
         value=0,
         total_value=0,
-        format="",
+        format=FORMATS.NUMBER.value,
     ):
         return ComplianceReportSummaryRowSchema(
             line=line,

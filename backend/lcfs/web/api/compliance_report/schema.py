@@ -3,6 +3,7 @@ from typing import ClassVar, Optional, List
 from datetime import datetime, date
 from enum import Enum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
@@ -59,7 +60,7 @@ class SummarySchema(BaseSchema):
     is_locked: bool
 
     class Config:
-        extra = 'allow'
+        extra = "allow"
 
 
 class ComplianceReportStatusSchema(BaseSchema):
@@ -181,7 +182,7 @@ class ComplianceReportListSchema(BaseSchema):
 
 
 class ComplianceReportSummaryRowSchema(BaseSchema):
-    line: Optional[str] = ""
+    line: Optional[int] = None
     description: Optional[str] = ""
     field: Optional[str] = ""
     gasoline: Optional[float] = 0
@@ -189,7 +190,7 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
     jet_fuel: Optional[float] = 0
     value: Optional[float] = 0
     total_value: Optional[float] = 0
-    format: Optional[str] = ""
+    format: Optional[str] = FORMATS.NUMBER.value
 
 
 class ComplianceReportSummarySchema(BaseSchema):
@@ -206,10 +207,12 @@ class ComplianceReportSummarySchema(BaseSchema):
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):
     compliance_report_id: int
+    is_locked: Optional[bool] = False
     renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
     low_carbon_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
     summary_id: int
+    is_locked: bool
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):

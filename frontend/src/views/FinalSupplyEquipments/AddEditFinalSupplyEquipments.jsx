@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useTranslation } from 'react-i18next'
@@ -19,7 +19,6 @@ import { handleScheduleSave } from '@/utils/schedules.js'
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
-
   const [errors, setErrors] = useState({})
   const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
@@ -195,10 +194,10 @@ export const AddEditFinalSupplyEquipments = () => {
         modified: true
       }
 
-      const transaction = params.api.applyTransaction({
+      const transaction = {
         add: [rowData],
         addIndex: params.node?.rowIndex + 1
-      })
+      }
 
       setErrors({ [newRowID]: 'finalSupplyEquipment' })
 
