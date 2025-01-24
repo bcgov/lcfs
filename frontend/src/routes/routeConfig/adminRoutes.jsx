@@ -8,7 +8,7 @@ import ViewUser from '@/views/Admin/AdminMenu/components/ViewUser'
 export const adminRoutes = [
   {
     path: ROUTES.ADMIN.MAIN,
-    element: <Navigate to={ROUTES.ADMIN_USERS} replace />,
+    element: <Navigate to={ROUTES.ADMIN.USERS.LIST} replace />,
     handle: { title: 'Administration' }
   },
   {
