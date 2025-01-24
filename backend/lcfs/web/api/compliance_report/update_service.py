@@ -193,7 +193,7 @@ class ComplianceReportUpdateService:
         # If there's an existing summary, preserve user-edited values
         if existing_summary:
             for row in calculated_summary.renewable_fuel_target_summary:
-                if row.line == "6":
+                if row.line == 6:
                     # Preserve line 6 values (renewable fuel retained)
                     row.gasoline = (
                         existing_summary.line_6_renewable_fuel_retained_gasoline
@@ -207,7 +207,7 @@ class ComplianceReportUpdateService:
                         existing_summary.line_6_renewable_fuel_retained_jet_fuel
                         or row.jet_fuel
                     )
-                elif row.line == "7":
+                elif row.line == 7:
                     # Preserve line 7 values (previously retained)
                     row.gasoline = (
                         existing_summary.line_7_previously_retained_gasoline
@@ -220,7 +220,7 @@ class ComplianceReportUpdateService:
                         existing_summary.line_7_previously_retained_jet_fuel
                         or row.jet_fuel
                     )
-                elif row.line == "8":
+                elif row.line == 8:
                     # Preserve line 8 values (obligation deferred)
                     row.gasoline = (
                         existing_summary.line_8_obligation_deferred_gasoline
