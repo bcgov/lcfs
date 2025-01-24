@@ -12,7 +12,8 @@ import { actions, validation } from '@/components/BCDataGrid/columns'
 import { apiRoutes } from '@/constants/routes'
 import {
   StandardCellErrors,
-  StandardCellStyle
+  StandardCellStyle,
+  StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import {
   isFuelTypeOther,
@@ -21,7 +22,12 @@ import {
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
-export const allocationAgreementColDefs = (optionsData, errors, currentUser) => [
+export const allocationAgreementColDefs = (
+  optionsData,
+  currentUser,
+  errors,
+  warnings
+) => [
   validation,
   actions({
     enableDuplicate: false,
@@ -68,7 +74,8 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 120,
     editable: true,
@@ -104,7 +111,8 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
       (!params.value && (
         <BCTypography variant="body4">Enter or search a name</BCTypography>
       )),
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 310,
     editable: true,
@@ -142,7 +150,8 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
       'allocationAgreement:allocationAgreementColLabels.postalAddress'
     ),
     cellEditor: 'agTextCellEditor',
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     editable: true,
     minWidth: 350
   },
@@ -153,7 +162,8 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
       'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
     ),
     cellEditor: 'agTextCellEditor',
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     editable: true,
     minWidth: 200
   },
@@ -164,7 +174,8 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
       'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
     ),
     cellEditor: 'agTextCellEditor',
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     editable: true,
     minWidth: 200
   },
@@ -185,7 +196,8 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 200,
     editable: true,
@@ -289,7 +301,8 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 300,
     editable: true,
@@ -403,7 +416,8 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
     valueFormatter: (params) => {
       return parseFloat(params.value).toFixed(2)
     },
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     editable: false,
     valueGetter: (params) => {
       if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
@@ -450,7 +464,8 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 100,
     editable: true
   },
@@ -459,7 +474,8 @@ export const allocationAgreementColDefs = (optionsData, errors, currentUser) => 
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.units'
     ),
-    cellStyle: (params) => StandardCellErrors(params, errors),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     editable: false,
     minWidth: 80
   }

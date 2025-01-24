@@ -303,7 +303,7 @@ export const BCGridEditor = ({
         {...props}
       />
       <BCBox sx={{ height: '40px', margin: '15px 0', width: '100%' }}>
-        <BCAlert2 ref={alertRef} data-test="alert-box" />
+        <BCAlert2 dismissible={true} ref={alertRef} data-test="alert-box" />
       </BCBox>
       <BCBox flex={1}>
         {showAddRowsButton && (

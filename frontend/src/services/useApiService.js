@@ -39,10 +39,12 @@ export const useApiService = (opts = {}) => {
             error.response.status,
             error.response.data
           )
-          enqueueSnackbar(`${error.response.status} error`, {
-            autoHideDuration: 5000,
-            variant: 'error'
-          })
+          if (CONFIG.ENVIRONMENT !== 'production') {
+            enqueueSnackbar(`${error.response.status} error`, {
+              autoHideDuration: 5000,
+              variant: 'error'
+            })
+          }
         }
 
         if (error.response?.status === 403) {

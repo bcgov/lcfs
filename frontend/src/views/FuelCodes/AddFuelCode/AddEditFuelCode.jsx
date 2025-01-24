@@ -266,7 +266,7 @@ const AddEditFuelCodeBase = () => {
           const fieldLabels = fields.map((field) =>
             t(`fuelCode:fuelCodeColLabels.${field}`)
           )
-          const errMsg = `Error updating row: ${
+          const errMsg = `Unable to save row: ${
             fieldLabels.length === 1 ? fieldLabels[0] : ''
           } ${message}`
           updatedData.validationMsg = errMsg
@@ -274,7 +274,7 @@ const AddEditFuelCodeBase = () => {
         } else {
           const errMsg = error.response?.data?.detail || error.message
           updatedData.validationMsg = errMsg
-          handleError(error, `Error updating row: ${errMsg}`)
+          handleError(error, `Unable to save row: ${errMsg}`)
         }
       }
 

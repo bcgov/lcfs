@@ -144,7 +144,7 @@
     "Recommended by manager": "Recommended {{createDate}} by {{displayName}}.",
     "Assessed": "Assessed {{createDate}} by {{displayName}}.",
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
-    "ReAssessed": "Re-assessed"
+    "Reassessed": "Re-assessed"
   },
   "internalComments": "Internal comments",
   "fuelLabels": {

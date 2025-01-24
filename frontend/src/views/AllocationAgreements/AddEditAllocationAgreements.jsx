@@ -19,12 +19,14 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { DEFAULT_CI_FUEL } from '@/constants/common'
+import { handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
-  const [gridApi, setGridApi] = useState()
   const [errors, setErrors] = useState({})
+  const [warnings, setWarnings] = useState({})
+
   const [columnDefs, setColumnDefs] = useState([])
   const alertRef = useRef()
   const location = useLocation()
@@ -97,8 +99,6 @@ export const AddEditAllocationAgreements = () => {
 
   const onGridReady = useCallback(
     async (params) => {
-      setGridApi(params.api)
-
       if (
         Array.isArray(data.allocationAgreements) &&
         data.allocationAgreements.length > 0
@@ -130,11 +130,12 @@ export const AddEditAllocationAgreements = () => {
   useEffect(() => {
     const updatedColumnDefs = allocationAgreementColDefs(
       optionsData,
+      currentUser,
       errors,
-      currentUser
+      warnings
     )
     setColumnDefs(updatedColumnDefs)
-  }, [errors, optionsData, currentUser])
+  }, [optionsData, currentUser, errors, warnings])
 
   useEffect(() => {
     if (
@@ -215,8 +216,6 @@ export const AddEditAllocationAgreements = () => {
         return
       }
 
-      if (!isValid) return
-
       params.node.updateData({
         ...params.node.data,
         validationStatus: 'pending'
@@ -261,48 +260,18 @@ export const AddEditAllocationAgreements = () => {
         return // Stop execution, do not proceed to save
       }
 
-      try {
-        setErrors({})
-        await saveRow(updatedData)
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'success',
-          modified: false
-        }
-        alertRef.current?.triggerAlert({
-          message: 'Row updated successfully.',
-          severity: 'success'
-        })
-      } catch (error) {
-        setErrors({
-          [params.node.data.id]: error.response.data.errors[0].fields
-        })
+      updatedData = await handleScheduleSave({
+        alertRef,
+        idField: 'allocationAgreementId',
+        labelPrefix: 'allocationAgreement:allocationAgreementColLabels',
+        params,
+        setErrors,
+        setWarnings,
+        saveRow,
+        t,
+        updatedData
+      })
 
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'error'
-        }
-
-        if (error.code === 'ERR_BAD_REQUEST') {
-          const { fields, message } = error.response.data.errors[0]
-          const fieldLabels = fields.map((field) =>
-            t(`allocationAgreement:allocationAgreementColLabels.${field}`)
-          )
-          const errMsg = `Error updating row: ${
-            fieldLabels.length === 1 ? fieldLabels[0] : ''
-          } ${message}`
-
-          alertRef.current?.triggerAlert({
-            message: errMsg,
-            severity: 'error'
-          })
-        } else {
-          alertRef.current?.triggerAlert({
-            message: `Error updating row: ${error.message}`,
-            severity: 'error'
-          })
-        }
-      }
       updatedData.ciOfFuel = params.node.data.ciOfFuel
       params.node.updateData(updatedData)
     },

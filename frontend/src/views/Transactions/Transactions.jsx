@@ -32,7 +32,7 @@ export const Transactions = () => {
   const location = useLocation()
   const apiService = useApiService()
   const gridRef = useRef()
-  const downloadButtonRef = useRef(null);
+  const downloadButtonRef = useRef(null)
   const { data: currentUser, hasRoles } = useCurrentUser()
 
   const [searchParams] = useSearchParams()
@@ -180,10 +180,6 @@ export const Transactions = () => {
     }
   }, [location.state])
 
-  if (!currentUser) {
-    return <Loading />
-  }
-
   const handleSetResetGrid = useCallback((fn) => {
     setResetGridFn(() => fn)
   }, [])
@@ -193,6 +189,10 @@ export const Transactions = () => {
       resetGridFn()
     }
   }, [resetGridFn])
+
+  if (!currentUser) {
+    return <Loading />
+  }
 
   return (
     <>
@@ -208,12 +208,7 @@ export const Transactions = () => {
           <BCTypography variant="h5" mb={2} color="primary">
             {t('txn:title')}
           </BCTypography>
-          <Box
-            display="flex"
-            gap={1}
-            mb={2}
-            alignItems="center"
-          >
+          <Box display="flex" gap={1} mb={2} alignItems="center">
             {currentUser?.organization?.orgStatus?.status ===
               ORGANIZATION_STATUSES.REGISTERED && (
               <Role roles={[roles.transfers]}>

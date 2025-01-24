@@ -18,10 +18,12 @@ import {
   PROVISION_APPROVED_FUEL_CODE
 } from './_schema'
 import * as ROUTES from '@/constants/routes/routes.js'
+import { handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
   const [errors, setErrors] = useState({})
+  const [warnings, setWarnings] = useState({})
 
   const gridRef = useRef(null)
   const alertRef = useRef()
@@ -214,7 +216,7 @@ export const AddEditOtherUses = () => {
             )
 
             const provisionValue =
-            provisions.length === 1 ? provisions[0] : null
+              provisions.length === 1 ? provisions[0] : null
             params.node.setDataValue('provisionOfTheAct', provisionValue)
 
             // Auto-populate the "fuelCode" field
@@ -285,48 +287,17 @@ export const AddEditOtherUses = () => {
         return // Stop execution, do not proceed to save
       }
 
-      try {
-        setErrors({})
-        await saveRow(updatedData)
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'success',
-          modified: false
-        }
-        alertRef.current?.triggerAlert({
-          message: 'Row updated successfully.',
-          severity: 'success'
-        })
-      } catch (error) {
-        setErrors({
-          [params.node.data.id]: error.response.data.errors[0].fields
-        })
-
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'error'
-        }
-
-        if (error.code === 'ERR_BAD_REQUEST') {
-          const { fields, message } = error.response.data.errors[0]
-          const fieldLabels = fields.map((field) =>
-            t(`otherUses:otherUsesColLabels.${field}`)
-          )
-          const errMsg = `Error updating row: ${
-            fieldLabels.length === 1 ? fieldLabels[0] : ''
-          } ${message}`
-
-          alertRef.current?.triggerAlert({
-            message: errMsg,
-            severity: 'error'
-          })
-        } else {
-          alertRef.current?.triggerAlert({
-            message: `Error updating row: ${error.message}`,
-            severity: 'error'
-          })
-        }
-      }
+      updatedData = await handleScheduleSave({
+        alertRef,
+        idField: 'otherUsesId',
+        labelPrefix: 'otherUses:otherUsesColLabels',
+        params,
+        setErrors,
+        setWarnings,
+        saveRow,
+        t,
+        updatedData
+      })
 
       params.node.updateData(updatedData)
     },
@@ -353,12 +324,7 @@ export const AddEditOtherUses = () => {
           <BCTypography variant="h5" color="primary">
             {t('otherUses:newOtherUsesTitle')}
           </BCTypography>
-          <BCTypography
-            variant="body4"
-            color="primary"
-            my={2}
-            component="div"
-          >
+          <BCTypography variant="body4" color="primary" my={2} component="div">
             {t('otherUses:newOtherUsesGuide')}
           </BCTypography>
         </div>
@@ -367,7 +333,7 @@ export const AddEditOtherUses = () => {
           gridRef={gridRef}
           alertRef={alertRef}
           getRowId={(params) => params.data.id}
-          columnDefs={otherUsesColDefs(optionsData, errors)}
+          columnDefs={otherUsesColDefs(optionsData, errors, warnings)}
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
           rowData={rowData}

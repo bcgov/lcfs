@@ -80,4 +80,4 @@ class FuelSupply(BaseModel, Auditable, Versioning):
     end_use_type = relationship("EndUseType")
 
     def __repr__(self):
-        return f"<FuelSupply(id={self.fuel_supply_id}>"
+        return f"<FuelSupply(id={self.fuel_supply_id}, fuel_type_id={self.fuel_type_id}, quantity={self.quantity})>"

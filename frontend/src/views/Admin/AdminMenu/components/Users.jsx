@@ -31,10 +31,11 @@ export const Users = () => {
   const gridOptions = {
     overlayNoRowsTemplate: t('admin:usersNotFound')
   }
-  const defaultSortModel = [
+  const defaultSortModel = useMemo(() => [
     { field: 'isActive', direction: 'desc' },
     { field: 'firstName', direction: 'asc' }
-  ]
+  ], []);
+  
   const navigate = useNavigate()
 
   const handleNewUserClick = () => {

@@ -30,6 +30,12 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
         default=False,
         comment="Indicates whether the fuel is fossil-derived for other uses",
     )
+    renewable = Column(
+        Boolean,
+        server_default=text("FALSE"),
+        nullable=False,
+        comment="Indicates whether the fuel should be categorized as renewable",
+    )
     provision_1_id = Column(
         Integer,
         ForeignKey("provision_of_the_act.provision_of_the_act_id"),
