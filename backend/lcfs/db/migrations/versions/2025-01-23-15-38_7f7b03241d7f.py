@@ -6,7 +6,7 @@ It also populates 'role_id' for existing notification types based on their 'noti
 Additionally, it updates the 'IN_APP' notification channel so that 'subscribe_by_default' is enabled.
 
 Revision ID: 7f7b03241d7f
-Revises: ec826b9226df
+Revises: 0576833c005d
 Create Date: 2025-01-23 15:38:19.362993
 """
 
@@ -15,7 +15,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "7f7b03241d7f"
-down_revision = "ec826b9226df"
+down_revision = "0576833c005d"
 branch_labels = None
 depends_on = None
 
