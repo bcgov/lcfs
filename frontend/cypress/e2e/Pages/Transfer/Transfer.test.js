@@ -127,8 +127,8 @@ Given('bceid transfer accounts are setup with roles', () => {
   cy.getByDataTest('login-container').should('exist')
   cy.loginWith(
     'bceid',
-    Cypress.env(`org1_bceid_username`),
-    Cypress.env(`org1_bceid_password`)
+    Cypress.env('ORG1_BCEID_USERNAME'),
+    Cypress.env('ORG1_BCEID_PASSWORD')
   )
   cy.wait(5000)
   cy.getByDataTest('dashboard-container').should('exist')
@@ -144,8 +144,8 @@ When('I login as recieving org and submit', () => {
   // Login with the updated user
   cy.loginWith(
     'bceid',
-    Cypress.env(`org2_bceid_username`),
-    Cypress.env(`org2_bceid_password`)
+    Cypress.env('org2_bceid_username'),
+    Cypress.env('org2_bceid_password')
   )
   cy.wait(5000)
   cy.getByDataTest('dashboard-container').should('exist')
@@ -172,8 +172,8 @@ When('I login as analyst and recommend', () => {
   // Login with the updated user
   cy.loginWith(
     'idir',
-    Cypress.env(`admin_idir_username`),
-    Cypress.env(`admin_idir_password`)
+    Cypress.env('ADMIN_IDIR_USERNAME'),
+    Cypress.env('ADMIN_IDIR_PASSWORD')
   )
 
   cy.wait(5000)
@@ -204,8 +204,8 @@ When('I login as director and records transfer', () => {
   // Login with the updated user
   cy.loginWith(
     'idir',
-    Cypress.env(`admin_idir_username`),
-    Cypress.env(`admin_idir_password`)
+    Cypress.env('ADMIN_IDIR_USERNAME'),
+    Cypress.env('ADMIN_IDIR_PASSWORD')
   )
   cy.wait(5000)
   cy.setIDIRRoles('director')
@@ -232,8 +232,8 @@ When('I login as director and refuse transfer', () => {
   // Login with the updated user
   cy.loginWith(
     'idir',
-    Cypress.env(`admin_idir_username`),
-    Cypress.env(`admin_idir_password`)
+    Cypress.env('ADMIN_IDIR_USERNAME'),
+    Cypress.env('ADMIN_IDIR_PASSWORD')
   )
   cy.wait(5000)
   cy.setIDIRRoles('director')

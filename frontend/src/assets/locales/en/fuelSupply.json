@@ -1,7 +1,6 @@
 {
   "fuelSupplyTitle": "Supply of fuel",
   "noFuelSuppliesFound": "No fuel supplies found",
-  "addFuelSupplyRowsTitle": "Add new supply of fuel",
   "fuelSupplyGuide": "Report fuel volumes you supplied for the various end uses.",
   "fuelSupplyDownloadBtn": "Download as Excel",
   "fuelSupplyDownloadingMsg": "Downloading supply of fuels information",
