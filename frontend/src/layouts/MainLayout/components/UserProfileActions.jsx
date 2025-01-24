@@ -18,6 +18,7 @@ import {
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import { NavLink, useLocation } from 'react-router-dom'
 import { ROUTES } from '@/constants/routes'
+import LogoutIcon from '@mui/icons-material/Logout'
 
 export const UserProfileActions = () => {
   const { t } = useTranslation()
@@ -74,7 +75,7 @@ export const UserProfileActions = () => {
               component={NavLink}
               to={(currentUser?.isGovernmentUser
                 ? ROUTES.ADMIN_USERS_VIEW
-                : ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', currentUser?.organization?.organizationId)
+                : ROUTES.ORGANIZATION_VIEWUSER.replace(':orgID', currentUser?.organization?.organizationId)
               ).replace(':userID', currentUser?.userProfileId)}
               style={{
                 whiteSpace: 'nowrap',
@@ -98,7 +99,7 @@ export const UserProfileActions = () => {
                 height: '60%',
                 alignSelf: 'center',
                 marginLeft: 1,
-                marginRight: 1
+                marginRight: '0.6rem'
               })}
             />
           </>
@@ -114,6 +115,7 @@ export const UserProfileActions = () => {
                 route={ROUTES.NOTIFICATIONS}
                 light={false}
                 isMobileView={false}
+                sx={{ '&': { marginRight: 0, marginLeft: 0, padding: '2px', paddingBottom: '10px' } }}
               />
             </Tooltip>
           )}
@@ -125,7 +127,7 @@ export const UserProfileActions = () => {
               backgroundColor: secondary.main,
               height: '60%',
               alignSelf: 'center',
-              marginLeft: 1,
+              marginLeft: '0.6rem',
               marginRight: 3
             })}
           />
@@ -137,6 +139,15 @@ export const UserProfileActions = () => {
           size="small"
           variant="outlined"
           data-test="logout-button"
+          startIcon={<LogoutIcon sx={{ width: '18px', height: '18px' }} />}
+          sx={{
+            maxHeight: '32px',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.8)',
+              color: 'rgba(0, 0, 0, 0.8)',
+              borderColor: 'rgba(0, 0, 0, 0.8)'
+            }
+          }}
         >
           {t('logout')}
         </BCButton>

@@ -57,12 +57,14 @@ function BCWidgetCard({
               variant="outlined"
               size="small"
               style={{ maxHeight: '25px', minHeight: '25px' }}
-              color="primay"
+              color="light"
               onClick={handleButtonClick}
-              startIcon={<EditIcon sx={{ width: '14px', height: '14px' }} />}
+              startIcon={<EditIcon sx={{ width: '16px', height: '16px' }} />}
               sx={{
                 '&:hover': {
-                  backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  color: 'rgba(0, 0, 0, 0.8)',
+                  borderColor: 'rgba(0, 0, 0, 0.8)'
                 }
               }}
             >

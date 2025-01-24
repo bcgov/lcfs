@@ -8,6 +8,8 @@ import FileUploadIcon from '@mui/icons-material/FileUpload'
 import { useState } from 'react'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import Box from '@mui/material/Box'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faUpload } from '@fortawesome/free-solid-svg-icons'
 
 export const ActivityListCard = ({ name, period, reportID }) => {
   const { t } = useTranslation(['report'])
@@ -56,7 +58,8 @@ export const ActivityListCard = ({ name, period, reportID }) => {
               <BCButton
                 sx={{ marginLeft: '24px' }}
                 data-test="submit-docs"
-                size="large"
+                size="small"
+                className='svg-icon-button'
                 variant="contained"
                 color="primary"
                 onClick={() => {

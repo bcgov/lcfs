@@ -53,7 +53,7 @@ export const Navbar = () => {
     <BCNavbar
       title={t('title')}
       routes={navMenuItems}
-      beta={true}
+      beta={false}
       data-test="main-layout-navbar"
       headerRightPart={<HeaderComponent key="headerRight" />}
       menuRightPart={<UserProfileActions key="menuRight" />}

@@ -263,7 +263,6 @@ export const Transactions = () => {
             <ClearFiltersButton
               onClick={handleClearFilters}
               sx={{
-                height: downloadButtonRef.current?.offsetHeight || '36px',
                 minWidth: 'fit-content',
                 whiteSpace: 'nowrap'
               }}

@@ -128,7 +128,7 @@ async def create_user(
     response_model=UserBaseSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.MANAGE_USERS])
 async def update_user(
     request: Request,
     organization_id: int,
