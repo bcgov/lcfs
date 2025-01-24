@@ -185,7 +185,7 @@ export const AssessmentCard = ({
                     <Box>
                       <BCButton
                         data-test="create-supplemental"
-                        size="large"
+                        size="small"
                         variant="contained"
                         color="primary"
                         onClick={() => {
@@ -205,7 +205,8 @@ export const AssessmentCard = ({
               <Box>
                 <BCButton
                   data-test="create-supplemental"
-                  size="large"
+                  size="small"
+                  className='svg-icon-button'
                   variant="contained"
                   color="primary"
                   onClick={() => {

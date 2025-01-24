@@ -1,27 +1,17 @@
-import React, { lazy, Suspense } from 'react'
+import { Login } from '@/components/Login'
 import ROUTES from '../routes'
-
-// Lazy-loaded components
-const Login = lazy(() => import('@/components/Login'))
-const Unauthorized = lazy(() => import('@/components/Unauthorized'))
-
-// Utility function to wrap components with Suspense
-const withSuspense = (Component, props = {}) => (
-  <Suspense fallback={<div>Loading...</div>}>
-    <Component {...props} />
-  </Suspense>
-)
+import { Unauthorized } from '@/components/Unauthorized'
 
 export const publicRoutes = [
   {
     name: 'Login',
     key: 'login',
     path: ROUTES.AUTH.LOGIN,
-    element: withSuspense(Login),
+    element: <Login />,
     handle: { title: 'Login' }
   },
   {
     path: ROUTES.AUTH.UNAUTHORIZED,
-    element: withSuspense(Unauthorized)
+    element: <Unauthorized />
   }
 ]

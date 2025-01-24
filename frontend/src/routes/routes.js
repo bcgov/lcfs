@@ -1,8 +1,3 @@
-const createRouteConfig = (prefix = '') => ({
-  path: prefix,
-  createPath: (suffix = '') => `${prefix}${suffix}`
-})
-
 export const ROUTES = {
   // Auth routes
   AUTH: {
@@ -18,7 +13,7 @@ export const ROUTES = {
 
   // Transaction routes
   TRANSACTIONS: {
-    ...createRouteConfig('/transactions'),
+    LIST: '/transactions',
     ADD: '/transactions/add',
     EDIT: '/transactions/edit/:transactionId',
     VIEW: '/transactions/:transactionId',
@@ -36,7 +31,7 @@ export const ROUTES = {
 
   // Transfer routes
   TRANSFERS: {
-    ...createRouteConfig('/transfers'),
+    LIST: '/transfers',
     ADD: '/transfers/add',
     EDIT: '/transfers/edit/:transferId',
     VIEW: '/transfers/:transferId'
@@ -44,14 +39,14 @@ export const ROUTES = {
 
   // Organization routes
   ORGANIZATION: {
-    ...createRouteConfig('/organization'),
+    ORG: '/organization',
     ADD_USER: '/organization/add-user',
     VIEW_USER: '/organization/:userID',
     EDIT_USER: '/organization/:userID/edit-user'
   },
 
   ORGANIZATIONS: {
-    ...createRouteConfig('/organizations'),
+    LIST: '/organizations',
     ADD: '/organizations/add-org',
     VIEW: '/organizations/:orgID',
     EDIT: '/organizations/:orgID/edit-org',
@@ -62,7 +57,7 @@ export const ROUTES = {
 
   // Compliance reporting routes
   REPORTS: {
-    ...createRouteConfig('/compliance-reporting'),
+    LIST: '/compliance-reporting',
     VIEW: '/compliance-reporting/:compliancePeriod/:complianceReportId',
     COMPARE: '/compare-reporting',
     ADD: {
@@ -83,13 +78,13 @@ export const ROUTES = {
 
   // Notification routes
   NOTIFICATIONS: {
-    ...createRouteConfig('/notifications'),
+    LIST: '/notifications',
     SETTINGS: '/notifications/configure'
   },
 
   // Admin routes
   ADMIN: {
-    ...createRouteConfig('/admin'),
+    MAIN: '/admin',
     USERS: {
       LIST: '/admin/users',
       ADD: '/admin/users/add-user',
@@ -106,7 +101,7 @@ export const ROUTES = {
 
   // Fuel code routes
   FUEL_CODES: {
-    ...createRouteConfig('/fuel-codes'),
+    LIST: '/fuel-codes',
     ADD: '/fuel-codes/add-fuel-code',
     EDIT: '/fuel-codes/:fuelCodeID'
   }

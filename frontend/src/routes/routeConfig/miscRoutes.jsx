@@ -1,29 +1,19 @@
-import React, { lazy, Suspense } from 'react'
+import { FileSubmissions } from '@/views/FileSubmissions'
 import ROUTES from '../routes'
-
-// Lazy-loaded components
-const FileSubmissions = lazy(() => import('@/views/FileSubmissions'))
-const Dashboard = lazy(() => import('@/views/Dashboard'))
-
-// Utility function to wrap components with Suspense
-const withSuspense = (Component, props = {}) => (
-  <Suspense fallback={<div>Loading...</div>}>
-    <Component {...props} />
-  </Suspense>
-)
+import { Dashboard } from '@/views/Dashboard'
 
 export const miscRoutes = [
   {
     path: ROUTES.FILE_SUBMISSION,
-    element: withSuspense(FileSubmissions),
-    handle: { title: 'File Submissions' }
+    element: <FileSubmissions />,
+    handle: { title: 'File submissions' }
   },
   {
     path: ROUTES.DASHBOARD,
     children: [
       {
         path: '',
-        element: withSuspense(Dashboard),
+        element: <Dashboard />,
         handle: { title: 'Dashboard' }
       }
     ]

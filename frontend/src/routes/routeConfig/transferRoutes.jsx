@@ -1,50 +1,35 @@
-import React, { lazy, Suspense } from 'react'
 import { Navigate } from 'react-router-dom'
 import ROUTES from '../routes'
-
-// Lazy-loaded component
-const AddEditViewTransfer = lazy(
-  () => import('@/views/Transfers/AddEditViewTransfer')
-)
-
-// Utility function to wrap components with Suspense
-const withSuspense = (Component, props = {}) => (
-  <Suspense fallback={<div>Loading...</div>}>
-    <Component {...props} />
-  </Suspense>
-)
+import { AddEditViewTransfer } from '@/views/Transfers'
 
 export const transferRoutes = [
   {
-    path: ROUTES.TRANSFERS,
+    path: ROUTES.TRANSFERS.LIST,
     element: <Navigate to={ROUTES.TRANSACTIONS} replace />,
     handle: { title: 'Transfers' }
   },
   {
     path: ROUTES.TRANSFERS.ADD,
-    element: withSuspense(AddEditViewTransfer, { mode: 'add' }),
+    element: <AddEditViewTransfer />,
     handle: {
       title: 'New transfer',
-      mode: 'add',
-      crumb: () => 'New transfer'
+      mode: 'add'
     }
   },
   {
     path: ROUTES.TRANSFERS.EDIT,
-    element: withSuspense(AddEditViewTransfer, { mode: 'edit' }),
+    element: <AddEditViewTransfer />,
     handle: {
       title: 'Edit transfer',
-      mode: 'edit',
-      crumb: () => 'Edit transfer'
+      mode: 'edit'
     }
   },
   {
     path: ROUTES.TRANSFERS.VIEW,
-    element: withSuspense(AddEditViewTransfer, { mode: 'view' }),
+    element: <AddEditViewTransfer />,
     handle: {
       title: 'View transfer',
-      mode: 'view',
-      crumb: () => 'View transfer'
+      mode: 'view'
     }
   }
 ]

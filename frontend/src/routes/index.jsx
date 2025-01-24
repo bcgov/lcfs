@@ -13,43 +13,20 @@ import { notificationRoutes } from './routeConfig/notificationRoutes'
 import { miscRoutes } from './routeConfig/miscRoutes'
 import { transferRoutes } from './routeConfig/transferRoutes'
 import PublicLayout from '@/layouts/PublicLayout'
+import { fuelCodeRoutes } from './routeConfig/fuelCodeRoutes'
 
 const allRoutes = [
   ...publicRoutes,
   ...miscRoutes,
   ...adminRoutes,
+  ...fuelCodeRoutes,
   ...organizationRoutes,
   ...transactionRoutes,
   ...transferRoutes,
   ...reportRoutes,
   ...notificationRoutes
+  // ... other route groups
 ]
-
-function flattenRoutes(routes, basePath = '') {
-  const flatRoutes = []
-
-  routes.forEach((route) => {
-    if (typeof route === 'string') {
-      // Handle plain string paths
-      flatRoutes.push({ path: route })
-    } else if (route.path && typeof route.path === 'string') {
-      // Handle objects with path and children
-      const newBasePath = basePath + route.path
-
-      flatRoutes.push({ ...route, path: newBasePath })
-
-      Object.keys(route).forEach((key) => {
-        if (typeof route[key] === 'object') {
-          const nestedRoutes = flattenRoutes([route[key]], newBasePath)
-          flatRoutes.push(...nestedRoutes)
-        }
-      })
-    }
-  })
-
-  return flatRoutes
-}
-console.log(allRoutes)
 
 export const router = createBrowserRouter([
   {
@@ -58,10 +35,7 @@ export const router = createBrowserRouter([
   },
   {
     element: <MainLayout />,
-    children: [
-      ...allRoutes
-      // ... other route groups
-    ]
+    children: allRoutes
   },
   {
     path: ROUTES.API_DOCS,

@@ -98,7 +98,7 @@ export const UserProfileActions = () => {
                 height: '60%',
                 alignSelf: 'center',
                 marginLeft: 1,
-                marginRight: 1
+                marginRight: '0.2rem'
               })}
             />
           </>
@@ -114,6 +114,7 @@ export const UserProfileActions = () => {
                 route={ROUTES.NOTIFICATIONS}
                 light={false}
                 isMobileView={false}
+                sx={{ '&': { marginRight: 0, marginLeft: 0 } }}
               />
             </Tooltip>
           )}
@@ -125,7 +126,7 @@ export const UserProfileActions = () => {
               backgroundColor: secondary.main,
               height: '60%',
               alignSelf: 'center',
-              marginLeft: 1,
+              marginLeft: '0.5rem',
               marginRight: 3
             })}
           />

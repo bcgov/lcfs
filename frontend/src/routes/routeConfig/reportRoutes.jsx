@@ -1,57 +1,33 @@
-import React, { lazy, Suspense } from 'react'
+import { ComplianceReports } from '@/views/ComplianceReports'
+import { CompareReports } from '@/views/CompareReports/CompareReports'
+import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector'
 import ROUTES from '../routes'
-
-// Lazy-loaded components
-const ComplianceReports = lazy(() => import('@/views/ComplianceReports'))
-const CompareReports = lazy(
-  () => import('@/views/CompareReports/CompareReports')
-)
-const ComplianceReportViewSelector = lazy(
-  () => import('@/views/ComplianceReports/ComplianceReportViewSelector')
-)
-const AddEditNotionalTransfers = lazy(() => import('@/views/NotionalTransfers'))
-const AddEditAllocationAgreements = lazy(
-  () => import('@/views/AllocationAgreements/AddEditAllocationAgreements')
-)
-const AddEditOtherUses = lazy(
-  () => import('@/views/OtherUses/AddEditOtherUses')
-)
-const AddEditFinalSupplyEquipments = lazy(
-  () => import('@/views/FinalSupplyEquipments/AddEditFinalSupplyEquipments')
-)
-const AddEditFuelSupplies = lazy(
-  () => import('@/views/FuelSupplies/AddEditFuelSupplies')
-)
-const AddEditFuelExports = lazy(
-  () => import('@/views/FuelExports/AddEditFuelExports')
-)
-
-// Utility function to wrap components with Suspense
-const withSuspense = (Component, props = {}) => (
-  <Suspense fallback={<div>Loading...</div>}>
-    <Component {...props} />
-  </Suspense>
-)
+import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
+import { AddEditAllocationAgreements } from '@/views/AllocationAgreements/AddEditAllocationAgreements'
+import { AddEditOtherUses } from '@/views/OtherUses/AddEditOtherUses'
+import { AddEditFinalSupplyEquipments } from '@/views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
+import { AddEditFuelSupplies } from '@/views/FuelSupplies/AddEditFuelSupplies'
+import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
 
 export const reportRoutes = [
   {
-    path: ROUTES.REPORTS,
-    element: withSuspense(ComplianceReports),
+    path: ROUTES.REPORTS.LIST,
+    element: <ComplianceReports />,
     handle: { title: 'Compliance reporting' }
   },
   {
     path: ROUTES.REPORTS.COMPARE,
-    element: withSuspense(CompareReports),
+    element: <CompareReports />,
     handle: { title: 'Compare reports' }
   },
   {
     path: ROUTES.REPORTS.VIEW,
-    element: withSuspense(ComplianceReportViewSelector),
+    element: <ComplianceReportViewSelector />,
     handle: { title: '' }
   },
   {
     path: ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS,
-    element: withSuspense(AddEditNotionalTransfers),
+    element: <AddEditNotionalTransfers />,
     handle: {
       title: 'Notional transfer of eligible renewable fuels',
       mode: 'add'
@@ -59,7 +35,7 @@ export const reportRoutes = [
   },
   {
     path: ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS,
-    element: withSuspense(AddEditAllocationAgreements),
+    element: <AddEditAllocationAgreements />,
     handle: {
       title: 'Allocation agreements',
       mode: 'add'
@@ -67,7 +43,7 @@ export const reportRoutes = [
   },
   {
     path: ROUTES.REPORTS.ADD.OTHER_USE_FUELS,
-    element: withSuspense(AddEditOtherUses),
+    element: <AddEditOtherUses />,
     handle: {
       title: 'Fuels for other use',
       mode: 'add'
@@ -75,7 +51,7 @@ export const reportRoutes = [
   },
   {
     path: ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS,
-    element: withSuspense(AddEditFinalSupplyEquipments),
+    element: <AddEditFinalSupplyEquipments />,
     handle: {
       title: 'Final supply equipment',
       mode: 'add'
@@ -83,7 +59,7 @@ export const reportRoutes = [
   },
   {
     path: ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL,
-    element: withSuspense(AddEditFuelSupplies),
+    element: <AddEditFuelSupplies />,
     handle: {
       title: 'Supply of fuel',
       mode: 'add'
@@ -91,7 +67,7 @@ export const reportRoutes = [
   },
   {
     path: ROUTES.REPORTS.ADD.FUEL_EXPORTS,
-    element: withSuspense(AddEditFuelExports),
+    element: <AddEditFuelExports />,
     handle: {
       title: 'Export fuels',
       mode: 'add'

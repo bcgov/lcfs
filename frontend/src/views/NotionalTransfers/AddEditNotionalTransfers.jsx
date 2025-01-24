@@ -241,7 +241,7 @@ export const AddEditNotionalTransfers = () => {
           <BCTypography variant="h5" color="primary">
             {t('notionalTransfer:newNotionalTransferTitle')}
           </BCTypography>
-          <BCTypography variant="body4" color="primary" my={2} component="div">
+          <BCTypography variant="body4" color="text" my={2} component="div">
             {t('notionalTransfer:newNotionalTransferGuide')}
           </BCTypography>
         </div>

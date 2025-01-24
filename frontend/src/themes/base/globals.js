@@ -229,16 +229,13 @@ const globals = {
     padding: '0.1rem',
     width: '60px'
   },
-  '.ag-filter-apply-panel-button[data-ref="clearFilterButton"]': {
-    border: `1.2px solid ${grey[500]}`,
-    borderRadius: '0.3rem',
-    color: grey[600],
-    textTransform: 'none',
-    fontSize: pxToRem(14),
+  '.MuiButton-root': {
+    height: pxToRem(39),
     padding: '6px 12px'
   },
-  '.ag-filter-apply-panel-button[data-ref="clearFilterButton"]:hover': {
-    color: grey[900]
+  '.svg-icon-button .MuiSvgIcon-root': {
+    height: pxToRem(22),
+    width: pxToRem(22)
   },
 
   '.MuiPaper-elevation': {
