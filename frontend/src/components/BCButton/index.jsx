@@ -8,7 +8,7 @@ const BCButton = forwardRef(
     {
       color = 'white',
       variant = 'contained',
-      size = 'medium',
+      size = 'small',
       circular = false,
       iconOnly = false,
       isLoading,
