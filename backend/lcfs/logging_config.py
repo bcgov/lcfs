@@ -80,7 +80,11 @@ def custom_console_renderer():
                     exc_type, exc_value, exc_traceback = sys.exc_info()
                 # Create a Traceback object
                 rich_traceback = Traceback.from_exception(
-                    exc_type, exc_value, exc_traceback, width=console.width
+                    exc_type,
+                    exc_value,
+                    exc_traceback,
+                    width=console.width,
+                    max_frames=5,
                 )
                 console.print(rich_traceback)
             else:

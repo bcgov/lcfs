@@ -1,15 +1,16 @@
-from lcfs.web.api.notification.schema import (
-    SubscriptionSchema,
-    NotificationMessageSchema,
-)
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from lcfs.web.api.notification.services import NotificationService
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
     NotificationMessage,
 )
+from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.notification.repo import NotificationRepository
+from lcfs.web.api.notification.schema import (
+    SubscriptionSchema,
+    NotificationMessageSchema,
+)
 
 # Mock common data for reuse
 mock_notification_message = NotificationMessage(
@@ -397,4 +398,34 @@ async def test_delete_notification_channel_subscription(notification_service):
     )
     mock_repo.delete_notification_channel_subscription.assert_awaited_once_with(
         subscription_id
+    )
+
+
+@pytest.mark.anyio
+async def test_service_delete_subscriptions_for_user_role(notification_service):
+    service, mock_repo = notification_service
+    user_profile_id = 1
+    role_enum = RoleEnum.ANALYST
+
+    mock_repo.delete_subscriptions_for_user_role = AsyncMock()
+
+    await service.delete_subscriptions_for_user_role(user_profile_id, role_enum)
+
+    mock_repo.delete_subscriptions_for_user_role.assert_awaited_once_with(
+        user_profile_id, role_enum
+    )
+
+
+@pytest.mark.anyio
+async def test_service_add_subscriptions_for_user_role(notification_service):
+    service, mock_repo = notification_service
+    user_profile_id = 1
+    role_enum = RoleEnum.DIRECTOR
+
+    mock_repo.add_subscriptions_for_user_role = AsyncMock()
+
+    await service.add_subscriptions_for_user_role(user_profile_id, role_enum)
+
+    mock_repo.add_subscriptions_for_user_role.assert_awaited_once_with(
+        user_profile_id, role_enum
     )
