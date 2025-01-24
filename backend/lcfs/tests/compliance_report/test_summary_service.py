@@ -709,7 +709,7 @@ async def test_can_sign_flag_logic(
             "jet_fuel": 25,
         }
     )
-    mock_repo.aggregate_other_uses = AsyncMock(
+    mock_repo.aggregate_other_uses_quantity = AsyncMock(
         return_value={
             "gasoline": 50,
             "diesel": 25,
@@ -781,8 +781,8 @@ async def test_calculate_fuel_quantities_fossil_derived(
     mock_fuel_supply_repo,
 ):
     # Create a mock repository
-    mock_repo.aggregate_fuel_supplies.return_value = {"diesel": 100.0}
-    mock_repo.aggregate_other_uses.return_value = {"gasoline": 50.0}
+    mock_repo.aggregate_quantities.return_value = {"diesel": 100.0}
+    mock_repo.aggregate_other_uses_quantity.return_value = {"gasoline": 50.0}
 
     # Define test inputs
     compliance_report_id = 1
@@ -798,10 +798,10 @@ async def test_calculate_fuel_quantities_fossil_derived(
 
     # Assertions
     assert result == {"diesel": 100.0, "gasoline": 50.0}
-    mock_repo.aggregate_fuel_supplies.assert_called_once_with(
+    mock_repo.aggregate_quantities.assert_called_once_with(
         effective_fuel_supplies, fossil_derived
     )
-    mock_repo.aggregate_other_uses.assert_awaited_once_with(
+    mock_repo.aggregate_other_uses_quantity.assert_awaited_once_with(
         compliance_report_id, fossil_derived
     )
     mock_repo.aggregate_allocation_agreements.assert_not_called()
@@ -815,8 +815,8 @@ async def test_calculate_fuel_quantities_renewable(
     mock_fuel_supply_repo,
 ):
     # Create a mock repository
-    mock_repo.aggregate_fuel_supplies.return_value = {"gasoline": 200.0}
-    mock_repo.aggregate_other_uses.return_value = {"diesel": 75.0, "jet-fuel": 25.0}
+    mock_repo.aggregate_quantities.return_value = {"gasoline": 200.0}
+    mock_repo.aggregate_other_uses_quantity.return_value = {"diesel": 75.0, "jet-fuel": 25.0}
 
     # Define test inputs
     compliance_report_id = 2
@@ -829,10 +829,10 @@ async def test_calculate_fuel_quantities_renewable(
     )
 
     # Assertions
-    mock_repo.aggregate_fuel_supplies.assert_called_once_with(
+    mock_repo.aggregate_quantities.assert_called_once_with(
         effective_fuel_supplies, fossil_derived
     )
-    mock_repo.aggregate_other_uses.assert_awaited_once_with(
+    mock_repo.aggregate_other_uses_quantity.assert_awaited_once_with(
         compliance_report_id, fossil_derived
     )
     assert result == {"gasoline": 200.0, "diesel": 75.0, "jet-fuel": 25.0}
