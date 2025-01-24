@@ -416,7 +416,7 @@ def upgrade():
             (4, 'Adjacent'),
             (5, 'Pipeline'),
             (6, 'Marine-international'),
-            (7, 'Marine'),
+            (7, 'Marine')
         ON CONFLICT (transport_mode_id) DO NOTHING;
     """
     )
