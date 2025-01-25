@@ -7,6 +7,7 @@ from lcfs.db.models.notification import (
 )
 from lcfs.db.models.organization import Organization
 from lcfs.db.models.user import UserProfile
+from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserRole import UserRole
 from lcfs.web.api.base import (
     NotificationTypeEnum,
@@ -458,3 +459,102 @@ class NotificationRepository:
         )
         result = await self.db.execute(query)
         return result.scalars().all()
+
+    @repo_handler
+    async def delete_subscriptions_for_user_role(
+        self, user_profile_id: int, role: RoleEnum
+    ) -> None:
+        """
+        Deletes all subscriptions for a user based on the role provided.
+        """
+        # Get the role id
+        role_obj_stmt = select(Role).where(Role.name == role)
+        role_obj_result = await self.db.execute(role_obj_stmt)
+        role_obj = role_obj_result.scalar_one_or_none()
+
+        if not role_obj:
+            # If the RoleEnum has no matching row in the DB, skip or raise an error
+            logger.warning(
+                f"Role '{role.value}' not found in the DB. No subscriptions deleted."
+            )
+            return
+
+        # Find all notification type ids matching that role id
+        subquery = select(NotificationType.notification_type_id).where(
+            NotificationType.role_id == role_obj.role_id
+        )
+
+        # Delete all subscriptions for those notification type ids
+        stmt = (
+            delete(NotificationChannelSubscription)
+            .where(NotificationChannelSubscription.user_profile_id == user_profile_id)
+            .where(NotificationChannelSubscription.notification_type_id.in_(subquery))
+        )
+
+        await self.db.execute(stmt)
+        await self.db.flush()
+
+    @repo_handler
+    async def add_subscriptions_for_user_role(
+        self, user_profile_id: int, role: RoleEnum
+    ) -> None:
+        """
+        Adds subscriptions for a user based on the role provided.
+        """
+        # Get the role id
+        role_obj_stmt = select(Role).where(Role.name == role)
+        role_obj_result = await self.db.execute(role_obj_stmt)
+        role_obj = role_obj_result.scalar_one_or_none()
+
+        if not role_obj:
+            logger.warning(
+                f"Role '{role.value}' not found in the DB. Cannot add subscriptions."
+            )
+            return
+
+        # Get all channels that are enabled & set to subscribe by default
+        channels_stmt = select(NotificationChannel.notification_channel_id).where(
+            NotificationChannel.enabled == True,
+            NotificationChannel.subscribe_by_default == True,
+        )
+        channels_result = await self.db.execute(channels_stmt)
+        channel_ids = channels_result.scalars().all()
+
+        if not channel_ids:
+            logger.info("No enabled notification channels found.")
+            return
+
+        # Get all notification types with that role_id
+        notif_type_stmt = select(NotificationType).where(
+            NotificationType.role_id == role_obj.role_id
+        )
+        types_result = await self.db.execute(notif_type_stmt)
+        matching_types = types_result.scalars().all()
+
+        if not matching_types:
+            logger.info(f"No notification types found for role_id={role_obj.role_id}")
+            return
+
+        # For each matching notification_type & each channel, insert if missing
+        for nt in matching_types:
+            for ch_id in channel_ids:
+                # Check if there's already a subscription for (user, type, channel)
+                sub_exists_query = select(NotificationChannelSubscription).where(
+                    NotificationChannelSubscription.user_profile_id == user_profile_id,
+                    NotificationChannelSubscription.notification_type_id
+                    == nt.notification_type_id,
+                    NotificationChannelSubscription.notification_channel_id == ch_id,
+                )
+                existing_sub_result = await self.db.execute(sub_exists_query)
+                existing_sub = existing_sub_result.scalar_one_or_none()
+
+                if not existing_sub:
+                    new_sub = NotificationChannelSubscription(
+                        user_profile_id=user_profile_id,
+                        notification_type_id=nt.notification_type_id,
+                        notification_channel_id=ch_id,
+                        is_enabled=True,
+                    )
+                    self.db.add(new_sub)
+
+        await self.db.flush()

@@ -74,7 +74,7 @@ export const FuelSupplySummary = ({ data, status }) => {
         valueGetter: (params) => params.data.fuelCategory?.category
       },
       {
-        headerName: t('fuelSupply:fuelSupplyColLabels.endUse'),
+        headerName: t('fuelSupply:fuelSupplyColLabels.endUseId'),
         field: 'endUse',
         valueGetter: (params) => params.data.endUseType?.type || 'Any'
       },

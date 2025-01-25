@@ -322,7 +322,7 @@ export const AddEditAllocationAgreements = () => {
               <BCTypography
                 key={i}
                 variant="body4"
-                color="primary"
+                color="text"
                 my={0.5}
                 component="div"
               >

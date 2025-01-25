@@ -13,26 +13,6 @@ def updateTransferEffectiveDateSQL = """
       AND update_date::date = transaction_effective_date::date; -- On the same day as transaction_effective_date
 """
 
-// Cleanup queries
-def cleanUpQueries = [
-    """
-    -- 105
-    UPDATE "transaction"
-    SET compliance_units = -6994
-    WHERE transaction_id = 1491;
-    """,
-    """
-    -- 273
-    UPDATE compliance_report
-    SET transaction_id = null
-    WHERE transaction_id IN (1920, 5046, 5071, 5315);
-    """,
-    """
-    DELETE FROM "transaction"
-    WHERE transaction_id IN (1920, 5046, 5071, 5315);
-    """
-]
-
 // Fetch connection to the destination database
 def destinationDbcpService = context.controllerServiceLookup.getControllerService('3244bf63-0192-1000-ffff-ffffc8ec6d93')
 Connection destinationConn = null
@@ -48,12 +28,6 @@ try {
         log.info("Successfully executed UPDATE on 'public.transfer'. Rows affected: ${rowsUpdated}")
     }
 
-    // Step 2: Execute the cleanup queries in sequence
-    cleanUpQueries.each { query ->
-        try (PreparedStatement stmt = destinationConn.prepareStatement(query)) {
-            stmt.executeUpdate()
-        }
-    }
     log.info("Cleanup queries executed successfully.")
 
     // Commit transaction

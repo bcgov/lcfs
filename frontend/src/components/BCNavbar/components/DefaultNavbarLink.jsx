@@ -18,7 +18,8 @@ function DefaultNavbarLink({
   route,
   light,
   onClick,
-  isMobileView
+  isMobileView,
+  sx = {}
 }) {
   const [hover, setHover] = useState(false)
   return (
@@ -60,7 +61,8 @@ function DefaultNavbarLink({
         transition: transitions.create('transform', {
           easing: transitions.easing.sharp,
           duration: transitions.duration.shorter
-        })
+        }),
+        ...sx
       })}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}

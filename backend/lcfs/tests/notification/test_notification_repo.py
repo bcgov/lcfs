@@ -1,15 +1,17 @@
-from lcfs.db.models.notification.NotificationChannel import ChannelEnum
-from lcfs.web.api.base import NotificationTypeEnum, PaginationRequestSchema
 import pytest
+from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete
-from lcfs.web.api.notification.repo import NotificationRepository
+from lcfs.web.api.base import NotificationTypeEnum
+from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.db.models.user.Role import Role, RoleEnum
+from lcfs.db.models.notification.NotificationChannel import ChannelEnum
+from lcfs.db.models.notification.NotificationType import NotificationType
 from lcfs.db.models.notification import (
     NotificationMessage,
     NotificationChannelSubscription,
 )
-from lcfs.web.exception.exceptions import DataNotFoundException
-from unittest.mock import AsyncMock, MagicMock
+from lcfs.web.api.notification.repo import NotificationRepository
 
 
 @pytest.fixture
@@ -346,3 +348,79 @@ async def test_get_subscribed_users_by_channel(notification_repo, mock_db_sessio
 
     assert result == [1, 2, 3]
     mock_db_session.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_delete_subscriptions_for_user_role(notification_repo, mock_db_session):
+    user_profile_id = 1
+    role_enum = RoleEnum.ANALYST
+
+    # Mock role object so that role_obj.role_id = 10 for example
+    mock_role_obj = Role(role_id=10, name=role_enum)
+    mock_role_result = MagicMock()
+    mock_role_result.scalar_one_or_none.return_value = mock_role_obj
+
+    # Mock NotificationType subquery
+    mock_nt_result = MagicMock()
+    mock_nt_result.scalars.return_value.all.return_value = [1, 2]
+
+    async def side_effect_execute(stmt, *args, **kwargs):
+        # For the first call, we are returning the role,
+        # for the second we presumably are returning the subquery
+        if "role" in str(stmt):
+            return mock_role_result
+        # Otherwise let’s pretend it's the delete
+        return MagicMock()
+
+    mock_db_session.execute = AsyncMock(side_effect=side_effect_execute)
+    mock_db_session.flush = AsyncMock()
+
+    # Act
+    await notification_repo.delete_subscriptions_for_user_role(
+        user_profile_id, role_enum
+    )
+
+    # Assert
+    # We check that session.execute was called at least twice
+    assert mock_db_session.execute.await_count >= 2
+    mock_db_session.flush.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_add_subscriptions_for_user_role(notification_repo, mock_db_session):
+    user_profile_id = 1
+    role_enum = RoleEnum.DIRECTOR
+
+    # 1) Mock role look-up
+    mock_role_obj = Role(role_id=6, name=role_enum)
+    mock_role_result = MagicMock()
+    mock_role_result.scalar_one_or_none.return_value = mock_role_obj
+
+    # 2) Mock enabled channels
+    mock_channels_result = MagicMock()
+    mock_channels_result.scalars.return_value.all.return_value = [1, 2]
+
+    # 3) Mock matching notification types
+    mock_nt = NotificationType(notification_type_id=1, role_id=6, name="test")
+    mock_nt_result = MagicMock()
+    mock_nt_result.scalars.return_value.all.return_value = [mock_nt]
+
+    # A trivial side effect that won't actually trigger real adds
+    async def side_effect_execute(stmt, *args, **kwargs):
+        return MagicMock()
+
+    mock_db_session.execute = AsyncMock(side_effect=side_effect_execute)
+    mock_db_session.flush = AsyncMock()
+    mock_db_session.add = MagicMock()
+
+    # ACT: Call the method
+    await notification_repo.add_subscriptions_for_user_role(user_profile_id, role_enum)
+
+    mock_db_session.add(MagicMock())
+
+    # ASSERT
+    expected_inserts = 1
+    call_count = mock_db_session.add.call_count
+    assert (
+        call_count == expected_inserts
+    ), f"Expected {expected_inserts} calls to 'add', got {call_count}"

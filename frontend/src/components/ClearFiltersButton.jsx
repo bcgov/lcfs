@@ -1,9 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
-import BCTypography from '@/components/BCTypography'
 import { faFilterCircleXmark } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faEraser } from '@fortawesome/free-solid-svg-icons';
 
 export const ClearFiltersButton = ({
   onClick,
@@ -22,10 +20,7 @@ export const ClearFiltersButton = ({
       color={color}
       onClick={onClick}
       startIcon={<FontAwesomeIcon icon={faFilterCircleXmark} className="small-icon" />}
-      sx={{
-        minHeight: '36px',
-        ...sx
-      }}
+      sx={{...sx}}
     >
       {t('common:ClearFilters')}
     </BCButton>
