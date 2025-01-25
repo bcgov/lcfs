@@ -966,7 +966,7 @@ async def test_get_all_org_reported_years_not_found(
 def test_aggregate_fuel_supplies(
     compliance_report_repo, fuel_supplies, fossil_derived, expected
 ):
-    result = compliance_report_repo.aggregate_fuel_supplies(
+    result = compliance_report_repo.aggregate_quantities(
         fuel_supplies, fossil_derived
     )
 
@@ -981,7 +981,7 @@ async def test_aggregate_other_uses(compliance_report_repo, dbsession):
     ]
     dbsession.execute = AsyncMock(return_value=mock_result)
 
-    result = await compliance_report_repo.aggregate_other_uses(1, True)
+    result = await compliance_report_repo.aggregate_other_uses_quantity(1, True)
 
     assert result == {"gasoline": 50.0, "ethanol": 75.0}
     dbsession.execute.assert_awaited_once()

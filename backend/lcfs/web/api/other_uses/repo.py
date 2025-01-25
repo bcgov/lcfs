@@ -107,7 +107,7 @@ class OtherUsesRepository:
         return result
 
     async def get_effective_other_uses(
-        self, compliance_report_group_uuid: str
+        self, compliance_report_group_uuid: str, return_model: bool = False
     ) -> List[OtherUsesSchema]:
         """
         Queries other uses from the database for a specific compliance report.
@@ -175,6 +175,9 @@ class OtherUsesRepository:
 
         result = await self.db.execute(other_uses_select)
         other_uses = result.unique().scalars().all()
+
+        if return_model:
+            return other_uses
 
         return [
             OtherUsesSchema(

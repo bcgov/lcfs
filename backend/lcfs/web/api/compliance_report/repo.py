@@ -1,6 +1,6 @@
 from collections import defaultdict
 from datetime import datetime
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union
 
 import structlog
 from fastapi import Depends
@@ -745,23 +745,25 @@ class ComplianceReportRepository:
         )
         return result or 0
 
-    def aggregate_fuel_supplies(
-        self, fuel_supplies: List[FuelSupply], fossil_derived: bool
+    def aggregate_quantities(
+        self, records: List[Union[FuelSupply, OtherUses]], fossil_derived: bool
     ) -> Dict[str, float]:
-        """Aggregate quantities from fuel supplies based on fossil_derived flag."""
+        """Common aggregation logic for both FuelSupply and OtherUses"""
         fuel_quantities = defaultdict(float)
 
-        # Use a list comprehension to filter and iterate in one step
-        for fs in (
-            fs for fs in fuel_supplies if fs.fuel_type.fossil_derived == fossil_derived
-        ):
-            fuel_category = self._format_category(fs.fuel_category.category)
-            fuel_quantities[fuel_category] += fs.quantity
+        for record in records:
+            # Check if record matches fossil_derived filter
+            if isinstance(record, FuelSupply) and record.fuel_type.fossil_derived == fossil_derived:
+                fuel_category = self._format_category(record.fuel_category.category)
+                fuel_quantities[fuel_category] += record.quantity
+            elif isinstance(record, OtherUses) and record.fuel_type.fossil_derived == fossil_derived:
+                fuel_category = self._format_category(record.fuel_category.category)
+                fuel_quantities[fuel_category] += record.quantity_supplied
 
         return dict(fuel_quantities)
 
     @repo_handler
-    async def aggregate_other_uses(
+    async def aggregate_other_uses_quantity(
         self, compliance_report_id: int, fossil_derived: bool
     ) -> Dict[str, float]:
         """Aggregate quantities from other uses."""
