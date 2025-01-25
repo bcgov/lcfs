@@ -26,7 +26,7 @@ export const AddEditFinalSupplyEquipments = () => {
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'finalSupplyEquipment', 'reports'])
-  const subTitles = t('finalSupplyEquipment:reportingResponsibilityInfo', {
+  const guides = t('finalSupplyEquipment:reportingResponsibilityInfo', {
     returnObjects: true
   })
   const params = useParams()
@@ -243,11 +243,11 @@ export const AddEditFinalSupplyEquipments = () => {
             {t('finalSupplyEquipment:fseTitle')}
           </BCTypography>
           <BCBox my={2.5} component="div">
-            {subTitles.map((v, i) => (
+            {guides.map((v, i) => (
               <BCTypography
                 key={i}
                 variant="body4"
-                color="primary"
+                color="text"
                 mt={0.5}
                 component="div"
                 dangerouslySetInnerHTML={{ __html: v }}

@@ -331,6 +331,7 @@ class UserRepository:
             org = org_result.scalar_one_or_none()
             db_user_profile.organization = org
         self.db.add(db_user_profile)
+        await self.db.flush()
         return db_user_profile
 
     @repo_handler

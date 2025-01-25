@@ -94,7 +94,8 @@ export const LegacyAssessmentCard = ({
               <Box>
                 <BCButton
                   data-test="view-legacy"
-                  size="large"
+                  size="small"
+                  className="svg-icon-button"
                   variant="contained"
                   color="primary"
                   startIcon={<AssignmentIcon />}
