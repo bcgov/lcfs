@@ -298,7 +298,15 @@ try {
         finishedModes.each { mode ->
             def insertFinishedMode = destinationConn.prepareStatement(insertFinishedFuelTransportModeSQL)
             insertFinishedMode.setInt(1, newFuelCodeId)
-            insertFinishedMode.setInt(2, transportModeMapping[mode] ?: mode)
+            
+            if (transportModeMapping[mode] != null) {
+                insertFinishedMode.setInt(2, transportModeMapping[mode])
+            } else if (mode != null) {
+                insertFinishedMode.setInt(2, mode)
+            } else {
+                insertFinishedMode.setNull(2, java.sql.Types.INTEGER)
+            }
+            
             insertFinishedMode.executeUpdate()
         }
 
@@ -306,7 +314,15 @@ try {
         feedstockModes.each { mode ->
             def insertFeedstockMode = destinationConn.prepareStatement(insertFeedstockFuelTransportModeSQL)
             insertFeedstockMode.setInt(1, newFuelCodeId)
-            insertFeedstockMode.setInt(2, transportModeMapping[mode] ?: mode)
+            
+            if (transportModeMapping[mode] != null) {
+                insertFeedstockMode.setInt(2, transportModeMapping[mode])
+            } else if (mode != null) {
+                insertFeedstockMode.setInt(2, mode)
+            } else {
+                insertFeedstockMode.setNull(2, java.sql.Types.INTEGER)
+            }
+            
             insertFeedstockMode.executeUpdate()
         }
     }
