@@ -247,7 +247,7 @@ export const AddEditFuelExports = () => {
           <BCTypography variant="h5" color="primary">
             {t('fuelExport:addFuelExportRowsTitle')}
           </BCTypography>
-          <BCTypography variant="body4" color="primary" my={2} component="div">
+          <BCTypography variant="body4" color="text" my={2} component="div">
             {t('fuelExport:fuelExportGuide')}
           </BCTypography>
         </div>

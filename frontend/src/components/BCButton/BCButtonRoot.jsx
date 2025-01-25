@@ -33,8 +33,8 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
     // boxShadow value when button is hovered
     const hoveredBoxShadowValue = colored[color]
       ? `${boxShadow(
-          [0, 14],
-          [26, -12],
+          [0, -10],
+          [26, -32],
           palette[color].main,
           0.4
         )}, ${boxShadow(
@@ -62,6 +62,7 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
     }
 
     return {
+      border: '1px solid rgba(0, 51, 102)',
       background: backgroundValue,
       color: colorValue,
       boxShadow: boxShadowValue,
@@ -291,7 +292,8 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
     ...(variant === 'gradient' && gradientStyles()),
     ...(variant === 'text' && textStyles()),
     ...(circular && circularStyles()),
-    ...(iconOnly && iconOnlyStyles())
+    ...(iconOnly && iconOnlyStyles()),
+    maxHeight: pxToRem(39),
   }
 })
 

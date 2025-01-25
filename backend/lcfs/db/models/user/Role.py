@@ -43,7 +43,9 @@ class Role(BaseModel, Auditable):
     )
     display_order = Column(Integer, comment="Relative rank in display sorting order")
 
+    # Relationships
     user_roles = relationship("UserRole", back_populates="role")
+    notification_type_roles = relationship("NotificationType", back_populates="role")
 
     def __repr__(self):
         return "<Role %r>" % self.name
