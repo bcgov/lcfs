@@ -1,5 +1,5 @@
 import enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Float, DateTime
 from lcfs.db.base import BaseModel
 
 
@@ -7,6 +7,7 @@ class TransactionViewTypeEnum(enum.Enum):
     Transfer = "Transfer"
     InitiativeAgreement = "InitiativeAgreement"
     AdminAdjustment = "AdminAdjustment"
+    # ComplianceReport = "ComplianceReport"
 
 
 # This class represents a database view for transactions. It is intended to consolidate
@@ -23,22 +24,79 @@ class TransactionView(BaseModel):
     __table_args__ = {"extend_existing": True}
 
     # Columns definitions mapping to the database fields
-    # id and type columns are defined as a composite primary key.
-    transaction_id = Column(Integer, primary_key=True)
-    transaction_type = Column(String, primary_key=True)
-    description = Column(String)
-    from_organization_id = Column(Integer)
-    from_organization = Column(String)
-    to_organization_id = Column(Integer)
-    to_organization = Column(String)
-    quantity = Column(Integer)
-    price_per_unit = Column(Float)
-    status = Column(String)
-    compliance_period = Column(String)
-    comment = Column(String)
-    category = Column(String)
-    transaction_effective_date = Column(DateTime)
-    recorded_date = Column(DateTime)
-    approved_date = Column(DateTime)
-    create_date = Column(DateTime)
-    update_date = Column(DateTime)
+    # id, type and description columns are defined as a composite primary key.
+    transaction_id = Column(
+        Integer,
+        primary_key=True,
+        comment="Unique identifier for the transaction.",
+    )
+    transaction_type = Column(
+        String,
+        primary_key=True,
+        comment="Type of transaction (e.g., Transfer, InitiativeAgreement).",
+    )
+    description = Column(
+        String,
+        primary_key=True,
+        comment="Brief description of the transaction.",
+    )
+    compliance_period = Column(
+        String,
+        comment="Compliance period associated with the transaction (year).",
+    )
+    from_organization_id = Column(
+        Integer,
+        comment="Identifier of the organization initiating the transaction.",
+    )
+    from_organization = Column(
+        String,
+        comment="Name of the organization initiating the transaction.",
+    )
+    to_organization_id = Column(
+        Integer,
+        comment="Identifier of the organization receiving the transaction.",
+    )
+    to_organization = Column(
+        String,
+        comment="Name of the organization receiving the transaction.",
+    )
+    quantity = Column(
+        Integer,
+        comment="Quantity of units involved in the transaction.",
+    )
+    price_per_unit = Column(
+        Float,
+        comment="Price per unit of the transaction.",
+    )
+    status = Column(
+        String,
+        comment="Status of the transaction (e.g., Approved, Pending).",
+    )
+    comment = Column(
+        String,
+        comment="Additional comments on the transaction.",
+    )
+    category = Column(
+        String,
+        comment="Category of the transaction.",
+    )
+    transaction_effective_date = Column(
+        DateTime,
+        comment="Date the transaction becomes effective.",
+    )
+    recorded_date = Column(
+        DateTime,
+        comment="Date the transaction was recorded.",
+    )
+    approved_date = Column(
+        DateTime,
+        comment="Date the transaction was approved.",
+    )
+    create_date = Column(
+        DateTime,
+        comment="Date the transaction record was created.",
+    )
+    update_date = Column(
+        DateTime,
+        comment="Date the transaction record was last updated.",
+    )
