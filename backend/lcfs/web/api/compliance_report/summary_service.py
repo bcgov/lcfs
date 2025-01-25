@@ -591,11 +591,11 @@ class ComplianceReportSummaryService:
                 line=line,
                 description=(
                     RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                        "{:,}".format(int(summary_lines["4"]["gasoline"] * 0.05)),
-                        "{:,}".format(int(summary_lines["4"]["diesel"] * 0.05)),
-                        "{:,}".format(int(summary_lines["4"]["jet_fuel"] * 0.05)),
+                        "{:,}".format(round(summary_lines[4]["gasoline"] * 0.05)),
+                        "{:,}".format(round(summary_lines[4]["diesel"] * 0.05)),
+                        "{:,}".format(round(summary_lines[4]["jet_fuel"] * 0.05)),
                     )
-                    if (line in ["6", "8"])
+                    if (line in [6, 8])
                     else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
                 ),
                 field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
