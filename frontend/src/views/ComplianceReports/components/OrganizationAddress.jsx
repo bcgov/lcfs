@@ -6,7 +6,7 @@ import { FormProvider, useForm } from 'react-hook-form'
 import { BCFormText } from '@/components/BCForm/index.js'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { defaultValues } from '@/views/Users/AddEditUser/_schema.js'
-import { Box, Stack } from '@mui/material'
+import { Box, Stack, List, ListItem } from '@mui/material'
 import BCButton from '@/components/BCButton/index.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
@@ -115,19 +115,31 @@ export const OrganizationAddress = ({
   return (
     <BCTypography variant="body4" color="text">
       {!isEditing && (
-        <ul>
+        <List
+          sx={{
+            listStyleType: 'disc',
+            listStylePosition: 'outside',
+            pl: 2.5,
+            '& .MuiListItem-root': {
+              display: 'list-item',
+              py: 0.5,
+              paddingLeft: 0
+            }
+          }}
+        >
           {formFields(t).map(({ name, label }) => (
-            <li key={name}>
+            <ListItem key={name} sx={{ display: 'list-item', padding: 0 }}>
               <strong>{label}:</strong>{' '}
               {snapshotData[name] || (
                 <BCTypography variant="body4" color="error">
                   Required
                 </BCTypography>
               )}
-            </li>
+            </ListItem>
           ))}
-        </ul>
+        </List>
       )}
+
       {isEditing && (
         <form onSubmit={handleSubmit(onSubmit, onError)}>
           <FormProvider {...{ control, setValue }}>

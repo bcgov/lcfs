@@ -15,7 +15,7 @@ export const HeaderComponent = () => {
       <>
         <BCTypography
           component={NavLink}
-          to={!data?.isGovernmentUser && ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', data?.organization?.organizationId)}
+          to={!data?.isGovernmentUser && ROUTES.ORGANIZATION}
           className="organization_name"
           variant="body1"
           align="right"

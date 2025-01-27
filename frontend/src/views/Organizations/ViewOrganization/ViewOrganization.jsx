@@ -255,7 +255,6 @@ export const ViewOrganization = () => {
           <ClearFiltersButton
             onClick={handleClearFilters}
             sx={{
-              height: newUserButtonRef.current?.offsetHeight || '36px',
               marginRight: '8px',
               marginBottom: '8px',
               minWidth: 'fit-content',

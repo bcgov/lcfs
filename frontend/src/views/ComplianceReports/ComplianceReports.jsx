@@ -151,7 +151,6 @@ export const ComplianceReports = () => {
         <ClearFiltersButton
           onClick={handleClearFilters}
           sx={{
-            height: newButtonRef.current?.offsetHeight || '36px',
             display: 'flex',
             alignItems: 'center'
           }}

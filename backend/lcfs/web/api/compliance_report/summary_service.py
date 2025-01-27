@@ -2,7 +2,7 @@ import logging
 import re
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict, Optional, Union
 
 from fastapi import Depends
 from sqlalchemy import inspect
@@ -10,6 +10,7 @@ from sqlalchemy import inspect
 from lcfs.db.models import FuelSupply
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
@@ -27,6 +28,7 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
+from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
@@ -46,8 +48,8 @@ class ComplianceReportSummaryService:
         fuel_supply_repo: FuelSupplyRepository = Depends(FuelSupplyRepository),
         fuel_export_repo: FuelExportRepository = Depends(FuelExportRepository),
         allocation_agreement_repo: AllocationAgreementRepository = Depends(
-            AllocationAgreementRepository
-        ),
+            AllocationAgreementRepository),
+        other_uses_repo: OtherUsesRepository = Depends(OtherUsesRepository),
     ):
         self.repo = repo
         self.notional_transfer_service = notional_transfer_service
@@ -55,6 +57,7 @@ class ComplianceReportSummaryService:
         self.fuel_supply_repo = fuel_supply_repo
         self.fuel_export_repo = fuel_export_repo
         self.allocation_agreement_repo = allocation_agreement_repo
+        self.other_uses_repo = other_uses_repo
 
     def convert_summary_to_dict(
         self, summary_obj: ComplianceReportSummary
@@ -345,6 +348,11 @@ class ComplianceReportSummaryService:
             compliance_report_group_uuid=compliance_report.compliance_report_group_uuid
         )
 
+        # Get effective other uses
+        effective_other_uses = await self.other_uses_repo.get_effective_other_uses(
+            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid, return_model=True
+        )
+
         # Fetch fuel quantities
         # line 1
         fossil_quantities = await self.calculate_fuel_quantities(
@@ -357,9 +365,15 @@ class ComplianceReportSummaryService:
             fs for fs in effective_fuel_supplies if fs.fuel_type.renewable
         ]
 
+        filtered_renewable_other_uses = [
+            ou for ou in effective_other_uses if ou.fuel_type.renewable
+        ]
+
+        all_renewable_records = [*filtered_renewable_fuel_supplies, *filtered_renewable_other_uses]
+
         renewable_quantities = await self.calculate_fuel_quantities(
             compliance_report.compliance_report_id,
-            filtered_renewable_fuel_supplies,
+            all_renewable_records,
             fossil_derived=False,
         )
 
@@ -591,11 +605,11 @@ class ComplianceReportSummaryService:
                 line=line,
                 description=(
                     RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                        "{:,}".format(int(summary_lines["4"]["gasoline"] * 0.05)),
-                        "{:,}".format(int(summary_lines["4"]["diesel"] * 0.05)),
-                        "{:,}".format(int(summary_lines["4"]["jet_fuel"] * 0.05)),
+                        "{:,}".format(round(summary_lines[4]["gasoline"] * 0.05)),
+                        "{:,}".format(round(summary_lines[4]["diesel"] * 0.05)),
+                        "{:,}".format(round(summary_lines[4]["jet_fuel"] * 0.05)),
                     )
-                    if (line in ["6", "8"])
+                    if (line in [6, 8])
                     else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
                 ),
                 field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
@@ -741,17 +755,17 @@ class ComplianceReportSummaryService:
     async def calculate_fuel_quantities(
         self,
         compliance_report_id: int,
-        effective_fuel_supplies: List[FuelSupply],
+        records: List[Union[FuelSupply, OtherUses]],
         fossil_derived: bool,
     ) -> Dict[str, float]:
         """
         Calculate the total quantities of fuels, separated by fuel category and fossil_derived flag.
         """
-        fuel_quantities = self.repo.aggregate_fuel_supplies(
-            effective_fuel_supplies, fossil_derived
+        fuel_quantities = self.repo.aggregate_quantities(
+            records, fossil_derived
         )
 
-        other_uses = await self.repo.aggregate_other_uses(
+        other_uses = await self.repo.aggregate_other_uses_quantity(
             compliance_report_id, fossil_derived
         )
 

@@ -263,6 +263,11 @@ def mock_fuel_supply_repo():
 def mock_fuel_export_repo():
     return AsyncMock(spec=FuelExportRepository)
 
+@pytest.fixture
+def mock_other_uses_repo():
+    mock_repo = MagicMock()
+    mock_repo.get_effective_other_uses = AsyncMock(return_value=MagicMock())
+    return mock_repo
 
 @pytest.fixture
 def compliance_report_summary_service(
@@ -271,6 +276,7 @@ def compliance_report_summary_service(
     mock_notional_transfer_service,
     mock_fuel_supply_repo,
     mock_fuel_export_repo,
+    mock_other_uses_repo
 ):
     service = ComplianceReportSummaryService()
     service.repo = mock_repo
@@ -278,6 +284,7 @@ def compliance_report_summary_service(
     service.notional_transfer_service = mock_notional_transfer_service
     service.fuel_supply_repo = mock_fuel_supply_repo
     service.fuel_export_repo = mock_fuel_export_repo
+    service.other_uses_repo = mock_other_uses_repo
     return service
 
 
