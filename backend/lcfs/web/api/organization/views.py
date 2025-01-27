@@ -239,7 +239,7 @@ async def update_transfer(
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def create_compliance_report(
     request: Request,
     organization_id: int,
@@ -258,7 +258,7 @@ async def create_compliance_report(
     response_model=ComplianceReportListSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def get_compliance_reports(
     request: Request,
     organization_id: int,
@@ -276,7 +276,7 @@ async def get_compliance_reports(
     response_model=List[CompliancePeriodSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def get_all_org_reported_years(
     request: Request,
     organization_id: int,
@@ -294,7 +294,7 @@ async def get_all_org_reported_years(
     response_model=ChainedComplianceReportSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def get_compliance_report_by_id(
     request: Request,
     organization_id: int,

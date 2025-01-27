@@ -32,6 +32,16 @@ export const LinkRenderer = (props) => {
     </Link>
   )
 }
+
+export const ConditionalLinkRenderer = (condition) => {
+  return (props) => {
+    if (condition(props)) {
+      return LinkRenderer(props)
+    } else {
+      return TextRenderer(props)
+    }
+  }
+}
 const BaseStatusRenderer = ({
   isView = false,
   value = false,

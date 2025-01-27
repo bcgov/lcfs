@@ -29,7 +29,9 @@ logger = structlog.get_logger(__name__)
     response_model=FuelTypeOptionsResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_fs_table_options(
     request: Request, compliancePeriod: str, service: FuelSupplyServices = Depends()
 ) -> FuelTypeOptionsResponse:
@@ -39,7 +41,9 @@ async def get_fs_table_options(
 @router.post(
     "/list-all", response_model=FuelSuppliesSchema, status_code=status.HTTP_200_OK
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_fuel_supply(
     request: Request,
     request_data: CommonPaginatedReportRequestSchema = Body(...),
@@ -50,11 +54,13 @@ async def get_fuel_supply(
     """Endpoint to get list of fuel supplied list for a compliance report"""
     try:
         compliance_report_id = request_data.compliance_report_id
-        compliance_report = await service.get_compliance_report_by_id(compliance_report_id)
+        compliance_report = await service.get_compliance_report_by_id(
+            compliance_report_id
+        )
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found"
+                detail="Compliance report not found",
             )
 
         await report_validate.validate_compliance_report_access(compliance_report)
@@ -80,7 +86,7 @@ async def get_fuel_supply(
         logger.exception("Error occurred", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while processing your request"
+            detail="An unexpected error occurred while processing your request",
         )
 
 
@@ -89,7 +95,9 @@ async def get_fuel_supply(
     response_model=Union[FuelSupplyResponseSchema, DeleteFuelSupplyResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def save_fuel_supply_row(
     request: Request,
     response: Response,
