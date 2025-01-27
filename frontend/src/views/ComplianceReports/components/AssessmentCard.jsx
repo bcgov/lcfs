@@ -20,7 +20,8 @@ import Loading from '@/components/Loading.jsx'
 
 export const AssessmentCard = ({
   orgData,
-  hasMet,
+  hasMetRenewables,
+  hasMetLowCarbon,
   hasSupplemental,
   isGovernmentUser,
   currentStatus,
@@ -82,7 +83,8 @@ export const AssessmentCard = ({
           : t('report:orgDetails')
       }
       editButton={
-        !isEditing && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && {
+        !isEditing &&
+        currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && {
           onClick: onEdit,
           text: 'Edit',
           id: 'edit'
@@ -124,7 +126,7 @@ export const AssessmentCard = ({
                         dangerouslySetInnerHTML={{
                           __html: t('report:assessmentLn1', {
                             name: orgData.name,
-                            hasMet: hasMet ? 'has met' : 'has not met'
+                            hasMet: hasMetRenewables ? 'has met' : 'has not met'
                           })
                         }}
                       />
@@ -145,7 +147,7 @@ export const AssessmentCard = ({
                         dangerouslySetInnerHTML={{
                           __html: t('report:assessmentLn2', {
                             name: orgData.name,
-                            hasMet: hasMet ? 'has met' : 'has not met'
+                            hasMet: hasMetLowCarbon ? 'has met' : 'has not met'
                           })
                         }}
                       />
@@ -206,7 +208,7 @@ export const AssessmentCard = ({
                 <BCButton
                   data-test="create-supplemental"
                   size="small"
-                  className='svg-icon-button'
+                  className="svg-icon-button"
                   variant="contained"
                   color="primary"
                   onClick={() => {
