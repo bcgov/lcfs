@@ -10,6 +10,7 @@ import localizedFormat from 'dayjs/plugin/localizedFormat'
 import duration from 'dayjs/plugin/duration'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
+import { formatDateWithTimezoneAbbr } from '@/utils/formatters.js'
 
 dayjs.extend(localizedFormat)
 dayjs.extend(duration)
@@ -52,21 +53,6 @@ function TransferHistory({ transferHistory }) {
   const diffYears = diff?.years() || 0
   const diffMonths = diff?.months() || 0
   const diffDays = diff?.days() || 0
-
-  const formatWithTimezoneAbbr = (dateInput) => {
-    const time = dayjs(dateInput)
-    const formattedDate = time.format('LLL')
-
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZoneName: 'short'
-    })
-    const parts = formatter.formatToParts(time.toDate())
-    const timeZoneName = parts.find(
-      (part) => part.type === 'timeZoneName'
-    ).value
-
-    return `${formattedDate} ${timeZoneName}`
-  }
 
   let category = 'A'
   if (
@@ -124,7 +110,7 @@ function TransferHistory({ transferHistory }) {
               <BCTypography variant="body2" component="div">
                 <b>{getTransferStatusLabel(item.transferStatus?.status)}</b>{' '}
                 <span> on </span>
-                {formatWithTimezoneAbbr(item.createDate)}
+                {formatDateWithTimezoneAbbr(item.createDate)}
                 <span> by </span>
                 <strong>
                   {' '}
