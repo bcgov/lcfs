@@ -77,7 +77,7 @@ const OrgTransactionsCard = () => {
             <FontAwesomeIcon
               key={index}
               icon={icon}
-              style={{ color: '#578260', marginLeft: 6 }}
+              style={{ color: '#547D59', marginLeft: 6 }}
             />
           ))}
         </BCTypography>
