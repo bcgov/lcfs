@@ -16,8 +16,8 @@ Given('the IDIR user is on the login page', () => {
 When('the IDIR user logs in with valid credentials', () => {
   cy.loginWith(
     'idir',
-    Cypress.env('admin_idir_username'),
-    Cypress.env('admin_idir_password')
+    Cypress.env('ADMIN_IDIR_USERNAME'),
+    Cypress.env('ADMIN_IDIR_PASSWORD')
   )
   cy.setIDIRRoles('analyst')
   cy.visit('/')
