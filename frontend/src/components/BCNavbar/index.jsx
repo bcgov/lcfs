@@ -34,6 +34,7 @@ function BCNavbar({
             }}
             color="inherit"
             elevation={0}
+            aria-label="main navigation"
           >
             <HeaderBar
               data={{ title, routes, beta, headerRightPart, menuRightPart }}

@@ -46,6 +46,7 @@ const AdminLinksCard = () => {
             >
               <BCTypography
                 variant="subtitle2"
+                component="p"
                 color="link"
                 sx={{
                   textDecoration: 'underline',

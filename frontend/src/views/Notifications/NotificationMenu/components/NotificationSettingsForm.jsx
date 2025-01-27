@@ -214,7 +214,7 @@ const NotificationSettingsForm = ({
               }}
             >
               <MailIcon
-                sx={{ color: '#578260', width: '22px', height: '22px' }}
+                sx={{ color: '#547D59', width: '22px', height: '22px' }}
               />
               <BCTypography variant="body2" sx={{ color: 'text.primary' }}>
                 {t('emailNotification')}
@@ -234,7 +234,7 @@ const NotificationSettingsForm = ({
               }}
             >
               <NotificationsIcon
-                sx={{ color: '#578260', width: '22px', height: '22px' }}
+                sx={{ color: '#547D59', width: '22px', height: '22px' }}
               />
               <BCTypography variant="body2" sx={{ color: 'text.primary' }}>
                 {t('inAppNotification')}
@@ -263,7 +263,7 @@ const NotificationSettingsForm = ({
                         >
                           <MailIcon
                             style={{
-                              color: '#578260',
+                              color: '#547D59',
                               width: '22px',
                               height: '22px'
                             }}
@@ -280,7 +280,7 @@ const NotificationSettingsForm = ({
                         >
                           <NotificationsIcon
                             style={{
-                              color: '#578260',
+                              color: '#547D59',
                               width: '22px',
                               height: '22px'
                             }}

@@ -82,7 +82,7 @@ const OrganizationsSummaryCard = () => {
             {selectedOrganization.name}
           </BCTypography>
           <BCTypography
-            style={{ fontSize: '32px', color: '#578260', marginBottom: '-2px' }}
+            style={{ fontSize: '32px', color: '#547D59', marginBottom: '-2px' }}
             component="span"
           >
             {numberFormatter(selectedOrganization.totalBalance)}
@@ -95,7 +95,7 @@ const OrganizationsSummaryCard = () => {
           </BCTypography>
           <Box display="flex" alignItems="center" mt={1}>
             <BCTypography
-              style={{ fontSize: '22px', color: '#578260' }}
+              style={{ fontSize: '22px', color: '#547D59' }}
               component="span"
             >
               ({numberFormatter(selectedOrganization.reservedBalance)} in
@@ -119,6 +119,7 @@ const OrganizationsSummaryCard = () => {
             }}
             variant="outlined"
             onChange={onSelectOrganization}
+            inputProps={{ 'aria-label': 'Select an organization' }}
           >
             <MenuItem key="default" value={t('txn:allOrganizations')}>
               {t('txn:allOrganizations')}
