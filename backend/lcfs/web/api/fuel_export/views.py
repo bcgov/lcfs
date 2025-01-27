@@ -39,7 +39,9 @@ get_async_db = dependencies.get_async_db_session
     response_model=FuelTypeOptionsResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_fuel_export_table_options(
     request: Request, compliancePeriod: str, service: FuelExportServices = Depends()
 ) -> FuelTypeOptionsResponse:
@@ -49,7 +51,9 @@ async def get_fuel_export_table_options(
 @router.post(
     "/list-all", response_model=FuelExportsSchema, status_code=status.HTTP_200_OK
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_fuel_exports(
     request: Request,
     request_data: CommonPaginatedReportRequestSchema = Body(...),
@@ -61,11 +65,13 @@ async def get_fuel_exports(
     try:
         compliance_report_id = request_data.compliance_report_id
 
-        compliance_report = await service.get_compliance_report_by_id(compliance_report_id)
+        compliance_report = await service.get_compliance_report_by_id(
+            compliance_report_id
+        )
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found"
+                detail="Compliance report not found",
             )
 
         await report_validate.validate_compliance_report_access(compliance_report)
@@ -91,9 +97,8 @@ async def get_fuel_exports(
         logger.exception("Error occurred", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while processing your request"
+            detail="An unexpected error occurred while processing your request",
         )
-
 
 
 @router.post(
@@ -101,7 +106,7 @@ async def get_fuel_exports(
     response_model=Union[FuelExportSchema, DeleteFuelExportResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def save_fuel_export_row(
     request: Request,
     request_data: FuelExportCreateUpdateSchema = Body(...),

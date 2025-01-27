@@ -166,7 +166,6 @@ export const Organizations = () => {
         <ClearFiltersButton
           onClick={handleClearFilters}
           sx={{
-            height: '36px',
             minWidth: 'fit-content',
             whiteSpace: 'nowrap'
           }}

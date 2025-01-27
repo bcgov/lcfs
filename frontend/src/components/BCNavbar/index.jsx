@@ -1,8 +1,6 @@
-import { AppBar, Divider, useMediaQuery, useTheme, Menu } from '@mui/material'
+import { AppBar, Divider, Menu, useMediaQuery, useTheme } from '@mui/material'
 import PopupState, { bindMenu } from 'material-ui-popup-state'
 import DefaultNavbarLink from '@/components/BCNavbar/components/DefaultNavbarLink'
-
-// BCGov Dashboard React base styles
 import { PropTypes } from 'prop-types'
 import MenuBar from '@/components/BCNavbar/components/MenuBar'
 import HeaderBar from '@/components/BCNavbar/components/HeaderBar'

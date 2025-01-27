@@ -1,4 +1,5 @@
 import { ROLES_BADGE_SIZE } from '@/constants/common'
+import dayjs from 'dayjs'
 
 /**
  * Formats a number with commas and specified decimal places.
@@ -293,4 +294,22 @@ export const isArrayEmpty = (data) => {
     }
   }
   return null
+}
+
+/**
+ * Takes a date string and returns the full formatted date with timestamp and timezone
+ * @param dateInput {string}
+ * @returns {string}
+ */
+export const formatDateWithTimezoneAbbr = (dateInput) => {
+  const time = dayjs(dateInput)
+  const formattedDate = time.format('LLL')
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZoneName: 'short'
+  })
+  const parts = formatter.formatToParts(time.toDate())
+  const timeZoneName = parts.find((part) => part.type === 'timeZoneName').value
+
+  return `${formattedDate} ${timeZoneName}`
 }

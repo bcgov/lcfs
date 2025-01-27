@@ -330,7 +330,7 @@ export const AddEditFuelSupplies = () => {
           <BCTypography variant="h5" color="primary">
             {t('fuelSupply:fuelSupplyTitle')}
           </BCTypography>
-          <BCTypography variant="body4" color="primary" my={2} component="div">
+          <BCTypography variant="body4" color="text" my={2} component="div">
             {t('fuelSupply:fuelSupplyGuide')}
           </BCTypography>
         </div>

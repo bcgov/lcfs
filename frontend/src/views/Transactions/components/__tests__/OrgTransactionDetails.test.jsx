@@ -29,14 +29,6 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Mock formatters
-vi.mock('@/utils/formatters', () => ({
-  numberFormatter: vi.fn(({ value }) => value.toLocaleString()),
-  dateFormatter: vi.fn(
-    ({ value }) => new Date(value).toISOString().split('T')[0]
-  )
-}))
-
 // Mock BCWidgetCard to avoid errors from nested components
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
   __esModule: true,
@@ -132,9 +124,10 @@ describe('OrgTransactionDetails Component', () => {
       )
     ).toBeInTheDocument()
     expect(screen.getByText(/Compliance units/)).toBeInTheDocument()
-    expect(screen.getAllByText(/1/)).toHaveLength(3)
+    expect(screen.getAllByText(/1/)).toHaveLength(4)
     expect(screen.getByText(/Effective date/)).toBeInTheDocument()
-    expect(screen.getAllByText(/2024-06-04/)).toHaveLength(2)
+    expect(screen.getAllByText(/2024-06-04/)).toHaveLength(1)
+    expect(screen.getAllByText(/June 4, 2024/)).toHaveLength(1)
     expect(screen.getByText(/Approved/)).toBeInTheDocument()
     expect(
       screen.getByText(/by the director under the Low Carbon Fuels Act/)
@@ -165,6 +158,7 @@ describe('OrgTransactionDetails Component', () => {
     expect(screen.getByText(/50,000/)).toBeInTheDocument()
     expect(screen.getByText(/Effective date/)).toBeInTheDocument()
     expect(screen.getByText(/2023-01-01/)).toBeInTheDocument()
+    expect(screen.getAllByText(/June 3, 2024/)).toHaveLength(1)
     expect(screen.getByText(/Approved/)).toBeInTheDocument()
     expect(
       screen.getByText(/by the director under the Low Carbon Fuels Act/)
@@ -197,9 +191,10 @@ describe('OrgTransactionDetails Component', () => {
       )
     ).toBeInTheDocument()
     expect(screen.getByText(/Compliance units/)).toBeInTheDocument()
-    expect(screen.getAllByText(/1/)).toHaveLength(3)
+    expect(screen.getAllByText(/1/)).toHaveLength(4)
     expect(screen.getByText(/Effective date/)).toBeInTheDocument()
-    expect(screen.getAllByText(/2024-06-04/)).toHaveLength(2)
+    expect(screen.getAllByText(/2024-06-04/)).toHaveLength(1)
+    expect(screen.getAllByText(/June 4, 2024/)).toHaveLength(1)
     expect(screen.getByText(/Approved/)).toBeInTheDocument()
     expect(
       screen.getByText(/by the director under the Low Carbon Fuels Act/)

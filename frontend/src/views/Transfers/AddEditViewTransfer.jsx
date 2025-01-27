@@ -480,6 +480,7 @@ export const AddEditViewTransfer = () => {
               <BCButton
                 data-test="button-cluster-back"
                 variant="outlined"
+                size="small"
                 color="primary"
                 style={{
                   gap: 8

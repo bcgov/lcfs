@@ -58,7 +58,7 @@ export const Introduction = ({ expanded, compliancePeriod }) => {
           id="compliance-report-intro"
           data-test="compliance-report-intro"
         >
-          <BCTypography color="primary" variant="h5" component="div">
+          <BCTypography color="primary" variant="h6" component="div">
             {t('report:introduction')}
           </BCTypography>
         </AccordionSummary>

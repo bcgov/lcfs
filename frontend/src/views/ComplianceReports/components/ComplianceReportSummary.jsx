@@ -118,7 +118,7 @@ const ComplianceReportSummary = ({
 
   return (
     <>
-      <BCTypography color="primary" variant="h5" mb={2} component="div">
+      <BCTypography color="primary" variant="h5" mb={1} mt={2} component="div">
         {t('report:summaryAndDeclaration')}
       </BCTypography>
       <Accordion defaultExpanded>
@@ -178,7 +178,7 @@ const ComplianceReportSummary = ({
                         key={config.id}
                         data-test={config.id}
                         id={config.id}
-                        size="large"
+                        size="small"
                         variant={config.variant}
                         color={config.color}
                         onClick={methods.handleSubmit(config.handler)}
