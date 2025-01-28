@@ -212,6 +212,22 @@ export const AddEditFuelSupplies = () => {
             endUseTypes.length === 1 ? endUseTypes[0].type : null
 
           params.node.setDataValue('endUseType', endUseValue)
+
+          if (selectedFuelType.provisions.length === 1 &&
+            !params.node.data.provisionOfTheAct
+          ) {
+            params.node.setDataValue(
+              'provisionOfTheAct',
+              selectedFuelType.provisions[0].name
+            )
+            params.node.setDataValue(
+              'provisionOfTheActId',
+              selectedFuelType.provisions[0].provisionOfTheActId
+            )
+          } else {
+            params.node.setDataValue('provisionOfTheAct', null)
+            params.node.setDataValue('provisionOfTheActId', null)
+          }
         }
       }
     },
