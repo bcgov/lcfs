@@ -19,7 +19,7 @@ const linkStyle = {
 
 const UserSettingsLink = ({ onClick, children }) => (
   <ListItemButton onClick={onClick}>
-    <Typography variant="subtitle2" sx={linkStyle}>
+    <Typography variant="subtitle2" sx={linkStyle} component="p">
       {children}
     </Typography>
   </ListItemButton>
@@ -65,7 +65,7 @@ const OrgUserSettingsCard = () => {
               {t('dashboard:orgUserSettings.help')}
               <FontAwesomeIcon
                 icon={faArrowUpRightFromSquare}
-                style={{ color: '#578260', marginLeft: 6 }}
+                style={{ color: '#547D59', marginLeft: 6 }}
               />
             </UserSettingsLink>
           </List>
