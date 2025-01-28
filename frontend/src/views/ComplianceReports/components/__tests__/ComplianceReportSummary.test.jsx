@@ -6,7 +6,6 @@ import {
   useGetComplianceReportSummary,
   useUpdateComplianceReportSummary
 } from '@/hooks/useComplianceReports'
-import { SUMMARY } from '@/constants/common'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { buttonClusterConfigFn } from '@/views/ComplianceReports/buttonConfigs'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -58,7 +57,7 @@ vi.mock('@/contexts/AuthContext', () => ({
 
 describe('ComplianceReportSummary', () => {
   const mockReportID = '123'
-  const mockSetHasMet = vi.fn() // Mock setHasMet function
+  const mockSetHasMet = vi.fn() // Mock hasMet functions
   const mockHandleSubmit = vi.fn() // Mock handleSubmit function
 
   beforeAll(() => {
@@ -75,7 +74,8 @@ describe('ComplianceReportSummary', () => {
     render(
       <ComplianceReportSummary
         reportID={mockReportID}
-        setHasMet={mockSetHasMet}
+        setHasMetRenewables={mockSetHasMet}
+        setHasMetLowCarbon={mockSetHasMet}
       />,
       { wrapper }
     )
@@ -98,7 +98,8 @@ describe('ComplianceReportSummary', () => {
     render(
       <ComplianceReportSummary
         reportID={mockReportID}
-        setHasMet={mockSetHasMet}
+        setHasMetRenewables={mockSetHasMet}
+        setHasMetLowCarbon={mockSetHasMet}
         alertRef={alertRef} // Pass the alertRef prop
       />,
       { wrapper }
@@ -112,12 +113,13 @@ describe('ComplianceReportSummary', () => {
       isLoading: false,
       isError: false,
       data: {
-        renewableFuelTargetSummary: {
-          [SUMMARY.LINE_1]: { gasoline: 100, diesel: 100, jetFuel: 100 },
-          [SUMMARY.LINE_2]: { gasoline: 50, diesel: 50, jetFuel: 50 },
-          [SUMMARY.LINE_4]: { gasoline: 30, diesel: 30, jetFuel: 30 }
-        },
-        lowCarbonFuelTargetSummary: [],
+        renewableFuelTargetSummary: [
+          { line: 1, gasoline: 100, diesel: 100, jetFuel: 100 },
+          { line: 2, gasoline: 50, diesel: 50, jetFuel: 50 },
+          { line: 4, gasoline: 30, diesel: 30, jetFuel: 30 },
+          { line: 11, value: 0 }
+        ],
+        lowCarbonFuelTargetSummary: [{ line: 20, value: 0 }],
         nonCompliancePenaltySummary: [{ totalValue: 0 }, { totalValue: 0 }]
       }
     })
@@ -126,7 +128,8 @@ describe('ComplianceReportSummary', () => {
       <ComplianceReportSummary
         reportID={mockReportID}
         currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
-        setHasMet={mockSetHasMet}
+        setHasMetRenewables={mockSetHasMet}
+        setHasMetLowCarbon={mockSetHasMet}
         methods={{ handleSubmit: mockHandleSubmit }}
         buttonClusterConfig={buttonClusterConfigFn({
           hasRoles: vi.fn(),
