@@ -27,7 +27,6 @@ LEFT JOIN
 ORDER BY 
     ev.name;
 
-
 -- Query 2: Verify Functions
 WITH expected_functions AS (
     SELECT 'refresh_transaction_aggregate' AS name
@@ -45,10 +44,6 @@ WITH expected_functions AS (
     SELECT 'update_organization_balance'
     UNION ALL
     SELECT 'update_count_transfers_in_progress'
-    UNION ALL
-    SELECT 'jsonb_diff'
-    UNION ALL
-    SELECT 'generate_json_delta'
     UNION ALL
     SELECT 'audit_trigger_func'
 )
@@ -136,6 +131,31 @@ LEFT JOIN
 ORDER BY 
     et.trigger_name;
 
+
+-- Audit functions validation
+SELECT
+    f.function_name,
+    f.schema_name,
+    CASE
+        WHEN p.oid IS NOT NULL THEN 'Exists'
+        ELSE 'Does Not Exist'
+    END AS existence
+FROM
+    (VALUES
+        ('jsonb_diff', 'public'),
+        ('generate_json_delta', 'public')
+    ) AS f(function_name, schema_name)
+LEFT JOIN
+    pg_catalog.pg_proc p ON p.proname = f.function_name
+    AND p.pronamespace = (
+        SELECT oid FROM pg_catalog.pg_namespace WHERE nspname = f.schema_name
+    )
+    AND p.proargtypes = ARRAY[
+        'jsonb'::regtype,
+        'jsonb'::regtype
+    ]::oidvector
+ORDER BY
+    f.function_name;
 
 -- Validation Query: Check Existence of Audit Triggers Considering Truncation
 
