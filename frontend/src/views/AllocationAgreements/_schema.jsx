@@ -328,14 +328,6 @@ export const allocationAgreementColDefs = (
           ?.provisions.find(
             (item) => item.name === params.newValue
           )?.provisionOfTheActId
-        if (params.data.provisionOfTheAct !== PROVISION_APPROVED_FUEL_CODE) {
-          const fuelType = optionsData?.fuelTypes?.find(
-            (obj) => params.data.fuelType === obj.fuelType
-          )
-          params.data.ciOfFuel =
-            fuelType?.energyDensity?.energyDensity ||
-            fuelType?.defaultCarbonIntensity
-        }
         params.data.fuelCode = null
         params.data.fuelCodeId = null
       }
