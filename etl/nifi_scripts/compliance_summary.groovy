@@ -5,7 +5,6 @@ import java.sql.ResultSet
 import java.sql.Timestamp
 import java.util.Calendar
 
-
 // =========================================
 // NiFi Controller Services
 // =========================================
@@ -19,6 +18,20 @@ try {
     sourceConn = sourceDbcpService.getConnection()
     destinationConn = destinationDbcpService.getConnection()
     destinationConn.setAutoCommit(false)
+
+    // =========================================
+    // Fetch Existing compliance_report_id from Destination
+    // =========================================
+    log.info("Fetching existing compliance_report_id from destination database.")
+    def existingComplianceReportIds = new HashSet<Integer>()
+    def fetchExistingIdsStmt = destinationConn.prepareStatement("SELECT compliance_report_id FROM public.compliance_report")
+    ResultSet existingRs = fetchExistingIdsStmt.executeQuery()
+    while (existingRs.next()) {
+        existingComplianceReportIds.add(existingRs.getInt("compliance_report_id"))
+    }
+    existingRs.close()
+    fetchExistingIdsStmt.close()
+    log.info("Fetched ${existingComplianceReportIds.size()} existing compliance_report_id(s) from destination.")
 
     // =========================================
     // Fetch Data from Source Table
@@ -124,7 +137,6 @@ try {
         )
     """
 
-
     PreparedStatement destinationStmt = destinationConn.prepareStatement(INSERT_DESTINATION_SUMMARY_SQL)
 
     // =========================================
@@ -138,6 +150,7 @@ try {
     // Processing Loop
     // =========================================
 
+    log.info("Starting to process source records and insert into destination.")
     while (rs.next()) {
         // Fetch source fields
         def summaryId = rs.getInt("summary_id")
@@ -154,6 +167,13 @@ try {
         def creditsOffsetA = rs.getInt('credits_offset_a')
         def creditsOffsetB = rs.getInt('credits_offset_b')
         def creditsOffsetC = rs.getInt('credits_offset_c')
+
+        // Check if compliance_report_id exists in destination
+        if (!existingComplianceReportIds.contains(complianceReportId)) {
+            log.warn("Compliance Report ID ${complianceReportId} does not exist in destination. Skipping insertion of summary_id ${summaryId}.")
+            totalSkipped++
+            continue // Skip to the next record
+        }
 
         // Create a summaryRecord map for the destination table
         def summaryRecord = [
@@ -204,7 +224,7 @@ try {
             line_19_units_to_be_exported                   : null, // No direct mapping
             line_20_surplus_deficit_units                  : null, // No direct mapping
             line_21_surplus_deficit_ratio                  : null, // No direct mapping
-            line_22_compliance_units_issued                : creditsOffset, // No direct mapping
+            line_22_compliance_units_issued                : creditsOffset,
             line_11_fossil_derived_base_fuel_gasoline      : null, // No direct mapping
             line_11_fossil_derived_base_fuel_diesel        : null, // No direct mapping
             line_11_fossil_derived_base_fuel_jet_fuel      : null, // No direct mapping
@@ -219,7 +239,6 @@ try {
             create_user                                 : "etl_user", // Replace with actual user or mapping
             update_user                                 : "etl_user"  // Replace with actual user or mapping
         ]
-
 
         // =========================================
         // Insertion into Destination Table
@@ -412,7 +431,7 @@ try {
             destinationStmt.setDouble(47, 0.0) // No mapping
 
             // 48. line_22_compliance_units_issued (float8) NOT NULL
-            destinationStmt.setDouble(48, summary.line_22_compliance_units_issued)
+            destinationStmt.setDouble(48, summaryRecord.line_22_compliance_units_issued)
 
             // 49. line_11_fossil_derived_base_fuel_gasoline (float8) NOT NULL
             destinationStmt.setDouble(49, 0.0) // No mapping
@@ -458,7 +477,7 @@ try {
             totalInserted++
 
         } catch (Exception e) {
-            log.error("Failed to insert summary_record for compliance_report_id: ${summaryRecord.compliance_report_id}", e)
+            log.error("Failed to insert summary_record for compliance_report_id: ${summaryRecord.compliance_report_id}, summary_id: ${summaryRecord.summary_id}", e)
             totalSkipped++
             // Continue processing other records
             continue
@@ -474,7 +493,7 @@ try {
         destinationConn.commit()
         log.info("Successfully inserted ${totalInserted} records into destination compliance_report_summary.")
         if (totalSkipped > 0) {
-            log.warn("Skipped ${totalSkipped} records due to insertion errors.")
+            log.warn("Skipped ${totalSkipped} records due to missing compliance_report_id in destination or insertion errors.")
         }
     } catch (Exception e) {
         log.error("Batch insertion failed. Rolling back.", e)
