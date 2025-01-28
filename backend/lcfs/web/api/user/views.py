@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 
 from lcfs.db import dependencies
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.base import PaginationRequestSchema, FilterModel
 from lcfs.web.api.role.schema import RoleSchema
 from lcfs.web.api.user.schema import (
     UserCreateSchema,
@@ -77,6 +77,13 @@ async def get_users(
         - filter: the actual filter value
         - field: Database Field that needs filtering.
     """
+    pagination.filters = [*pagination.filters, FilterModel(
+        filter_type="text",
+        type="blank",
+        field="organizationId",
+        filter=""
+    )]
+
     return await service.get_all_users(pagination)
 
 

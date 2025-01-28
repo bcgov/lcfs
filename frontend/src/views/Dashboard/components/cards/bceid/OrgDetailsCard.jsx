@@ -63,6 +63,7 @@ const OrgDetailsCard = () => {
                 >
                   <BCTypography
                     variant="subtitle2"
+                    component="p"
                     color="link"
                     sx={{
                       textDecoration: 'underline',
@@ -89,7 +90,7 @@ const OrgDetailsCard = () => {
                     {t('dashboard:orgDetails.createNewUsrLabel')}
                     <FontAwesomeIcon
                       icon={faShareFromSquare}
-                      style={{ color: '#578260', marginLeft: 6 }}
+                      style={{ color: '#547D59', marginLeft: 6 }}
                     />
                   </BCTypography>
                 </ListItemButton>

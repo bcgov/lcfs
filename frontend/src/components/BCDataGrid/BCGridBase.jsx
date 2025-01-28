@@ -76,20 +76,45 @@ export const BCGridBase = forwardRef(
       if (api) {
         // Clear filter model
         api.setFilterModel(null)
-  
+
         // Clear individual filters
         const columns = api.getColumnDefs()
-        columns.forEach(column => {
+        columns.forEach((column) => {
           api.destroyFilter(column.field)
         })
       }
     }, [])
-  
+
     // Expose clearFilters method through ref
     useImperativeHandle(ref, () => ({
       ...gridRef.current,
       clearFilters
     }))
+
+    const hideSelectsOutsideViewport = (e) => {
+      const borderSize = 2
+
+      // Ag Grid scrolls within 40px of the right edge of a column when clicking on it
+      const rightFuzz = 40
+      const cell = e.api.getFocusedCell()
+
+      if (!cell) {
+        return
+      }
+
+      const columnLeft = cell.column.getLeft()
+      const columnRight = columnLeft + cell.column.getActualWidth()
+
+      const gridLeft = e.api.getHorizontalPixelRange().left
+      const gridRight = e.api.getHorizontalPixelRange().right
+
+      if (
+        gridLeft > columnLeft + borderSize ||
+        gridRight < columnRight - borderSize - rightFuzz
+      ) {
+        e.api.clearFocusedCell()
+      }
+    }
 
     return (
       <AgGridReact
@@ -111,6 +136,7 @@ export const BCGridBase = forwardRef(
         enableBrowserTooltips={true}
         suppressPaginationPanel
         suppressScrollOnNewData
+        onBodyScrollEnd={hideSelectsOutsideViewport}
         onRowDataUpdated={determineHeight}
         getRowStyle={getRowStyle}
         rowHeight={ROW_HEIGHT}

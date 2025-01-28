@@ -34,7 +34,8 @@ const ComplianceReportSummary = ({
   setIsSigningAuthorityDeclared,
   buttonClusterConfig,
   methods,
-  setHasMet,
+  setHasMetRenewables,
+  setHasMetLowCarbon,
   alertRef
 }) => {
   const [summaryData, setSummaryData] = useState(null)
@@ -52,10 +53,17 @@ const ComplianceReportSummary = ({
     useUpdateComplianceReportSummary(data?.complianceReportId, {
       onSuccess: (response) => {
         setSummaryData(response.data)
-        setHasMet(
-          response.data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 ||
-            response.data?.nonCompliancePenaltySummary[1].totalValue <= 0
-        )
+        const renewablePenaltyAmount =
+          response.data?.renewableFuelTargetSummary.find(
+            (line) => line.line === 11
+          )
+        const lowCarbonPenaltyCredits =
+          response.data?.lowCarbonFuelTargetSummary.find(
+            (line) => line.line === 20
+          )
+
+        setHasMetRenewables(renewablePenaltyAmount.value > 0)
+        setHasMetLowCarbon(lowCarbonPenaltyCredits.value >= 0)
       },
       onError: (error) => {
         alertRef.current?.triggerAlert({
@@ -67,10 +75,15 @@ const ComplianceReportSummary = ({
   useEffect(() => {
     if (data) {
       setSummaryData(data)
-      setHasMet(
-        data?.nonCompliancePenaltySummary[0]?.totalValue <= 0 ||
-          data?.nonCompliancePenaltySummary[1].totalValue <= 0
+      const renewablePenaltyAmount = data?.renewableFuelTargetSummary.find(
+        (line) => line.line === 11
       )
+      const lowCarbonPenaltyCredits = data?.lowCarbonFuelTargetSummary.find(
+        (line) => line.line === 20
+      )
+
+      setHasMetRenewables(renewablePenaltyAmount.value > 0)
+      setHasMetLowCarbon(lowCarbonPenaltyCredits.value > 0)
       setHasRecords(data && data.canSign)
     }
     if (isError) {
@@ -79,7 +92,7 @@ const ComplianceReportSummary = ({
         severity: 'error'
       })
     }
-  }, [alertRef, data, error, isError, setHasMet])
+  }, [alertRef, data, error, isError, setHasMetRenewables, setHasMetLowCarbon])
 
   useEffect(() => {
     if (snapshotData) {
