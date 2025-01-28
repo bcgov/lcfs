@@ -94,6 +94,11 @@ export const useUpdateComplianceReportSummary = (reportID, options) => {
         ['compliance-report-summary', reportID],
         data.data
       )
+
+      // Call original onSuccess callback to set summary data
+      if (options?.onSuccess) {
+        options.onSuccess(data)
+      }
     }
   })
 }

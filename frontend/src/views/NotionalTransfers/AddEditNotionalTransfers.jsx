@@ -15,7 +15,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import * as ROUTES from '@/constants/routes/routes.js'
-import { handleScheduleSave } from '@/utils/schedules.js'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -102,9 +102,7 @@ export const AddEditNotionalTransfers = () => {
         })
       }
     } else {
-      const id = uuid()
-      const emptyRow = { id, complianceReportId }
-      setRowData([emptyRow])
+      setRowData([{ id: uuid(), complianceReportId }])
     }
 
     params.api.sizeColumnsToFit()
@@ -188,23 +186,16 @@ export const AddEditNotionalTransfers = () => {
 
   const onAction = async (action, params) => {
     if (action === 'delete') {
-      const updatedRow = { ...params.node.data, deleted: true }
-
-      params.api.applyTransaction({ remove: [params.node.data] })
-      if (updatedRow.notionalTransferId) {
-        try {
-          await saveRow(updatedRow)
-          alertRef.current?.triggerAlert({
-            message: 'Row deleted successfully.',
-            severity: 'success'
-          })
-        } catch (error) {
-          alertRef.current?.triggerAlert({
-            message: `Error deleting row: ${error.message}`,
-            severity: 'error'
-          })
+      await handleScheduleDelete(
+        params,
+        'notionalTransferId',
+        saveRow,
+        alertRef,
+        setRowData,
+        {
+          complianceReportId
         }
-      }
+      )
     }
   }
 

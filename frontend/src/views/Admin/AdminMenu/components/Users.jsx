@@ -10,7 +10,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { apiRoutes, ROUTES } from '@/constants/routes'
-import { idirUserDefaultFilter, usersColumnDefs } from './_schema'
+import { usersColumnDefs } from './_schema'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const Users = () => {
@@ -20,7 +20,7 @@ export const Users = () => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [resetGridFn, setResetGridFn] = useState(null)
-  const newUserButtonRef = useRef(null);
+  const newUserButtonRef = useRef(null)
 
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${Math.random()}`)
@@ -31,11 +31,14 @@ export const Users = () => {
   const gridOptions = {
     overlayNoRowsTemplate: t('admin:usersNotFound')
   }
-  const defaultSortModel = useMemo(() => [
-    { field: 'isActive', direction: 'desc' },
-    { field: 'firstName', direction: 'asc' }
-  ], []);
-  
+  const defaultSortModel = useMemo(
+    () => [
+      { field: 'isActive', direction: 'desc' },
+      { field: 'firstName', direction: 'asc' }
+    ],
+    []
+  )
+
   const navigate = useNavigate()
 
   const handleNewUserClick = () => {
@@ -84,14 +87,9 @@ export const Users = () => {
         <BCTypography variant="h5" my={1} color="primary">
           {t('admin:Users')}
         </BCTypography>
-        <BCBox
-          display="flex"
-          alignItems="center"
-          gap={2}
-          mt={1}
-        >
+        <BCBox display="flex" alignItems="center" gap={2} mt={1}>
           <BCButton
-            ref= {newUserButtonRef}
+            ref={newUserButtonRef}
             variant="contained"
             size="small"
             color="primary"
@@ -127,7 +125,6 @@ export const Users = () => {
             getRowId={getRowId}
             gridOptions={gridOptions}
             defaultSortModel={defaultSortModel}
-            defaultFilterModel={idirUserDefaultFilter}
             handleGridKey={handleGridKey}
             enableResetButton={false}
             enableCopyButton={false}
