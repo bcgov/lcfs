@@ -19,7 +19,7 @@ import {
   fuelSupplyColDefs,
   PROVISION_APPROVED_FUEL_CODE
 } from './_schema'
-import { handleScheduleSave } from '@/utils/schedules.js'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -309,23 +309,17 @@ export const AddEditFuelSupplies = () => {
 
   const onAction = async (action, params) => {
     if (action === 'delete') {
-      const updatedRow = { ...params.node.data, deleted: true }
-
-      params.api.applyTransaction({ remove: [params.node.data] })
-      if (updatedRow.fuelSupplyId) {
-        try {
-          await saveRow(updatedRow)
-          alertRef.current?.triggerAlert({
-            message: 'Row deleted successfully.',
-            severity: 'success'
-          })
-        } catch (error) {
-          alertRef.current?.triggerAlert({
-            message: `Error deleting row: ${error.message}`,
-            severity: 'error'
-          })
+      await handleScheduleDelete(
+        params,
+        'fuelSupplyId',
+        saveRow,
+        alertRef,
+        setRowData,
+        {
+          complianceReportId,
+          compliancePeriod
         }
-      }
+      )
     }
   }
 
