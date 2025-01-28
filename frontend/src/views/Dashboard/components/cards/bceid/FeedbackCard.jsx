@@ -18,7 +18,7 @@ const FeedbackCard = () => {
       alignItems="center"
       justifyContent="center"
     >
-      <Icon sx={{ color: '#578260', fontSize: 60 }}>
+      <Icon sx={{ color: '#547D59', fontSize: 60 }}>
         <MailIcon />
       </Icon>
       <BCTypography

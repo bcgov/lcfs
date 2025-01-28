@@ -49,7 +49,7 @@ const WebsiteCard = () => {
             icon={faShareFromSquare}
             style={{
               marginLeft: '6px',
-              color: '#578260'
+              color: '#547D59'
             }}
           />
         </a>

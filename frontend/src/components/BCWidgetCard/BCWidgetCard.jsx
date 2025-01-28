@@ -48,7 +48,12 @@ function BCWidgetCard({
           mx={2}
           mt={-3}
         >
-          <BCTypography variant="subtitle2" fontWeight="light" color="inherit">
+          <BCTypography
+            variant="subtitle2"
+            fontWeight="light"
+            color="inherit"
+            component="h2"
+          >
             {title}
           </BCTypography>
           {editButton && (
