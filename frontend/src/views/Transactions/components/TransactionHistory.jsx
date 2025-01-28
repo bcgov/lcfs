@@ -3,6 +3,7 @@ import BCTypography from '@/components/BCTypography'
 import dayjs from 'dayjs'
 import localizedFormat from 'dayjs/plugin/localizedFormat'
 import { useTranslation } from 'react-i18next'
+import { formatDateWithTimezoneAbbr } from '@/utils/formatters.js'
 
 dayjs.extend(localizedFormat)
 
@@ -43,7 +44,7 @@ export const TransactionHistory = ({ transactionHistory }) => {
                   {getTransactionStatusLabel(getStatusObject(item))}
                 </strong>
                 <span> on </span>
-                {dayjs(item.createDate).format('LL')}
+                {formatDateWithTimezoneAbbr(item.createDate)}
                 <span> by </span>
                 <strong>
                   {item.displayName ||

@@ -331,7 +331,7 @@ async def test_get_compliance_report_summary_success(
     ) as mock_calculate_compliance_report_summary, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         mock_compliance_report_summary = compliance_report_summary_schema()
 
         mock_calculate_compliance_report_summary.return_value = (
@@ -360,7 +360,7 @@ async def test_get_compliance_report_summary_invalid_payload(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
 
     # Assuming 'abc' is an invalid report_id
     url = fastapi_app.url_path_for("get_compliance_report_summary", report_id="abc")
@@ -379,7 +379,7 @@ async def test_get_compliance_report_summary_not_found(
     with patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportSummaryService.calculate_compliance_report_summary"
     ) as mock_calculate_compliance_report_summary:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
 
         # Simulate DataNotFoundException for a non-existent report
         mock_calculate_compliance_report_summary.side_effect = DataNotFoundException(
@@ -408,7 +408,7 @@ async def test_update_compliance_report_summary_success(
     ) as mock_update_compliance_report_summary, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
 
         mock_compliance_report_summary = compliance_report_summary_schema()
         request_schema = ComplianceReportSummaryUpdateSchema(
@@ -464,7 +464,7 @@ async def test_update_compliance_report_summary_invalid_payload(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
 
     url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
     payload = {"invalidField": "invalidValue"}  # Invalid payload structure
@@ -484,7 +484,7 @@ async def test_update_compliance_report_summary_not_found(
     with patch(
         "lcfs.web.api.compliance_report.summary_service.ComplianceReportSummaryService.update_compliance_report_summary"
     ) as mock_update_compliance_report_summary:
-        set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
 
         # Simulate DataNotFoundException for a non-existent summary
         mock_update_compliance_report_summary.side_effect = DataNotFoundException(

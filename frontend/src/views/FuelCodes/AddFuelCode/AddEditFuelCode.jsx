@@ -35,6 +35,7 @@ const AddEditFuelCodeBase = () => {
 
   const [rowData, setRowData] = useState([])
   const [errors, setErrors] = useState({})
+  const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
   const [isGridReady, setGridReady] = useState(false)
   const [modalData, setModalData] = useState(null)
@@ -121,11 +122,10 @@ const AddEditFuelCodeBase = () => {
     params.api.sizeColumnsToFit()
   }
 
-  const handleError = (error, message) => {
-    console.error(error)
+  const handleError = (error, message, severity) => {
     alertRef.current?.triggerAlert({
       message,
-      severity: 'error'
+      severity
     })
   }
 
@@ -229,6 +229,8 @@ const AddEditFuelCodeBase = () => {
 
       try {
         setErrors({})
+        setWarnings({})
+
         if (updatedData.fuelCodeId) {
           await updateFuelCode(updatedData)
         } else {
@@ -253,9 +255,12 @@ const AddEditFuelCodeBase = () => {
             error.response.data.errors[0]?.fields
         })
 
+        const isNewRow = !updatedData.fuelCodeId
+        const severity = isNewRow ? 'warning' : 'error'
+
         updatedData = {
           ...updatedData,
-          validationStatus: 'error'
+          validationStatus: severity
         }
 
         if (
@@ -270,11 +275,11 @@ const AddEditFuelCodeBase = () => {
             fieldLabels.length === 1 ? fieldLabels[0] : ''
           } ${message}`
           updatedData.validationMsg = errMsg
-          handleError(error, errMsg)
+          handleError(error, errMsg, severity)
         } else {
           const errMsg = error.response?.data?.detail || error.message
           updatedData.validationMsg = errMsg
-          handleError(error, `Unable to save row: ${errMsg}`)
+          handleError(error, `Unable to save row: ${errMsg}`, severity)
         }
       }
 

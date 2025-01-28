@@ -38,7 +38,9 @@ get_async_db = dependencies.get_async_db_session
     response_model=OtherUsesTableOptionsSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 # @cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_table_options(
     request: Request,
@@ -52,7 +54,9 @@ async def get_table_options(
 @router.post(
     "/list-all", response_model=OtherUsesAllSchema, status_code=status.HTTP_200_OK
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_other_uses(
     request: Request,
     request_data: ComplianceReportRequestSchema = Body(...),
@@ -64,17 +68,19 @@ async def get_other_uses(
     try:
         compliance_report_id = request_data.compliance_report_id
 
-        compliance_report = await service.get_compliance_report_by_id(compliance_report_id)
+        compliance_report = await service.get_compliance_report_by_id(
+            compliance_report_id
+        )
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found"
+                detail="Compliance report not found",
             )
 
         await report_validate.validate_compliance_report_access(compliance_report)
         await report_validate.validate_organization_access(
-                request_data.compliance_report_id
-            )
+            request_data.compliance_report_id
+        )
         return await service.get_other_uses(request_data.compliance_report_id)
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
@@ -84,7 +90,7 @@ async def get_other_uses(
         logger.exception("Error occurred", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while processing your request"
+            detail="An unexpected error occurred while processing your request",
         )
 
 
@@ -93,7 +99,9 @@ async def get_other_uses(
     response_model=OtherUsesListSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_other_uses_paginated(
     request: Request,
     request_data: PaginatedOtherUsesRequestSchema = Body(...),
@@ -118,7 +126,7 @@ async def get_other_uses_paginated(
     response_model=Union[OtherUsesSchema, DeleteOtherUsesResponseSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def save_other_uses_row(
     request: Request,
     request_data: OtherUsesCreateSchema = Body(...),

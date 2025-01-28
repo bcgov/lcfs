@@ -2,7 +2,11 @@ import React from 'react'
 import { Box, Grid } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
-import { dateFormatter, numberFormatter } from '@/utils/formatters'
+import {
+  dateFormatter,
+  formatDateWithTimezoneAbbr,
+  numberFormatter
+} from '@/utils/formatters'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
 
@@ -58,7 +62,7 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
       )}
       <BCTypography variant="body2">
         <strong>{t('txn:approvedLabel')}</strong>{' '}
-        {dateFormatter({ value: approvedDate })} {t('txn:approvedByDirector')}
+        {formatDateWithTimezoneAbbr(approvedDate)} {t('txn:approvedByDirector')}
       </BCTypography>
     </Box>
   )
