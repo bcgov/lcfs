@@ -50,6 +50,7 @@ export const UserProfileActions = () => {
       color="inherit"
       className="small-icon"
       sx={{ mx: 1 }}
+      title={t('Notifications')}
       aria-label={t('Notifications')}
     >
       <Badge
@@ -75,7 +76,10 @@ export const UserProfileActions = () => {
               component={NavLink}
               to={(currentUser?.isGovernmentUser
                 ? ROUTES.ADMIN_USERS_VIEW
-                : ROUTES.ORGANIZATION_VIEWUSER.replace(':orgID', currentUser?.organization?.organizationId)
+                : ROUTES.ORGANIZATION_VIEWUSER.replace(
+                    ':orgID',
+                    currentUser?.organization?.organizationId
+                  )
               ).replace(':userID', currentUser?.userProfileId)}
               style={{
                 whiteSpace: 'nowrap',
@@ -115,7 +119,22 @@ export const UserProfileActions = () => {
                 route={ROUTES.NOTIFICATIONS}
                 light={false}
                 isMobileView={false}
-                sx={{ '&': { marginRight: 0, marginLeft: 0, padding: '2px', paddingBottom: '10px' } }}
+                sx={{
+                  '&': {
+                    marginRight: 0,
+                    marginLeft: 0,
+                    padding: '2px',
+                    paddingBottom: '10px'
+                  },
+                  '&:hover': {
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)'
+                  },
+                  '&.active': {
+                    borderBottom: '3px solid #fcc219',
+                    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                    paddingBottom: '7px'
+                  }
+                }}
               />
             </Tooltip>
           )}
