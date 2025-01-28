@@ -301,7 +301,7 @@ class ComplianceReportSummaryService:
         # need to get these values from the db after fuel supply is implemented
 
         # If report for previous period copy carryover amounts
-        if prev_compliance_report:
+        if prev_compliance_report and prev_compliance_report.legacy_id is None:
             # TODO: if previous report exists then ensure in the UI we're disabling the line 7 & 9 for editing
             previous_retained = {
                 "gasoline": prev_compliance_report.summary.line_6_renewable_fuel_retained_gasoline,
