@@ -41,6 +41,16 @@ WITH expected_functions AS (
     SELECT 'refresh_mv_compliance_report_count'
     UNION ALL
     SELECT 'refresh_mv_fuel_code_count'
+    UNION ALL
+    SELECT 'update_organization_balance'
+    UNION ALL
+    SELECT 'update_count_transfers_in_progress'
+    UNION ALL
+    SELECT 'jsonb_diff'
+    UNION ALL
+    SELECT 'generate_json_delta'
+    UNION ALL
+    SELECT 'audit_trigger_func'
 )
 SELECT 
     'Function' AS item_type,
@@ -94,6 +104,10 @@ WITH expected_triggers AS (
     SELECT 'refresh_mv_compliance_report_count_after_change', 'compliance_report'
     UNION ALL
     SELECT 'refresh_mv_fuel_code_count_after_change', 'fuel_code'
+    UNION ALL
+    SELECT 'update_organization_balance_trigger', 'transaction'
+    UNION ALL
+    SELECT 'update_count_transfers_in_progress_trigger', 'transfer'
 )
 SELECT 
     'Trigger' AS item_type,
@@ -123,6 +137,52 @@ ORDER BY
     et.trigger_name;
 
 
+-- Validation Query: Check Existence of Audit Triggers Considering Truncation
+
+WITH table_list AS (
+    SELECT unnest(ARRAY[
+        'transaction','compliance_report','compliance_report_history','compliance_report_status',
+        'compliance_report_summary','compliance_period','initiative_agreement','initiative_agreement_status',
+        'initiative_agreement_history','allocation_agreement','allocation_transaction_type','custom_fuel_type',
+        'fuel_code','fuel_code_prefix','fuel_code_status','fuel_category','fuel_instance','fuel_type',
+        'fuel_export','organization','organization_address','organization_attorney_address','organization_status',
+        'organization_type','transfer','transfer_category','transfer_history','transfer_status','internal_comment',
+        'user_profile','user_role','role','notification_message','notification_type','admin_adjustment',
+        'admin_adjustment_status','admin_adjustment_history','provision_of_the_act','supplemental_report',
+        'final_supply_equipment','notional_transfer','fuel_supply','additional_carbon_intensity','document',
+        'end_use_type','energy_density','energy_effectiveness_ratio','transport_mode','final_supply_equipment',
+        'level_of_equipment','user_login_history','unit_of_measure','target_carbon_intensity'
+    ]) AS tablename
+),
+trigger_names AS (
+    SELECT
+        tablename,
+        'audit_' || tablename || '_insert_update_delete' AS expected_trigger_name,
+        -- Truncate the trigger name to 63 characters if necessary
+        CASE
+            WHEN length('audit_' || tablename || '_insert_update_delete') > 63
+            THEN substring('audit_' || tablename || '_insert_update_delete' from 1 for 63)
+            ELSE 'audit_' || tablename || '_insert_update_delete'
+        END AS actual_trigger_name
+    FROM table_list
+)
+SELECT
+    tn.tablename,
+    tn.expected_trigger_name,
+    tn.actual_trigger_name,
+    CASE
+        WHEN t.tgname IS NOT NULL THEN 'Exists'
+        ELSE 'Missing'
+    END AS trigger_status
+FROM trigger_names tn
+LEFT JOIN pg_trigger t
+    ON t.tgname = tn.actual_trigger_name
+    AND t.tgrelid = (
+        SELECT oid FROM pg_class WHERE relname = tn.tablename AND relnamespace = 'public'::regnamespace
+    )
+ORDER BY tn.tablename;
+
+
 -- Refresh all materialized views
 BEGIN;
 
@@ -134,6 +194,25 @@ REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count;
 REFRESH MATERIALIZED VIEW CONCURRENTLY mv_org_compliance_report_count;
 
 COMMIT;
+
+-- update existing transfer counts
+UPDATE organization o
+SET count_transfers_in_progress = COALESCE(sub.total_transfer_count, 0)
+FROM (
+    SELECT
+        org.organization_id,
+        COUNT(DISTINCT t.transfer_id) AS total_transfer_count
+    FROM organization org
+    LEFT JOIN transfer t
+        ON org.organization_id = t.from_organization_id
+        OR org.organization_id = t.to_organization_id
+    WHERE t.current_status_id IN (3, 4) -- Sent, Submitted
+    GROUP BY org.organization_id
+) sub
+WHERE o.organization_id = sub.organization_id;
+
+
+
 
 
 -- FIXES
