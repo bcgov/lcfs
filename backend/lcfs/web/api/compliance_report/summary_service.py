@@ -535,8 +535,8 @@ class ComplianceReportSummaryService:
             category: round(
                 max(
                     0,
-                    eligible_renewable_fuel_required.get(category, 0)
-                    - net_renewable_supplied.get(category, 0),
+                    int(eligible_renewable_fuel_required.get(category, 0))
+                    - int(net_renewable_supplied.get(category, 0)),
                 )
                 * PRESCRIBED_PENALTY_RATE[category],
                 2,
