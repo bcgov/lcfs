@@ -14,7 +14,7 @@ import {
 import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { isArrayEmpty } from '@/utils/formatters'
-import { handleScheduleSave } from '@/utils/schedules.js'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -161,23 +161,18 @@ export const AddEditFinalSupplyEquipments = () => {
 
   const onAction = async (action, params) => {
     if (action === 'delete') {
-      const updatedRow = { ...params.node.data, deleted: true }
-
-      params.api.applyTransaction({ remove: [params.node.data] })
-      if (updatedRow.finalSupplyEquipmentId) {
-        try {
-          await saveRow(updatedRow)
-          alertRef.current?.triggerAlert({
-            message: 'Row deleted successfully.',
-            severity: 'success'
-          })
-        } catch (error) {
-          alertRef.current?.triggerAlert({
-            message: `Error deleting row: ${error.message}`,
-            severity: 'error'
-          })
+      await handleScheduleDelete(
+        params,
+        'finalSupplyEquipmentId',
+        saveRow,
+        alertRef,
+        setRowData,
+        {
+          complianceReportId,
+          supplyFromDate: `${compliancePeriod}-01-01`,
+          supplyToDate: `${compliancePeriod}-12-31`
         }
-      }
+      )
     }
     if (action === 'duplicate') {
       const newRowID = uuid()
