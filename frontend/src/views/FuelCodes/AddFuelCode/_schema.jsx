@@ -563,7 +563,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       marginTop: '0.7rem'
     },
     cellEditorParams: {
-      options: optionsData?.transportModes.map((obj) => obj.transportMode),
+      options: optionsData?.transportModes?.map((obj) => obj.transportMode) || [],
       multiple: true,
       openOnFocus: true,
       disableCloseOnSelect: true
@@ -588,7 +588,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       marginTop: '0.7rem'
     },
     cellEditorParams: {
-      options: optionsData?.transportModes.map((obj) => obj.transportMode),
+      options: optionsData?.transportModes.map((obj) => obj.transportMode) || [],
       multiple: true,
       openOnFocus: true,
       disableCloseOnSelect: true

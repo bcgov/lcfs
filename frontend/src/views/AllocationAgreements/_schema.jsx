@@ -11,7 +11,6 @@ import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { apiRoutes } from '@/constants/routes'
 import {
-  StandardCellErrors,
   StandardCellStyle,
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
@@ -212,7 +211,7 @@ export const allocationAgreementColDefs = (
         params.data.fuelTypeOther = undefined
         params.data.fuelCategory =
           fuelType.fuelCategories?.[0]?.category ?? null
-        params.data.units = fuelType?.units
+        params.data.units = fuelType?.unit
         params.data.unrecognized = fuelType?.unrecognized
         params.data.provisionOfTheAct = null
         params.data.fuelCode = undefined
@@ -242,7 +241,12 @@ export const allocationAgreementColDefs = (
       minWords: 1
     }),
     cellStyle: (params) =>
-      StandardCellStyle(params, errors, null, fuelTypeOtherConditionalStyle),
+      StandardCellStyle(
+        params,
+        errors,
+        warnings,
+        fuelTypeOtherConditionalStyle
+      ),
     valueSetter: (params) => {
       const { newValue: selectedFuelTypeOther, data } = params
       data.fuelTypeOther = selectedFuelTypeOther
@@ -253,6 +257,7 @@ export const allocationAgreementColDefs = (
   },
   {
     field: 'fuelCategory',
+    headerComponent: RequiredHeader,
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelCategory'
     ),
@@ -261,14 +266,31 @@ export const allocationAgreementColDefs = (
       options:
         optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCategories.map((item) => item.category) || [],
+          ?.fuelCategories.map((item) => item.fuelCategory)
+          .sort() || [],
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
       openOnFocus: true
     }),
     suppressKeyboardEvent,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 150,
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.fuelCategory = params.newValue
+        params.data.fuelCategoryId = optionsData?.fuelTypes
+          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.fuelCategories?.find(
+            (obj) => params.newValue === obj.fuelCategory
+          )?.fuelCategoryId
+        params.data.provisionOfTheAct = null
+        params.data.provisionOfTheActId = null
+      }
+      return true
+    },
+    valueGetter: (params) => params.data.fuelCategory,
     editable: (params) =>
       optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -281,23 +303,16 @@ export const allocationAgreementColDefs = (
       'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
     ),
     cellEditor: AutocompleteCellEditor,
-    cellEditorParams: (params) => {
-      const fuelType = optionsData?.fuelTypes?.find(
-        (type) => type.fuelType === params.data.fuelType
-      )
-
-      const provisionsOfTheAct = fuelType
-        ? fuelType.provisionOfTheAct.map((provision) => provision.name)
-        : []
-
-      return {
-        options: provisionsOfTheAct.sort(),
-        multiple: false,
-        disableCloseOnSelect: false,
-        freeSolo: false,
-        openOnFocus: true
-      }
-    },
+    cellEditorParams: (params) => ({
+      options: optionsData?.fuelTypes
+        ?.find((obj) => params.data.fuelType === obj.fuelType)
+        ?.provisions.map((item) => item.name)
+        .sort(),
+      multiple: false,
+      disableCloseOnSelect: false,
+      freeSolo: false,
+      openOnFocus: true
+    }),
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
@@ -305,6 +320,27 @@ export const allocationAgreementColDefs = (
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 300,
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.provisionOfTheAct = params.newValue
+        params.data.provisionOfTheActId = optionsData?.fuelTypes
+          ?.find((obj) => params.data.fuelType === obj.fuelType)
+          ?.provisions.find(
+            (item) => item.name === params.newValue
+          )?.provisionOfTheActId
+        if (params.data.provisionOfTheAct !== PROVISION_APPROVED_FUEL_CODE) {
+          const fuelType = optionsData?.fuelTypes?.find(
+            (obj) => params.data.fuelType === obj.fuelType
+          )
+          params.data.ciOfFuel =
+            fuelType?.energyDensity?.energyDensity ||
+            fuelType?.defaultCarbonIntensity
+        }
+        params.data.fuelCode = null
+        params.data.fuelCodeId = null
+      }
+      return true
+    },
     editable: true,
     tooltipValueGetter: (p) =>
       'Select the method for determining carbon intensity'
@@ -315,18 +351,20 @@ export const allocationAgreementColDefs = (
       'allocationAgreement:allocationAgreementColLabels.fuelCode'
     ),
     cellEditor: AutocompleteCellEditor,
-    cellEditorParams: (params) => ({
-      options:
-        optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCodes.map((item) => item.fuelCode) || [],
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false,
-      openOnFocus: true
-    }),
+    cellEditorParams: (params) => {
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
+      return {
+        options: fuelType?.fuelCodes.map((item) => item.fuelCode) || [],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      }
+    },
     cellStyle: (params) => {
-      const style = StandardCellErrors(params, errors)
+      const style = StandardCellWarningAndErrors(params, errors, warnings)
       const isFuelCodeScenario =
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
       const fuelType = optionsData?.fuelTypes?.find(
@@ -340,8 +378,7 @@ export const allocationAgreementColDefs = (
 
       // If required and missing, show red border and white background
       if (fuelCodeRequiredAndMissing) {
-        style.borderColor = 'red'
-        style.backgroundColor = '#fff'
+        return style
       } else {
         // Apply conditional styling if not missing
         conditionalStyle =
@@ -374,7 +411,7 @@ export const allocationAgreementColDefs = (
         fuelTypeObj.fuelCodes?.map((item) => item.fuelCode) || []
 
       if (isFuelCodeScenario && !params.data.fuelCode) {
-        // Autopopulate if only one fuel code is available
+        // Auto-populate if only one fuel code is available
         if (fuelCodes.length === 1) {
           const singleFuelCode = fuelTypeObj.fuelCodes[0]
           params.data.fuelCode = singleFuelCode.fuelCode
@@ -419,35 +456,6 @@ export const allocationAgreementColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     editable: false,
-    valueGetter: (params) => {
-      if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
-        return (
-          optionsData?.fuelTypes
-            ?.find((obj) => params.data.fuelType === obj.fuelType)
-            ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
-            ?.carbonIntensity || 0
-        )
-      } else {
-        if (optionsData) {
-          if (isFuelTypeOther(params) && params.data.fuelCategory) {
-            const categories = optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            ).fuelCategories
-
-            const defaultCI = categories.find(
-              (cat) => cat.category === params.data.fuelCategory
-            ).defaultAndPrescribedCi
-
-            return defaultCI
-          }
-        }
-        return (
-          optionsData?.fuelTypes?.find(
-            (obj) => params.data.fuelType === obj.fuelType
-          )?.defaultCarbonIntensity || 0
-        )
-      }
-    },
     minWidth: 100
   },
   {
