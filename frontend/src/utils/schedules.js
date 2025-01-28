@@ -1,3 +1,5 @@
+import { v4 as uuid } from 'uuid'
+
 export const handleScheduleSave = async ({
   labelPrefix,
   idField,
@@ -77,4 +79,35 @@ export const handleScheduleSave = async ({
     }
   }
   return updatedData
+}
+
+export const handleScheduleDelete = async (
+  params,
+  idField,
+  saveRow,
+  alertRef,
+  setRowData,
+  defaultRowData
+) => {
+  const updatedRow = { ...params.node.data, deleted: true }
+
+  params.api.applyTransaction({ remove: [params.node.data] })
+  if (updatedRow[idField]) {
+    try {
+      await saveRow(updatedRow)
+      alertRef.current?.triggerAlert({
+        message: 'Row deleted successfully.',
+        severity: 'success'
+      })
+    } catch (error) {
+      alertRef.current?.triggerAlert({
+        message: `Error deleting row: ${error.message}`,
+        severity: 'error'
+      })
+    }
+  }
+
+  if (params.api.isRowDataEmpty()) {
+    setRowData([{ ...defaultRowData, id: uuid() }])
+  }
 }
