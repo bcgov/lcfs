@@ -42,7 +42,6 @@ export const MainLayout = () => {
         </BCTypography>
         <Navbar />
         <Container
-          component="main"
           maxWidth="lg"
           sx={{
             padding: '1rem',

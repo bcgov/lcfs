@@ -114,10 +114,6 @@ export const usersColumnDefs = (t) => [
   }
 ]
 
-export const idirUserDefaultFilter = [
-  { filterType: 'text', type: 'blank', field: 'organizationId', filter: '' }
-]
-
 const prefixMap = {
   Transfer: 'CT',
   AdminAdjustment: 'AA',
