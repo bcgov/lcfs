@@ -63,7 +63,7 @@ const ComplianceReportSummary = ({
           )
 
         setHasMetRenewables(renewablePenaltyAmount.value > 0)
-        setHasMetLowCarbon(lowCarbonPenaltyCredits.value >= 0)
+        setHasMetLowCarbon(lowCarbonPenaltyCredits.value > 0)
       },
       onError: (error) => {
         alertRef.current?.triggerAlert({
