@@ -80,8 +80,11 @@ class ComplianceReportSummaryService:
         for column in inspector.mapper.column_attrs:
             line = self._extract_line_number(column.key)
 
-            # Skip Dead Columns
-            if "line_11_fossil_derived_base_fuel" in column.key:
+            # Skip Non-display Columns
+            if (
+                "line_11_fossil_derived_base_fuel" in column.key
+                or "line_21_surplus_deficit_ratio" in column.key
+            ):
                 continue
 
             # Decide which section of the summary we're dealing with:
@@ -96,6 +99,9 @@ class ComplianceReportSummaryService:
 
             if column.key == "total_non_compliance_penalty_payable":
                 self._handle_summary_lines(summary, summary_obj, column.key, line)
+
+        # DB Columns are not in the same order as display, so sort them
+        summary.low_carbon_fuel_target_summary.sort(key=lambda row: int(row.line))
 
         return summary
 
@@ -136,8 +142,8 @@ class ComplianceReportSummaryService:
         )
         summary.low_carbon_fuel_target_summary.append(
             ComplianceReportSummaryRowSchema(
-                line=str(line),
-                format=FORMATS.NUMBER if line != 21 else FORMATS.CURRENCY,
+                line=line,
+                format=FORMATS.NUMBER.value if line != 21 else FORMATS.CURRENCY.value,
                 description=(
                     description
                     if line != 21
