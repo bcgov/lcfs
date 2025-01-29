@@ -151,30 +151,8 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
       }
       return null
     },
-    cellStyle: (params) => {
-      const style = StandardCellWarningAndErrors(params, errors, warnings)
-      const isFuelCodeScenario =
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      const fuelCodes = fuelType?.fuelCodes || []
-      const fuelCodeRequiredAndMissing =
-        isFuelCodeScenario && !params.data.fuelCode
-
-      if (fuelCodeRequiredAndMissing) {
-        // Required scenario but missing a fuel code
-        style.borderColor = 'red'
-        style.backgroundColor = '#fff'
-      } else if (isFuelCodeScenario && fuelCodes.length > 0) {
-        style.backgroundColor = '#fff'
-        style.borderColor = style.borderColor || 'unset'
-      } else {
-        style.backgroundColor = '#f2f2f2'
-      }
-
-      return style
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 150,
     editable: (params) => {
@@ -207,7 +185,7 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
 
       return params.data.fuelCode
     },
-    tooltipValueGetter: (p) => 'Select the approved fuel code'
+    tooltipValueGetter: () => 'Select the approved fuel code'
   },
   {
     field: 'quantitySupplied',
