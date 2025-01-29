@@ -1,5 +1,6 @@
+from lcfs.db.models.fuel import FuelCodeStatus
 import structlog
-from datetime import date
+from datetime import date, datetime
 from typing import List, Optional, Tuple, Dict, Any
 
 from fastapi import Depends
@@ -40,7 +41,7 @@ class OtherUsesRepository:
         """Get all table options"""
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
-        fuel_types = await self.get_formatted_fuel_types(include_legacy=include_legacy)
+        fuel_types = await self.get_formatted_fuel_types(include_legacy=include_legacy, compliance_period=int(compliance_period))
         expected_uses = await self.fuel_code_repo.get_expected_use_types()
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
 
@@ -53,7 +54,11 @@ class OtherUsesRepository:
             (await self.db.execute(provisions_select)).scalars().all()
         )
 
-        fuel_codes = (await self.db.execute(select(FuelCode))).scalars().all()
+        fuel_codes = (await self.db.execute(select(FuelCode).join(FuelCodeStatus).where(and_(
+            FuelCodeStatus.status == 'Approved',
+            FuelCode.effective_date <= datetime(int(compliance_period), 12, 31), # end of compliance year
+            FuelCode.expiration_date >= datetime(int(compliance_period), 1, 1) # within compliance year
+        )))).scalars().all()
 
         return {
             "fuel_types": fuel_types,
@@ -318,10 +323,9 @@ class OtherUsesRepository:
 
     @repo_handler
     async def get_formatted_fuel_types(
-        self, include_legacy=False
+        self, include_legacy=False, compliance_period: int = None
     ) -> List[Dict[str, Any]]:
         """Get all fuel type options with their associated fuel categories and fuel codes for other uses"""
-        current_date = date.today()
         base_conditions = [
             FuelType.other_uses_fossil_derived == True,
         ]
@@ -354,11 +358,13 @@ class OtherUsesRepository:
 
         # Prepare the data in the format matching your schema
         formatted_fuel_types = []
+        approved_fuel_code_status_id = (await self.db.execute(select(FuelCodeStatus.fuel_code_status_id).where(FuelCodeStatus.status == "Approved"))).scalar_one_or_none()
         for fuel_type in fuel_types:
             valid_fuel_codes = [
                 fc for fc in fuel_type.fuel_codes
-                if (fc.effective_date is None or fc.effective_date <= current_date) and
-                (fc.expiration_date is None or fc.expiration_date > current_date)
+                if (fc.effective_date is None or fc.effective_date <= date(compliance_period, 12, 31)) and
+                (fc.expiration_date is None or fc.expiration_date >= date(compliance_period, 1, 1)) and
+                (fc.fuel_status_id == approved_fuel_code_status_id)
             ]
 
             formatted_fuel_type = {
@@ -380,10 +386,7 @@ class OtherUsesRepository:
                         "fuel_code": fc.fuel_code,
                         "carbon_intensity": fc.carbon_intensity,
                     }
-                    for fc in fuel_type.fuel_codes
-                    if (fc.effective_date is None or fc.effective_date <= current_date) and
-                    (fc.expiration_date is None or fc.expiration_date > current_date)
-                    ],
+                    for fc in valid_fuel_codes],
                 "provision_of_the_act": [],
             }
 
