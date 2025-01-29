@@ -336,7 +336,7 @@ async def test_get_formatted_fuel_types_all_fuel_codes_invalid(other_uses_repo, 
     mock_db_session.execute = AsyncMock(return_value=mock_query_result)
     other_uses_repo.db = mock_db_session
 
-    result = await other_uses_repo.get_formatted_fuel_types(include_legacy=False)
+    result = await other_uses_repo.get_formatted_fuel_types(include_legacy=False, compliance_period=2024)
 
     assert isinstance(result, list), "Result should be a list"
     assert len(result) == 1, "Result should contain exactly one fuel type"
@@ -423,7 +423,7 @@ async def test_get_formatted_fuel_types_mixed_fuel_codes(other_uses_repo, mock_d
     mock_db_session.execute = AsyncMock(return_value=mock_query_result)
     other_uses_repo.db = mock_db_session
 
-    result = await other_uses_repo.get_formatted_fuel_types(include_legacy=False)
+    result = await other_uses_repo.get_formatted_fuel_types(include_legacy=False, compliance_period=2024)
 
     assert isinstance(result, list), "Result should be a list"
     assert len(result) == 1, "Result should contain exactly one fuel type"
