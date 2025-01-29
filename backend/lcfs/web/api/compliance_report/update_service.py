@@ -251,19 +251,29 @@ class ComplianceReportUpdateService:
             # Update the report with the new summary
             report.summary = new_summary
 
-        if report.summary.line_20_surplus_deficit_units != 0:
+        deficit_units = report.summary.line_20_surplus_deficit_units
+        if deficit_units != 0:
             if report.transaction is not None:
                 # Update existing transaction
-                report.transaction.compliance_units = (
-                    report.summary.line_20_surplus_deficit_units
-                )
+                report.transaction.compliance_units = deficit_units
             else:
-                # Create a new reserved transaction for receiving organization
-                report.transaction = await self.org_service.adjust_balance(
-                    transaction_action=TransactionActionEnum.Reserved,
-                    compliance_units=report.summary.line_20_surplus_deficit_units,
-                    organization_id=report.organization_id,
+                available_balance = await self.org_service.calculate_available_balance(
+                    report.organization_id
                 )
+                # Only need a Transaction if they have credits
+                if available_balance > 0:
+                    units_to_reserve = deficit_units
+
+                    # If not enough credits, reserve what is left
+                    if deficit_units < 0 and abs(deficit_units) > available_balance:
+                        units_to_reserve = available_balance * -1
+
+                    report.transaction = await self.org_service.adjust_balance(
+                        transaction_action=TransactionActionEnum.Reserved,
+                        compliance_units=units_to_reserve,
+                        organization_id=report.organization_id,
+                    )
+
         await self.repo.update_compliance_report(report)
 
         return calculated_summary
