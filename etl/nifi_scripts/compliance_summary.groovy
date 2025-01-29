@@ -20,18 +20,20 @@ try {
     destinationConn.setAutoCommit(false)
 
     // =========================================
-    // Fetch Existing compliance_report_id from Destination
+    // Fetch Mapping of legacy_id to LCFS compliance_report_id from Destination
     // =========================================
-    log.info("Fetching existing compliance_report_id from destination database.")
-    def existingComplianceReportIds = new HashSet<Integer>()
-    def fetchExistingIdsStmt = destinationConn.prepareStatement("SELECT compliance_report_id FROM public.compliance_report")
-    ResultSet existingRs = fetchExistingIdsStmt.executeQuery()
-    while (existingRs.next()) {
-        existingComplianceReportIds.add(existingRs.getInt("compliance_report_id"))
+    log.info("Fetching legacy_id to LCFS compliance_report_id mapping from destination database.")
+    def legacyToLcfsIdMap = [:] // Map<legacy_id, lcfs_id>
+    def fetchMappingStmt = destinationConn.prepareStatement("SELECT compliance_report_id, legacy_id FROM public.compliance_report WHERE legacy_id IS NOT NULL")
+    ResultSet mappingRs = fetchMappingStmt.executeQuery()
+    while (mappingRs.next()) {
+        def lcfsId = mappingRs.getInt("compliance_report_id")
+        def legacyId = mappingRs.getInt("legacy_id")
+        legacyToLcfsIdMap[legacyId] = lcfsId
     }
-    existingRs.close()
-    fetchExistingIdsStmt.close()
-    log.info("Fetched ${existingComplianceReportIds.size()} existing compliance_report_id(s) from destination.")
+    mappingRs.close()
+    fetchMappingStmt.close()
+    log.info("Fetched ${legacyToLcfsIdMap.size()} legacy_id to LCFS compliance_report_id mappings from destination.")
 
     // =========================================
     // Fetch Data from Source Table
@@ -57,7 +59,9 @@ try {
             public.compliance_report cr
         JOIN
             public.compliance_report_summary crs
-            ON cr.summary_id = crs.id WHERE cr.summary_id IS NOT NULL
+            ON cr.summary_id = crs.id 
+        WHERE 
+            cr.summary_id IS NOT NULL
         ORDER BY
             cr.id;
     """
@@ -154,7 +158,7 @@ try {
     while (rs.next()) {
         // Fetch source fields
         def summaryId = rs.getInt("summary_id")
-        def complianceReportId = rs.getInt("compliance_report_id")
+        def sourceComplianceReportLegacyId = rs.getInt("compliance_report_id")
         def gasolineClassRetained = rs.getBigDecimal('gasoline_class_retained')
         def gasolineClassDeferred = rs.getBigDecimal('gasoline_class_deferred')
         def dieselClassRetained = rs.getBigDecimal('diesel_class_retained')
@@ -168,9 +172,11 @@ try {
         def creditsOffsetB = rs.getInt('credits_offset_b')
         def creditsOffsetC = rs.getInt('credits_offset_c')
 
-        // Check if compliance_report_id exists in destination
-        if (!existingComplianceReportIds.contains(complianceReportId)) {
-            log.warn("Compliance Report ID ${complianceReportId} does not exist in destination. Skipping insertion of summary_id ${summaryId}.")
+        // Map source compliance_report_id (legacy_id) to LCFS compliance_report_id
+        def lcfsComplianceReportId = legacyToLcfsIdMap[sourceComplianceReportLegacyId]
+
+        if (lcfsComplianceReportId == null) {
+            log.warn("No LCFS compliance_report found with legacy_id ${sourceComplianceReportLegacyId}. Skipping summary_id ${summaryId}.")
             totalSkipped++
             continue // Skip to the next record
         }
@@ -178,7 +184,7 @@ try {
         // Create a summaryRecord map for the destination table
         def summaryRecord = [
             summary_id                          : summaryId,
-            compliance_report_id                : complianceReportId,
+            compliance_report_id                : lcfsComplianceReportId, // Use LCFS ID
             quarter                             : null,
             is_locked                           : true,
             line_1_fossil_derived_base_fuel_gasoline      : null, // No direct mapping
@@ -477,7 +483,7 @@ try {
             totalInserted++
 
         } catch (Exception e) {
-            log.error("Failed to insert summary_record for compliance_report_id: ${summaryRecord.compliance_report_id}, summary_id: ${summaryRecord.summary_id}", e)
+            log.error("Failed to insert summary_record for LCFS compliance_report_id: ${summaryRecord.compliance_report_id}, summary_id: ${summaryRecord.summary_id}", e)
             totalSkipped++
             // Continue processing other records
             continue
@@ -493,7 +499,7 @@ try {
         destinationConn.commit()
         log.info("Successfully inserted ${totalInserted} records into destination compliance_report_summary.")
         if (totalSkipped > 0) {
-            log.warn("Skipped ${totalSkipped} records due to missing compliance_report_id in destination or insertion errors.")
+            log.warn("Skipped ${totalSkipped} records due to missing LCFS compliance_report_id in destination or insertion errors.")
         }
     } catch (Exception e) {
         log.error("Batch insertion failed. Rolling back.", e)
