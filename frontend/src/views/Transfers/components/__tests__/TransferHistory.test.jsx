@@ -3,6 +3,7 @@ import { render, screen, cleanup } from '@testing-library/react'
 import TransferHistory from '../TransferHistory'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useTransfer } from '@/hooks/useTransfer'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
 import {
   TRANSFER_STATUSES,
@@ -11,6 +12,7 @@ import {
 import dayjs from 'dayjs'
 
 vi.mock('@/hooks/useTransfer')
+vi.mock('@/hooks/useCurrentUser')
 
 vi.mock('react-router-dom', () => ({
   useParams: () => ({ transferId: '1' })
@@ -55,6 +57,10 @@ describe('TransferHistory Component', () => {
 
   // Before each test, set up mocks and fix the Date object
   beforeEach(() => {
+     // Mock useCurrentUser for IDIR user by default
+    useCurrentUser.mockReturnValue({
+      data: { isGovernmentUser: true }
+    })
     // Mock 'useTransfer' to return consistent data
     useTransfer.mockReturnValue({
       data: {

@@ -90,9 +90,8 @@ class FuelSupplyRepository:
                 f"Invalid compliance_period: '{compliance_period}' must be an integer."
             ) from e
 
-        start_of_this_year = datetime(current_year, 1, 1)
-        start_of_previous_year = datetime(current_year - 1, 1, 1)
-
+        start_of_compliance_year = datetime(current_year, 1, 1)
+        end_of_compliance_year = datetime(current_year, 12, 31)
         query = (
             select(
                 FuelType.fuel_type_id,
@@ -176,8 +175,8 @@ class FuelSupplyRepository:
                     FuelCode.fuel_status_id == subquery_fuel_code_status_id,
                     ProvisionOfTheAct.provision_of_the_act_id
                     == subquery_provision_of_the_act_id,
-                    FuelCode.expiration_date > start_of_previous_year,
-                    FuelCode.effective_date <= start_of_this_year,
+                    FuelCode.expiration_date >= start_of_compliance_year,
+                    FuelCode.effective_date <= end_of_compliance_year,
                 ),
             )
             .outerjoin(
