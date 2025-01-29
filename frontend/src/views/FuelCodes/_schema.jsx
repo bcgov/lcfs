@@ -1,14 +1,10 @@
 import {
   CommonArrayRenderer,
-  FuelCodeStatusRenderer,
-  TextRenderer
+  FuelCodeStatusRenderer
 } from '@/utils/grid/cellRenderers'
 import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
-import {
-  BCSelectFloatingFilter,
-  BCDateFloatingFilter
-} from '@/components/BCDataGrid/components'
+import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
 
 export const fuelCodeColDefs = (t) => [
@@ -153,8 +149,8 @@ export const fuelCodeColDefs = (t) => [
     minWidth: 335,
     valueGetter: (params) =>
       params.data.feedstockFuelTransportModes.map(
-        (item) => item.feedstockFuelTransportMode.transportMode
-      ),
+        (item) => item.feedstockFuelTransportMode?.transportMode || ''
+      ) || [],
     cellRenderer: (props) => <CommonArrayRenderer {...props} />
   },
   {
@@ -171,8 +167,8 @@ export const fuelCodeColDefs = (t) => [
     minWidth: 335,
     valueGetter: (params) =>
       params.data.finishedFuelTransportModes.map(
-        (item) => item.finishedFuelTransportMode.transportMode
-      ),
+        (item) => item.finishedFuelTransportMode?.transportMode || ''
+      ) || [],
     cellRenderer: (props) => <CommonArrayRenderer {...props} />
   },
   {

@@ -155,31 +155,88 @@ export const AddEditAllocationAgreements = () => {
 
   const onCellValueChanged = useCallback(
     async (params) => {
+      setWarnings({}) // Reset warnings
+
       if (params.colDef.field === 'provisionOfTheAct') {
-        params.node.setDataValue('fuelCode', '')
+        params.node.setDataValue('fuelCode', '') // Reset fuelCode if provisionOfTheAct changes
       }
+
       if (
         ['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(
           params.colDef.field
         )
       ) {
         let ciOfFuel = 0
-        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
-          const fuelType = optionsData?.fuelTypes?.find(
-            (obj) => params.data.fuelType === obj.fuelType
-          )
-          const fuelCode = fuelType?.fuelCodes?.find(
-            (item) => item.fuelCode === params.data.fuelCode
-          )
-          ciOfFuel = fuelCode?.carbonIntensity || 0
-        } else {
-          const fuelType = optionsData?.fuelTypes?.find(
-            (obj) => params.data.fuelType === obj.fuelType
-          )
-          ciOfFuel = fuelType?.defaultCarbonIntensity || 0
+
+        const selectedFuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )
+
+        if (params.colDef.field === 'fuelType') {
+          if (selectedFuelType) {
+            // Reset and set dependent fields for fuelType
+            const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
+              (item) => item.fuelCategory
+            )
+
+            // Set to null if multiple options, otherwise use the first item
+            const categoryValue =
+              fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
+
+            params.node.setDataValue('fuelCategory', categoryValue)
+
+            // Reset provisionOfTheAct and provisionOfTheActId fields
+            if (selectedFuelType.provisions.length === 1) {
+              params.node.setDataValue(
+                'provisionOfTheAct',
+                selectedFuelType.provisions[0].name
+              )
+              params.node.setDataValue(
+                'provisionOfTheActId',
+                selectedFuelType.provisions[0].provisionOfTheActId
+              )
+            } else {
+              params.node.setDataValue('provisionOfTheAct', null)
+              params.node.setDataValue('provisionOfTheActId', null)
+            }
+          } else {
+            // Reset all related fields if no valid fuelType is selected
+            params.node.setDataValue('fuelCategory', null)
+            params.node.setDataValue('provisionOfTheAct', null)
+            params.node.setDataValue('provisionOfTheActId', null)
+          }
         }
 
+        if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+          // Logic for approved fuel code provision
+          const fuelCode = selectedFuelType?.fuelCodes?.find(
+            (item) => item.fuelCode === params.data.fuelCode
+          )
+          ciOfFuel = fuelCode?.fuelCodeCarbonIntensity || 0
+        } else {
+          // Default carbon intensity for fuel type
+          ciOfFuel = selectedFuelType?.defaultCarbonIntensity || 0
+        }
+
+        // Set the carbon intensity value
         params.node.setDataValue('ciOfFuel', ciOfFuel)
+      }
+
+      if (params.colDef.field === 'fuelCategory') {
+        const selectedFuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.node.data.fuelType === obj.fuelType
+        )
+
+        if (selectedFuelType) {
+          const validFuelCategory = selectedFuelType.fuelCategories.find(
+            (item) => item.fuelCategory === params.data.fuelCategory
+          )
+
+          // Reset fuelCategory if the selected one is invalid
+          if (!validFuelCategory) {
+            params.node.setDataValue('fuelCategory', null)
+          }
+        }
       }
     },
     [optionsData]
