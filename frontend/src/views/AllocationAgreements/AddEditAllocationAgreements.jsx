@@ -294,29 +294,6 @@ export const AddEditAllocationAgreements = () => {
         updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
       }
 
-      const isFuelCodeScenario =
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      if (isFuelCodeScenario && !updatedData.fuelCode) {
-        // Fuel code is required but not provided
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [params.node.data.id]: ['fuelCode']
-        }))
-
-        alertRef.current?.triggerAlert({
-          message: t('allocationAgreement:fuelCodeFieldRequiredError'),
-          severity: 'error'
-        })
-
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'error'
-        }
-
-        params.node.updateData(updatedData)
-        return // Stop execution, do not proceed to save
-      }
-
       updatedData = await handleScheduleSave({
         alertRef,
         idField: 'allocationAgreementId',

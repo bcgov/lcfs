@@ -6,7 +6,6 @@ from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from datetime import date, datetime
 from pydantic import (
     Field,
-    ValidationError,
     field_validator,
     model_validator,
 )
