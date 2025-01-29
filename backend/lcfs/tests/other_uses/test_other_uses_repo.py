@@ -304,6 +304,7 @@ async def test_get_formatted_fuel_types_all_fuel_codes_invalid(other_uses_repo, 
     # Create expired and future fuel codes
     mock_fuel_code_expired = MagicMock(spec=FuelCode)
     mock_fuel_code_expired.fuel_code_id = 1
+    mock_fuel_code_expired.fuel_status_id = 2
     mock_fuel_code_expired.fuel_code = "FC_EXPIRED"
     mock_fuel_code_expired.effective_date = None
     mock_fuel_code_expired.expiration_date = past_date
@@ -311,6 +312,7 @@ async def test_get_formatted_fuel_types_all_fuel_codes_invalid(other_uses_repo, 
 
     mock_fuel_code_future = MagicMock(spec=FuelCode)
     mock_fuel_code_future.fuel_code_id = 2
+    mock_fuel_code_future.fuel_status_id = 2
     mock_fuel_code_future.fuel_code = "FC_FUTURE"
     mock_fuel_code_future.effective_date = future_date
     mock_fuel_code_future.expiration_date = None
@@ -370,6 +372,7 @@ async def test_get_formatted_fuel_types_mixed_fuel_codes(other_uses_repo, mock_d
     # Create mix of valid and invalid fuel codes
     mock_fuel_code_expired = MagicMock(spec=FuelCode)
     mock_fuel_code_expired.fuel_code_id = 1
+    mock_fuel_code_expired.fuel_status_id = 2
     mock_fuel_code_expired.fuel_code = "FC_EXPIRED"
     mock_fuel_code_expired.effective_date = None
     mock_fuel_code_expired.expiration_date = past_date
@@ -377,6 +380,7 @@ async def test_get_formatted_fuel_types_mixed_fuel_codes(other_uses_repo, mock_d
 
     mock_fuel_code_active = MagicMock(spec=FuelCode)
     mock_fuel_code_active.fuel_code_id = 2
+    mock_fuel_code_active.fuel_status_id = 2
     mock_fuel_code_active.fuel_code = "FC_ACTIVE"
     mock_fuel_code_active.effective_date = None
     mock_fuel_code_active.expiration_date = None
@@ -384,6 +388,7 @@ async def test_get_formatted_fuel_types_mixed_fuel_codes(other_uses_repo, mock_d
 
     mock_fuel_code_valid = MagicMock(spec=FuelCode)
     mock_fuel_code_valid.fuel_code_id = 3
+    mock_fuel_code_valid.fuel_status_id = 3
     mock_fuel_code_valid.fuel_code = "FC_VALID"
     mock_fuel_code_valid.effective_date = today - timedelta(days=10)
     mock_fuel_code_valid.expiration_date = future_date
@@ -391,6 +396,7 @@ async def test_get_formatted_fuel_types_mixed_fuel_codes(other_uses_repo, mock_d
 
     mock_fuel_code_future = MagicMock(spec=FuelCode)
     mock_fuel_code_future.fuel_code_id = 4
+    mock_fuel_code_future.fuel_status_id = 4
     mock_fuel_code_future.fuel_code = "FC_FUTURE"
     mock_fuel_code_future.effective_date = future_date
     mock_fuel_code_future.expiration_date = None
