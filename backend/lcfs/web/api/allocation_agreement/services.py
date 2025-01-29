@@ -1,8 +1,7 @@
 import math
+from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 import structlog
-from typing import List
 from fastapi import Depends, HTTPException, status
-from datetime import datetime
 
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -11,21 +10,14 @@ from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
+    AllocationAgreementOptionsSchema,
     AllocationAgreementSchema,
     AllocationAgreementListSchema,
     AllocationAgreementTableOptionsSchema,
-    # AllocationAgreementFuelCategorySchema,
     AllocationAgreementAllSchema,
-    FuelTypeSchema,
-    FuelCategorySchema,
     AllocationTransactionTypeSchema,
-    ProvisionOfTheActSchema,
-    FuelCodeSchema,
-    # UnitOfMeasureSchema,
-    # ExpectedUseTypeSchema
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
-from lcfs.utils.constants import default_ci
 
 logger = structlog.get_logger(__name__)
 
@@ -35,10 +27,12 @@ class AllocationAgreementServices:
         self,
         repo: AllocationAgreementRepository = Depends(AllocationAgreementRepository),
         fuel_repo: FuelCodeRepository = Depends(),
-         compliance_report_repo: ComplianceReportRepository = Depends(),
+        fuel_supply_service: FuelSupplyServices = Depends(),
+        compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
         self.repo = repo
         self.fuel_repo = fuel_repo
+        self.fuel_supply_service = fuel_supply_service
         self.compliance_report_repo = compliance_report_repo
 
     async def convert_to_model(
@@ -97,25 +91,10 @@ class AllocationAgreementServices:
         Gets the list of table options related to allocation agreements.
         """
         table_options = await self.repo.get_table_options(compliance_period)
-        fuel_types = [
-            {
-                **fuel_type,
-                "fuel_categories": [
-                    {
-                        **fuel_category,
-                        "default_and_prescribed_ci": (
-                            round(fuel_type["default_carbon_intensity"], 2)
-                            if fuel_type["fuel_type"] != "Other"
-                            else default_ci.get(fuel_category["category"], 0)
-                        ),  #
-                    }
-                    for fuel_category in fuel_type["fuel_categories"]
-                ],
-            }
-            for fuel_type in table_options["fuel_types"]
-        ]
-
-        return AllocationAgreementTableOptionsSchema(
+        options = await self.fuel_supply_service.get_fuel_supply_options(
+            compliance_period
+        )
+        return AllocationAgreementOptionsSchema(
             allocation_transaction_types=[
                 AllocationTransactionTypeSchema.model_validate(
                     allocation_transaction_type
@@ -124,16 +103,7 @@ class AllocationAgreementServices:
                     "allocation_transaction_types"
                 ]
             ],
-            fuel_types=fuel_types,
-            provisions_of_the_act=[
-                ProvisionOfTheActSchema.model_validate(provision)
-                for provision in table_options["provisions_of_the_act"]
-            ],
-            fuel_codes=[
-                FuelCodeSchema.model_validate(fuel_code)
-                for fuel_code in table_options["fuel_codes"]
-            ],
-            units_of_measure=table_options["units_of_measure"],
+            fuel_types=options.fuel_types
         )
 
     @service_handler
@@ -357,14 +327,16 @@ class AllocationAgreementServices:
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
-        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
-            compliance_report_id,
+        compliance_report = (
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id,
+            )
         )
 
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found for this period"
+                detail="Compliance report not found for this period",
             )
 
         return compliance_report
