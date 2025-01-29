@@ -343,16 +343,32 @@ def create_materialized_views():
     op.execute(
         """
         CREATE MATERIALIZED VIEW mv_compliance_report_count AS
-        SELECT 
-            CASE current_status_id 
+        SELECT
+            CASE cr.current_status_id
                 WHEN 2 THEN 'Submitted'
                 WHEN 3 THEN 'Recommended by Analysts'
                 WHEN 4 THEN 'Recommended by Manager'
+                ELSE 'Other'
             END AS status,
             COUNT(*) AS count
-        FROM compliance_report
-        WHERE current_status_id IN (2,3,4)
-        GROUP BY current_status_id;
+        FROM
+            compliance_report cr
+        JOIN (
+            SELECT
+                compliance_report_group_uuid,
+                MAX(version) AS max_version
+            FROM
+                compliance_report
+            GROUP BY
+                compliance_report_group_uuid
+        ) latest ON cr.compliance_report_group_uuid = latest.compliance_report_group_uuid
+                AND cr.version = latest.max_version
+        WHERE
+            cr.current_status_id IN (2, 3, 4)
+        GROUP BY
+            cr.current_status_id
+        ORDER BY
+            status;
         """
     )
     logger.info("Created materialized view: mv_compliance_report_count")
