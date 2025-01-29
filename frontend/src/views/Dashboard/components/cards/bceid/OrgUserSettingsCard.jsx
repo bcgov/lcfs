@@ -59,15 +59,6 @@ const OrgUserSettingsCard = () => {
             >
               {t('dashboard:orgUserSettings.configureNotifications')}
             </UserSettingsLink>
-
-            {/* TODO: Update the link to the help page */}
-            <UserSettingsLink onClick={() => navigate()}>
-              {t('dashboard:orgUserSettings.help')}
-              <FontAwesomeIcon
-                icon={faArrowUpRightFromSquare}
-                style={{ color: '#547D59', marginLeft: 6 }}
-              />
-            </UserSettingsLink>
           </List>
         </Stack>
       }
