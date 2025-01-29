@@ -93,6 +93,21 @@ export const BCGridBase = forwardRef(
 
     const closeSelectsOnScroll = (e) => {
       const cell = e.api.getFocusedCell()
+      const columnDef = cell && e.api.getColumnDef(cell.column)
+
+      // Don't close if editing date field
+      if (cell && columnDef?.cellEditor === 'datePickerEditor') {
+        const editingCell = {
+          rowIndex: cell.rowIndex,
+          column: cell.column
+        }
+
+        // Restore focus after scroll ends
+        setTimeout(() => {
+          e.api.setFocusedCell(editingCell.rowIndex, editingCell.column)
+        }, 100)
+        return
+      }
 
       if (cell) {
         e.api.clearFocusedCell()
