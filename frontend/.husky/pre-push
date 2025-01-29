@@ -1,14 +1,14 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
+# #!/usr/bin/env sh
+# . "$(dirname -- "$0")/_/husky.sh"
 
-# Navigate to your frontend directory
-cd frontend
+# # Navigate to your frontend directory
+# cd frontend
 
-# Run the full test suite
-npm run test
+# # Run the full test suite
+# npm run test
 
-# Verify the build
-npm run build
+# # Verify the build
+# npm run build
 
-# Run end-to-end tests
-npm run cypress:run
+# # Run end-to-end tests
+# # npm run cypress:run

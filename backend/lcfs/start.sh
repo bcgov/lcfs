@@ -1,7 +1,10 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+# Enable strict error handling
+set -e
 
 # Wait for the database to be ready
-./wait-for-it.sh db:5432 --timeout=30
+./wait-for-it.sh $LCFS_DB_HOST:5432 --timeout=30
 
 # Load migrations or other prestart tasks
 ./lcfs/prestart.sh

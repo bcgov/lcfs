@@ -1,4 +1,4 @@
-import defaultTheme from '@/assets/theme'
+import defaultTheme from '@/themes'
 import { ThemeProvider, CssBaseline } from '@mui/material'
 import { withThemeFromJSXProvider } from '@storybook/addon-themes'
 import '@fontsource/roboto/300.css'

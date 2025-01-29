@@ -1,9 +1,15 @@
 from typing import Awaitable, Callable
 
 from fastapi import FastAPI
+import boto3
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from lcfs.services.rabbitmq.consumers import start_consumers, stop_consumers
 from lcfs.services.redis.lifetime import init_redis, shutdown_redis
+from lcfs.services.tfrs.redis_balance import init_org_balance_cache
 from lcfs.settings import settings
 
 
@@ -45,11 +51,18 @@ def register_startup_event(
         _setup_db(app)
 
         # Initialize Redis connection pool
-        init_redis(app)
+        await init_redis(app)
 
         # Assign settings to app state for global access
         app.state.settings = settings
-        pass  # noqa: WPS420
+
+        # Initialize FastAPI cache with the Redis client
+        FastAPICache.init(RedisBackend(app.state.redis_client), prefix="lcfs")
+
+        await init_org_balance_cache(app)
+
+        # Setup RabbitMQ Listeners
+        await start_consumers(app)
 
     return _startup
 
@@ -69,6 +82,6 @@ def register_shutdown_event(
         await app.state.db_engine.dispose()
 
         await shutdown_redis(app)
-        pass  # noqa: WPS420
+        await stop_consumers()
 
     return _shutdown

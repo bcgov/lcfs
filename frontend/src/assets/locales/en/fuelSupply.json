@@ -1,0 +1,35 @@
+{
+  "fuelSupplyTitle": "Supply of fuel",
+  "noFuelSuppliesFound": "No fuel supplies found",
+  "fuelSupplyGuide": "Report fuel volumes you supplied for the various end uses.",
+  "fuelSupplyDownloadBtn": "Download as Excel",
+  "fuelSupplyDownloadingMsg": "Downloading supply of fuels information",
+  "fuelSupplyDownloadFailMsg": "Failed to download supply of fuel information.",
+  "LoadFailMsg": "Failed to load supply of fuel rows",
+  "addRow": "Add row",
+  "rows": "rows",
+  "fuelCodeFieldRequiredError": "Unable to save row: Fuel code field required",
+  "fuelSupplyColLabels": {
+    "complianceReportId": "Compliance Report ID",
+    "fuelSupplyId": "Fuel supply ID",
+    "fuelType": "Fuel type",
+    "fuelTypeOther": "Fuel type other",
+    "fuelCategoryId": "Fuel category",
+    "endUseId": "End use",
+    "provisionOfTheActId": "Determining carbon intensity",
+    "fuelCode": "Fuel code",
+    "quantity": "Quantity supplied",
+    "units": "Units",
+    "complianceUnits": "Compliance units",
+    "targetCi": "Target CI",
+    "ciOfFuel": "RCI",
+    "uci": "UCI",
+    "energyDensity": "Energy density",
+    "eer": "EER",
+    "energy": "Energy Content",
+    "determiningCarbonIntensity": "Determining carbon intensity"
+  },
+  "validateMsg": {
+    "isRequired": "{{field}} is required"
+  }
+}

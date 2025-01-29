@@ -1,0 +1,19 @@
+{
+  "title": "Admin Adjustments",
+  "newAdminAdjustment": "New Admin Adjustment",
+  "administrativeAdjustment": "Administrative adjustment — ID:",
+  "editAdminAdjustmentID": "Edit Admin Adjustment ID: ",
+  "actionMsgs": {
+    "createdText": "Draft admin adjustment successfully created.",
+    "updatedText": "Draft admin adjustment successfully updated.",
+    "errorCreateText": "Error creating admin adjustment",
+    "errorUpdateText": "Error updating admin adjustment",
+    "successText": "Admin adjustment successfully {{status}}",
+    "errorRetrieval": "Error retrieving the record"
+  },
+  "deleteDraftConfirmText": "Are you sure you want to delete this draft?",
+  "deleteConfirmText": "Are you sure you want to delete this admin adjustment?",
+  "recommendConfirmText": "Are you sure you want to recommend this admin adjustment?",
+  "approveConfirmText": "Are you sure you want to approve this administrative adjustment?",
+  "loadingText": "Loading Administrative Adjustment"
+}

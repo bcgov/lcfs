@@ -1,141 +1,270 @@
-"""
-User management endpoints
-GET: /users/current
-GET: /users/<user_id>
-GET: /users
-GET: /users/search?username=...&organization=...&surname=...&include_inactive=false
-POST: /users/create
-PATCH: /users/<user_id>
-DELETE: /users/<user_id> (Delete only if the user has never logged in/mapped)
-GET: /users/<user_id>/roles {List of Roles with IDs}
-GET: /users/<user_id>/history
-"""
-import math
-from logging import getLogger
 from typing import List
 
-from fastapi import APIRouter, status, FastAPI, Depends, HTTPException, Request
-from starlette.responses import Response
-from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
+from fastapi import APIRouter, Body, status, Request, Response, Depends, Query
+from fastapi.responses import StreamingResponse
+
 from lcfs.db import dependencies
-from lcfs.web.api.base import EntityResponse
-from lcfs.web.api.user.session import UserRepository
-from lcfs.web.api.user.schema import UserCreate, UserBase
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.base import PaginationRequestSchema, FilterModel
+from lcfs.web.api.role.schema import RoleSchema
+from lcfs.web.api.user.schema import (
+    UserCreateSchema,
+    UserBaseSchema,
+    UserLoginHistoryResponseSchema,
+    UsersSchema,
+    UserActivitiesResponseSchema,
+    UpdateEmailSchema,
+)
+from lcfs.web.api.user.services import UserServices
+from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
-logger = getLogger("users")
+logger = structlog.get_logger(__name__)
 get_async_db = dependencies.get_async_db_session
-user_repo = None  # Define user_repo at the global level
-
-@router.on_event("startup")
-async def startup_event():
-    global user_repo
-    async for db in get_async_db():  # Iterate over the async_generator
-        user_repo = UserRepository(db)
-        break  # Break after obtaining the database connection
 
 
-@router.get("/current", response_model=UserBase, status_code=status.HTTP_200_OK)
-async def get_current_user(request: Request, response: Response = None) -> UserBase:
-    try:
-        current_user = request.user
-        if not current_user:
-            err_msg = "Current user not found"
-            logger.error(err_msg)
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return UserBase(status=status.HTTP_404_NOT_FOUND,
-                                  message="Not Found", success=False, data={},
-                                  error={"message": err_msg})
-        return UserBase.from_orm(current_user)
-    except Exception as e:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting current user", str(e.args[0]))
-        return UserBase(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                              message="Failed", success=False, data={},
-                              error={"message": f"Technical error: {e.args[0]}"})
+@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.GOVERNMENT])
+async def export_users(
+    request: Request,
+    format: str = Query(default="xls", description="File export format"),
+    service: UserServices = Depends(),
+):
+    """
+    Endpoint to export information of all users
+
+    This endpoint can support exporting data in different file formats (xls, xlsx, csv)
+    as specified by the 'format' and 'media_type' variables.
+    - 'format' specifies the file format: options are 'xls', 'xlsx', and 'csv'.
+    - 'media_type' sets the appropriate MIME type based on 'format':
+        'application/vnd.ms-excel' for 'xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' for 'xlsx',
+        'text/csv' for 'csv'.
+
+    The SpreadsheetBuilder class is used for building the spreadsheet.
+    It allows adding multiple sheets with custom styling options and exports them as a byte stream.
+    Also, an example of how to use the SpreadsheetBuilder is provided in its class documentation.
+
+    Note: Only the first sheet data is used for the CSV format,
+        as CSV files do not support multiple sheets.
+    """
+    return await service.export_users(format)
 
 
+@router.post("/list", response_model=UsersSchema, status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_users(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    response: Response = None,
+    service: UserServices = Depends(),
+) -> UsersSchema:
+    """
+    Endpoint to get information of all users for ag-grid in the UI
 
-@router.get("/", response_model=List[UserBase], status_code=status.HTTP_200_OK)
-async def get_users(limit: int = 10, offset: int = 0, response: Response = None) -> List[UserBase]:
-    current_page = math.ceil(offset / limit) + 1
-    try:
-        users = await user_repo.query_users(
-            pagination={
-                "per_page": limit, 
-                "page": offset, 
-                "sort_field": "username", 
-                "sort_direction": "asc"
-            }
-        )
-        if len(users) == 0:
-            logger.error("Error getting users")
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return []
-        
-        # Convert the users to a list of UserBase objects
-        user_bases = [UserBase.from_orm(user) for user in users]
-        return user_bases  # Return the list of UserBase objects
-    except Exception as e:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting users", str(e.args[0]))
-        return []  # Return an empty list if there's an error
-    
+    Pagination Request Schema:
+    - page: offset/ page indicates the pagination of rows for the users list
+    - size: size indicates the number of rows per page for the users list
+    - sortOrders: sortOrders is an array of objects that specify the sorting criteria for the users list.
+        Each object has the following properties:
+        - field: the name of the field to sort by
+        - direction: the sorting direction ('asc' or 'desc')
+    - filterModel: filterModel is an array of objects that specifies the filtering criteria for the users list.
+        It has the following properties:
+        - filter_type: the type of filtering to perform ('text', 'number', 'date', 'boolean')
+        - type: the type of filter to apply ('equals', 'notEquals', 'contains', 'notContains', 'startsWith', 'endsWith')
+        - filter: the actual filter value
+        - field: Database Field that needs filtering.
+    """
+    pagination.filters = [*pagination.filters, FilterModel(
+        filter_type="text",
+        type="blank",
+        field="organizationId",
+        filter=""
+    )]
 
-@router.get("/search", response_model=EntityResponse, status_code=status.HTTP_200_OK)
-async def get_user_search(username: str = None, organization: str = None,
-                          surname: str = None, include_inactive: bool = False,
-                          response: Response = None) -> EntityResponse:
-    # TODO: add sorting and pagination
-    try:
-        users = await user_repo.search_users(username, organization,
-                                                      surname, include_inactive)
-        if users.__len__() == 0:
-            logger.error("Error getting users")
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return EntityResponse(status=status.HTTP_404_NOT_FOUND,
-                                  message="Not Found", success=False, data={},
-                                  error={"message": "No users found"})
-        return EntityResponse(status=status.HTTP_200_OK, data=users,
-                              total=len(users), error={},
-                              success=True, message="Success")
-    except Exception as e:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error("Error getting users", str(e.args[0]))
-        return EntityResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                              message="Failed", success=False, data={},
-                              error={"message": f"Technical error: {e.args[0]}"})
+    return await service.get_all_users(pagination)
 
 
-@router.get("/{user_id}", response_model=EntityResponse, status_code=status.HTTP_200_OK)
-async def get_user_by_id(user_id: int, response: Response = None) -> EntityResponse:
-    try:
-        user = await user_repo.get_user(user_id=user_id)
-        if user is None:
-            err_msg = f"User {user_id} not found"
-            logger.error(err_msg)
-            response.status_code = status.HTTP_404_NOT_FOUND
-            return EntityResponse(status=status.HTTP_404_NOT_FOUND,
-                                  message="Not Found", success=False, data={},
-                                  error={"message": err_msg})
-        return EntityResponse(status=status.HTTP_200_OK, data=user,
-                              total=1, error={}, total_pages=1, limit=1,
-                              success=True, message="Success")
-    except Exception as e:
-        response.status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
-        logger.error(f"Error finding user {user_id}", str(e.args[0]))
-        return EntityResponse(status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                              message="Failed", success=False, data={},
-                              error={"message": f"Technical error: {e.args[0]}"})
+@router.post("/logged-in", status_code=status.HTTP_200_OK)
+@view_handler(["*"])
+async def track_logged_in(
+    request: Request, response: Response = None, service: UserServices = Depends()
+) -> str:
+    """
+    Endpoint to track when a user logs in
+
+    This endpoint returns the information of the current user, including their roles and organization.
+    """
+
+    await service.track_user_login(request.user)
+    return "Tracked"
 
 
-@router.post("/create", response_model=EntityResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(user_data: UserCreate, db: AsyncSession = Depends(get_async_db)) -> EntityResponse:
-    try:
-        user_repo = UserRepository(db)
-        created_user = await user_repo.create_user(user_data)
-        return EntityResponse(status=status.HTTP_201_CREATED, data=created_user, error={}, success=True, message="User created successfully")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
+@router.get("/current", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
+@view_handler(["*"])
+async def get_current_user(
+    request: Request, response: Response = None
+) -> UserBaseSchema:
+    """
+    Endpoint to get information of the current user
+
+    This endpoint returns the information of the current user, including their roles and organization.
+    """
+    return UserBaseSchema.model_validate(request.user)
 
 
+@router.get("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_user_by_id(
+    request: Request,
+    user_id: int,
+    service: UserServices = Depends(),
+) -> UserBaseSchema:
+    """
+    Endpoint to get information of a user by ID
+    This endpoint returns the information of a user by ID, including their roles and organization.
+    """
+    return await service.get_user_by_id(user_id)
+
+
+@router.post("", response_model=None, status_code=status.HTTP_201_CREATED)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def create_user(
+    request: Request,
+    response: Response = None,
+    user_create: UserCreateSchema = ...,
+    service: UserServices = Depends(),
+) -> None:
+    """
+    Endpoint to create a new user
+    This endpoint creates a new user and returns the information of the created user.
+    """
+    return await service.create_user(user_create)
+
+
+@router.put("/{user_id}", response_model=UserBaseSchema, status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def update_user(
+    request: Request,
+    response: Response = None,
+    user_id: int = None,
+    user_create: UserCreateSchema = ...,
+    service: UserServices = Depends(),
+) -> UserBaseSchema:
+    """
+    Endpoint to update a user
+    This endpoint updates a user and returns the information of the updated user.
+    """
+    await service.update_user(user_create, user_id)
+    return await service.get_user_by_id(user_id)
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_200_OK)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def delete_user(
+    request: Request,
+    response: Response = None,
+    user_id: int = None,
+    service: UserServices = Depends(),
+) -> None:
+    """
+    Endpoint to delete a user
+    This endpoint deletes a user, if the user had never logged in before.
+    """
+    return await service.delete_user(user_id)
+
+
+@router.get(
+    "/{user_id}/roles", response_model=List[RoleSchema], status_code=status.HTTP_200_OK
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_user_roles(
+    request: Request,
+    response: Response = None,
+    user_id: int = None,
+    service: UserServices = Depends(),
+) -> List[RoleSchema]:
+    """
+    Endpoint to get the roles of a user
+    """
+    return await service.get_user_roles(user_id)
+
+
+@router.post(
+    "/{user_id}/activity",
+    response_model=UserActivitiesResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ADMINISTRATOR, RoleEnum.MANAGE_USERS])
+async def get_user_activities(
+    request: Request,
+    user_id: int,
+    pagination: PaginationRequestSchema = Body(...),
+    service: UserServices = Depends(),
+) -> UserActivitiesResponseSchema:
+    """
+    Get activities of a specific user.
+
+    Permissions:
+    - Government users with 'ADMINISTRATOR' role can access any user's activities.
+    - Supplier users with 'MANAGE_USERS' role can access activities of users within
+        their own organization.
+    """
+    current_user = request.user
+    return await service.get_user_activities(user_id, current_user, pagination)
+
+
+@router.post(
+    "/activities/all",
+    response_model=UserActivitiesResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def get_all_user_activities(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(...),
+    service: UserServices = Depends(),
+) -> UserActivitiesResponseSchema:
+    """
+    Get activities of all users.
+    """
+    current_user = request.user
+    return await service.get_all_user_activities(current_user, pagination)
+
+
+@router.post(
+    "/login-history",
+    response_model=UserLoginHistoryResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ADMINISTRATOR])
+async def get_all_user_login_history(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(...),
+    service: UserServices = Depends(),
+) -> UserLoginHistoryResponseSchema:
+    """
+    Get users login history.
+    """
+    current_user = request.user
+    return await service.get_all_user_login_history(current_user, pagination)
+
+
+@router.post(
+    "/update-email",
+    response_model=UpdateEmailSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def update_email(
+    request: Request,
+    email_data: UpdateEmailSchema = Body(...),
+    service: UserServices = Depends(),
+):
+    user_id = request.user.user_profile_id
+    email = email_data.email
+
+    user = await service.update_email(user_id, email)
+    return UpdateEmailSchema(email=user.email)

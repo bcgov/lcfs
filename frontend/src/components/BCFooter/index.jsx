@@ -1,18 +1,26 @@
 import PropTypes from 'prop-types'
-
-// @mui material components
 import { Link } from '@mui/material'
-
-// BCGov React components
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-// Icons
 import GitHubIcon from '@mui/icons-material/GitHub'
+import typography from '@/themes/base/typography'
 
-// BCGov React base styles
-import typography from '@/assets/theme/base/typography'
-
-function Footer({ repoDetails, links }) {
+function Footer({
+  repoDetails = {
+    href: 'https://github.com/bcgov/lcfs/releases/tag/v0.2.0',
+    name: 'v0.2.0',
+    id: 'footer-about-version',
+    label: 'LCFS repository changelog'
+  },
+  links = [
+    {
+      href: '/',
+      name: 'Home',
+      id: 'footer-home',
+      label: 'Home page of LCFS'
+    }
+  ]
+}) {
   const { size } = typography
 
   const renderLinks = () =>
@@ -39,7 +47,7 @@ function Footer({ repoDetails, links }) {
           aria-label={link.label}
           id={link.id}
         >
-          <BCTypography variant="button" fontWeight="regular" color="text">
+          <BCTypography variant="button" fontWeight="regular" color="white">
             {link.name}
           </BCTypography>
         </Link>
@@ -63,7 +71,8 @@ function Footer({ repoDetails, links }) {
         backgroundColor: primary.nav,
         borderTop: `2px solid ${secondary.main}`,
         color: white.main,
-        minHeight: pxToRem(46)
+        minHeight: pxToRem(46),
+        position: 'relative'
       })}
     >
       <BCBox
@@ -91,7 +100,7 @@ function Footer({ repoDetails, links }) {
         justifyContent="center"
         alignItems="center"
         flexWrap="wrap"
-        color="text"
+        color="white"
         fontSize={size.sm}
         px={1.5}
       >
@@ -114,24 +123,6 @@ function Footer({ repoDetails, links }) {
       </BCBox>
     </BCBox>
   )
-}
-
-// Setting default values for the props of Footer
-Footer.defaultProps = {
-  links: [
-    {
-      href: '/',
-      name: 'Home',
-      id: 'footer-home',
-      label: 'Home page of LCFS'
-    }
-  ],
-  repoDetails: {
-    href: 'https://github.com/bcgov/lcfs/releases/tag/v0.2.0',
-    name: 'v0.2.0',
-    id: 'footer-about-version',
-    label: 'LCFS repository changelog'
-  }
 }
 
 // Typechecking props for the Footer

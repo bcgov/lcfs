@@ -8,6 +8,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 docs/
+.DS_Store
 
 # C extensions
 *.so
@@ -104,7 +105,6 @@ ENV/
 env.bak/
 venv.bak/
 .git/
-.github/
 
 # Spyder project settings
 .spyderproject
@@ -132,3 +132,4 @@ cython_debug/
 
 # local database file
 LCFS Local DB.session.sql
+frontend/cucumber-report.html

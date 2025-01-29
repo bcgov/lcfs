@@ -19,17 +19,30 @@ describe('User Login Test Suite', () => {
       .and('have.attr', 'href', '/contact-us')
   })
 
+  it('redirects unauthenticated users to the login page', () => {
+    // Visit a protected route
+    cy.visit('/organizations')
+    // Check if the user is redirected to the login page
+    cy.url().should('include', '/login')
+  })
+
   describe('IDIR Login Flow', () => {
+    it('fails login with wrong IDIR user credentials', () => {
+      cy.loginWith('idir', 'wrong_username', 'wrong_password')
+      cy.getByDataTest('main-layout-navbar').should('not.exist')
+    })
+
     it('completes login with IDIR user credentials', () => {
-      cy.login(
+      cy.loginWith(
         'idir',
         Cypress.env('IDIR_TEST_USER'),
         Cypress.env('IDIR_TEST_PASS')
       )
+      cy.getByDataTest('main-layout-navbar').should('be.visible')
     })
 
     it('executes logout functionality for IDIR user', () => {
-      cy.login(
+      cy.loginWith(
         'idir',
         Cypress.env('IDIR_TEST_USER'),
         Cypress.env('IDIR_TEST_PASS')
@@ -39,21 +52,22 @@ describe('User Login Test Suite', () => {
   })
 
   describe('BCeID Login Flow', () => {
-    it('completes login with BCeID user credentials', () => {
-      cy.login(
-        'bceid',
-        Cypress.env('BCEID_TEST_USER'),
-        Cypress.env('BCEID_TEST_PASS')
-      )
+    it('fails login with wrong BCeID user credentials', () => {
+      cy.loginWith('bceid', 'wrong_username', 'wrong_password')
+      cy.getByDataTest('main-layout-navbar').should('not.exist')
     })
 
-    it('executes logout functionality for BCeID user', () => {
-      cy.login(
+    it('completes login with BCeID user credentials', () => {
+      cy.loginWith(
         'bceid',
         Cypress.env('BCEID_TEST_USER'),
         Cypress.env('BCEID_TEST_PASS')
       )
-      cy.logout()
+      // we are testing successful keycloak login but the user
+      // does not exist in the LCFS db so it shows the error
+      cy.contains('No User with that configuration exists.').should(
+        'be.visible'
+      )
     })
   })
 })

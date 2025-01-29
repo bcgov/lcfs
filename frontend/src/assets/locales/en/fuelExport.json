@@ -1,0 +1,37 @@
+{
+  "fuelExportTitle": "Export fuel",
+  "noFuelExportsFound": "No fuel exports found",
+  "addFuelExportRowsTitle": "Export fuels",
+  "fuelExportGuide": "Report fuel volumes that were marketed or supplied in B.C. and then exported out of the province. Only negative compliance units (debits) can be issued, credits cannot be issued for exported fuel.",
+  "fuelExportDownloadBtn": "Download as Excel",
+  "fuelExportDownloadingMsg": "Downloading export fuels information",
+  "fuelExportDownloadFailMsg": "Failed to download export fuel information.",
+  "LoadFailMsg": "Failed to load export fuel rows",
+  "addRow": "Add row",
+  "rows": "rows",
+  "fuelExportColLabels": {
+    "complianceReportId": "Compliance Report ID",
+    "fuelExportId": "Fuel export ID",
+    "fuelTypeId": "Fuel type",
+    "exportDate": "Export date",
+    "fuelTypeOther": "Fuel type other",
+    "fuelCategoryId": "Fuel category",
+    "endUseId": "End use",
+    "provisionOfTheActId": "Determining carbon intensity",
+    "fuelCode": "Fuel code",
+    "quantity": "Quantity supplied",
+    "units": "Units",
+    "complianceUnits": "Compliance units",
+    "targetCI": "Target CI",
+    "ciOfFuel": "RCI",
+    "uci": "UCI",
+    "energyDensity": "Energy density",
+    "eer": "EER",
+    "energy": "Energy Content",
+    "determiningCarbonIntensity": "Determining carbon intensity"
+  },
+  "validateMsg": {
+    "isRequired": "{{field}} is required"
+  },
+  "fuelCodeFieldRequiredError": "Unable to save row: Fuel code field required"
+}

@@ -1,16 +1,18 @@
 """lcfs models."""
+
 from pathlib import Path
 import pkgutil
+
 
 def load_all_models() -> None:
     """Load all models from this folder, loading specific models first."""
 
     # Models that need to be loaded first
     priority_models = [
-      'OrganizationStatus',
-      'Organization', 
-      'UserProfile', 
-      'Role'
+        "organization.OrganizationStatus",
+        "organization.Organization",
+        "user.UserProfile",
+        "user.Role",
     ]
 
     # Load priority models
@@ -29,27 +31,15 @@ def load_all_models() -> None:
             __import__(module.name)  # noqa: WPS421
 
 
-from . import OrganizationType
-from . import OrganizationStatus
-from . import OrganizationAddress
-from . import OrganizationAttorneyAddress
-from . import OrganizationStatus
-from . import OrganizationBalance
-from . import Organization
-from . import Role
-from . import UserProfile
-from . import UserRole
-from . import UserLoginHistory
-from . import Category
-from . import Comment
-from . import NotificationChannel
-from . import NotificationType
-from . import NotificationChannelSubscription
-from . import NotificationMessage
-from . import Transaction
-from . import TransactionType
-from . import Issuance
-from . import IssuanceHistory
-from . import Transfer
-from . import TransferHistory
-from . import TransferStatus
+# Explicit model imports from subdirectories
+from .admin_adjustment import *
+from .comment import *
+from .compliance import *
+from .document import *
+from .fuel import *
+from .initiative_agreement import *
+from .notification import *
+from .organization import *
+from .transaction import *
+from .transfer import *
+from .user import *

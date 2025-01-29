@@ -1,0 +1,113 @@
+{
+  "title": {
+    "ConfigureNotifications": "Configure notifications",
+    "Notifications": "Notifications"
+  },
+  "tabs": {
+    "configuration": "Configuration",
+    "notifications": "Notifications"
+  },
+  "emailNotification": "Email notification",
+  "inAppNotification": "In-app notification",
+  "saveButton": "Save",
+  "notificationsEmail": "Notifications email",
+  "messages": {
+    "subscriptionUpdated": "Subscription updated successfully.",
+    "emailSaved": "Email address saved successfully."
+  },
+  "errors": {
+    "invalidEmail": "Please enter a valid email address.",
+    "emailRequired": "Email address is required.",
+    "loadingNotificationSettings": "Error loading notification settings.",
+    "operationFailed": "An error occurred while processing your request. Please try again."
+  },
+  "loading": {
+    "savingPreferences": "Updating your subscription preferences...",
+    "notificationSettings": "Loading notification settings..."
+  },
+  "aria": {
+    "notificationsTabs": "Notifications Tabs"
+  },
+  "bceid": {
+    "categories": {
+      "transfers": {
+        "title": "Transfers",
+        "partnerActions": "Transfer partner proposed, declined, rescinded or signed & submitted",
+        "directorDecision": "Director recorded/refused"
+      },
+      "initiativeAgreements": {
+        "title": "Initiative agreements and other transactions",
+        "directorApproval": "Director approved"
+      },
+      "complianceReports": {
+        "title": "Compliance & supplemental reports",
+        "directorAssessment": "Director assessment"
+      }
+    }
+  },
+  "idirAnalyst": {
+    "categories": {
+      "transfers": {
+        "title": "Transfers",
+        "submittedForReview": "Submitted to government for analyst review",
+        "rescindedAction": "Rescinded by either transfer partner",
+        "directorRecorded": "Director recorded/refused"
+      },
+      "initiativeAgreements": {
+        "title": "Initiative agreements and other transactions",
+        "returnedToAnalyst": "Director approved/returned to analyst"
+      },
+      "complianceReports": {
+        "title": "Compliance & supplemental reports",
+        "submittedForReview": "Submitted to government for analyst review (or returned by compliance manager)",
+        "managerRecommendation": "Recommended by compliance manager",
+        "directorDecision": "Director assessment"
+      }
+    }
+  },
+  "idirComplianceManager": {
+    "categories": {
+      "complianceReports": {
+        "title": "Compliance & supplemental reports",
+        "submittedForReview": "Submitted to government for analyst review",
+        "analystRecommendation": "Analyst recommendation (or returned by the director)",
+        "directorAssessment": "Director assessment"
+      }
+    }
+  },
+  "idirDirector": {
+    "categories": {
+      "transfers": {
+        "title": "Transfers",
+        "analystRecommendation": "Analyst recommendation"
+      },
+      "initiativeAgreements": {
+        "title": "Initiative agreements and other transactions",
+        "analystRecommendation": "Analyst recommendation"
+      },
+      "complianceReports": {
+        "title": "Compliance & supplemental reports",
+        "managerRecommendation": "Compliance manager recommendation"
+      }
+    }
+  },
+  "buttonStack": {
+    "selectAll": "Select all",
+    "unselectAll": "Unselect all",
+    "markAsRead": "Mark as read",
+    "deleteSelected": "Delete selected"
+  },
+  "notificationColLabels": {
+    "type": "Type",
+    "date": "Date",
+    "user": "User",
+    "transactionId": "Transaction ID",
+    "organization": "Organization"
+  },
+  "noNotificationsFound": "No notification messages found.",
+  "noNotificationsSelectedText": "No messages selected.",
+  "deleteSuccessText": "Successfully deleted selected message(s).",
+  "deleteErrorText": "An error occurred while deleting the selected message(s).",
+  "markAsReadSuccessText": "Successfully updated message(s) as read.",
+  "markAsReadErrorText": "An error occurred while updating the message(s) as read."
+}

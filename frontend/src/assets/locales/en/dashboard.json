@@ -1,0 +1,93 @@
+{
+  "directorReview": {
+    "title": "Director review",
+    "loadingMessage": "Loading director review items...",
+    "thereAre": "There are:",
+    "transfersForReview": "Transfer(s) for your review and statutory decision",
+    "complianceReportsForReview": "Compliance report(s) awaiting your review",
+    "initiativeAgreementsForReview": "Initiative agreement(s) awaiting your review",
+    "adminAdjustmentsForReview": "Administrative adjustment(s) awaiting your review"
+  },
+  "orgTransactions": {
+    "title": "Transactions",
+    "orgHas": "{{name}} has:",
+    "transfersInProgress": "Transfer(s) in progress",
+    "organizationsRegistered": "Organizations registered for transfers (see bulletin RLCF-013)",
+    "startNewTransfer": "Start a new transfer",
+    "linkTooltip": "Link opens in a new browser tab",
+    "loadingMessage": "Loading transactions card..."
+  },
+  "transactions": {
+    "title": "Transactions",
+    "thereAre": "There are:",
+    "transfersInProgress": "Transfer(s) in progress",
+    "initiativeAgreementsInProgress": "Initiative agreement(s) in progress",
+    "administrativeAdjustmentsInProgress": "Administrative adjustment(s) in progress",
+    "viewAllTransactions": "View all transactions",
+    "loadingMessage": "Loading transactions card..."
+  },
+  "fuelCodes": {
+    "title": "Fuel Codes",
+    "thereAre": "There are:",
+    "fcInProgress": "Fuel Code(s) in progress",
+    "loadingMessage": "Loading fuel codes card..."
+  },
+  "complianceReports": {
+    "title": "Compliance reports",
+    "thereAre": "There are:",
+    "crInProgress": "Compliance Report(s) in progress",
+    "loadingMessage": "Loading Compliance Report card..."
+  },
+  "feedback": {
+    "title": "We want to hear from you",
+    "email": "We are always striving to<br />improve LCFS.<br />Please send your<br />suggestions and feedback to:<br /><a href=\"mailto:lcfs@gov.bc.ca\" aria-label=\"Please send your suggestions and feedback to lcfs@gov.bc.ca\">lcfs@gov.bc.ca</a>"
+  },
+  "website": {
+    "title": "Low Carbon Fuel Standard",
+    "linkText": "Visit our website at:",
+    "linkUrl": "gov.bc.ca/lowcarbonfuels",
+    "linkTooltip": "Link opens in a new browser tab"
+  },
+  "orgBalance": {
+    "loading": "Loading balance details...",
+    "unableToFetchBalanceDetails": "Unable to fetch balance details.",
+    "org": "Organization",
+    "hasABalanceOf": "has a balance of",
+    "complianceUnits": "compliance units",
+    "inReserve": "in reserve",
+    "inReserveTooltip": "In-reserve are the portion of compliance units in your balance that are currently pending the completion of a transaction. For example, transferring credits to another organization or a compliance report awaiting assessment by the director. Compliance units that are in-reserve cannot be transferred or otherwise used until the pending transaction has been completed."
+  },
+  "adminLinks": {
+    "mngGovUsrsLabel": "Manage government users",
+    "addEditOrgsLabel": "Add/edit fuel suppliers",
+    "usrActivity": "User activity",
+    "administration": "Administration"
+  },
+  "orgDetails": {
+    "orgDetailsLabel": "Organization Details",
+    "orgDetailsLoadingMsg": "Loading organization details...",
+    "users": "Users",
+    "createNewUsrLabel": "Create new BCeID account",
+    "linkTooltip": "Link opens in a new browser tab"
+  },
+  "orgComplianceReports": {
+    "title": "Compliance reports",
+    "loadingMessage": "Loading compliance reports card...",
+    "orgHas": "{{name}} has:",
+    "inProgress": "Compliance report(s) in progress",
+    "awaitingGovReview": "Compliance report(s) awaiting government review",
+    "noActionRequired": "There are no reports that require any action."
+  },
+  "userSettings": {
+    "title": "User settings",
+    "notifications": "Notifications",
+    "configureNotifications": "Configure your notifications",
+    "help": "Help"
+  },
+  "orgUserSettings": {
+    "title": "User settings",
+    "notifications": "Notifications",
+    "configureNotifications": "Configure your notifications",
+    "help": "Help"
+  }
+}

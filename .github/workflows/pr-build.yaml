@@ -1,0 +1,211 @@
+name: PR Build on Dev
+
+on:
+  pull_request:
+    types: [labeled, synchronize]
+    paths:
+      - frontend/**
+      - backend/**
+
+env:
+  GIT_URL: https://github.com/bcgov/lcfs.git
+  TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
+  DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
+  PR_NUMBER: ${{ github.event.pull_request.number }}
+  GIT_REF: ${{ github.event.pull_request.head.ref }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  install-oc:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.1.1
+
+      - name: Set up cache for OpenShift CLI
+        id: cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: /usr/local/bin/oc  # Path where the `oc` binary will be installed
+          key: oc-cli-${{ runner.os }}
+
+      - name: Install OpenShift CLI (if not cached)
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: |
+          curl -LO https://mirror.openshift.com/pub/openshift-v4/clients/ocp/stable/openshift-client-linux.tar.gz
+          tar -xvf openshift-client-linux.tar.gz
+          sudo mv oc /usr/local/bin/
+          oc version --client
+
+      - name: Confirm OpenShift CLI is Available
+        run: oc version --client
+
+  get-version:
+    if: >
+      (github.event.action == 'labeled' && github.event.label.name == 'build' && github.event.pull_request.base.ref == github.event.repository.default_branch) ||
+      (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'build') && github.event.pull_request.base.ref == github.event.repository.default_branch)
+    name: Retrieve version
+    runs-on: ubuntu-latest
+    needs: [install-oc]
+
+    outputs:
+      output1: ${{ steps.get-version.outputs.VERSION }}
+
+    steps:
+
+      - name: Restore oc command from Cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: /usr/local/bin/oc
+          key: oc-cli-${{ runner.os }}
+
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ env.TOOLS_NAMESPACE }}
+
+      - id: get-version
+        run: |
+
+          pr_deployed=$(helm -n ${{ env.DEV_NAMESPACE }} list | grep lcfs-frontend-dev- | wc -l | tr -d '[:space:]')
+          if [ "$pr_deployed" -gt 1 ]; then
+            echo "There are at least 2 pull requests have been deployed on dev. Please uninstalled one of them in order to to have space to deploy this pull request. Exiting with code 99"
+            exit 99
+          else
+            echo "There are $pr_deployed pull request builds on dev. Will deploy a new one."
+            version=$(echo "${{ github.event.repository.default_branch }}" | sed -E 's/release-(.*)/\1/')
+            echo "VERSION=$version" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    if: >
+      (github.event.action == 'labeled' && github.event.label.name == 'build' && github.event.pull_request.base.ref == github.event.repository.default_branch) ||
+      (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'build') && github.event.pull_request.base.ref == github.event.repository.default_branch)
+    name: Build LCFS
+    runs-on: ubuntu-latest
+    needs: [get-version]
+    timeout-minutes: 60
+
+    env:
+      VERSION: ${{ needs.get-version.outputs.output1 }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.1.1
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Restore oc command from Cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: /usr/local/bin/oc
+          key: oc-cli-${{ runner.os }}
+
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ env.TOOLS_NAMESPACE }}
+
+      - name: Build LCFS Frontend
+        run: |
+          cd openshift/templates
+          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PR_NUMBER }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          sleep 2s
+          for build in $(oc -n ${{ env.TOOLS_NAMESPACE }} get builds -l buildconfig=lcfs-frontend-${{ env.VERSION }}-${{ env.PR_NUMBER }} -o jsonpath='{.items[?(@.status.phase=="Running")].metadata.name}'); do
+            oc -n ${{ env.TOOLS_NAMESPACE }} cancel-build $build --wait=true
+          done
+          sleep 2s
+          oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-frontend-${{ env.VERSION }}-${{ env.PR_NUMBER }} --wait=true
+          sleep 2s
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PR_NUMBER }}
+
+      - name: Build LCFS Backend
+        run: |
+          cd openshift/templates
+          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PR_NUMBER }} GIT_URL=${{ env.GIT_URL }} GIT_REF=${{ github.event.pull_request.head.ref }} | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          sleep 2s
+          for build in $(oc -n ${{ env.TOOLS_NAMESPACE }} get builds -l buildconfig=lcfs-backend-${{ env.VERSION }}-${{ env.PR_NUMBER }} -o jsonpath='{.items[?(@.status.phase=="Running")].metadata.name}'); do
+            oc -n ${{ env.TOOLS_NAMESPACE }} cancel-build $build --wait=true
+          done
+          sleep 2s
+          oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-backend-${{ env.VERSION }}-${{ env.PR_NUMBER }} --wait=true
+          sleep 2s
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PR_NUMBER }} ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PR_NUMBER }}
+
+  deploy:
+    if: >
+      (github.event.action == 'labeled' && github.event.label.name == 'build' && github.event.pull_request.base.ref == github.event.repository.default_branch) ||
+      (github.event.action == 'synchronize' && contains(github.event.pull_request.labels.*.name, 'build') && github.event.pull_request.base.ref == github.event.repository.default_branch)
+    name: Deploy LCFS
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: [get-version, build]
+
+    env:
+      VERSION: ${{ needs.get-version.outputs.output1 }}
+
+    steps:
+      - name: Checkout Manifest repository
+        uses: actions/checkout@v4.1.1
+        with:
+          repository: bcgov-c/tenant-gitops-d2bd59
+          ref: main
+          ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
+
+      - name: Restore oc command from Cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: /usr/local/bin/oc
+          key: oc-cli-${{ runner.os }}
+          
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ env.TOOLS_NAMESPACE }}
+
+      - name: Update values-dev-pr.yaml for frentend and backend
+        uses: mikefarah/yq@v4.40.5
+        with:
+          cmd: |
+            yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.route.host = "lcfs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.volumes[0].configMap.name = "lcfs-frontend-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.apiBase = "https://lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/api"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.keycloak.postLogoutUrl = "https://lcfs-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca/"' lcfs/charts/lcfs-frontend/values-dev-pr.yaml
+            yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i '.route.host = "lcfs-backend-dev-${{ env.PR_NUMBER }}.apps.silver.devops.gov.bc.ca"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_DB_HOST") | .value) = "lcfs-postgres-dev-${{ env.PR_NUMBER }}-postgresql.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_REDIS_HOST") | .value) = "lcfs-redis-dev-${{ env.PR_NUMBER }}-master.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_S3_ENDPOINT") | .value) = "lcfs-minio-dev-${{ env.PR_NUMBER }}.${{ env.DEV_NAMESPACE }}.svc.cluster.local"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_S3_SECRET_KEY") | .valueFrom.secretKeyRef.name) = "lcfs-minio-dev-${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+            yq -i eval '(.env[] | select(.name == "LCFS_RABBITMQ_TRANSACTION_QUEUE") | .value) = "transaction_queue_${{ env.PR_NUMBER }}"' lcfs/charts/lcfs-backend/values-dev-pr.yaml
+
+      - name: Helm Deployment
+        shell: bash {0}
+        run: |
+          cd lcfs/charts/lcfs-postgres-pr
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-postgres-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/postgresql --version 15.5.17
+          cd ../lcfs-redis-pr
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-redis-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/redis --version 19.6.1
+          cd ../lcfs-minio-pr
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-minio-dev-${{ env.PR_NUMBER }} oci://registry-1.docker.io/bitnamicharts/minio --version 14.8.0
+          cd ../lcfs-frontend
+          # refresh the pod annotation everytime in order to force the rollout
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-frontend-dev-${{ env.PR_NUMBER }} . --set podAnnotations.rolloutTriggered="A$(date +%s)E"
+          sleep 60s
+          cd ../lcfs-backend
+          helm -n ${{ env.DEV_NAMESPACE }} -f ./values-dev-pr.yaml upgrade --install lcfs-backend-dev-${{ env.PR_NUMBER }} . --set podAnnotations.rolloutTriggered="A$(date +%s)E"

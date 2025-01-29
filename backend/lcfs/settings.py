@@ -30,10 +30,12 @@ class Settings(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8000
-    # quantity of workers for uvicorn
-    workers_count: int = 1
-    # Enable uvicorn reloading
-    reload: bool = True
+    # Number of Uvicorn workers
+    workers_count: int = 2
+    # Enable Uvicorn reload (True for development, False for production)
+    reload: bool = False
+    # App timeout matching OpenShift's ROUTER_DEFAULT_SERVER_TIMEOUT
+    timeout_keep_alive: int = 30
 
     # Current environment
     environment: str = "dev"
@@ -46,18 +48,49 @@ class Settings(BaseSettings):
     db_user: str = "lcfs"
     db_pass: str = "development_only"
     db_base: str = "lcfs"
+    db_test: str = "lcfs_test"
     db_echo: bool = False
 
     # Variables for Redis
     redis_host: str = "localhost"
     redis_port: int = 6379
+    redis_db: str = "lcfs"
     redis_user: Optional[str] = None
-    redis_pass: Optional[str] = None
+    redis_pass: Optional[str] = "development_only"
     redis_base: Optional[int] = None
 
-    # Variables for Keycloak 
-    well_known_endpoint: str = "https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration"
-    keycloak_audience: str = "tfrs-on-gold-4308"
+    # Variables for Keycloak
+    well_known_endpoint: str = (
+        "https://dev.loginproxy.gov.bc.ca/auth/realms/standard/.well-known/openid-configuration"
+    )
+    keycloak_audience: str = "low-carbon-fuel-standard-5147"
+
+    # Variables for S3
+    s3_endpoint: str = "http://minio:9000"
+    s3_bucket: str = "lcfs"
+    s3_access_key: str = "s3_access_key"
+    s3_secret_key: str = "development_only"
+    s3_docs_path: str = "lcfs-docs"
+
+    # Variables for ClamAV
+    clamav_enabled: bool = False
+    clamav_host: str = "clamav"
+    clamav_port: int = 3310
+
+    # Variables for RabbitMQ
+    rabbitmq_host: str = "rabbitmq"
+    rabbitmq_port: int = 5672
+    rabbitmq_pass: str = "development_only"
+    rabbitmq_user: str = "lcfs"
+    rabbitmq_vhost: str = "lcfs"
+    rabbitmq_transaction_queue: str = "transaction_queue"
+
+    ches_auth_url: str = ""
+    ches_email_url: str = ""
+    ches_client_id: str = ""
+    ches_client_secret: str = ""
+    ches_sender_email: str = "noreply@gov.bc.ca"
+    ches_sender_name: str = "LCFS Notification System"
 
     @property
     def db_url(self) -> URL:
@@ -73,6 +106,22 @@ class Settings(BaseSettings):
             user=self.db_user,
             password=self.db_pass,
             path=f"/{self.db_base}",
+        )
+
+    @property
+    def db_test_url(self) -> URL:
+        """
+        Assemble database URL from settings.
+
+        :return: database URL.
+        """
+        return URL.build(
+            scheme="postgresql+asyncpg",
+            host=self.db_host,
+            port=self.db_port,
+            user=self.db_user,
+            password=self.db_pass,
+            path=f"/{self.db_test}",
         )
 
     @property

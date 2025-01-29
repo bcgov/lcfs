@@ -1,40 +1,62 @@
-from importlib import metadata
 import logging
-
 import os
 import debugpy
-import colorlog
-from fastapi import FastAPI
-from fastapi.responses import UJSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from prometheus_fastapi_instrumentator import Instrumentator
-from starlette.middleware.authentication import AuthenticationMiddleware
-from starlette.authentication import AuthenticationBackend, AuthCredentials, UnauthenticatedUser
+import uuid
 
-from lcfs.web.api.router import api_router
+import structlog
+from fastapi import FastAPI, HTTPException
+from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import UJSONResponse
+from prometheus_fastapi_instrumentator import Instrumentator
+from starlette.authentication import (
+    AuthenticationBackend,
+    AuthCredentials,
+    UnauthenticatedUser,
+)
+from starlette.middleware.authentication import AuthenticationMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+
+from lcfs.logging_config import setup_logging, correlation_id_var
 from lcfs.services.keycloak.authentication import UserAuthentication
+from lcfs.settings import settings
+from lcfs.web.api.router import api_router
+from lcfs.web.exception.exception_handler import validation_exception_handler
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 
-# Create a colorized log formatter
-log_formatter = colorlog.ColoredFormatter(
-    "%(log_color)s[%(levelname)s] [%(asctime)s]  %(name)s.%(funcName)s - %(message)s",
-    log_colors={
-        'DEBUG': 'cyan',
-        'INFO': 'green',
-        'WARNING': 'yellow',
-        'ERROR': 'red',
-        'CRITICAL': 'bold_red'
-    }
-)
+origins = [
+    "http://localhost",
+    "http://localhost:3000",
+    "https://lcfs-dev.apps.silver.devops.gov.bc.ca",
+    "https://lcfs-test.apps.silver.devops.gov.bc.ca",
+    "https://lcfs-prod.apps.silver.devops.gov.bc.ca",
+    "https://lcfs.apps.silver.devops.gov.bc.ca",
+    "https://lowcarbonfuels.gov.bc.ca",
+]
 
-# Create a colorized console handler with the formatter
-console_handler = colorlog.StreamHandler()
-console_handler.setFormatter(log_formatter)
 
-# Configure the root logger with the console handler
-root_logger = logging.getLogger()
-root_logger.addHandler(console_handler)
-root_logger.setLevel(logging.DEBUG)
+class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
+    """
+    Catches HTTP exception from other middlewares, returns JSON responses, and adds CORS headers.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        try:
+            return await call_next(request)
+        except HTTPException as exc:
+            response = JSONResponse(
+                status_code=exc.status_code,
+                content={"status": exc.status_code, "detail": exc.detail},
+            )
+
+            # Check if the request origin is in the allowed origins
+            request_origin = request.headers.get("origin")
+            if request_origin in origins:
+                response.headers["Access-Control-Allow-Origin"] = request_origin
+
+            return response
 
 
 class LazyAuthenticationBackend(AuthenticationBackend):
@@ -42,19 +64,44 @@ class LazyAuthenticationBackend(AuthenticationBackend):
         self.app = app
 
     async def authenticate(self, request):
-        if request.scope['method'] == "OPTIONS":
+        if request.scope["method"] == "OPTIONS":
             return AuthCredentials([]), UnauthenticatedUser()
-        
+
+        if request.url.path == "/api/health":  # Skip for health check
+            return AuthCredentials([]), UnauthenticatedUser()
+
         # Lazily retrieve Redis, session, and settings from app state
-        redis_pool = self.app.state.redis_pool
-        session = self.app.state.db_session_factory
+        redis_client = self.app.state.redis_client
+        session_factory = self.app.state.db_session_factory
         settings = self.app.state.settings
 
         # Now that we have the dependencies, we can instantiate the real backend
-        real_backend = UserAuthentication(redis_pool=redis_pool, session=session, settings=settings)
-        
+        real_backend = UserAuthentication(
+            redis_client=redis_client,
+            session_factory=session_factory,
+            settings=settings,
+        )
+
         # Call the authenticate method of the real backend
         return await real_backend.authenticate(request)
+
+
+# Middleware to handle correlation IDs
+class CorrelationIdMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
+        correlation_id_var.set(correlation_id)
+        response = await call_next(request)
+        response.headers["X-Correlation-ID"] = correlation_id
+        return response
+
+
+# Middleware to set context variables
+class ContextMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request.state.correlation_id = correlation_id_var.get()
+        response = await call_next(request)
+        return response
 
 
 def get_app() -> FastAPI:
@@ -72,20 +119,19 @@ def get_app() -> FastAPI:
     #     print("⏳ Waiting for debugger attach on port 5678...")
     #     debugpy.wait_for_client()
 
+    # Map the string log level to the logging module's integer constants
+    log_level = getattr(logging, settings.log_level.value.upper(), logging.DEBUG)
+    setup_logging(level=log_level)
+
     # Create the fastapi instance
     app = FastAPI(
         title="LCFS Backend API Development",
-        version=metadata.version("lcfs"),
+        version="0.1.0",
         docs_url="/api/docs",
         redoc_url="/api/redoc",
         openapi_url="/api/openapi.json",
         default_response_class=UJSONResponse,
     )
-
-    origins = [
-        "http://localhost",
-        "http://localhost:3000",
-    ]
 
     # Set up CORS middleware options
     app.add_middleware(
@@ -94,10 +140,20 @@ def get_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],  # Allows all methods
         allow_headers=["*"],  # Allows all headers
+        expose_headers=[
+            "Content-Disposition"
+        ],  # Expose Content-Disposition header to the frontend
     )
 
-    # Apply custom authentication handler for user injection purposes
+    # Apply middlewares
     app.add_middleware(AuthenticationMiddleware, backend=LazyAuthenticationBackend(app))
+    app.add_middleware(MiddlewareExceptionWrapper)
+    app.add_middleware(CorrelationIdMiddleware)
+    app.add_middleware(ContextMiddleware)
+
+    # Register exception handlers
+    app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(Exception, global_exception_handler)
 
     # Adds prometheus metrics instrumentation.
     Instrumentator().instrument(app).expose(app)
@@ -110,3 +166,21 @@ def get_app() -> FastAPI:
     app.include_router(router=api_router, prefix="/api")
 
     return app
+
+
+async def global_exception_handler(request: Request, exc: Exception):
+    """Handle uncaught exceptions."""
+    logger = structlog.get_logger(__name__)
+    logger.error(
+        "Unhandled exception",
+        error=str(exc),
+        exc_info=True,
+        request_url=str(request.url),
+        method=request.method,
+        headers=dict(request.headers),
+        correlation_id=correlation_id_var.get(),
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error"},
+    )

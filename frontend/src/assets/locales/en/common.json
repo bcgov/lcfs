@@ -1,0 +1,55 @@
+{
+  "title": "Low Carbon Fuel Standard",
+  "govOrg": "Government of British Columbia",
+  "underAct": "Low Carbon Fuel Standard Act",
+  "gov": "Government",
+  "yes": "Yes",
+  "no": "No",
+  "asterisk": "<span><span style='color: red;'>*</span> indicates a required field</span>",
+  "unknown": "Unknown",
+  "backBtn": "Back",
+  "cancelBtn": "Cancel",
+  "saveBtn": "Save",
+  "supplier": "Fuel Supplier",
+  "balance": "Balance",
+  "logout": "Logout",
+  "complianceUnits": "Compliance units",
+  "quantity": "Quantity",
+  "inReserve": "In reserve",
+  "status": "Status",
+  "confirmation": "Confirmation",
+  "submitError": "Error occurred while submitting. Please retry. For ongoing issues, contact support.",
+  "success": "success",
+  "login": {
+    "loginMessage": "Login with",
+    "troubleMessage": "Trouble logging in?"
+  },
+  "layout": {
+    "breadCrumbHome": "Home",
+    "disclaimer": {
+      "part1": "For security and privacy, please don't share personal information on this website.",
+      "part2": "This information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations."
+    }
+  },
+  "Dashboard": "Dashboard",
+  "Organizations": "Organizations",
+  "Users": "Users",
+  "Transactions": "Transactions",
+  "Transfer": "Transfer",
+  "ComplianceReporting": "Compliance reporting",
+  "FileSubmissions": "File submissions",
+  "Administration": "Administration",
+  "Organization": "Organization",
+  "FuelCodes": "Fuel codes",
+  "lcfsEmail": "lcfs@gov.bc.ca",
+  "scrollToTop": "Scroll to top",
+  "scrollToBottom": "Scroll to bottom",
+  "Notifications": "Notifications",
+  "unauthorized": {
+    "title": "403 / Unauthorized",
+    "message": "Sorry, you do not have permission to access this page.",
+    "contact": "Contact your LCFS or BCeID administrator or contact",
+    "email": "lcfs@gov.bc.ca"
+  },
+  "ClearFilters": "Clear filters"
+}

@@ -1,9 +1,16 @@
-import { RouterProvider, createBrowserRouter } from 'react-router-dom'
+import { RouterProvider } from 'react-router-dom'
+import { useCurrentUser } from './hooks/useCurrentUser'
+import Loading from './components/Loading'
+import { router } from './routes'
 
-import { routes } from '@/routes'
+const App = () => {
+  const { isLoading } = useCurrentUser()
 
-const router = createBrowserRouter(routes)
+  if (isLoading) {
+    return <Loading />
+  }
 
-const App = () => <RouterProvider router={router} />
+  return <RouterProvider router={router} />
+}
 
 export default App

@@ -1,0 +1,144 @@
+{
+  "header" : {
+    "dataModelVersion" : "3"
+  },
+  "content" : {
+    "flowSnapshot" : {
+      "externalControllerServices" : {
+        "c3d0e746-e921-3321-ae2d-584895e9dc32" : {
+          "identifier" : "c3d0e746-e921-3321-ae2d-584895e9dc32",
+          "name" : "TFRS"
+        },
+        "1c6bdea5-84e0-3517-82d2-ad5fc8e6432c" : {
+          "identifier" : "1c6bdea5-84e0-3517-82d2-ad5fc8e6432c",
+          "name" : "LCFS"
+        }
+      },
+      "flowContents" : {
+        "comments" : "",
+        "componentType" : "PROCESS_GROUP",
+        "connections" : [ ],
+        "controllerServices" : [ ],
+        "defaultBackPressureDataSizeThreshold" : "1 GB",
+        "defaultBackPressureObjectThreshold" : 10000,
+        "defaultFlowFileExpiration" : "0 sec",
+        "flowFileConcurrency" : "UNBOUNDED",
+        "flowFileOutboundPolicy" : "STREAM_WHEN_AVAILABLE",
+        "funnels" : [ ],
+        "identifier" : "bb9b9cd3-0464-3f72-b036-ac335d4210e2",
+        "inputPorts" : [ ],
+        "instanceIdentifier" : "4f0ec623-0193-1000-0000-0000246af8c6",
+        "labels" : [ {
+          "componentType" : "LABEL",
+          "groupIdentifier" : "bb9b9cd3-0464-3f72-b036-ac335d4210e2",
+          "height" : 40.0,
+          "identifier" : "f2b53acb-0172-3f57-9817-e861bfc5c700",
+          "instanceIdentifier" : "3ca638d8-c01c-11a8-bf7a-dfc50000dda3",
+          "label" : "Download credit_trade and credit_trade_history information from \nTFRS database to load onto LCFS database (Transaction, Transfer and transfer_history tables)",
+          "position" : {
+            "x" : 1160.0,
+            "y" : 568.0
+          },
+          "style" : {
+            "font-size" : "14px"
+          },
+          "width" : 600.0,
+          "zIndex" : 0
+        } ],
+        "name" : "Transfers transactions",
+        "outputPorts" : [ ],
+        "position" : {
+          "x" : 1160.0,
+          "y" : 560.0
+        },
+        "processGroups" : [ ],
+        "processors" : [ {
+          "autoTerminatedRelationships" : [ "success", "failure" ],
+          "backoffMechanism" : "PENALIZE_FLOWFILE",
+          "bulletinLevel" : "WARN",
+          "bundle" : {
+            "artifact" : "nifi-groovyx-nar",
+            "group" : "org.apache.nifi",
+            "version" : "1.27.0"
+          },
+          "comments" : "",
+          "componentType" : "PROCESSOR",
+          "concurrentlySchedulableTaskCount" : 1,
+          "executionNode" : "ALL",
+          "groupIdentifier" : "bb9b9cd3-0464-3f72-b036-ac335d4210e2",
+          "identifier" : "7ed356d0-2363-3992-8e60-eb5b5ce86f80",
+          "instanceIdentifier" : "b9d73248-1438-1418-a736-cc94c8c21e70",
+          "maxBackoffPeriod" : "10 mins",
+          "name" : "Transfer data ETL",
+          "penaltyDuration" : "30 sec",
+          "position" : {
+            "x" : 1168.0,
+            "y" : 624.0
+          },
+          "properties" : {
+            "SQL.lcfs" : "1c6bdea5-84e0-3517-82d2-ad5fc8e6432c",
+            "groovyx-failure-strategy" : "rollback",
+            "SQL.tfrs" : "c3d0e746-e921-3321-ae2d-584895e9dc32",
+            "groovyx-script-file" : "/opt/nifi/nifi-current/nifi_scripts/transfer.groovy"
+          },
+          "propertyDescriptors" : {
+            "SQL.lcfs" : {
+              "displayName" : "SQL.lcfs",
+              "identifiesControllerService" : true,
+              "name" : "SQL.lcfs",
+              "sensitive" : false
+            },
+            "groovyx-script-body" : {
+              "displayName" : "Script Body",
+              "identifiesControllerService" : false,
+              "name" : "groovyx-script-body",
+              "sensitive" : false
+            },
+            "groovyx-failure-strategy" : {
+              "displayName" : "Failure strategy",
+              "identifiesControllerService" : false,
+              "name" : "groovyx-failure-strategy",
+              "sensitive" : false
+            },
+            "groovyx-additional-classpath" : {
+              "displayName" : "Additional classpath",
+              "identifiesControllerService" : false,
+              "name" : "groovyx-additional-classpath",
+              "sensitive" : false
+            },
+            "SQL.tfrs" : {
+              "displayName" : "SQL.tfrs",
+              "identifiesControllerService" : true,
+              "name" : "SQL.tfrs",
+              "sensitive" : false
+            },
+            "groovyx-script-file" : {
+              "displayName" : "Script File",
+              "identifiesControllerService" : false,
+              "name" : "groovyx-script-file",
+              "resourceDefinition" : {
+                "cardinality" : "SINGLE",
+                "resourceTypes" : [ "FILE" ]
+              },
+              "sensitive" : false
+            }
+          },
+          "retriedRelationships" : [ ],
+          "retryCount" : 10,
+          "runDurationMillis" : 0,
+          "scheduledState" : "ENABLED",
+          "schedulingPeriod" : "365 day",
+          "schedulingStrategy" : "TIMER_DRIVEN",
+          "style" : { },
+          "type" : "org.apache.nifi.processors.groovyx.ExecuteGroovyScript",
+          "yieldDuration" : "1 sec"
+        } ],
+        "remoteProcessGroups" : [ ],
+        "variables" : { }
+      },
+      "flowEncodingVersion" : "1.0",
+      "parameterContexts" : { },
+      "parameterProviders" : { }
+    }
+  }
+}

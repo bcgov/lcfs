@@ -63,6 +63,7 @@ BCTypography.propTypes = {
     'light',
     'dark',
     'text',
+    'link',
     'white'
   ]),
   fontWeight: PropTypes.oneOf([false, 'light', 'regular', 'medium', 'bold']),
@@ -84,7 +85,7 @@ BCTypography.propTypes = {
     'bottom'
   ]),
   textGradient: PropTypes.bool,
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
   opacity: PropTypes.number
 }
 

@@ -13,7 +13,11 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 3000
+    port: 3000,
+    hmr: {
+      overlay: false,
+      clientPort: 3000
+    }
     // watch: {
     //   usePolling: true,
     // },
@@ -21,9 +25,24 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'jsdom',
-    setupFiles: './testSetup.js'
+    setupFiles: './testSetup.js',
+
+    coverage: {
+      thresholds: '80',
+      enabled: true,
+      reporter: ['html'],
+      include: ['src'],
+      exclude: [
+        'src/*.{jsx,js}',
+        'src/assets',
+        'src/constants',
+        'src/themes',
+        'src/tests',
+        'src/stores'
+      ]
+    }
   },
   optimizeDeps: {
-    include: ['@mui/material/Unstable_Grid2']
+    include: ['@mui/material/Unstable_Grid2', '@mui/material/Tooltip']
   }
 })

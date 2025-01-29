@@ -1,0 +1,49 @@
+---
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+metadata:
+  name: maintenance-page
+  creationTimestamp:
+  labels:
+    app: maintenance-page
+spec:
+  lookupPolicy:
+    local: false
+status:
+  dockerImageRepository: ""
+---
+kind: BuildConfig
+apiVersion: build.openshift.io/v1
+metadata:
+  name: maintenance-page
+  creationTimestamp:
+  labels:
+    app: maintenance-page
+spec:
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChange: {}
+  runPolicy: SerialLatestOnly
+  source:
+    type: Git
+    contextDir: "openshift/templates/maintenance-page"
+    git:
+      uri: https://github.com/bcgov/lcfs.git
+      ref: add-maintenance-page
+  strategy:
+    dockerStrategy:
+      pullSecret:
+        name: artifacts-pull-default-gyszor
+      forcePull: true
+      noCache: true
+    type: Docker
+  output:
+    to:
+      kind: ImageStreamTag
+      name: maintenance-page:latest
+  resources: {}
+  postCommit: {}
+  nodeSelector:
+  successfulBuildsHistoryLimit: 5
+  failedBuildsHistoryLimit: 5

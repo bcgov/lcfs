@@ -1,75 +1,242 @@
-from typing import Annotated
-from fastapi import APIRouter, Depends
-from fastapi.responses import Response
-from lcfs.db.dependencies import SessionLocal
-from lcfs.web.api.base import EntityResponse
-from lcfs.web.api.notification.schema import NotificationChannelSubscriptionRequest, NotificationMessageRequest
-from starlette import status
-from sqlalchemy.ext.asyncio import AsyncSession
-from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models import NotificationMessage, UserProfile
+"""
+Notification endpoints
+"""
 
-from sqlalchemy import select, update
+from typing import Union, List
+from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.exception.exceptions import DataNotFoundException
+import structlog
+from fastapi import APIRouter, Body, Depends, HTTPException, Request, Response
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.notification.schema import (
+    DeleteNotificationChannelSubscriptionResponseSchema,
+    DeleteNotificationMessageResponseSchema,
+    DeleteSubscriptionSchema,
+    DeleteNotificationMessageSchema,
+    NotificationsSchema,
+    SubscriptionSchema,
+    NotificationMessageSchema,
+    NotificationCountSchema,
+)
+from lcfs.web.api.notification.services import NotificationService
+from lcfs.web.core.decorators import view_handler
+from starlette import status
+
 
 router = APIRouter()
+logger = structlog.get_logger(__name__)
 
 
-# all routes should have a User dependency
+@router.get(
+    "/", response_model=List[NotificationMessageSchema], status_code=status.HTTP_200_OK
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_notification_messages_by_user_id(
+    request: Request,
+    is_read: bool = None,
+    service: NotificationService = Depends(),
+):
+    """
+    Retrieve all notifications of a user
+    """
 
-@router.get('/', status_code=status.HTTP_200_OK)
-async def get_notifications(user, db: Annotated[AsyncSession, Depends(get_async_db_session)], response_model=EntityResponse) -> EntityResponse:
-    # get all notifications of a user
-    # check for user auth. raise otherwise
-    # raise HTTPException()
-    # return db.execute(select(NotificationMessage).where(NotificationMessage.user_id == user.user_id))
-    return 
+    return await service.get_notification_messages_by_user_id(
+        user_id=request.user.user_profile_id, is_read=is_read
+    )
 
-@router.get('/{notification_id}', status_code=status.HTTP_200_OK)
-async def get_notification(user, notification_id: int, db: Annotated[AsyncSession, Depends(get_async_db_session)], response_model=EntityResponse) -> EntityResponse:
-    # get a single notitification of a user
-    # check for user auth. raise otherwise
-    # raise HTTPException()
-    # get notification by id
-    # return db.execute(select(NotificationMessage).where(NotificationMessage.notification_id == notification_id))
-    return
 
-@router.put('/{notification_id}', status_code=status.HTTP_204_NO_CONTENT)
-async def update_notification(user, notification_id: int, db:Annotated[AsyncSession, Depends(get_async_db_session)], reqeust: NotificationMessageRequest,response_model=EntityResponse) -> Response:
-    # update a notification of a user
-    # check for user auth. raise otherwise
-    # raise HTTPException()
-    # return db.execute(update(NotificationMessage).where(NotificationMessage.notification_id == notification_id).values())
-    return Response(content=None, status_code=status.HTTP_204_NO_CONTENT)
+@router.post(
+    "/list", response_model=NotificationsSchema, status_code=status.HTTP_200_OK
+)
+@view_handler(["*"])
+async def get_notification_messages_by_user_id(
+    request: Request,
+    pagination: PaginationRequestSchema = Body(..., embed=False),
+    response: Response = None,
+    service: NotificationService = Depends(),
+):
+    """
+    Retrieve all notifications of a user with pagination
+    """
+    return await service.get_paginated_notification_messages(
+        user_id=request.user.user_profile_id, pagination=pagination
+    )
 
-@router.get('/', status_code=status.HTTP_200_OK)
-async def get_notifications_channel_subscriptions(user, db: Annotated[AsyncSession, Depends(get_async_db_session)], response_model=EntityResponse) -> Response:
-    # get all notification subscriptions
-    # check for user auth. raise otherwise
-    # raise HTTPException()
-    # return db.execute(select(NotificationChannelSubscription).where(NotificationChannelSubscription.user_id == user.user_id))
-    return
 
-@router.get('/{notification_channel_subscription_id}', status_code=status.HTTP_200_OK)
-async def get_notification_channel_subscription(user, notification_channel_subscription_id: int, db:Annotated[AsyncSession, Depends(get_async_db_session)], response_model=EntityResponse) -> EntityResponse:
-    # get a single notification subscriptions
-    # check for user auth. raise otherwise
-    # raise HTTPException()
-    # get notification subscription by id
-    # return db.execute(select(NotificationChannelSubscription).where(NotificationChannelSubscription.notification_channel_subscription_id == notification_channel_subscription_id))
-    return
+@router.put("/", response_model=List[int], status_code=status.HTTP_200_OK)
+@view_handler(["*"])
+async def update_notification_messages_to_read(
+    request: Request,
+    notification_ids: List[int] = Body(..., embed=False),
+    response: Response = None,
+    service: NotificationService = Depends(),
+):
+    """
+    Update notifications (mark the messages as read)
+    """
+    return await service.update_notification_messages(
+        request.user.user_profile_id, notification_ids
+    )
 
-@router.put('/{notification_channel_subscription_id}', status_code=status.HTTP_204_NO_CONTENT)
-async def update_notification_channel_subscription(user, notification_channel_subscription_id: int, db:Annotated[AsyncSession, Depends(get_async_db_session)], request: NotificationChannelSubscriptionRequest, response_model=EntityResponse ) -> Response:
-    # update a notification subscription of a user
-    # check for user auth. raise otherwise
-    # raise HTTPException()
-    # return db.execute(update(NotificationChannelSubscription).where(NotificationChannelSubscription.notification_channel_subscription_id == notification_channel_subscription_id).values())
-    return Response(content=None, status_code=status.HTTP_204_NO_CONTENT)
 
-@router.delete('/{notification_channel_subscription_id}', status_code=status.HTTP_204_NO_CONTENT)
-async def delete_notification_channel_subscription(user, notification_channel_subscription_id: int, db:Annotated[AsyncSession, Depends(get_async_db_session)], response_model=EntityResponse ) -> Response:
-    # delete a notification subscription of a user
-    # check for user auth. raise otherwise
-    # raise HTTPException()
-    # return db.execute(delete(NotificationChannelSubscription).where(NotificationChannelSubscription.notification_channel_subscription_id == notification_channel_subscription_id))
-    return Response(content=None, status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/", response_model=List[int], status_code=status.HTTP_200_OK)
+@view_handler(["*"])
+async def delete_notification_messages(
+    request: Request,
+    notification_ids: List[int] = Body(..., embed=False),
+    response: Response = None,
+    service: NotificationService = Depends(),
+):
+    """
+    Delete notification messages
+    """
+    return await service.delete_notification_messages(
+        request.user.user_profile_id, notification_ids
+    )
+
+
+@router.get(
+    "/count",
+    response_model=NotificationCountSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def get_unread_notifications(
+    request: Request, service: NotificationService = Depends()
+):
+    """
+    Retrieve counter for unread notifications by user id
+    """
+    # Count unread notifications
+    count = await service.count_unread_notifications_by_user_id(
+        user_id=request.user.user_profile_id
+    )
+    return NotificationCountSchema(count=count)
+
+
+@router.get(
+    "/subscriptions",
+    response_model=List[SubscriptionSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def get_notifications_channel_subscriptions_by_user_id(
+    request: Request, service: NotificationService = Depends()
+):
+    return await service.get_notification_channel_subscriptions_by_user_id(
+        user_id=request.user.user_profile_id
+    )
+
+
+@router.post(
+    "/save",
+    response_model=Union[
+        NotificationMessageSchema, DeleteNotificationMessageResponseSchema
+    ],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def save_notification(
+    request: Request,
+    request_data: Union[
+        NotificationMessageSchema, DeleteNotificationMessageSchema
+    ] = Body(...),
+    service: NotificationService = Depends(),
+):
+    """
+    Save a single notification
+    """
+    notification_id = request_data.notification_message_id
+    if request_data.deleted:
+        try:
+            await service.delete_notification_message(notification_id)
+            return DeleteNotificationMessageResponseSchema(
+                message="Notification Message deleted successfully"
+            )
+        except DataNotFoundException as e:
+            raise HTTPException(status_code=404, detail=str(e))
+    elif notification_id:
+        return await service.update_notification(request_data)
+    else:
+        return await service.create_notification_message(request_data)
+
+
+@router.post(
+    "/subscriptions/save",
+    response_model=Union[
+        SubscriptionSchema, DeleteNotificationChannelSubscriptionResponseSchema
+    ],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def save_subscription(
+    request: Request,
+    request_data: Union[SubscriptionSchema, DeleteSubscriptionSchema] = Body(...),
+    service: NotificationService = Depends(),
+):
+    user_profile_id = request.user.user_profile_id
+    subscription_id = request_data.notification_channel_subscription_id
+
+    if request_data.deleted:
+        try:
+            await service.delete_notification_channel_subscription(
+                subscription_id, user_profile_id
+            )
+            return DeleteNotificationChannelSubscriptionResponseSchema(
+                message="Notification Subscription deleted successfully"
+            )
+        except DataNotFoundException as e:
+            raise HTTPException(status_code=404, detail=str(e))
+    else:
+        return await service.create_notification_channel_subscription(
+            request_data, user_profile_id
+        )
+
+
+@router.get(
+    "/subscriptions/{notification_channel_subscription_id}",
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_notification_channel_subscription_by_id(
+    request: Request,
+    notification_channel_subscription_id: int,
+    service: NotificationService = Depends(),
+):
+
+    subscription = await service.get_notification_channel_subscription_by_id(
+        notification_channel_subscription_id=notification_channel_subscription_id
+    )
+
+    if subscription.user_profile_id != request.user.user_profile_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to access this resource.",
+        )
+
+    return subscription
+
+
+@router.get(
+    "/{notification_id}",
+    response_model=NotificationMessageSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_notification_message_by_id(
+    request: Request, notification_id: int, service: NotificationService = Depends()
+):
+    """
+    Retrieve a single notification by ID
+    """
+
+    notification = await service.get_notification_message_by_id(
+        notification_id=notification_id
+    )
+    if notification.related_user_profile_id != request.user.user_profile_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to access this resource.",
+        )
+
+    return notification

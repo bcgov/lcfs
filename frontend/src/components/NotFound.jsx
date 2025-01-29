@@ -1,4 +1,4 @@
-const NotFound = () => (
+export const NotFound = () => (
   <div className="alert alert-danger error-alert" role="alert">
     <p>The requested page could not be found.</p>
     <p>
@@ -14,5 +14,3 @@ const NotFound = () => (
     </p>
   </div>
 )
-
-export default NotFound

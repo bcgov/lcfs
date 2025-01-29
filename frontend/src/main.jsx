@@ -1,11 +1,15 @@
 import { CssBaseline, ThemeProvider } from '@mui/material'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import { ReactKeycloakProvider } from '@react-keycloak/web'
-import { QueryClient, QueryClientProvider } from 'react-query'
-import { getKeycloak, keycloakInitOptions } from '@/keycloak'
-import Loading from '@/components/Loading'
-import theme from '@/assets/theme'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import theme from '@/themes'
+import './i18n'
+import { KeycloakProvider } from '@/components/KeycloakProvider'
+import { getKeycloak } from '@/utils/keycloak'
+import { LocalizationProvider } from '@mui/x-date-pickers'
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
+import { SnackbarProvider } from 'notistack'
+import { AuthProvider } from '@/contexts/AuthContext'
 
 const queryClient = new QueryClient()
 const keycloak = getKeycloak()
@@ -13,17 +17,21 @@ const root = document.getElementById('root')
 
 if (root) {
   createRoot(root).render(
-    <ReactKeycloakProvider
-      authClient={keycloak}
-      initOptions={keycloakInitOptions}
-      LoadingComponent={<Loading />}
-    >
-      <QueryClientProvider client={queryClient}>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <App />
-        </ThemeProvider>
-      </QueryClientProvider>
-    </ReactKeycloakProvider>
+    <main>
+      <KeycloakProvider authClient={keycloak}>
+        <AuthProvider>
+          <QueryClientProvider client={queryClient}>
+            <ThemeProvider theme={theme}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <SnackbarProvider>
+                  <CssBaseline />
+                  <App />
+                </SnackbarProvider>
+              </LocalizationProvider>
+            </ThemeProvider>
+          </QueryClientProvider>
+        </AuthProvider>
+      </KeycloakProvider>
+    </main>
   )
 }
