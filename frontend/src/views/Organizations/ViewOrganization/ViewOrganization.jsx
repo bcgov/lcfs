@@ -19,7 +19,7 @@ import {
 import { constructAddress } from '@/utils/constructAddress'
 import { phoneNumberFormatter } from '@/utils/formatters'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { defaultSortModel, getUserColumnDefs } from './_schema'
+import { defaultFilterModel, defaultSortModel, getUserColumnDefs } from './_schema'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
@@ -284,6 +284,7 @@ export const ViewOrganization = () => {
           getRowId={getRowId}
           gridOptions={gridOptions}
           defaultSortModel={defaultSortModel}
+          defaultFilterModel={defaultFilterModel}
           handleGridKey={handleGridKey}
           defaultColDef={defaultColDef}
           enableCopyButton={false}
