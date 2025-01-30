@@ -5,26 +5,26 @@ import BCTypography from '@/components/BCTypography'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { DownloadButton } from '@/components/DownloadButton'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import { ROUTES, apiRoutes } from '@/constants/routes'
+import { apiRoutes, ROUTES } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Box, Grid } from '@mui/material'
-import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
-import { transactionsColDefs, defaultSortModel } from './_schema'
+import { defaultSortModel, transactionsColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   ORGANIZATION_STATUSES,
   TRANSACTION_STATUSES,
   TRANSFER_STATUSES
 } from '@/constants/statuses'
-import { roles, govRoles } from '@/constants/roles'
+import { govRoles, roles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
 import Loading from '@/components/Loading'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -33,7 +33,7 @@ export const Transactions = () => {
   const apiService = useApiService()
   const gridRef = useRef()
   const downloadButtonRef = useRef(null)
-  const { data: currentUser, hasRoles } = useCurrentUser()
+  const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
 
   const [searchParams] = useSearchParams()
   const highlightedId = searchParams.get('hid')
@@ -61,9 +61,20 @@ export const Transactions = () => {
 
   const [selectedOrgId, setSelectedOrgId] = useState(null)
 
+  const shouldRenderLink = (props) => {
+    return (
+      props.data.transactionType !== 'ComplianceReport' ||
+      hasAnyRole(
+        roles.government,
+        roles.signing_authority,
+        roles.compliance_reporting
+      )
+    )
+  }
+
   const defaultColDef = useMemo(
     () => ({
-      cellRenderer: LinkRenderer,
+      cellRenderer: ConditionalLinkRenderer(shouldRenderLink),
       cellRendererParams: {
         isAbsolute: true,
         url: (
@@ -204,7 +215,7 @@ export const Transactions = () => {
         )}
       </div>
       <Grid container spacing={2}>
-        <Grid item xs={12} lg={5}>
+        <Grid item xs={12} lg={7}>
           <BCTypography variant="h5" mb={2} color="primary">
             {t('txn:title')}
           </BCTypography>
@@ -272,7 +283,7 @@ export const Transactions = () => {
         <Grid
           item
           xs={12}
-          lg={7}
+          lg={5}
           sx={{
             display: 'flex',
             flexDirection: 'column',

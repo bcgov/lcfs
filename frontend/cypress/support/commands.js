@@ -62,13 +62,13 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
     cy.visit('/')
     cy.getByDataTest('login-container').should('exist')
     // Login as an IDIR user with Admin privileges.
-    expect(Cypress.env('admin_idir_username'), 'IDIR username is set').to.be.a(
+    expect(Cypress.env('ADMIN_IDIR_USERNAME'), 'IDIR username is set').to.be.a(
       'string'
     ).and.not.be.empty
     cy.loginWith(
       'idir',
-      Cypress.env('admin_idir_username'),
-      Cypress.env('admin_idir_password')
+      Cypress.env('ADMIN_IDIR_USERNAME'),
+      Cypress.env('ADMIN_IDIR_PASSWORD')
     )
     // If BCeID user then update the roles using the IDIR user
     cy.visit(
@@ -104,8 +104,10 @@ Cypress.Commands.add('setIDIRRoles', (role) => {
   // Roles ['analyst', 'compliance manager', 'director']
   cy.visit('/admin/users')
 
+  cy.wait(5000)
+
   // Find the row with the specified name and click it
-  cy.contains('a', Cypress.env('admin_idir_email')).should('be.visible').click()
+  cy.contains('a', Cypress.env('ADMIN_IDIR_EMAIL')).should('be.visible').click()
 
   cy.url().should('match', /\/admin\/users\/\d+/)
 

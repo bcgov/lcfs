@@ -41,7 +41,7 @@ async def test_save_fuel_supply_row_create(
     mock_compliance_report_validation,
     mock_fuel_supply_validation,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
     url = fastapi_app.url_path_for("save_fuel_supply_row")
     payload = {
         "compliance_report_id": 1,
@@ -97,7 +97,7 @@ async def test_save_fuel_supply_row_update(
     mock_compliance_report_validation,
     mock_fuel_supply_validation,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
     url = fastapi_app.url_path_for("save_fuel_supply_row")
 
     payload = {
@@ -155,7 +155,7 @@ async def test_save_fuel_supply_row_delete(
     mock_compliance_report_validation,
     mock_fuel_supply_validation,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
     url = fastapi_app.url_path_for("save_fuel_supply_row")
     payload = {
         "compliance_report_id": 1,
@@ -194,8 +194,7 @@ async def test_save_fuel_supply_row_delete(
 
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
-    assert data == {"success": True,
-                    "message": "Fuel supply row deleted successfully"}
+    assert data == {"success": True, "message": "Fuel supply row deleted successfully"}
 
 
 @pytest.mark.anyio
@@ -206,7 +205,7 @@ async def test_save_fuel_supply_row_duplicate(
     mock_fuel_supply_action_service,
     mock_fuel_supply_validation,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
     url = fastapi_app.url_path_for("save_fuel_supply_row")
     payload = {
         "compliance_report_id": 1,

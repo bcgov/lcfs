@@ -35,9 +35,7 @@ When('the supplier navigates to the fuel supply page', () => {
     '[data-test="schedule-list"] > :nth-child(1) > .MuiTypography-root'
   ).click()
 
-  cy.contains('.MuiTypography-h5', 'Add new supply of fuel').should(
-    'be.visible'
-  )
+  cy.contains('.MuiTypography-h5', 'Supply of fuel').should('be.visible')
 })
 
 When('the supplier enters a valid fuel supply row', () => {

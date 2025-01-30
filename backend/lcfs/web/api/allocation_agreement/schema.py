@@ -1,4 +1,5 @@
 from typing import Optional, List
+from lcfs.web.api.fuel_supply.schema import FuelTypeOptionsResponse
 from pydantic import Field, field_validator
 from lcfs.web.api.base import (
     BaseSchema,
@@ -112,3 +113,6 @@ class OrganizationDetailsSchema(BaseSchema):
     address: Optional[str]
     email: Optional[str]
     phone: Optional[str]
+
+class AllocationAgreementOptionsSchema(FuelTypeOptionsResponse):
+    allocation_transaction_types: List[AllocationTransactionTypeSchema]

@@ -76,20 +76,28 @@ export const BCGridBase = forwardRef(
       if (api) {
         // Clear filter model
         api.setFilterModel(null)
-  
+
         // Clear individual filters
         const columns = api.getColumnDefs()
-        columns.forEach(column => {
+        columns.forEach((column) => {
           api.destroyFilter(column.field)
         })
       }
     }, [])
-  
+
     // Expose clearFilters method through ref
     useImperativeHandle(ref, () => ({
       ...gridRef.current,
       clearFilters
     }))
+
+    const closeSelectsOnScroll = (e) => {
+      const cell = e.api.getFocusedCell()
+
+      if (cell) {
+        e.api.clearFocusedCell()
+      }
+    }
 
     return (
       <AgGridReact
@@ -111,6 +119,7 @@ export const BCGridBase = forwardRef(
         enableBrowserTooltips={true}
         suppressPaginationPanel
         suppressScrollOnNewData
+        onBodyScroll={closeSelectsOnScroll}
         onRowDataUpdated={determineHeight}
         getRowStyle={getRowStyle}
         rowHeight={ROW_HEIGHT}

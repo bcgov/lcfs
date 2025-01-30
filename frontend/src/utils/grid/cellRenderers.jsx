@@ -32,6 +32,16 @@ export const LinkRenderer = (props) => {
     </Link>
   )
 }
+
+export const ConditionalLinkRenderer = (condition) => {
+  return (props) => {
+    if (condition(props)) {
+      return LinkRenderer(props)
+    } else {
+      return TextRenderer(props)
+    }
+  }
+}
 const BaseStatusRenderer = ({
   isView = false,
   value = false,
@@ -67,20 +77,6 @@ const BaseStatusRenderer = ({
     </BCBox>
   )
 
-  if (props.url) {
-    const baseUrl = props.isAbsolute ? '' : `${location.pathname}/`
-    const targetUrl =
-      baseUrl +
-      ((props.url && props.url({ data: props.data })) || props?.node?.id)
-
-    return (
-      <Link to={targetUrl} style={{ color: '#000' }}>
-        {component}
-      </Link>
-    )
-  } else {
-    return component
-  }
 }
 
 export const StatusRenderer = (props) => (
@@ -324,11 +320,11 @@ const GenericChipRenderer = ({
   const [hiddenChipsCount, setHiddenChipsCount] = useState(0)
 
   const options = Array.isArray(value)
-    ? value
+    ? value.filter((item) => item !== "")
     : value
         .split(',')
         .map((item) => item.trim())
-        .filter(Boolean)
+        .filter((item) => item !== "")
 
   const calculateChipWidths = useCallback(() => {
     if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }

@@ -18,7 +18,7 @@ import {
   PROVISION_APPROVED_FUEL_CODE
 } from './_schema'
 import * as ROUTES from '@/constants/routes/routes.js'
-import { handleScheduleSave } from '@/utils/schedules.js'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
@@ -133,9 +133,7 @@ export const AddEditOtherUses = () => {
         })
       }
     } else {
-      const id = uuid()
-      const emptyRow = { id, complianceReportId }
-      setRowData([emptyRow])
+      setRowData([{ id: uuid, complianceReportId }])
     }
 
     params.api.sizeColumnsToFit()
@@ -151,29 +149,17 @@ export const AddEditOtherUses = () => {
   }
 
   const onAction = async (action, params) => {
-    alertRef.current?.triggerAlert({
-      message: 'Row updating',
-      severity: 'pending'
-    })
-
     if (action === 'delete') {
-      const updatedRow = { ...params.data, deleted: true }
-
-      params.api.applyTransaction({ remove: [params.node.data] })
-      if (updatedRow.otherUsesId) {
-        try {
-          await saveRow(updatedRow)
-          alertRef.current?.triggerAlert({
-            message: 'Row deleted successfully.',
-            severity: 'success'
-          })
-        } catch (error) {
-          alertRef.current?.triggerAlert({
-            message: `Error deleting row: ${error.message}`,
-            severity: 'error'
-          })
+      await handleScheduleDelete(
+        params,
+        'otherUsesId',
+        saveRow,
+        alertRef,
+        setRowData,
+        {
+          complianceReportId
         }
-      }
+      )
     }
   }
 

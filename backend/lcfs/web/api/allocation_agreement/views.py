@@ -24,9 +24,9 @@ from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
 from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
+    AllocationAgreementOptionsSchema,
     AllocationAgreementSchema,
     AllocationAgreementListSchema,
-    AllocationAgreementTableOptionsSchema,
     DeleteAllocationAgreementResponseSchema,
     PaginatedAllocationAgreementRequestSchema,
     AllocationAgreementAllSchema,
@@ -43,10 +43,12 @@ get_async_db = dependencies.get_async_db_session
 
 @router.get(
     "/table-options",
-    response_model=AllocationAgreementTableOptionsSchema,
+    response_model=AllocationAgreementOptionsSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_table_options(
     request: Request,
     compliancePeriod: str,
@@ -61,7 +63,9 @@ async def get_table_options(
     response_model=AllocationAgreementAllSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_allocation_agreements(
     request: Request,
     request_data: ComplianceReportRequestSchema = Body(...),
@@ -73,18 +77,22 @@ async def get_allocation_agreements(
     try:
         compliance_report_id = request_data.compliance_report_id
 
-        compliance_report = await service.get_compliance_report_by_id(compliance_report_id)
+        compliance_report = await service.get_compliance_report_by_id(
+            compliance_report_id
+        )
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found"
+                detail="Compliance report not found",
             )
 
         await report_validate.validate_compliance_report_access(compliance_report)
         await report_validate.validate_organization_access(
             request_data.compliance_report_id
         )
-        return await service.get_allocation_agreements(request_data.compliance_report_id)
+        return await service.get_allocation_agreements(
+            request_data.compliance_report_id
+        )
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
         raise http_ex
@@ -93,7 +101,7 @@ async def get_allocation_agreements(
         logger.exception("Error occurred", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while processing your request"
+            detail="An unexpected error occurred while processing your request",
         )
 
 
@@ -102,7 +110,9 @@ async def get_allocation_agreements(
     response_model=AllocationAgreementListSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_allocation_agreements_paginated(
     request: Request,
     request_data: PaginatedAllocationAgreementRequestSchema = Body(...),
@@ -129,7 +139,7 @@ async def get_allocation_agreements_paginated(
     ],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def save_allocation_agreements_row(
     request: Request,
     request_data: AllocationAgreementCreateSchema = Body(...),
@@ -167,7 +177,9 @@ async def save_allocation_agreements_row(
 
 
 @router.get("/search", response_model=List[OrganizationDetailsSchema], status_code=200)
-@view_handler(["*"])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def search_table_options_strings(
     request: Request,
     transaction_partner: Optional[str] = Query(

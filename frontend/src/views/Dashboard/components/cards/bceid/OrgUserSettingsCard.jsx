@@ -19,7 +19,7 @@ const linkStyle = {
 
 const UserSettingsLink = ({ onClick, children }) => (
   <ListItemButton onClick={onClick}>
-    <Typography variant="subtitle2" sx={linkStyle}>
+    <Typography variant="subtitle2" sx={linkStyle} component="p">
       {children}
     </Typography>
   </ListItemButton>
@@ -58,15 +58,6 @@ const OrgUserSettingsCard = () => {
               onClick={() => navigate(ROUTES.NOTIFICATIONS_SETTINGS)}
             >
               {t('dashboard:orgUserSettings.configureNotifications')}
-            </UserSettingsLink>
-
-            {/* TODO: Update the link to the help page */}
-            <UserSettingsLink onClick={() => navigate()}>
-              {t('dashboard:orgUserSettings.help')}
-              <FontAwesomeIcon
-                icon={faArrowUpRightFromSquare}
-                style={{ color: '#578260', marginLeft: 6 }}
-              />
             </UserSettingsLink>
           </List>
         </Stack>

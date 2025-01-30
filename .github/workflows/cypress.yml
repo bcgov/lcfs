@@ -69,10 +69,17 @@ jobs:
           config-file: cypress.config.js
           working-directory: frontend
         env:
-          IDIR_TEST_USER: ${{ secrets.CYPRESS_IDIR_TEST_USER }}
-          IDIR_TEST_PASS: ${{ secrets.CYPRESS_IDIR_TEST_PASS }}
-          BCEID_TEST_USER: ${{ secrets.CYPRESS_BCEID_TEST_USER }}
-          BCEID_TEST_PASS: ${{ secrets.CYPRESS_BCEID_TEST_PASS }}
+          IDIR_TEST_USER: ${{ secrets.ADMIN_IDIR_USERNAME }}
+          IDIR_TEST_PASS: ${{ secrets.ADMIN_IDIR_PASSWORD }}
+          BCEID_TEST_USER: ${{ secrets.BCEID_TEST_USER }}
+          BCEID_TEST_PASS: ${{ secrets.BCEID_TEST_PASS }}
+          ADMIN_IDIR_USERNAME: ${{ secrets.ADMIN_IDIR_USERNAME }}
+          ADMIN_IDIR_PASSWORD: ${{ secrets.ADMIN_IDIR_PASSWORD }}
+          ADMIN_IDIR_EMAIL: ${{ secrets.ADMIN_IDIR_EMAIL }}
+          ORG1_BCEID_USERNAME: ${{ secrets.ORG1_BCEID_USERNAME }}
+          ORG1_BCEID_PASSWORD: ${{ secrets.ORG1_BCEID_PASSWORD }}
+          ORG2_BCEID_USERNAME: ${{ secrets.ORG2_BCEID_USERNAME }}
+          ORG2_BCEID_PASSWORD: ${{ secrets.ORG2_BCEID_PASSWORD }}
 
       - name: Cleanup
         if: always()

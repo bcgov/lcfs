@@ -51,7 +51,7 @@ const OrgBalanceCard = () => {
             {t('dashboard:orgBalance.hasABalanceOf')}
           </BCTypography>
           <BCTypography
-            style={{ fontSize: '32px', color: '#578260', marginBottom: '-4px' }}
+            style={{ fontSize: '32px', color: '#547D59', marginBottom: '-4px' }}
             component="span"
           >
             {orgBalance.totalBalance.toLocaleString()}
@@ -63,7 +63,7 @@ const OrgBalanceCard = () => {
           </BCTypography>
           <Box display="flex" alignItems="center" mt={1}>
             <BCTypography
-              style={{ fontSize: '22px', color: '#578260' }}
+              style={{ fontSize: '22px', color: '#547D59' }}
               component="span"
             >
               ({formattedReservedBalance} {t('dashboard:orgBalance.inReserve')})
@@ -73,7 +73,7 @@ const OrgBalanceCard = () => {
               TransitionComponent={Fade}
               arrow
             >
-              <InfoIcon style={{ marginLeft: '4px', color: '#578260' }} />
+              <InfoIcon style={{ marginLeft: '4px', color: '#547D59' }} />
             </Tooltip>
           </Box>
         </>

@@ -57,9 +57,6 @@ describe('OrgUserSettingsCard', () => {
     expect(
       screen.getByText('mock__dashboard:orgUserSettings.configureNotifications')
     ).toBeInTheDocument()
-    expect(
-      screen.getByText('mock__dashboard:orgUserSettings.help')
-    ).toBeInTheDocument()
   })
 
   it('handles missing title gracefully', () => {
@@ -136,25 +133,5 @@ describe('OrgUserSettingsCard', () => {
     fireEvent.click(configureLink)
 
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.NOTIFICATIONS_SETTINGS)
-  })
-
-  it('navigates to the help page (placeholder) when "mock__dashboard:orgUserSettings.help" is clicked', () => {
-    useCurrentUser.mockReturnValue({
-      data: {
-        firstName: 'Test',
-        lastName: 'User',
-        title: 'Dev',
-        roles: [{ name: 'Government' }]
-      },
-      isLoading: false
-    })
-
-    render(<OrgUserSettingsCard />, { wrapper })
-
-    const helpLink = screen.getByText('mock__dashboard:orgUserSettings.help')
-    fireEvent.click(helpLink)
-
-    // By default, it calls navigate() with no args
-    expect(mockNavigate).toHaveBeenCalled()
   })
 })
