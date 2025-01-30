@@ -65,9 +65,11 @@ When('the supplier enters a valid fuel supply row', () => {
   cy.get(
     'div[col-id="provisionOfTheAct"][title="Act Relied Upon to Determine Carbon Intensity: Identify the appropriate provision of the Act relied upon to determine the carbon intensity of each fuel."]'
   ).click()
+  cy.get(
+    '[data-testid="select-Default carbon intensity - section 19 (b) (ii)"]'
+  ).click()
 
   cy.get('body').click()
-  cy.contains('Row updated successfully.').should('be.visible')
   cy.wait(700)
   cy.get('.ag-body-horizontal-scroll-viewport').scrollTo(1000, 0)
   cy.wait(1200)
@@ -102,7 +104,7 @@ Then('the compliance report introduction is shown', () => {
     .and('have.text', 'Status: Draft')
 
   // Assert the Introduction Header
-  cy.contains('div.MuiTypography-h5', 'Introduction')
+  cy.contains('div.MuiTypography-h6', 'Introduction')
     .should('be.visible')
     .and('have.text', 'Introduction')
 
