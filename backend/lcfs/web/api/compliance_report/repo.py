@@ -467,7 +467,6 @@ class ComplianceReportRepository:
             query = query.order_by(sort_method(order.field))
 
         # Execute query with offset and limit for pagination
-        print(query)
         query_result = (
             (await self.db.execute(query.offset(offset).limit(limit)))
             .unique()
