@@ -150,7 +150,7 @@ export const ComplianceReports = () => {
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
           <BCGridViewer
             gridRef={gridRef}
-            gridKey={'all-user-activities-grid'}
+            gridKey={'compliance-reports-grid'}
             columnDefs={reportsColDefs(t, hasRoles(roles.supplier))}
             query={useGetComplianceReportList}
             queryParams={{ cacheTime: 0, staleTime: 0 }}
