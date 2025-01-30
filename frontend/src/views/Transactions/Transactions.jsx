@@ -215,7 +215,7 @@ export const Transactions = () => {
         )}
       </div>
       <Grid container spacing={2}>
-        <Grid item xs={12} lg={5}>
+        <Grid item xs={12} lg={7}>
           <BCTypography variant="h5" mb={2} color="primary">
             {t('txn:title')}
           </BCTypography>
@@ -283,7 +283,7 @@ export const Transactions = () => {
         <Grid
           item
           xs={12}
-          lg={7}
+          lg={5}
           sx={{
             display: 'flex',
             flexDirection: 'column',

@@ -5,7 +5,6 @@ import java.sql.ResultSet
 import java.sql.Timestamp
 import java.util.Calendar
 
-
 // =========================================
 // NiFi Controller Services
 // =========================================
@@ -19,6 +18,22 @@ try {
     sourceConn = sourceDbcpService.getConnection()
     destinationConn = destinationDbcpService.getConnection()
     destinationConn.setAutoCommit(false)
+
+    // =========================================
+    // Fetch Mapping of legacy_id to LCFS compliance_report_id from Destination
+    // =========================================
+    log.info("Fetching legacy_id to LCFS compliance_report_id mapping from destination database.")
+    def legacyToLcfsIdMap = [:] // Map<legacy_id, lcfs_id>
+    def fetchMappingStmt = destinationConn.prepareStatement("SELECT compliance_report_id, legacy_id FROM public.compliance_report WHERE legacy_id IS NOT NULL")
+    ResultSet mappingRs = fetchMappingStmt.executeQuery()
+    while (mappingRs.next()) {
+        def lcfsId = mappingRs.getInt("compliance_report_id")
+        def legacyId = mappingRs.getInt("legacy_id")
+        legacyToLcfsIdMap[legacyId] = lcfsId
+    }
+    mappingRs.close()
+    fetchMappingStmt.close()
+    log.info("Fetched ${legacyToLcfsIdMap.size()} legacy_id to LCFS compliance_report_id mappings from destination.")
 
     // =========================================
     // Fetch Data from Source Table
@@ -44,7 +59,9 @@ try {
             public.compliance_report cr
         JOIN
             public.compliance_report_summary crs
-            ON cr.summary_id = crs.id WHERE cr.summary_id IS NOT NULL
+            ON cr.summary_id = crs.id 
+        WHERE 
+            cr.summary_id IS NOT NULL
         ORDER BY
             cr.id;
     """
@@ -124,7 +141,6 @@ try {
         )
     """
 
-
     PreparedStatement destinationStmt = destinationConn.prepareStatement(INSERT_DESTINATION_SUMMARY_SQL)
 
     // =========================================
@@ -138,10 +154,11 @@ try {
     // Processing Loop
     // =========================================
 
+    log.info("Starting to process source records and insert into destination.")
     while (rs.next()) {
         // Fetch source fields
         def summaryId = rs.getInt("summary_id")
-        def complianceReportId = rs.getInt("compliance_report_id")
+        def sourceComplianceReportLegacyId = rs.getInt("compliance_report_id")
         def gasolineClassRetained = rs.getBigDecimal('gasoline_class_retained')
         def gasolineClassDeferred = rs.getBigDecimal('gasoline_class_deferred')
         def dieselClassRetained = rs.getBigDecimal('diesel_class_retained')
@@ -155,10 +172,19 @@ try {
         def creditsOffsetB = rs.getInt('credits_offset_b')
         def creditsOffsetC = rs.getInt('credits_offset_c')
 
+        // Map source compliance_report_id (legacy_id) to LCFS compliance_report_id
+        def lcfsComplianceReportId = legacyToLcfsIdMap[sourceComplianceReportLegacyId]
+
+        if (lcfsComplianceReportId == null) {
+            log.warn("No LCFS compliance_report found with legacy_id ${sourceComplianceReportLegacyId}. Skipping summary_id ${summaryId}.")
+            totalSkipped++
+            continue // Skip to the next record
+        }
+
         // Create a summaryRecord map for the destination table
         def summaryRecord = [
             summary_id                          : summaryId,
-            compliance_report_id                : complianceReportId,
+            compliance_report_id                : lcfsComplianceReportId, // Use LCFS ID
             quarter                             : null,
             is_locked                           : true,
             line_1_fossil_derived_base_fuel_gasoline      : null, // No direct mapping
@@ -204,7 +230,7 @@ try {
             line_19_units_to_be_exported                   : null, // No direct mapping
             line_20_surplus_deficit_units                  : null, // No direct mapping
             line_21_surplus_deficit_ratio                  : null, // No direct mapping
-            line_22_compliance_units_issued                : creditsOffset, // No direct mapping
+            line_22_compliance_units_issued                : creditsOffset,
             line_11_fossil_derived_base_fuel_gasoline      : null, // No direct mapping
             line_11_fossil_derived_base_fuel_diesel        : null, // No direct mapping
             line_11_fossil_derived_base_fuel_jet_fuel      : null, // No direct mapping
@@ -219,7 +245,6 @@ try {
             create_user                                 : "etl_user", // Replace with actual user or mapping
             update_user                                 : "etl_user"  // Replace with actual user or mapping
         ]
-
 
         // =========================================
         // Insertion into Destination Table
@@ -412,7 +437,7 @@ try {
             destinationStmt.setDouble(47, 0.0) // No mapping
 
             // 48. line_22_compliance_units_issued (float8) NOT NULL
-            destinationStmt.setDouble(48, summary.line_22_compliance_units_issued)
+            destinationStmt.setDouble(48, summaryRecord.line_22_compliance_units_issued)
 
             // 49. line_11_fossil_derived_base_fuel_gasoline (float8) NOT NULL
             destinationStmt.setDouble(49, 0.0) // No mapping
@@ -458,7 +483,7 @@ try {
             totalInserted++
 
         } catch (Exception e) {
-            log.error("Failed to insert summary_record for compliance_report_id: ${summaryRecord.compliance_report_id}", e)
+            log.error("Failed to insert summary_record for LCFS compliance_report_id: ${summaryRecord.compliance_report_id}, summary_id: ${summaryRecord.summary_id}", e)
             totalSkipped++
             // Continue processing other records
             continue
@@ -474,7 +499,7 @@ try {
         destinationConn.commit()
         log.info("Successfully inserted ${totalInserted} records into destination compliance_report_summary.")
         if (totalSkipped > 0) {
-            log.warn("Skipped ${totalSkipped} records due to insertion errors.")
+            log.warn("Skipped ${totalSkipped} records due to missing LCFS compliance_report_id in destination or insertion errors.")
         }
     } catch (Exception e) {
         log.error("Batch insertion failed. Rolling back.", e)

@@ -122,7 +122,7 @@ const AddEditFuelCodeBase = () => {
     params.api.sizeColumnsToFit()
   }
 
-  const handleError = (error, message, severity) => {
+  const handleError = (_error, message, severity) => {
     alertRef.current?.triggerAlert({
       message,
       severity
