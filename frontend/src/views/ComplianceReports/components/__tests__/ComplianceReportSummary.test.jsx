@@ -116,11 +116,15 @@ describe('ComplianceReportSummary', () => {
         renewableFuelTargetSummary: [
           { line: 1, gasoline: 100, diesel: 100, jetFuel: 100 },
           { line: 2, gasoline: 50, diesel: 50, jetFuel: 50 },
-          { line: 4, gasoline: 30, diesel: 30, jetFuel: 30 },
-          { line: 11, value: 0 }
+          { line: 3, gasoline: 50, diesel: 50, jetFuel: 50 },
+          { line: 4, gasoline: 30, diesel: 30, jetFuel: 30 }
         ],
-        lowCarbonFuelTargetSummary: [{ line: 20, value: 0 }],
-        nonCompliancePenaltySummary: [{ totalValue: 0 }, { totalValue: 0 }]
+        lowCarbonFuelTargetSummary: [],
+        nonCompliancePenaltySummary: [
+          { line: 11, totalValue: 0 },
+          { line: 21, totalValue: 0 },
+          { totalValue: 0 }
+        ]
       }
     })
 
