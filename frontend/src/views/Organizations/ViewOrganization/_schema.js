@@ -72,11 +72,3 @@ export const getUserColumnDefs = (t) => {
 }
 
 export const defaultSortModel = [{ field: 'firstName', direction: 'asc' }]
-export const defaultFilterModel = [
-  {
-    field: 'isActive',
-    filterType: 'text',
-    type: 'equals',
-    filter: 'Active'
-  }
-]
