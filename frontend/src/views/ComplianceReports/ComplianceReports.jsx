@@ -9,7 +9,10 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useCreateComplianceReport, useGetComplianceReportList } from '@/hooks/useComplianceReports'
+import {
+  useCreateComplianceReport,
+  useGetComplianceReportList
+} from '@/hooks/useComplianceReports'
 import { reportsColDefs } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import BCTypography from '@/components/BCTypography'
@@ -31,9 +34,10 @@ export const ComplianceReports = () => {
   const newButtonRef = useRef(null)
   const { hasRoles, data: currentUser } = useCurrentUser()
 
-  const getRowId = useCallback((params) => {
-    return `${params.data.compliancePeriod.description}-${params.data.complianceReportId}`
-  }, [])
+  const getRowId = useCallback(
+    (params) => params.data.complianceReportGroupUuid,
+    []
+  )
 
   useEffect(() => {
     if (location.state?.message) {
