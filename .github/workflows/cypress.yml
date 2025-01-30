@@ -2,8 +2,8 @@ name: Cypress Daily
 
 on:
   schedule:
-    - cron: '0 16 * * *'  # Runs daily at 16:00 UTC (8 AM PST)
-  workflow_dispatch:      # Allows manual triggering of the workflow
+    - cron: "0 16 * * *" # Runs daily at 16:00 UTC (8 AM PST)
+  workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
   cypress:
@@ -34,14 +34,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Build and Run Backend Service
-        run: |
-          docker build -t backend-service -f ./backend/Dockerfile ./backend
-          docker run -d --name backend \
-            --network=host \
-            -e LCFS_DB_HOST=localhost \
-            -e LCFS_REDIS_HOST=localhost \
-            backend-service
+      - name: Build Backend Service
+        run: docker build -t backend-service -f ./backend/Dockerfile ./backend
+
+      - name: Run Backend Service
+        run: docker run -d --name backend --network=host -e LCFS_DB_HOST=localhost -e LCFS_REDIS_HOST=localhost backend-service
 
       - name: Wait for DB to be Ready
         run: sleep 20
@@ -52,34 +49,33 @@ jobs:
       - name: Data Seeding
         run: docker exec backend poetry run python /app/lcfs/db/seeders/seed_database.py
 
-      - name: Build and Run Frontend Service
-        run: |
-          docker build -t frontend-service -f ./frontend/Dockerfile.dev ./frontend
-          docker run -d --name frontend \
-            --network=host \
-            frontend-service
+      - name: Build Frontend Service
+        run: docker build -t frontend-service -f ./frontend/Dockerfile.dev ./frontend
+
+      - name: Run Frontend Service
+        run: docker run -d --name frontend --network=host frontend-service
 
       - name: Cypress run
-        uses: cypress-io/github-action@v2
+        uses: cypress-io/github-action@v6
         with:
           browser: chrome
-          wait-on: 'http://localhost:3000'
+          wait-on: "http://localhost:3000"
           wait-on-timeout: 60
           record: false
           config-file: cypress.config.js
           working-directory: frontend
         env:
-          IDIR_TEST_USER: ${{ secrets.ADMIN_IDIR_USERNAME }}
-          IDIR_TEST_PASS: ${{ secrets.ADMIN_IDIR_PASSWORD }}
-          BCEID_TEST_USER: ${{ secrets.BCEID_TEST_USER }}
-          BCEID_TEST_PASS: ${{ secrets.BCEID_TEST_PASS }}
-          ADMIN_IDIR_USERNAME: ${{ secrets.ADMIN_IDIR_USERNAME }}
-          ADMIN_IDIR_PASSWORD: ${{ secrets.ADMIN_IDIR_PASSWORD }}
-          ADMIN_IDIR_EMAIL: ${{ secrets.ADMIN_IDIR_EMAIL }}
-          ORG1_BCEID_USERNAME: ${{ secrets.ORG1_BCEID_USERNAME }}
-          ORG1_BCEID_PASSWORD: ${{ secrets.ORG1_BCEID_PASSWORD }}
-          ORG2_BCEID_USERNAME: ${{ secrets.ORG2_BCEID_USERNAME }}
-          ORG2_BCEID_PASSWORD: ${{ secrets.ORG2_BCEID_PASSWORD }}
+          CYPRESS_IDIR_TEST_USER: ${{ secrets.ADMIN_IDIR_USERNAME }}
+          CYPRESS_IDIR_TEST_PASS: ${{ secrets.ADMIN_IDIR_PASSWORD }}
+          CYPRESS_BCEID_TEST_USER: ${{ secrets.BCEID_TEST_USER }}
+          CYPRESS_BCEID_TEST_PASS: ${{ secrets.BCEID_TEST_PASS }}
+          CYPRESS_ADMIN_IDIR_USERNAME: ${{ secrets.ADMIN_IDIR_USERNAME }}
+          CYPRESS_ADMIN_IDIR_PASSWORD: ${{ secrets.ADMIN_IDIR_PASSWORD }}
+          CYPRESS_ADMIN_IDIR_EMAIL: ${{ secrets.ADMIN_IDIR_EMAIL }}
+          CYPRESS_ORG1_BCEID_USERNAME: ${{ secrets.ORG1_BCEID_USERNAME }}
+          CYPRESS_ORG1_BCEID_PASSWORD: ${{ secrets.ORG1_BCEID_PASSWORD }}
+          CYPRESS_ORG2_BCEID_USERNAME: ${{ secrets.ORG2_BCEID_USERNAME }}
+          CYPRESS_ORG2_BCEID_PASSWORD: ${{ secrets.ORG2_BCEID_PASSWORD }}
 
       - name: Cleanup
         if: always()
