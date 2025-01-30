@@ -444,6 +444,9 @@ class ComplianceReportRepository:
         )
 
         # Apply sorting from pagination
+        if len(pagination.sort_orders) < 1:
+            field = get_field_for_filter(ComplianceReport, "update_date")
+            query = query.order_by(desc(field))
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
             if order.field == "status":
