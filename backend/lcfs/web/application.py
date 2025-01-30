@@ -33,6 +33,7 @@ origins = [
     "https://lcfs-test.apps.silver.devops.gov.bc.ca",
     "https://lcfs-prod.apps.silver.devops.gov.bc.ca",
     "https://lcfs.apps.silver.devops.gov.bc.ca",
+    "https://lowcarbonfuels.gov.bc.ca",
 ]
 
 
