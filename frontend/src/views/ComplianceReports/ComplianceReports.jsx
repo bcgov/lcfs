@@ -1,21 +1,24 @@
 import { Stack } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import { useCallback, useEffect, useMemo, useRef, useState  } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { apiRoutes, ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/constants/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useCreateComplianceReport } from '@/hooks/useComplianceReports'
-import { defaultSortModel, reportsColDefs } from './components/_schema'
+import {
+  useCreateComplianceReport,
+  useGetComplianceReportList
+} from '@/hooks/useComplianceReports'
+import { reportsColDefs } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
@@ -23,29 +26,18 @@ export const ComplianceReports = () => {
   const [isButtonLoading, setIsButtonLoading] = useState(false)
   const [resetGridFn, setResetGridFn] = useState(null)
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [gridKey, setGridKey] = useState(`compliance-reports-grid`)
 
   const gridRef = useRef()
   const alertRef = useRef()
   const navigate = useNavigate()
   const location = useLocation()
-  const newButtonRef = useRef(null);
+  const newButtonRef = useRef(null)
   const { hasRoles, data: currentUser } = useCurrentUser()
 
-  const gridOptions = useMemo(
-    () => ({
-      overlayNoRowsTemplate: t('report:noReportsFound')
-    }),
-    [t]
-  )
   const getRowId = useCallback(
-    (params) => params.data.complianceReportId.toString(),
+    (params) => params.data.complianceReportGroupUuid,
     []
   )
-
-  const handleGridKey = useCallback(() => {
-    setGridKey('reports-grid')
-  }, [])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -156,25 +148,20 @@ export const ComplianceReports = () => {
           }}
         />
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-          <BCDataGridServer
+          <BCGridViewer
             gridRef={gridRef}
-            apiEndpoint={
-              hasRoles(roles.supplier)
-                ? apiRoutes.getOrgComplianceReports.replace(
-                    ':orgID',
-                    currentUser?.organization?.organizationId
-                  )
-                : apiRoutes.getComplianceReports
-            }
-            apiData={'reports'}
+            gridKey={'compliance-reports-grid'}
             columnDefs={reportsColDefs(t, hasRoles(roles.supplier))}
-            gridKey={gridKey}
+            query={useGetComplianceReportList}
+            queryParams={{ cacheTime: 0, staleTime: 0 }}
+            dataKey={'reports'}
             getRowId={getRowId}
-            defaultSortModel={defaultSortModel}
-            defaultFilterModel={location.state?.filters}
-            gridOptions={gridOptions}
-            handleGridKey={handleGridKey}
-            enableCopyButton={false}
+            overlayNoRowsTemplate={t('report:noReportsFound')}
+            autoSizeStrategy={{
+              type: 'fitGridWidth',
+              defaultMinWidth: 50,
+              defaultMaxWidth: 600
+            }}
             defaultColDef={defaultColDef}
             onSetResetGrid={handleSetResetGrid}
           />
