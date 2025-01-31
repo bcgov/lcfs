@@ -190,7 +190,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
         ?.fuelCategories.map((item) => item.fuelCategory).length > 1,
-    tooltipValueGetter: (p) => 'Select the fuel category from the list'
+    tooltipValueGetter: () => 'Select the fuel category from the list'
   },
   {
     field: 'endUseType',
@@ -279,7 +279,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       return true
     },
     editable: true,
-    tooltipValueGetter: (p) =>
+    tooltipValueGetter: () =>
       'Act Relied Upon to Determine Carbon Intensity: Identify the appropriate provision of the Act relied upon to determine the carbon intensity of each fuel.'
   },
   {
