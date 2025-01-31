@@ -19,10 +19,9 @@ depends_on = None
 def upgrade():
     # Add the new 'Rejected' value to the enum
     op.execute(
-        """
-        ALTER TYPE public.compliancereportstatusenum 
-        ADD VALUE IF NOT EXISTS 'Rejected';
-    """
+        sa.text(
+            "ALTER TYPE public.compliancereportstatusenum ADD VALUE IF NOT EXISTS 'Rejected'"
+        ).execution_options(autocommit=True)
     )
     # Insert 'Rejected' status into cr status
     op.execute(
