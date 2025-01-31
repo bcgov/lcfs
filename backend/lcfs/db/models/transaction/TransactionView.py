@@ -37,7 +37,6 @@ class TransactionView(BaseModel):
     )
     description = Column(
         String,
-        primary_key=True,
         comment="Brief description of the transaction.",
     )
     compliance_period = Column(

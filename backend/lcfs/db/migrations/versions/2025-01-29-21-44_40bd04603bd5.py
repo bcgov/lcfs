@@ -208,7 +208,6 @@ def upgrade() -> None:
         CREATE UNIQUE INDEX mv_transaction_aggregate_unique_idx
             ON mv_transaction_aggregate (
                 transaction_id,
-                description,
                 transaction_type
             );
         """
