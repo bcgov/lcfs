@@ -39,7 +39,7 @@ jobs:
         run: docker build -t backend-service -f ./backend/Dockerfile ./backend
 
       - name: Run Backend Service
-        run: docker run -d --name backend --network=host -e LCFS_DB_HOST=localhost -e LCFS_REDIS_HOST=localhost backend-service -e LCFS_RABBITMQ_HOST=localhost
+        run: docker run -d --name backend --network=host -e LCFS_DB_HOST=localhost -e LCFS_REDIS_HOST=localhost -e LCFS_RABBITMQ_HOST=localhost -e LCFS_CHES_ENABLED=False backend-service
 
       - name: Wait for DB to be Ready
         run: sleep 20

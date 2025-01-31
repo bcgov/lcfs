@@ -16,6 +16,12 @@
 import 'cypress-axe'
 import './commands'
 
+cy.on('fail', (error, runnable) => {
+  console.error(error)
+
+  throw error
+})
+
 export const terminalLog = (violations) => {
   cy.task(
     'log',
