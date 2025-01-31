@@ -48,17 +48,8 @@ When('the supplier enters a valid fuel supply row', () => {
   cy.get('div[col-id="fuelType"][title="Select the fuel type from the list"]')
     .click()
     .find('input')
-    .type('CNG{enter}')
+    .type('Ethanol{enter}')
 
-  cy.wait(800)
-
-  // Set "Fuel category" to "Gasoline"
-  cy.get(
-    'div[col-id="fuelCategory"][title="Select the fuel category from the list"]'
-  )
-    .click()
-    .find('input')
-    .type('Gasoline{enter}')
   cy.wait(800)
 
   // Set "Determining carbon intensity" to "Default carbon intensity - section 19 (b) (ii)"
@@ -169,10 +160,11 @@ When('the supplier submits the report', () => {
   cy.wait(2000)
 })
 
-Then('the status should change to Submitted', () => {
-  cy.get('[data-test="compliance-report-status"]')
-    .should('be.visible')
-    .and('have.text', 'Status: Submitted')
+Then('the banner shows success', () => {
+  // Assert the Submitted Message
+  cy.contains('div', 'Compliance report successfully submitted').should(
+    'be.visible'
+  )
 })
 
 Then('they see the previously submitted report', () => {
