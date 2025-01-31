@@ -213,7 +213,8 @@ export const AddEditFuelSupplies = () => {
 
           params.node.setDataValue('endUseType', endUseValue)
 
-          if (selectedFuelType.provisions.length === 1 &&
+          if (
+            selectedFuelType.provisions.length === 1 &&
             !params.node.data.provisionOfTheAct
           ) {
             params.node.setDataValue(
@@ -267,27 +268,6 @@ export const AddEditFuelSupplies = () => {
 
       if (updatedData.fuelType === 'Other') {
         updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
-      }
-
-      const isFuelCodeScenario =
-        params.node.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      if (isFuelCodeScenario && !params.node.data.fuelCode) {
-        // Set error on the row
-        setErrors({
-          [params.node.data.id]: ['fuelCode']
-        })
-
-        alertRef.current?.triggerAlert({
-          message: t('fuelSupply:fuelCodeFieldRequiredError'),
-          severity: 'error'
-        })
-
-        // Update node data to reflect error state
-        params.node.updateData({
-          ...params.node.data,
-          validationStatus: 'error'
-        })
-        return // Stop saving further
       }
 
       updatedData = await handleScheduleSave({

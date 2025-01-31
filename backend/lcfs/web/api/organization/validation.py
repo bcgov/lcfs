@@ -64,7 +64,9 @@ class OrganizationValidation:
             transfer_create.current_status in LCFS_Constants.FROM_ORG_TRANSFER_STATUSES
         )
 
-        await self.check_available_balance(organization_id, transfer_create.quantity)
+        await self.check_available_balance(
+            transfer_create.from_organization_id, transfer_create.quantity
+        )
         if (
             transfer_create.from_organization_id == organization_id and valid_status
         ) or (  # status changes allowed for from-organization

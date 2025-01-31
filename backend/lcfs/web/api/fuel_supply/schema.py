@@ -1,7 +1,6 @@
-from enum import Enum
 from typing import List, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from lcfs.web.api.base import (
     BaseSchema,
@@ -11,6 +10,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+from lcfs.web.utils.schema_validators import fuel_code_required
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -131,6 +131,11 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
 
     class Config:
         use_enum_values = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_fuel_code_required(cls, values):
+        return fuel_code_required(values)
 
 
 class FuelSupplyResponseSchema(BaseSchema):

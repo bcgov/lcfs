@@ -265,13 +265,14 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
           <Grid container>
             <Grid item lg={12}>
               <BCBox>
-                <InputLabel htmlFor="orgLegalName" sx={{ pb: 1 }}>
+                <InputLabel htmlFor="txnEffectiveDate" sx={{ pb: 1 }}>
                   <BCTypography
                     variant="body3"
                     dangerouslySetInnerHTML={{ __html: t('txn:effectiveDate') }}
                   ></BCTypography>
                 </InputLabel>
                 <TextField
+                  id="txnEffectiveDate"
                   data-test="txn-effective-date"
                   {...register('transactionEffectiveDate')}
                   type="date"
@@ -290,20 +291,6 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
                   }
                 />
               </BCBox>
-            </Grid>
-            <Grid item lg={12} mt={3}>
-              <BCTypography
-                variant="body3"
-                sx={{
-                  '& p': {
-                    marginBottom: '16px'
-                  },
-                  '& p:last-child': {
-                    marginBottom: '0'
-                  }
-                }}
-                dangerouslySetInnerHTML={{ __html: t('txn:description') }}
-              ></BCTypography>
             </Grid>
           </Grid>
         </BCBox>

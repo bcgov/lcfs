@@ -32,6 +32,5 @@
   },
   "validateMsg": {
     "isRequired": "{{field}} is required"
-  },
-  "fuelCodeFieldRequiredError": "Unable to save row: Fuel code field required"
+  }
 }

@@ -70,14 +70,6 @@ export const TransactionView = ({ transaction }) => {
             </Grid>
           </Grid>
         </BCBox>
-        <BCBox sx={{ bgcolor: '#f2f2f2' }} p={3} m={1} mt={2}>
-          <Grid item lg={12}>
-            <BCTypography
-              variant="body3"
-              dangerouslySetInnerHTML={{ __html: t('txn:description') }}
-            />
-          </Grid>
-        </BCBox>
       </LabelBox>
     </BCBox>
   )

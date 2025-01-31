@@ -54,16 +54,16 @@ const ComplianceReportSummary = ({
       onSuccess: (response) => {
         setSummaryData(response.data)
         const renewablePenaltyAmount =
-          response.data?.renewableFuelTargetSummary.find(
+          response.data?.nonCompliancePenaltySummary.find(
             (line) => line.line === 11
           )
-        const lowCarbonPenaltyCredits =
-          response.data?.lowCarbonFuelTargetSummary.find(
-            (line) => line.line === 20
+        const lowCarbonPenaltyAmount =
+          response.data?.nonCompliancePenaltySummary.find(
+            (line) => line.line === 21
           )
 
-        setHasMetRenewables(renewablePenaltyAmount.value > 0)
-        setHasMetLowCarbon(lowCarbonPenaltyCredits.value > 0)
+        setHasMetRenewables(renewablePenaltyAmount.totalValue <= 0)
+        setHasMetLowCarbon(lowCarbonPenaltyAmount.totalValue <= 0)
       },
       onError: (error) => {
         alertRef.current?.triggerAlert({
@@ -75,15 +75,15 @@ const ComplianceReportSummary = ({
   useEffect(() => {
     if (data) {
       setSummaryData(data)
-      const renewablePenaltyAmount = data?.renewableFuelTargetSummary.find(
+      const renewablePenaltyAmount = data?.nonCompliancePenaltySummary.find(
         (line) => line.line === 11
       )
-      const lowCarbonPenaltyCredits = data?.lowCarbonFuelTargetSummary.find(
-        (line) => line.line === 20
+      const lowCarbonPenaltyAmount = data?.nonCompliancePenaltySummary.find(
+        (line) => line.line === 21
       )
 
-      setHasMetRenewables(renewablePenaltyAmount.value > 0)
-      setHasMetLowCarbon(lowCarbonPenaltyCredits.value > 0)
+      setHasMetRenewables(renewablePenaltyAmount.totalValue <= 0)
+      setHasMetLowCarbon(lowCarbonPenaltyAmount.totalValue <= 0)
       setHasRecords(data && data.canSign)
     }
     if (isError) {

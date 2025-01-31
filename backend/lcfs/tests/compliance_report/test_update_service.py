@@ -9,6 +9,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatusEnum,
 )
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
@@ -53,6 +54,7 @@ def mock_environment_vars():
 def mock_org_service():
     mock_org_service = MagicMock()
     mock_org_service.adjust_balance = AsyncMock()  # Mock the adjust_balance method
+    mock_org_service.calculate_available_balance = AsyncMock(return_value=1000)
     return mock_org_service
 
 
@@ -594,3 +596,186 @@ async def test_handle_submitted_no_sign(
 
     with pytest.raises(ServiceException):
         await compliance_report_update_service.handle_submitted_status(mock_report)
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_no_credits(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
+):
+    """
+    Scenario: The report requires deficit units to be reserved (-100),
+    but available_balance is 0, so no transaction is created.
+    """
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 123
+    # Deficit units is nonzero
+    mock_report.summary = MagicMock(
+        spec=ComplianceReportSummary, line_20_surplus_deficit_units=-100
+    )
+    # No existing transaction
+    mock_report.transaction = None
+
+    # Required roles are present
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Mock the summary so we skip deeper logic
+    mock_repo.get_summary_by_report_id.return_value = None
+
+    # Pretend the final summary can_sign is True
+    calculated_summary = ComplianceReportSummarySchema(
+        can_sign=True,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # available_balance = 0
+    mock_org_service.calculate_available_balance.return_value = 0
+    # If adjust_balance is called, we'll see an assertion fail
+    mock_org_service.adjust_balance = AsyncMock()
+
+    # Execute
+    await compliance_report_update_service.handle_submitted_status(mock_report)
+
+    # Assertions:
+    # 1) We did NOT call adjust_balance, because balance = 0
+    mock_org_service.adjust_balance.assert_not_awaited()
+    # 2) No transaction is created
+    assert mock_report.transaction is None
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_insufficient_credits(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
+):
+    """
+    Scenario: The report requires deficit units of 100,
+    but the org only has 50 credits available. We reserve partial (-50)
+    to match the actual available balance.
+    """
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 123
+    # Need 100 credits, but only 50 are available
+    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
+    mock_report.summary.line_20_surplus_deficit_units = -100
+    mock_report.transaction = None
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Skip deeper summary logic
+    mock_repo.get_summary_by_report_id.return_value = None
+    mock_repo.save_compliance_report_summary = AsyncMock(
+        return_value=mock_report.summary
+    )
+    mock_repo.add_compliance_report_summary = AsyncMock(
+        return_value=mock_report.summary
+    )
+    calculated_summary = ComplianceReportSummarySchema(
+        can_sign=True,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # Org only has 50
+    mock_org_service.calculate_available_balance = AsyncMock(return_value=50)
+    # Mock the result of adjust_balance
+    mock_transaction = MagicMock()
+    mock_org_service.adjust_balance.return_value = mock_transaction
+
+    # Execute
+    await compliance_report_update_service.handle_submitted_status(mock_report)
+
+    # We should have called adjust_balance with -50 units (reserving partial)
+    mock_org_service.adjust_balance.assert_awaited_once_with(
+        transaction_action=TransactionActionEnum.Reserved,
+        compliance_units=-50,
+        organization_id=123,
+    )
+    # And a transaction object is assigned back to the report
+    assert mock_report.transaction == mock_transaction
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_sufficient_credits(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
+):
+    """
+    Scenario: The report requires deficit units of -100,
+    and the org has 200 credits available. We reserve all -100.
+    """
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 123
+    # Need 100 credits
+    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
+    mock_report.summary.line_20_surplus_deficit_units = -100
+    mock_report.transaction = None
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Skip deeper summary logic
+    mock_repo.get_summary_by_report_id.return_value = None
+    mock_repo.save_compliance_report_summary = AsyncMock(
+        return_value=mock_report.summary
+    )
+    mock_repo.add_compliance_report_summary = AsyncMock(
+        return_value=mock_report.summary
+    )
+    calculated_summary = ComplianceReportSummarySchema(
+        can_sign=True,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # Org has enough
+    mock_org_service.calculate_available_balance.return_value = 200
+    mock_transaction = MagicMock()
+    mock_org_service.adjust_balance.return_value = mock_transaction
+
+    # Execute
+    await compliance_report_update_service.handle_submitted_status(mock_report)
+
+    # We should have called adjust_balance with the full -100
+    mock_org_service.adjust_balance.assert_awaited_once_with(
+        transaction_action=TransactionActionEnum.Reserved,
+        compliance_units=-100,
+        organization_id=123,
+    )
+    assert mock_report.transaction == mock_transaction

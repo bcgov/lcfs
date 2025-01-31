@@ -61,6 +61,12 @@ export const BCGridViewer = ({
       const columnState = JSON.parse(localStorage.getItem(`${gridKey}-column`))
       if (filterState) {
         params.api.setFilterModel(filterState)
+        const filterArr = [
+          ...Object.entries(filterState).map(([field, value]) => {
+            return { field, ...value }
+          })
+        ]
+        setFilterModel(filterArr)
       }
       if (columnState) {
         params.api.applyColumnState({
@@ -152,7 +158,7 @@ export const BCGridViewer = ({
         ...defaultFilterModel
       ]
       setFilterModel(filterArr)
-      localStorage.setItem(`${gridKey}-filter`, JSON.stringify(filterArr))
+      localStorage.setItem(`${gridKey}-filter`, JSON.stringify(gridFilters))
     },
     [defaultFilterModel, gridKey, ref]
   )

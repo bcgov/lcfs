@@ -6,7 +6,7 @@ import structlog
 from fastapi import Depends
 from sqlalchemy import func, select, and_, asc, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, contains_eager
+from sqlalchemy.orm import joinedload, contains_eager, aliased
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import CompliancePeriod
@@ -364,8 +364,6 @@ class ComplianceReportRepository:
         # Base query conditions
         conditions = []
         sub_conditions = []
-        if organization_id:
-            sub_conditions.append(ComplianceReport.organization_id == organization_id)
 
         if pagination.filters and len(pagination.filters) > 0:
             self.apply_sub_filters(pagination, sub_conditions)
@@ -376,19 +374,36 @@ class ComplianceReportRepository:
         limit = pagination.size
 
         # Build the main query
+        latest_version_subquery = select(
+            ComplianceReport.compliance_report_group_uuid,
+            func.max(ComplianceReport.version).label("latest_version"),
+        ).group_by(ComplianceReport.compliance_report_group_uuid)
+        if organization_id:
+            latest_version_subquery = latest_version_subquery.where(
+                ComplianceReport.organization_id == organization_id
+            )
+        latest_version_subquery = latest_version_subquery.subquery()
+        cr_alias = aliased(ComplianceReport)
+
         subquery = (
             select(
-                ComplianceReport.compliance_report_group_uuid,
-                func.max(ComplianceReport.version).label("latest_version"),
+                cr_alias.compliance_report_group_uuid,
+                cr_alias.version.label("latest_version"),
+            )
+            .join(
+                latest_version_subquery,
+                and_(
+                    cr_alias.compliance_report_group_uuid
+                    == latest_version_subquery.c.compliance_report_group_uuid,
+                    cr_alias.version == latest_version_subquery.c.latest_version,
+                ),
+            )
+            .join(
+                ComplianceReportStatus,
+                cr_alias.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
             )
             .where(and_(*sub_conditions))
-            .group_by(ComplianceReport.compliance_report_group_uuid)
-        )
-
-        subquery = subquery.join(
-            ComplianceReportStatus,
-            ComplianceReport.current_status_id
-            == ComplianceReportStatus.compliance_report_status_id,
         )
 
         subquery = subquery.subquery()
@@ -428,6 +443,9 @@ class ComplianceReportRepository:
         )
 
         # Apply sorting from pagination
+        if len(pagination.sort_orders) < 1:
+            field = get_field_for_filter(ComplianceReport, "update_date")
+            query = query.order_by(desc(field))
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
             if order.field == "status":

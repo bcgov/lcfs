@@ -1,5 +1,5 @@
 
-name: LCFS 0.2.0 Prod CI
+name: LCFS 1.0.0 Prod CI
 
 on:
   workflow_dispatch:

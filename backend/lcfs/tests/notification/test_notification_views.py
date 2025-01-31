@@ -151,7 +151,6 @@ async def test_get_notifications_by_id(
         url = fastapi_app.url_path_for(
             "get_notification_message_by_id", notification_id=1
         )
-        print("Resolved URL:", url)
 
         response = await client.get(url)
 

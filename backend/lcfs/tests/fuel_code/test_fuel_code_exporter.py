@@ -65,7 +65,6 @@ async def test_export_success():
     # Verify file content
     headers = await response.body_iterator.__anext__()
     file_content = await response.body_iterator.__anext__()
-    print("-", file_content)
     assert (
         b"Status,Prefix,Fuel code,Carbon intensity,EDRMS#,Company,Contact name,Contact email,Application date,Approval date,Effective date,Expiry date,Fuel,Feedstock,Feedstock location,Misc,Fuel production facility city,Fuel production facility province/state,Fuel production facility country,Facility nameplate capacity,Unit,Feedstock transport mode,Finished fuel transport mode,Former company,Notes\n"
         in headers
