@@ -605,7 +605,6 @@ async def test_get_fuel_code_statuses_success(
         result = response.json()
         assert isinstance(result, list)
         assert len(result) == 2
-        print(result[0])
         assert result[0]["fuelCodeStatusId"] == 1
         assert result[0]["status"] == "Draft"
         assert result[1]["fuelCodeStatusId"] == 2

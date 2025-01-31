@@ -123,7 +123,6 @@ async def get_other_uses_paginated(
 
 @router.post(
     "/save",
-    response_model=Union[OtherUsesSchema, DeleteOtherUsesResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])

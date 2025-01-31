@@ -148,7 +148,6 @@ class FuelExportActionService:
             for field, value in fe_data.model_dump(
                 exclude=FUEL_EXPORT_EXCLUDE_FIELDS
             ).items():
-                print(field, value)
                 setattr(existing_export, field, value)
 
             # Populate calculated fields

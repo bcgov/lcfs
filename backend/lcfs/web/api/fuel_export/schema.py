@@ -1,16 +1,17 @@
 from datetime import date
-from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional
+
+from pydantic import Field, field_validator, model_validator
+
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
     PaginationResponseSchema,
     SortOrder,
 )
-from pydantic import Field, field_validator, validator
-
 from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+from lcfs.web.utils.schema_validators import fuel_code_required
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -139,13 +140,6 @@ class FuelExportSchema(BaseSchema):
     fuel_code: Optional[FuelCodeResponseSchema] = None
 
 
-    @validator("quantity")
-    def quantity_must_be_positive(cls, v):
-        if v <= 0:
-            raise ValueError("quantity must be greater than zero")
-        return v
-
-
 class FuelExportCreateUpdateSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
@@ -171,11 +165,18 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     energy: Optional[float] = 0
     deleted: Optional[bool] = None
 
-    @validator("quantity")
-    def quantity_must_be_positive(cls, v):
-        if v <= 0:
+    @model_validator(mode="before")
+    @classmethod
+    def quantity_must_be_positive(cls, values):
+        quantity = values.get("quantity")
+        if quantity and quantity <= 0:
             raise ValueError("quantity must be greater than zero")
-        return v
+        return values
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_fuel_code_required(cls, values):
+        return fuel_code_required(values)
 
 
 class DeleteFuelExportResponseSchema(BaseSchema):
