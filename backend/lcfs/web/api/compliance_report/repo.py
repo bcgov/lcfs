@@ -105,12 +105,7 @@ class ComplianceReportRepository:
             elif filter.field == "organization":
                 continue
             elif filter.field == "type":
-                field = get_field_for_filter(ComplianceReport, "reporting_frequency")
-                filter_value = (
-                    ReportingFrequency.ANNUAL.value
-                    if filter_value.lower().startswith("c")
-                    else ReportingFrequency.QUARTERLY.value
-                )
+                field = get_field_for_filter(ComplianceReport, "nickname")
             elif filter.field == "compliance_period":
                 continue
             else:

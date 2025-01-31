@@ -99,10 +99,6 @@ class ComplianceReportServices:
         The report_id can be any report in the series (original or supplemental).
         Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
-        # check if we're passing a specifc user otherwise use request user
-        if not user:
-            user = self.request.user
-
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(
             report_id, is_model=True
