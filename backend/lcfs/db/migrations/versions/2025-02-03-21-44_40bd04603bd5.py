@@ -1,8 +1,8 @@
 """Add compliance period to the mv_transaction_aggregate materialized view.
 
 Revision ID: 40bd04603bd5
-Revises: 0d8e7ee6a6e0
-Create Date: 2025-01-29 21:44:15.223085
+Revises: d4f91d033ac7
+Create Date: 2025-02-03 21:44:15.223085
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "40bd04603bd5"
-down_revision = "0d8e7ee6a6e0"
+down_revision = "d4f91d033ac7"
 branch_labels = None
 depends_on = None
 
