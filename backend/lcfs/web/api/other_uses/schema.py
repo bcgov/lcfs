@@ -1,21 +1,23 @@
+from enum import Enum
 from typing import Optional, List
-from pydantic import Field, field_validator
+
+from pydantic import Field, field_validator, model_validator
+
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
     SortOrder,
-    PaginationRequestSchema,
     PaginationResponseSchema,
 )
-from enum import Enum
-
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+from lcfs.web.utils.schema_validators import fuel_code_required_label
 
 
 class FuelCodeStatusEnumSchema(str, Enum):
     Draft = "Draft"
     Approved = "Approved"
     Deleted = "Deleted"
+
 
 class FuelCodeSchema(BaseSchema):
     fuel_code_id: int
@@ -96,13 +98,17 @@ class OtherUsesCreateSchema(BaseSchema):
     fuel_code: Optional[str] = None
     ci_of_fuel: Optional[float] = None
     expected_use: str
-    other_uses_id: Optional[int] = None
     rationale: Optional[str] = None
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
     user_type: Optional[str] = None
     action_type: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_fuel_code_required(cls, values):
+        return fuel_code_required_label(values)
 
 
 class OtherUsesSchema(OtherUsesCreateSchema):

@@ -250,29 +250,6 @@ export const AddEditOtherUses = () => {
       // clean up any null or empty string values
       let updatedData = cleanEmptyStringValues(params.data)
 
-      const isFuelCodeScenario =
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      if (isFuelCodeScenario && !updatedData.fuelCode) {
-        // Fuel code is required but not provided
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [params.node.data.id]: ['fuelCode']
-        }))
-
-        alertRef.current?.triggerAlert({
-          message: t('otherUses:fuelCodeFieldRequiredError'),
-          severity: 'error'
-        })
-
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'error'
-        }
-
-        params.node.updateData(updatedData)
-        return // Stop execution, do not proceed to save
-      }
-
       updatedData = await handleScheduleSave({
         alertRef,
         idField: 'otherUsesId',

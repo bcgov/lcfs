@@ -62,14 +62,16 @@ export const reportsColDefs = (t, bceidRole) => [
               { id: 1, name: 'Draft' },
               { id: 2, name: 'Submitted' },
               { id: 3, name: 'Assessed' },
-              { id: 4, name: 'Reassessed' }
+              { id: 4, name: 'Reassessed' },
+              { id: 7, name: 'Rejected' }
             ]
           : [
               { id: 2, name: 'Submitted' },
               { id: 5, name: 'Recommended by analyst' },
               { id: 6, name: 'Recommended by manager' },
               { id: 3, name: 'Assessed' },
-              { id: 4, name: 'Reassessed' }
+              { id: 4, name: 'Reassessed' },
+              { id: 7, name: 'Rejected' }
             ],
         isLoading: false
       }),
