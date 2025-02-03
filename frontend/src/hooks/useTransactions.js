@@ -4,6 +4,7 @@ import { useCurrentUser } from './useCurrentUser'
 import { roles } from '@/constants/roles'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { apiRoutes } from '@/constants/routes'
+import { apiRoutes } from '@/constants/routes/index.js'
 
 export const useTransaction = (transactionID, options) => {
   const client = useApiService()
@@ -72,6 +73,23 @@ export const useGetTransactionList = (
           filters
         })
       ).data
+    },
+    ...options
+  })
+}
+
+export const useTransactionDocuments = (parentID, parentType, options) => {
+  const client = useApiService()
+
+  return useQuery({
+    queryKey: ['documents', parentType, parentID],
+    queryFn: async () => {
+      const path = apiRoutes.getDocuments
+        .replace(':parentID', parentID)
+        .replace(':parentType', parentType)
+
+      const res = await client.get(path)
+      return res.data
     },
     ...options
   })

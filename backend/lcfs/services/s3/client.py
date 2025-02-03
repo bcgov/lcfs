@@ -1,8 +1,18 @@
 from fastapi import HTTPException
 import os
 import uuid
+
+from lcfs.db.models.admin_adjustment.AdminAdjustment import (
+    admin_adjustment_document_association,
+    AdminAdjustment,
+)
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+    initiative_agreement_document_association,
+    InitiativeAgreement,
+)
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from fastapi import Depends
 from pydantic.v1 import ValidationError
@@ -17,7 +27,9 @@ from lcfs.db.models.compliance.ComplianceReport import (
 from lcfs.db.models.document import Document
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
+from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.exception.exceptions import ServiceException
 
 BUCKET_NAME = settings.s3_bucket
 MAX_FILE_SIZE_MB = 50
@@ -31,32 +43,26 @@ class DocumentService:
         clamav_service: ClamAVService = Depends(),
         s3_client=Depends(get_s3_client),
         compliance_report_service: ComplianceReportServices = Depends(),
+        admin_adjustment_service: AdminAdjustmentServices = Depends(),
+        initiative_agreement_service: InitiativeAgreementServices = Depends(),
     ):
+        self.initiative_agreement_service = initiative_agreement_service
+        self.admin_adjustment_service = admin_adjustment_service
         self.db = db
         self.clamav_service = clamav_service
         self.s3_client = s3_client
         self.compliance_report_service = compliance_report_service
 
     @repo_handler
-    async def upload_file(
-        self, file, parent_id: str, parent_type="compliance_report", user=None
-    ):
-        compliance_report = (
-            await self.compliance_report_service.get_compliance_report_by_id(parent_id)
-        )
-        if not compliance_report:
-            raise HTTPException(status_code=404, detail="Compliance report not found")
-
-        # Check if the user is a supplier and the compliance report status is different from Draft
-        if (
-            RoleEnum.SUPPLIER in user.role_names
-            and compliance_report.current_status.status
-            != ComplianceReportStatusEnum.Draft.value
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="Suppliers can only upload files when the compliance report status is Draft",
-            )
+    async def upload_file(self, file, parent_id: int, parent_type, user=None):
+        if parent_type == "compliance_report":
+            await self._verify_compliance_report_access(parent_id, user)
+        elif parent_type == "administrativeAdjustment":
+            await self._verify_administrative_adjustment_access(parent_id, user)
+        elif parent_type == "initiativeAgreement":
+            await self._verify_initiative_agreement_access(parent_id, user)
+        else:
+            raise ServiceException(f"Unknown parent type {parent_type} in upload_file")
 
         file_id = uuid.uuid4()
         file_key = f"{settings.s3_docs_path}/{parent_type}/{parent_id}/{file_id}"
@@ -101,13 +107,93 @@ class DocumentService:
                 document_id=document.document_id,
             )
             await self.db.execute(stmt)
+        elif parent_type == "administrativeAdjustment":
+            admin_adjustment = await self.db.get(AdminAdjustment, parent_id)
+            if not admin_adjustment:
+                raise Exception("Administrative Adjustment not found")
+
+            self.db.add(document)
+            await self.db.flush()
+
+            # Insert the association
+            stmt = admin_adjustment_document_association.insert().values(
+                admin_adjustment_id=admin_adjustment.admin_adjustment_id,
+                document_id=document.document_id,
+            )
+            await self.db.execute(stmt)
+        elif parent_type == "initiativeAgreement":
+            initiative_agreement = await self.db.get(InitiativeAgreement, parent_id)
+            if not initiative_agreement:
+                raise Exception("Administrative Adjustment not found")
+
+            self.db.add(document)
+            await self.db.flush()
+
+            # Insert the association
+            stmt = initiative_agreement_document_association.insert().values(
+                initiative_agreement_id=initiative_agreement.initiative_agreement_id,
+                document_id=document.document_id,
+            )
+            await self.db.execute(stmt)
         else:
-            raise ValidationError(f"Invalid Type {parent_type}")
+            raise ServiceException(f"Invalid Type {parent_type}")
 
         await self.db.flush()
         await self.db.refresh(document)
 
         return document
+
+    async def _verify_compliance_report_access(self, parent_id, user):
+        compliance_report = (
+            await self.compliance_report_service.get_compliance_report_by_id(parent_id)
+        )
+        if not compliance_report:
+            raise HTTPException(status_code=404, detail="Compliance report not found")
+
+        # Check if the user is a supplier and the compliance report status is different from Draft
+        if (
+            RoleEnum.SUPPLIER in user.role_names
+            and compliance_report.current_status.status
+            != ComplianceReportStatusEnum.Draft.value
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Suppliers can only upload files when the compliance report status is Draft",
+            )
+
+    async def _verify_administrative_adjustment_access(self, parent_id, user):
+        admin_adjustment = await self.admin_adjustment_service.get_admin_adjustment(
+            parent_id
+        )
+        if not admin_adjustment:
+            raise HTTPException(
+                status_code=404, detail="Administrative Adjustment not found"
+            )
+
+        # Check if Government User
+        if RoleEnum.GOVERNMENT in user.role_names:
+            return
+        raise HTTPException(
+            status_code=400,
+            detail="Only Government Staff can upload files to Administrative Adjustments.",
+        )
+
+    async def _verify_initiative_agreement_access(self, parent_id, user):
+        initiative_agreement = (
+            await self.initiative_agreement_service.get_initiative_agreement(parent_id)
+        )
+        if not initiative_agreement:
+            raise HTTPException(
+                status_code=404, detail="Initiative Agreement not found"
+            )
+
+        # Check if Government User
+        if RoleEnum.GOVERNMENT in user.role_names:
+            return
+        raise HTTPException(
+            status_code=400,
+            detail="Only Government Staff can upload files to Initiative Agreements.",
+        )
 
     @repo_handler
     async def generate_presigned_url(self, document_id: int):
@@ -139,18 +225,38 @@ class DocumentService:
 
     @repo_handler
     async def get_by_id_and_type(self, parent_id: int, parent_type="compliance_report"):
-        # Select documents that are associated with the given compliance report ID
-        if parent_type == "compliance_report":
-            stmt = (
-                select(Document)
-                .join(compliance_report_document_association)
-                .where(
-                    compliance_report_document_association.c.compliance_report_id
-                    == parent_id
-                )
-            )
-        else:
-            raise ValidationError(f"Invalid Type for loading Documents {parent_type}")
+        # Mapping of parent types to their respective association tables and columns
+        type_mapping = {
+            "compliance_report": (
+                compliance_report_document_association,
+                "compliance_report_id",
+            ),
+            "administrativeAdjustment": (
+                admin_adjustment_document_association,
+                "admin_adjustment_id",
+            ),
+            "initiativeAgreement": (
+                initiative_agreement_document_association,
+                "initiative_agreement_id",
+            ),
+        }
+
+        # Retrieve the association table and column based on the parent_type
+        association_info = type_mapping.get(parent_type)
+
+        if not association_info:
+            raise ServiceException(f"Invalid Type for loading Documents {parent_type}")
+
+        association_table, column_name = association_info
+
+        # Construct the SQL statement dynamically
+        stmt = (
+            select(Document)
+            .join(association_table)
+            .where(getattr(association_table.c, column_name) == parent_id)
+        )
+
+        # Execute the statement and fetch results
         result = await self.db.execute(stmt)
         documents = result.scalars().all()
         return documents

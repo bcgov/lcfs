@@ -1,7 +1,24 @@
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey, DateTime, String
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey, DateTime, String, Table
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+
+initiative_agreement_document_association = Table(
+    "initiative_agreement_document_association",
+    BaseModel.metadata,
+    Column(
+        "initiative_agreement_id",
+        Integer,
+        ForeignKey("initiative_agreement.initiative_agreement_id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "document_id",
+        Integer,
+        ForeignKey("document.document_id"),
+        primary_key=True,
+    ),
+)
 
 
 class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
@@ -40,6 +57,12 @@ class InitiativeAgreement(BaseModel, Auditable, EffectiveDates):
     current_status = relationship("InitiativeAgreementStatus")
     initiative_agreement_internal_comments = relationship(
         "InitiativeAgreementInternalComment", back_populates="initiative_agreement"
+    )
+
+    documents = relationship(
+        "Document",
+        secondary=initiative_agreement_document_association,
+        back_populates="initiative_agreements",
     )
 
     def __repr__(self):
