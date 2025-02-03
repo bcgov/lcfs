@@ -2,7 +2,7 @@
 
 Revision ID: e50534b604f2
 Revises: 0d8e7ee6a6e0
-Create Date: 2025-01-30 09:44:16.180111
+Create Date: 2025-02-03 22:44:16.180111
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "e50534b604f2"
-down_revision = "0d8e7ee6a6e0"
+down_revision = "40bd04603bd5"
 branch_labels = None
 depends_on = None
 
