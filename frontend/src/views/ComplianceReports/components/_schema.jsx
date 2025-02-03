@@ -27,11 +27,7 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
-    valueGetter: ({ data }) => {
-      const typeLabel = t('report:complianceReport')
-      const nickname = data.nickname ? ` - ${data.nickname}` : ''
-      return `${typeLabel}${nickname}`
-    },
+    valueGetter: ({ data }) => data.nickname,
     filter: 'agTextColumnFilter', // Enable text filtering
     filterParams: {
       textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
@@ -62,14 +58,16 @@ export const reportsColDefs = (t, bceidRole) => [
               { id: 1, name: 'Draft' },
               { id: 2, name: 'Submitted' },
               { id: 3, name: 'Assessed' },
-              { id: 4, name: 'Reassessed' }
+              { id: 4, name: 'Reassessed' },
+              { id: 7, name: 'Rejected' }
             ]
           : [
               { id: 2, name: 'Submitted' },
               { id: 5, name: 'Recommended by analyst' },
               { id: 6, name: 'Recommended by manager' },
               { id: 3, name: 'Assessed' },
-              { id: 4, name: 'Reassessed' }
+              { id: 4, name: 'Reassessed' },
+              { id: 7, name: 'Rejected' }
             ],
         isLoading: false
       }),

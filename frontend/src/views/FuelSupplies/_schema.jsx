@@ -298,28 +298,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         openOnFocus: true
       }
     },
-    cellStyle: (params) => {
-      const style = StandardCellWarningAndErrors(params, errors, warnings)
-      const isFuelCodeScenario =
-        params.data?.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      const fuelCodes = fuelType?.fuelCodes || []
-      const fuelCodeRequiredAndMissing =
-        isFuelCodeScenario && !params.data.fuelCode
-
-      if (fuelCodeRequiredAndMissing) {
-        // Highlight the cell if fuel code is required but not selected
-        return { ...style, backgroundColor: '#fff', borderColor: 'red' }
-      } else if (isFuelCodeScenario && fuelCodes.length > 0) {
-        // Allow selection when scenario matches and codes are present
-        return { ...style, backgroundColor: '#fff', borderColor: 'unset' }
-      } else {
-        // Otherwise disabled styling
-        return { ...style, backgroundColor: '#f2f2f2', borderColor: 'unset' }
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 135,
     editable: (params) => {
