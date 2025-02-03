@@ -173,5 +173,6 @@
   "noRecords": "Cannot submit: You must report fuel activity information (FSE data alone is not sufficient)",
   "invalidAddress": "Cannot submit: Please fill out all required address fields",
   "addressEdited": " - edited",
-  "viewLegacyBtn": "View Full Historical Report in TFRS"
+  "viewLegacyBtn": "View Full Historical Report in TFRS",
+  "documentLabel": "Add file attachments (maximum file size: 50 MB):"
 }

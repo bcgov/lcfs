@@ -96,8 +96,9 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         component: (data) => (
           <>
             <SupportingDocumentSummary
+              parentType="compliance_report"
+              parentID={complianceReportId}
               data={data}
-              reportID={complianceReportId}
             />
             <DocumentUploadDialog
               parentID={complianceReportId}

@@ -120,7 +120,7 @@ export const buttonClusterConfigFn = ({
           content: t(`${transactionType}:recommendConfirmText`)
         })
       },
-      disabled: !hasRoles(roles.analyst)
+      disabled: !hasRoles(roles.analyst) || !transactionId
     },
     returnTransaction: {
       ...outlinedButton(t(`txn:actionBtns.returnToAnalystBtn`)),
