@@ -173,4 +173,4 @@ async def create_supplemental_report(
     """
     Create a supplemental compliance report.
     """
-    return await service.create_supplemental_report(report_id)
+    return await service.create_supplemental_report(report_id, request.user)
