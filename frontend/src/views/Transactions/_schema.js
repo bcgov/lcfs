@@ -34,6 +34,20 @@ export const transactionsColDefs = (t) => [
     }
   },
   {
+    colId: 'compliancePeriod',
+    field: 'compliancePeriod',
+    headerName: t('txn:txnColLabels.compliancePeriod'),
+    minWidth: 190,
+    valueGetter: (params) => {
+      return params.data?.compliancePeriod || 'N/A'
+    },
+    filter: true,
+    filterParams: {
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
+    }
+  },
+  {
     colId: 'transactionType',
     field: 'transactionType',
     headerName: t('txn:txnColLabels.type'),
