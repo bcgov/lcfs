@@ -1,15 +1,19 @@
 import math
 import uuid
-from typing import List
+from typing import List, Literal
 
 import structlog
-from fastapi import Depends
+from fastapi import Depends, Request
 
 from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,
     SupplementalInitiatorType,
     ReportingFrequency,
 )
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.user import UserProfile
@@ -24,6 +28,7 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
+from lcfs.db.base import ActionTypeEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -33,9 +38,11 @@ class ComplianceReportServices:
         self,
         repo: ComplianceReportRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
+        request: Request = None,
     ) -> None:
         self.repo = repo
         self.snapshot_services = snapshot_services
+        self.request = request
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:
@@ -59,7 +66,8 @@ class ComplianceReportServices:
             report_data.status
         )
         if not draft_status:
-            raise DataNotFoundException(f"Status '{report_data.status}' not found.")
+            raise DataNotFoundException(
+                f"Status '{report_data.status}' not found.")
 
         # Generate a new group_uuid for the new report series
         group_uuid = str(uuid.uuid4())
@@ -244,7 +252,8 @@ class ComplianceReportServices:
 
             if apply_masking:
                 # Apply masking to each report in the chain
-                masked_chain = self._mask_report_status(compliance_report_chain)
+                masked_chain = self._mask_report_status(
+                    compliance_report_chain)
                 # Apply history masking to each report in the chain
                 masked_chain = [
                     self._mask_report_status_for_history(report, apply_masking)
@@ -292,3 +301,94 @@ class ComplianceReportServices:
         self, organization_id: int
     ) -> List[CompliancePeriodSchema]:
         return await self.repo.get_all_org_reported_years(organization_id)
+
+    @service_handler
+    async def get_changelog_data(
+        self,
+        report_id: int,
+        selection: Literal['fuel_supplies', 'other_uses',
+                           'notional_transfers', 'fuel_exports']
+    ):
+        """Fetches the fuel supply changelog for a specific compliance report."""
+        # Map selection to relationship to load
+        RELATIONSHIP_MAP = {
+            'fuel_supplies': FuelSupply,
+            'other_uses': OtherUses,
+            'notional_transfers': NotionalTransfer,
+            'fuel_exports': FuelExport,
+        }
+
+        # group_id = await self.repo.get_compliance_report_group_id(report_id)
+        changelog = await self.repo.get_changelog_data(report_id, RELATIONSHIP_MAP[selection])
+        # return reports
+
+        # change_log = create_change_log(reports, selection)
+
+        return changelog
+
+
+def create_change_log(reports, selection: Literal['fuel_supplies', 'other_uses', 'notional_transfers', 'fuel_exports']):
+    """
+    Given a list of 2 compliance reports, create a change log for the selected category.
+    Returns:
+    {
+        latest: # current report rows,
+        previous: # previous report rows,
+        added: # rows that were added,
+        deleted: # rows that were deleted,
+        edited: [
+            {
+                previous: # row from previous report,
+                changes: { column: new_value, ... }
+            }
+        ]
+    }
+    """
+    # Assume reports[0] is previous and reports[1] is current
+    previous_report = reports[0]
+    current_report = reports[1]
+
+    previous_data = getattr(previous_report, selection, [])
+    current_data = getattr(current_report, selection, [])
+
+    # Build dictionaries keyed by 'group_uuid'
+    prev_by_group = {getattr(item, 'group_uuid')
+                             : item for item in previous_data}
+    curr_by_group = {getattr(item, 'group_uuid')
+                             : item for item in current_data}
+
+    added = []   # rows in current but not in previous
+    deleted = []  # rows in previous but not in current
+    edited = []  # rows in both but with differences
+
+    for group_uuid, prev_item in prev_by_group.items():
+        if group_uuid in curr_by_group:
+            curr_item = curr_by_group[group_uuid]
+            if curr_item.action_type == ActionTypeEnum.DELETE:
+                deleted.append(curr_item)
+                continue
+            # Compute changed columns (new values from current)
+            differences = {}
+            for key, prev_val in vars(prev_item).items():
+                curr_val = vars(curr_item).get(key)
+                if prev_val != curr_val:
+                    differences[key] = curr_val
+            if differences:
+                edited.append({
+                    "previous": prev_item,
+                    "changes": differences
+                })
+        else:
+            deleted.append(prev_item)
+
+    for group_uuid, curr_item in curr_by_group.items():
+        if group_uuid not in prev_by_group:
+            added.append(curr_item)
+
+    return {
+        "latest": current_data,
+        "previous": previous_data,
+        "added": added,
+        "deleted": deleted,
+        "edited": edited
+    }
