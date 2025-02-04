@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Stack, List, ListItemButton } from '@mui/material'
@@ -10,7 +10,9 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useTransactionCounts } from '@/hooks/useDashboard'
 
-const CountDisplay = ({ count }) => (
+// Separate reusable components
+// eslint-disable-next-line react/display-name
+const CountDisplay = React.memo(({ count }) => (
   <BCTypography
     component="span"
     variant="h3"
@@ -21,42 +23,149 @@ const CountDisplay = ({ count }) => (
   >
     {count}
   </BCTypography>
-)
+))
+
+// Constants for transaction configurations
+const TRANSACTION_CONFIGS = {
+  transfers: {
+    type: 'Transfer',
+    statuses: ['Submitted', 'Recommended'],
+    translationKey: 'dashboard:transactions.transfersInProgress'
+  },
+  initiativeAgreements: {
+    type: 'Initiative Agreement',
+    statuses: ['Draft', 'Recommended'],
+    translationKey: 'dashboard:transactions.initiativeAgreementsInProgress'
+  },
+  adminAdjustments: {
+    type: 'Admin Adjustment',
+    statuses: ['Draft', 'Recommended'],
+    translationKey: 'dashboard:transactions.administrativeAdjustmentsInProgress'
+  },
+  viewAll: {
+    type: null,
+    statuses: null,
+    translationKey: 'dashboard:transactions.viewAllTransactions'
+  }
+}
+
+// Styles object for better organization
+const styles = {
+  cardContent: {
+    '& .MuiCardContent-root': {
+      padding: '16px'
+    }
+  },
+  list: {
+    maxWidth: '100%',
+    padding: 0,
+    '& .MuiListItemButton-root': {
+      padding: '2px 0'
+    }
+  },
+  link: {
+    textDecoration: 'underline',
+    '&:hover': {
+      color: 'info.main'
+    }
+  }
+}
 
 const TransactionsCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
-  const { data: counts, isLoading } = useTransactionCounts()
+  const { data: counts = {}, isLoading } = useTransactionCounts()
 
-  const handleNavigation = (route, transactionType, statuses) => {
-    const filters = [
-      {
-        field: 'transactionType',
+  const createFilter = useCallback((transactionType, statuses) => {
+    if (!transactionType) return null
+
+    return JSON.stringify({
+      transactionType: {
         filterType: 'text',
         type: 'equals',
         filter: transactionType
       },
-      { field: 'status', filterType: 'set', type: 'set', filter: statuses }
-    ]
-    navigate(route, { state: { filters } })
-  }
+      status: {
+        filterType: 'set',
+        type: 'set',
+        filter: statuses
+      }
+    })
+  }, [])
 
-  const renderLinkWithCount = (text, count, onClick) => {
-    return (
+  const handleNavigation = useCallback(
+    (transactionType, statuses) => {
+      const itemKey = 'transactions-grid-filter'
+      const filter = createFilter(transactionType, statuses)
+
+      if (filter) {
+        localStorage.setItem(itemKey, filter)
+      } else {
+        localStorage.removeItem(itemKey)
+      }
+
+      navigate(ROUTES.TRANSACTIONS)
+    },
+    [navigate, createFilter]
+  )
+
+  const renderLinkWithCount = useCallback(
+    (text, count, onClick) => (
       <>
         {count != null && <CountDisplay count={count} />}
         <BCTypography
           variant="body2"
           color="link"
-          sx={{
-            textDecoration: 'underline',
-            '&:hover': { color: 'info.main' }
-          }}
+          sx={styles.link}
           onClick={onClick}
         >
           {text}
         </BCTypography>
       </>
+    ),
+    []
+  )
+
+  const transactionItems = useMemo(
+    () => [
+      {
+        key: 'transfers',
+        text: t(TRANSACTION_CONFIGS.transfers.translationKey),
+        count: counts.transfers,
+        config: TRANSACTION_CONFIGS.transfers
+      },
+      {
+        key: 'initiativeAgreements',
+        text: t(TRANSACTION_CONFIGS.initiativeAgreements.translationKey),
+        count: counts.initiativeAgreements,
+        config: TRANSACTION_CONFIGS.initiativeAgreements
+      },
+      {
+        key: 'adminAdjustments',
+        text: t(TRANSACTION_CONFIGS.adminAdjustments.translationKey),
+        count: counts.adminAdjustments,
+        config: TRANSACTION_CONFIGS.adminAdjustments
+      },
+      {
+        key: 'viewAll',
+        text: t(TRANSACTION_CONFIGS.viewAll.translationKey),
+        count: null,
+        config: TRANSACTION_CONFIGS.viewAll
+      }
+    ],
+    [t, counts]
+  )
+
+  if (isLoading) {
+    return (
+      <BCWidgetCard
+        component="div"
+        title={t('dashboard:transactions.title')}
+        sx={styles.cardContent}
+        content={
+          <Loading message={t('dashboard:transactions.loadingMessage')} />
+        }
+      />
     )
   }
 
@@ -64,98 +173,26 @@ const TransactionsCard = () => {
     <BCWidgetCard
       component="div"
       title={t('dashboard:transactions.title')}
-      sx={{ '& .MuiCardContent-root': { padding: '16px' } }}
+      sx={styles.cardContent}
       content={
-        isLoading ? (
-          <Loading message={t('dashboard:transactions.loadingMessage')} />
-        ) : (
-          <Stack spacing={1}>
-            <BCTypography variant="body2" sx={{ marginBottom: 0 }}>
-              {t('dashboard:transactions.thereAre')}
-            </BCTypography>
-            <List
-              component="div"
-              sx={{
-                maxWidth: '100%',
-                padding: 0,
-                '& .MuiListItemButton-root': {
-                  padding: '2px 0'
-                }
-              }}
-            >
+        <Stack spacing={1}>
+          <BCTypography variant="body2" sx={{ marginBottom: 0 }}>
+            {t('dashboard:transactions.thereAre')}
+          </BCTypography>
+          <List component="div" sx={styles.list}>
+            {transactionItems.map(({ key, text, count, config }) => (
               <ListItemButton
+                key={key}
                 component="a"
-                onClick={() =>
-                  handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', [
-                    'Submitted',
-                    'Recommended'
-                  ])
-                }
+                onClick={() => handleNavigation(config.type, config.statuses)}
               >
-                {renderLinkWithCount(
-                  t('dashboard:transactions.transfersInProgress'),
-                  counts?.transfers || 0,
-                  () =>
-                    handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', [
-                      'Submitted',
-                      'Recommended'
-                    ])
+                {renderLinkWithCount(text, count, () =>
+                  handleNavigation(config.type, config.statuses)
                 )}
               </ListItemButton>
-              <ListItemButton
-                component="a"
-                onClick={() =>
-                  handleNavigation(ROUTES.TRANSACTIONS, 'InitiativeAgreement', [
-                    'Draft',
-                    'Recommended'
-                  ])
-                }
-              >
-                {renderLinkWithCount(
-                  t('dashboard:transactions.initiativeAgreementsInProgress'),
-                  counts?.initiativeAgreements || 0,
-                  () =>
-                    handleNavigation(
-                      ROUTES.TRANSACTIONS,
-                      'InitiativeAgreement',
-                      ['Draft', 'Recommended']
-                    )
-                )}
-              </ListItemButton>
-              <ListItemButton
-                component="a"
-                onClick={() =>
-                  handleNavigation(ROUTES.TRANSACTIONS, 'AdminAdjustment', [
-                    'Draft',
-                    'Recommended'
-                  ])
-                }
-              >
-                {renderLinkWithCount(
-                  t(
-                    'dashboard:transactions.administrativeAdjustmentsInProgress'
-                  ),
-                  counts?.adminAdjustments || 0,
-                  () =>
-                    handleNavigation(ROUTES.TRANSACTIONS, 'AdminAdjustment', [
-                      'Draft',
-                      'Recommended'
-                    ])
-                )}
-              </ListItemButton>
-              <ListItemButton
-                component="a"
-                onClick={() => navigate(ROUTES.TRANSACTIONS)}
-              >
-                {renderLinkWithCount(
-                  t('dashboard:transactions.viewAllTransactions'),
-                  null,
-                  () => navigate(ROUTES.TRANSACTIONS)
-                )}
-              </ListItemButton>
-            </List>
-          </Stack>
-        )
+            ))}
+          </List>
+        </Stack>
       }
     />
   )

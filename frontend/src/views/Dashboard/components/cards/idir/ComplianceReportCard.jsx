@@ -26,22 +26,16 @@ export const ComplianceReportCard = () => {
   const { data: counts, isLoading } = useComplianceReportCounts()
 
   const handleNavigation = () => {
-    navigate(ROUTES.REPORTS, {
-      state: {
-        filters: [
-          {
-            field: 'status',
-            filter: [
-              'Submitted',
-              'Recommended by analyst',
-              'Recommended by manager'
-            ],
-            filterType: 'text',
-            type: 'set'
-          }
-        ]
-      }
-    })
+    const filterStatuses = [
+      'Submitted',
+      'Recommended by analyst',
+      'Recommended by manager'
+    ]
+    const filter = `{"status":{"filterType":"set","type":"set","filter": ${JSON.stringify(
+      filterStatuses
+    )}}}`
+    localStorage.setItem('compliance-reports-grid-filter', filter)
+    navigate(ROUTES.REPORTS)
   }
 
   const renderLinkWithCount = (text, count, onClick) => {
