@@ -10,7 +10,7 @@ import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
-export const NotionalTransferSummary = ({ data, status }) => {
+export const ScheduleASummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { complianceReportId } = useParams()
@@ -55,7 +55,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
       minWidth: 200
     },
     {
-      headerName: t('notionalTransfer:notionalTransferColLabels.fuelCategory'),
+      headerName: t('notionalTransfer:notionalTransferColLabels.fuelClass'),
       field: 'fuelCategory'
     },
     {
@@ -104,4 +104,4 @@ export const NotionalTransferSummary = ({ data, status }) => {
   )
 }
 
-NotionalTransferSummary.displayName = 'NotionalTransferSummary'
+ScheduleASummary.displayName = 'ScheduleASummary'
