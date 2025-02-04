@@ -1,10 +1,10 @@
 from collections import defaultdict
 from datetime import datetime
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Tuple
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import func, select, and_, asc, desc, update
+from sqlalchemy import func, select, and_, asc, desc, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager, aliased
 
@@ -94,7 +94,8 @@ class ComplianceReportRepository:
             filter_option = filter.type
             filter_type = filter.filter_type
             if filter.field == "status":
-                field = get_field_for_filter(ComplianceReportStatus, filter.field)
+                field = get_field_for_filter(
+                    ComplianceReportStatus, filter.field)
                 if isinstance(filter_value, list):
                     filter_value = [
                         ComplianceReportStatusEnum(value) for value in filter_value
@@ -112,7 +113,8 @@ class ComplianceReportRepository:
                 field = get_field_for_filter(ComplianceReport, filter.field)
 
             conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
+                apply_filter_conditions(
+                    field, filter_value, filter_option, filter_type)
             )
 
     @repo_handler
@@ -167,7 +169,8 @@ class ComplianceReportRepository:
         Retrieve a compliance period from the database
         """
         result = await self.db.scalar(
-            select(CompliancePeriod).where(CompliancePeriod.description == period)
+            select(CompliancePeriod).where(
+                CompliancePeriod.description == period)
         )
         return result
 
@@ -206,7 +209,8 @@ class ComplianceReportRepository:
         Retrieve the compliance report status ID from the database based on the description.
         Replaces spaces with underscores in the status description.
         """
-        status_enum = status.replace(" ", "_")  # frontend sends status with spaces
+        status_enum = status.replace(
+            " ", "_")  # frontend sends status with spaces
         result = await self.db.execute(
             select(ComplianceReportStatus).where(
                 ComplianceReportStatus.status
@@ -365,7 +369,8 @@ class ComplianceReportRepository:
             self.apply_filters(pagination, conditions)
 
         # Pagination and offset setup
-        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        offset = 0 if (pagination.page < 1) else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
 
         # Build the main query
@@ -451,20 +456,24 @@ class ComplianceReportRepository:
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
             if order.field == "status":
-                order.field = get_field_for_filter(ComplianceReportStatus, "status")
+                order.field = get_field_for_filter(
+                    ComplianceReportStatus, "status")
                 query = query.join(
                     ComplianceReportStatus,
                     ComplianceReport.current_status_id
                     == ComplianceReportStatus.compliance_report_status_id,
                 )
             elif order.field == "compliance_period":
-                order.field = get_field_for_filter(CompliancePeriod, "description")
+                order.field = get_field_for_filter(
+                    CompliancePeriod, "description")
             elif order.field == "organization":
                 order.field = get_field_for_filter(Organization, "name")
             elif order.field == "type":
-                order.field = get_field_for_filter(ComplianceReport, "nickname")
+                order.field = get_field_for_filter(
+                    ComplianceReport, "nickname")
             else:
-                order.field = get_field_for_filter(ComplianceReport, order.field)
+                order.field = get_field_for_filter(
+                    ComplianceReport, order.field)
             query = query.order_by(sort_method(order.field))
 
         # Execute query with offset and limit for pagination
@@ -535,7 +544,8 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.transaction),
             )
             .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
-            .order_by(ComplianceReport.version.desc())  # Ensure ordering by version
+            # Ensure ordering by version
+            .order_by(ComplianceReport.version.desc())
         )
 
         compliance_reports = result.scalars().unique().all()
@@ -646,7 +656,8 @@ class ComplianceReportRepository:
             summary_obj = existing_summary
         else:
             raise ValueError(
-                f"No summary found with report ID {summary.compliance_report_id}"
+                f"""No summary found with report ID {
+                    summary.compliance_report_id}"""
             )
 
         summary_obj.is_locked = summary.is_locked
@@ -654,7 +665,8 @@ class ComplianceReportRepository:
         for row in summary.renewable_fuel_target_summary:
             line_number = row.line
             for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
-                column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
+                column_name = f"""line_{line_number}_{
+                    row.field.lower()}_{fuel_type}"""
                 setattr(summary_obj, column_name, int(getattr(row, fuel_type)))
 
         # Update low carbon fuel target summary
@@ -774,10 +786,12 @@ class ComplianceReportRepository:
         for record in records:
             # Check if record matches fossil_derived filter
             if isinstance(record, FuelSupply) and record.fuel_type.fossil_derived == fossil_derived:
-                fuel_category = self._format_category(record.fuel_category.category)
+                fuel_category = self._format_category(
+                    record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity
             elif isinstance(record, OtherUses) and record.fuel_type.fossil_derived == fossil_derived:
-                fuel_category = self._format_category(record.fuel_category.category)
+                fuel_category = self._format_category(
+                    record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity_supplied
 
         return dict(fuel_quantities)
@@ -914,3 +928,31 @@ class ComplianceReportRepository:
             .where(ComplianceReport.legacy_id == legacy_id)
         )
         return result.scalars().unique().first()
+
+    @repo_handler
+    async def get_compliance_report_group_id(self, report_id):
+        """
+        Retrieve the compliance report group ID
+        """
+        result = await self.db.scalar(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == report_id
+            )
+        )
+        return result
+
+    @repo_handler
+    async def get_changelog_data(
+        self,
+        report_id: int,
+        selection
+    ):
+
+        # Fetch reports with the calculated versions
+        result = await self.db.execute(
+            select(selection)
+            .where(
+                selection.compliance_report_id == report_id,
+            )
+        )
+        return result.unique().scalars().all()

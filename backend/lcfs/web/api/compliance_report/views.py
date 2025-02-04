@@ -66,7 +66,8 @@ async def get_compliance_reports(
 ) -> ComplianceReportListSchema:
     # Add filter on statuses so that IDIR users won't be able to see draft reports
     pagination.filters.append(
-        FilterModel(field="status", filter="Draft", filter_type="text", type="notEqual")
+        FilterModel(field="status", filter="Draft",
+                    filter_type="text", type="notEqual")
     )
     return await service.get_compliance_reports_paginated(pagination)
 
@@ -174,3 +175,67 @@ async def create_supplemental_report(
     Create a supplemental compliance report.
     """
     return await service.create_supplemental_report(report_id, request.user)
+
+
+@router.get(
+    "/{report_id}/fuel-supply/changelog",
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(['*'])
+async def get_changelog(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+):
+    """
+    Retrieve the fuel supply changelog for a specific report by ID.
+    """
+    return await service.get_changelog_data(report_id, 'fuel_supplies')
+
+
+@router.get(
+    "/{report_id}/other-uses/changelog",
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(['*'])
+async def get_changelog(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+):
+    """
+    Retrieve the fuel supply changelog for a specific report by ID.
+    """
+    return await service.get_changelog_data(report_id, 'other_uses')
+
+
+@router.get(
+    "/{report_id}/notional-transfers/changelog",
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(['*'])
+async def get_changelog(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+):
+    """
+    Retrieve the fuel supply changelog for a specific report by ID.
+    """
+    return await service.get_changelog_data(report_id, 'notional_transfers')
+
+
+@router.get(
+    "/{report_id}/fuel-exports/changelog",
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(['*'])
+async def get_changelog(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+):
+    """
+    Retrieve the fuel supply changelog for a specific report by ID.
+    """
+    return await service.get_changelog_data(report_id, 'fuel_exports')

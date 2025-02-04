@@ -8,6 +8,11 @@ import { AddEditOtherUses } from '@/views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from '@/views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
 import { AddEditFuelSupplies } from '@/views/FuelSupplies/AddEditFuelSupplies'
 import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
+import { element } from 'prop-types'
+import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog'
+import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog'
+import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog'
+import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog'
 
 export const reportRoutes = [
   {
@@ -71,6 +76,34 @@ export const reportRoutes = [
     handle: {
       title: 'Export fuels',
       mode: 'add'
+    }
+  },
+  {
+    path: ROUTES.REPORTS.CHANGELOG.SUPPLY_OF_FUEL,
+    element: <FuelSupplyChangelog />,
+    handle: {
+      title: 'Fuel Supply Changelog'
+    }
+  },
+  {
+    path: ROUTES.REPORTS.CHANGELOG.NOTIONAL_TRANSFERS,
+    element: <NotionalTransferChangelog />,
+    handle: {
+      title: 'Notional Transfers Changelog'
+    }
+  },
+  {
+    path: ROUTES.REPORTS.CHANGELOG.OTHER_USE_FUELS,
+    element: <OtherUsesChangelog />,
+    handle: {
+      title: 'Other Use Fuels Changelog'
+    }
+  },
+  {
+    path: ROUTES.REPORTS.CHANGELOG.FUEL_EXPORTS,
+    element: <FuelExportChangelog />,
+    handle: {
+      title: 'Fuel Exports Changelog'
     }
   }
 ]
