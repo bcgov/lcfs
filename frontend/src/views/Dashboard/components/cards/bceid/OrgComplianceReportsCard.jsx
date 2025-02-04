@@ -31,10 +31,11 @@ const OrgComplianceReportsCard = () => {
   const { data: counts, isLoading } = useOrgComplianceReportCounts()
 
   const handleNavigation = (route, status) => {
-    const filters = [
-      { field: 'status', filterType: 'text', type: 'equals', filter: status }
-    ]
-    navigate(route, { state: { filters } })
+    localStorage.setItem(
+      'compliance-reports-grid-filter',
+      `{"status":{"filterType":"text","type":"equals","filter":"${status}"}}`
+    )
+    navigate(route)
   }
 
   const renderLinkWithCount = (text, count, onClick) => {

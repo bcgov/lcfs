@@ -160,7 +160,7 @@ export const BCGridViewer = ({
       setFilterModel(filterArr)
       localStorage.setItem(`${gridKey}-filter`, JSON.stringify(gridFilters))
     },
-    [defaultFilterModel, gridKey, ref]
+    [defaultFilterModel, gridKey]
   )
 
   const onSortChanged = useCallback(() => {

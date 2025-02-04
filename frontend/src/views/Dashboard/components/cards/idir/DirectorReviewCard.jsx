@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { Stack, List, ListItemButton } from '@mui/material'
@@ -10,7 +10,9 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useDirectorReviewCounts } from '@/hooks/useDashboard'
 
-const CountDisplay = ({ count }) => (
+// Separate reusable components
+// eslint-disable-next-line react/display-name
+const CountDisplay = React.memo(({ count }) => (
   <BCTypography
     component="span"
     variant="h3"
@@ -21,49 +23,151 @@ const CountDisplay = ({ count }) => (
   >
     {count}
   </BCTypography>
-)
+))
+
+// Constants for filter configurations
+const FILTER_CONFIGS = {
+  transfers: {
+    route: ROUTES.TRANSACTIONS,
+    gridKey: 'transactions-grid-filter',
+    filter: JSON.stringify({
+      transactionType: {
+        filterType: 'text',
+        type: 'equals',
+        filter: 'Transfer'
+      },
+      status: { filterType: 'text', type: 'equals', filter: 'Recommended' }
+    })
+  },
+  complianceReports: {
+    route: ROUTES.REPORTS,
+    gridKey: 'compliance-reports-grid-filter',
+    filter: JSON.stringify({
+      status: {
+        filterType: 'text',
+        type: 'equals',
+        filter: 'Recommended by manager'
+      }
+    })
+  },
+  initiativeAgreements: {
+    route: ROUTES.TRANSACTIONS,
+    gridKey: 'transactions-grid-filter',
+    filter: JSON.stringify({
+      transactionType: {
+        filterType: 'text',
+        type: 'equals',
+        filter: 'Initiative Agreement'
+      },
+      status: { filterType: 'text', type: 'equals', filter: 'Recommended' }
+    })
+  },
+  adminAdjustments: {
+    route: ROUTES.TRANSACTIONS,
+    gridKey: 'transactions-grid-filter',
+    filter: JSON.stringify({
+      transactionType: {
+        filterType: 'text',
+        type: 'equals',
+        filter: 'Admin Adjustment'
+      },
+      status: { filterType: 'text', type: 'equals', filter: 'Recommended' }
+    })
+  }
+}
+
+// Styles object for better organization
+const styles = {
+  cardContent: {
+    '& .MuiCardContent-root': {
+      padding: '16px'
+    }
+  },
+  list: {
+    maxWidth: '100%',
+    padding: 0,
+    '& .MuiListItemButton-root': {
+      padding: '2px 0'
+    }
+  },
+  link: {
+    textDecoration: 'underline',
+    '&:hover': {
+      color: 'info.main'
+    }
+  }
+}
 
 const DirectorReviewCard = () => {
   const { t } = useTranslation(['dashboard'])
   const navigate = useNavigate()
-  const { data: counts, isLoading } = useDirectorReviewCounts()
+  const { data: counts = {}, isLoading } = useDirectorReviewCounts()
 
-  const handleNavigation = (route, transactionType, status) => {
-    const filters = [
-      {
-        field: 'transactionType',
-        filterType: 'text',
-        type: 'contains',
-        filter: transactionType
-      },
-      { field: 'status', filterType: 'text', type: 'equals', filter: status }
-    ]
-    navigate(route, { state: { filters } })
-  }
+  const handleNavigation = useCallback(
+    (config) => {
+      localStorage.setItem(config.gridKey, config.filter)
+      navigate(config.route)
+    },
+    [navigate]
+  )
 
-  const handleComplianceNavigation = (route, status) => {
-    const filters = [
-      { field: 'status', filterType: 'text', type: 'equals', filter: status }
-    ]
-    navigate(route, { state: { filters } })
-  }
-
-  const renderLinkWithCount = (text, count, onClick) => {
-    return (
+  const renderLinkWithCount = useCallback(
+    (text, count, onClick) => (
       <>
         <CountDisplay count={count} />
         <BCTypography
           variant="body2"
           color="link"
-          sx={{
-            textDecoration: 'underline',
-            '&:hover': { color: 'info.main' }
-          }}
+          sx={styles.link}
           onClick={onClick}
         >
           {text}
         </BCTypography>
       </>
+    ),
+    []
+  )
+
+  const reviewItems = useMemo(
+    () => [
+      {
+        key: 'transfers',
+        text: t('dashboard:directorReview.transfersForReview'),
+        count: counts.transfers || 0,
+        config: FILTER_CONFIGS.transfers
+      },
+      {
+        key: 'complianceReports',
+        text: t('dashboard:directorReview.complianceReportsForReview'),
+        count: counts.complianceReports || 0,
+        config: FILTER_CONFIGS.complianceReports
+      },
+      {
+        key: 'initiativeAgreements',
+        text: t('dashboard:directorReview.initiativeAgreementsForReview'),
+        count: counts.initiativeAgreements || 0,
+        config: FILTER_CONFIGS.initiativeAgreements
+      },
+      {
+        key: 'adminAdjustments',
+        text: t('dashboard:directorReview.adminAdjustmentsForReview'),
+        count: counts.adminAdjustments || 0,
+        config: FILTER_CONFIGS.adminAdjustments
+      }
+    ],
+    [t, counts]
+  )
+
+  if (isLoading) {
+    return (
+      <BCWidgetCard
+        component="div"
+        title={t('dashboard:directorReview.title')}
+        sx={styles.cardContent}
+        content={
+          <Loading message={t('dashboard:directorReview.loadingMessage')} />
+        }
+      />
     )
   }
 
@@ -71,110 +175,26 @@ const DirectorReviewCard = () => {
     <BCWidgetCard
       component="div"
       title={t('dashboard:directorReview.title')}
-      sx={{ '& .MuiCardContent-root': { padding: '16px' } }} // Reduce padding of the card content
+      sx={styles.cardContent}
       content={
-        isLoading ? (
-          <Loading message={t('dashboard:directorReview.loadingMessage')} />
-        ) : (
-          <Stack spacing={1}>
-            <BCTypography variant="body2" sx={{ marginBottom: 0 }}>
-              {t('dashboard:directorReview.thereAre')}
-            </BCTypography>
-            <List
-              component="div"
-              sx={{
-                maxWidth: '100%',
-                padding: 0,
-                '& .MuiListItemButton-root': {
-                  padding: '2px 0'
-                }
-              }}
-            >
+        <Stack spacing={1}>
+          <BCTypography variant="body2" sx={{ marginBottom: 0 }}>
+            {t('dashboard:directorReview.thereAre')}
+          </BCTypography>
+          <List component="div" sx={styles.list}>
+            {reviewItems.map(({ key, text, count, config }) => (
               <ListItemButton
+                key={key}
                 component="a"
-                onClick={() =>
-                  handleNavigation(
-                    ROUTES.TRANSACTIONS,
-                    'Transfer',
-                    'Recommended'
-                  )
-                }
+                onClick={() => handleNavigation(config)}
               >
-                {renderLinkWithCount(
-                  t('dashboard:directorReview.transfersForReview'),
-                  counts?.transfers || 0,
-                  () =>
-                    handleNavigation(
-                      ROUTES.TRANSACTIONS,
-                      'Transfer',
-                      'Recommended'
-                    )
+                {renderLinkWithCount(text, count, () =>
+                  handleNavigation(config)
                 )}
               </ListItemButton>
-              <ListItemButton
-                component="a"
-                onClick={() =>
-                  handleComplianceNavigation(
-                    ROUTES.REPORTS,
-                    'Recommended by manager'
-                  )
-                }
-              >
-                {renderLinkWithCount(
-                  t('dashboard:directorReview.complianceReportsForReview'),
-                  counts?.complianceReports || 0,
-                  () =>
-                    handleComplianceNavigation(
-                      ROUTES.REPORTS,
-                      'Recommended by manager'
-                    )
-                )}
-              </ListItemButton>
-              <ListItemButton
-                component="a"
-                onClick={() =>
-                  handleNavigation(
-                    ROUTES.TRANSACTIONS,
-                    'InitiativeAgreement',
-                    'Recommended'
-                  )
-                }
-              >
-                {renderLinkWithCount(
-                  t('dashboard:directorReview.initiativeAgreementsForReview'),
-                  counts?.initiativeAgreements || 0,
-                  () =>
-                    handleNavigation(
-                      ROUTES.TRANSACTIONS,
-                      'InitiativeAgreement',
-                      'Recommended'
-                    )
-                )}
-              </ListItemButton>
-              <ListItemButton
-                component="a"
-                onClick={() =>
-                  handleNavigation(
-                    ROUTES.TRANSACTIONS,
-                    'AdminAdjustment',
-                    'Recommended'
-                  )
-                }
-              >
-                {renderLinkWithCount(
-                  t('dashboard:directorReview.adminAdjustmentsForReview'),
-                  counts?.adminAdjustments || 0,
-                  () =>
-                    handleNavigation(
-                      ROUTES.TRANSACTIONS,
-                      'AdminAdjustment',
-                      'Recommended'
-                    )
-                )}
-              </ListItemButton>
-            </List>
-          </Stack>
-        )
+            ))}
+          </List>
+        </Stack>
       }
     />
   )

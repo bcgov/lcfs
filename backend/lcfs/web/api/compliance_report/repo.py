@@ -95,6 +95,9 @@ class ComplianceReportRepository:
             filter_type = filter.filter_type
             if filter.field == "status":
                 field = get_field_for_filter(ComplianceReportStatus, filter.field)
+                # Check if filter_value is a comma-separated string
+                if isinstance(filter_value, str) and "," in filter_value:
+                    filter_value = filter_value.split(",")  # Convert to list
                 if isinstance(filter_value, list):
                     filter_value = [
                         ComplianceReportStatusEnum(value) for value in filter_value

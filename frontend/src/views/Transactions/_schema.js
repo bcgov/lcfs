@@ -71,6 +71,21 @@ export const transactionsColDefs = (t) => [
       },
       buttons: ['clear']
     },
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'transactionType',
+      labelKey: 'transactionType',
+      optionsQuery: () => ({
+        data: [
+          { transactionType: 'Compliance Report' },
+          { transactionType: 'Admin Adjustment' },
+          { transactionType: 'Transfer' },
+          { transactionType: 'Initiative Agreement' }
+        ],
+        isLoading: false
+      })
+    },
+    suppressFloatingFilterButton: true,
     width: 222
   },
   {

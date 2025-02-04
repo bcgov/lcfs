@@ -26,18 +26,11 @@ export const FuelCodeCard = () => {
   const { data: counts, isLoading } = useFuelCodeCounts()
 
   const handleNavigation = () => {
-    navigate(ROUTES.FUELCODES, {
-      state: {
-        filters: [
-          {
-            field: 'status',
-            filter: 'Draft',
-            filterType: 'text',
-            type: 'equals'
-          }
-        ]
-      }
-    })
+    localStorage.setItem(
+      'fuel-codes-grid-filter',
+      '{"status":{"filterType":"text","type":"equals","filter":"Draft"}}'
+    )
+    navigate(ROUTES.FUELCODES)
   }
 
   const renderLinkWithCount = (text, count, onClick) => {

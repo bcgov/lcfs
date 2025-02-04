@@ -33,17 +33,12 @@ const OrgTransactionsCard = () => {
   const { data: orgData } = useOrganization()
   const { data: counts, isLoading } = useOrgTransactionCounts()
 
-  const handleNavigation = (route, transactionType, statuses) => {
-    const filters = [
-      {
-        field: 'transactionType',
-        filterType: 'text',
-        type: 'equals',
-        filter: transactionType
-      },
-      { field: 'status', filterType: 'set', type: 'set', filter: statuses }
-    ]
-    navigate(route, { state: { filters } })
+  const handleNavigation = (route) => {
+    const filterKey = 'transactions-grid-filter'
+    const filters =
+      '{"status":{"filterType":"set","type":"set","filter":["Draft", "Sent", "Submitted"]},"transactionType":{"filterType":"text","type":"equals","filter":"Transfer"}}'
+    localStorage.setItem(filterKey, filters)
+    navigate(route)
   }
 
   function openExternalLink(event, url) {
@@ -110,23 +105,12 @@ const OrgTransactionsCard = () => {
             >
               <ListItemButton
                 component="a"
-                onClick={() =>
-                  handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', [
-                    'Draft',
-                    'Sent',
-                    'Submitted'
-                  ])
-                }
+                onClick={() => handleNavigation(ROUTES.TRANSACTIONS)}
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.transfersInProgress'),
                   counts?.transfers || 0,
-                  () =>
-                    handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', [
-                      'Draft',
-                      'Sent',
-                      'Submitted'
-                    ])
+                  () => handleNavigation(ROUTES.TRANSACTIONS)
                 )}
               </ListItemButton>
 
