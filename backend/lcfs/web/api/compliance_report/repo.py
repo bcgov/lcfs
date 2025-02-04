@@ -105,12 +105,7 @@ class ComplianceReportRepository:
             elif filter.field == "organization":
                 continue
             elif filter.field == "type":
-                field = get_field_for_filter(ComplianceReport, "reporting_frequency")
-                filter_value = (
-                    ReportingFrequency.ANNUAL.value
-                    if filter_value.lower().startswith("c")
-                    else ReportingFrequency.QUARTERLY.value
-                )
+                field = get_field_for_filter(ComplianceReport, "nickname")
             elif filter.field == "compliance_period":
                 continue
             else:
@@ -409,7 +404,9 @@ class ComplianceReportRepository:
         subquery = subquery.subquery()
         # Join the main ComplianceReport table with the subquery to get the latest version per group
         query = (
-            select(ComplianceReport)
+            select(ComplianceReport,
+                   CompliancePeriod.compliance_period_id,
+                   ComplianceReport.update_date)
             .join(
                 subquery,
                 and_(
@@ -439,6 +436,11 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.history)
                 .joinedload(ComplianceReportHistory.user_profile)
                 .joinedload(UserProfile.organization),
+            )
+            .distinct()
+            .order_by(
+                desc(CompliancePeriod.compliance_period_id),
+                desc(ComplianceReport.update_date)
             )
         )
 
