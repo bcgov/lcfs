@@ -173,24 +173,14 @@ export const AddEditFuelSupplies = () => {
             fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
           const endUseValue =
             endUseTypes.length === 1 ? endUseTypes[0].type : null
+          const provisionValue =
+            selectedFuelType.provisions.length === 1
+              ? selectedFuelType.provisions[0].name
+              : null
 
           params.node.setDataValue('fuelCategory', categoryValue)
           params.node.setDataValue('endUseType', endUseValue)
-
-          // Reset provisionOfTheAct and provisionOfTheActId fields
-          if (selectedFuelType.provisions.length === 1) {
-            params.node.setDataValue(
-              'provisionOfTheAct',
-              selectedFuelType.provisions[0].name
-            )
-            params.node.setDataValue(
-              'provisionOfTheActId',
-              selectedFuelType.provisions[0].provisionOfTheActId
-            )
-          } else {
-            params.node.setDataValue('provisionOfTheAct', null)
-            params.node.setDataValue('provisionOfTheActId', null)
-          }
+          params.node.setDataValue('provisionOfTheAct', provisionValue)
         }
       }
 
@@ -210,25 +200,13 @@ export const AddEditFuelSupplies = () => {
           // Set to null if multiple options, otherwise use first item
           const endUseValue =
             endUseTypes.length === 1 ? endUseTypes[0].type : null
+          const provisionValue =
+            selectedFuelType.provisions.length === 1
+              ? selectedFuelType.provisions[0].name
+              : null
 
           params.node.setDataValue('endUseType', endUseValue)
-
-          if (
-            selectedFuelType.provisions.length === 1 &&
-            !params.node.data.provisionOfTheAct
-          ) {
-            params.node.setDataValue(
-              'provisionOfTheAct',
-              selectedFuelType.provisions[0].name
-            )
-            params.node.setDataValue(
-              'provisionOfTheActId',
-              selectedFuelType.provisions[0].provisionOfTheActId
-            )
-          } else {
-            params.node.setDataValue('provisionOfTheAct', null)
-            params.node.setDataValue('provisionOfTheActId', null)
-          }
+          params.node.setDataValue('provisionOfTheAct', provisionValue)
         }
       }
     },
