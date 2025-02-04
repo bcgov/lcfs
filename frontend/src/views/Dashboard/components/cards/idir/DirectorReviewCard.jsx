@@ -10,7 +10,6 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useDirectorReviewCounts } from '@/hooks/useDashboard'
 
-// Separate reusable components
 // eslint-disable-next-line react/display-name
 const CountDisplay = React.memo(({ count }) => (
   <BCTypography
@@ -76,7 +75,6 @@ const FILTER_CONFIGS = {
   }
 }
 
-// Styles object for better organization
 const styles = {
   cardContent: {
     '& .MuiCardContent-root': {
