@@ -14,13 +14,12 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 export const AllocationAgreementSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [gridKey, setGridKey] = useState(`allocation-agreements-grid`)
-  const { complianceReportId, compliancePeriod } = useParams()
+  const [gridKey, setGridKey] = useState('allocation-agreements-grid')
+  const { complianceReportId } = useParams()
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'allocationAgreement'])
   const location = useLocation()
-  const navigate = useNavigate()
 
   useEffect(() => {
     if (location.state?.message) {

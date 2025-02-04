@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { NotionalTransferSummary } from '@/views/NotionalTransfers/index.js'
+import { ScheduleASummary } from '@/views/ComplianceReports/legacy/ScheduleASummary'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 vi.mock('react-router-dom', async () => {
@@ -64,7 +64,7 @@ describe('NotionalTransferSummary Component Tests', () => {
     }
     vi.mocked(useLocation).mockReturnValue(mockLocation)
 
-    render(<NotionalTransferSummary data={[]} />, { wrapper })
+    render(<ScheduleASummary status="DRAFT" />, { wrapper })
     const alertBox = screen.getByTestId('alert-box')
     expect(alertBox).toBeInTheDocument()
     expect(alertBox.textContent).toContain('Test Alert Message')
