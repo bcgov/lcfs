@@ -26,7 +26,9 @@ def mock_environment_vars():
 @pytest.mark.anyio
 async def test_send_notification_email_success(mock_email_repo, mock_environment_vars):
     # Arrange
-    notification_type = NotificationTypeEnum.BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT
+    notification_type = (
+        NotificationTypeEnum.BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT
+    )
     notification_context = {
         "subject": "Test Notification",
         "user_name": "John Doe",
@@ -102,7 +104,7 @@ async def test_get_ches_token_success(mock_environment_vars):
         service = CHESEmailService()
 
         # Act
-        token = await service.get_ches_token()
+        token = await service._get_ches_token()
 
         # Assert
         assert token == mock_token
@@ -123,13 +125,13 @@ async def test_get_ches_token_cached(mock_environment_vars):
         service = CHESEmailService()
 
         # First call to get token
-        first_token = await service.get_ches_token()
+        first_token = await service._get_ches_token()
 
         # Reset mock to ensure no second call is made
         mock_post.reset_mock()
 
         # Act: Second call should return cached token
-        second_token = await service.get_ches_token()
+        second_token = await service._get_ches_token()
 
         # Assert
         assert first_token == second_token

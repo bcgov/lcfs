@@ -404,7 +404,9 @@ class ComplianceReportRepository:
         subquery = subquery.subquery()
         # Join the main ComplianceReport table with the subquery to get the latest version per group
         query = (
-            select(ComplianceReport)
+            select(ComplianceReport,
+                   CompliancePeriod.compliance_period_id,
+                   ComplianceReport.update_date)
             .join(
                 subquery,
                 and_(
@@ -434,6 +436,11 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.history)
                 .joinedload(ComplianceReportHistory.user_profile)
                 .joinedload(UserProfile.organization),
+            )
+            .distinct()
+            .order_by(
+                desc(CompliancePeriod.compliance_period_id),
+                desc(ComplianceReport.update_date)
             )
         )
 
