@@ -380,6 +380,12 @@ class ComplianceReportRepository:
             latest_version_subquery = latest_version_subquery.where(
                 ComplianceReport.organization_id == organization_id
             )
+        else:
+            latest_version_subquery = latest_version_subquery.join(
+                ComplianceReportStatus,
+                ComplianceReport.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            ).where(ComplianceReportStatus.status != ComplianceReportStatusEnum.Draft)
         latest_version_subquery = latest_version_subquery.subquery()
         cr_alias = aliased(ComplianceReport)
 
@@ -407,9 +413,11 @@ class ComplianceReportRepository:
         subquery = subquery.subquery()
         # Join the main ComplianceReport table with the subquery to get the latest version per group
         query = (
-            select(ComplianceReport,
-                   CompliancePeriod.compliance_period_id,
-                   ComplianceReport.update_date)
+            select(
+                ComplianceReport,
+                CompliancePeriod.compliance_period_id,
+                ComplianceReport.update_date,
+            )
             .join(
                 subquery,
                 and_(
@@ -443,7 +451,7 @@ class ComplianceReportRepository:
             .distinct()
             .order_by(
                 desc(CompliancePeriod.compliance_period_id),
-                desc(ComplianceReport.update_date)
+                desc(ComplianceReport.update_date),
             )
         )
 
@@ -776,10 +784,16 @@ class ComplianceReportRepository:
 
         for record in records:
             # Check if record matches fossil_derived filter
-            if isinstance(record, FuelSupply) and record.fuel_type.fossil_derived == fossil_derived:
+            if (
+                isinstance(record, FuelSupply)
+                and record.fuel_type.fossil_derived == fossil_derived
+            ):
                 fuel_category = self._format_category(record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity
-            elif isinstance(record, OtherUses) and record.fuel_type.fossil_derived == fossil_derived:
+            elif (
+                isinstance(record, OtherUses)
+                and record.fuel_type.fossil_derived == fossil_derived
+            ):
                 fuel_category = self._format_category(record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity_supplied
 

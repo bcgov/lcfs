@@ -10,25 +10,18 @@ vi.mock('react-i18next', () => ({
       const translations = {
         'report:reportActivities': 'Report Activities',
         'report:activityHdrLabel': `Activity Header for ${options?.name} during ${options?.period}`,
-        'report:activityLinksList': 'Activity Links List',
-        'report:uploadLabel': 'Upload Documents',
-        'report:supportingDocs': 'Supporting Documents'
+        'report:activityLinksList': 'Activity Links List'
       }
       return translations[key]
     }
   })
 }))
 
+vi.mock('@/services/useApiService')
+
 // Mock the ActivityLinksList component
 vi.mock('./ActivityLinkList', () => ({
-  ActivityLinksList: () => <div>Mocked Activity Links List</div>
-}))
-
-// Mock the DocumentUploadDialog component
-vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
-  __esModule: true,
-  default: ({ open }) =>
-    open ? <div>Mocked Document Upload Dialog</div> : null
+  ActivityLinksList: () => <div key="1">Mocked Activity Links List</div>
 }))
 
 describe('ActivityListCard', () => {
@@ -46,18 +39,5 @@ describe('ActivityListCard', () => {
       screen.getByText('Activity Header for Test Name during Q1 2023')
     ).toBeInTheDocument()
     expect(screen.getByText('Activity Links List:')).toBeInTheDocument()
-    expect(screen.getByText('Upload Documents')).toBeInTheDocument()
-    expect(screen.getByText('Supporting Documents')).toBeInTheDocument()
-  })
-
-  it('opens the DocumentUploadDialog when the button is clicked', () => {
-    render(<ActivityListCard {...defaultProps} />, { wrapper })
-
-    const button = screen.getByRole('button', { name: /supporting documents/i })
-    fireEvent.click(button)
-
-    expect(
-      screen.getByText('Mocked Document Upload Dialog')
-    ).toBeInTheDocument()
   })
 })

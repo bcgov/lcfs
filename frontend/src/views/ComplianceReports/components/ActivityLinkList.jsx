@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Box, List } from '@mui/material'
@@ -7,6 +7,7 @@ import { ROUTES } from '@/constants/routes'
 import Chip from '@mui/material/Chip'
 import { styled } from '@mui/material/styles'
 import colors from '@/themes/base/colors.js'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog.jsx'
 
 export const StyledChip = styled(Chip)({
   fontWeight: 'bold',
@@ -21,6 +22,8 @@ export const ActivityLinksList = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const { compliancePeriod, complianceReportId } = useParams()
+
+  const [isOpen, setIsOpen] = useState(false)
 
   const createActivity = (nameKey, labelKey, route) => ({
     name: t(nameKey),
@@ -71,7 +74,14 @@ export const ActivityLinksList = () => {
         'report:activityLists.allocationAgreements',
         'report:activityLabels.allocationAgreements',
         ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS
-      )
+      ),
+      {
+        name: t('report:activityLists.uploadDocuments'),
+        label: t('report:activityLabels.uploadDocuments'),
+        action: () => {
+          setIsOpen(true)
+        }
+      }
     ],
     [t, navigate, compliancePeriod, complianceReportId]
   )
@@ -148,6 +158,14 @@ export const ActivityLinksList = () => {
           </Box>
         ))}
       </List>
+      <DocumentUploadDialog
+        parentID={complianceReportId}
+        parentType="compliance_report"
+        open={isOpen}
+        close={() => {
+          setIsOpen(false)
+        }}
+      />
     </>
   )
 }

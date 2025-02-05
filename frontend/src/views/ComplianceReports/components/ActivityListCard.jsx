@@ -3,16 +3,10 @@ import { useTranslation } from 'react-i18next'
 import { ActivityLinksList } from './ActivityLinkList'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import BCButton from '@/components/BCButton'
-import FileUploadIcon from '@mui/icons-material/FileUpload'
-import { useState } from 'react'
-import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import Box from '@mui/material/Box'
 
-export const ActivityListCard = ({ name, period, reportID }) => {
+export const ActivityListCard = ({ name, period }) => {
   const { t } = useTranslation(['report'])
-
-  const [isOpen, setIsOpen] = useState(false)
 
   return (
     <BCWidgetCard
@@ -40,40 +34,6 @@ export const ActivityListCard = ({ name, period, reportID }) => {
           <Box>
             <ActivityLinksList />
           </Box>
-          <Box>
-            <BCTypography
-              variant="body4"
-              color="text"
-              component="div"
-              sx={{ paddingBottom: '8px' }}
-            >
-              {t('report:uploadLabel')}
-            </BCTypography>
-            <Box>
-              <BCButton
-                sx={{ marginLeft: '24px' }}
-                data-test="submit-docs"
-                size="small"
-                className="svg-icon-button"
-                variant="contained"
-                color="primary"
-                onClick={() => {
-                  setIsOpen(true)
-                }}
-                startIcon={<FileUploadIcon />}
-              >
-                {t('report:supportingDocs')}
-              </BCButton>
-            </Box>
-          </Box>
-          <DocumentUploadDialog
-            parentID={reportID}
-            parentType="compliance_report"
-            open={isOpen}
-            close={() => {
-              setIsOpen(false)
-            }}
-          />
         </BCBox>
       }
     />
