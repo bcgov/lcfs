@@ -33,7 +33,8 @@
     "allocationAgreements": "Allocation agreements (e.g., allocating responsibility for fuel)",
     "notionalTransfers": "Notional transfers of eligible renewable fuel",
     "fuelsOtherUse": "Fuels for other use",
-    "exportFuels": "Exporting fuel that was previously marketed in British Columbia"
+    "exportFuels": "Exporting fuel that was previously marketed in British Columbia",
+    "uploadDocuments": "Upload supporting documents for your report"
   },
   "activityLabels": {
     "supplyOfFuel": "Supply of fuel",
@@ -41,7 +42,8 @@
     "allocationAgreements": "Allocation agreements",
     "notionalTransfers": "Notional transfers",
     "fuelsOtherUse": "Fuels for other use",
-    "exportFuels": "Exporting fuel"
+    "exportFuels": "Exporting fuel",
+    "uploadDocuments": "Upload documents"
   },
   "actionBtns": {
     "saveDraftBtn": "Save draft report",
