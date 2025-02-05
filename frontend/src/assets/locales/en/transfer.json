@@ -83,5 +83,6 @@
   },
   "zeroDollarInstructionText": "If proposing a zero-dollar transfer, use the comment box below to provide an explanation for this value.",
   "categoryCheckbox": "Select the checkbox to set the transfer as <strong>Category D</strong> if the price is significantly less than fair market value. This will override the default category determined by the agreement and approval dates indicated above.",
-  "director": "Director"
+  "director": "Director",
+  "quantityAdjusted": "Quantity adjusted to maximum available balance"
 }
