@@ -28,14 +28,32 @@ class OrganizationValidation:
             organization_id
         )
         if available_balance < quantity:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Organization does not have enough compliance units to create this transfer.",
-            )
+            return {
+                "adjusted": True,
+                "available_balance": available_balance,
+                "original_quantity": quantity,
+                "adjusted_quantity": available_balance
+            }
+
+        return {
+            "adjusted": False,
+            "available_balance": available_balance,
+            "original_quantity": quantity,
+            "adjusted_quantity": quantity
+        }
 
     async def create_transfer(
         self, organization_id, transfer_create: TransferCreateSchema
     ):
+        balance_check = await self.check_available_balance(
+        organization_id,
+        transfer_create.quantity
+        )
+
+        if balance_check["adjusted"]:
+            # Adjust quantity to available balance
+            transfer_create.quantity = balance_check["adjusted_quantity"]
+
         is_to_org_registered = await self.org_repo.is_registered_for_transfer(
             transfer_create.to_organization_id
         )
@@ -52,8 +70,6 @@ class OrganizationValidation:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Validation for authorization failed.",
             )
-        # Before creation, check for available balance
-        await self.check_available_balance(organization_id, transfer_create.quantity)
         return
 
     async def update_transfer(

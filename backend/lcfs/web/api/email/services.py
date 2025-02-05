@@ -30,31 +30,8 @@ class CHESEmailService:
         template_dir = os.path.join(os.path.dirname(__file__), "templates")
         self.template_env = Environment(
             loader=FileSystemLoader(template_dir),
-            autoescape=True  # Enable autoescaping for security
+            autoescape=True,  # Enable autoescaping for security
         )
-
-    def _validate_configuration(self):
-        """
-        Validate the CHES configuration to ensure all necessary environment variables are set.
-        """
-        missing_configs = []
-        
-        # Check each required CHES configuration setting
-        if not settings.ches_auth_url:
-            missing_configs.append("ches_auth_url")
-        if not settings.ches_email_url:
-            missing_configs.append("ches_email_url")
-        if not settings.ches_client_id:
-            missing_configs.append("ches_client_id")
-        if not settings.ches_client_secret:
-            missing_configs.append("ches_client_secret")
-        if not settings.ches_sender_email:
-            missing_configs.append("ches_sender_email")
-        if not settings.ches_sender_name:
-            missing_configs.append("ches_sender_name")
-
-        if missing_configs:
-            raise ValueError(f"Missing CHES configuration: {', '.join(missing_configs)}")
 
     @service_handler
     async def send_notification_email(
@@ -66,6 +43,9 @@ class CHESEmailService:
         """
         Send an email notification to users subscribed to the specified notification type.
         """
+        if not settings.ches_enabled:
+            return False
+
         # Validate configuration before performing any operations
         self._validate_configuration()
 
@@ -74,8 +54,10 @@ class CHESEmailService:
             notification_type.value, organization_id
         )
         if not recipient_emails:
-            logger.info(f"""No subscribers for notification type: {
-                        notification_type.value}""")
+            logger.info(
+                f"""No subscribers for notification type: {
+                        notification_type.value}"""
+            )
             return False
 
         # Render the email content
@@ -91,6 +73,31 @@ class CHESEmailService:
         # Send email
         return await self.send_email(email_payload)
 
+    @service_handler
+    async def send_email(self, payload: Dict[str, Any]) -> bool:
+        """
+        Send an email using CHES.
+        """
+        # Validate configuration before performing any operations
+        if not settings.ches_enabled:
+            return False
+
+        self._validate_configuration()
+
+        token = await self._get_ches_token()
+        response = requests.post(
+            settings.ches_email_url,
+            json=payload,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            timeout=15,
+        )
+        response.raise_for_status()
+        logger.info("Email sent successfully.")
+        return True
+
     def _render_email_template(
         self, template_name: str, context: Dict[str, Any]
     ) -> str:
@@ -104,8 +111,7 @@ class CHESEmailService:
             return template.render(**context)
         except Exception as e:
             logger.error(f"Template rendering error: {str(e)}")
-            raise ValueError(
-                f"Failed to render email template for {template_name}")
+            raise ValueError(f"Failed to render email template for {template_name}")
 
     def _build_email_payload(
         self, recipients: List[str], context: Dict[str, Any], body: str
@@ -126,29 +132,7 @@ class CHESEmailService:
             "bodyType": "html",
         }
 
-    @service_handler
-    async def send_email(self, payload: Dict[str, Any]) -> bool:
-        """
-        Send an email using CHES.
-        """
-        # Validate configuration before performing any operations
-        self._validate_configuration()
-
-        token = await self.get_ches_token()
-        response = requests.post(
-            settings.ches_email_url,
-            json=payload,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-            timeout=15,
-        )
-        response.raise_for_status()
-        logger.info("Email sent successfully.")
-        return True
-
-    async def get_ches_token(self) -> str:
+    async def _get_ches_token(self) -> str:
         """
         Retrieve and cache the CHES access token.
         """
@@ -172,3 +156,28 @@ class CHESEmailService:
         )
         logger.info("Retrieved new CHES token.")
         return self._access_token
+
+    def _validate_configuration(self):
+        """
+        Validate the CHES configuration to ensure all necessary environment variables are set.
+        """
+        missing_configs = []
+
+        # Check each required CHES configuration setting
+        if not settings.ches_auth_url:
+            missing_configs.append("ches_auth_url")
+        if not settings.ches_email_url:
+            missing_configs.append("ches_email_url")
+        if not settings.ches_client_id:
+            missing_configs.append("ches_client_id")
+        if not settings.ches_client_secret:
+            missing_configs.append("ches_client_secret")
+        if not settings.ches_sender_email:
+            missing_configs.append("ches_sender_email")
+        if not settings.ches_sender_name:
+            missing_configs.append("ches_sender_name")
+
+        if missing_configs:
+            raise ValueError(
+                f"Missing CHES configuration: {', '.join(missing_configs)}"
+            )

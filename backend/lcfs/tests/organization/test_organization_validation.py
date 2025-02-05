@@ -37,6 +37,23 @@ async def test_create_transfer_success(
     mock_transaction_repo.calculate_available_balance.assert_called_once()
     pass
 
+@pytest.mark.anyio
+async def test_check_available_balance_excess_quantity(organization_validation):
+    organization_validation.transaction_repo.calculate_available_balance.return_value = 500
+    
+    result = await organization_validation.check_available_balance(1, 1000)
+    
+    assert result["adjusted"] is True
+    assert result["adjusted_quantity"] == 500
+
+@pytest.mark.anyio
+async def test_check_available_balance_valid_quantity(organization_validation):
+    organization_validation.transaction_repo.calculate_available_balance.return_value = 1000
+    
+    result = await organization_validation.check_available_balance(1, 500)
+    
+    assert result["adjusted"] is False
+    assert result["adjusted_quantity"] == 500
 
 @pytest.mark.anyio
 async def test_update_transfer_success(organization_validation, mock_transaction_repo):
