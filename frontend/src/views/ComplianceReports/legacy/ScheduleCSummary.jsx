@@ -1,19 +1,19 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
-import { useGetOtherUses } from '@/hooks/useOtherUses'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import {
   decimalFormatter,
   formatNumberWithCommas as valueFormatter
 } from '@/utils/formatters'
-import { useTranslation } from 'react-i18next'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { useGetOtherUses } from '@/hooks/useOtherUses.js'
+import Grid2 from '@mui/material/Unstable_Grid2'
 
-export const OtherUsesSummary = ({ data, status }) => {
+export const ScheduleCSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { t } = useTranslation(['common', 'otherUses'])
@@ -50,18 +50,8 @@ export const OtherUsesSummary = ({ data, status }) => {
       width: '260px'
     },
     {
-      headerName: t('otherUses:otherUsesColLabels.fuelCategory'),
+      headerName: t('otherUses:otherUsesColLabels.fuelClass'),
       field: 'fuelCategory',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.provisionOfTheAct'),
-      field: 'provisionOfTheAct',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.fuelCode'),
-      field: 'fuelCode',
       floatingFilter: false
     },
     {
@@ -74,12 +64,6 @@ export const OtherUsesSummary = ({ data, status }) => {
       headerName: t('otherUses:otherUsesColLabels.units'),
       field: 'units',
       floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.ciOfFuel'),
-      field: 'ciOfFuel',
-      floatingFilter: false,
-      valueFormatter: decimalFormatter
     },
     {
       headerName: t('otherUses:otherUsesColLabels.expectedUse'),
@@ -131,4 +115,4 @@ export const OtherUsesSummary = ({ data, status }) => {
   )
 }
 
-OtherUsesSummary.displayName = 'OtherUsesSummary'
+ScheduleCSummary.displayName = 'ScheduleCSummary'

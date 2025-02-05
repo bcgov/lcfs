@@ -35,7 +35,8 @@
     "fuelsOtherUse": "Fuels for other use",
     "exportFuels": "Exporting fuel that was previously marketed in British Columbia",
     "uploadDocuments": "Upload supporting documents for your report",
-    "scheduleA": "Schedule A - Notional transfers of renewable fuel"
+    "scheduleA": "Schedule A - Notional transfers of renewable fuel",
+    "scheduleC": "Schedule C - Fuels used for other purposes"
   },
   "activityLabels": {
     "supplyOfFuel": "Supply of fuel",

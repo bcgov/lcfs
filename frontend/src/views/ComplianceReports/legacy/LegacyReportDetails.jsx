@@ -15,6 +15,9 @@ import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTrans
 import { ROUTES } from '@/constants/routes'
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { ScheduleASummary } from '@/views/ComplianceReports/legacy/ScheduleASummary.jsx'
+import { useGetAllOtherUses } from '@/hooks/useOtherUses.js'
+import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary.jsx'
+import { ScheduleCSummary } from '@/views/ComplianceReports/legacy/ScheduleCSummary.jsx'
 
 const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
   const { t } = useTranslation()
@@ -50,6 +53,21 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
         component: (data) =>
           data.length > 0 && (
             <ScheduleASummary status={currentStatus} data={data} />
+          )
+      },
+      {
+        name: t('report:activityLists.scheduleC'),
+        action: () =>
+          navigate(
+            ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          ),
+        useFetch: useGetAllOtherUses,
+        component: (data) =>
+          data.length > 0 && (
+            <ScheduleCSummary status={currentStatus} data={data} />
           )
       }
     ],
