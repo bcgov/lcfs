@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { OtherUsesSummary } from '../OtherUsesSummary'
+import { ScheduleCSummary } from '../ScheduleCSummary.jsx'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 vi.mock('react-router-dom', async () => {
@@ -63,7 +63,7 @@ describe('OtherUsesSummary Component Tests', () => {
   })
 
   it('renders root component', () => {
-    render(<OtherUsesSummary />, { wrapper })
+    render(<ScheduleCSummary />, { wrapper })
     const title = screen.getByTestId('container')
     expect(title).toBeInTheDocument()
   })
@@ -74,7 +74,7 @@ describe('OtherUsesSummary Component Tests', () => {
     }
     vi.mocked(useLocation).mockReturnValue(mockLocation)
 
-    render(<OtherUsesSummary />, { wrapper })
+    render(<ScheduleCSummary />, { wrapper })
     const alertBox = screen.getByTestId('alert-box')
     expect(alertBox).toBeInTheDocument()
     expect(alertBox.textContent).toContain('Test Alert Message')
