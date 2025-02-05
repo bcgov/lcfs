@@ -121,18 +121,31 @@ export const AddEditViewTransfer = () => {
   useEffect(() => {
     if (!transferId) return
     if (isFetched && transferData) {
+      // Fetch the comments from the transfer data
+      const fromOrgCommentObj = transferData.comments?.find(
+        (c) => c.commentSource === 'FROM_ORG'
+      )
+      const fromOrgCommentText = fromOrgCommentObj?.comment || ''
+
+      const toOrgCommentObj = transferData.comments?.find(
+        (c) => c.commentSource === 'TO_ORG'
+      )
+      const toOrgCommentText = toOrgCommentObj?.comment || ''
+
+      const govCommentObj = transferData.comments?.find(
+        (c) => c.commentSource === 'GOVERNMENT'
+      )
+      const govCommentText = govCommentObj?.comment || ''
+
       // Populate the form with fetched transfer data
       methods.reset({
         fromOrganizationId: transferData.fromOrganization.organizationId,
         toOrganizationId: transferData.toOrganization.organizationId,
         quantity: transferData.quantity,
         pricePerUnit: transferData.pricePerUnit,
-        fromOrgComment: transferData.fromOrgComment,
-        toOrgComment: transferData.toOrgComment,
-        govComment:
-          methods.getValues().govComment !== ''
-            ? methods.getValues().govComment
-            : transferData.govComment,
+        fromOrgComment: fromOrgCommentText,
+        toOrgComment: toOrgCommentText,
+        govComment: govCommentText,
         agreementDate: transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
           : new Date().toISOString().split('T')[0], // Format date or use current date as fallback
