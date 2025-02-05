@@ -309,8 +309,6 @@ class ComplianceReportServices:
         selection: Literal['fuel_supplies', 'other_uses',
                            'notional_transfers', 'fuel_exports']
     ):
-        """Fetches the fuel supply changelog for a specific compliance report."""
-        # Map selection to relationship to load
         RELATIONSHIP_MAP = {
             'fuel_supplies': FuelSupply,
             'other_uses': OtherUses,
@@ -318,77 +316,6 @@ class ComplianceReportServices:
             'fuel_exports': FuelExport,
         }
 
-        # group_id = await self.repo.get_compliance_report_group_id(report_id)
         changelog = await self.repo.get_changelog_data(report_id, RELATIONSHIP_MAP[selection])
-        # return reports
-
-        # change_log = create_change_log(reports, selection)
 
         return changelog
-
-
-def create_change_log(reports, selection: Literal['fuel_supplies', 'other_uses', 'notional_transfers', 'fuel_exports']):
-    """
-    Given a list of 2 compliance reports, create a change log for the selected category.
-    Returns:
-    {
-        latest: # current report rows,
-        previous: # previous report rows,
-        added: # rows that were added,
-        deleted: # rows that were deleted,
-        edited: [
-            {
-                previous: # row from previous report,
-                changes: { column: new_value, ... }
-            }
-        ]
-    }
-    """
-    # Assume reports[0] is previous and reports[1] is current
-    previous_report = reports[0]
-    current_report = reports[1]
-
-    previous_data = getattr(previous_report, selection, [])
-    current_data = getattr(current_report, selection, [])
-
-    # Build dictionaries keyed by 'group_uuid'
-    prev_by_group = {getattr(item, 'group_uuid')
-                             : item for item in previous_data}
-    curr_by_group = {getattr(item, 'group_uuid')
-                             : item for item in current_data}
-
-    added = []   # rows in current but not in previous
-    deleted = []  # rows in previous but not in current
-    edited = []  # rows in both but with differences
-
-    for group_uuid, prev_item in prev_by_group.items():
-        if group_uuid in curr_by_group:
-            curr_item = curr_by_group[group_uuid]
-            if curr_item.action_type == ActionTypeEnum.DELETE:
-                deleted.append(curr_item)
-                continue
-            # Compute changed columns (new values from current)
-            differences = {}
-            for key, prev_val in vars(prev_item).items():
-                curr_val = vars(curr_item).get(key)
-                if prev_val != curr_val:
-                    differences[key] = curr_val
-            if differences:
-                edited.append({
-                    "previous": prev_item,
-                    "changes": differences
-                })
-        else:
-            deleted.append(prev_item)
-
-    for group_uuid, curr_item in curr_by_group.items():
-        if group_uuid not in prev_by_group:
-            added.append(curr_item)
-
-    return {
-        "latest": current_data,
-        "previous": previous_data,
-        "added": added,
-        "deleted": deleted,
-        "edited": edited
-    }
