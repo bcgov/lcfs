@@ -6,7 +6,7 @@ The build config to build a clean up image base on Openshift4 oc client image
 
 ## cleanup-cron.yaml
 
-The Openshift Cron Job to run periodically to clean up unused resource on in ITVR spaces
+The Openshift Cron Job to run periodically to clean up unused resource on in LCFS spaces
 
 ## Dockerfile
 

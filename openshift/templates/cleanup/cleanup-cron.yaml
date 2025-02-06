@@ -52,34 +52,77 @@ objects:
                   image: >-
                     image-registry.openshift-image-registry.svc:5000/${LICENSE_PLATE}-tools/lcfs-cleanup:prod
                   args:
-                    - >
+                    - |
+                      #!/bin/bash
+
+                      # Function to clean up BuildConfigs without associated builds
+                      cleanup_buildconfigs() {
+                        local NAMESPACE=$1
+
+                        if [ -z "$NAMESPACE" ]; then
+                          echo "Error: Namespace argument is required."
+                          return 1
+                        fi
+
+                        # Set the namespace/project
+                        echo "Switching to namespace: $NAMESPACE"
+                        oc project $NAMESPACE > /dev/null 2>&1
+                        if [ $? -ne 0 ]; then
+                          echo "Error: Unable to switch to namespace: $NAMESPACE. Please check if it exists."
+                          return 1
+                        fi
+
+                        # Get all BuildConfigs in the namespace
+                        echo "Fetching BuildConfigs in namespace: $NAMESPACE"
+                        buildconfigs=$(oc get bc -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}')
+
+                        if [ -z "$buildconfigs" ]; then
+                          echo "No BuildConfigs found in namespace: $NAMESPACE"
+                          return 0
+                        fi
+
+                        # Loop through each BuildConfig and check for associated builds
+                        for bc in $buildconfigs; do
+                          echo "Checking BuildConfig: $bc"
+
+                          # Check if there are any builds associated with this BuildConfig
+                          builds=$(oc get builds -l buildconfig=$bc -o jsonpath='{.items[*].metadata.name}')
+                          
+                          if [ -z "$builds" ]; then
+                            # If no builds are associated, delete the BuildConfig
+                            echo "No builds found for BuildConfig: $bc. Deleting it..."
+                            oc delete bc $bc
+                          else
+                            echo "BuildConfig: $bc has associated builds. Skipping..."
+                          fi
+                        done
+
+                        echo "Cleanup completed in namespace: $NAMESPACE."
+                      }
+
                       date
-
                       oc login --token=$(LOGIN_TOKEN) --server=https://api.silver.devops.gov.bc.ca:6443
-
                       oc version
-
                       echo ""
-
-                      echo "====> Cleaning up ${LICENSE_PLATE}-tools" 
-
-                      echo "==========> Removing expired builds"
-
-                      oc -n ${LICENSE_PLATE}-tools get builds | grep -E "Complete|Failed|Cancelled" | awk '{print $1}' | xargs oc -n ${LICENSE_PLATE}-tools delete build || true
-
-                      echo "==========> Removing expired pods"
-
-                      oc -n ${LICENSE_PLATE}-tools get pods | grep -E "Completed|Error|ContainerStatusUnknown" | grep -v crunchy | grep -v spilo | awk '{print $1}' | xargs oc -n ${LICENSE_PLATE}-tools delete pod || true
-
-                      namespaces=("${LICENSE_PLATE}-dev" "${LICENSE_PLATE}-test")
-
+                      echo "========> Cleaning up d2bd59-tools" 
+                      echo "====> Removing all builds"
+                      oc -n d2bd59-tools get builds | awk '{print $1}' | xargs oc -n d2bd59-tools delete build || true
+                      echo "====> Removing expired pods"
+                      oc -n d2bd59-tools get pods | grep -E "Completed|Error|ContainerStatusUnknown" | grep -v crunchy | grep -v spilo | awk '{print $1}' | xargs oc -n d2bd59-tools delete pod || true
+                      echo "====> Removing all BuildConfigs"
+                      oc -n d2bd59-tools get bc | awk '{print $1}' | xargs oc -n d2bd59-tools delete bc || true
+                      echo "====> Removing backend images"
+                      oc -n d2bd59-tools get imagetags | grep lcfs-backend | awk '{print $1}' | xargs oc -n d2bd59-tools delete imagetag || true
+                      echo "====> Removing frontend images"
+                      oc -n d2bd59-tools get imagetags | grep lcfs-frontend | awk '{print $1}' | xargs oc -n d2bd59-tools delete imagetag || true
+                      namespaces=("d2bd59-dev" "d2bd59-test")
                       for namespace in "${namespaces[@]}"; do
 
                           echo ""
 
-                          echo "====> Cleaning up $namespace"
+                          echo "========> Cleaning up $namespace"
 
-                          echo "==========> Removing expired pods"
+                          echo "====> Removing expired pods"
 
                           oc -n $namespace get pods | grep Completed | awk '{print $1}' | xargs oc -n $namespace delete pod || true
 
@@ -87,19 +130,20 @@ objects:
 
                           env=$(echo $namespace | awk -F '-' '{print $NF}')
 
-                          echo "==========> Removing expired backend images"
+                          echo "====> Removing expired backend images"
 
                           runningBackendImageTag=$(oc -n $namespace describe deployment/lcfs-backend-$env | grep Image | grep lcfs-backend | awk -F ':' '{print $4}') || true
                           
                           oc -n $namespace get imagetags | grep lcfs-backend | grep -v $runningBackendImageTag | awk '{print $1}' | xargs oc -n $namespace delete imagetag || true
 
-                          echo "==========> Removing expired frontend images"
+                          echo "====> Removing expired frontend images"
 
                           runningFrontendImageTag=$(oc -n $namespace describe deployment/lcfs-frontend-$env | grep Image | grep lcfs-frontend | awk -F ':' '{print $4}') || true
                           
                           oc -n $namespace get imagetags | grep lcfs-frontend | grep -v $runningFrontendImageTag | awk '{print $1}' | xargs oc -n $namespace delete imagetag || true
                           
                       done
+
 
               restartPolicy: Never
               terminationGracePeriodSeconds: 30
