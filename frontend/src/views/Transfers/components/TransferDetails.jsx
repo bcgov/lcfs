@@ -35,7 +35,7 @@ export const TransferDetails = () => {
   const availableBalance = useMemo(() => {
     if (!balanceData) return 0
     // Maximum Allowed = Total Balance - Reserved Balance
-    return balanceData.totalBalance - balanceData.reservedBalance
+    return balanceData.totalBalance - Math.abs(balanceData.reservedBalance)
   }, [balanceData])
 
   const organizations =
