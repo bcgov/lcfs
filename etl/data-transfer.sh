@@ -2,24 +2,27 @@
 set -e
 
 # This script handles PostgreSQL data transfer between OpenShift and local containers
-
-# 4 Arguments 
+#
+# Expected parameters:
 # $1 = 'tfrs' or 'lcfs' (application)
 # $2 = 'test', 'prod', or 'dev' (environment)
 # $3 = 'import' or 'export' (direction of data transfer)
-# $4 = 'local container name or id'
-# example commands:
-# . data-transfer.sh lcfs dev export 398cd4661173
-# . data-transfer.sh tfrs prod import 398cd4661173
+# $4 = local container name or id
+# $5 = (optional) table name to dump (e.g., compliance_report_history)
+#
+# Example commands:
+# ./data-transfer.sh lcfs dev export 398cd4661173 compliance_report_history
+# ./data-transfer.sh tfrs prod import 398cd4661173
 
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
     echo "Passed $# parameters. Expected 4 or 5."
-    echo "Usage: $0 <application> <environment> <direction> <local_container> [<port>]"
+    echo "Usage: $0 <application> <environment> <direction> <local_container> [<table>]"
     echo "Where:"
     echo "  <application> is 'tfrs' or 'lcfs'"
     echo "  <environment> is 'test', 'prod', or 'dev'"
     echo "  <direction> is 'import' or 'export'"
     echo "  <local_container> is the name or id of your local Docker container"
+    echo "  <table> (optional) is the table name to dump (e.g., compliance_report_history)"
     exit 1
 fi
 
@@ -27,6 +30,12 @@ application=$1
 env=$2
 direction=$3
 local_container=$4
+
+# Optional parameter: table name
+table=""
+if [ "$#" -eq 5 ]; then
+    table=$5
+fi
 
 # Validate direction
 if [ "$direction" != "import" ] && [ "$direction" != "export" ]; then
@@ -40,34 +49,13 @@ if [ "$application" = "tfrs" ] && [ "$direction" = "export" ]; then
     exit 1
 fi
 
-# checks if you are logged in to openshift
+# Check if you are logged in to OpenShift
 echo "** Checking Openshift creds"
 oc whoami
 echo "logged in"
 echo
 
-# Function to get the leader pod for Crunchy Data PostgreSQL clusters
-get_leader_pod() {
-    local project=$1
-    local app_label=$2
-    
-    # Get all pods with the given app label
-    pods=$(oc get pods -n $project_name -o name | grep "$app_label")
-    
-    # Loop through pods to find the leader
-    for pod in $pods; do
-        is_leader=$(oc exec -n $project $pod -- bash -c "psql -U postgres -tAc \"SELECT pg_is_in_recovery()\"")
-        if [ "$is_leader" = "f" ]; then
-            echo $pod
-            return
-        fi
-    done
-    
-    echo "No leader pod found"
-    exit 1
-}
-
-# Set project name and pod name based on application and environment
+# Set project, app label, database name, and credentials
 case $application in
     "tfrs")
         project_name="0ab226-$env"
@@ -77,11 +65,20 @@ case $application in
             app_label="tfrs-spilo"
         fi
         db_name="tfrs"
+        remote_db_user="postgres"
+        local_db_user="postgres"
         ;;
     "lcfs")
         project_name="d2bd59-$env"
         app_label="lcfs-crunchy-$env-lcfs"
         db_name="lcfs"
+        if [ "$env" = "prod" ]; then
+            remote_db_user="lcfsprod"
+            local_db_user="lcfs"
+        else
+            remote_db_user="lcfs"
+            local_db_user="lcfs"
+        fi
         ;;
     *)
         echo "Invalid application. Use 'tfrs' or 'lcfs'."
@@ -93,6 +90,27 @@ echo "** Setting project $project_name"
 oc project $project_name
 echo
 
+# Function to get the leader pod for Crunchy Data PostgreSQL clusters
+get_leader_pod() {
+    local project=$1
+    local app_label=$2
+    
+    # Get all pods with the given app label
+    pods=$(oc get pods -n $project_name -o name | grep "$app_label")
+    
+    # Loop through pods to find the leader (using remote_db_user)
+    for pod in $pods; do
+        is_leader=$(oc exec -n $project $pod -- bash -c "psql -U $remote_db_user -tAc \"SELECT pg_is_in_recovery()\"")
+        if [ "$is_leader" = "f" ]; then
+            echo $pod
+            return
+        fi
+    done
+    
+    echo "No leader pod found"
+    exit 1
+}
+
 # Get the appropriate pod
 pod_name=$(get_leader_pod $project_name $app_label)
 if [ -z "$pod_name" ]; then
@@ -101,50 +119,58 @@ if [ -z "$pod_name" ]; then
 fi
 echo "** Leader pod identified: $pod_name"
 
+# Set up table option for pg_dump if a table name is provided.
+table_option=""
+file_suffix="$db_name"
+if [ -n "$table" ]; then
+    table_option="-t $table"
+    file_suffix="${db_name}_${table}"
+fi
+
 if [ "$direction" = "import" ]; then
-    echo "** Starting pg_dump on OpenShift pod"
-    oc exec $pod_name -- bash -c "pg_dump -U postgres -F t --no-privileges --no-owner -c -d $db_name > /tmp/$db_name.tar"
+    echo "** Starting pg_dump on OpenShift pod (using remote user $remote_db_user)"
+    oc exec $pod_name -- bash -c "pg_dump -U $remote_db_user $table_option -F t --no-privileges --no-owner -c -d $db_name > /tmp/${file_suffix}.tar"
     echo
 
     echo "** Downloading .tar file from OpenShift pod"
-    oc rsync $pod_name:/tmp/$db_name.tar ./
+    oc rsync $pod_name:/tmp/${file_suffix}.tar ./
     echo
 
     echo "** Copying .tar to local database container $local_container"
-    docker cp $db_name.tar $local_container:/tmp/$db_name.tar
+    docker cp ${file_suffix}.tar $local_container:/tmp/${file_suffix}.tar
     echo
 
-    echo "** Restoring local database"
-    docker exec $local_container bash -c "pg_restore -U $db_name --dbname=$db_name --no-owner --clean --if-exists --verbose /tmp/$db_name.tar" || true
+    echo "** Restoring local database (using local user $local_db_user)"
+    docker exec $local_container bash -c "pg_restore -U $local_db_user --dbname=$db_name --no-owner --clean --if-exists --verbose /tmp/${file_suffix}.tar" || true
     echo
 
     echo "** Cleaning up dump file from OpenShift pod"
-    oc exec $pod_name -- bash -c "rm /tmp/$db_name.tar"
+    oc exec $pod_name -- bash -c "rm /tmp/${file_suffix}.tar"
     echo
 
     echo "** Cleaning up local dump file"
-    rm $db_name.tar
+    rm ${file_suffix}.tar
 
 elif [ "$direction" = "export" ]; then
-    echo "** Starting pg_dump on local container"
-    docker exec $local_container bash -c "pg_dump -U $db_name -F t --no-privileges --no-owner -c -d $db_name > /tmp/$db_name.tar"
+    echo "** Starting pg_dump on local container (using local user $local_db_user)"
+    docker exec $local_container bash -c "pg_dump -U $local_db_user $table_option -F t --no-privileges --no-owner -c -d $db_name > /tmp/${file_suffix}.tar"
     echo
 
     echo "** Copying .tar file from local container"
-    docker cp $local_container:/tmp/$db_name.tar ./
+    docker cp $local_container:/tmp/${file_suffix}.tar ./
     echo
 
     echo "** Preparing .tar file for OpenShift pod"
     mkdir -p tmp_transfer
-    mv $db_name.tar tmp_transfer/
+    mv ${file_suffix}.tar tmp_transfer/
     echo
 
     echo "** Uploading .tar file to OpenShift pod"
     oc rsync ./tmp_transfer $pod_name:/tmp/
     echo
 
-    echo "** Restoring database on OpenShift pod"
-    oc exec $pod_name -- bash -c "pg_restore -U postgres --dbname=$db_name --no-owner --clean --if-exists --verbose /tmp/tmp_transfer/$db_name.tar" || true
+    echo "** Restoring database on OpenShift pod (using remote user $remote_db_user)"
+    oc exec $pod_name -- bash -c "pg_restore -U $remote_db_user --dbname=$db_name --no-owner --clean --if-exists --verbose /tmp/tmp_transfer/${file_suffix}.tar" || true
     echo
 
     echo "** Cleaning up temporary files on OpenShift pod"
@@ -158,6 +184,5 @@ elif [ "$direction" = "export" ]; then
     echo "** Cleaning up local temporary directory"
     rm -rf tmp_transfer
 fi
-
 
 echo "** Finished data transfer and cleanup"
