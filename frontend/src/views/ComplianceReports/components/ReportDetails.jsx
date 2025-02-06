@@ -263,12 +263,11 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
       </BCTypography>
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
-        const isSupportingDocs = activity.name === t('report:supportingDocs')
         return (
           ((data && !isArrayEmpty(data)) && (
             <Accordion
               key={index}
-              expanded={isSupportingDocs || expanded.includes(`panel${index}`)}
+              expanded={expanded.includes(`panel${index}`)}
               onChange={onExpand(`panel${index}`)}
             >
               <AccordionSummary
