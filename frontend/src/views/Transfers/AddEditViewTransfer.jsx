@@ -62,7 +62,7 @@ export const AddEditViewTransfer = () => {
   const { transferId } = useParams()
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const [steps, setSteps] = useState(['Draft', 'Sent', 'Submitted', 'Recorded'])
+  const [steps, setSteps] = useState(['Sent', 'Submitted', 'Recorded'])
   const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
   const { data: toOrgData } = useRegExtOrgs()
   const isGovernmentUser = !!currentUser?.isGovernmentUser
@@ -261,8 +261,10 @@ export const AddEditViewTransfer = () => {
       statusSet.add(item.transferStatus.status)
     })
     if (statusSet.length === 0) {
-      setSteps(['Draft', 'Sent', 'Submitted', 'Recorded'])
+      setSteps(['Sent', 'Submitted', 'Recorded'])
     } else {
+       statusSet.delete(TRANSFER_STATUSES.DRAFT)
+       
       if (!statusSet.has(TRANSFER_STATUSES.SENT))
         statusSet.add(TRANSFER_STATUSES.SENT)
       if (
