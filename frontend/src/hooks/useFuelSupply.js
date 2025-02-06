@@ -60,23 +60,3 @@ export const useSaveFuelSupply = (params, options) => {
     }
   })
 }
-
-export const useGetChangelog = ({ complianceReportID, selection }) => {
-  console.log(
-    apiRoutes.getChangelog
-      .replace(':reportID', complianceReportID)
-      .replace(':selection', selection)
-  )
-  const client = useApiService()
-  return useQuery({
-    queryKey: ['fuel-supply-changelog', complianceReportID],
-    queryFn: async () => {
-      const response = await client.get(
-        apiRoutes.getChangelog
-          .replace(':reportID', complianceReportID)
-          .replace(':selection', selection)
-      )
-      return response.data
-    }
-  })
-}

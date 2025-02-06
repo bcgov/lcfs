@@ -302,10 +302,23 @@ class ComplianceReportServices:
     ) -> List[CompliancePeriodSchema]:
         return await self.repo.get_all_org_reported_years(organization_id)
 
+    def _model_to_dict(self, record) -> dict:
+        """Safely convert a model to a dict, skipping lazy-loaded attributes that raise errors."""
+        result = {}
+        for key, value in record.__dict__.items():
+            if key == '_sa_instance_state':
+                continue
+            try:
+                result[key] = value
+            except Exception:
+                result[key] = None
+        return result
+
     @service_handler
     async def get_changelog_data(
         self,
-        report_id: int,
+        pagination: PaginationResponseSchema,
+        compliance_report_id: int,
         selection: Literal['fuel_supplies', 'other_uses',
                            'notional_transfers', 'fuel_exports']
     ):
@@ -315,7 +328,39 @@ class ComplianceReportServices:
             'notional_transfers': NotionalTransfer,
             'fuel_exports': FuelExport,
         }
+        changelog, total_count = await self.repo.get_changelog_data(pagination, compliance_report_id, RELATIONSHIP_MAP[selection])
 
-        changelog = await self.repo.get_changelog_data(report_id, RELATIONSHIP_MAP[selection])
+        groups = {}
+        for record in changelog:
+            group_uuid = getattr(record, "group_uuid", None)
+            groups.setdefault(group_uuid, []).append(record)
+        for group in groups.values():
+            if len(group) == 2:
+                first, second = group
+                diff = {}
+                first_dict = self._model_to_dict(first)
+                second_dict = self._model_to_dict(second)
+                keys = set(first_dict.keys()).union(second_dict.keys())
+                for key in keys:
+                    if first_dict.get(key) != second_dict.get(key):
+                        diff[key] = True
+                setattr(first, "diff", diff)
+                setattr(second, "diff", diff)
+                # Identify older record by version and mark it as updated
+                if getattr(first, "version", 0) < getattr(second, "version", 0):
+                    setattr(first, "updated", True)
+                else:
+                    setattr(second, "updated", True)
 
-        return changelog
+        changelog = [record for group in groups.values() for record in group]
+
+        return {
+            'pagination': PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=math.ceil(
+                    total_count / pagination.size) if pagination.size else 0,
+            ),
+            'changelog': changelog,
+        }

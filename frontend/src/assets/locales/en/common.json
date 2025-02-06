@@ -51,5 +51,6 @@
     "contact": "Contact your LCFS or BCeID administrator or contact",
     "email": "lcfs@gov.bc.ca"
   },
-  "ClearFilters": "Clear filters"
+  "ClearFilters": "Clear filters",
+  "changelogCurrentState": "Current state, Not assessed"
 }

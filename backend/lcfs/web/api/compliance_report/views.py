@@ -22,7 +22,10 @@ from lcfs.web.api.compliance_report.schema import (
     ChainedComplianceReportSchema,
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
+    CommonPaginatedReportRequestSchema,
+    ComplianceReportChangelogSchema
 )
+from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
@@ -177,28 +180,42 @@ async def create_supplemental_report(
     return await service.create_supplemental_report(report_id, request.user)
 
 
-@router.get(
-    "/{report_id}/fuel-supply/changelog",
+@router.post(
+    "/fuel-supply/changelog",
+    response_model=ComplianceReportChangelogSchema[FuelSupplyResponseSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
-async def get_changelog(
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_fuel_supply_changelog(
     request: Request,
-    report_id: int,
+    request_data: CommonPaginatedReportRequestSchema = Body(...),
     service: ComplianceReportServices = Depends(),
-):
+) -> ComplianceReportChangelogSchema[FuelSupplyResponseSchema]:
     """
     Retrieve the fuel supply changelog for a specific report by ID.
     """
-    return await service.get_changelog_data(report_id, 'fuel_supplies')
+
+    compliance_report_id = request_data.compliance_report_id
+
+    pagination = PaginationRequestSchema(
+        page=request_data.page,
+        size=request_data.size,
+        sort_orders=request_data.sort_orders,
+        filters=request_data.filters,
+    )
+    return await service.get_changelog_data(
+        pagination,
+        compliance_report_id,
+        'fuel_supplies'
+    )
 
 
-@router.get(
-    "/{report_id}/other-uses/changelog",
+@router.post(
+    "/other-uses/changelog",
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
-async def get_changelog(
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_other_uses_changelog(
     request: Request,
     report_id: int,
     service: ComplianceReportServices = Depends(),
@@ -209,12 +226,12 @@ async def get_changelog(
     return await service.get_changelog_data(report_id, 'other_uses')
 
 
-@router.get(
-    "/{report_id}/notional-transfers/changelog",
+@router.post(
+    "/notional-transfers/changelog",
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
-async def get_changelog(
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_notional_transfers_changelog(
     request: Request,
     report_id: int,
     service: ComplianceReportServices = Depends(),
@@ -225,12 +242,12 @@ async def get_changelog(
     return await service.get_changelog_data(report_id, 'notional_transfers')
 
 
-@router.get(
-    "/{report_id}/fuel-exports/changelog",
+@router.post(
+    "/fuel-exports/changelog",
     status_code=status.HTTP_200_OK,
 )
-@view_handler(['*'])
-async def get_changelog(
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_fuel_exports_changelog(
     request: Request,
     report_id: int,
     service: ComplianceReportServices = Depends(),

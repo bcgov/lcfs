@@ -8,6 +8,7 @@
   "LoadFailMsg": "Failed to load supply of fuel rows",
   "addRow": "Add row",
   "rows": "rows",
+  "exitChangeLog": "Exit change log",
   "fuelSupplyColLabels": {
     "complianceReportId": "Compliance Report ID",
     "fuelSupplyId": "Fuel supply ID",

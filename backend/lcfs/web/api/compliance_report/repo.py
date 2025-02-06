@@ -7,6 +7,7 @@ from fastapi import Depends
 from sqlalchemy import func, select, and_, asc, desc, update, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager, aliased
+from sqlalchemy.inspection import inspect  # New import
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import CompliancePeriod
@@ -944,15 +945,56 @@ class ComplianceReportRepository:
     @repo_handler
     async def get_changelog_data(
         self,
-        report_id: int,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int,
         selection
     ):
 
-        # Fetch reports with the calculated versions
-        result = await self.db.execute(
-            select(selection)
-            .where(
-                selection.compliance_report_id == report_id,
+        conditions = [selection.compliance_report_id == compliance_report_id]
+        offset = 0 if pagination.page < 1 else (
+            pagination.page - 1) * pagination.size
+        limit = pagination.size
+
+        # Create an alias for the previous version row.
+        prev_alias = aliased(selection)
+
+        # Dynamically load all relationships for the selection model.
+        mapper = inspect(selection)
+        relationship_options = [
+            joinedload(getattr(selection, rel.key)) for rel in mapper.relationships
+        ]
+        # Create relationship options for the aliased model as well.
+        relationship_options_prev = [
+            joinedload(getattr(prev_alias, rel.key)) for rel in mapper.relationships
+        ]
+
+        # Build a query that retrieves each current record along with its previous version (if any)
+        stmt = (
+            select(selection, prev_alias)
+            .outerjoin(
+                prev_alias,
+                and_(
+                    prev_alias.group_uuid == selection.group_uuid,
+                    prev_alias.version == selection.version - 1,
+                ),
             )
+            .options(*(relationship_options + relationship_options_prev))
+            .where(and_(*conditions))
+            .order_by(selection.create_date.asc())
+            .offset(offset)
+            .limit(limit)
         )
-        return result.unique().scalars().all()
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        changelog = []
+        for current, previous in rows:
+            changelog.append(current)
+            if current.action_type.value.upper() == "UPDATE" and previous is not None:
+                previous.action_type = "UPDATE"
+                changelog.append(previous)
+
+        total_count = len(changelog)
+
+        return changelog, total_count

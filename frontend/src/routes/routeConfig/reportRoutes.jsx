@@ -82,28 +82,28 @@ export const reportRoutes = [
     path: ROUTES.REPORTS.CHANGELOG.SUPPLY_OF_FUEL,
     element: <FuelSupplyChangelog />,
     handle: {
-      title: 'Fuel Supply Changelog'
+      title: 'Change log'
     }
   },
   {
     path: ROUTES.REPORTS.CHANGELOG.NOTIONAL_TRANSFERS,
     element: <NotionalTransferChangelog />,
     handle: {
-      title: 'Notional Transfers Changelog'
+      title: 'Change log'
     }
   },
   {
     path: ROUTES.REPORTS.CHANGELOG.OTHER_USE_FUELS,
     element: <OtherUsesChangelog />,
     handle: {
-      title: 'Other Use Fuels Changelog'
+      title: 'Change log'
     }
   },
   {
     path: ROUTES.REPORTS.CHANGELOG.FUEL_EXPORTS,
     element: <FuelExportChangelog />,
     handle: {
-      title: 'Fuel Exports Changelog'
+      title: 'Change log'
     }
   }
 ]
