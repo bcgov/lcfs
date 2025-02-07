@@ -54,6 +54,14 @@ export const TransferDetails = () => {
     }
   }, [quantity, pricePerUnit])
 
+  useEffect(() => {
+    if (quantity === availableBalance) {
+      setShowAdjustmentAlert(true)
+    } else if (quantity < availableBalance) {
+      setShowAdjustmentAlert(false)
+    }
+  }, [quantity, availableBalance])
+
   const renderError = (fieldName, sameAsField = null) => {
     // If the sameAsField is provided and is true, hide errors for this field
     if (sameAsField && watch(sameAsField)) {
@@ -104,14 +112,21 @@ export const TransferDetails = () => {
                 customInput={TextField}
                 thousandSeparator
                 value={value}
-                onValueChange={(values) => {
-                  const newValue = values.floatValue > availableBalance
-                    ? availableBalance
-                    : values.floatValue
-                  onChange(newValue)
-                  if (values.floatValue > availableBalance) {
-                    setShowAdjustmentAlert(true)
+                isAllowed={(values) => {
+                  const { floatValue } = values
+                  if (floatValue > availableBalance) {
+                    onChange(availableBalance)
+                    return
                   }
+                  return floatValue === undefined || typeof floatValue === 'number'
+                }}
+                onValueChange={(values) => {
+                  const newValue = values.floatValue || 0
+                  if (newValue > availableBalance) {
+                    onChange(availableBalance)
+                    return
+                  }
+                  onChange(newValue)
                 }}
                 onBlur={onBlur}
                 name={name}
