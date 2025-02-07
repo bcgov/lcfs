@@ -163,6 +163,20 @@ class ComplianceReportBaseSchema(BaseSchema):
     legacy_id: Optional[int] = None
 
 
+class ComplianceReportSchema(BaseSchema):
+    compliance_report_id: int
+    compliance_report_group_uuid: str
+    version: int
+    compliance_period_id: int
+    compliance_period: str
+    organization_id: int
+    organization_name: str
+    report_type: str
+    report_status_id: int
+    report_status: str
+    update_date: datetime
+
+
 class ChainedComplianceReportSchema(BaseSchema):
     report: ComplianceReportBaseSchema
     chain: Optional[List[ComplianceReportBaseSchema]] = []
@@ -178,7 +192,7 @@ class ComplianceReportCreateSchema(BaseSchema):
 
 class ComplianceReportListSchema(BaseSchema):
     pagination: PaginationResponseSchema
-    reports: List[ComplianceReportBaseSchema]
+    reports: List[ComplianceReportSchema]
 
 
 class ComplianceReportSummaryRowSchema(BaseSchema):
