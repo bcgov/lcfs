@@ -12,7 +12,7 @@ import logging
 
 # revision identifiers, used by Alembic.
 revision = "0bfaff83e51e"
-down_revision = "145e5501e322"
+down_revision = "67c0765b7e49"
 branch_labels = None
 depends_on = None
 
