@@ -5,7 +5,7 @@ from fastapi import Depends
 from starlette.responses import StreamingResponse
 
 from lcfs.utils.constants import FILE_MEDIA_TYPE
-from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
+from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.core.decorators import service_handler
@@ -15,31 +15,31 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 FUEL_CODE_EXPORT_FILENAME = "BC-LCFS-Fuel-Codes"
 FUEL_CODE_EXPORT_SHEETNAME = "Fuel Codes"
 FUEL_CODE_EXPORT_COLUMNS = [
-    "Status",
-    "Prefix",
-    "Fuel code",
-    "Carbon intensity",
-    "EDRMS#",
-    "Company",
-    "Contact name",
-    "Contact email",
-    "Application date",
-    "Approval date",
-    "Effective date",
-    "Expiry date",
-    "Fuel",
-    "Feedstock",
-    "Feedstock location",
-    "Misc",
-    "Fuel production facility city",
-    "Fuel production facility province/state",
-    "Fuel production facility country",
-    "Facility nameplate capacity",
-    "Unit",
-    "Feedstock transport mode",
-    "Finished fuel transport mode",
-    "Former company",
-    "Notes",
+    SpreadsheetColumn("Status", "text"),
+    SpreadsheetColumn("Prefix", "text"),
+    SpreadsheetColumn("Fuel code", "text"),
+    SpreadsheetColumn("Carbon intensity", "text"),
+    SpreadsheetColumn("EDRMS#", "text"),
+    SpreadsheetColumn("Company", "text"),
+    SpreadsheetColumn("Contact name", "text"),
+    SpreadsheetColumn("Contact email", "text"),
+    SpreadsheetColumn("Application date", "date"),
+    SpreadsheetColumn("Approval date", "date"),
+    SpreadsheetColumn("Effective date", "date"),
+    SpreadsheetColumn("Expiry date", "date"),
+    SpreadsheetColumn("Fuel", "text"),
+    SpreadsheetColumn("Feedstock", "text"),
+    SpreadsheetColumn("Feedstock location", "text"),
+    SpreadsheetColumn("Misc", "text"),
+    SpreadsheetColumn("Fuel production facility city", "text"),
+    SpreadsheetColumn("Fuel production facility province/state", "text"),
+    SpreadsheetColumn("Fuel production facility country", "text"),
+    SpreadsheetColumn("Facility nameplate capacity", "text"),
+    SpreadsheetColumn("Unit", "text"),
+    SpreadsheetColumn("Feedstock transport mode", "text"),
+    SpreadsheetColumn("Finished fuel transport mode", "text"),
+    SpreadsheetColumn("Former company", "text"),
+    SpreadsheetColumn("Notes", "text"),
 ]
 
 
@@ -61,7 +61,7 @@ class FuelCodeExporter:
                 page=1,
                 size=1000,
                 filters=[],
-                sortOrders=[],
+                sort_orders=[],
             )
         )
 
