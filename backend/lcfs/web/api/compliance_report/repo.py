@@ -7,7 +7,6 @@ from fastapi import Depends
 from sqlalchemy import String, cast, func, select, and_, asc, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, aliased
-from sqlalchemy.dialects import postgresql
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import CompliancePeriod, ComplianceReportListView
@@ -409,12 +408,6 @@ class ComplianceReportRepository:
                 )
             query = query.order_by(sort_method(order.field))
 
-        print("Generated SQL Query:")
-        print(
-            query.compile(
-                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
-            )
-        )
         # Execute query with offset and limit for pagination
         query_result = (
             (await self.db.execute(query.offset(offset).limit(limit)))

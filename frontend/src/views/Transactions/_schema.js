@@ -152,6 +152,23 @@ export const transactionsColDefs = (t) => [
       labelKey: 'status',
       optionsQuery: useTransactionStatuses
     },
+    filterParams: {
+      textFormatter: (value) => value.toLowerCase(),
+      textCustomComparator: (filter, value, filterText) => {
+        // Split the filter text by comma and trim each value
+        const filterValues = filterText
+          .split(',')
+          .map((text) => text.trim().toLowerCase())
+
+        const cleanValue = value.toLowerCase()
+
+        // Return true if the value matches any of the filter values
+        return filterValues.some((filterValue) =>
+          cleanValue.includes(filterValue)
+        )
+      },
+      buttons: ['clear']
+    },
     suppressFloatingFilterButton: true,
     minWidth: 180,
     width: 250
