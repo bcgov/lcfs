@@ -74,9 +74,22 @@ class ComplianceReportRepository:
                         field, filter_value, filter_option, filter_type
                     )
                 )
+            elif filter.field == "type":
+                field = get_field_for_filter(ComplianceReport, "nickname")
+                conditions.append(
+                    apply_filter_conditions(
+                        field, filter_value, filter_option, filter_type
+                    )
+                )
 
     def apply_sub_filters(self, pagination, conditions):
+        skip_fields = {"organization", "type", "compliance_period"}
+
         for filter in pagination.filters:
+
+            if filter.field in skip_fields:
+                continue
+
             filter_value = filter.filter
             # check if the date string is selected for filter
             if filter.filter is None:
@@ -102,12 +115,6 @@ class ComplianceReportRepository:
                     filter_type = "set"
                 else:
                     filter_value = ComplianceReportStatusEnum(filter_value)
-            elif filter.field == "organization":
-                continue
-            elif filter.field == "type":
-                field = get_field_for_filter(ComplianceReport, "nickname")
-            elif filter.field == "compliance_period":
-                continue
             else:
                 field = get_field_for_filter(ComplianceReport, filter.field)
 
