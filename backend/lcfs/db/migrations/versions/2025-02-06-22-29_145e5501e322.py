@@ -2,7 +2,7 @@
 Add new transfer_comment table and migrate existing comment fields.
 
 Revision ID: 145e5501e322
-Revises: e50534b604f2
+Revises: 6231e628ae7d
 Create Date: 2025-02-06 22:29:53.919293
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "145e5501e322"
-down_revision = "e50534b604f2"
+down_revision = "6231e628ae7d"
 branch_labels = None
 depends_on = None
 
