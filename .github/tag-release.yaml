@@ -1,0 +1,33 @@
+name: Tag Release
+
+on:
+  push:
+    branches: [tag-release-1.0.0]
+  workflow_dispatch:
+
+env:
+  GIT_URL: https://github.com/bcgov/lcfs.git
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_TAG: sssss
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.1.1
+
+      - name: GitHub Commit & Push
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          git fetch --tags
+          git tag -l
+          prodtag="v${{ env.IMAGE_TAG }}"
+          git tag $prodtag ${{ env.IMAGE_TAG }}
+          git push origin $prodtag
