@@ -1,4 +1,4 @@
-"""Dashboard counts fix
+"""Dashboard counts fix for compliance report views
 
 Revision ID: 0bfaff83e51e
 Revises: e50534b604f2

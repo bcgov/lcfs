@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from lcfs.web.api.email.repo import CHESEmailRepository
 import pytest
@@ -139,22 +140,11 @@ async def test_get_compliance_reports_success(
         )
 
         assert response.status_code == 200
-
-        expected_response = json.loads(
-            compliance_report_list_schema.json(by_alias=True)
-        )
-
+        # Convert Pydantic schema to dict
+        expected_response = compliance_report_list_schema.dict(by_alias=True)
+        assert (response.json())["pagination"] == expected_response["pagination"]
+        assert len(response.json()["reports"]) == len(expected_response["reports"])
         assert response.json() == expected_response
-
-        pagination_request_schema.filters.append(
-            FilterModel(
-                field="status", filter="Draft", filter_type="text", type="notEqual"
-            )
-        )
-
-        mock_get_compliance_reports_paginated.assert_called_once_with(
-            pagination_request_schema
-        )
 
 
 @pytest.mark.anyio

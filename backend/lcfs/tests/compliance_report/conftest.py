@@ -17,6 +17,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     CompliancePeriodSchema,
     ComplianceReportOrganizationSchema,
+    ComplianceReportSchema,
     SummarySchema,
     ComplianceReportStatusSchema,
     ComplianceReportHistorySchema,
@@ -82,6 +83,62 @@ def compliance_report_history_schema(
         user_profile=compliance_report_user_schema,
         create_date=datetime(2024, 4, 1, 12, 0, 0),
     )
+
+
+@pytest.fixture
+def compliance_report_schema(
+    compliance_period_schema,
+    compliance_report_organization_schema,
+    compliance_report_status_schema,
+):
+    def _create_compliance_report_schema(
+        compliance_report_id: int = 1,
+        compliance_report_group_uuid: str = None,
+        version: int = 0,
+        compliance_period_id: int = None,
+        compliance_period: CompliancePeriodSchema = None,
+        organization_id: int = None,
+        organization: ComplianceReportOrganizationSchema = None,
+        report_type: str = "Annual Compliance",
+        report_status_id: int = None,
+        report_status: str = "Submitted",
+        update_date: datetime = datetime(2024, 4, 1, 12, 0, 0),
+    ):
+        compliance_period_id = (
+            compliance_period_id or compliance_period_schema.compliance_period_id
+        )
+        compliance_period = compliance_period or compliance_period_schema
+        if isinstance(compliance_period, CompliancePeriodSchema):
+            compliance_period = compliance_period.description
+        organization_id = (
+            organization_id or compliance_report_organization_schema.organization_id
+        )
+        organization = organization or compliance_report_organization_schema
+        organization_name = (
+            organization.name if organization else "Default Org"
+        )
+        compliance_report_group_uuid = compliance_report_group_uuid or str(uuid.uuid4())
+        report_status_id = (
+            report_status_id
+            or compliance_report_status_schema.compliance_report_status_id
+        )
+        report_status = report_status or compliance_report_status_schema.status
+
+        return ComplianceReportSchema(
+            compliance_report_id=compliance_report_id,
+            compliance_report_group_uuid=compliance_report_group_uuid,
+            version=version,
+            compliance_period_id=compliance_period_id,
+            compliance_period=compliance_period,
+            organization_id=organization_id,
+            organization_name=organization_name,
+            report_type=report_type,
+            report_status_id=report_status_id,
+            report_status=report_status,
+            update_date=update_date,
+        )
+
+    return _create_compliance_report_schema
 
 
 @pytest.fixture
@@ -217,11 +274,11 @@ def compliance_report_summary_schema(
 
 
 @pytest.fixture
-def compliance_report_list_schema(compliance_report_base_schema):
+def compliance_report_list_schema(compliance_report_schema):
     return ComplianceReportListSchema(
         pagination=PaginationResponseSchema(total=100, page=1, size=10, total_pages=10),
         reports=[
-            compliance_report_base_schema(),
+            compliance_report_schema(),
             # Add more ComplianceReportBaseSchema instances if needed
         ],
     )
