@@ -816,7 +816,10 @@ async def test_calculate_fuel_quantities_renewable(
 ):
     # Create a mock repository
     mock_repo.aggregate_quantities.return_value = {"gasoline": 200.0}
-    mock_repo.aggregate_other_uses_quantity.return_value = {"diesel": 75.0, "jet-fuel": 25.0}
+    mock_repo.aggregate_other_uses_quantity.return_value = {
+        "diesel": 75.0,
+        "jet-fuel": 25.0,
+    }
 
     # Define test inputs
     compliance_report_id = 2
@@ -836,3 +839,134 @@ async def test_calculate_fuel_quantities_renewable(
         compliance_report_id, fossil_derived
     )
     assert result == {"gasoline": 200.0, "diesel": 75.0, "jet-fuel": 25.0}
+
+
+@pytest.mark.anyio
+async def test_calculate_fuel_supply_compliance_units_positive(
+    compliance_report_summary_service,
+):
+    """
+    Test calculate_fuel_supply_compliance_units with a record that yields a positive value.
+    For TCI=100, EER=1, RCI=80, UCI=10, Q=1_000_000, ED=1:
+    (100*1 - (80+10)) * ((1_000_000*1)/1_000_000) = (100 - 90) * 1 = 10.
+    Expected result: 10.
+    """
+    mock_fuel_supply = MagicMock()
+    mock_fuel_supply.target_ci = 100
+    mock_fuel_supply.eer = 1
+    mock_fuel_supply.ci_of_fuel = 80
+    mock_fuel_supply.uci = 10
+    mock_fuel_supply.quantity = 1_000_000
+    mock_fuel_supply.energy_density = 1
+
+    # Patch the repo call to return our single mock record.
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=[mock_fuel_supply])
+    )
+    dummy_report = MagicMock()
+    dummy_report.compliance_report_group_uuid = "dummy-group"
+
+    result = (
+        await compliance_report_summary_service.calculate_fuel_supply_compliance_units(
+            dummy_report
+        )
+    )
+    assert result == 10
+
+
+@pytest.mark.anyio
+async def test_calculate_fuel_supply_compliance_units_negative(
+    compliance_report_summary_service,
+):
+    """
+    Test calculate_fuel_supply_compliance_units with a record that yields a negative value.
+    For TCI=80, EER=1, RCI=90, UCI=5, Q=1_000_000, ED=1:
+    (80*1 - (90+5)) * ((1_000_000*1)/1_000_000) = (80 - 95) = -15.
+    Expected result: -15.
+    """
+    mock_fuel_supply = MagicMock()
+    mock_fuel_supply.target_ci = 80
+    mock_fuel_supply.eer = 1
+    mock_fuel_supply.ci_of_fuel = 90
+    mock_fuel_supply.uci = 5
+    mock_fuel_supply.quantity = 1_000_000
+    mock_fuel_supply.energy_density = 1
+
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=[mock_fuel_supply])
+    )
+    dummy_report = MagicMock()
+    dummy_report.compliance_report_group_uuid = "dummy-group"
+
+    result = (
+        await compliance_report_summary_service.calculate_fuel_supply_compliance_units(
+            dummy_report
+        )
+    )
+    assert result == -15
+
+
+@pytest.mark.anyio
+async def test_calculate_fuel_export_compliance_units_positive(
+    compliance_report_summary_service,
+):
+    """
+    Test calculate_fuel_export_compliance_units with a record where the underlying compliance_units is positive.
+    Using TCI=100, EER=1, RCI=80, UCI=10, Q=1_000_000, ED=1:
+    - The raw compliance_units = 10.
+    - After negation: -10, which is negative.
+    Expected result: -10.
+    """
+    mock_fuel_export = MagicMock()
+    mock_fuel_export.target_ci = 100
+    mock_fuel_export.eer = 1
+    mock_fuel_export.ci_of_fuel = 80
+    mock_fuel_export.uci = 10
+    mock_fuel_export.quantity = 1_000_000
+    mock_fuel_export.energy_density = 1
+
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=[mock_fuel_export])
+    )
+    dummy_report = MagicMock()
+    dummy_report.compliance_report_group_uuid = "dummy-group"
+
+    result = (
+        await compliance_report_summary_service.calculate_fuel_export_compliance_units(
+            dummy_report
+        )
+    )
+    assert result == -10
+
+
+@pytest.mark.anyio
+async def test_calculate_fuel_export_compliance_units_negative(
+    compliance_report_summary_service,
+):
+    """
+    Test calculate_fuel_export_compliance_units with a record where the underlying compliance_units is negative.
+    For TCI=80, EER=1, RCI=90, UCI=5, Q=1_000_000, ED=1:
+    - The raw compliance_units = (80 - (90+5)) = -15.
+    - After negation: -(-15) = 15, which is not negative, so the method returns 0.
+    Expected result: 0.
+    """
+    mock_fuel_export = MagicMock()
+    mock_fuel_export.target_ci = 80
+    mock_fuel_export.eer = 1
+    mock_fuel_export.ci_of_fuel = 90
+    mock_fuel_export.uci = 5
+    mock_fuel_export.quantity = 1_000_000
+    mock_fuel_export.energy_density = 1
+
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=[mock_fuel_export])
+    )
+    dummy_report = MagicMock()
+    dummy_report.compliance_report_group_uuid = "dummy-group"
+
+    result = (
+        await compliance_report_summary_service.calculate_fuel_export_compliance_units(
+            dummy_report
+        )
+    )
+    assert result == 0
