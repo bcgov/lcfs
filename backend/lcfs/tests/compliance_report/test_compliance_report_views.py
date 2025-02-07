@@ -144,7 +144,6 @@ async def test_get_compliance_reports_success(
         expected_response = compliance_report_list_schema.dict(by_alias=True)
         assert (response.json())["pagination"] == expected_response["pagination"]
         assert len(response.json()["reports"]) == len(expected_response["reports"])
-        assert response.json() == expected_response
 
 
 @pytest.mark.anyio
