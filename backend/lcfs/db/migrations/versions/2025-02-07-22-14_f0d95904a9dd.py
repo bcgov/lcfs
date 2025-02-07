@@ -1,19 +1,18 @@
 """
-Remove old comment columns from transfer table, add new transfer_comment table,
+Remove comment columns from transfer table,
 and update mv_transaction_aggregate so it shows FROM_ORG comments for transfers.
 
 Revision ID: f0d95904a9dd
-Revises: 40bd04603bd5
-Create Date: 2025-02-03 14:14:11.287846
+Revises: 145e5501e322
+Create Date: 2025-02-07 14:14:11.287846
 """
 
 import sqlalchemy as sa
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "f0d95904a9dd"
-down_revision = "40bd04603bd5"
+down_revision = "145e5501e322"
 branch_labels = None
 depends_on = None
 
@@ -59,83 +58,7 @@ def upgrade() -> None:
     op.drop_column("transfer", "gov_comment")
 
     # --------------------------------------------------
-    # 4) Create the enum type (comment_source_enum), if it doesn't already exist.
-    # --------------------------------------------------
-    sa.Enum(
-        "FROM_ORG",
-        "TO_ORG",
-        "GOVERNMENT",
-        name="transfer_comment_source_enum",
-    ).create(op.get_bind())
-
-    # --------------------------------------------------
-    # 5) Create the new table 'transfer_comment'.
-    # --------------------------------------------------
-    op.create_table(
-        "transfer_comment",
-        sa.Column(
-            "transfer_comment_id",
-            sa.Integer(),
-            primary_key=True,
-            autoincrement=True,
-            comment="Identifier for the transfer comment.",
-        ),
-        sa.Column(
-            "transfer_id",
-            sa.Integer(),
-            sa.ForeignKey("transfer.transfer_id"),
-            nullable=False,
-            comment="Foreign key to the transfer table.",
-        ),
-        sa.Column(
-            "comment", sa.Text(), nullable=True, comment="Text content of the comment."
-        ),
-        sa.Column(
-            "comment_source",
-            postgresql.ENUM(
-                "FROM_ORG",
-                "TO_ORG",
-                "GOVERNMENT",
-                name="transfer_comment_source_enum",
-                create_type=False,
-            ),
-            nullable=False,
-            comment="Defines who made the comment: FROM_ORG, TO_ORG, or GOVERNMENT.",
-        ),
-        sa.Column(
-            "create_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Timestamp for when this record was first created.",
-        ),
-        sa.Column(
-            "update_date",
-            sa.TIMESTAMP(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=True,
-            comment="Timestamp for the most recent update to this record.",
-        ),
-        sa.Column(
-            "create_user",
-            sa.String(),
-            nullable=True,
-            comment="Username or identifier of the user who created this record.",
-        ),
-        sa.Column(
-            "update_user",
-            sa.String(),
-            nullable=True,
-            comment="Username or identifier of the user who last updated this record.",
-        ),
-        sa.PrimaryKeyConstraint(
-            "transfer_comment_id", name=op.f("pk_transfer_comment")
-        ),
-        comment="Stores comments for each transfer.",
-    )
-
-    # --------------------------------------------------
-    # 6) Create the updated mv_transaction_aggregate with FROM_ORG comments for transfers.
+    # 4) Create the updated mv_transaction_aggregate with FROM_ORG comments for transfers.
     # --------------------------------------------------
     op.execute(
         """
@@ -294,7 +217,7 @@ def upgrade() -> None:
     )
 
     # ------------------------------------
-    # 7) Create index
+    # 5) Create index
     # ------------------------------------
     op.execute(
         """
@@ -307,7 +230,7 @@ def upgrade() -> None:
     )
 
     # ------------------------------------
-    # 8) Create refresh function & triggers
+    # 6) Create refresh function & triggers
     # ------------------------------------
     op.execute(
         """
@@ -424,22 +347,7 @@ def downgrade() -> None:
     op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_transaction_aggregate;")
 
     # ------------------------------------
-    # 3) Drop the new 'transfer_comment' table
-    # ------------------------------------
-    op.drop_table("transfer_comment")
-
-    # ------------------------------------
-    # 4) Drop the enum type we created
-    # ------------------------------------
-    sa.Enum(
-        "GOVERNMENT",
-        "TO_ORG",
-        "FROM_ORG",
-        name="transfer_comment_source_enum",
-    ).drop(op.get_bind())
-
-    # ------------------------------------
-    # 5) Re-add the old comment columns back to 'transfer' table
+    # 3) Re-add the old comment columns back to 'transfer' table
     # ------------------------------------
     op.add_column(
         "transfer", sa.Column("from_org_comment", sa.String(length=1000), nullable=True)
@@ -452,7 +360,7 @@ def downgrade() -> None:
     )
 
     # ------------------------------------
-    # 6) Recreate the old materialized view
+    # 4) Recreate the old materialized view
     # ------------------------------------
     op.execute(
         """
@@ -603,7 +511,7 @@ def downgrade() -> None:
     )
 
     # ------------------------------------
-    # 7) Create old index
+    # 5) Create old index
     # ------------------------------------
     op.execute(
         """
@@ -616,7 +524,7 @@ def downgrade() -> None:
     )
 
     # ------------------------------------
-    # 8) Recreate old refresh function & triggers
+    # 6) Recreate old refresh function & triggers
     # ------------------------------------
     op.execute(
         """
