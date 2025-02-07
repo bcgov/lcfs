@@ -41,5 +41,6 @@ export const schemaValidation = Yup.object({
     .matches(
       /^((\d{5}-\d{4})|(\d{5})|([A-Z]\d[A-Z]\s?\d[A-Z]\d))$/i,
       'Please enter a valid Postal / ZIP Code.'
-    )
+    ),
+  hasEarlyIssuance: Yup.string().required('Early issuance setting is required')
 })
