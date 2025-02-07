@@ -45,13 +45,16 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   const isSupplierRole =
     userRoles.some((role) => role.name === roles.supplier) || false
 
-  const editSupportingDocs = useMemo(() => {
-    return (
-      isAnalystRole &&
-      (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
-        currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED)
-    )
-  }, [isAnalystRole, currentStatus])
+    const editSupportingDocs = useMemo(() => {
+      return (
+        // Allow BCeID users to edit in Draft status
+        (isSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) ||
+        // Allow analysts to edit in Submitted or Assessed status
+        (isAnalystRole &&
+          (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
+           currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED))
+      )
+    }, [isAnalystRole, isSupplierRole, currentStatus])
 
   const editAnalyst = useMemo(() => {
     return (
