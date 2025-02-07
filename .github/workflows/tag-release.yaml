@@ -28,6 +28,14 @@ jobs:
           git config --global user.name "GitHub Actions"
           git fetch --tags
           git tag -l
-          prodtag="v${{ env.IMAGE_TAG }}"
-          git tag $prodtag ${{ env.IMAGE_TAG }}
-          git push origin $prodtag
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub
+        with:
+          tag_name: ${{ env.IMAGE_TAG }} # The pushed tag
+          release_name: "vv${{ env.IMAGE_TAG }}" # Release title
+          body: "This is an automated release 🚀" # Release notes
+          draft: false # Set to true if you want a draft release
+          prerelease: false
