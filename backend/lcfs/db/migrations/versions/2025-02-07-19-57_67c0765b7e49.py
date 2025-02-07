@@ -1,7 +1,7 @@
 """Transfers have N/A for Compliance Period until recorded, then set to the recorded year.
 
 Revision ID: 67c0765b7e49
-Revises: e50534b604f2
+Revises: 145e5501e322
 Create Date: 2025-02-07 19:57:21.922120
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "67c0765b7e49"
-down_revision = "e50534b604f2"
+down_revision = "145e5501e322"
 branch_labels = None
 depends_on = None
 
