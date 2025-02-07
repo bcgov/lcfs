@@ -15,7 +15,7 @@ export const ScheduleASummary = ({ data, status }) => {
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { complianceReportId } = useParams()
 
-  const { t } = useTranslation(['common', 'notionalTransfers'])
+  const { t } = useTranslation(['common', 'notionalTransfers', 'legacy'])
   const location = useLocation()
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export const ScheduleASummary = ({ data, status }) => {
       minWidth: 200
     },
     {
-      headerName: t('notionalTransfer:notionalTransferColLabels.fuelClass'),
+      headerName: t('legacy:columnLabels.fuelClass'),
       field: 'fuelCategory'
     },
     {

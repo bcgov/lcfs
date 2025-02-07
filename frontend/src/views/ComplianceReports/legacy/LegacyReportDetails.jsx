@@ -18,9 +18,12 @@ import { ScheduleASummary } from '@/views/ComplianceReports/legacy/ScheduleASumm
 import { useGetAllOtherUses } from '@/hooks/useOtherUses.js'
 import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary.jsx'
 import { ScheduleCSummary } from '@/views/ComplianceReports/legacy/ScheduleCSummary.jsx'
+import { useGetFuelSupplies } from '@/hooks/useFuelSupply.js'
+import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary.jsx'
+import { ScheduleBSummary } from '@/views/ComplianceReports/legacy/ScheduleBSummary.jsx'
 
 const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
-  const { t } = useTranslation()
+  const { t } = useTranslation(['legacy'])
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
 
@@ -41,7 +44,7 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
   const activityList = useMemo(
     () => [
       {
-        name: t('report:activityLists.scheduleA'),
+        name: t('legacy:activityLists.scheduleA'),
         action: () =>
           navigate(
             ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
@@ -56,7 +59,22 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
           )
       },
       {
-        name: t('report:activityLists.scheduleC'),
+        name: t('legacy:activityLists.scheduleB'),
+        action: () =>
+          navigate(
+            ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
+              ':compliancePeriod',
+              compliancePeriod
+            ).replace(':complianceReportId', complianceReportId)
+          ),
+        useFetch: useGetFuelSupplies,
+        component: (data) =>
+          data.fuelSupplies.length > 0 && (
+            <ScheduleBSummary status={currentStatus} data={data} />
+          )
+      },
+      {
+        name: t('legacy:activityLists.scheduleC'),
         action: () =>
           navigate(
             ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(

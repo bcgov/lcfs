@@ -26,7 +26,6 @@
     "complianceReportId": "Compliance report ID",
     "fuelType": "Fuel type",
     "fuelCategory": "Fuel category",
-    "fuelClass": "Fuel class",
     "provisionOfTheAct": "Determining carbon intensity",
     "fuelCode": "Fuel code",
     "quantitySupplied": "Quantity supplied",

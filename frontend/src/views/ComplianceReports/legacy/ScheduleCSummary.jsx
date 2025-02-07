@@ -16,7 +16,7 @@ import Grid2 from '@mui/material/Unstable_Grid2'
 export const ScheduleCSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const { t } = useTranslation(['common', 'otherUses'])
+  const { t } = useTranslation(['common', 'otherUses', 'legacy'])
 
   const { complianceReportId } = useParams()
 
@@ -50,7 +50,7 @@ export const ScheduleCSummary = ({ data, status }) => {
       width: '260px'
     },
     {
-      headerName: t('otherUses:otherUsesColLabels.fuelClass'),
+      headerName: t('legacy:columnLabels.fuelClass'),
       field: 'fuelCategory',
       floatingFilter: false
     },
