@@ -61,7 +61,7 @@ export const AddEditUser = ({ userType }) => {
 
   // User form hook and form validation
   const form = useForm({
-    resolver: yupResolver(userInfoSchema),
+    resolver: yupResolver(userInfoSchema(userType)),
     mode: 'onChange',
     defaultValues
   })

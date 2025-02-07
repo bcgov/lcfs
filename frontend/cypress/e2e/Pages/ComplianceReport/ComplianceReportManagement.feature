@@ -14,7 +14,7 @@ Feature: Compliance Report Management
     Then it should round the amount to 25
     When the supplier accepts the agreement
     And the supplier submits the report
-    Then the status should change to Submitted
+    Then the banner shows success
 
   Scenario: Analyst logs in to review a compliance report
     Given the user is on the login page

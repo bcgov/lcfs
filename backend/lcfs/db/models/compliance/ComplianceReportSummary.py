@@ -117,6 +117,8 @@ class ComplianceReportSummary(BaseModel, Auditable):
     compliance_report = relationship("ComplianceReport", back_populates="summary")
 
     def __repr__(self):
-        return f"<ComplianceReportSummary(id={self.summary_id}, quarter={self.quarter}, version={self.version})>"
+        return (
+            f"<ComplianceReportSummary(id={self.summary_id}, quarter={self.quarter})>"
+        )
 
     # method to annualize a report once all four quarters are approved?
