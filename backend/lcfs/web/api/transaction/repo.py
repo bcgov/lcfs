@@ -269,7 +269,7 @@ class TransactionRepository:
                             (
                                 Transaction.transaction_action
                                 == TransactionActionEnum.Reserved,
-                                Transaction.compliance_units,
+                                func.abs(Transaction.compliance_units),
                             ),
                             else_=0,
                         )
