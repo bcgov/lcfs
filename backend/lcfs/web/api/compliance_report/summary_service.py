@@ -803,7 +803,7 @@ class ComplianceReportSummaryService:
             TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity
             EER = fuel_supply.eer or 0  # Energy Effectiveness Ratio
             RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity
-            UCI = fuel_supply.uci  # Additional Carbon Intensity
+            UCI = fuel_supply.uci or 0  # Additional Carbon Intensity
             Q = fuel_supply.quantity or 0  # Quantity of Fuel Supplied
             ED = fuel_supply.energy_density or 0  # Energy Density
 
@@ -832,7 +832,7 @@ class ComplianceReportSummaryService:
             TCI = fuel_export.target_ci or 0  # Target Carbon Intensity
             EER = fuel_export.eer or 0  # Energy Effectiveness Ratio
             RCI = fuel_export.ci_of_fuel or 0  # Recorded Carbon Intensity
-            UCI = fuel_export.uci  # Additional Carbon Intensity
+            UCI = fuel_export.uci or 0  # Additional Carbon Intensity
             Q = fuel_export.quantity or 0  # Quantity of Fuel Supplied
             ED = fuel_export.energy_density or 0  # Energy Density
 
