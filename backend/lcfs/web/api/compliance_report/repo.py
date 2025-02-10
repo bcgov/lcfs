@@ -34,7 +34,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
-    ComplianceReportSchema,
+    ComplianceReportViewSchema,
     ComplianceReportSummaryUpdateSchema,
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
@@ -421,7 +421,7 @@ class ComplianceReportRepository:
 
         # Transform results into Pydantic schemas
         reports = [
-            ComplianceReportSchema.model_validate(report) for report in query_result
+            ComplianceReportViewSchema.model_validate(report) for report in query_result
         ]
         return reports, total_count
 

@@ -63,3 +63,9 @@ export const PHONE_REGEX =
 
 export const HELP_GUIDE_URL =
   'https://www2.gov.bc.ca/gov/content?id=7A58AF3855154747A0793F0C9A6E9089'
+
+export const FILTER_KEYS = {
+  COMPLIANCE_REPORT_GRID: 'compliance-reports-grid-filter',
+  TRANSACTIONS_GRID: 'transactions-grid-filter',
+  FUEL_CODES_GRID: 'fuel-codes-grid-filter'
+}

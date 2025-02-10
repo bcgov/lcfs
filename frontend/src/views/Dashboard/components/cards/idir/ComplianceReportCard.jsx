@@ -1,7 +1,9 @@
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
+import { FILTER_KEYS } from '@/constants/common'
 import { ROUTES } from '@/constants/routes'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useComplianceReportCounts } from '@/hooks/useDashboard'
 import { List, ListItemButton, Stack } from '@mui/material'
 import { useTranslation } from 'react-i18next'
@@ -26,15 +28,18 @@ export const ComplianceReportCard = () => {
   const { data: counts, isLoading } = useComplianceReportCounts()
 
   const handleNavigation = () => {
-    const filterStatuses = [
-      'Submitted',
-      'Recommended by analyst',
-      'Recommended by manager'
-    ]
-    const filter = `{"status":{"filterType":"set","type":"set","filter": ${JSON.stringify(
-      filterStatuses
-    )}}}`
-    localStorage.setItem('compliance-reports-grid-filter', filter)
+    const filter = {
+      status: {
+        filterType: 'set',
+        type: 'set',
+        filter: [
+          COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST,
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+        ]
+      }
+    }
+    sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, JSON.stringify(filter))
     navigate(ROUTES.REPORTS)
   }
 

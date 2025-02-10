@@ -11,6 +11,8 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgTransactionCounts } from '@/hooks/useDashboard'
+import { FILTER_KEYS } from '@/constants/common'
+import { TRANSACTION_TYPES, TRANSFER_STATUSES } from '@/constants/statuses'
 
 const CountDisplay = ({ count }) => (
   <BCTypography
@@ -34,10 +36,21 @@ const OrgTransactionsCard = () => {
   const { data: counts, isLoading } = useOrgTransactionCounts()
 
   const handleNavigation = (route) => {
-    const filterKey = 'transactions-grid-filter'
-    const filters =
-      '{"status":{"filterType":"set","type":"set","filter":["Draft", "Sent", "Submitted"]},"transactionType":{"filterType":"text","type":"equals","filter":"Transfer"}}'
-    localStorage.setItem(filterKey, filters)
+    sessionStorage.setItem(
+      FILTER_KEYS.TRANSACTIONS_GRID,
+      JSON.stringify({
+        status: {
+          filterType: 'set',
+          type: 'set',
+          filter: [TRANSFER_STATUSES.SENT, TRANSFER_STATUSES.SUBMITTED]
+        },
+        transactionType: {
+          filterType: 'text',
+          type: 'equals',
+          filter: TRANSACTION_TYPES.TRANSFER
+        }
+      })
+    )
     navigate(route)
   }
 

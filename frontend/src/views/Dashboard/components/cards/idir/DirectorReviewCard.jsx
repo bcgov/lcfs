@@ -9,6 +9,12 @@ import withRole from '@/utils/withRole'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useDirectorReviewCounts } from '@/hooks/useDashboard'
+import { FILTER_KEYS } from '@/constants/common'
+import {
+  COMPLIANCE_REPORT_STATUSES,
+  TRANSACTION_STATUSES,
+  TRANSFER_STATUSES
+} from '@/constants/statuses'
 
 // eslint-disable-next-line react/display-name
 const CountDisplay = React.memo(({ count }) => (
@@ -28,49 +34,61 @@ const CountDisplay = React.memo(({ count }) => (
 const FILTER_CONFIGS = {
   transfers: {
     route: ROUTES.TRANSACTIONS,
-    gridKey: 'transactions-grid-filter',
+    gridKey: FILTER_KEYS.TRANSACTIONS_GRID,
     filter: JSON.stringify({
       transactionType: {
         filterType: 'text',
         type: 'equals',
         filter: 'Transfer'
       },
-      status: { filterType: 'text', type: 'equals', filter: 'Recommended' }
+      status: {
+        filterType: 'text',
+        type: 'equals',
+        filter: TRANSFER_STATUSES.RECOMMENDED
+      }
     })
   },
   complianceReports: {
     route: ROUTES.REPORTS,
-    gridKey: 'compliance-reports-grid-filter',
+    gridKey: FILTER_KEYS.COMPLIANCE_REPORT_GRID,
     filter: JSON.stringify({
       status: {
         filterType: 'text',
         type: 'equals',
-        filter: 'Recommended by manager'
+        filter: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
       }
     })
   },
   initiativeAgreements: {
     route: ROUTES.TRANSACTIONS,
-    gridKey: 'transactions-grid-filter',
+    gridKey: FILTER_KEYS.TRANSACTIONS_GRID,
     filter: JSON.stringify({
       transactionType: {
         filterType: 'text',
         type: 'equals',
         filter: 'Initiative Agreement'
       },
-      status: { filterType: 'text', type: 'equals', filter: 'Recommended' }
+      status: {
+        filterType: 'text',
+        type: 'equals',
+        filter: TRANSACTION_STATUSES.RECOMMENDED
+      }
     })
   },
   adminAdjustments: {
     route: ROUTES.TRANSACTIONS,
-    gridKey: 'transactions-grid-filter',
+    gridKey: FILTER_KEYS.TRANSACTIONS_GRID,
     filter: JSON.stringify({
       transactionType: {
         filterType: 'text',
         type: 'equals',
         filter: 'Admin Adjustment'
       },
-      status: { filterType: 'text', type: 'equals', filter: 'Recommended' }
+      status: {
+        filterType: 'text',
+        type: 'equals',
+        filter: TRANSACTION_STATUSES.RECOMMENDED
+      }
     })
   }
 }
@@ -103,7 +121,7 @@ const DirectorReviewCard = () => {
 
   const handleNavigation = useCallback(
     (config) => {
-      localStorage.setItem(config.gridKey, config.filter)
+      sessionStorage.setItem(config.gridKey, config.filter)
       navigate(config.route)
     },
     [navigate]

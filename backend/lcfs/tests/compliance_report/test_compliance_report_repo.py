@@ -11,7 +11,7 @@ from lcfs.db.models.compliance import (
     ComplianceReportSummary,
     FuelSupply,
 )
-from lcfs.web.api.compliance_report.schema import ComplianceReportSchema, ComplianceReportSummarySchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportViewSchema, ComplianceReportSummarySchema
 from lcfs.web.api.base import (
     PaginationRequestSchema,
 )
@@ -632,7 +632,7 @@ async def test_get_reports_paginated_success(
 
     assert isinstance(reports, list)
     assert len(reports) > 0
-    assert isinstance(reports[0], ComplianceReportSchema)
+    assert isinstance(reports[0], ComplianceReportViewSchema)
     assert total_count >= len(reports)
 
 
