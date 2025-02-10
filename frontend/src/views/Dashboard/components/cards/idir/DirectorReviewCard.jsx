@@ -16,20 +16,6 @@ import {
   TRANSFER_STATUSES
 } from '@/constants/statuses'
 
-// eslint-disable-next-line react/display-name
-const CountDisplay = React.memo(({ count }) => (
-  <BCTypography
-    component="span"
-    variant="h3"
-    sx={{
-      color: 'success.main',
-      marginX: 3
-    }}
-  >
-    {count}
-  </BCTypography>
-))
-
 // Constants for filter configurations
 const FILTER_CONFIGS = {
   transfers: {
@@ -130,7 +116,16 @@ const DirectorReviewCard = () => {
   const renderLinkWithCount = useCallback(
     (text, count, onClick) => (
       <>
-        <CountDisplay count={count} />
+        <BCTypography
+          component="span"
+          variant="h3"
+          sx={{
+            color: 'success.main',
+            marginX: 3
+          }}
+        >
+          {count}
+        </BCTypography>
         <BCTypography
           variant="body2"
           color="link"
