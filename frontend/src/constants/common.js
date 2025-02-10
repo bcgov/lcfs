@@ -69,3 +69,5 @@ export const FILTER_KEYS = {
   TRANSACTIONS_GRID: 'transactions-grid-filter',
   FUEL_CODES_GRID: 'fuel-codes-grid-filter'
 }
+
+export const MAX_FILE_SIZE_BYTES = 52428800 // 50MB
