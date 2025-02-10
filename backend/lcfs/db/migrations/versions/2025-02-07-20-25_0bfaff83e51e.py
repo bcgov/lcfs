@@ -42,17 +42,20 @@ def upgrade():
                     cr.version,
                     crs.status
                 FROM compliance_report cr
-                JOIN latest_versions lv ON cr.compliance_report_group_uuid = lv.compliance_report_group_uuid
+                JOIN latest_versions lv 
+                    ON cr.compliance_report_group_uuid = lv.compliance_report_group_uuid
                     AND cr.version = lv.max_version
-                JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
+                JOIN compliance_report_status crs 
+                    ON cr.current_status_id = crs.compliance_report_status_id
             ),
             second_latest_versions AS (
-                -- Get second latest version only for reports where latest is Draft
+                -- Get the second latest version only for reports where the latest is Draft
                 SELECT
                     cr.compliance_report_group_uuid,
                     MAX(cr.version) AS second_max_version
                 FROM compliance_report cr
-                JOIN latest_with_status lws ON cr.compliance_report_group_uuid = lws.compliance_report_group_uuid
+                JOIN latest_with_status lws 
+                    ON cr.compliance_report_group_uuid = lws.compliance_report_group_uuid
                 WHERE cr.version < lws.version
                     AND lws.status = 'Draft'
                 GROUP BY cr.compliance_report_group_uuid
@@ -61,18 +64,20 @@ def upgrade():
                 -- Always select the latest version
                 SELECT cr.*
                 FROM compliance_report cr
-                JOIN latest_versions lv ON cr.compliance_report_group_uuid = lv.compliance_report_group_uuid
+                JOIN latest_versions lv 
+                    ON cr.compliance_report_group_uuid = lv.compliance_report_group_uuid
                     AND cr.version = lv.max_version
-                
-                UNION
-                
-                -- Select second latest version only where latest is Draft
+
+                UNION ALL
+
+                -- Select second latest version only where the latest is Draft
                 SELECT cr.*
                 FROM compliance_report cr
-                JOIN second_latest_versions slv ON cr.compliance_report_group_uuid = slv.compliance_report_group_uuid
+                JOIN second_latest_versions slv 
+                    ON cr.compliance_report_group_uuid = slv.compliance_report_group_uuid
                     AND cr.version = slv.second_max_version
             )
-            SELECT
+            SELECT DISTINCT
                 sr.compliance_report_id,
                 sr.compliance_report_group_uuid,
                 sr.version,
@@ -85,9 +90,12 @@ def upgrade():
                 crs.status AS report_status,
                 sr.update_date
             FROM selected_reports sr
-            JOIN compliance_period cp ON sr.compliance_period_id = cp.compliance_period_id
-            JOIN organization o ON sr.organization_id = o.organization_id
-            JOIN compliance_report_status crs ON sr.current_status_id = crs.compliance_report_status_id;
+            JOIN compliance_period cp 
+                ON sr.compliance_period_id = cp.compliance_period_id
+            JOIN organization o 
+                ON sr.organization_id = o.organization_id
+            JOIN compliance_report_status crs 
+                ON sr.current_status_id = crs.compliance_report_status_id;
             """
         )
         # Drop org_compliance_count
