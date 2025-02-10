@@ -548,6 +548,7 @@ def downgrade():
         op.execute(
             """
         CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
+        with all_transactions as (
             ------------------------------------------------------------------------
             -- Transfers
             ------------------------------------------------------------------------
@@ -562,7 +563,16 @@ def downgrade():
                 t.quantity,
                 t.price_per_unit,
                 ts.status::text AS status,
-                EXTRACT(YEAR FROM t.transaction_effective_date)::text AS compliance_period,
+                CASE 
+                    WHEN ts.status = 'Recorded' THEN EXTRACT(YEAR FROM (
+                        SELECT th.create_date
+                        FROM transfer_history th
+                        WHERE th.transfer_id = t.transfer_id
+                        AND th.transfer_status_id = 6  -- Recorded
+                        LIMIT 1
+                    ))::text
+                    ELSE 'N/A'
+                END AS compliance_period,
                 t.from_org_comment AS comment,
                 tc.category,
                 (
@@ -661,7 +671,6 @@ def downgrade():
             -- Compliance Reports
             ------------------------------------------------------------------------
             SELECT
-                distinct
                 cr.compliance_report_id AS transaction_id,
                 'ComplianceReport' AS transaction_type,
                 cr.nickname AS description,
@@ -690,7 +699,8 @@ def downgrade():
             JOIN "transaction" tr
                 ON cr.transaction_id = tr.transaction_id
                AND cr.transaction_id IS NOT NULL
-            WHERE crs.status IN ('Assessed', 'Reassessed');
+            WHERE crs.status IN ('Assessed', 'Reassessed'))
+            SELECT DISTINCT * FROM all_transactions;
         """
         )
         op.execute(
