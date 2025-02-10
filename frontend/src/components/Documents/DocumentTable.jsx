@@ -1,4 +1,3 @@
-import BCModal from '@/components/BCModal'
 import { useEffect, useRef, useState } from 'react'
 import {
   Box,
@@ -22,6 +21,7 @@ import {
   useUploadDocument,
   useViewDocument
 } from '@/hooks/useDocuments'
+import { MAX_FILE_SIZE_BYTES } from '@/constants/common.js'
 
 const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   width: '100%',
@@ -49,8 +49,6 @@ const TableCell = styled(Box)({
   display: 'flex',
   alignItems: 'center'
 })
-
-const BYTES_50 = 52428800
 
 function DocumentTable({ parentType, parentID }) {
   const { t } = useTranslation(['report'])
@@ -120,7 +118,7 @@ function DocumentTable({ parentType, parentID }) {
       fileSize: file.size
     }
 
-    if (file.size > BYTES_50) {
+    if (file.size > MAX_FILE_SIZE_BYTES) {
       setFiles([
         ...files,
         {

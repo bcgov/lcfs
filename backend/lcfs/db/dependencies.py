@@ -2,7 +2,6 @@ import logging
 from typing import AsyncGenerator
 
 from fastapi import Request
-from redis import asyncio as aioredis
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -30,7 +29,9 @@ async def set_user_context(session: AsyncSession, username: str):
         raise e
 
 
-async def get_async_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
+async def get_async_db_session(
+    request: Request,
+) -> AsyncGenerator[AsyncSession, None]:
     """
     Create and get database session.
     :yield: database session.
