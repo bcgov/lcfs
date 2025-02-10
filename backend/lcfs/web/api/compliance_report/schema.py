@@ -163,7 +163,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     legacy_id: Optional[int] = None
 
 
-class ComplianceReportSchema(BaseSchema):
+class ComplianceReportViewSchema(BaseSchema):
     compliance_report_id: int
     compliance_report_group_uuid: str
     version: int
@@ -192,7 +192,7 @@ class ComplianceReportCreateSchema(BaseSchema):
 
 class ComplianceReportListSchema(BaseSchema):
     pagination: PaginationResponseSchema
-    reports: List[ComplianceReportSchema]
+    reports: List[ComplianceReportViewSchema]
 
 
 class ComplianceReportSummaryRowSchema(BaseSchema):

@@ -1,7 +1,9 @@
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
+import { FILTER_KEYS } from '@/constants/common'
 import { ROUTES } from '@/constants/routes'
+import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 import { useFuelCodeCounts } from '@/hooks/useDashboard'
 import { List, ListItemButton, Stack } from '@mui/material'
 import { useTranslation } from 'react-i18next'
@@ -26,9 +28,15 @@ export const FuelCodeCard = () => {
   const { data: counts, isLoading } = useFuelCodeCounts()
 
   const handleNavigation = () => {
-    localStorage.setItem(
-      'fuel-codes-grid-filter',
-      '{"status":{"filterType":"text","type":"equals","filter":"Draft"}}'
+    sessionStorage.setItem(
+      FILTER_KEYS.FUEL_CODES_GRID,
+      JSON.stringify({
+        status: {
+          filterType: 'text',
+          type: 'equals',
+          filter: FUEL_CODE_STATUSES.DRAFT
+        }
+      })
     )
     navigate(ROUTES.FUELCODES)
   }

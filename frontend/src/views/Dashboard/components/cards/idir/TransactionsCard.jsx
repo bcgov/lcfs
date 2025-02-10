@@ -9,36 +9,23 @@ import withRole from '@/utils/withRole'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useTransactionCounts } from '@/hooks/useDashboard'
-
-// eslint-disable-next-line react/display-name
-const CountDisplay = React.memo(({ count }) => (
-  <BCTypography
-    component="span"
-    variant="h3"
-    sx={{
-      color: 'success.main',
-      marginX: 3
-    }}
-  >
-    {count}
-  </BCTypography>
-))
+import { TRANSACTION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
 
 // Constants for transaction configurations
 const TRANSACTION_CONFIGS = {
   transfers: {
     type: 'Transfer',
-    statuses: ['Submitted', 'Recommended'],
+    statuses: [TRANSFER_STATUSES.SUBMITTED, TRANSFER_STATUSES.RECOMMENDED],
     translationKey: 'dashboard:transactions.transfersInProgress'
   },
   initiativeAgreements: {
     type: 'Initiative Agreement',
-    statuses: ['Draft', 'Recommended'],
+    statuses: [TRANSACTION_STATUSES.DRAFT, TRANSACTION_STATUSES.RECOMMENDED],
     translationKey: 'dashboard:transactions.initiativeAgreementsInProgress'
   },
   adminAdjustments: {
     type: 'Admin Adjustment',
-    statuses: ['Draft', 'Recommended'],
+    statuses: [TRANSACTION_STATUSES.DRAFT, TRANSACTION_STATUSES.RECOMMENDED],
     translationKey: 'dashboard:transactions.administrativeAdjustmentsInProgress'
   },
   viewAll: {
@@ -97,9 +84,9 @@ const TransactionsCard = () => {
       const filter = createFilter(transactionType, statuses)
 
       if (filter) {
-        localStorage.setItem(itemKey, filter)
+        sessionStorage.setItem(itemKey, filter)
       } else {
-        localStorage.removeItem(itemKey)
+        sessionStorage.removeItem(itemKey)
       }
 
       navigate(ROUTES.TRANSACTIONS)
@@ -110,7 +97,18 @@ const TransactionsCard = () => {
   const renderLinkWithCount = useCallback(
     (text, count, onClick) => (
       <>
-        {count != null && <CountDisplay count={count} />}
+        {count != null && (
+          <BCTypography
+            component="span"
+            variant="h3"
+            sx={{
+              color: 'success.main',
+              marginX: 3
+            }}
+          >
+            {count}
+          </BCTypography>
+        )}
         <BCTypography
           variant="body2"
           color="link"

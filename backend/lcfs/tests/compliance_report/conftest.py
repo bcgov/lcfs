@@ -17,7 +17,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     CompliancePeriodSchema,
     ComplianceReportOrganizationSchema,
-    ComplianceReportSchema,
+    ComplianceReportViewSchema,
     SummarySchema,
     ComplianceReportStatusSchema,
     ComplianceReportHistorySchema,
@@ -124,7 +124,7 @@ def compliance_report_schema(
         )
         report_status = report_status or compliance_report_status_schema.status
 
-        return ComplianceReportSchema(
+        return ComplianceReportViewSchema(
             compliance_report_id=compliance_report_id,
             compliance_report_group_uuid=compliance_report_group_uuid,
             version=version,
