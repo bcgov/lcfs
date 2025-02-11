@@ -33,6 +33,7 @@ import { SupportingDocumentSummary } from '@/views/SupportingDocuments/Supportin
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { isArrayEmpty } from '@/utils/array.js'
 
 const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
@@ -72,20 +73,6 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
     }
     return editAnalyst || editSupplier
   }
-
-  const isArrayEmpty = useCallback((data) => {
-    if (Array.isArray(data)) {
-      return data.length === 0
-    }
-    if (typeof data === 'object' && data !== null) {
-      const keys = Object.keys(data)
-      const arrayKey = keys.find((key) => key !== 'pagination')
-      if (arrayKey && Array.isArray(data[arrayKey])) {
-        return data[arrayKey].length === 0
-      }
-    }
-    return null
-  }, [])
 
   const activityList = useMemo(
     () => [
@@ -268,7 +255,8 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
         return (
-          ((data && !isArrayEmpty(data)) && (
+          data &&
+          !isArrayEmpty(data) && (
             <Accordion
               key={index}
               expanded={expanded.includes(`panel${index}`)}
@@ -326,7 +314,6 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
                 )}
               </AccordionDetails>
             </Accordion>
-            )
           )
         )
       })}

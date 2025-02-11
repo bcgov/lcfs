@@ -6,19 +6,15 @@ import {
   useGetFuelExports,
   useSaveFuelExport
 } from '@/hooks/useFuelExport'
-import { isArrayEmpty } from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import {
-  defaultColDef,
-  fuelExportColDefs,
-  PROVISION_APPROVED_FUEL_CODE
-} from './_schema'
+import { defaultColDef, fuelExportColDefs } from './_schema'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import { isArrayEmpty } from '@/utils/array.js'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
