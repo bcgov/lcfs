@@ -153,7 +153,7 @@ describe('ComplianceReportSummary', () => {
       expect(screen.getByTestId('accordion-summary')).toBeInTheDocument()
       expect(screen.getByTestId('accordion-details')).toBeInTheDocument()
       expect(screen.getByText('Summary & declaration')).toBeInTheDocument()
-      expect(screen.getAllByText('SummaryTable')).toHaveLength(3)
+      expect(screen.getAllByText('SummaryTable')).toHaveLength(4)
       expect(
         screen.getByTestId('signing-authority-checkbox')
       ).toBeInTheDocument()

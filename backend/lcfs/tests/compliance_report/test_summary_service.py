@@ -444,18 +444,23 @@ async def test_calculate_non_compliance_penalty_summary_without_penalty_payable(
 ):
     mock_compliance_report_summary = [
         compliance_report_summary_row_schema(
-            line="11", gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
+            line=11, gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
         )
     ]
 
     result = compliance_report_summary_service.calculate_non_compliance_penalty_summary(
-        0, mock_compliance_report_summary
+        0, mock_compliance_report_summary,0
     )
 
-    assert len(result) == 3
+    assert len(result) == 4
+    # Check line 11 values
     assert result[0].total_value == 6000
-    assert result[1].total_value == 0
-    assert result[2].total_value == 6000
+     # Check line 21 values (from low carbon fuel target)
+    assert result[1].total_value == 0  # No penalty when units = 0
+    # Check line 28 values (from low carbon fuel requirement)
+    assert result[2].total_value == 0  # No penalty from part 3 when units = 0
+    # Check total line values
+    assert result[3].total_value == 6000  # 6000 + 0 + 0
 
 
 @pytest.mark.anyio
@@ -464,18 +469,23 @@ async def test_calculate_non_compliance_penalty_summary_with_penalty_payable(
 ):
     mock_compliance_report_summary = [
         compliance_report_summary_row_schema(
-            line="11", gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
+            line=11, gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
         )
     ]
 
     result = compliance_report_summary_service.calculate_non_compliance_penalty_summary(
-        -2, mock_compliance_report_summary
+        -2, mock_compliance_report_summary, -1
     )
 
-    assert len(result) == 3
+    assert len(result) == 4
+    # Check line 11 values (from renewable fuel target)
     assert result[0].total_value == 6000
+    # Check values from low carbon fuel target (line 21)
     assert result[1].total_value == 1200
-    assert result[2].total_value == 7200
+    # Check values from part 3 requirement (line 28)
+    assert result[2].total_value == -1
+    # Check total values (all penalties combined)
+    assert result[3].total_value == 7199  # 6000 + 1200 + (-1)
 
 
 @pytest.mark.anyio

@@ -94,6 +94,45 @@ LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
     },
 }
 
+LOW_CARBON_FUEL_REQUIREMENT_SUMMARY_DESCRIPTIONS = {
+    23: {
+        "description": "Total credits from fuel supplied (from Schedule B)",
+        "field": "total_credits_from_fuel_supplied",
+    },
+    24:{
+        "description": "Total debits from fuel exported (from Schedule B)",
+        "field": "total_debits_from_fuel_supplied",
+    },
+    25:{
+        "description": "Net credit or debit balance for compliance period",
+        "field": "total_credit_debit_balance",
+    },
+    26: {
+        "description": "Total banked credits to offset outstanding debits (if applicable)",
+        "field": "total_banked_credits",
+    },
+    "26a": {
+        "description": "Banked credits used to offset outstanding debits - Previous Reports",
+        "field": "banked_credits_used_prev_reports",
+    },
+    "26b": {
+        "description": "Banked credits used to offset outstanding debits - Supplemental Report #2",
+        "field": "banked_credits_used_supplemental_report",
+    },
+    "26c": {
+        "description": "Banked credits spent that will be returned due to debit decrease - Supplemental Report #2",
+        "field": "banked_credits_spent",
+    },
+    27:{
+        "description": "Outstanding debit balance",
+        "field": "outstanding_debit_balance",
+    },
+    28: {
+        "description": "Part 3 non-compliance penalty payable",
+        "field": "non_compliance_penalty_payable",
+    }
+}
+
 NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
     11: {
         "description": "Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)",
@@ -102,6 +141,10 @@ NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
     21: {
         "description": "Low carbon fuel target non-compliance penalty total (Line 21)",
         "field": "line_21_non_compliance_penalty_payable",
+    },
+    28: {
+        "description": "Part 3 non-compliance penalty payable (Line 28)",
+        "field": "part_3_non_compliance_penalty_payable",
     },
     None: {
         "description": "Total non-compliance penalty payable ",

@@ -405,6 +405,7 @@ async def test_update_compliance_report_summary_success(
             is_locked=False,
             renewable_fuel_target_summary=mock_compliance_report_summary.renewable_fuel_target_summary,
             low_carbon_fuel_target_summary=mock_compliance_report_summary.low_carbon_fuel_target_summary,
+            low_carbon_fuel_requirement_summary=mock_compliance_report_summary.low_carbon_fuel_requirement_summary,
             non_compliance_penalty_summary=mock_compliance_report_summary.non_compliance_penalty_summary,
             summary_id=mock_compliance_report_summary.summary_id,
         )

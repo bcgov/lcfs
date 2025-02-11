@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import ClassVar, Optional, List
+from typing import ClassVar, Optional, List, Union
 from datetime import datetime, date
 from enum import Enum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
@@ -196,7 +196,7 @@ class ComplianceReportListSchema(BaseSchema):
 
 
 class ComplianceReportSummaryRowSchema(BaseSchema):
-    line: Optional[int] = None
+    line: Optional[Union[int, str]] = None
     description: Optional[str] = ""
     field: Optional[str] = ""
     gasoline: Optional[float] = 0
@@ -210,6 +210,7 @@ class ComplianceReportSummaryRowSchema(BaseSchema):
 class ComplianceReportSummarySchema(BaseSchema):
     renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
     low_carbon_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
+    low_carbon_fuel_requirement_summary: List[ComplianceReportSummaryRowSchema]
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
     can_sign: bool = False
     summary_id: Optional[int] = None
@@ -224,6 +225,7 @@ class ComplianceReportSummaryUpdateSchema(BaseSchema):
     is_locked: Optional[bool] = False
     renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
     low_carbon_fuel_target_summary: List[ComplianceReportSummaryRowSchema]
+    low_carbon_fuel_requirement_summary: List[ComplianceReportSummaryRowSchema]
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
     summary_id: int
     is_locked: bool

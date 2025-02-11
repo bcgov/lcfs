@@ -312,6 +312,27 @@ export const lowCarbonColumns = (t) => [
   }
 ]
 
+export const lowCarbonRequirementsColumns = (t) => [
+  {
+    id: 'line',
+    label: t('report:summaryLabels.line'),
+    align: 'center',
+    width: '100px',
+    bold: true
+  },
+  {
+    id: 'description',
+    label: t('report:lowCarbonFuelRequirementSummary'),
+    maxWidth: '300px'
+  },
+  {
+    id: 'value',
+    label: t('report:summaryLabels.value'),
+    align: 'center',
+    width: '150px'
+  }
+]
+
 export const nonComplianceColumns = (t) => [
   {
     id: 'description',

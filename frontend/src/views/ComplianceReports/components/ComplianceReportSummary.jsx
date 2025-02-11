@@ -12,6 +12,7 @@ import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
 import SummaryTable from './SummaryTable'
 import {
   renewableFuelColumns,
+  lowCarbonRequirementsColumns,
   lowCarbonColumns,
   nonComplianceColumns
 } from './_schema'
@@ -166,6 +167,13 @@ const ComplianceReportSummary = ({
             title={t('report:lowCarbonFuelTargetSummary')}
             columns={lowCarbonColumns(t)}
             data={summaryData?.lowCarbonFuelTargetSummary}
+            width={'80.65%'}
+          />
+          <SummaryTable
+            data-test="low-carbon-requirement-summary"
+            title={t('report:lowCarbonFuelRequirementSummary')}
+            columns={lowCarbonRequirementsColumns(t)}
+            data={summaryData?.lowCarbonFuelRequirementSummary}
             width={'80.65%'}
           />
           <SummaryTable

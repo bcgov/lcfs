@@ -15,6 +15,7 @@ from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.compliance_report.constants import (
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
+    LOW_CARBON_FUEL_REQUIREMENT_SUMMARY_DESCRIPTIONS,
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
     PRESCRIBED_PENALTY_RATE,
     FORMATS,
@@ -74,6 +75,7 @@ class ComplianceReportSummaryService:
             quarter=summary_obj.quarter,
             renewable_fuel_target_summary=[],
             low_carbon_fuel_target_summary=[],
+            low_carbon_fuel_requirement_summary=[],
             non_compliance_penalty_summary=[],
             can_sign=False,
         )
@@ -93,7 +95,10 @@ class ComplianceReportSummaryService:
                 self._handle_renewable_line(summary, summary_obj, column.key, line)
             elif line in range(12, 23):
                 self._handle_low_carbon_line(summary, summary_obj, column.key, line)
-
+            elif line in range(23, 29):
+                self._handle_low_carbon_fuel_requirement_line(
+                    summary, summary_obj, column.key, line
+                )
             # Let's just use special logic to calculate these
             if line in [11, 21]:
                 self._handle_summary_lines(summary, summary_obj, column.key, line)
@@ -153,6 +158,30 @@ class ComplianceReportSummaryService:
                     )
                 ),
                 field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["field"],
+                value=int(getattr(summary_obj, column_key) or 0),
+            )
+        )
+
+    def _handle_low_carbon_fuel_requirement_line(
+        self, summary, summary_obj, column_key, line: int
+    ) -> None:
+        """Populate the low_carbon_fuel_requirement_summary section"""
+        description = self._format_description(
+            line=line,
+            descriptions_dict=LOW_CARBON_FUEL_REQUIREMENT_SUMMARY_DESCRIPTIONS,
+        )
+        summary.low_carbon_fuel_requirement_summary.append(
+            ComplianceReportSummaryRowSchema(
+                line=line,
+                format=FORMATS.NUMBER.value if line != 28 else FORMATS.CURRENCY.value,
+                description=(
+                    description
+                    if line != 28
+                    else self._non_compliance_special_description(
+                        line, summary_obj, LOW_CARBON_FUEL_REQUIREMENT_SUMMARY_DESCRIPTIONS
+                    )
+                ),
+                field=LOW_CARBON_FUEL_REQUIREMENT_SUMMARY_DESCRIPTIONS[line]["field"],
                 value=int(getattr(summary_obj, column_key) or 0),
             )
         )
@@ -405,8 +434,14 @@ class ComplianceReportSummaryService:
                 compliance_report,
             )
         )
+        low_carbon_fuel_requirement_summary, non_compliance_penalty_payable_part_3_units= (
+            await self.calculate_low_carbon_fuel_requirement_summary(
+                compliance_report
+            )
+        )
         non_compliance_penalty_summary = self.calculate_non_compliance_penalty_summary(
-            non_compliance_penalty_payable_units, renewable_fuel_target_summary
+            non_compliance_penalty_payable_units, renewable_fuel_target_summary, 
+            non_compliance_penalty_payable_part_3_units
         )
 
         existing_summary = self.convert_summary_to_dict(summary_model)
@@ -432,6 +467,7 @@ class ComplianceReportSummaryService:
             compliance_report,
             renewable_fuel_target_summary,
             low_carbon_fuel_target_summary,
+            low_carbon_fuel_requirement_summary,
             non_compliance_penalty_summary,
             summary_model,
             can_sign,
@@ -450,6 +486,7 @@ class ComplianceReportSummaryService:
         compliance_report,
         renewable_fuel_target_summary,
         low_carbon_fuel_target_summary,
+        low_carbon_fuel_requirement_summary,
         non_compliance_penalty_summary,
         summary_model,
         can_sign,
@@ -461,6 +498,7 @@ class ComplianceReportSummaryService:
             quarter=summary_model.quarter,
             renewable_fuel_target_summary=renewable_fuel_target_summary,
             low_carbon_fuel_target_summary=low_carbon_fuel_target_summary,
+            low_carbon_fuel_requirement_summary=low_carbon_fuel_requirement_summary,
             non_compliance_penalty_summary=non_compliance_penalty_summary,
             can_sign=can_sign,
         )
@@ -726,10 +764,45 @@ class ComplianceReportSummaryService:
 
         return low_carbon_fuel_target_summary, non_compliance_penalty_payable_units
 
+    async def calculate_low_carbon_fuel_requirement_summary(
+        self,
+        compliance_report: ComplianceReport,
+    ) -> Tuple[List[ComplianceReportSummaryRowSchema], int]:
+        non_compliance_penalty_payable_units_part_3=0
+        low_carbon_summary_lines = {
+            23: {"value": 0},
+            24: {"value": 0},
+            25: {"value": 0},
+            26: {"value": 0},
+            "26a": {"value": 0},
+            "26b": {"value": 0},
+            "26c": {"value": 0},
+            27: {"value": 0},
+            28: {"value": 0},
+        }
+
+        low_carbon_fuel_requirement_summary = [
+            ComplianceReportSummaryRowSchema(
+                line=line,
+                description=LOW_CARBON_FUEL_REQUIREMENT_SUMMARY_DESCRIPTIONS[
+                    int(line) if isinstance(line, str) and line.isdigit() else line
+                ]["description"],
+                field=LOW_CARBON_FUEL_REQUIREMENT_SUMMARY_DESCRIPTIONS[
+                    int(line) if isinstance(line, str) and line.isdigit() else line
+                ]["field"],
+                value=values.get("value", 0),
+                format=(FORMATS.CURRENCY if (line == 28) else FORMATS.NUMBER),
+            )
+            for line, values in low_carbon_summary_lines.items()
+        ]
+
+        return low_carbon_fuel_requirement_summary, non_compliance_penalty_payable_units_part_3
+
     def calculate_non_compliance_penalty_summary(
         self,
         non_compliance_penalty_payable_units: int,
         renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema],
+        non_compliance_penalty_payable_part3_units: int,
     ) -> List[ComplianceReportSummaryRowSchema]:
         non_compliance_penalty_payable = int(
             (non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)
@@ -739,7 +812,9 @@ class ComplianceReportSummaryService:
         non_compliance_summary_lines = {
             11: {"total_value": line_11.total_value},
             21: {"total_value": non_compliance_penalty_payable},
-            None: {"total_value": non_compliance_penalty_payable + line_11.total_value},
+            28: {"total_value": non_compliance_penalty_payable_part3_units},
+            None: {"total_value": non_compliance_penalty_payable + line_11.total_value +
+                   non_compliance_penalty_payable_part3_units},
         }
 
         non_compliance_penalty_summary = [

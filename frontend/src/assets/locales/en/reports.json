@@ -133,6 +133,7 @@
   "lowCarbonFuelTarget": "Low carbon fuel target",
   "renewableFuelTargetSummary": "Renewable fuel target summary",
   "lowCarbonFuelTargetSummary": "Low carbon fuel target summary",
+  "lowCarbonFuelRequirementSummary": "Low carbon fuel requirement summary",
   "nonCompliancePenaltySummary": "Non-compliance penalty payable summary",
   "delta": "Delta",
   "compareReports": "Compare summary data between the following 2 report versions",

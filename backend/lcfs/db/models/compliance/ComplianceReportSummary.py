@@ -101,6 +101,17 @@ class ComplianceReportSummary(BaseModel, Auditable):
     line_21_surplus_deficit_ratio = Column(Float, nullable=False, default=0)
     line_22_compliance_units_issued = Column(Float, nullable=False, default=0)
 
+    #Low carbon fuel requirement summary columns
+    line_23_total_credits_from_fuel_supplied = Column(Float, nullable=False, default=0)
+    line_24_total_debits_from_fuel_supplied = Column(Float, nullable=False, default=0)
+    line_25_total_credit_debit_balance = Column(Float, nullable=False, default=0)
+    line_26_total_banked_credits = Column(Float, nullable=False, default=0)
+    line_26a_banked_credits_used_prev_reports = Column(Float, nullable=False, default=0)
+    line_26b_banked_credits_used_supplemental_report = Column(Float, nullable=False, default=0)
+    line_26c_banked_credits_spent = Column(Float, nullable=False, default=0)
+    line_27_outstanding_debit_balance = Column(Float, nullable=False, default=0)
+    line_28_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
+
     # Non-compliance penalty summary columns
     line_11_fossil_derived_base_fuel_gasoline = Column(Float, nullable=False, default=0)
     line_11_fossil_derived_base_fuel_diesel = Column(Float, nullable=False, default=0)

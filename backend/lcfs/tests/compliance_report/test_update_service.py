@@ -250,6 +250,11 @@ async def test_handle_submitted_status_with_existing_summary(
                 line=12, field="low_carbon_fuel_required", value=0
             ),
         ],
+        low_carbon_fuel_requirement_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=23, field="total_gasoline_energy", value=0
+            ),
+        ],
         non_compliance_penalty_summary=[
             ComplianceReportSummaryRowSchema(
                 line=21, field="non_compliance_penalty_payable", value=0
@@ -334,6 +339,11 @@ async def test_handle_submitted_status_without_existing_summary(
         low_carbon_fuel_target_summary=[
             ComplianceReportSummaryRowSchema(
                 line=12, field="low_carbon_fuel_required", value=0
+            ),
+        ],
+        low_carbon_fuel_requirement_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=23, field="total_gasoline_energy", value=0
             ),
         ],
         non_compliance_penalty_summary=[
@@ -431,6 +441,11 @@ async def test_handle_submitted_status_partial_existing_values(
                 line=12, field="low_carbon_fuel_required", value=0
             ),
         ],
+        low_carbon_fuel_requirement_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=23, field="total_gasoline_energy", value=0
+            ),
+        ],
         non_compliance_penalty_summary=[
             ComplianceReportSummaryRowSchema(
                 line=21, field="non_compliance_penalty_payable", value=0
@@ -521,6 +536,11 @@ async def test_handle_submitted_status_no_user_edits(
                 line=12, field="low_carbon_fuel_required", value=0
             ),
         ],
+        low_carbon_fuel_requirement_summary=[
+            ComplianceReportSummaryRowSchema(
+                line=23, field="total_gasoline_energy", value=0
+            ),
+        ],
         non_compliance_penalty_summary=[
             ComplianceReportSummaryRowSchema(
                 line=21, field="non_compliance_penalty_payable", value=0
@@ -582,6 +602,7 @@ async def test_handle_submitted_no_sign(
         compliance_report_id=report_id,
         renewable_fuel_target_summary=[],
         low_carbon_fuel_target_summary=[],
+        low_carbon_fuel_requirement_summary=[],
         non_compliance_penalty_summary=[],
         can_sign=False,
     )
@@ -635,6 +656,7 @@ async def test_handle_submitted_status_no_credits(
         compliance_report_id=report_id,
         renewable_fuel_target_summary=[],
         low_carbon_fuel_target_summary=[],
+        low_carbon_fuel_requirement_summary=[],
         non_compliance_penalty_summary=[],
     )
     compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
@@ -695,6 +717,7 @@ async def test_handle_submitted_status_insufficient_credits(
         compliance_report_id=report_id,
         renewable_fuel_target_summary=[],
         low_carbon_fuel_target_summary=[],
+        low_carbon_fuel_requirement_summary= [],
         non_compliance_penalty_summary=[],
     )
     compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
@@ -758,6 +781,7 @@ async def test_handle_submitted_status_sufficient_credits(
         compliance_report_id=report_id,
         renewable_fuel_target_summary=[],
         low_carbon_fuel_target_summary=[],
+        low_carbon_fuel_requirement_summary=[],
         non_compliance_penalty_summary=[],
     )
     compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(

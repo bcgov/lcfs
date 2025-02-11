@@ -244,11 +244,13 @@ def compliance_report_summary_schema(
 ):
     mock_renewable_fuel_target_summary = [compliance_report_summary_row_schema()]
     mock_low_carbon_fuel_target_summary = [compliance_report_summary_row_schema()]
+    mock_low_carbon_fuel_requirement_summary = [compliance_report_summary_row_schema()]
     mock_non_compliance_penalty_summary = [compliance_report_summary_row_schema()]
 
     def _create_compliance_report_summary(
         renewable_fuel_target_summary=mock_renewable_fuel_target_summary,
         low_carbon_fuel_target_summary=mock_low_carbon_fuel_target_summary,
+        low_carbon_fuel_requirement_summary=mock_low_carbon_fuel_requirement_summary,
         non_compliance_penalty_summary=mock_non_compliance_penalty_summary,
         summary_id=summary_schema.summary_id,
         compliance_report_id=compliance_report_base_schema().compliance_report_id,
@@ -261,6 +263,7 @@ def compliance_report_summary_schema(
         return ComplianceReportSummarySchema(
             renewable_fuel_target_summary=renewable_fuel_target_summary,
             low_carbon_fuel_target_summary=low_carbon_fuel_target_summary,
+            low_carbon_fuel_requirement_summary=low_carbon_fuel_requirement_summary,
             non_compliance_penalty_summary=non_compliance_penalty_summary,
             summary_id=summary_id,
             compliance_report_id=compliance_report_id,

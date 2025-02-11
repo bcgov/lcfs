@@ -794,6 +794,7 @@ async def test_save_compliance_report_summary_success(
         compliance_report_id=compliance_reports[0].compliance_report_id,
         renewable_fuel_target_summary=[],
         low_carbon_fuel_target_summary=[],
+        low_carbon_fuel_requirement_summary=[],
         non_compliance_penalty_summary=[],
     )
 
@@ -813,6 +814,7 @@ async def test_save_compliance_report_summary_exception(
         compliance_report_id=1000,  # Non-existent report_id
         renewable_fuel_target_summary=[],
         low_carbon_fuel_target_summary=[],
+        low_carbon_fuel_requirement_summary=[],
         non_compliance_penalty_summary=[],
     )
 
