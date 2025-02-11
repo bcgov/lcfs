@@ -3,8 +3,8 @@ Remove comment columns from transfer table,
 and update mv_transaction_aggregate so it shows FROM_ORG comments for transfers.
 
 Revision ID: f0d95904a9dd
-Revises: 145e5501e322
-Create Date: 2025-02-07 14:14:11.287846
+Revises: 775db18a959a
+Create Date: 2025-02-11 14:14:11.287846
 """
 
 import sqlalchemy as sa
@@ -12,7 +12,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "f0d95904a9dd"
-down_revision = "145e5501e322"
+down_revision = "775db18a959a"
 branch_labels = None
 depends_on = None
 
@@ -77,7 +77,16 @@ def upgrade() -> None:
                 t.quantity,
                 t.price_per_unit,
                 ts.status::text AS status,
-                EXTRACT(YEAR FROM t.transaction_effective_date)::text AS compliance_period,
+                CASE 
+                    WHEN ts.status = 'Recorded' THEN EXTRACT(YEAR FROM (
+                        SELECT th.create_date
+                        FROM transfer_history th
+                        WHERE th.transfer_id = t.transfer_id
+                        AND th.transfer_status_id = 6  -- Recorded
+                        LIMIT 1
+                    ))::text
+                    ELSE 'N/A'
+                END AS compliance_period,
                 
                 -- Get the FROM_ORG comment if it exists
                 (
@@ -379,7 +388,16 @@ def downgrade() -> None:
                 t.quantity,
                 t.price_per_unit,
                 ts.status::text AS status,
-                EXTRACT(YEAR FROM t.transaction_effective_date)::text AS compliance_period,
+                CASE 
+                    WHEN ts.status = 'Recorded' THEN EXTRACT(YEAR FROM (
+                        SELECT th.create_date
+                        FROM transfer_history th
+                        WHERE th.transfer_id = t.transfer_id
+                        AND th.transfer_status_id = 6  -- Recorded
+                        LIMIT 1
+                    ))::text
+                    ELSE 'N/A'
+                END AS compliance_period,
                 t.from_org_comment AS comment,
                 tc.category,
                 (
