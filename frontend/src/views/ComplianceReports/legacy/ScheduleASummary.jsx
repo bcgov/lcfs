@@ -9,15 +9,15 @@ import { useLocation, useParams } from 'react-router-dom'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { scheduleASummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
 import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
-import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema.jsx'
 
-export const NotionalTransferSummary = ({ data, status }) => {
+export const ScheduleASummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { complianceReportId } = useParams()
 
-  const { t } = useTranslation(['common', 'notionalTransfers'])
+  const { t } = useTranslation(['common', 'notionalTransfers', 'legacy'])
   const location = useLocation()
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
   )
 
   const columns = useMemo(() => {
-    return notionalTransferSummaryColDefs(t)
+    return scheduleASummaryColDefs(t)
   }, [t])
 
   return (
@@ -78,4 +78,4 @@ export const NotionalTransferSummary = ({ data, status }) => {
   )
 }
 
-NotionalTransferSummary.displayName = 'NotionalTransferSummary'
+ScheduleASummary.displayName = 'ScheduleASummary'

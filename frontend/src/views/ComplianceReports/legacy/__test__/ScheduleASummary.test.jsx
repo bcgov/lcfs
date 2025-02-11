@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { OtherUsesSummary } from '../OtherUsesSummary'
+import { ScheduleASummary } from '@/views/ComplianceReports/legacy/ScheduleASummary'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 vi.mock('react-router-dom', async () => {
@@ -10,43 +10,39 @@ vi.mock('react-router-dom', async () => {
     ...actual,
     useNavigate: vi.fn(),
     useParams: () => ({
-      complianceReportId: '123',
-      compliancePeriod: '2024'
+      complianceReportId: '123'
     }),
     useLocation: vi.fn()
   }
 })
 
-vi.mock('@react-keycloak/web', () => ({
-  useKeycloak: () => ({
-    keycloak: {
-      token: 'mock-token',
-      authenticated: true,
-      initialized: true
-    }
-  })
+// Mock the BCGridViewer correctly
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: () => <div data-testid="mockedBCGridViewer"></div>
 }))
 
-vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({
+// Mock useGetNotionalTransfers hook
+vi.mock('@/hooks/useNotionalTransfer', () => ({
+  useGetNotionalTransfers: () => ({
     data: {
-      roles: [{ name: 'Supplier' }, { name: 'Government' }]
+      pagination: { page: 1, size: 10, total: 2 },
+      notionalTransfers: [
+        {
+          notionalTransferId: '001',
+          legalName: 'Partner 1',
+          addressForService: 'Address 1'
+        },
+        {
+          notionalTransferId: '002',
+          legalName: 'Partner 2',
+          addressForService: 'Address 2'
+        }
+      ]
     }
   })
 }))
 
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  __esModule: true,
-  default: () => <div data-test="mockedBCDataGridServer"></div>
-}))
-
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
-    setForbidden: vi.fn()
-  })
-}))
-
-describe('OtherUsesSummary Component Tests', () => {
+describe('NotionalTransferSummary Component Tests', () => {
   let navigate
   let location
 
@@ -62,19 +58,13 @@ describe('OtherUsesSummary Component Tests', () => {
     vi.resetAllMocks()
   })
 
-  it('renders root component', () => {
-    render(<OtherUsesSummary />, { wrapper })
-    const title = screen.getByTestId('container')
-    expect(title).toBeInTheDocument()
-  })
-
-  it('displays alert message on initial load if present', () => {
+  it('displays alert message if location state has a message', () => {
     const mockLocation = {
       state: { message: 'Test Alert Message', severity: 'error' }
     }
     vi.mocked(useLocation).mockReturnValue(mockLocation)
 
-    render(<OtherUsesSummary />, { wrapper })
+    render(<ScheduleASummary status="DRAFT" />, { wrapper })
     const alertBox = screen.getByTestId('alert-box')
     expect(alertBox).toBeInTheDocument()
     expect(alertBox.textContent).toContain('Test Alert Message')

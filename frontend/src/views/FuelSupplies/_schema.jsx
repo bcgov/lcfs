@@ -10,12 +10,12 @@ import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import {
-  isFuelTypeOther,
-  fuelTypeOtherConditionalStyle
+  fuelTypeOtherConditionalStyle,
+  isFuelTypeOther
 } from '@/utils/fuelTypeOther'
 import {
-  StandardCellWarningAndErrors,
-  StandardCellStyle
+  StandardCellStyle,
+  StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 
@@ -480,6 +480,67 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     valueFormatter,
     minWidth: 100,
     editable: false
+  }
+]
+
+export const fuelSupplySummaryColDef = (t) => [
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
+    field: 'complianceUnits',
+    valueFormatter
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'),
+    field: 'fuelType',
+    valueGetter: (params) => params.data.fuelType?.fuelType
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data.fuelCategory?.category
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.endUseId'),
+    field: 'endUse',
+    valueGetter: (params) => params.data.endUseType?.type || 'Any'
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'),
+    field: 'determiningCarbonIntensity',
+    valueGetter: (params) => params.data.provisionOfTheAct?.name
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'),
+    field: 'fuelCode',
+    valueGetter: (params) => params.data.fuelCode?.fuelCode
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  },
+  { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: 'units' },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.targetCi'),
+    field: 'targetCi'
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
+    field: 'ciOfFuel'
+  },
+  {
+    field: 'uci',
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci')
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'),
+    field: 'energyDensity'
+  },
+  { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: 'eer' },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.energy'),
+    field: 'energy',
+    valueFormatter
   }
 ]
 

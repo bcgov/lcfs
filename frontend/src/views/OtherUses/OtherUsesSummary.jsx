@@ -12,6 +12,8 @@ import {
 import { useTranslation } from 'react-i18next'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
+import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema.jsx'
 
 export const OtherUsesSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -41,61 +43,9 @@ export const OtherUsesSummary = ({ data, status }) => {
     }),
     [status]
   )
-
-  const columns = [
-    {
-      headerName: t('otherUses:otherUsesColLabels.fuelType'),
-      field: 'fuelType',
-      floatingFilter: false,
-      width: '260px'
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.fuelCategory'),
-      field: 'fuelCategory',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.provisionOfTheAct'),
-      field: 'provisionOfTheAct',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.fuelCode'),
-      field: 'fuelCode',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.quantitySupplied'),
-      field: 'quantitySupplied',
-      floatingFilter: false,
-      valueFormatter
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.units'),
-      field: 'units',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.ciOfFuel'),
-      field: 'ciOfFuel',
-      floatingFilter: false,
-      valueFormatter: decimalFormatter
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.expectedUse'),
-      field: 'expectedUse',
-      floatingFilter: false,
-      flex: 1,
-      minWidth: 200
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.otherExpectedUse'),
-      field: 'rationale',
-      floatingFilter: false,
-      flex: 1,
-      minWidth: 200
-    }
-  ]
+  const columns = useMemo(() => {
+    return otherUsesSummaryColDefs(t)
+  }, [t])
 
   const getRowId = (params) => params.data.otherUsesId
 
@@ -110,13 +60,13 @@ export const OtherUsesSummary = ({ data, status }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          gridKey={'other-uses'}
+          gridKey="other-uses"
           getRowId={getRowId}
           columnDefs={columns}
           defaultColDef={defaultColDef}
           query={useGetOtherUses}
           queryParams={{ complianceReportId }}
-          dataKey={'otherUses'}
+          dataKey="otherUses"
           suppressPagination={data?.length <= 10}
           autoSizeStrategy={{
             type: 'fitCellContents',
