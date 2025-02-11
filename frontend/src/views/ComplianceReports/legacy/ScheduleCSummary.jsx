@@ -4,14 +4,11 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
-import {
-  decimalFormatter,
-  formatNumberWithCommas as valueFormatter
-} from '@/utils/formatters'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { useGetOtherUses } from '@/hooks/useOtherUses.js'
 import Grid2 from '@mui/material/Unstable_Grid2'
+import { scheduleCSummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
 
 export const ScheduleCSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -42,44 +39,9 @@ export const ScheduleCSummary = ({ data, status }) => {
     [status]
   )
 
-  const columns = [
-    {
-      headerName: t('otherUses:otherUsesColLabels.fuelType'),
-      field: 'fuelType',
-      floatingFilter: false,
-      width: '260px'
-    },
-    {
-      headerName: t('legacy:columnLabels.fuelClass'),
-      field: 'fuelCategory',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.quantitySupplied'),
-      field: 'quantitySupplied',
-      floatingFilter: false,
-      valueFormatter
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.units'),
-      field: 'units',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.expectedUse'),
-      field: 'expectedUse',
-      floatingFilter: false,
-      flex: 1,
-      minWidth: 200
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.otherExpectedUse'),
-      field: 'rationale',
-      floatingFilter: false,
-      flex: 1,
-      minWidth: 200
-    }
-  ]
+  const columns = useMemo(() => {
+    return scheduleCSummaryColDefs(t)
+  }, [t])
 
   const getRowId = (params) => params.data.otherUsesId
 
