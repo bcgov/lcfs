@@ -28,6 +28,7 @@ export const AddEditFinalSupplyEquipments = () => {
   const [errors, setErrors] = useState({})
   const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
+  const [isDownloading, setIsDownloading] = useState(false)
   const apiService = useApiService()
 
   const alertRef = useRef()
@@ -213,6 +214,8 @@ export const AddEditFinalSupplyEquipments = () => {
 
   const handleDownload = async (includeData) => {
     try {
+      handleClose()
+      setIsDownloading(true)
       await apiService.download(
         includeData
           ? apiRoutes.exportFinalSupplyEquipments.replace(
@@ -224,12 +227,13 @@ export const AddEditFinalSupplyEquipments = () => {
               complianceReportId
             )
       )
-      handleClose()
     } catch (error) {
       console.error(
         'Error downloading final supply equipment information:',
         error
       )
+    } finally {
+      setIsDownloading(false)
     }
   }
 
@@ -297,12 +301,17 @@ export const AddEditFinalSupplyEquipments = () => {
             aria-expanded={open ? 'true' : undefined}
             onClick={handleClick}
             endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+            isLoading={isDownloading}
           >
             {t('finalSupplyEquipment:downloadBtn')}
           </BCButton>
           <Menu
             id="basic-menu"
             anchorEl={anchorEl}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right'
+            }}
             transformOrigin={{
               vertical: 'top',
               horizontal: 'right'
@@ -314,6 +323,7 @@ export const AddEditFinalSupplyEquipments = () => {
             }}
           >
             <MenuItem
+              disabled={isDownloading}
               onClick={() => {
                 handleDownload(true)
               }}
@@ -321,6 +331,7 @@ export const AddEditFinalSupplyEquipments = () => {
               {t('finalSupplyEquipment:downloadWithDataBtn')}
             </MenuItem>
             <MenuItem
+              disabled={isDownloading}
               onClick={() => {
                 handleDownload(false)
               }}
