@@ -10,6 +10,7 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
         "field": "eligible_renewable_fuel_supplied",
     },
     3: {
+        "legacy": "Total volume of tracked fuel supplied (Line 1|12 + Line 2|13)",
         "description": "Total volume of tracked fuel supplied (Line 1 + Line 2)",
         "field": "total_tracked_fuel_supplied",
     },
@@ -22,28 +23,73 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
         "field": "net_notionally_transferred",
     },
     6: {
+        "legacy": "Volume of eligible renewable fuel retained (up to 5% of Line 4|15 - gasoline={}; diesel={})",
         "description": "Volume of eligible renewable fuel retained (up to 5% of Line 4 - gasoline={}; diesel={}; jet fuel={})",
         "field": "renewable_fuel_retained",
     },
     7: {
+        "legacy": "Volume of eligible renewable fuel previously retained (from Line 6 |17 of previous compliance period)",
         "description": "Volume of eligible renewable fuel previously retained (from Line 6 of previous compliance period)",
         "field": "previously_retained",
     },
     8: {
+        "legacy": "Volume of eligible renewable obligation deferred (up to 5% of Line 4|15 - gasoline={}; diesel={})",
         "description": "Volume of eligible renewable obligation deferred (up to 5% of Line 4 - gasoline={}; diesel={}; jet fuel={})",
         "field": "obligation_deferred",
     },
     9: {
+        "legacy": "Volume of renewable obligation added (from Line 8|19 of previous compliance period)",
         "description": "Volume of renewable obligation added (from Line 8 of previous compliance period)",
         "field": "obligation_added",
     },
     10: {
+        "legacy": "Net volume of eligible renewable fuel supplied (Total of Line 2|13 + Line 5|16 - Line 6|17 + Line 7|18 + Line 8|19 - Line 9|20)",
         "description": "Net volume of eligible renewable fuel supplied (Total of Line 2 + Line 5 - Line 6 + Line 7 + Line 8 - Line 9)",
         "field": "net_renewable_fuel_supplied",
     },
     11: {
+        "legacy": "Non-compliance penalty payable [(Line 4|15 - Line 10|21) x prescribed penalty rate]",
         "description": "Non-compliance penalty payable [(Line 4 - Line 10) x prescribed penalty rate]",
         "field": "non_compliance_penalty",
+    },
+}
+
+PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
+    "23": {
+        "description": "Total credits from fuel supplied (from Schedule B)",
+        "field": "low_carbon_fuel_required",
+    },
+    "24": {
+        "description": "Total debits from fuel supplied (from Schedule B)",
+        "field": "low_carbon_fuel_supplied",
+    },
+    "25": {
+        "description": "Net credit or debit balance for compliance period",
+        "field": "low_carbon_fuel_surplus",
+    },
+    "26": {
+        "description": "Total banked credits used to offset outstanding debits (if applicable)",
+        "field": "banked_units_used",
+    },
+    "26a": {
+        "description": "Banked credits used to offset outstanding debits - Previous reports",
+        "field": "banked_units_remaining",
+    },
+    "26b": {
+        "description": "Banked credits used to offset outstanding debits - {}",
+        "field": "non_banked_units_used",
+    },
+    "26c": {
+        "description": "Banked credits spent that will be returned due to debit decrease - {}",
+        "field": "units_to_be_banked",
+    },
+    "27": {
+        "description": "Outstanding debit balance",
+        "field": "units_to_be_exported",
+    },
+    "28": {
+        "description": "Part 3 non-compliance penalty payable",
+        "field": "surplus_deficit_units",
     },
 }
 
@@ -96,10 +142,12 @@ LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
 
 NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
     11: {
+        "legacy": "Renewable fuel target non-compliance penalty total (Line 11|22, Gasoline + Diesel)",
         "description": "Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)",
         "field": "fossil_derived_base_fuel",
     },
     21: {
+        "legacy": "Low carbon fuel target non-compliance penalty total (Line 28)",
         "description": "Low carbon fuel target non-compliance penalty total (Line 21)",
         "field": "line_21_non_compliance_penalty_payable",
     },

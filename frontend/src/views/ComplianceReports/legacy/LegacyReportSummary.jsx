@@ -6,7 +6,7 @@ import {
   renewableFuelColumns,
   lowCarbonColumns,
   nonComplianceColumns
-} from './_schema'
+} from '../components/_schema'
 import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
@@ -63,7 +63,7 @@ const LegacyReportSummary = ({
         <AccordionDetails>
           <SummaryTable
             data-test="renewable-summary"
-            title={t('report:renewableFuelTargetSummary')}
+            title={t('report:part2RenewableFuelTargetSummary')}
             columns={
               summaryData
                 ? renewableFuelColumns(
@@ -79,7 +79,7 @@ const LegacyReportSummary = ({
           />
           <SummaryTable
             data-test="low-carbon-summary"
-            title={t('report:lowCarbonFuelTargetSummary')}
+            title={t('report:part3LowCarbonFuelTargetSummary')}
             columns={lowCarbonColumns(t)}
             data={summaryData?.lowCarbonFuelTargetSummary}
             width={'80.65%'}
