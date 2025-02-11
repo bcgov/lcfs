@@ -18,10 +18,10 @@ vi.mock('@/views/ComplianceReports/components/HistoryCard.jsx', () => ({
   HistoryCard: ({ report }) => <div>HistoryCard - Version {report.version}</div>
 }))
 
-// Mock window.open
-global.open = vi.fn()
-
 describe('LegacyAssessmentCard', () => {
+  // Mock window.open so we can check calls
+  global.open = vi.fn()
+
   const setup = (overrides = {}) => {
     const defaultProps = {
       orgData: {
@@ -93,6 +93,25 @@ describe('LegacyAssessmentCard', () => {
         '_blank'
       )
     })
+  })
+
+  it('uses environment-based TFRS URL if we override CONFIG.TFRS_BASE', async () => {
+    // Temporarily override the TFRS base
+    const originalBase = CONFIG.TFRS_BASE
+    CONFIG.TFRS_BASE = 'https://fake-env-tfrs.example.com'
+
+    setup({ legacyReportId: '999' })
+    fireEvent.click(screen.getByText('report:viewLegacyBtn'))
+
+    await waitFor(() => {
+      expect(global.open).toHaveBeenCalledWith(
+        'https://fake-env-tfrs.example.com/compliance_reporting/edit/999/intro',
+        '_blank'
+      )
+    })
+
+    // Restore original TFRS_BASE so we don't impact other tests
+    CONFIG.TFRS_BASE = originalBase
   })
 
   it('displays history when chain is not empty', () => {
