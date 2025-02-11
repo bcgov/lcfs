@@ -26,6 +26,9 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportChangelogSchema
 )
 from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
+from lcfs.web.api.notional_transfer.schema import NotionalTransferCreateSchema
+from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
+from lcfs.web.api.fuel_export.schema import FuelExportSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
@@ -191,10 +194,6 @@ async def get_fuel_supply_changelog(
     request_data: CommonPaginatedReportRequestSchema = Body(...),
     service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportChangelogSchema[FuelSupplyResponseSchema]:
-    """
-    Retrieve the fuel supply changelog for a specific report by ID.
-    """
-
     compliance_report_id = request_data.compliance_report_id
 
     pagination = PaginationRequestSchema(
@@ -212,47 +211,81 @@ async def get_fuel_supply_changelog(
 
 @router.post(
     "/other-uses/changelog",
+    response_model=ComplianceReportChangelogSchema[OtherUsesChangelogSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def get_other_uses_changelog(
     request: Request,
-    report_id: int,
+    request_data: CommonPaginatedReportRequestSchema = Body(...),
     service: ComplianceReportServices = Depends(),
-):
-    """
-    Retrieve the fuel supply changelog for a specific report by ID.
-    """
-    return await service.get_changelog_data(report_id, 'other_uses')
+) -> ComplianceReportChangelogSchema[OtherUsesChangelogSchema]:
+    compliance_report_id = request_data.compliance_report_id
+
+    pagination = PaginationRequestSchema(
+        page=request_data.page,
+        size=request_data.size,
+        sort_orders=request_data.sort_orders,
+        filters=request_data.filters,
+    )
+    changelog = await service.get_changelog_data(
+        pagination,
+        compliance_report_id,
+        'other_uses'
+    )
+
+    print(1, '===============================', changelog)
+
+    return changelog
 
 
 @router.post(
     "/notional-transfers/changelog",
+    response_model=ComplianceReportChangelogSchema[NotionalTransferCreateSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def get_notional_transfers_changelog(
     request: Request,
-    report_id: int,
+    request_data: CommonPaginatedReportRequestSchema = Body(...),
     service: ComplianceReportServices = Depends(),
-):
-    """
-    Retrieve the fuel supply changelog for a specific report by ID.
-    """
-    return await service.get_changelog_data(report_id, 'notional_transfers')
+) -> ComplianceReportChangelogSchema[NotionalTransferCreateSchema]:
+    compliance_report_id = request_data.compliance_report_id
+
+    pagination = PaginationRequestSchema(
+        page=request_data.page,
+        size=request_data.size,
+        sort_orders=request_data.sort_orders,
+        filters=request_data.filters,
+    )
+    return await service.get_changelog_data(
+        pagination,
+        compliance_report_id,
+        'notional_transfers'
+    )
 
 
 @router.post(
     "/fuel-exports/changelog",
+    response_model=ComplianceReportChangelogSchema[FuelExportSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def get_fuel_exports_changelog(
     request: Request,
-    report_id: int,
+    request_data: CommonPaginatedReportRequestSchema = Body(...),
     service: ComplianceReportServices = Depends(),
-):
-    """
-    Retrieve the fuel supply changelog for a specific report by ID.
-    """
-    return await service.get_changelog_data(report_id, 'fuel_exports')
+) -> ComplianceReportChangelogSchema[FuelExportSchema]:
+    compliance_report_id = request_data.compliance_report_id
+
+    pagination = PaginationRequestSchema(
+        page=request_data.page,
+        size=request_data.size,
+        sort_orders=request_data.sort_orders,
+        filters=request_data.filters,
+    )
+    return await service.get_changelog_data(
+        pagination,
+        compliance_report_id,
+        'fuel_exports'
+    )

@@ -152,7 +152,8 @@ class OtherUsesServices:
         """
         other_uses = await self.repo.get_other_uses(compliance_report_id)
         return OtherUsesAllSchema(
-            other_uses=[OtherUsesSchema.model_validate(ou) for ou in other_uses]
+            other_uses=[OtherUsesSchema.model_validate(
+                ou) for ou in other_uses]
         )
 
     @service_handler
@@ -293,7 +294,10 @@ class OtherUsesServices:
         # Copy fields from the latest version for the deletion record
         for field in existing_fuel_supply.__table__.columns.keys():
             if field not in OTHER_USE_EXCLUDE_FIELDS:
-                setattr(deleted_entity, field, getattr(existing_fuel_supply, field))
+                setattr(deleted_entity, field, getattr(
+                    existing_fuel_supply, field))
+
+        deleted_entity.compliance_report_id = other_use_data.compliance_report_id
 
         await self.repo.create_other_use(deleted_entity)
         return DeleteOtherUsesResponseSchema(success=True, message="Marked as deleted.")

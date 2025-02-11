@@ -15,6 +15,14 @@ class ReceivedOrTransferredEnumSchema(str, Enum):
     Transferred = "Transferred"
 
 
+class NotionalTransferDiffSchema(BaseSchema):
+    legal_name: Optional[bool] = None
+    address_for_service: Optional[bool] = None
+    fuel_category: Optional[bool] = None
+    received_or_transferred: Optional[bool] = None
+    quantity: Optional[bool] = None
+
+
 class NotionalTransferCreateSchema(BaseSchema):
     legal_name: str
     address_for_service: str
@@ -31,7 +39,8 @@ class NotionalTransferCreateSchema(BaseSchema):
 
 
 class NotionalTransferSchema(NotionalTransferCreateSchema):
-    pass
+    diff: Optional[NotionalTransferDiffSchema] = None
+    updated: Optional[bool] = None
 
 
 class PaginatedNotionalTransferRequestSchema(BaseSchema):

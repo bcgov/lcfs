@@ -32,13 +32,23 @@ import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
-import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
+import {
+  useComplianceReportDocuments,
+  useGetComplianceReport
+} from '@/hooks/useComplianceReports'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
+  const { data: currentUser } = useCurrentUser()
+
+  const { data: complianceReportData } = useGetComplianceReport(
+    currentUser?.organization?.organizationId,
+    complianceReportId
+  )
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
   const isAnalystRole =
@@ -73,6 +83,9 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
     return editAnalyst || editSupplier
   }
   const shouldShowChangelogButton = (activityName) => {
+    if (complianceReportData.report.version === 0) {
+      return false
+    }
     return (
       (isGovernmentRole || isSupplierRole) &&
       currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED &&

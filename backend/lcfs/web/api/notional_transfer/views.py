@@ -142,7 +142,8 @@ async def get_notional_transfer(
 ) -> NotionalTransferSchema:
     notional_transfer = await service.get_notional_transfer(notional_transfer_id)
     if not notional_transfer:
-        raise HTTPException(status_code=404, detail="Notional transfer not found")
+        raise HTTPException(
+            status_code=404, detail="Notional transfer not found")
     await report_validate.validate_organization_access(
         notional_transfer.compliance_report_id
     )
@@ -151,7 +152,8 @@ async def get_notional_transfer(
 
 @router.post(
     "/save",
-    response_model=Union[NotionalTransferSchema, DeleteNotionalTransferResponseSchema],
+    response_model=Union[NotionalTransferSchema,
+                         DeleteNotionalTransferResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
@@ -175,21 +177,18 @@ async def save_notional_transfer_row(
             status_code=403, detail="User does not have the required role."
         )
 
+    await validate.validate_compliance_report_id(
+        compliance_report_id, [request_data]
+    )
     if request_data.deleted:
         # Delete existing notional transfer
-        await validate.validate_compliance_report_id(
-            compliance_report_id, [request_data]
-        )
+
         return await service.delete_notional_transfer(request_data, current_user_type)
     elif notional_transfer_id:
         # Update existing notional transfer
-        await validate.validate_compliance_report_id(
-            compliance_report_id, [request_data]
-        )
+
         return await service.update_notional_transfer(request_data, current_user_type)
     else:
         # Create new notional transfer
-        await validate.validate_compliance_report_id(
-            compliance_report_id, [request_data]
-        )
+
         return await service.create_notional_transfer(request_data, current_user_type)

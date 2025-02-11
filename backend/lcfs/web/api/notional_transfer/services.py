@@ -236,6 +236,8 @@ class NotionalTransferServices:
                 setattr(deleted_entity, field, getattr(
                     existing_transfer, field))
 
+        deleted_entity.compliance_report_id = notional_transfer_data.compliance_report_id
+
         await self.repo.create_notional_transfer(deleted_entity)
         return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")
 

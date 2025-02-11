@@ -33,7 +33,10 @@ export const handleScheduleSave = async ({
       })
 
       params.api.forEachNode((rowNode) => {
-        if (rowNode.data.fuelSupplyId === newWarnings[0].id) {
+        if (
+          rowNode.data.fuelSupplyId === newWarnings[0].id ||
+          rowNode.data.notionalTransferId === newWarnings[0].id
+        ) {
           rowNode.updateData({
             ...rowNode.data,
             validationStatus: 'warning'
