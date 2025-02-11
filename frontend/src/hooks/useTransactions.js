@@ -4,7 +4,6 @@ import { useCurrentUser } from './useCurrentUser'
 import { roles } from '@/constants/roles'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { apiRoutes } from '@/constants/routes'
-import { apiRoutes } from '@/constants/routes/index.js'
 
 export const useTransaction = (transactionID, options) => {
   const client = useApiService()
