@@ -92,6 +92,6 @@
     "govLineForGov": "{{user}} of {{government}}, {{date}} - {{comment}}",
     "govLine": "{{government}}, {{date}} - {{comment}}",
     "userLine": "{{user}} of {{org}}, {{date}} - {{comment}}"
-  }
+  },
   "quantityAdjusted": "Quantity adjusted to maximum available balance"
 }
