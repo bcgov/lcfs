@@ -11,35 +11,19 @@ import {
 import BCTypography from '@/components/BCTypography'
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'
 import { ROUTES } from '@/constants/routes'
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { ScheduleASummary } from '@/views/ComplianceReports/legacy/ScheduleASummary.jsx'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses.js'
-import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary.jsx'
 import { ScheduleCSummary } from '@/views/ComplianceReports/legacy/ScheduleCSummary.jsx'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply.js'
-import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary.jsx'
 import { ScheduleBSummary } from '@/views/ComplianceReports/legacy/ScheduleBSummary.jsx'
+import { isArrayEmpty } from '@/utils/array.js'
 
 const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
   const { t } = useTranslation(['legacy'])
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
-
-  const isArrayEmpty = useCallback((data) => {
-    if (Array.isArray(data)) {
-      return data.length === 0
-    }
-    if (typeof data === 'object' && data !== null) {
-      const keys = Object.keys(data)
-      const arrayKey = keys.find((key) => key !== 'pagination')
-      if (arrayKey && Array.isArray(data[arrayKey])) {
-        return data[arrayKey].length === 0
-      }
-    }
-    return null
-  }, [])
 
   const activityList = useMemo(
     () => [
