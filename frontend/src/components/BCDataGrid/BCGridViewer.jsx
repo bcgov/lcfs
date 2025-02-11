@@ -57,8 +57,8 @@ export const BCGridViewer = ({
 
   const onGridReady = useCallback(
     (params) => {
-      const filterState = JSON.parse(localStorage.getItem(`${gridKey}-filter`))
-      const columnState = JSON.parse(localStorage.getItem(`${gridKey}-column`))
+      const filterState = JSON.parse(sessionStorage.getItem(`${gridKey}-filter`))
+      const columnState = JSON.parse(sessionStorage.getItem(`${gridKey}-column`))
       if (filterState) {
         params.api.setFilterModel(filterState)
         const filterArr = [
@@ -92,9 +92,9 @@ export const BCGridViewer = ({
     [defaultSortModel, gridKey]
   )
   const resetGrid = useCallback(() => {
-    // Clear localStorage
-    localStorage.removeItem(`${gridKey}-filter`)
-    localStorage.removeItem(`${gridKey}-column`)
+    // Clear sessionStorage
+    sessionStorage.removeItem(`${gridKey}-filter`)
+    sessionStorage.removeItem(`${gridKey}-column`)
 
     // Reset states
     setPage(1)
@@ -158,9 +158,9 @@ export const BCGridViewer = ({
         ...defaultFilterModel
       ]
       setFilterModel(filterArr)
-      localStorage.setItem(`${gridKey}-filter`, JSON.stringify(gridFilters))
+      sessionStorage.setItem(`${gridKey}-filter`, JSON.stringify(gridFilters))
     },
-    [defaultFilterModel, gridKey, ref]
+    [defaultFilterModel, gridKey]
   )
 
   const onSortChanged = useCallback(() => {
@@ -177,7 +177,7 @@ export const BCGridViewer = ({
         }
       })
     setSortModel(sortTemp)
-    localStorage.setItem(
+    sessionStorage.setItem(
       `${gridKey}-column`,
       JSON.stringify(ref.current?.api.getColumnState())
     )
