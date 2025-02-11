@@ -13,8 +13,8 @@ import {
 } from '@/hooks/useFinalSupplyEquipment'
 import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
-import { isArrayEmpty } from '@/utils/formatters'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import { isArrayEmpty } from '@/utils/array.js'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])

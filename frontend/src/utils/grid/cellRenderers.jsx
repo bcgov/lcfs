@@ -255,7 +255,9 @@ export const ReportsStatusRenderer = (props) => {
     'success',
     'error'
   ]
-  const statusIndex = statusArr.indexOf(props.data.currentStatus.status)
+  const statusIndex = statusArr.indexOf(
+    props.data.reportStatus.replaceAll('_', ' ')
+  )
   return (
     <Link
       to={

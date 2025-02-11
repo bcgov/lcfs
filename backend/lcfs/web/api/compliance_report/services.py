@@ -20,6 +20,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
+    ComplianceReportViewSchema,
 )
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.core.decorators import service_handler
@@ -180,6 +181,7 @@ class ComplianceReportServices:
                         ComplianceReportStatusEnum.Recommended_by_manager,
                         ComplianceReportStatusEnum.Submitted,
                     ]
+
         reports, total_count = await self.repo.get_reports_paginated(
             pagination, organization_id
         )
@@ -205,7 +207,17 @@ class ComplianceReportServices:
 
         masked_reports = []
         for report in reports:
-            if report.current_status.status in recommended_statuses:
+            if (
+                isinstance(report, ComplianceReportViewSchema)
+                and report.report_status in recommended_statuses
+            ):
+                report.report_status = ComplianceReportStatusEnum.Submitted.value
+                report.report_status_id = None
+                masked_reports.append(report)
+            elif (
+                isinstance(report, ComplianceReportBaseSchema)
+                and report.current_status.status in recommended_statuses
+            ):
                 report.current_status.status = (
                     ComplianceReportStatusEnum.Submitted.value
                 )

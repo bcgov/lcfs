@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { LegacyAssessmentCard } from '@/views/ComplianceReports/components/LegacyAssessmentCard.jsx'
+import LegacyReportDetails from '@/views/ComplianceReports/legacy/LegacyReportDetails.jsx'
 
 const iconStyle = {
   width: '2rem',
@@ -54,6 +55,7 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
   const { data: currentUser, isLoading: isCurrentUserLoading } =
     useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
+  const userRoles = currentUser?.roles
 
   const currentStatus = reportData.report.currentStatus?.status
   const { data: orgData, isLoading } = useOrganization(
@@ -112,6 +114,22 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
             chain={reportData.chain}
           />
         </Stack>
+        <LegacyReportDetails currentStatus={currentStatus} />
+        <BCTypography variant="h6" color="primary" sx={{ marginY: '16px' }}>
+          {t('report:questions')}
+        </BCTypography>
+        <BCTypography
+          variant="body4"
+          sx={{
+            '& p': {
+              marginBottom: '16px'
+            },
+            '& p:last-child': {
+              marginBottom: '0'
+            }
+          }}
+          dangerouslySetInnerHTML={{ __html: t('report:contact') }}
+        ></BCTypography>
         <Tooltip
           title={
             isScrollingUp ? t('common:scrollToTop') : t('common:scrollToBottom')
