@@ -2,15 +2,14 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { apiRoutes } from '@/constants/routes'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import i18n from '@/i18n'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { scheduleBSummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
 
 export const ScheduleBSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -56,62 +55,9 @@ export const ScheduleBSummary = ({ data, status }) => {
     [status]
   )
 
-  const columns = useMemo(
-    () => [
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
-        field: 'complianceUnits',
-        valueFormatter
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'),
-        field: 'fuelType',
-        valueGetter: (params) => params.data.fuelType?.fuelType
-      },
-      {
-        headerName: t('legacy:columnLabels.fuelClass'),
-        field: 'fuelCategory',
-        valueGetter: (params) => params.data.fuelCategory?.category
-      },
-      {
-        headerName: t(
-          'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
-        ),
-        field: 'determiningCarbonIntensity',
-        valueGetter: (params) => params.data.provisionOfTheAct?.name
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'),
-        field: 'fuelCode',
-        valueGetter: (params) => params.data.fuelCode?.fuelCode
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.quantity'),
-        field: 'quantity',
-        valueFormatter
-      },
-      { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: 'units' },
-      {
-        headerName: t('legacy:columnLabels.ciLimit'),
-        field: 'targetCi'
-      },
-      {
-        headerName: t('legacy:columnLabels.fuelCi'),
-        field: 'ciOfFuel'
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'),
-        field: 'energyDensity'
-      },
-      { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: 'eer' },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.energy'),
-        field: 'energy',
-        valueFormatter
-      }
-    ],
-    [t]
-  )
+  const columns = useMemo(() => {
+    return scheduleBSummaryColDefs(t)
+  }, [t])
 
   const getRowId = (params) => {
     return params.data.fuelSupplyId.toString()

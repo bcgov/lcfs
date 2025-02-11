@@ -9,6 +9,8 @@ import { useLocation, useParams } from 'react-router-dom'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { scheduleASummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
+import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
 
 export const ScheduleASummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -39,37 +41,9 @@ export const ScheduleASummary = ({ data, status }) => {
     [status]
   )
 
-  const columns = [
-    {
-      headerName: t('notionalTransfer:notionalTransferColLabels.legalName'),
-      field: 'legalName',
-      flex: 1,
-      minWidth: 200
-    },
-    {
-      headerName: t(
-        'notionalTransfer:notionalTransferColLabels.addressForService'
-      ),
-      field: 'addressForService',
-      flex: 1,
-      minWidth: 200
-    },
-    {
-      headerName: t('legacy:columnLabels.fuelClass'),
-      field: 'fuelCategory'
-    },
-    {
-      headerName: t(
-        'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
-      ),
-      field: 'receivedOrTransferred'
-    },
-    {
-      headerName: t('notionalTransfer:notionalTransferColLabels.quantity'),
-      field: 'quantity',
-      valueFormatter
-    }
-  ]
+  const columns = useMemo(() => {
+    return scheduleASummaryColDefs(t)
+  }, [t])
 
   return (
     <Grid2 className="notional-transfer-container" mx={-1}>
