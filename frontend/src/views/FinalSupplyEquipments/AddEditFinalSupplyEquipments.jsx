@@ -15,6 +15,12 @@ import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import { isArrayEmpty } from '@/utils/array.js'
+import { useApiService } from '@/services/useApiService.js'
+import { apiRoutes } from '@/constants/routes/index.js'
+import BCButton from '@/components/BCButton/index.jsx'
+import { Menu, MenuItem } from '@mui/material'
+import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -22,6 +28,8 @@ export const AddEditFinalSupplyEquipments = () => {
   const [errors, setErrors] = useState({})
   const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
+  const [isDownloading, setIsDownloading] = useState(false)
+  const apiService = useApiService()
 
   const alertRef = useRef()
   const location = useLocation()
@@ -204,6 +212,31 @@ export const AddEditFinalSupplyEquipments = () => {
     }
   }
 
+  const handleDownload = async (includeData) => {
+    try {
+      handleClose()
+      setIsDownloading(true)
+      await apiService.download(
+        includeData
+          ? apiRoutes.exportFinalSupplyEquipments.replace(
+              ':reportID',
+              complianceReportId
+            )
+          : apiRoutes.downloadFinalSupplyEquipmentsTemplate.replace(
+              ':reportID',
+              complianceReportId
+            )
+      )
+    } catch (error) {
+      console.error(
+        'Error downloading final supply equipment information:',
+        error
+      )
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
   const handleNavigateBack = useCallback(() => {
     navigate(
       ROUTES.REPORTS_VIEW.replace(
@@ -229,6 +262,15 @@ export const AddEditFinalSupplyEquipments = () => {
     [compliancePeriod, complianceReportId]
   )
 
+  const [anchorEl, setAnchorEl] = useState(null)
+  const open = Boolean(anchorEl)
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget)
+  }
+  const handleClose = () => {
+    setAnchorEl(null)
+  }
+
   return (
     isFetched &&
     !equipmentsLoading && (
@@ -250,6 +292,54 @@ export const AddEditFinalSupplyEquipments = () => {
             ))}
           </BCBox>
         </div>
+        <BCBox>
+          <BCButton
+            color="primary"
+            variant="outlined"
+            aria-controls={open ? 'basic-menu' : undefined}
+            aria-haspopup="true"
+            aria-expanded={open ? 'true' : undefined}
+            onClick={handleClick}
+            endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+            isLoading={isDownloading}
+          >
+            {t('finalSupplyEquipment:downloadBtn')}
+          </BCButton>
+          <Menu
+            id="basic-menu"
+            anchorEl={anchorEl}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right'
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right'
+            }}
+            open={open}
+            onClose={handleClose}
+            MenuListProps={{
+              'aria-labelledby': 'basic-button'
+            }}
+          >
+            <MenuItem
+              disabled={isDownloading}
+              onClick={() => {
+                handleDownload(true)
+              }}
+            >
+              {t('finalSupplyEquipment:downloadWithDataBtn')}
+            </MenuItem>
+            <MenuItem
+              disabled={isDownloading}
+              onClick={() => {
+                handleDownload(false)
+              }}
+            >
+              {t('finalSupplyEquipment:downloadWithoutDataBtn')}
+            </MenuItem>
+          </Menu>
+        </BCBox>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
