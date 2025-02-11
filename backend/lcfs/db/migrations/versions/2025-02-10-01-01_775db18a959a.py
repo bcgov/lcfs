@@ -1,8 +1,8 @@
 """Link documents to AA and IA
 
 Revision ID: 775db18a959a
-Revises: e50534b604f2
-Create Date: 2025-02-07 01:01:12.679938
+Revises: 0bfaff83e51e
+Create Date: 2025-02-10 01:01:12.679938
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "775db18a959a"
-down_revision = "e50534b604f2"
+down_revision = "0bfaff83e51e"
 branch_labels = None
 depends_on = None
 
