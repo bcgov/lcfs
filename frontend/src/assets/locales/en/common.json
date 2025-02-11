@@ -52,5 +52,6 @@
     "email": "lcfs@gov.bc.ca"
   },
   "ClearFilters": "Clear filters",
-  "changelogCurrentState": "Current state, Not assessed"
+  "changelogCurrentState": "Current state, Not assessed",
+  "exitChangeLog": "Exit change log"
 }

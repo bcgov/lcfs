@@ -26,7 +26,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportChangelogSchema
 )
 from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
-from lcfs.web.api.notional_transfer.schema import NotionalTransferCreateSchema
+from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
 from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
 from lcfs.web.api.fuel_export.schema import FuelExportSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
@@ -234,14 +234,12 @@ async def get_other_uses_changelog(
         'other_uses'
     )
 
-    print(1, '===============================', changelog)
-
     return changelog
 
 
 @router.post(
     "/notional-transfers/changelog",
-    response_model=ComplianceReportChangelogSchema[NotionalTransferCreateSchema],
+    response_model=ComplianceReportChangelogSchema[NotionalTransferChangelogSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
@@ -249,7 +247,7 @@ async def get_notional_transfers_changelog(
     request: Request,
     request_data: CommonPaginatedReportRequestSchema = Body(...),
     service: ComplianceReportServices = Depends(),
-) -> ComplianceReportChangelogSchema[NotionalTransferCreateSchema]:
+) -> ComplianceReportChangelogSchema[NotionalTransferChangelogSchema]:
     compliance_report_id = request_data.compliance_report_id
 
     pagination = PaginationRequestSchema(

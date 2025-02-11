@@ -422,7 +422,7 @@ export const FuelSupplyChangelog = () => {
             )
           }
         >
-          {t('fuelSupply:exitChangeLog')}
+          {t('common:exitChangeLog')}
         </BCTypography>
       </Box>
       <BCTypography variant="h6" color="primary" component="div" mb={2}>
