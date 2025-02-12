@@ -89,7 +89,7 @@ class CHESEmailService:
 
         token = await self._get_ches_token()
         if not token:
-            logger.info("Email sending skipped: failed to retrieve a valid CHES token.")
+            logger.warn("Email sending skipped: failed to retrieve a valid CHES token.")
             return False
 
         try:
