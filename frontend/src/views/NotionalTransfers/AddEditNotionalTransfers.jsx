@@ -16,7 +16,7 @@ import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
-import { isArrayEmpty } from '@/utils/formatters'
+import { isArrayEmpty } from '@/utils/array'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
