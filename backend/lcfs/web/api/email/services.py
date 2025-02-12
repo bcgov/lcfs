@@ -4,7 +4,7 @@ import requests
 import structlog
 from fastapi import Depends
 from jinja2 import Environment, FileSystemLoader
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from lcfs.settings import settings
@@ -78,25 +78,36 @@ class CHESEmailService:
         """
         Send an email using CHES.
         """
-        # Validate configuration before performing any operations
         if not settings.ches_enabled:
             return False
 
-        self._validate_configuration()
+        try:
+            self._validate_configuration()
+        except Exception as e:
+            logger.info(f"Email configuration error: {e}")
+            return False
 
         token = await self._get_ches_token()
-        response = requests.post(
-            settings.ches_email_url,
-            json=payload,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-            },
-            timeout=15,
-        )
-        response.raise_for_status()
-        logger.info("Email sent successfully.")
-        return True
+        if not token:
+            logger.warn("Email sending skipped: failed to retrieve a valid CHES token.")
+            return False
+
+        try:
+            response = requests.post(
+                settings.ches_email_url,
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                timeout=15,
+            )
+            response.raise_for_status()
+            logger.info("Email sent successfully.")
+            return True
+        except Exception as e:
+            logger.error(f"Email sending failed: {e}")
+            return False
 
     def _render_email_template(
         self, template_name: str, context: Dict[str, Any]
@@ -132,30 +143,35 @@ class CHESEmailService:
             "bodyType": "html",
         }
 
-    async def _get_ches_token(self) -> str:
+    async def _get_ches_token(self) -> Optional[str]:
         """
         Retrieve and cache the CHES access token.
         """
-        # Validate configuration before performing any operations
-        self._validate_configuration()
+        try:
+            self._validate_configuration()
 
-        if self._access_token and datetime.now().timestamp() < self._token_expiry:
+            if self._access_token and datetime.now().timestamp() < self._token_expiry:
+                return self._access_token
+
+            response = requests.post(
+                settings.ches_auth_url,
+                data={"grant_type": "client_credentials"},
+                auth=(settings.ches_client_id, settings.ches_client_secret),
+                timeout=10,
+            )
+            response.raise_for_status()
+
+            token_data = response.json()
+            self._access_token = token_data.get("access_token")
+            self._token_expiry = datetime.now().timestamp() + token_data.get(
+                "expires_in", 3600
+            )
+            logger.info("Retrieved new CHES token.")
             return self._access_token
-        response = requests.post(
-            settings.ches_auth_url,
-            data={"grant_type": "client_credentials"},
-            auth=(settings.ches_client_id, settings.ches_client_secret),
-            timeout=10,
-        )
-        response.raise_for_status()
 
-        token_data = response.json()
-        self._access_token = token_data.get("access_token")
-        self._token_expiry = datetime.now().timestamp() + token_data.get(
-            "expires_in", 3600
-        )
-        logger.info("Retrieved new CHES token.")
-        return self._access_token
+        except Exception as e:
+            logger.error(f"Token retrieval failed: {e}")
+            return None
 
     def _validate_configuration(self):
         """
