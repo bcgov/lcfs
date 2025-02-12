@@ -1,8 +1,8 @@
 """Add fields for Low Carbon fuel requirement summary
 
 Revision ID: 0d59d56ca310
-Revises: e50534b604f2
-Create Date: 2025-02-10 13:13:50.046160
+Revises: f0d95904a9dd
+Create Date: 2025-02-11 23:13:50.046160
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "0d59d56ca310"
-down_revision = "775db18a959a"
+down_revision = "f0d95904a9dd"
 branch_labels = None
 depends_on = None
 
