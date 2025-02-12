@@ -55,41 +55,50 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
 }
 
 PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
-    "23": {
+    12: {
         "description": "Total credits from fuel supplied (from Schedule B)",
         "field": "low_carbon_fuel_required",
+        "units": "Credits",
     },
-    "24": {
+    13: {
         "description": "Total debits from fuel supplied (from Schedule B)",
         "field": "low_carbon_fuel_supplied",
+        "units": "(Debits)",
     },
-    "25": {
+    14: {
         "description": "Net credit or debit balance for compliance period",
         "field": "low_carbon_fuel_surplus",
+        "units": "Credits (Debits)",
     },
-    "26": {
+    15: {
         "description": "Total banked credits used to offset outstanding debits (if applicable)",
         "field": "banked_units_used",
+        "units": "Credits",
     },
-    "26a": {
+    16: {
         "description": "Banked credits used to offset outstanding debits - Previous reports",
         "field": "banked_units_remaining",
+        "units": "Credits",
     },
-    "26b": {
+    17: {
         "description": "Banked credits used to offset outstanding debits - {}",
         "field": "non_banked_units_used",
+        "units": "Credits",
     },
-    "26c": {
+    18: {
         "description": "Banked credits spent that will be returned due to debit decrease - {}",
         "field": "units_to_be_banked",
+        "units": "Credits",
     },
-    "27": {
+    19: {
         "description": "Outstanding debit balance",
         "field": "units_to_be_exported",
+        "units": "(Debits)",
     },
-    "28": {
+    20: {
         "description": "Part 3 non-compliance penalty payable",
         "field": "surplus_deficit_units",
+        "units": "$CAD",
     },
 }
 

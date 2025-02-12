@@ -6,7 +6,7 @@ import {
   renewableFuelColumns,
   lowCarbonColumns,
   nonComplianceColumns
-} from '../components/_schema'
+} from './_schema'
 import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
@@ -68,9 +68,7 @@ const LegacyReportSummary = ({
               summaryData
                 ? renewableFuelColumns(
                     t,
-                    summaryData?.renewableFuelTargetSummary,
-                    currentStatus === 'Draft',
-                    compliancePeriodYear
+                    summaryData?.renewableFuelTargetSummary
                   )
                 : []
             }

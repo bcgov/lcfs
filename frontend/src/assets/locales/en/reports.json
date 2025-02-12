@@ -168,7 +168,8 @@
   "summaryLabels": {
     "line": "Line",
     "value": "Value",
-    "totalValue": "Total Value"
+    "totalValue": "Total Value",
+    "units": "Units"
   },
   "summaryLoadingMsg": "Loading compliance report summary...",
   "noSigningAuthorityTooltip": "Cannot submit: Signing authority role required.",
