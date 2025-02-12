@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { IconButton } from '@mui/material'
 import { Clear as ClearIcon } from '@mui/icons-material'
+
 const ITEM_HEIGHT = 48
 const ITEM_PADDING_TOP = 8
 
@@ -17,7 +18,37 @@ export const BCSelectFloatingFilter = ({
   initialSelectedValues = []
 }) => {
   const [selectedValues, setSelectedValues] = useState([])
+  const [options, setOptions] = useState([])
   const { data: optionsData, isLoading, isError, error } = optionsQuery(params)
+
+  useEffect(() => {
+    if (optionsData) {
+      setOptions(optionsData)
+    }
+  }, [isLoading])
+
+  useEffect(() => {
+    if (!model) {
+      setSelectedValues(initialSelectedValues)
+      return
+    }
+
+    const filterValues = model.filter?.split(',') || []
+
+    if (filterValues.length > 1) {
+      const optionExists = options.some(
+        (opt) => opt[valueKey]?.toString() === model?.filter?.toString()
+      )
+
+      if (!optionExists) {
+        const newOptions = [
+          { [valueKey]: model?.filter, [labelKey]: model?.filter }
+        ]
+        setOptions((prev) => [...prev, ...newOptions])
+      }
+    }
+    setSelectedValues(filterValues)
+  }, [model])
 
   const handleChange = (event) => {
     const { options } = event.target
@@ -39,7 +70,7 @@ export const BCSelectFloatingFilter = ({
       setSelectedValues(newValues)
       onModelChange({
         type: initialFilterType,
-        filter: newValues
+        filter: newValues.join(',')
       })
     }
   }
@@ -47,6 +78,10 @@ export const BCSelectFloatingFilter = ({
   const handleClear = (event) => {
     event.stopPropagation()
     setSelectedValues([])
+
+    // Remove any dynamically added options
+    setOptions(optionsData || [])
+
     onModelChange(null)
   }
 
@@ -67,20 +102,12 @@ export const BCSelectFloatingFilter = ({
       )
     }
 
-    return (optionsData || []).map((option) => (
+    return options.map((option) => (
       <option key={option[valueKey]} value={option[valueKey]}>
         {option[labelKey]}
       </option>
     ))
-  }, [isLoading, isError, optionsData, error])
-
-  useEffect(() => {
-    if (!model) {
-      setSelectedValues(initialSelectedValues)
-    } else {
-      setSelectedValues([model?.filter])
-    }
-  }, [model])
+  }, [isLoading, isError, options, error, valueKey, labelKey])
 
   return (
     <div

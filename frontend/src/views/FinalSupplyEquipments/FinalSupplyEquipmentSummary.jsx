@@ -10,6 +10,8 @@ import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { numberFormatter } from '@/utils/formatters.js'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
+import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema.jsx'
 
 export const FinalSupplyEquipmentSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -53,130 +55,9 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
     }),
     [status]
   )
-
-  const columns = useMemo(
-    () => [
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
-        ),
-        field: 'organizationName'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
-        ),
-        field: 'supplyFromDate'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
-        ),
-        field: 'supplyToDate'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
-        ),
-        field: 'kwhUsage',
-        valueFormatter: numberFormatter
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
-        ),
-        field: 'registrationNbr'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'
-        ),
-        field: 'serialNbr'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
-        ),
-        field: 'manufacturer'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.model'
-        ),
-        field: 'model'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
-        ),
-        field: 'levelOfEquipment',
-        valueGetter: (params) => params.data.levelOfEquipment.name
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'
-        ),
-        field: 'ports'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
-        ),
-        field: 'intendedUses',
-        valueGetter: (params) =>
-          params.data.intendedUseTypes.map((use) => use.type).join(', '),
-        cellRenderer: CommonArrayRenderer,
-        cellRendererParams: { marginTop: '0.7em' }
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
-        ),
-        field: 'intendedUsers',
-        valueGetter: (params) =>
-          params.data.intendedUserTypes.map((use) => use.typeName).join(', '),
-        cellRenderer: CommonArrayRenderer,
-        cellRendererParams: { marginTop: '0.7em' }
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
-        ),
-        field: 'streetAddress'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.city'
-        ),
-        field: 'city'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
-        ),
-        field: 'postalCode'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.latitude'
-        ),
-        field: 'latitude'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.longitude'
-        ),
-        field: 'longitude'
-      },
-      {
-        headerName: t(
-          'finalSupplyEquipment:finalSupplyEquipmentColLabels.notes'
-        ),
-        field: 'notes'
-      }
-    ],
-    [t]
-  )
+  const columns = useMemo(() => {
+    return finalSupplyEquipmentSummaryColDefs(t)
+  }, [t])
 
   const getRowId = (params) => {
     return params.data.finalSupplyEquipmentId.toString()

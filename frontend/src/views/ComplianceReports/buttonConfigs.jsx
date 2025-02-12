@@ -1,6 +1,6 @@
 // complianceReportButtonConfigs.js
 
-import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faPencil } from '@fortawesome/free-solid-svg-icons'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 
