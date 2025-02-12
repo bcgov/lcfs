@@ -50,6 +50,9 @@ export const apiRoutes = {
   finalSupplyEquipmentOptions: '/final-supply-equipments/table-options',
   getAllFinalSupplyEquipments: '/final-supply-equipments/list-all',
   saveFinalSupplyEquipments: '/final-supply-equipments/save',
+  exportFinalSupplyEquipments: '/final-supply-equipments/export/:reportID',
+  downloadFinalSupplyEquipmentsTemplate:
+    '/final-supply-equipments/template/:reportID',
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
   fuelSupplyOptions: '/fuel-supply/table-options?',
   getAllFuelSupplies: '/fuel-supply/list-all',

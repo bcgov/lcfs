@@ -11,8 +11,8 @@ set -e
 # $5 = (optional) table name to dump (e.g., compliance_report_history)
 #
 # Example commands:
-# ./data-transfer.sh lcfs dev export 398cd4661173 compliance_report_history
-# ./data-transfer.sh tfrs prod import 398cd4661173
+# . data-transfer.sh lcfs dev export 398cd4661173 compliance_report_history
+# . data-transfer.sh tfrs prod import 398cd4661173
 
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
     echo "Passed $# parameters. Expected 4 or 5."
@@ -66,17 +66,17 @@ case $application in
         fi
         db_name="tfrs"
         remote_db_user="postgres"
-        local_db_user="postgres"
+        local_db_user="tfrs"
         ;;
     "lcfs")
         project_name="d2bd59-$env"
         app_label="lcfs-crunchy-$env-lcfs"
         db_name="lcfs"
         if [ "$env" = "prod" ]; then
-            remote_db_user="lcfsprod"
+            remote_db_user="postgres"
             local_db_user="lcfs"
         else
-            remote_db_user="lcfs"
+            remote_db_user="postgres"
             local_db_user="lcfs"
         fi
         ;;

@@ -125,7 +125,7 @@ export const BCGridEditor = ({
         onCellEditingStopped({
           node,
           oldValue: '',
-          newvalue: node.data[findFirstEditableColumn()],
+          newValue: node.data[findFirstEditableColumn()],
           ...props
         })
       })
