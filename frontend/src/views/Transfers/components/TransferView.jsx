@@ -72,7 +72,10 @@ export const TransferView = ({ transferId, editorMode, transferData }) => {
       </BCBox>
       {/* Comments */}
       {transferData?.comments.length > 0 && (
-        <CommentList comments={transferData?.comments} />
+        <CommentList
+          comments={transferData?.comments}
+          viewerIsGovernment={!!isGovernmentUser}
+        />
       )}
       {!getAllTerminalTransferStatuses().includes(transferStatus) && (
         <Comments

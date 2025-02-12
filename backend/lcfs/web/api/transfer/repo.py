@@ -1,5 +1,5 @@
 import structlog
-from typing import List
+from typing import List, Optional
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,13 +11,18 @@ from lcfs.db.dependencies import get_async_db_session
 from lcfs.web.core.decorators import repo_handler
 from lcfs.web.api.transfer.schema import CreateTransferHistorySchema, TransferSchema
 
+from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.transfer.Transfer import Transfer
-from lcfs.db.models.transfer.TransferStatus import TransferStatus, TransferStatusEnum
+from lcfs.db.models.transfer.TransferStatus import TransferStatus
 from lcfs.db.models.transfer.TransferCategory import (
     TransferCategory,
     TransferCategoryEnum,
 )
 from lcfs.db.models.transfer.TransferHistory import TransferHistory
+from lcfs.db.models.transfer.TransferComment import (
+    TransferComment,
+    TransferCommentSourceEnum,
+)
 
 logger = structlog.get_logger(__name__)
 
@@ -40,6 +45,7 @@ class TransferRepository:
             selectinload(Transfer.transfer_history).selectinload(
                 TransferHistory.transfer_status
             ),
+            selectinload(Transfer.transfer_comments),
         )
         result = await self.db.execute(query)
         transfers = result.scalars().all()
@@ -83,6 +89,13 @@ class TransferRepository:
                 selectinload(Transfer.transfer_history).selectinload(
                     TransferHistory.transfer_status
                 ),
+                selectinload(Transfer.transfer_comments),
+                selectinload(Transfer.transfer_comments).selectinload(
+                    TransferComment.user_profile
+                ),
+                selectinload(Transfer.transfer_comments)
+                .selectinload(TransferComment.user_profile)
+                .selectinload(UserProfile.organization),
             )
             .where(Transfer.transfer_id == transfer_id)
         )
@@ -109,6 +122,7 @@ class TransferRepository:
                 "current_status",
                 "transfer_category",
                 "transfer_history",
+                "transfer_comments",
             ],
         )  # Ensures that all specified relations are up-to-date
 
@@ -168,6 +182,7 @@ class TransferRepository:
                 "current_status",
                 "transfer_category",
                 "transfer_history",
+                "transfer_comments",
             ],
         )
         return TransferSchema.model_validate(transfer)
@@ -195,6 +210,47 @@ class TransferRepository:
         self.db.add(new_history_record)
         await self.db.flush()
         return new_history_record
+
+    @repo_handler
+    async def upsert_transfer_comment(
+        self, transfer_id: int, comment: str, comment_source: TransferCommentSourceEnum
+    ) -> Optional[TransferComment]:
+        """
+        Finds or creates a TransferComment row for the given `transfer_id` and `comment_source`.
+
+        - If 'comment' is blank or None, do nothing (skip).
+        - If there's an existing row, update its 'comment'.
+        - If no existing row, create a new one.
+        - Returns the updated/created TransferComment, or None if skipped.
+        """
+        # If the comment is blank or None, skip entirely
+        if not comment or not comment.strip():
+            return None
+
+        # Try to find existing
+        stmt = select(TransferComment).where(
+            TransferComment.transfer_id == transfer_id,
+            TransferComment.comment_source == comment_source,
+        )
+        existing = await self.db.scalar(stmt)
+
+        # If existing, update
+        if existing:
+            existing.comment = comment.strip()
+            existing.update_date = datetime.now()
+            self.db.add(existing)
+            await self.db.flush()
+            return existing
+
+        # Otherwise create new
+        new_comment = TransferComment(
+            transfer_id=transfer_id,
+            comment=comment.strip(),
+            comment_source=comment_source,
+        )
+        self.db.add(new_comment)
+        await self.db.flush()
+        return new_comment
 
     @repo_handler
     async def update_transfer_history(
