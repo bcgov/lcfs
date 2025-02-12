@@ -38,6 +38,7 @@ import {
 } from '@/hooks/useComplianceReports'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { isArrayEmpty } from '@/utils/array.js'
 
 const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
@@ -60,11 +61,14 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
 
   const editSupportingDocs = useMemo(() => {
     return (
-      isAnalystRole &&
-      (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
-        currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED)
+      // Allow BCeID users to edit in Draft status
+      (isSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) ||
+      // Allow analysts to edit in Submitted or Assessed status
+      (isAnalystRole &&
+        (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
+          currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED))
     )
-  }, [isAnalystRole, currentStatus])
+  }, [isAnalystRole, isSupplierRole, currentStatus])
 
   const editAnalyst = useMemo(() => {
     return (
@@ -98,20 +102,6 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
     )
   }
 
-  const isArrayEmpty = useCallback((data) => {
-    if (Array.isArray(data)) {
-      return data.length === 0
-    }
-    if (typeof data === 'object' && data !== null) {
-      const keys = Object.keys(data)
-      const arrayKey = keys.find((key) => key !== 'pagination')
-      if (arrayKey && Array.isArray(data[arrayKey])) {
-        return data[arrayKey].length === 0
-      }
-    }
-    return null
-  }, [])
-
   const activityList = useMemo(
     () => [
       {
@@ -124,8 +114,9 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         component: (data) => (
           <>
             <SupportingDocumentSummary
+              parentType="compliance_report"
+              parentID={complianceReportId}
               data={data}
-              reportID={complianceReportId}
             />
             <DocumentUploadDialog
               parentID={complianceReportId}
@@ -309,15 +300,11 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
         return (
-          ((data && !isArrayEmpty(data)) ||
-            activity.name === t('report:supportingDocs')) && (
+          data &&
+          !isArrayEmpty(data) && (
             <Accordion
               key={index}
-              expanded={
-                activity.name === t('report:supportingDocs')
-                  ? expanded.includes(`panel${index}`) && !isArrayEmpty(data)
-                  : expanded.includes(`panel${index}`)
-              }
+              expanded={expanded.includes(`panel${index}`)}
               onChange={onExpand(`panel${index}`)}
             >
               <AccordionSummary

@@ -10,6 +10,8 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgComplianceReportCounts } from '@/hooks/useDashboard'
+import { FILTER_KEYS } from '@/constants/common'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
 const CountDisplay = ({ count }) => (
   <BCTypography
@@ -31,10 +33,11 @@ const OrgComplianceReportsCard = () => {
   const { data: counts, isLoading } = useOrgComplianceReportCounts()
 
   const handleNavigation = (route, status) => {
-    const filters = [
-      { field: 'status', filterType: 'text', type: 'equals', filter: status }
-    ]
-    navigate(route, { state: { filters } })
+    const filter = JSON.stringify({
+      status: { filterType: 'text', type: 'equals', filter: status }
+    })
+    sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, filter)
+    navigate(route)
   }
 
   const renderLinkWithCount = (text, count, onClick) => {
@@ -95,12 +98,12 @@ const OrgComplianceReportsCard = () => {
                   {renderLinkWithCount(
                     t('dashboard:orgComplianceReports.inProgress'),
                     inProgressCount,
-                    () => handleNavigation(ROUTES.REPORTS, 'Draft')
+                    () => handleNavigation(ROUTES.REPORTS, COMPLIANCE_REPORT_STATUSES.DRAFT)
                   )}
                   {renderLinkWithCount(
                     t('dashboard:orgComplianceReports.awaitingGovReview'),
                     awaitingGovReviewCount,
-                    () => handleNavigation(ROUTES.REPORTS, 'Submitted')
+                    () => handleNavigation(ROUTES.REPORTS, COMPLIANCE_REPORT_STATUSES.SUBMITTED)
                   )}
                 </List>
               </>

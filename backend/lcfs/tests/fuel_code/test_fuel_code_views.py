@@ -2,7 +2,6 @@ from datetime import date
 from unittest.mock import patch
 
 import pytest
-from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from httpx import AsyncClient
 from starlette import status

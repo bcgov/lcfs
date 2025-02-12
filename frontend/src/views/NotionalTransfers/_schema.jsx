@@ -162,6 +162,38 @@ export const notionalTransferColDefs = (
   }
 ]
 
+export const notionalTransferSummaryColDefs = (t) => [
+  {
+    headerName: t('notionalTransfer:notionalTransferColLabels.legalName'),
+    field: 'legalName',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: t(
+      'notionalTransfer:notionalTransferColLabels.addressForService'
+    ),
+    field: 'addressForService',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: t('notionalTransfer:notionalTransferColLabels.fuelCategory'),
+    field: 'fuelCategory'
+  },
+  {
+    headerName: t(
+      'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
+    ),
+    field: 'receivedOrTransferred'
+  },
+  {
+    headerName: t('notionalTransfer:notionalTransferColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  }
+]
+
 export const defaultColDef = {
   editable: true,
   resizable: true,

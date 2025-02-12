@@ -79,6 +79,7 @@ export const AddEditOrg = () => {
         orgEmailAddress: data.email,
         orgPhoneNumber: data.phone,
         orgEDRMSRecord: data.edrmsRecord,
+        hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
         orgRegForTransfers:
           data.orgStatus.organizationStatusId === 2 ? '2' : '1',
         orgStreetAddress: data.orgAddress.streetAddress,
@@ -152,6 +153,7 @@ export const AddEditOrg = () => {
       email: data.orgEmailAddress,
       phone: data.orgPhoneNumber,
       edrmsRecord: data.orgEDRMSRecord,
+      hasEarlyIssuance: data.hasEarlyIssuance === 'yes',
       organizationStatusId: parseInt(data.orgRegForTransfers),
       organizationTypeId: parseInt(data.orgSupplierType),
       address: {
@@ -424,7 +426,6 @@ export const AddEditOrg = () => {
                               id="orgSupplierType"
                               name="orgSupplierType"
                               defaultValue="1"
-                              sx={{ pt: 1 }}
                             >
                               <FormControlLabel
                                 value="1"
@@ -463,9 +464,9 @@ export const AddEditOrg = () => {
                               defaultValue=""
                               render={({ field }) => (
                                 <RadioGroup
+                                  row
                                   id="orgRegForTransfers"
                                   name="orgRegForTransfers"
-                                  sx={{ pt: 1 }}
                                   {...field}
                                 >
                                   <FormControlLabel
@@ -481,6 +482,7 @@ export const AddEditOrg = () => {
                                   />
                                   <FormControlLabel
                                     value="1"
+                                    sx={{ ml: 2 }}
                                     control={
                                       <Radio data-test="orgRegForTransfers1" />
                                     }
@@ -496,6 +498,62 @@ export const AddEditOrg = () => {
                               /
                             </Controller>
                             {renderError('orgRegForTransfers')}
+                          </Grid>
+                        </Grid>
+                      </FormControl>
+                    </Box>
+                    <Box mb={2}>
+                      <FormControl fullWidth>
+                        <Grid container>
+                          <Grid item xs={4}>
+                            <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
+                              <BCTypography variant="body3">
+                                {t('org:earlyIssuanceLabel')}:
+                              </BCTypography>
+                            </FormLabel>
+                          </Grid>
+                          <Grid item xs={8}>
+                            <Controller
+                              control={control}
+                              name="hasEarlyIssuance"
+                              defaultValue=""
+                              render={({ field }) => (
+                                <RadioGroup
+                                  row
+                                  id="hasEarlyIssuance"
+                                  name="hasEarlyIssuance"
+                                  sx={{ pt: 1 }}
+                                  {...field}
+                                >
+                                  <FormControlLabel
+                                    value="yes"
+                                    control={
+                                      <Radio data-test="hasEarlyIssuanceYes" />
+                                    }
+                                    label={
+                                      <BCTypography variant="body3">
+                                        {t('yes')}
+                                      </BCTypography>
+                                    }
+                                  />
+                                  <FormControlLabel
+                                    value="no"
+                                    sx={{ ml: 2 }}
+                                    control={
+                                      <Radio data-test="hasEarlyIssuanceNo" />
+                                    }
+                                    label={
+                                      <BCTypography variant="body3">
+                                        {t('no')}
+                                      </BCTypography>
+                                    }
+                                  />
+                                </RadioGroup>
+                              )}
+                            >
+                              /
+                            </Controller>
+                            {renderError('hasEarlyIssuance')}
                           </Grid>
                         </Grid>
                       </FormControl>

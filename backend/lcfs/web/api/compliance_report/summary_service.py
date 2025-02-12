@@ -48,7 +48,8 @@ class ComplianceReportSummaryService:
         fuel_supply_repo: FuelSupplyRepository = Depends(FuelSupplyRepository),
         fuel_export_repo: FuelExportRepository = Depends(FuelExportRepository),
         allocation_agreement_repo: AllocationAgreementRepository = Depends(
-            AllocationAgreementRepository),
+            AllocationAgreementRepository
+        ),
         other_uses_repo: OtherUsesRepository = Depends(OtherUsesRepository),
     ):
         self.repo = repo
@@ -356,7 +357,8 @@ class ComplianceReportSummaryService:
 
         # Get effective other uses
         effective_other_uses = await self.other_uses_repo.get_effective_other_uses(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid, return_model=True
+            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid,
+            return_model=True,
         )
 
         # Fetch fuel quantities
@@ -375,7 +377,10 @@ class ComplianceReportSummaryService:
             ou for ou in effective_other_uses if ou.fuel_type.renewable
         ]
 
-        all_renewable_records = [*filtered_renewable_fuel_supplies, *filtered_renewable_other_uses]
+        all_renewable_records = [
+            *filtered_renewable_fuel_supplies,
+            *filtered_renewable_other_uses,
+        ]
 
         renewable_quantities = await self.calculate_fuel_quantities(
             compliance_report.compliance_report_id,
@@ -767,9 +772,7 @@ class ComplianceReportSummaryService:
         """
         Calculate the total quantities of fuels, separated by fuel category and fossil_derived flag.
         """
-        fuel_quantities = self.repo.aggregate_quantities(
-            records, fossil_derived
-        )
+        fuel_quantities = self.repo.aggregate_quantities(records, fossil_derived)
 
         other_uses = await self.repo.aggregate_other_uses_quantity(
             compliance_report_id, fossil_derived
@@ -800,7 +803,7 @@ class ComplianceReportSummaryService:
             TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity
             EER = fuel_supply.eer or 0  # Energy Effectiveness Ratio
             RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity
-            UCI = 0  # Assuming additional carbon intensity attributable to use is not available
+            UCI = fuel_supply.uci or 0  # Additional Carbon Intensity
             Q = fuel_supply.quantity or 0  # Quantity of Fuel Supplied
             ED = fuel_supply.energy_density or 0  # Energy Density
 
@@ -829,7 +832,7 @@ class ComplianceReportSummaryService:
             TCI = fuel_export.target_ci or 0  # Target Carbon Intensity
             EER = fuel_export.eer or 0  # Energy Effectiveness Ratio
             RCI = fuel_export.ci_of_fuel or 0  # Recorded Carbon Intensity
-            UCI = 0  # Assuming additional carbon intensity attributable to use is not available
+            UCI = fuel_export.uci or 0  # Additional Carbon Intensity
             Q = fuel_export.quantity or 0  # Quantity of Fuel Supplied
             ED = fuel_export.energy_density or 0  # Energy Density
 

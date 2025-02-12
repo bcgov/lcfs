@@ -26,13 +26,24 @@
   "supplementalCreated": "Supplemental report created successfully.",
   "clickDrag": "Drag and drop your (PDF, JPG, PNG, MSG, DOC, XLS) file(s) here or click to select the file(s) from your machine to upload.",
   "activityLinksList": "Click links to report activities",
+  "activitySecondList": "Verification details",
   "activityLists": {
     "supplyOfFuel": "Supply of fuel (e.g., gasoline, diesel, jet fuel, electricity, hydrogen, etc.)",
     "finalSupplyEquipment": "Final supply equipment (FSE) identification for electricity supply",
     "allocationAgreements": "Allocation agreements (e.g., allocating responsibility for fuel)",
     "notionalTransfers": "Notional transfers of eligible renewable fuel",
     "fuelsOtherUse": "Fuels for other use",
-    "exportFuels": "Exporting fuel that was previously marketed in British Columbia"
+    "exportFuels": "Exporting fuel that was previously marketed in British Columbia",
+    "uploadDocuments": "Upload supporting documents for your report"
+  },
+  "activityLabels": {
+    "supplyOfFuel": "Supply of fuel",
+    "finalSupplyEquipment": "FSE",
+    "allocationAgreements": "Allocation agreements",
+    "notionalTransfers": "Notional transfers",
+    "fuelsOtherUse": "Fuels for other use",
+    "exportFuels": "Exporting fuel",
+    "uploadDocuments": "Upload documents"
   },
   "actionBtns": {
     "saveDraftBtn": "Save draft report",
@@ -164,5 +175,6 @@
   "addressEdited": " - edited",
   "viewLegacyBtn": "View Full Historical Report in TFRS",
   "reportAssessed": "Compliance report, Assessed",
-  "changelog": "Change log"
+  "changelog": "Change log",
+  "documentLabel": "Add file attachments (maximum file size: 50 MB):"
 }

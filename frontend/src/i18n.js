@@ -18,6 +18,7 @@ import fuelExportEn from '@/assets/locales/en/fuelExport.json'
 import dashboardEn from '@/assets/locales/en/dashboard.json'
 import allocationAgreementEn from '@/assets/locales/en/allocationAgreement.json'
 import notificationsEn from '@/assets/locales/en/notifications.json'
+import legacyEn from '@/assets/locales/en/legacy.json'
 
 // manage translations separated from your code: https://react.i18next.com/guides/multiple-translation-files)
 const resources = {
@@ -40,7 +41,8 @@ const resources = {
     fuelExport: fuelExportEn,
     dashboard: dashboardEn,
     allocationAgreement: allocationAgreementEn,
-    notifications: notificationsEn
+    notifications: notificationsEn,
+    legacy: legacyEn
   }
 }
 

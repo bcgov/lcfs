@@ -1,7 +1,24 @@
-from sqlalchemy import Column, Integer, BigInteger, ForeignKey, DateTime, String
+from sqlalchemy import Column, Integer, BigInteger, ForeignKey, DateTime, String, Table
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+
+admin_adjustment_document_association = Table(
+    "admin_adjustment_document_association",
+    BaseModel.metadata,
+    Column(
+        "admin_adjustment_id",
+        Integer,
+        ForeignKey("admin_adjustment.admin_adjustment_id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "document_id",
+        Integer,
+        ForeignKey("document.document_id"),
+        primary_key=True,
+    ),
+)
 
 
 class AdminAdjustment(BaseModel, Auditable, EffectiveDates):
@@ -35,6 +52,12 @@ class AdminAdjustment(BaseModel, Auditable, EffectiveDates):
     current_status = relationship("AdminAdjustmentStatus")
     admin_adjustment_internal_comments = relationship(
         "AdminAdjustmentInternalComment", back_populates="admin_adjustment"
+    )
+
+    documents = relationship(
+        "Document",
+        secondary=admin_adjustment_document_association,
+        back_populates="admin_adjustments",
     )
 
     def __repr__(self):

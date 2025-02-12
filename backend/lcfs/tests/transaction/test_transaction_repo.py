@@ -126,8 +126,9 @@ async def test_transactions_in_have_correct_visibilities(
     assert len(transactions_transferee) == 7
     assert total_count_transferee == 7
 
-    assert len(transactions_gov) == 9
-    assert total_count_gov == 9
+    # No Rescinded transfer shown in the government transactions
+    assert len(transactions_gov) == 8
+    assert total_count_gov == 8
 
 
 @pytest.mark.anyio
