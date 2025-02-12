@@ -57,7 +57,11 @@ class ComplianceDataService:
         return self.nickname
 
     def is_legacy_year(self) -> bool:
-        return self.compliance_period < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
+        return (
+            self.compliance_period < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
+            if self.compliance_period is not None
+            else False
+        )
 
 
 # Create a global instance
