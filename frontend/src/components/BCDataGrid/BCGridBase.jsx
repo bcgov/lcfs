@@ -122,7 +122,7 @@ export const BCGridBase = forwardRef(
         onRowDataUpdated={determineHeight}
         getRowStyle={(params) => ({
           ...getRowStyle(params),
-          ...props.gridOptions.getRowStyle(params)
+          ...props.gridOptions?.getRowStyle(params)
         })}
         rowHeight={ROW_HEIGHT}
         headerHeight={40}

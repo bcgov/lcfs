@@ -93,7 +93,7 @@ async def test_get_fuel_supply_list(fuel_supply_service):
 
     assert isinstance(response, FuelSuppliesSchema)
     mock_repo.get_fuel_supply_list.assert_awaited_once_with(
-        compliance_report_id)
+        compliance_report_id, False)
 
 
 @pytest.mark.anyio

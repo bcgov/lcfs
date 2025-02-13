@@ -428,46 +428,6 @@ async def test_delete_fuel_supply_success(
 
 
 @pytest.mark.anyio
-async def test_delete_fuel_supply_already_deleted(
-    fuel_supply_action_service, mock_repo, mock_fuel_code_repo
-):
-    fe_data = create_sample_fs_data()
-    user_type = UserTypeEnum.SUPPLIER
-
-    # Exclude invalid fields
-    fe_data_dict = fe_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS)
-
-    # Mock existing supply already marked as deleted
-    existing_supply = FuelSupply(
-        **fe_data_dict,
-        fuel_supply_id=1,
-        version=1,
-        action_type=ActionTypeEnum.DELETE,
-    )
-    existing_supply.compliance_units = 0
-    existing_supply.fuel_type = {
-        "fuel_type_id": 3,
-        "fuel_type": "Electricity",
-        "units": "kWh",
-    }
-    existing_supply.fuel_category = {"category": "Diesel"}
-    existing_supply.units = "Litres"
-    mock_repo.get_latest_fuel_supply_by_group_uuid.return_value = existing_supply
-
-    # Call the method under test
-    result = await fuel_supply_action_service.delete_fuel_supply(fe_data, user_type)
-
-    # Assertions
-    assert isinstance(result, DeleteFuelSupplyResponseSchema)
-    assert result.success is True
-    assert result.message == "Already deleted."
-    mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with(
-        fe_data.group_uuid
-    )
-    mock_repo.create_fuel_supply.assert_not_awaited()
-
-
-@pytest.mark.anyio
 async def test_populate_fuel_supply_fields(
     fuel_supply_action_service, mock_fuel_code_repo
 ):

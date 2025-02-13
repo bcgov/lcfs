@@ -5,6 +5,7 @@ import * as ROUTES from '@/constants/routes/routes.js'
 import {
   useFuelSupplyOptions,
   useGetFuelSupplies,
+  useGetFuelSuppliesList,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
 import { cleanEmptyStringValues } from '@/utils/formatters'
@@ -50,8 +51,10 @@ export const AddEditFuelSupplies = () => {
 
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
-  const { data, isLoading: fuelSuppliesLoading } =
-    useGetFuelSupplies(complianceReportId)
+  const { data, isLoading: fuelSuppliesLoading } = useGetFuelSuppliesList({
+    complianceReportId,
+    changelog: true
+  })
 
   const gridOptions = useMemo(
     () => ({

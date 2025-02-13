@@ -252,11 +252,6 @@ class FuelSupplyActionService:
             fs_data.group_uuid
         )
 
-        if existing_fuel_supply.action_type == ActionTypeEnum.DELETE:
-            return DeleteFuelSupplyResponseSchema(
-                success=True, message="Already deleted."
-            )
-
         if fs_data.is_new_entry:
             await self.repo.delete_fuel_supply(fuel_supply_id=fs_data.fuel_supply_id)
             return DeleteFuelSupplyResponseSchema(

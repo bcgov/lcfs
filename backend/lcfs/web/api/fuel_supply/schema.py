@@ -15,6 +15,7 @@ from lcfs.web.utils.schema_validators import fuel_code_required
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
+    changelog: Optional[bool] = None
     filters: Optional[List[FilterModel]] = None
     page: Optional[int] = None
     size: Optional[int] = None

@@ -234,13 +234,14 @@ class FuelSupplyServices:
 
     @service_handler
     async def get_fuel_supply_list(
-        self, compliance_report_id: int
+        self, compliance_report_id: int, changelog: bool = False
     ) -> FuelSuppliesSchema:
         """Get fuel supply list for a compliance report"""
-        fuel_supply_models = await self.repo.get_fuel_supply_list(compliance_report_id)
+        fuel_supply_models = await self.repo.get_fuel_supply_list(compliance_report_id, changelog)
         fs_list = [
             FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supply_models
         ]
+
         return FuelSuppliesSchema(fuel_supplies=fs_list if fs_list else [])
 
     @service_handler

@@ -199,7 +199,7 @@ class FuelSupplyRepository:
         }
 
     @repo_handler
-    async def get_fuel_supply_list(self, compliance_report_id: int) -> List[FuelSupply]:
+    async def get_fuel_supply_list(self, compliance_report_id: int, changelog: Optional[bool] = False) -> List[FuelSupply]:
         """
         Retrieve the list of effective fuel supplies for a given compliance report.
         """
@@ -215,7 +215,7 @@ class FuelSupplyRepository:
 
         # Retrieve effective fuel supplies using the group UUID
         effective_fuel_supplies = await self.get_effective_fuel_supplies(
-            compliance_report_group_uuid=group_uuid
+            compliance_report_group_uuid=group_uuid, changelog=changelog
         )
 
         return effective_fuel_supplies
@@ -406,13 +406,12 @@ class FuelSupplyRepository:
 
     @repo_handler
     async def get_effective_fuel_supplies(
-        self, compliance_report_group_uuid: str, compliance_report_id: Optional[int] = None
+        self, compliance_report_group_uuid: str, compliance_report_id: Optional[int] = None, changelog: Optional[bool] = False
     ) -> Sequence[FuelSupply]:
         """
         Retrieve effective FuelSupply records associated with the given compliance_report_group_uuid.
-        For each group_uuid:
-            - Exclude the entire group if any record in the group is marked as DELETE.
-            - From the remaining groups, select the record with the highest version and highest priority.
+        When changelog is True, include DELETE action type rows.
+        Otherwise, exclude groups with any DELETE action.
         """
         # Step 1: Subquery to get all compliance_report_ids in the specified group
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
@@ -423,23 +422,28 @@ class FuelSupplyRepository:
                 ComplianceReport.compliance_report_id <= compliance_report_id
             )
 
-        # Step 2: Subquery to identify record group_uuids that have any DELETE action
-        delete_group_select = (
-            select(FuelSupply.group_uuid)
-            .where(
-                FuelSupply.compliance_report_id.in_(compliance_reports_select),
-                FuelSupply.action_type == ActionTypeEnum.DELETE,
-            )
-            .distinct()
-        )
-
-        # Step 3: Subquery to find the maximum version and priority per group_uuid,
-        # excluding groups with any DELETE action
+        # Step 2 & 3: Build conditions; exclude DELETE rows only when changelog is False
         user_type_priority = case(
             (FuelSupply.user_type == UserTypeEnum.GOVERNMENT, 1),
             (FuelSupply.user_type == UserTypeEnum.SUPPLIER, 0),
             else_=0,
         )
+        conditions = [FuelSupply.compliance_report_id.in_(
+            compliance_reports_select)]
+        if not changelog:
+            delete_group_select = (
+                select(FuelSupply.group_uuid)
+                .where(
+                    FuelSupply.compliance_report_id.in_(
+                        compliance_reports_select),
+                    FuelSupply.action_type == ActionTypeEnum.DELETE,
+                )
+                .distinct()
+            )
+            conditions.extend([
+                FuelSupply.action_type != ActionTypeEnum.DELETE,
+                ~FuelSupply.group_uuid.in_(delete_group_select)
+            ])
 
         valid_fuel_supplies_select = (
             select(
@@ -447,14 +451,9 @@ class FuelSupplyRepository:
                 func.max(FuelSupply.version).label("max_version"),
                 func.max(user_type_priority).label("max_role_priority"),
             )
-            .where(
-                FuelSupply.compliance_report_id.in_(compliance_reports_select),
-                FuelSupply.action_type != ActionTypeEnum.DELETE,
-                ~FuelSupply.group_uuid.in_(delete_group_select),
-            )
+            .where(*conditions)
             .group_by(FuelSupply.group_uuid)
         )
-        # Now create a subquery for use in the JOIN
         valid_fuel_supplies_subq = valid_fuel_supplies_select.subquery()
 
         # Step 4: Main query to retrieve FuelSupply records with necessary eager relationships
