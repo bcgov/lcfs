@@ -15,6 +15,7 @@ from lcfs.web.utils.schema_validators import fuel_code_required
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
+    changelog: Optional[bool] = None
     filters: Optional[List[FilterModel]] = None
     page: Optional[int] = None
     size: Optional[int] = None
@@ -128,6 +129,7 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     eer: Optional[float] = None
     energy: Optional[float] = None
     deleted: Optional[bool] = None
+    is_new_supplemental_entry: Optional[bool] = None
 
     class Config:
         use_enum_values = True
@@ -136,6 +138,24 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     @classmethod
     def check_fuel_code_required(cls, values):
         return fuel_code_required(values)
+
+
+class FuelSupplyDiffSchema(BaseSchema):
+    compliance_units: Optional[bool] = None
+    fuel_type_id: Optional[bool] = None
+    fuel_category_id: Optional[bool] = None
+    end_use_id: Optional[bool] = None
+    provision_of_the_act_id: Optional[bool] = None
+    fuel_code_id: Optional[bool] = None
+    quantity: Optional[bool] = None
+    fuel_type_other: Optional[bool] = None
+    units: Optional[bool] = None
+    target_ci: Optional[bool] = None
+    ci_of_fuel: Optional[bool] = None
+    uci: Optional[bool] = None
+    energy_density: Optional[bool] = None
+    eer: Optional[bool] = None
+    energy: Optional[bool] = None
 
 
 class FuelSupplyResponseSchema(BaseSchema):
@@ -166,6 +186,8 @@ class FuelSupplyResponseSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
     fuel_type_other: Optional[str] = None
+    diff: Optional[FuelSupplyDiffSchema] = None
+    updated: Optional[bool] = None
 
 
 class DeleteFuelSupplyResponseSchema(BaseSchema):

@@ -1,22 +1,25 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
+import BCTypography from '@/components/BCTypography'
 import { DEFAULT_CI_FUEL } from '@/constants/common'
 import * as ROUTES from '@/constants/routes/routes.js'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useFuelSupplyOptions,
-  useGetFuelSupplies,
+  useGetFuelSuppliesList,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
+import colors from '@/themes/base/colors'
+import { isArrayEmpty } from '@/utils/array.js'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import BCTypography from '@/components/BCTypography'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelSupplyColDefs } from './_schema'
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
-import { isArrayEmpty } from '@/utils/array.js'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -31,6 +34,20 @@ export const AddEditFuelSupplies = () => {
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
+  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+  const { data: complianceReport, isLoading: complianceReportLoading } =
+    useGetComplianceReport(
+      currentUser?.organization.organizationId,
+      complianceReportId
+    )
+
+  const [isSupplemental, setIsSupplemental] = useState(false)
+
+  useEffect(() => {
+    if (typeof complianceReport?.report?.version === 'number') {
+      setIsSupplemental(complianceReport.report.version !== 0)
+    }
+  }, [complianceReport?.report?.version])
 
   const {
     data: optionsData,
@@ -40,8 +57,10 @@ export const AddEditFuelSupplies = () => {
 
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
-  const { data, isLoading: fuelSuppliesLoading } =
-    useGetFuelSupplies(complianceReportId)
+  const { data, isLoading: fuelSuppliesLoading } = useGetFuelSuppliesList({
+    complianceReportId,
+    changelog: isSupplemental
+  })
 
   const gridOptions = useMemo(
     () => ({
@@ -50,9 +69,38 @@ export const AddEditFuelSupplies = () => {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
+      },
+      getRowStyle: (params) => {
+        if (
+          params.data.actionType === 'CREATE' &&
+          params.data.isNewSupplementalEntry &&
+          isSupplemental
+        ) {
+          return {
+            backgroundColor: colors.alerts.success.background
+          }
+        }
+        if (
+          params.data.actionType === 'UPDATE' &&
+          params.data.isNewSupplementalEntry &&
+          isSupplemental
+        ) {
+          return {
+            backgroundColor: colors.alerts.warning.background
+          }
+        }
+        if (
+          params.data.actionType === 'DELETE' &&
+          params.data.isNewSupplementalEntry &&
+          isSupplemental
+        ) {
+          return {
+            backgroundColor: colors.alerts.error.background
+          }
+        }
       }
     }),
-    [t]
+    [t, isSupplemental]
   )
 
   useEffect(() => {
@@ -91,20 +139,24 @@ export const AddEditFuelSupplies = () => {
     async (params) => {
       setGridApi(params.api)
       if (!isArrayEmpty(data)) {
-        const updatedRowData = data.fuelSupplies.map((item) => ({
-          ...item,
-          complianceReportId, // This takes current reportId, important for versioning
-          compliancePeriod,
-          fuelCategory: item.fuelCategory?.category,
-          fuelType: item.fuelType?.fuelType,
-          fuelTypeOther:
-            item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
-          provisionOfTheAct: item.provisionOfTheAct?.name,
-          provisionOfTheActId: item.provisionOfTheActId,
-          fuelCode: item.fuelCode?.fuelCode,
-          endUse: item.endUse?.type,
-          id: uuid()
-        }))
+        const updatedRowData = data.fuelSupplies.map((item) => {
+          return {
+            ...item,
+            complianceReportId, // This takes current reportId, important for versioning
+            compliancePeriod,
+            fuelCategory: item.fuelCategory?.category,
+            fuelType: item.fuelType?.fuelType,
+            fuelTypeOther:
+              item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
+            provisionOfTheAct: item.provisionOfTheAct?.name,
+            provisionOfTheActId: item.provisionOfTheActId,
+            fuelCode: item.fuelCode?.fuelCode,
+            endUse: item.endUse?.type,
+            isNewSupplementalEntry:
+              isSupplemental && item.complianceReportId === +complianceReportId,
+            id: uuid()
+          }
+        })
         setRowData([...updatedRowData, { id: uuid() }])
       } else {
         setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
@@ -117,37 +169,50 @@ export const AddEditFuelSupplies = () => {
         })
       }, 100)
     },
-    [data, complianceReportId, compliancePeriod]
+    [data, complianceReportId, compliancePeriod, isSupplemental]
   )
 
   useEffect(() => {
-    if (optionsData?.fuelTypes?.length > 0) {
-      const updatedColumnDefs = fuelSupplyColDefs(optionsData, errors, warnings)
-      setColumnDefs(updatedColumnDefs)
-    }
-  }, [errors, warnings, optionsData])
+    const updatedColumnDefs = fuelSupplyColDefs(
+      optionsData,
+      errors,
+      warnings,
+      isSupplemental
+    )
+    setColumnDefs(updatedColumnDefs)
+  }, [isSupplemental, errors, optionsData, warnings])
 
   useEffect(() => {
     if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
-      const updatedRowData = data.fuelSupplies.map((item) => ({
-        ...item,
-        complianceReportId, // This takes current reportId, important for versioning
-        compliancePeriod,
-        fuelCategory: item.fuelCategory?.category,
-        fuelType: item.fuelType?.fuelType,
-        fuelTypeOther:
-          item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
-        provisionOfTheAct: item.provisionOfTheAct?.name,
-        provisionOfTheActId: item.provisionOfTheAct?.provisionOfTheActId,
-        fuelCode: item.fuelCode?.fuelCode,
-        endUse: item.endUse?.type,
-        id: uuid()
-      }))
+      const updatedRowData = data.fuelSupplies.map((item) => {
+        return {
+          ...item,
+          complianceReportId, // This takes current reportId, important for versioning
+          compliancePeriod,
+          fuelCategory: item.fuelCategory?.category,
+          fuelType: item.fuelType?.fuelType,
+          fuelTypeOther:
+            item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
+          provisionOfTheAct: item.provisionOfTheAct?.name,
+          provisionOfTheActId: item.provisionOfTheAct?.provisionOfTheActId,
+          fuelCode: item.fuelCode?.fuelCode,
+          endUse: item.endUse?.type,
+          isNewSupplementalEntry:
+            isSupplemental && item.complianceReportId === +complianceReportId,
+          id: uuid()
+        }
+      })
       setRowData(updatedRowData)
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
-  }, [data, fuelSuppliesLoading, complianceReportId, compliancePeriod])
+  }, [
+    data,
+    fuelSuppliesLoading,
+    complianceReportId,
+    compliancePeriod,
+    isSupplemental
+  ])
 
   const onCellValueChanged = useCallback(
     async (params) => {
@@ -263,7 +328,7 @@ export const AddEditFuelSupplies = () => {
   )
 
   const onAction = async (action, params) => {
-    if (action === 'delete') {
+    if (action === 'delete' || action === 'undo') {
       await handleScheduleDelete(
         params,
         'fuelSupplyId',
@@ -289,7 +354,9 @@ export const AddEditFuelSupplies = () => {
 
   return (
     isFetched &&
-    !fuelSuppliesLoading && (
+    !fuelSuppliesLoading &&
+    !currentUserLoading &&
+    !complianceReportLoading && (
       <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">

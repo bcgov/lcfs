@@ -1,19 +1,23 @@
-import React from 'react'
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { AddEditFuelSupplies } from '../AddEditFuelSupplies'
-import { wrapper } from '@/tests/utils/wrapper'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useFuelSupplyOptions,
-  useGetFuelSupplies,
+  useGetFuelSuppliesList,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { wrapper } from '@/tests/utils/wrapper'
+import { render, screen } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { AddEditFuelSupplies } from '../AddEditFuelSupplies'
 
 // Mock react-router-dom hooks
 const mockUseLocation = vi.fn()
 const mockUseNavigate = vi.fn()
 const mockUseParams = vi.fn()
+
+vi.mock('@/hooks/useCurrentUser')
+
+vi.mock('@/hooks/useComplianceReports')
 
 vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
@@ -77,7 +81,7 @@ describe('AddEditFuelSupplies', () => {
     })
 
     // Mock useGetFuelSupplies to return empty data initially
-    vi.mocked(useGetFuelSupplies).mockReturnValue({
+    vi.mocked(useGetFuelSuppliesList).mockReturnValue({
       data: { fuelSupplies: [] },
       isLoading: false
     })
@@ -86,14 +90,22 @@ describe('AddEditFuelSupplies', () => {
     vi.mocked(useSaveFuelSupply).mockReturnValue({
       mutateAsync: vi.fn()
     })
+
+    useCurrentUser.mockReturnValue({
+      data: {
+        organization: { organizationId: 1 }
+      }
+    })
+
+    useGetComplianceReport.mockImplementation((id) => {
+      return { data: { report: { version: 0 } } }
+    })
   })
 
   it('renders the component', () => {
     render(<AddEditFuelSupplies />, { wrapper })
     // Check for a title or any text that indicates successful rendering
-    expect(
-      screen.getByText('fuelSupply:fuelSupplyTitle')
-    ).toBeInTheDocument()
+    expect(screen.getByText('fuelSupply:fuelSupplyTitle')).toBeInTheDocument()
   })
 
   it('initializes with at least one row when there are no existing fuel supplies', () => {
@@ -105,7 +117,7 @@ describe('AddEditFuelSupplies', () => {
 
   it('loads existing fuel supplies when available', async () => {
     // Update mock to provide some existing fuel supplies
-    vi.mocked(useGetFuelSupplies).mockReturnValue({
+    vi.mocked(useGetFuelSuppliesList).mockReturnValue({
       data: {
         fuelSupplies: [
           { fuelSupplyId: 'abc', fuelType: 'Diesel' },

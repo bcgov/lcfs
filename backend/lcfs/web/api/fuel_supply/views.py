@@ -65,6 +65,7 @@ async def get_fuel_supply(
 
         await report_validate.validate_compliance_report_access(compliance_report)
         await report_validate.validate_organization_access(compliance_report_id)
+
         if hasattr(request_data, "page") and request_data.page is not None:
             # Handle pagination.
             pagination = PaginationRequestSchema(
@@ -77,7 +78,7 @@ async def get_fuel_supply(
                 pagination, compliance_report_id
             )
         else:
-            return await service.get_fuel_supply_list(compliance_report_id)
+            return await service.get_fuel_supply_list(compliance_report_id, request_data.changelog)
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
         raise http_ex
@@ -92,7 +93,8 @@ async def get_fuel_supply(
 
 @router.post(
     "/save",
-    response_model=Union[FuelSupplyResponseSchema, DeleteFuelSupplyResponseSchema],
+    response_model=Union[FuelSupplyResponseSchema,
+                         DeleteFuelSupplyResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 @view_handler(
@@ -118,7 +120,6 @@ async def save_fuel_supply_row(
         raise HTTPException(
             status_code=403, detail="User does not have the required role."
         )
-
     if request_data.deleted:
         # Delete existing fuel supply row using actions service
         return await action_service.delete_fuel_supply(request_data, current_user_type)

@@ -39,6 +39,10 @@ export const notionalTransferColDefs = (
     hide: true
   },
   {
+    field: 'notionalTransferId',
+    hide: true
+  },
+  {
     field: 'legalName',
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
     headerComponent: RequiredHeader,
