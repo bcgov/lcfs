@@ -87,7 +87,8 @@ class FuelSupplyRepository:
                 error=str(e),
             )
             raise ValueError(
-                f"Invalid compliance_period: '{compliance_period}' must be an integer."
+                f"""Invalid compliance_period: '{
+                    compliance_period}' must be an integer."""
             ) from e
 
         start_of_compliance_year = datetime(current_year, 1, 1)
@@ -187,7 +188,8 @@ class FuelSupplyRepository:
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         if not include_legacy:
             query = query.where(
-                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
+                and_(FuelType.is_legacy == False,
+                     ProvisionOfTheAct.is_legacy == False)
             )
 
         fuel_type_results = (await self.db.execute(query)).all()
@@ -220,7 +222,7 @@ class FuelSupplyRepository:
 
     @repo_handler
     async def get_fuel_supplies_paginated(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
+        self, pagination: PaginationRequestSchema, compliance_report_id: int = None, effective: bool = True
     ) -> List[FuelSupply]:
         """
         Retrieve a paginated list of effective fuel supplies for a given compliance report.
@@ -235,16 +237,22 @@ class FuelSupplyRepository:
         if not group_uuid:
             return [], 0
 
-        # Retrieve effective fuel supplies using the group UUID
-        effective_fuel_supplies = await self.get_effective_fuel_supplies(
-            compliance_report_group_uuid=group_uuid
-        )
+        fuel_supplies = []
+
+        if effective:
+            # Retrieve effective fuel supplies using the group UUID
+            fuel_supplies = await self.get_effective_fuel_supplies(
+                compliance_report_group_uuid=group_uuid, compliance_report_id=compliance_report_id
+            )
+        else:
+            fuel_supplies = await self.get_fuel_supplies(compliance_report_id)
 
         # Manually apply pagination
-        total_count = len(effective_fuel_supplies)
-        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
+        total_count = len(fuel_supplies)
+        offset = 0 if pagination.page < 1 else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_supplies = effective_fuel_supplies[offset : offset + limit]
+        paginated_supplies = fuel_supplies[offset: offset + limit]
 
         return paginated_supplies, total_count
 
@@ -299,7 +307,8 @@ class FuelSupplyRepository:
     async def delete_fuel_supply(self, fuel_supply_id: int):
         """Delete a fuel supply row from the database"""
         await self.db.execute(
-            delete(FuelSupply).where(FuelSupply.fuel_supply_id == fuel_supply_id)
+            delete(FuelSupply).where(
+                FuelSupply.fuel_supply_id == fuel_supply_id)
         )
         await self.db.flush()
 
@@ -334,7 +343,7 @@ class FuelSupplyRepository:
             .distinct()
         )
 
-        ### Type, Category, and Determine CI/Fuel codes are included
+        # Type, Category, and Determine CI/Fuel codes are included
         query = select(FuelSupply.fuel_supply_id).where(
             FuelSupply.compliance_report_id == fuel_supply.compliance_report_id,
             FuelSupply.fuel_type_id == fuel_supply.fuel_type_id,
@@ -397,7 +406,7 @@ class FuelSupplyRepository:
 
     @repo_handler
     async def get_effective_fuel_supplies(
-        self, compliance_report_group_uuid: str
+        self, compliance_report_group_uuid: str, compliance_report_id: Optional[int] = None
     ) -> Sequence[FuelSupply]:
         """
         Retrieve effective FuelSupply records associated with the given compliance_report_group_uuid.
@@ -407,9 +416,12 @@ class FuelSupplyRepository:
         """
         # Step 1: Subquery to get all compliance_report_ids in the specified group
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
-            ComplianceReport.compliance_report_group_uuid
-            == compliance_report_group_uuid
+            ComplianceReport.compliance_report_group_uuid == compliance_report_group_uuid
         )
+        if compliance_report_id is not None:
+            compliance_reports_select = compliance_reports_select.where(
+                ComplianceReport.compliance_report_id <= compliance_report_id
+            )
 
         # Step 2: Subquery to identify record group_uuids that have any DELETE action
         delete_group_select = (

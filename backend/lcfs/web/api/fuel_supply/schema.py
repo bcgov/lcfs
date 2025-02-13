@@ -138,6 +138,24 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
         return fuel_code_required(values)
 
 
+class FuelSupplyDiffSchema(BaseSchema):
+    compliance_units: Optional[bool] = None
+    fuel_type_id: Optional[bool] = None
+    fuel_category_id: Optional[bool] = None
+    end_use_id: Optional[bool] = None
+    provision_of_the_act_id: Optional[bool] = None
+    fuel_code_id: Optional[bool] = None
+    quantity: Optional[bool] = None
+    fuel_type_other: Optional[bool] = None
+    units: Optional[bool] = None
+    target_ci: Optional[bool] = None
+    ci_of_fuel: Optional[bool] = None
+    uci: Optional[bool] = None
+    energy_density: Optional[bool] = None
+    eer: Optional[bool] = None
+    energy: Optional[bool] = None
+
+
 class FuelSupplyResponseSchema(BaseSchema):
     fuel_supply_id: int
     compliance_report_id: int
@@ -166,6 +184,8 @@ class FuelSupplyResponseSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
     fuel_type_other: Optional[str] = None
+    diff: Optional[FuelSupplyDiffSchema] = None
+    updated: Optional[bool] = None
 
 
 class DeleteFuelSupplyResponseSchema(BaseSchema):

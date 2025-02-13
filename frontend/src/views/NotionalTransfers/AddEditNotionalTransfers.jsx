@@ -16,6 +16,7 @@ import { v4 as uuid } from 'uuid'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import * as ROUTES from '@/constants/routes/routes.js'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import { isArrayEmpty } from '@/utils/array'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -35,7 +36,7 @@ export const AddEditNotionalTransfers = () => {
   } = useNotionalTransferOptions()
   const { data: notionalTransfers, isLoading: transfersLoading } =
     useGetAllNotionalTransfers(complianceReportId)
-  const { mutateAsync: saveRow } = useSaveNotionalTransfer()
+  const { mutateAsync: saveRow } = useSaveNotionalTransfer(complianceReportId)
   const navigate = useNavigate()
   const { data: currentUser } = useCurrentUser()
 
@@ -71,50 +72,53 @@ export const AddEditNotionalTransfers = () => {
     return true // Proceed with the update
   }
 
-  const onGridReady = (params) => {
-    const ensureRowIds = (rows) => {
-      return rows.map((row) => {
-        if (!row.id) {
-          return {
-            ...row,
-            complianceReportId,
-            id: uuid(),
-            isValid: false
+  const onGridReady = useCallback(
+    (params) => {
+      const ensureRowIds = (rows) => {
+        return rows.map((row) => {
+          if (!row.id) {
+            return {
+              ...row,
+              complianceReportId,
+              id: uuid(),
+              isValid: false
+            }
           }
-        }
-        return row
-      })
-    }
-
-    if (notionalTransfers && notionalTransfers.length > 0) {
-      try {
-        setRowData([
-          ...ensureRowIds(notionalTransfers),
-          {
-            id: uuid(),
-            complianceReportId
-          }
-        ])
-      } catch (error) {
-        alertRef.triggerAlert({
-          message: t('notionalTransfer:LoadFailMsg'),
-          severity: 'error'
+          return row
         })
       }
-    } else {
-      setRowData([{ id: uuid(), complianceReportId }])
-    }
 
-    params.api.sizeColumnsToFit()
+      if (notionalTransfers && notionalTransfers.length > 0) {
+        try {
+          setRowData([
+            ...ensureRowIds(notionalTransfers),
+            {
+              id: uuid(),
+              complianceReportId
+            }
+          ])
+        } catch (error) {
+          alertRef.triggerAlert({
+            message: t('notionalTransfer:LoadFailMsg'),
+            severity: 'error'
+          })
+        }
+      } else {
+        setRowData([{ id: uuid(), complianceReportId }])
+      }
 
-    setTimeout(() => {
-      const lastRowIndex = params.api.getLastDisplayedRowIndex()
-      params.api.startEditingCell({
-        rowIndex: lastRowIndex,
-        colKey: 'legalName'
-      })
-    }, 100)
-  }
+      params.api.sizeColumnsToFit()
+
+      setTimeout(() => {
+        const lastRowIndex = params.api.getLastDisplayedRowIndex()
+        params.api.startEditingCell({
+          rowIndex: lastRowIndex,
+          colKey: 'legalName'
+        })
+      }, 100)
+    },
+    [complianceReportId, notionalTransfers, t]
+  )
 
   const onCellEditingStopped = useCallback(
     async (params) => {
@@ -210,6 +214,23 @@ export const AddEditNotionalTransfers = () => {
       setColumnDefs(updatedColumnDefs)
     }
   }, [optionsData, currentUser, errors, warnings, optionsLoading])
+
+  useEffect(() => {
+    if (!transfersLoading && !isArrayEmpty(notionalTransfers)) {
+      const updatedRowData = notionalTransfers.map((item) => ({
+        ...item,
+        complianceReportId
+      }))
+      setRowData(updatedRowData)
+    } else {
+      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
+    }
+  }, [
+    compliancePeriod,
+    complianceReportId,
+    notionalTransfers,
+    transfersLoading
+  ])
 
   const handleNavigateBack = useCallback(() => {
     navigate(
