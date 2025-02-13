@@ -15,6 +15,7 @@ from lcfs.web.api.fuel_export.actions_service import FuelExportActionService
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.base import ActionTypeEnum, UserTypeEnum
+from lcfs.db.models.user.Role import RoleEnum
 
 # Mock common data for reuse
 mock_fuel_type = FuelTypeSchema(
@@ -32,10 +33,19 @@ mock_fuel_category = FuelCategoryResponseSchema(
     category="Diesel",
 )
 
-
 # FuelExportServices Tests
+
+
 @pytest.mark.anyio
 async def test_get_fuel_export_options_success(fuel_export_service, mock_repo):
+    # (If needed, set a dummy request here as well)
+    from types import SimpleNamespace
+
+    dummy_user = SimpleNamespace(id=1, role_names=[RoleEnum.GOVERNMENT])
+    dummy_request = MagicMock()
+    dummy_request.user = dummy_user
+    fuel_export_service.request = dummy_request
+
     mock_repo.get_fuel_export_table_options.return_value = []
     result = await fuel_export_service.get_fuel_export_options("2024")
     assert isinstance(result, FuelTypeOptionsResponse)
@@ -44,6 +54,14 @@ async def test_get_fuel_export_options_success(fuel_export_service, mock_repo):
 
 @pytest.mark.anyio
 async def test_get_fuel_export_list_success(fuel_export_service, mock_repo):
+    # Set up a dummy request with a valid user
+    from types import SimpleNamespace
+
+    dummy_user = SimpleNamespace(id=1, role_names=[RoleEnum.GOVERNMENT])
+    dummy_request = MagicMock()
+    dummy_request.user = dummy_user
+    fuel_export_service.request = dummy_request
+
     # Create a mock FuelExport with all required fields
     mock_export = FuelExport(
         fuel_export_id=1,
@@ -57,10 +75,7 @@ async def test_get_fuel_export_list_success(fuel_export_service, mock_repo):
         export_date=date.today(),
         group_uuid="test-uuid",
         provision_of_the_act_id=1,
-        provision_of_the_act={
-            "provision_of_the_act_id": 1,
-            "name": "Test Provision"
-        },
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Test Provision"},
         version=0,
         user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
@@ -70,11 +85,22 @@ async def test_get_fuel_export_list_success(fuel_export_service, mock_repo):
     result = await fuel_export_service.get_fuel_export_list(1)
 
     assert isinstance(result, FuelExportsSchema)
-    mock_repo.get_fuel_export_list.assert_called_once_with(1)
+    # Expect the repo call to include exclude_draft_reports=True based on the user
+    mock_repo.get_fuel_export_list.assert_called_once_with(
+        1, exclude_draft_reports=True
+    )
 
 
 @pytest.mark.anyio
 async def test_get_fuel_exports_paginated_success(fuel_export_service, mock_repo):
+    # Set up a dummy request with a valid user
+    from types import SimpleNamespace
+
+    dummy_user = SimpleNamespace(id=1, role_names=[RoleEnum.GOVERNMENT])
+    dummy_request = MagicMock()
+    dummy_request.user = dummy_user
+    fuel_export_service.request = dummy_request
+
     mock_export = FuelExport(
         fuel_export_id=1,
         compliance_report_id=1,
@@ -86,10 +112,7 @@ async def test_get_fuel_exports_paginated_success(fuel_export_service, mock_repo
         units="L",
         export_date=date.today(),
         provision_of_the_act_id=1,
-        provision_of_the_act={
-            "provision_of_the_act_id": 1,
-            "name": "Test Provision"
-        },
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Test Provision"},
     )
     mock_repo.get_fuel_exports_paginated.return_value = ([mock_export], 1)
 
@@ -103,10 +126,15 @@ async def test_get_fuel_exports_paginated_success(fuel_export_service, mock_repo
     assert result.pagination.total == 1
     assert result.pagination.page == 1
     assert result.pagination.size == 10
-    mock_repo.get_fuel_exports_paginated.assert_called_once_with(pagination_mock, 1)
+    # Expect the extra parameter to be passed
+    mock_repo.get_fuel_exports_paginated.assert_called_once_with(
+        pagination_mock, 1, exclude_draft_reports=True
+    )
 
 
 # FuelExportActionService Tests
+
+
 @pytest.mark.anyio
 async def test_action_create_fuel_export_success(fuel_export_action_service, mock_repo):
     input_data = FuelExportCreateUpdateSchema(
@@ -131,10 +159,7 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
         user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
         provision_of_the_act_id=1,
-        provision_of_the_act={
-            "provision_of_the_act_id": 1,
-            "name": "Act Provision"
-        },
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Act Provision"},
         fuel_type_id=1,
         fuel_category_id=1,
         quantity=100,
@@ -181,10 +206,7 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         fuel_type_id=1,
         fuel_category_id=1,
         provision_of_the_act_id=1,
-        provision_of_the_act={
-            "provision_of_the_act_id": 1,
-            "name": "Act Provision"
-        },
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Act Provision"},
         quantity=100,
         units="L",
         export_date=date.today(),
