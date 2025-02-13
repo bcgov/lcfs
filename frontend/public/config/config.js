@@ -15,4 +15,5 @@ export const config = {
     notifications: false
   }
 }
+
 export default window.lcfs_config = config
