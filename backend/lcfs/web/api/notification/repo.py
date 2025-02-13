@@ -432,6 +432,11 @@ class NotificationRepository:
         """
         query = (
             select(NotificationChannelSubscription)
+            .options(
+                selectinload(NotificationChannelSubscription.user_profile)
+                .selectinload(UserProfile.user_roles)
+                .selectinload(UserRole.role)
+            )
             .join(
                 NotificationType,
                 NotificationType.notification_type_id

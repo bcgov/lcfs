@@ -1,4 +1,5 @@
 import math
+import json
 from typing import List, Optional
 import json
 from lcfs.db.models.notification import (
@@ -10,6 +11,7 @@ from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.api.notification.schema import (
     NotificationRequestSchema,
@@ -261,12 +263,48 @@ class NotificationService:
             }
         )
 
+        # Extract receiving org ID, service and status
+        to_org_id = None
+        service_val = ""
+        status_val = ""
+        if notification.notification_data and notification.notification_data.message:
+            try:
+                msg = json.loads(notification.notification_data.message)
+                to_org_id = msg.get("toOrganizationId")
+                service_val = msg.get("service", "").lower()
+                status_val = msg.get("status", "").lower()
+            except (ValueError, TypeError):
+                pass
+
+        # Decide if this is a Transfer that is Recorded/Refused
+        is_recorded_or_refused = (
+            service_val == "transfer" and status_val in ["recorded", "refused"]
+        )
+
         for notification_type in notification.notification_types:
             in_app_subscribed_users = await self.repo.get_subscribed_users_by_channel(
                 notification_type,
                 ChannelEnum.IN_APP,
                 notification.notification_data.related_organization_id,
             )
+
+            # Skip sending to Analysts if the org is not the receiving org and status is Recorded/Refused
+            final_subscriptions = []
+            for sub in in_app_subscribed_users:
+                skip = False
+
+                if is_recorded_or_refused and sub.user_profile:
+                    # Check if user is Analyst
+                    roles = [ur.role.name for ur in sub.user_profile.user_roles]
+                    if RoleEnum.ANALYST in roles:
+                        org_we_are_notifying = notification.notification_data.related_organization_id
+                        if to_org_id and org_we_are_notifying != to_org_id:
+                            skip = True
+
+                if not skip:
+                    final_subscriptions.append(sub)
+
+            in_app_subscribed_users = final_subscriptions
 
             # Batch create in-app notifications
             in_app_notifications = [
@@ -282,6 +320,7 @@ class NotificationService:
             if in_app_notifications:
                 await self.repo.create_notification_messages(in_app_notifications)
 
+            # Send any email notifications
             await self.email_service.send_notification_email(
                 notification_type,
                 notification.notification_context,
