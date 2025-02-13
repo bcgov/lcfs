@@ -60,7 +60,7 @@ export const useSaveFuelSupply = (params, options) => {
         complianceReportId: params.complianceReportId,
         ...data
       }
-      console.log(modifedData)
+
       return await client.post(apiRoutes.saveFuelSupplies, modifedData)
     },
     onSettled: () => {
