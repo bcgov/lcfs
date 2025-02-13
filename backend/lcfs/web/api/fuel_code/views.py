@@ -74,6 +74,21 @@ async def search_table_options_strings(
     prefix: Optional[str] = Query(
         None, alias="prefix", description="Prefix for filtering options"
     ),
+    fp_city: Optional[str] = Query(
+        None,
+        alias="fpCity",
+        description="Fuel production facility city for suggestions",
+    ),
+    fp_province: Optional[str] = Query(
+        None,
+        alias="fpProvince",
+        description="Fuel production facility province for suggestions",
+    ),
+    fp_country: Optional[str] = Query(
+        None,
+        alias="fpCountry",
+        description="Fuel production facility country for suggestions",
+    ),
     distinct_search: Optional[bool] = Query(
         False,
         alias="distinctSearch",
@@ -104,6 +119,9 @@ async def search_table_options_strings(
             )
             return await service.search_contact_name(company, contact_name)
         return await service.search_company(company)
+    elif fp_city or fp_province or fp_country:
+        logger.info("Searching fuel production facility location")
+        return await service.search_fp_facility_location(fp_city, fp_province, fp_country)
     else:
         raise ValueError("Invalid parameters provided for search")
 
