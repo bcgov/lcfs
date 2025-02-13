@@ -17,6 +17,9 @@ import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelSupplyColDefs } from './_schema'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import { isArrayEmpty } from '@/utils/array.js'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import colors from '@/themes/base/colors'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -31,6 +34,13 @@ export const AddEditFuelSupplies = () => {
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
+  const { data: currentUser } = useCurrentUser()
+  const { data: complianceReport } = useGetComplianceReport(
+    currentUser?.organization.organizationId,
+    complianceReportId
+  )
+
+  const isSupplemental = complianceReport?.report.version !== 0
 
   const {
     data: optionsData,
@@ -50,6 +60,24 @@ export const AddEditFuelSupplies = () => {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
+      },
+      getRowStyle: (params) => {
+        console.log(params)
+        if (params.data.actionType === 'CREATE' && params.data.isNewEntry) {
+          return {
+            backgroundColor: colors.alerts.success.background
+          }
+        }
+        if (params.data.actionType === 'UPDATE' && params.data.isNewEntry) {
+          return {
+            backgroundColor: colors.alerts.warning.background
+          }
+        }
+        if (params.data.actionType === 'DELETE' && params.data.isNewEntry) {
+          return {
+            backgroundColor: colors.alerts.error.background
+          }
+        }
       }
     }),
     [t]
@@ -91,20 +119,23 @@ export const AddEditFuelSupplies = () => {
     async (params) => {
       setGridApi(params.api)
       if (!isArrayEmpty(data)) {
-        const updatedRowData = data.fuelSupplies.map((item) => ({
-          ...item,
-          complianceReportId, // This takes current reportId, important for versioning
-          compliancePeriod,
-          fuelCategory: item.fuelCategory?.category,
-          fuelType: item.fuelType?.fuelType,
-          fuelTypeOther:
-            item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
-          provisionOfTheAct: item.provisionOfTheAct?.name,
-          provisionOfTheActId: item.provisionOfTheActId,
-          fuelCode: item.fuelCode?.fuelCode,
-          endUse: item.endUse?.type,
-          id: uuid()
-        }))
+        const updatedRowData = data.fuelSupplies.map((item) => {
+          return {
+            ...item,
+            complianceReportId, // This takes current reportId, important for versioning
+            compliancePeriod,
+            fuelCategory: item.fuelCategory?.category,
+            fuelType: item.fuelType?.fuelType,
+            fuelTypeOther:
+              item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
+            provisionOfTheAct: item.provisionOfTheAct?.name,
+            provisionOfTheActId: item.provisionOfTheActId,
+            fuelCode: item.fuelCode?.fuelCode,
+            endUse: item.endUse?.type,
+            isNewEntry: item.complianceReportId === +complianceReportId,
+            id: uuid()
+          }
+        })
         setRowData([...updatedRowData, { id: uuid() }])
       } else {
         setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
@@ -122,10 +153,22 @@ export const AddEditFuelSupplies = () => {
 
   useEffect(() => {
     if (optionsData?.fuelTypes?.length > 0) {
-      const updatedColumnDefs = fuelSupplyColDefs(optionsData, errors, warnings)
+      const updatedColumnDefs = fuelSupplyColDefs(
+        optionsData,
+        errors,
+        warnings,
+        isSupplemental,
+        complianceReport?.report.version
+      )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, warnings, optionsData])
+  }, [
+    errors,
+    warnings,
+    optionsData,
+    isSupplemental,
+    complianceReport?.report.version
+  ])
 
   useEffect(() => {
     if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
@@ -141,6 +184,7 @@ export const AddEditFuelSupplies = () => {
         provisionOfTheActId: item.provisionOfTheAct?.provisionOfTheActId,
         fuelCode: item.fuelCode?.fuelCode,
         endUse: item.endUse?.type,
+        isNewEntry: item.complianceReportId === +complianceReportId,
         id: uuid()
       }))
       setRowData(updatedRowData)

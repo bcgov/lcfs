@@ -18,10 +18,16 @@ import {
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
+import colors from '@/themes/base/colors'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
-export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
+export const fuelSupplyColDefs = (
+  optionsData,
+  errors,
+  warnings,
+  isSupplemental
+) => [
   validation,
   actions({
     enableDuplicate: false,
@@ -65,8 +71,23 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     minWidth: 100,
     valueFormatter,
     editable: false,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    }
   },
   {
     field: 'fuelType',
@@ -83,8 +104,23 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     suppressKeyboardEvent,
     minWidth: 260,
     editable: true,
@@ -131,13 +167,29 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       api: params.api,
       minWords: 1
     }),
-    cellStyle: (params) =>
-      StandardCellStyle(
-        params,
-        errors,
-        warnings,
-        fuelTypeOtherConditionalStyle
-      ),
+
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        )
+      }
+    },
     valueSetter: (params) => {
       const { newValue: selectedFuelTypeOther, data } = params
       data.fuelTypeOther = selectedFuelTypeOther
@@ -164,8 +216,23 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCategory = params.newValue
@@ -218,8 +285,23 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     suppressKeyboardEvent,
     valueGetter: (params) => params.data.endUseType?.type,
     editable: (params) => {
@@ -261,8 +343,23 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     suppressKeyboardEvent,
     minWidth: 370,
     valueSetter: (params) => {
@@ -298,8 +395,23 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         openOnFocus: true
       }
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     suppressKeyboardEvent,
     minWidth: 135,
     editable: (params) => {
@@ -365,8 +477,23 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    }
   },
   {
     field: 'units',
@@ -385,15 +512,50 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     suppressKeyboardEvent,
     editable: (params) => isFuelTypeOther(params),
-    cellStyle: (params) =>
-      StandardCellStyle(params, errors, warnings, fuelTypeOtherConditionalStyle)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        )
+      }
+    }
   },
   {
     field: 'targetCi',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
     editable: false,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     valueGetter: (params) =>
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -405,27 +567,72 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'ciOfFuel',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    }
   },
   {
     field: 'uci',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
     editable: false,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    }
   },
   {
     field: 'energyDensity',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
     cellEditor: 'agNumberCellEditor',
-    cellStyle: (params) =>
-      StandardCellStyle(
-        params,
-        errors,
-        warnings,
-        fuelTypeOtherConditionalStyle
-      ),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        )
+      }
+    },
     cellEditorParams: {
       precision: 2,
       min: 0,
@@ -449,8 +656,23 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'eer',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
     editable: false,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     valueGetter: (params) => {
       const eerOptions = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -474,8 +696,23 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   },
   {
     field: 'energy',
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          // if (params.data.updated) {
+          //   style.textDecoration = 'line-through'
+          // }
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+        // if (params.data.actionType === 'DELETE') {
+        //   return {
+        //     textDecoration: 'line-through'
+        //   }
+        // }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
     valueFormatter,
     minWidth: 100,

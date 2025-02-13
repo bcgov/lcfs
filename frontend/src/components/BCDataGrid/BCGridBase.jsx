@@ -98,7 +98,6 @@ export const BCGridBase = forwardRef(
         e.api.clearFocusedCell()
       }
     }
-
     return (
       <AgGridReact
         ref={gridRef}
@@ -121,7 +120,10 @@ export const BCGridBase = forwardRef(
         suppressScrollOnNewData
         onBodyScroll={closeSelectsOnScroll}
         onRowDataUpdated={determineHeight}
-        getRowStyle={getRowStyle}
+        getRowStyle={(params) => ({
+          ...getRowStyle(params),
+          ...props.gridOptions.getRowStyle(params)
+        })}
         rowHeight={ROW_HEIGHT}
         headerHeight={40}
         {...props}
