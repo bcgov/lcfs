@@ -121,11 +121,9 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'fuel-code-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path +=
-          'prefix=' +
-          (params.data.prefix || 'BCLCF') +
-          '&distinctSearch=true&fuelCode=' +
-          queryKey[1]
+        path += `prefix=${encodeURIComponent(
+          params.data.prefix || 'BCLCF'
+        )}&distinctSearch=true&fuelCode=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data?.fuelCodes || []
       },
@@ -175,7 +173,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'company-name-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path += 'company=' + queryKey[1]
+        path += `company=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data
       },
@@ -204,7 +202,9 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'contact-name-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path += 'company=' + params.data.company + '&contactName=' + queryKey[1]
+        path += `company=${encodeURIComponent(
+          params.data.company
+        )}&contactName=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data
       },
@@ -225,13 +225,11 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'contact-email-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path +=
-          'company=' +
-          params.data.company +
-          '&contactName=' +
-          params.data.contactName +
-          '&contactEmail=' +
-          queryKey[1]
+        path += `company=${encodeURIComponent(
+          params.data.company
+        )}&contactName=${encodeURIComponent(
+          params.data.contactName
+        )}&contactEmail=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data
       },
