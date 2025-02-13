@@ -1,16 +1,7 @@
-const environment = 'development'
-
-const tfrsBaseByEnv = {
-  development: 'https://tfrs-dev.apps.silver.devops.gov.bc.ca',
-  test: 'https://tfrs-test.apps.silver.devops.gov.bc.ca',
-  production: 'https://tfrs-prod.apps.silver.devops.gov.bc.ca'
-}
-const tfrsBase = tfrsBaseByEnv[environment] || tfrsBaseByEnv.development
-
 export const config = {
   api_base: 'http://localhost:8000/api',
-  tfrs_base: tfrsBase,
-  environment,
+  tfrs_base: 'http://localhost:3000',
+  environment: 'development',
   keycloak: {
     REALM: 'standard',
     CLIENT_ID: 'low-carbon-fuel-standard-5147',
@@ -24,5 +15,4 @@ export const config = {
     notifications: false
   }
 }
-
 export default window.lcfs_config = config
