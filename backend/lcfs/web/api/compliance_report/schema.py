@@ -3,6 +3,7 @@ from typing import ClassVar, Optional, List
 from datetime import datetime, date
 from enum import Enum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 
@@ -47,12 +48,8 @@ class PortsEnum(str, Enum):
     DUAL = "Dual port"
 
 
-class CompliancePeriodSchema(BaseSchema):
-    compliance_period_id: int
-    description: str
-    effective_date: Optional[datetime] = None
-    expiration_date: Optional[datetime] = None
-    display_order: Optional[int] = None
+class CompliancePeriodSchema(CompliancePeriodBaseSchema):
+    pass
 
 
 class SummarySchema(BaseSchema):
