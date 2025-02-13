@@ -30,8 +30,8 @@ FSE_EXPORT_COLUMNS = [
     SpreadsheetColumn("Street address", "text"),
     SpreadsheetColumn("City", "text"),
     SpreadsheetColumn("Postal code", "text"),
-    SpreadsheetColumn("Latitude", "float"),
-    SpreadsheetColumn("Longitude", "float"),
+    SpreadsheetColumn("Latitude", "decimal6"),
+    SpreadsheetColumn("Longitude", "decimal6"),
     SpreadsheetColumn("Notes", "text"),
 ]
 
