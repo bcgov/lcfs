@@ -62,7 +62,6 @@ export const AddEditFuelSupplies = () => {
         defaultMaxWidth: 600
       },
       getRowStyle: (params) => {
-        console.log(params)
         if (params.data.actionType === 'CREATE' && params.data.isNewEntry) {
           return {
             backgroundColor: colors.alerts.success.background
@@ -307,7 +306,7 @@ export const AddEditFuelSupplies = () => {
   )
 
   const onAction = async (action, params) => {
-    if (action === 'delete') {
+    if (action === 'delete' || action === 'undo') {
       await handleScheduleDelete(
         params,
         'fuelSupplyId',

@@ -24,6 +24,7 @@ FUEL_SUPPLY_EXCLUDE_FIELDS = {
     "version",
     "action_type",
     "units",
+    'is_new_entry',
 }
 
 # Example test cases from the dataset
@@ -499,7 +500,8 @@ async def test_populate_fuel_supply_fields(
     assert populated_supply.eer == 1  # Default EER
     assert populated_supply.energy_density == fe_data.energy_density
     # Energy calculation
-    assert populated_supply.energy == round(fe_data.energy_density * fe_data.quantity)
+    assert populated_supply.energy == round(
+        fe_data.energy_density * fe_data.quantity)
     assert populated_supply.compliance_units > 0
 
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
@@ -592,7 +594,8 @@ def test_calculate_compliance_units(case):
     """
     # Extract input parameters
     quantity = case["input"]["quantity"]
-    units = case["input"]["units"]  # Not used in calculation but included for context
+    # Not used in calculation but included for context
+    units = case["input"]["units"]
     target_ci = case["input"]["target_ci"]
     ci_of_fuel = case["input"]["ci_of_fuel"]
     energy_density = case["input"]["energy_density"]

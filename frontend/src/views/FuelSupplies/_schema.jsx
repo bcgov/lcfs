@@ -22,6 +22,12 @@ import colors from '@/themes/base/colors'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
+const ACTION_STATUS_MAP = {
+  UPDATE: 'Edit',
+  DELETE: 'Delete',
+  CREATE: 'New'
+}
+
 export const fuelSupplyColDefs = (
   optionsData,
   errors,
@@ -29,9 +35,16 @@ export const fuelSupplyColDefs = (
   isSupplemental
 ) => [
   validation,
-  actions({
-    enableDuplicate: false,
-    enableDelete: true
+  actions((params) => {
+    return {
+      enableDuplicate: false,
+      enableDelete: !params.data.isNewEntry,
+      enableUndo: isSupplemental && params.data.isNewEntry,
+      enableStatus:
+        isSupplemental &&
+        params.data.isNewEntry &&
+        ACTION_STATUS_MAP[params.data.actionType]
+    }
   }),
   {
     field: 'id',
