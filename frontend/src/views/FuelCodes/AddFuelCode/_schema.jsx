@@ -121,11 +121,9 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'fuel-code-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path +=
-          'prefix=' +
-          (params.data.prefix || 'BCLCF') +
-          '&distinctSearch=true&fuelCode=' +
-          queryKey[1]
+        path += `prefix=${encodeURIComponent(
+          params.data.prefix || 'BCLCF'
+        )}&distinctSearch=true&fuelCode=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data?.fuelCodes || []
       },
@@ -175,7 +173,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'company-name-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path += 'company=' + queryKey[1]
+        path += `company=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data
       },
@@ -204,7 +202,9 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'contact-name-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path += 'company=' + params.data.company + '&contactName=' + queryKey[1]
+        path += `company=${encodeURIComponent(
+          params.data.company
+        )}&contactName=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data
       },
@@ -225,13 +225,11 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'contact-email-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path +=
-          'company=' +
-          params.data.company +
-          '&contactName=' +
-          params.data.contactName +
-          '&contactEmail=' +
-          queryKey[1]
+        path += `company=${encodeURIComponent(
+          params.data.company
+        )}&contactName=${encodeURIComponent(
+          params.data.contactName
+        )}&contactEmail=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data
       },
@@ -409,38 +407,36 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     editable: canEdit,
     headerComponent: canEdit ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelProductionFacilityCity'),
-    cellEditor: AutocompleteCellEditor,
+    cellEditor: AsyncSuggestionEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: createCellRenderer('fuelProductionFacilityCity'),
-    cellEditorParams: {
-      onDynamicUpdate: (val, params) => params.api.stopEditing(),
-      noLabel: true,
-      options: [
-        ...new Map(
-          optionsData.fpLocations.map((location) => [
-            location.fuelProductionFacilityCity,
-            location.fuelProductionFacilityCity
-          ])
-        ).values()
-      ],
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: true,
-      openOnFocus: true
-    },
+    cellEditorParams: (params) => ({
+      queryKey: 'fuel-production-city-search',
+      queryFn: async ({ queryKey, client }) => {
+        let path = apiRoutes.fuelCodeSearch
+        path += `fpCity=${encodeURIComponent(queryKey[1])}`
+        const response = await client.get(path)
+        return response.data
+      },
+      title: 'fuelProductionFacilityCity',
+      enabled: true
+    }),
     minWidth: 325,
     valueSetter: (params) => {
-      params.data.fuelProductionFacilityCity = params.newValue
+      if (!params.newValue || params.newValue === '') {
+        params.data.fuelProductionFacilityCity = ''
+        params.data.fuelProductionFacilityProvinceState = ''
+        params.data.fuelProductionFacilityCountry = ''
+      }
 
-      const location = optionsData.fpLocations.find(
-        (location) => location.fuelProductionFacilityCity === params.newValue
-      )
-
-      params.data.fuelProductionFacilityProvinceState =
-        location?.fuelProductionFacilityProvinceState
-      params.data.fuelProductionFacilityCountry =
-        location?.fuelProductionFacilityCountry
+      // Split the newValue by comma and trim spaces
+      const [city = '', province = '', country = ''] = params.newValue
+        .split(',')
+        .map((val) => val.trim())
+      params.data.fuelProductionFacilityCity = city
+      params.data.fuelProductionFacilityProvinceState = province
+      params.data.fuelProductionFacilityCountry = country
 
       return true
     }
@@ -452,36 +448,32 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityProvinceState'
     ),
-    cellEditor: AutocompleteCellEditor,
+    cellEditor: AsyncSuggestionEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: createCellRenderer('fuelProductionFacilityProvinceState'),
-    cellEditorParams: {
-      onDynamicUpdate: (val, params) => params.api.stopEditing(),
-      noLabel: true,
-      options: [
-        ...new Map(
-          optionsData.fpLocations.map((location) => [
-            location.fuelProductionFacilityProvinceState,
-            location.fuelProductionFacilityProvinceState
-          ])
-        ).values()
-      ],
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: true,
-      openOnFocus: true
-    },
+    cellEditorParams: (params) => ({
+      queryKey: 'fuel-production-province-search',
+      queryFn: async ({ queryKey, client }) => {
+        let path = apiRoutes.fuelCodeSearch
+        path += `fpProvince=${encodeURIComponent(queryKey[1])}`
+        const response = await client.get(path)
+        return response.data
+      },
+      title: 'fuelProductionFacilityProvinceState',
+      enabled: true
+    }),
     minWidth: 325,
     valueSetter: (params) => {
-      params.data.fuelProductionFacilityProvinceState = params.newValue
-
-      const location = optionsData.fpLocations.find(
-        (location) =>
-          location.fuelProductionFacilityProvinceState === params.newValue
-      )
-      params.data.fuelProductionFacilityCountry =
-        location?.fuelProductionFacilityCountry
+      if (!params.newValue || params.newValue === '') {
+        params.data.fuelProductionFacilityProvinceState = ''
+        params.data.fuelProductionFacilityCountry = ''
+      }
+      const [province = '', country = ''] = params.newValue
+        .split(',')
+        .map((val) => val.trim())
+      params.data.fuelProductionFacilityProvinceState = province
+      params.data.fuelProductionFacilityCountry = country
 
       return true
     }
@@ -493,25 +485,21 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     headerName: i18n.t(
       'fuelCode:fuelCodeColLabels.fuelProductionFacilityCountry'
     ),
-    cellEditor: AutocompleteCellEditor,
+    cellEditor: AsyncSuggestionEditor,
     suppressKeyboardEvent,
     cellDataType: 'text',
     cellRenderer: createCellRenderer('fuelProductionFacilityCountry'),
-    cellEditorParams: {
-      noLabel: true,
-      options: [
-        ...new Map(
-          optionsData.fpLocations.map((location) => [
-            location.fuelProductionFacilityCountry,
-            location.fuelProductionFacilityCountry
-          ])
-        ).values()
-      ],
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: true,
-      openOnFocus: true
-    },
+    cellEditorParams: (params) => ({
+      queryKey: 'fuel-production-country-search',
+      queryFn: async ({ queryKey, client }) => {
+        let path = apiRoutes.fuelCodeSearch
+        path += `fpCountry=${encodeURIComponent(queryKey[1])}`
+        const response = await client.get(path)
+        return response.data
+      },
+      title: 'fuelProductionFacilityCountry',
+      enabled: true
+    }),
     minWidth: 325
   },
   {
@@ -563,7 +551,8 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       marginTop: '0.7rem'
     },
     cellEditorParams: {
-      options: optionsData?.transportModes?.map((obj) => obj.transportMode) || [],
+      options:
+        optionsData?.transportModes?.map((obj) => obj.transportMode) || [],
       multiple: true,
       openOnFocus: true,
       disableCloseOnSelect: true
@@ -588,7 +577,8 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       marginTop: '0.7rem'
     },
     cellEditorParams: {
-      options: optionsData?.transportModes.map((obj) => obj.transportMode) || [],
+      options:
+        optionsData?.transportModes.map((obj) => obj.transportMode) || [],
       multiple: true,
       openOnFocus: true,
       disableCloseOnSelect: true

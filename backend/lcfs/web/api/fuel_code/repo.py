@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Union, Optional, Sequence
 import structlog
 from fastapi import Depends
 from sqlalchemy import and_, or_, select, func, text, update, distinct, desc, asc
+from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager
 
@@ -511,6 +512,62 @@ class FuelCodeRepository:
             .limit(10)
         )
         return (await self.db.execute(query)).scalars().all()
+
+    @repo_handler
+    async def get_fp_facility_location_by_name(
+        self,
+        city: Optional[str] = None,
+        province: Optional[str] = None,
+        country: Optional[str] = None,
+    ) -> List[str]:
+        """
+        Fetch fuel production locations dynamically based on provided filters.
+
+        - If `city` is provided → Returns "city, province, country"
+        - If `province` is provided → Returns "province, country"
+        - If `country` is provided → Returns "country"
+        """
+        # Start building the query
+        stmt = select()
+
+        if city:
+            stmt = stmt.add_columns(
+                func.concat(
+                    coalesce(FuelCode.fuel_production_facility_city, ""),
+                    ", ",
+                    coalesce(FuelCode.fuel_production_facility_province_state, ""),
+                    ", ",
+                    coalesce(FuelCode.fuel_production_facility_country, ""),
+                ).label("location")
+            ).filter(FuelCode.fuel_production_facility_city.ilike(f"%{city}%"))
+
+        elif province:
+            stmt = stmt.add_columns(
+                func.concat(
+                    coalesce(FuelCode.fuel_production_facility_province_state, ""),
+                    ", ",
+                    coalesce(FuelCode.fuel_production_facility_country, ""),
+                ).label("location")
+            ).filter(
+                FuelCode.fuel_production_facility_province_state.ilike(f"%{province}%")
+            )
+
+        elif country:
+            stmt = stmt.add_columns(
+                coalesce(FuelCode.fuel_production_facility_country, "").label(
+                    "location"
+                )
+            ).filter(FuelCode.fuel_production_facility_country.ilike(f"%{country}%"))
+
+        else:
+            return []  # If no filter is provided, return an empty list.
+
+        # Ensure uniqueness and limit results
+        stmt = stmt.distinct().limit(10)
+
+        # Execute query
+        result = await self.db.execute(stmt)
+        return [row[0] for row in result.unique().all()]
 
     @repo_handler
     async def get_distinct_fuel_codes_by_code(
