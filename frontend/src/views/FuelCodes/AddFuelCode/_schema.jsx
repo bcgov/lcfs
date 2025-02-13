@@ -417,7 +417,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'fuel-production-city-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path += 'fpCity=' + queryKey[1]
+        path += `fpCity=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data
       },
@@ -426,7 +426,11 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     }),
     minWidth: 325,
     valueSetter: (params) => {
-      if (!params.newValue) return false
+      if (!params.newValue || params.newValue === '') {
+        params.data.fuelProductionFacilityCity = ''
+        params.data.fuelProductionFacilityProvinceState = ''
+        params.data.fuelProductionFacilityCountry = ''
+      }
 
       // Split the newValue by comma and trim spaces
       const [city = '', province = '', country = ''] = params.newValue
@@ -454,7 +458,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'fuel-production-province-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path += 'fpProvince=' + queryKey[1]
+        path += `fpProvince=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data
       },
@@ -463,14 +467,13 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     }),
     minWidth: 325,
     valueSetter: (params) => {
-      if (!params.newValue) return false // Handle empty values safely
-
-      // Split the newValue by comma and trim spaces
+      if (!params.newValue || params.newValue === '') {
+        params.data.fuelProductionFacilityProvinceState = ''
+        params.data.fuelProductionFacilityCountry = ''
+      }
       const [province = '', country = ''] = params.newValue
         .split(',')
         .map((val) => val.trim())
-
-      // Assign the values to the respective fields
       params.data.fuelProductionFacilityProvinceState = province
       params.data.fuelProductionFacilityCountry = country
 
@@ -492,7 +495,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       queryKey: 'fuel-production-country-search',
       queryFn: async ({ queryKey, client }) => {
         let path = apiRoutes.fuelCodeSearch
-        path += 'fpCountry=' + queryKey[1]
+        path += `fpCountry=${encodeURIComponent(queryKey[1])}`
         const response = await client.get(path)
         return response.data
       },
