@@ -29,7 +29,7 @@ FUEL_SUPPLY_EXCLUDE_FIELDS = {
     "version",
     "action_type",
     "units",
-    "is_new_entry"
+    "is_new_supplemental_entry"
 }
 
 
@@ -252,7 +252,7 @@ class FuelSupplyActionService:
             fs_data.group_uuid
         )
 
-        if fs_data.is_new_entry:
+        if fs_data.is_new_supplemental_entry:
             await self.repo.delete_fuel_supply(fuel_supply_id=fs_data.fuel_supply_id)
             return DeleteFuelSupplyResponseSchema(
                 success=True, message="Marked as deleted."

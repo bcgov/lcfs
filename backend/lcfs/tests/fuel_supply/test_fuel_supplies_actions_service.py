@@ -24,7 +24,7 @@ FUEL_SUPPLY_EXCLUDE_FIELDS = {
     "version",
     "action_type",
     "units",
-    'is_new_entry',
+    'is_new_supplemental_entry',
 }
 
 # Example test cases from the dataset

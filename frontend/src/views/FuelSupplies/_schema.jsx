@@ -38,11 +38,11 @@ export const fuelSupplyColDefs = (
   actions((params) => {
     return {
       enableDuplicate: false,
-      enableDelete: !params.data.isNewEntry,
-      enableUndo: isSupplemental && params.data.isNewEntry,
+      enableDelete: !params.data.isNewSupplementalEntry,
+      enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
       enableStatus:
         isSupplemental &&
-        params.data.isNewEntry &&
+        params.data.isNewSupplementalEntry &&
         ACTION_STATUS_MAP[params.data.actionType]
     }
   }),
@@ -85,7 +85,7 @@ export const fuelSupplyColDefs = (
     valueFormatter,
     editable: false,
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -118,7 +118,7 @@ export const fuelSupplyColDefs = (
       openOnFocus: true
     },
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -182,7 +182,7 @@ export const fuelSupplyColDefs = (
     }),
 
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -230,7 +230,7 @@ export const fuelSupplyColDefs = (
       openOnFocus: true
     }),
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -299,7 +299,7 @@ export const fuelSupplyColDefs = (
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -357,7 +357,7 @@ export const fuelSupplyColDefs = (
       openOnFocus: true
     }),
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -409,7 +409,7 @@ export const fuelSupplyColDefs = (
       }
     },
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -491,7 +491,7 @@ export const fuelSupplyColDefs = (
       showStepperButtons: false
     },
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -526,7 +526,7 @@ export const fuelSupplyColDefs = (
     suppressKeyboardEvent,
     editable: (params) => isFuelTypeOther(params),
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -553,7 +553,7 @@ export const fuelSupplyColDefs = (
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
     editable: false,
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -581,7 +581,7 @@ export const fuelSupplyColDefs = (
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -603,7 +603,7 @@ export const fuelSupplyColDefs = (
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
     editable: false,
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -625,7 +625,7 @@ export const fuelSupplyColDefs = (
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
     cellEditor: 'agNumberCellEditor',
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -670,7 +670,7 @@ export const fuelSupplyColDefs = (
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
     editable: false,
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'
@@ -710,7 +710,7 @@ export const fuelSupplyColDefs = (
   {
     field: 'energy',
     cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewEntry) {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
           // if (params.data.updated) {
           //   style.textDecoration = 'line-through'

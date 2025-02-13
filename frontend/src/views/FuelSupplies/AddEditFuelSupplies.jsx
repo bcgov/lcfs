@@ -65,24 +65,36 @@ export const AddEditFuelSupplies = () => {
         defaultMaxWidth: 600
       },
       getRowStyle: (params) => {
-        if (params.data.actionType === 'CREATE' && params.data.isNewEntry) {
+        if (
+          params.data.actionType === 'CREATE' &&
+          params.data.isNewSupplementalEntry &&
+          isSupplemental
+        ) {
           return {
             backgroundColor: colors.alerts.success.background
           }
         }
-        if (params.data.actionType === 'UPDATE' && params.data.isNewEntry) {
+        if (
+          params.data.actionType === 'UPDATE' &&
+          params.data.isNewSupplementalEntry &&
+          isSupplemental
+        ) {
           return {
             backgroundColor: colors.alerts.warning.background
           }
         }
-        if (params.data.actionType === 'DELETE' && params.data.isNewEntry) {
+        if (
+          params.data.actionType === 'DELETE' &&
+          params.data.isNewSupplementalEntry &&
+          isSupplemental
+        ) {
           return {
             backgroundColor: colors.alerts.error.background
           }
         }
       }
     }),
-    [t]
+    [t, isSupplemental]
   )
 
   useEffect(() => {
@@ -134,13 +146,15 @@ export const AddEditFuelSupplies = () => {
             provisionOfTheActId: item.provisionOfTheActId,
             fuelCode: item.fuelCode?.fuelCode,
             endUse: item.endUse?.type,
-            isNewEntry: item.complianceReportId === +complianceReportId,
+            isNewSupplementalEntry:
+              complianceReport?.report.version !== 0 &&
+              item.complianceReportId === +complianceReportId,
             id: uuid()
           }
         })
         setRowData([...updatedRowData, { id: uuid() }])
       } else {
-        setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
+        // setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
       setTimeout(() => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
@@ -150,50 +164,64 @@ export const AddEditFuelSupplies = () => {
         })
       }, 100)
     },
-    [data, complianceReportId, compliancePeriod]
+    [
+      data,
+      complianceReportId,
+      compliancePeriod,
+      complianceReport?.report.version
+    ]
   )
 
   useEffect(() => {
-    if (optionsData?.fuelTypes?.length > 0) {
-      const updatedColumnDefs = fuelSupplyColDefs(
-        optionsData,
-        errors,
-        warnings,
-        isSupplemental,
-        complianceReport?.report.version
-      )
-      setColumnDefs(updatedColumnDefs)
-    }
+    const updatedColumnDefs = fuelSupplyColDefs(
+      optionsData,
+      errors,
+      warnings,
+      complianceReport?.report.version !== 0
+    )
+    console.log('updatedColumnDefs')
+    setColumnDefs(updatedColumnDefs)
   }, [
+    complianceReport?.report.version,
     errors,
-    warnings,
-    optionsData,
     isSupplemental,
-    complianceReport?.report.version
+    optionsData,
+    warnings
   ])
 
   useEffect(() => {
     if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
-      const updatedRowData = data.fuelSupplies.map((item) => ({
-        ...item,
-        complianceReportId, // This takes current reportId, important for versioning
-        compliancePeriod,
-        fuelCategory: item.fuelCategory?.category,
-        fuelType: item.fuelType?.fuelType,
-        fuelTypeOther:
-          item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
-        provisionOfTheAct: item.provisionOfTheAct?.name,
-        provisionOfTheActId: item.provisionOfTheAct?.provisionOfTheActId,
-        fuelCode: item.fuelCode?.fuelCode,
-        endUse: item.endUse?.type,
-        isNewEntry: item.complianceReportId === +complianceReportId,
-        id: uuid()
-      }))
+      const updatedRowData = data.fuelSupplies.map((item) => {
+        return {
+          ...item,
+          complianceReportId, // This takes current reportId, important for versioning
+          compliancePeriod,
+          fuelCategory: item.fuelCategory?.category,
+          fuelType: item.fuelType?.fuelType,
+          fuelTypeOther:
+            item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
+          provisionOfTheAct: item.provisionOfTheAct?.name,
+          provisionOfTheActId: item.provisionOfTheAct?.provisionOfTheActId,
+          fuelCode: item.fuelCode?.fuelCode,
+          endUse: item.endUse?.type,
+          isNewSupplementalEntry:
+            complianceReport?.report.version !== 0 &&
+            item.complianceReportId === +complianceReportId,
+          id: uuid()
+        }
+      })
       setRowData(updatedRowData)
     } else {
-      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
+      // setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
-  }, [data, fuelSuppliesLoading, complianceReportId, compliancePeriod])
+  }, [
+    data,
+    fuelSuppliesLoading,
+    complianceReportId,
+    compliancePeriod,
+    isSupplemental,
+    complianceReport?.report.version
+  ])
 
   const onCellValueChanged = useCallback(
     async (params) => {

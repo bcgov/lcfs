@@ -129,7 +129,7 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     eer: Optional[float] = None
     energy: Optional[float] = None
     deleted: Optional[bool] = None
-    is_new_entry: Optional[bool] = None
+    is_new_supplemental_entry: Optional[bool] = None
 
     class Config:
         use_enum_values = True
