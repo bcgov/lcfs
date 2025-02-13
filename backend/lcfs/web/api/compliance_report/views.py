@@ -64,10 +64,6 @@ async def get_compliance_reports(
     pagination: PaginationRequestSchema = Body(..., embed=False),
     service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportListSchema:
-    # Add filter on statuses so that IDIR users won't be able to see draft reports
-    pagination.filters.append(
-        FilterModel(field="status", filter="Draft", filter_type="text", type="notEqual")
-    )
     return await service.get_compliance_reports_paginated(pagination)
 
 

@@ -9,6 +9,8 @@ import { useLocation, useParams } from 'react-router-dom'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
+import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema.jsx'
 
 export const NotionalTransferSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -39,37 +41,9 @@ export const NotionalTransferSummary = ({ data, status }) => {
     [status]
   )
 
-  const columns = [
-    {
-      headerName: t('notionalTransfer:notionalTransferColLabels.legalName'),
-      field: 'legalName',
-      flex: 1,
-      minWidth: 200
-    },
-    {
-      headerName: t(
-        'notionalTransfer:notionalTransferColLabels.addressForService'
-      ),
-      field: 'addressForService',
-      flex: 1,
-      minWidth: 200
-    },
-    {
-      headerName: t('notionalTransfer:notionalTransferColLabels.fuelCategory'),
-      field: 'fuelCategory'
-    },
-    {
-      headerName: t(
-        'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
-      ),
-      field: 'receivedOrTransferred'
-    },
-    {
-      headerName: t('notionalTransfer:notionalTransferColLabels.quantity'),
-      field: 'quantity',
-      valueFormatter
-    }
-  ]
+  const columns = useMemo(() => {
+    return notionalTransferSummaryColDefs(t)
+  }, [t])
 
   return (
     <Grid2 className="notional-transfer-container" mx={-1}>
@@ -82,7 +56,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          gridKey={'notional-transfers'}
+          gridKey="notional-transfers"
           getRowId={getRowId}
           columnDefs={columns}
           defaultColDef={defaultColDef}

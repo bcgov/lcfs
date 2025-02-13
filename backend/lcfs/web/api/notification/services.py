@@ -1,5 +1,6 @@
 import math
 from typing import List, Optional
+import json
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
     NotificationMessage,
@@ -254,7 +255,10 @@ class NotificationService:
         """
         # Prepare context once, outside the loop
         notification.notification_context.update(
-            {"organization_id": notification.notification_data.related_organization_id}
+            {
+                "organization_id": notification.notification_data.related_organization_id,
+                "message": json.loads(notification.notification_data.message),
+            }
         )
 
         for notification_type in notification.notification_types:

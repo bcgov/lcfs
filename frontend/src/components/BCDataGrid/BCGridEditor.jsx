@@ -125,7 +125,7 @@ export const BCGridEditor = ({
         onCellEditingStopped({
           node,
           oldValue: '',
-          newvalue: node.data[findFirstEditableColumn()],
+          newValue: node.data[findFirstEditableColumn()],
           ...props
         })
       })
@@ -194,6 +194,18 @@ export const BCGridEditor = ({
           const firstNewRow = res.add[0]
           startEditingFirstEditableCell(firstNewRow.rowIndex)
         }
+      }
+    }
+  }
+  const onCellFocused = (params) => {
+    if (params.column) {
+      // Ensure the focused column is always visible
+      this.gridApi.ensureColumnVisible(params.column)
+
+      // Scroll to make focused cell align to left
+      const leftPos = params.column.getLeftPosition()
+      if (leftPos !== null) {
+        this.gridApi.horizontalScrollTo(leftPos)
       }
     }
   }
@@ -299,6 +311,7 @@ export const BCGridEditor = ({
         getRowId={(params) => params.data.id}
         onCellClicked={onCellClicked}
         onCellEditingStopped={handleOnCellEditingStopped}
+        onCellFocused={onCellFocused}
         autoHeight={true}
         {...props}
       />

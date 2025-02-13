@@ -2,7 +2,9 @@ from .AllocationAgreement import AllocationAgreement
 from .AllocationTransactionType import AllocationTransactionType
 from .CompliancePeriod import CompliancePeriod
 from .ComplianceReport import ComplianceReport
+from .ComplianceReportCountView import ComplianceReportCountView
 from .ComplianceReportHistory import ComplianceReportHistory
+from .ComplianceReportListView import ComplianceReportListView
 from .ComplianceReportOrganizationSnapshot import ComplianceReportOrganizationSnapshot
 from .ComplianceReportStatus import ComplianceReportStatus
 from .ComplianceReportSummary import ComplianceReportSummary
@@ -19,7 +21,9 @@ __all__ = [
     "AllocationTransactionType",
     "CompliancePeriod",
     "ComplianceReport",
+    "ComplianceReportCountView",
     "ComplianceReportHistory",
+    "ComplianceReportListView",
     "ComplianceReportStatus",
     "ComplianceReportSummary",
     "ComplianceReportOrganizationSnapshot",
