@@ -7,7 +7,7 @@ from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
-    ComplianceReportSummaryService,
+    ComplianceReportSummaryService, ComplianceDataService
 )
 from lcfs.web.api.compliance_report.update_service import (
     ComplianceReportUpdateService,
@@ -326,6 +326,14 @@ def mock_other_uses_repo():
     mock_repo.get_effective_other_uses = AsyncMock(return_value=MagicMock())
     return mock_repo
 
+@pytest.fixture
+def mock_compliance_data_service():
+    """Mock the ComplianceDataService."""
+    mock_service = MagicMock(spec=ComplianceDataService)
+    mock_service.get_period.return_value = 2024
+    mock_service.get_nickname.return_value = "Test Report"
+    mock_service.is_legacy_year.return_value = False
+    return mock_service
 
 @pytest.fixture
 def compliance_report_summary_service(
@@ -335,6 +343,7 @@ def compliance_report_summary_service(
     mock_fuel_supply_repo,
     mock_fuel_export_repo,
     mock_other_uses_repo,
+    mock_compliance_data_service,
 ):
     service = ComplianceReportSummaryService()
     service.repo = mock_repo
@@ -343,6 +352,7 @@ def compliance_report_summary_service(
     service.fuel_supply_repo = mock_fuel_supply_repo
     service.fuel_export_repo = mock_fuel_export_repo
     service.other_uses_repo = mock_other_uses_repo
+    service.compliance_data_service = mock_compliance_data_service
     return service
 
 
