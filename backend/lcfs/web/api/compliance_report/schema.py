@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import ClassVar, Optional, List
+from typing import ClassVar, Optional, List, Union
 from datetime import datetime, date
 from enum import Enum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
@@ -196,13 +196,15 @@ class ComplianceReportListSchema(BaseSchema):
 
 
 class ComplianceReportSummaryRowSchema(BaseSchema):
-    line: Optional[int] = None
+    line: Optional[Union[int, str]] = None
     description: Optional[str] = ""
     field: Optional[str] = ""
     gasoline: Optional[float] = 0
     diesel: Optional[float] = 0
     jet_fuel: Optional[float] = 0
     value: Optional[float] = 0
+    units: Optional[str] = ""
+    bold: Optional[bool] = False
     total_value: Optional[float] = 0
     format: Optional[str] = FORMATS.NUMBER.value
 
