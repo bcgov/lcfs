@@ -1,3 +1,4 @@
+import { SUMMARY } from '@/constants/common'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters.js'
 
 export const scheduleASummaryColDefs = (t) => [
@@ -120,5 +121,83 @@ export const scheduleCSummaryColDefs = (t) => [
     floatingFilter: false,
     flex: 1,
     minWidth: 200
+  }
+]
+
+export const renewableFuelColumns = (t, data) => {
+  return [
+    {
+      id: 'line',
+      label: t('report:summaryLabels.line'),
+      align: 'center',
+      width: '100px',
+      bold: true
+    },
+    {
+      id: 'description',
+      label: t('report:part2RenewableFuelTargetSummary'),
+      maxWidth: '300px'
+    },
+    {
+      id: 'gasoline',
+      label: t('report:fuelLabels.gasoline'),
+      align: 'right',
+      width: '150px',
+      cellConstraints: {
+        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
+        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) }
+      }
+    },
+    {
+      id: 'diesel',
+      label: t('report:fuelLabels.diesel'),
+      align: 'right',
+      width: '150px',
+      cellConstraints: {
+        5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
+        7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) }
+      }
+    }
+  ]
+}
+
+export const lowCarbonColumns = (t) => [
+  {
+    id: 'line',
+    label: t('report:summaryLabels.line'),
+    align: 'center',
+    width: '100px',
+    bold: true
+  },
+  {
+    id: 'description',
+    label: t('report:part3LowCarbonFuelTargetSummary'),
+    maxWidth: '300px'
+  },
+  {
+    id: 'value',
+    label: t('report:summaryLabels.value'),
+    align: 'center',
+    width: '150px'
+  },
+  {
+    id: 'units',
+    label: t('report:summaryLabels.units'),
+    align: 'center',
+    width: '150px'
+  }
+]
+
+export const nonComplianceColumns = (t) => [
+  {
+    id: 'description',
+    label: t('report:nonCompliancePenaltySummary'),
+    maxWidth: '300px'
+  },
+  {
+    id: 'totalValue',
+    label: t('report:summaryLabels.totalValue'),
+    align: 'center',
+    width: '150px'
   }
 ]

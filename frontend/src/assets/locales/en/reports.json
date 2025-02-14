@@ -131,7 +131,9 @@
   "errorRetrieving": "Error retrieving the record",
   "renewableFuelTarget": "Renewable fuel target",
   "lowCarbonFuelTarget": "Low carbon fuel target",
+  "part2RenewableFuelTargetSummary": "Part 2 - Renewable fuel target summary",
   "renewableFuelTargetSummary": "Renewable fuel target summary",
+  "part3LowCarbonFuelTargetSummary": "Part 3 - Low carbon fuel target summary",
   "lowCarbonFuelTargetSummary": "Low carbon fuel target summary",
   "nonCompliancePenaltySummary": "Non-compliance penalty payable summary",
   "delta": "Delta",
@@ -166,7 +168,8 @@
   "summaryLabels": {
     "line": "Line",
     "value": "Value",
-    "totalValue": "Total Value"
+    "totalValue": "Total Value",
+    "units": "Units"
   },
   "summaryLoadingMsg": "Loading compliance report summary...",
   "noSigningAuthorityTooltip": "Cannot submit: Signing authority role required.",

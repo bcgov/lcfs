@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import List, Tuple, Dict, Optional, Union
 
 from fastapi import Depends
+from lcfs.utils.constants import LCFS_Constants
 from sqlalchemy import inspect
 
 from lcfs.db.models import FuelSupply
@@ -13,6 +14,7 @@ from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSu
 from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.compliance_report.constants import (
+    PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
@@ -37,6 +39,39 @@ from lcfs.web.utils.calculations import calculate_compliance_units
 logger = logging.getLogger(__name__)
 
 
+class ComplianceDataService:
+    def __init__(self):
+        self.compliance_period = None
+        self.nickname = None
+
+    def set_period(self, period: int):
+        self.compliance_period = period
+
+    def get_period(self) -> Optional[int]:
+        return self.compliance_period
+
+    def set_nickname(self, nickname: str):
+        self.nickname = nickname
+
+    def get_nickname(self) -> Optional[str]:
+        return self.nickname
+
+    def is_legacy_year(self) -> bool:
+        return (
+            self.compliance_period < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
+            if self.compliance_period is not None
+            else False
+        )
+
+
+# Create a global instance
+compliance_data_service = ComplianceDataService()
+
+
+def get_compliance_data_service():
+    return compliance_data_service
+
+
 class ComplianceReportSummaryService:
     def __init__(
         self,
@@ -51,6 +86,9 @@ class ComplianceReportSummaryService:
             AllocationAgreementRepository
         ),
         other_uses_repo: OtherUsesRepository = Depends(OtherUsesRepository),
+        compliance_data_service: ComplianceDataService = Depends(
+            get_compliance_data_service
+        ),
     ):
         self.repo = repo
         self.notional_transfer_service = notional_transfer_service
@@ -59,6 +97,7 @@ class ComplianceReportSummaryService:
         self.fuel_export_repo = fuel_export_repo
         self.allocation_agreement_repo = allocation_agreement_repo
         self.other_uses_repo = other_uses_repo
+        self.compliance_data_service = compliance_data_service
 
     def convert_summary_to_dict(
         self, summary_obj: ComplianceReportSummary
@@ -102,9 +141,39 @@ class ComplianceReportSummaryService:
                 self._handle_summary_lines(summary, summary_obj, column.key, line)
 
         # DB Columns are not in the same order as display, so sort them
-        summary.low_carbon_fuel_target_summary.sort(key=lambda row: int(row.line))
+        summary.low_carbon_fuel_target_summary.sort(
+            key=lambda row: int(
+                re.match(r"(\d+)", row.line).group(1)
+                if compliance_data_service.is_legacy_year()
+                else row.line
+            )
+        )
 
         return summary
+
+    def _get_line_value(self, line: int, is_legacy: bool = False) -> Union[str, int]:
+        """Helper method to format line values based on legacy year status"""
+        if not is_legacy:
+            return line
+
+        if line is None:
+            return line
+        elif 1 <= line <= 11:
+            return f"{line} | {line + 11}"
+        elif 12 <= line <= 22:
+            mapping = {
+                12: "23",
+                13: "24",
+                14: "25",
+                15: "26",
+                16: "26a",
+                17: "26b",
+                18: "26c",
+                19: "27",
+                20: "28",
+            }
+            return mapping.get(line, str(line))
+        return str(line)
 
     def _extract_line_number(self, column_key: str) -> Optional[int]:
         """Extract the line number (1..N) from a column key like 'line_4_...' using regex."""
@@ -137,23 +206,45 @@ class ComplianceReportSummaryService:
         self, summary, summary_obj, column_key, line: int
     ) -> None:
         """Populate the low_carbon_fuel_target_summary section"""
+        is_legacy = compliance_data_service.is_legacy_year()
+        if is_legacy and line > 20:
+            return
         description = self._format_description(
             line=line,
-            descriptions_dict=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
+            descriptions_dict=(
+                PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
+                if is_legacy
+                else LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
+            ),
         )
+        desc = None
+        if line == 21:
+            desc = self._non_compliance_special_description(
+                line, summary_obj, LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
+            )
+        elif line in [17, 18] and is_legacy:
+            desc = self._part3_special_description(
+                line, PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
+            )
+        else:
+            desc = description
         summary.low_carbon_fuel_target_summary.append(
             ComplianceReportSummaryRowSchema(
-                line=line,
-                format=FORMATS.NUMBER.value if line != 21 else FORMATS.CURRENCY.value,
-                description=(
-                    description
-                    if line != 21
-                    else self._non_compliance_special_description(
-                        line, summary_obj, LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
-                    )
+                line=self._get_line_value(line, is_legacy),
+                format=(
+                    FORMATS.CURRENCY.value
+                    if (line == 21 or (line == 20 and is_legacy))
+                    else FORMATS.NUMBER.value
                 ),
+                description=desc,
                 field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["field"],
                 value=int(getattr(summary_obj, column_key) or 0),
+                units=(
+                    PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["units"]
+                    if is_legacy
+                    else ""
+                ),
+                bold=True if (is_legacy and line > 18) else False,
             )
         )
 
@@ -190,7 +281,15 @@ class ComplianceReportSummaryService:
         Find or create a ComplianceReportSummaryRowSchema in `target_list` with the matching line.
         The 'line' is stored as a string internally.
         """
-        existing_element = next((el for el in target_list if el.line == line), None)
+        existing_element = next(
+            (
+                el
+                for el in target_list
+                if el.line
+                == self._get_line_value(line, compliance_data_service.is_legacy_year())
+            ),
+            None,
+        )
         if existing_element:
             return existing_element
 
@@ -204,7 +303,7 @@ class ComplianceReportSummaryService:
 
         # Create and append the new row
         new_element = ComplianceReportSummaryRowSchema(
-            line=line,
+            line=self._get_line_value(line, compliance_data_service.is_legacy_year()),
             format=default_format,
             description=description,
             field=default_descriptions[line]["field"],
@@ -228,7 +327,10 @@ class ComplianceReportSummaryService:
         Builds a description string from the dictionary.
         Optionally handle a special line with dynamic formatting.
         """
-        base_desc = descriptions_dict[line]["description"]
+        base_desc = descriptions_dict[line].get(
+            ("legacy" if compliance_data_service.is_legacy_year() else "description"),
+            descriptions_dict[line].get("description"),
+        )
         return base_desc  # By default, no fancy placeholders used here.
 
     def _renewable_special_description(self, line, summary_obj, descriptions_dict):
@@ -236,7 +338,10 @@ class ComplianceReportSummaryService:
         For lines 6 and 8, your original code does some .format() with three placeholders
         (line_4_eligible_renewable_fuel_required_* * 0.05).
         """
-        base_desc = descriptions_dict[line]["description"]
+        base_desc = descriptions_dict[line].get(
+            ("legacy" if compliance_data_service.is_legacy_year() else "description"),
+            descriptions_dict[line].get("description"),
+        )
         return base_desc.format(
             "{:,}".format(
                 int(summary_obj.line_4_eligible_renewable_fuel_required_gasoline * 0.05)
@@ -253,10 +358,23 @@ class ComplianceReportSummaryService:
         """
         For line 21, your original code does .format(...) with summary_obj.line_21_non_compliance_penalty_payable / 600
         """
-        base_desc = descriptions_dict[line]["description"]
+        base_desc = descriptions_dict[line].get(
+            ("legacy" if compliance_data_service.is_legacy_year() else "description"),
+            descriptions_dict[line].get("description"),
+        )
         return base_desc.format(
             "{:,}".format(int(summary_obj.line_21_non_compliance_penalty_payable / 600))
         )
+
+    def _part3_special_description(self, line, descriptions_dict):
+        """
+        For line 26a and 26b, your original code does .format(...) with compliance report nick name
+        """
+        base_desc = descriptions_dict[line].get(
+            ("legacy" if compliance_data_service.is_legacy_year() else "description"),
+            descriptions_dict[line].get("description"),
+        )
+        return base_desc.format("{:}".format(compliance_data_service.get_nickname()))
 
     @service_handler
     async def update_compliance_report_summary(
@@ -294,7 +412,10 @@ class ComplianceReportSummaryService:
         )
 
         summary_model = compliance_report.summary
-
+        compliance_data_service.set_nickname(compliance_report.nickname)
+        compliance_data_service.set_period(
+            int(compliance_report.compliance_period.description)
+        )
         # After the report has been submitted, the summary becomes locked
         # so we can return the existing summary rather than re-calculating
         if summary_model.is_locked:
@@ -613,7 +734,9 @@ class ComplianceReportSummaryService:
 
         summary = [
             ComplianceReportSummaryRowSchema(
-                line=line,
+                line=self._get_line_value(
+                    line, compliance_data_service.is_legacy_year()
+                ),
                 description=(
                     RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
                         "{:,}".format(round(summary_lines[4]["gasoline"] * 0.05)),
@@ -709,7 +832,9 @@ class ComplianceReportSummaryService:
 
         low_carbon_fuel_target_summary = [
             ComplianceReportSummaryRowSchema(
-                line=line,
+                line=self._get_line_value(
+                    line, compliance_data_service.is_legacy_year()
+                ),
                 description=(
                     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
                         "{:,}".format(non_compliance_penalty_payable_units * -1)
@@ -744,7 +869,9 @@ class ComplianceReportSummaryService:
 
         non_compliance_penalty_summary = [
             ComplianceReportSummaryRowSchema(
-                line=line,
+                line=self._get_line_value(
+                    line, compliance_data_service.is_legacy_year()
+                ),
                 description=(
                     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line][
                         "description"

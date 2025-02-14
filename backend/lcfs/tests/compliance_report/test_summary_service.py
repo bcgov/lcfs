@@ -444,7 +444,7 @@ async def test_calculate_non_compliance_penalty_summary_without_penalty_payable(
 ):
     mock_compliance_report_summary = [
         compliance_report_summary_row_schema(
-            line="11", gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
+            line=11, gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
         )
     ]
 
@@ -464,7 +464,7 @@ async def test_calculate_non_compliance_penalty_summary_with_penalty_payable(
 ):
     mock_compliance_report_summary = [
         compliance_report_summary_row_schema(
-            line="11", gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
+            line=11, gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
         )
     ]
 
@@ -686,7 +686,10 @@ async def test_can_sign_flag_logic(
     mock_allocation_agreements = [MagicMock()]
     mock_compliance_report = MagicMock(
         compliance_report_group_uuid="mock-group-uuid",
-        compliance_period=MagicMock(effective_date=MagicMock(year=2024)),
+        compliance_period=MagicMock(
+            effective_date=MagicMock(year=2024), description="2024"
+        ),
+        nickname="test-report",
         organization_id=1,
         compliance_report_id=1,
         summary=MagicMock(is_locked=False),
