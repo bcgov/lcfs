@@ -12,10 +12,9 @@ from lcfs.web.api.compliance_report.summary_service import (
 from lcfs.web.api.compliance_report.update_service import (
     ComplianceReportUpdateService,
 )
-
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
-    CompliancePeriodSchema,
     ComplianceReportOrganizationSchema,
     ComplianceReportViewSchema,
     SummarySchema,
@@ -37,7 +36,7 @@ from lcfs.web.api.fuel_export.repo import FuelExportRepository
 
 @pytest.fixture
 def compliance_period_schema():
-    return CompliancePeriodSchema(
+    return CompliancePeriodBaseSchema(
         compliance_period_id=1,
         description="2024",
         effective_date=datetime(2024, 1, 1),
@@ -96,7 +95,7 @@ def compliance_report_schema(
         compliance_report_group_uuid: str = None,
         version: int = 0,
         compliance_period_id: int = None,
-        compliance_period: CompliancePeriodSchema = None,
+        compliance_period: CompliancePeriodBaseSchema = None,
         organization_id: int = None,
         organization: ComplianceReportOrganizationSchema = None,
         report_type: str = "Annual Compliance",
@@ -108,7 +107,7 @@ def compliance_report_schema(
             compliance_period_id or compliance_period_schema.compliance_period_id
         )
         compliance_period = compliance_period or compliance_period_schema
-        if isinstance(compliance_period, CompliancePeriodSchema):
+        if isinstance(compliance_period, CompliancePeriodBaseSchema):
             compliance_period = compliance_period.description
         organization_id = (
             organization_id or compliance_report_organization_schema.organization_id
@@ -152,7 +151,7 @@ def compliance_report_base_schema(
     def _create_compliance_report_base_schema(
         compliance_report_id: int = 1,
         compliance_period_id: int = None,
-        compliance_period: CompliancePeriodSchema = None,
+        compliance_period: CompliancePeriodBaseSchema = None,
         organization_id: int = None,
         organization: ComplianceReportOrganizationSchema = None,
         summary: SummarySchema = None,

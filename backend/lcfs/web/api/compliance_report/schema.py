@@ -48,10 +48,6 @@ class PortsEnum(str, Enum):
     DUAL = "Dual port"
 
 
-class CompliancePeriodSchema(CompliancePeriodBaseSchema):
-    pass
-
-
 class SummarySchema(BaseSchema):
     summary_id: int
     is_locked: bool
@@ -144,7 +140,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     version: Optional[int]
     supplemental_initiator: Optional[SupplementalInitiatorType]
     compliance_period_id: int
-    compliance_period: CompliancePeriodSchema
+    compliance_period: CompliancePeriodBaseSchema
     organization_id: int
     organization: ComplianceReportOrganizationSchema
     summary: Optional[SummarySchema]

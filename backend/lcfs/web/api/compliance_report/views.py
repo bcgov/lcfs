@@ -14,8 +14,8 @@ from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.base import FilterModel, PaginationRequestSchema
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.schema import (
-    CompliancePeriodSchema,
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
     ComplianceReportSummarySchema,
@@ -40,13 +40,13 @@ logger = structlog.get_logger(__name__)
 
 @router.get(
     "/compliance-periods",
-    response_model=List[CompliancePeriodSchema],
+    response_model=List[CompliancePeriodBaseSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
 async def get_compliance_periods(
     request: Request, service: ComplianceReportServices = Depends()
-) -> list[CompliancePeriodSchema]:
+) -> list[CompliancePeriodBaseSchema]:
     """
     Get a list of compliance periods
     """
