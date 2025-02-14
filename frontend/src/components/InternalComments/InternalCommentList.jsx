@@ -120,6 +120,7 @@ const InternalCommentList = ({
                 width: 24,
                 height: 24,
                 fontSize: '0.75rem',
+                fontWeight: 'bold',
                 bgcolor: '#606060',
                 marginTop: 2.5,
                 marginRight: 2
@@ -167,7 +168,12 @@ const InternalCommentList = ({
                           marginLeft: '10px',
                           color: '#1976d2'
                         }}
-                        onClick={() => startEditing(comment.internalCommentId, comment.comment)}
+                        onClick={() =>
+                          startEditing(
+                            comment.internalCommentId,
+                            comment.comment
+                          )
+                        }
                       >
                         {t('internalComment:edit')}
                       </span>
@@ -184,11 +190,16 @@ const InternalCommentList = ({
           </BCBox>
         ))}
         {/* Conditionally renders the form to add a new comment based on the user's role */}
-        {hasAnyRole(roles.analyst, roles.director, roles.compliance_manager) && (
+        {hasAnyRole(
+          roles.analyst,
+          roles.director,
+          roles.compliance_manager
+        ) && (
           <BCBox sx={{ backgroundColor: '#fff' }} p={2}>
             <InternalCommentForm
               title={
-                ((hasAnyRole(roles.analyst) || hasAnyRole(roles.compliance_manager)) &&
+                ((hasAnyRole(roles.analyst) ||
+                  hasAnyRole(roles.compliance_manager)) &&
                   t('internalComment:commentToDirector')) ||
                 (hasAnyRole(roles.director) &&
                   t('internalComment:commentToAnalyst'))

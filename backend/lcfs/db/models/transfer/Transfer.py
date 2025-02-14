@@ -34,14 +34,6 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
         comment="Price per unit with two decimal places",
     )
     quantity = Column(Integer, comment="Quantity of units")
-    # compliance_period = Column(Integer, )
-    from_org_comment = Column(
-        String(1000), comment="Comment from the from-organization"
-    )
-    to_org_comment = Column(String(1000), comment="Comment from the to-organization")
-    gov_comment = Column(
-        String(1500), comment="Comment from the government to organizations"
-    )
     transfer_category_id = Column(
         Integer, ForeignKey("transfer_category.transfer_category_id")
     )
@@ -61,6 +53,7 @@ class Transfer(BaseModel, Auditable, EffectiveDates):
     transfer_category = relationship("TransferCategory")
     transfer_history = relationship("TransferHistory", back_populates="transfer")
     current_status = relationship("TransferStatus")
+    transfer_comments = relationship("TransferComment", back_populates="transfer")
     transfer_internal_comments = relationship(
         "TransferInternalComment", back_populates="transfer"
     )

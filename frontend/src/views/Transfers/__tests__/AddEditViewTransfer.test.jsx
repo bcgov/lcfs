@@ -422,12 +422,13 @@ describe.skip('AddEditViewTransfer Component Tests', () => {
       const buttonClusterSignButton = await screen.findByTestId(
         'sign-and-submit-btn'
       )
-      const buttonClusterRecindButton = await screen.findByTestId('rescind-btn')
+      const buttonClusterRescindButton =
+        await screen.findByTestId('rescind-btn')
 
       expect(buttonClusterBackButton).toBeInTheDocument()
       expect(buttonClusterDeclineButton).toBeInTheDocument()
       expect(buttonClusterSignButton).toBeInTheDocument()
-      expect(buttonClusterRecindButton).toBeInTheDocument()
+      expect(buttonClusterRescindButton).toBeInTheDocument()
     })
     it('renders the correct button components (Submitted status & signing auth)', async () => {
       useTransfer.mockReturnValue({
@@ -445,10 +446,11 @@ describe.skip('AddEditViewTransfer Component Tests', () => {
       const buttonClusterBackButton = await screen.findByTestId(
         'button-cluster-back'
       )
-      const buttonClusterRecindButton = await screen.findByTestId('rescind-btn')
+      const buttonClusterRescindButton =
+        await screen.findByTestId('rescind-btn')
 
       expect(buttonClusterBackButton).toBeInTheDocument()
-      expect(buttonClusterRecindButton).toBeInTheDocument()
+      expect(buttonClusterRescindButton).toBeInTheDocument()
     })
     it('renders the correct button components (Recommended status & director)', async () => {
       useTransfer.mockReturnValue({
@@ -478,10 +480,11 @@ describe.skip('AddEditViewTransfer Component Tests', () => {
       const buttonClusterBackButton = await screen.findByTestId(
         'button-cluster-back'
       )
-      const buttonClusterRecindButton = await screen.findByTestId('rescind-btn')
+      const buttonClusterRescindButton =
+        await screen.findByTestId('rescind-btn')
 
       expect(buttonClusterBackButton).toBeInTheDocument()
-      expect(buttonClusterRecindButton).toBeInTheDocument()
+      expect(buttonClusterRescindButton).toBeInTheDocument()
     })
     it('renders the alert box when alert severity state is present', async () => {
       useLocation.mockReturnValue({

@@ -10,12 +10,12 @@ import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import {
-  isFuelTypeOther,
-  fuelTypeOtherConditionalStyle
+  fuelTypeOtherConditionalStyle,
+  isFuelTypeOther
 } from '@/utils/fuelTypeOther'
 import {
-  StandardCellWarningAndErrors,
-  StandardCellStyle
+  StandardCellStyle,
+  StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 
@@ -190,7 +190,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
         ?.fuelCategories.map((item) => item.fuelCategory).length > 1,
-    tooltipValueGetter: (p) => 'Select the fuel category from the list'
+    tooltipValueGetter: () => 'Select the fuel category from the list'
   },
   {
     field: 'endUseType',
@@ -279,7 +279,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       return true
     },
     editable: true,
-    tooltipValueGetter: (p) =>
+    tooltipValueGetter: () =>
       'Act Relied Upon to Determine Carbon Intensity: Identify the appropriate provision of the Act relied upon to determine the carbon intensity of each fuel.'
   },
   {
@@ -298,28 +298,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
         openOnFocus: true
       }
     },
-    cellStyle: (params) => {
-      const style = StandardCellWarningAndErrors(params, errors, warnings)
-      const isFuelCodeScenario =
-        params.data?.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      const fuelCodes = fuelType?.fuelCodes || []
-      const fuelCodeRequiredAndMissing =
-        isFuelCodeScenario && !params.data.fuelCode
-
-      if (fuelCodeRequiredAndMissing) {
-        // Highlight the cell if fuel code is required but not selected
-        return { ...style, backgroundColor: '#fff', borderColor: 'red' }
-      } else if (isFuelCodeScenario && fuelCodes.length > 0) {
-        // Allow selection when scenario matches and codes are present
-        return { ...style, backgroundColor: '#fff', borderColor: 'unset' }
-      } else {
-        // Otherwise disabled styling
-        return { ...style, backgroundColor: '#f2f2f2', borderColor: 'unset' }
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 135,
     editable: (params) => {
@@ -500,6 +480,67 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     valueFormatter,
     minWidth: 100,
     editable: false
+  }
+]
+
+export const fuelSupplySummaryColDef = (t) => [
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
+    field: 'complianceUnits',
+    valueFormatter
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'),
+    field: 'fuelType',
+    valueGetter: (params) => params.data.fuelType?.fuelType
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data.fuelCategory?.category
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.endUseId'),
+    field: 'endUse',
+    valueGetter: (params) => params.data.endUseType?.type || 'Any'
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'),
+    field: 'determiningCarbonIntensity',
+    valueGetter: (params) => params.data.provisionOfTheAct?.name
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'),
+    field: 'fuelCode',
+    valueGetter: (params) => params.data.fuelCode?.fuelCode
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  },
+  { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: 'units' },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.targetCi'),
+    field: 'targetCi'
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
+    field: 'ciOfFuel'
+  },
+  {
+    field: 'uci',
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci')
+  },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'),
+    field: 'energyDensity'
+  },
+  { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: 'eer' },
+  {
+    headerName: t('fuelSupply:fuelSupplyColLabels.energy'),
+    field: 'energy',
+    valueFormatter
   }
 ]
 

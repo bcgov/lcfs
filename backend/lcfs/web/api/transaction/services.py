@@ -98,6 +98,16 @@ class TransactionsService:
                                 "%Y-%m-%d"
                             )
                         )
+                if filter.field == "status":
+                    field = cast(
+                        get_field_for_filter(TransactionView, "status"),
+                        String,
+                    )
+                    # Check if filter_value is a comma-separated string
+                    if isinstance(filter_value, str) and "," in filter_value:
+                        filter_value = filter_value.split(",")  # Convert to list
+                    if isinstance(filter_value, list):
+                        filter.filter_type = "set"
                 conditions.append(
                     apply_filter_conditions(
                         field, filter_value, filter.type, filter.filter_type

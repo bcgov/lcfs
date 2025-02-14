@@ -7,16 +7,16 @@ from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
-    ComplianceReportSummaryService,
+    ComplianceReportSummaryService, ComplianceDataService
 )
 from lcfs.web.api.compliance_report.update_service import (
     ComplianceReportUpdateService,
 )
-
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
-    CompliancePeriodSchema,
     ComplianceReportOrganizationSchema,
+    ComplianceReportViewSchema,
     SummarySchema,
     ComplianceReportStatusSchema,
     ComplianceReportHistorySchema,
@@ -36,7 +36,7 @@ from lcfs.web.api.fuel_export.repo import FuelExportRepository
 
 @pytest.fixture
 def compliance_period_schema():
-    return CompliancePeriodSchema(
+    return CompliancePeriodBaseSchema(
         compliance_period_id=1,
         description="2024",
         effective_date=datetime(2024, 1, 1),
@@ -85,6 +85,62 @@ def compliance_report_history_schema(
 
 
 @pytest.fixture
+def compliance_report_schema(
+    compliance_period_schema,
+    compliance_report_organization_schema,
+    compliance_report_status_schema,
+):
+    def _create_compliance_report_schema(
+        compliance_report_id: int = 1,
+        compliance_report_group_uuid: str = None,
+        version: int = 0,
+        compliance_period_id: int = None,
+        compliance_period: CompliancePeriodBaseSchema = None,
+        organization_id: int = None,
+        organization: ComplianceReportOrganizationSchema = None,
+        report_type: str = "Annual Compliance",
+        report_status_id: int = None,
+        report_status: str = "Submitted",
+        update_date: datetime = datetime(2024, 4, 1, 12, 0, 0),
+    ):
+        compliance_period_id = (
+            compliance_period_id or compliance_period_schema.compliance_period_id
+        )
+        compliance_period = compliance_period or compliance_period_schema
+        if isinstance(compliance_period, CompliancePeriodBaseSchema):
+            compliance_period = compliance_period.description
+        organization_id = (
+            organization_id or compliance_report_organization_schema.organization_id
+        )
+        organization = organization or compliance_report_organization_schema
+        organization_name = (
+            organization.name if organization else "Default Org"
+        )
+        compliance_report_group_uuid = compliance_report_group_uuid or str(uuid.uuid4())
+        report_status_id = (
+            report_status_id
+            or compliance_report_status_schema.compliance_report_status_id
+        )
+        report_status = report_status or compliance_report_status_schema.status
+
+        return ComplianceReportViewSchema(
+            compliance_report_id=compliance_report_id,
+            compliance_report_group_uuid=compliance_report_group_uuid,
+            version=version,
+            compliance_period_id=compliance_period_id,
+            compliance_period=compliance_period,
+            organization_id=organization_id,
+            organization_name=organization_name,
+            report_type=report_type,
+            report_status_id=report_status_id,
+            report_status=report_status,
+            update_date=update_date,
+        )
+
+    return _create_compliance_report_schema
+
+
+@pytest.fixture
 def compliance_report_base_schema(
     compliance_period_schema,
     compliance_report_organization_schema,
@@ -95,7 +151,7 @@ def compliance_report_base_schema(
     def _create_compliance_report_base_schema(
         compliance_report_id: int = 1,
         compliance_period_id: int = None,
-        compliance_period: CompliancePeriodSchema = None,
+        compliance_period: CompliancePeriodBaseSchema = None,
         organization_id: int = None,
         organization: ComplianceReportOrganizationSchema = None,
         summary: SummarySchema = None,
@@ -217,11 +273,11 @@ def compliance_report_summary_schema(
 
 
 @pytest.fixture
-def compliance_report_list_schema(compliance_report_base_schema):
+def compliance_report_list_schema(compliance_report_schema):
     return ComplianceReportListSchema(
         pagination=PaginationResponseSchema(total=100, page=1, size=10, total_pages=10),
         reports=[
-            compliance_report_base_schema(),
+            compliance_report_schema(),
             # Add more ComplianceReportBaseSchema instances if needed
         ],
     )
@@ -263,11 +319,21 @@ def mock_fuel_supply_repo():
 def mock_fuel_export_repo():
     return AsyncMock(spec=FuelExportRepository)
 
+
 @pytest.fixture
 def mock_other_uses_repo():
     mock_repo = MagicMock()
     mock_repo.get_effective_other_uses = AsyncMock(return_value=MagicMock())
     return mock_repo
+
+@pytest.fixture
+def mock_compliance_data_service():
+    """Mock the ComplianceDataService."""
+    mock_service = MagicMock(spec=ComplianceDataService)
+    mock_service.get_period.return_value = 2024
+    mock_service.get_nickname.return_value = "Test Report"
+    mock_service.is_legacy_year.return_value = False
+    return mock_service
 
 @pytest.fixture
 def compliance_report_summary_service(
@@ -276,7 +342,8 @@ def compliance_report_summary_service(
     mock_notional_transfer_service,
     mock_fuel_supply_repo,
     mock_fuel_export_repo,
-    mock_other_uses_repo
+    mock_other_uses_repo,
+    mock_compliance_data_service,
 ):
     service = ComplianceReportSummaryService()
     service.repo = mock_repo
@@ -285,18 +352,20 @@ def compliance_report_summary_service(
     service.fuel_supply_repo = mock_fuel_supply_repo
     service.fuel_export_repo = mock_fuel_export_repo
     service.other_uses_repo = mock_other_uses_repo
+    service.compliance_data_service = mock_compliance_data_service
     return service
 
 
 @pytest.fixture
 def compliance_report_update_service(
-    mock_repo, compliance_report_summary_service, mock_user_profile
+    mock_repo, mock_org_service, compliance_report_summary_service, mock_user_profile
 ):
     service = ComplianceReportUpdateService()
     service.repo = mock_repo
     service.summary_service = compliance_report_summary_service
     service.request = MagicMock()
     service.request.user = mock_user_profile
+    service.org_service = mock_org_service
     return service
 
 

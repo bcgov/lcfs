@@ -1,6 +1,6 @@
-import structlog
 from typing import List, Optional, Union
 
+import structlog
 from fastapi import (
     APIRouter,
     Body,
@@ -11,15 +11,17 @@ from fastapi import (
     Response,
     Depends,
 )
+from starlette.responses import StreamingResponse
 
 from lcfs.db import dependencies
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
     FinalSupplyEquipmentSchema,
 )
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.final_supply_equipment.export import FinalSupplyEquipmentExporter
 from lcfs.web.api.final_supply_equipment.schema import (
     DeleteFinalSupplyEquipmentResponseSchema,
     FSEOptionsSchema,
@@ -31,7 +33,6 @@ from lcfs.web.api.final_supply_equipment.validation import (
     FinalSupplyEquipmentValidation,
 )
 from lcfs.web.core.decorators import view_handler
-from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -74,11 +75,6 @@ async def get_final_supply_equipments(
         compliance_report = await service.get_compliance_report_by_id(
             compliance_report_id
         )
-        if not compliance_report:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found",
-            )
 
         await report_validate.validate_compliance_report_access(compliance_report)
         await report_validate.validate_organization_access(compliance_report_id)
@@ -158,3 +154,59 @@ async def search_table_options(
     if manufacturer:
         return await service.search_manufacturers(manufacturer)
     return []
+
+
+@router.get(
+    "/export/{report_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def export(
+    request: Request,
+    report_id: str,
+    report_validate: ComplianceReportValidation = Depends(),
+    exporter: FinalSupplyEquipmentExporter = Depends(),
+):
+    """
+    Endpoint to export information of all FSE
+    """
+    try:
+        compliance_report_id = int(report_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid report id. Must be an integer."
+        )
+
+    await report_validate.validate_organization_access(compliance_report_id)
+
+    organization = request.user.organization
+    return await exporter.export(compliance_report_id, organization, True)
+
+
+@router.get(
+    "/template/{report_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def get_template(
+    request: Request,
+    report_id: str,
+    report_validate: ComplianceReportValidation = Depends(),
+    exporter: FinalSupplyEquipmentExporter = Depends(),
+):
+    """
+    Endpoint to export a template for FSE
+    """
+    try:
+        compliance_report_id = int(report_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid report id. Must be an integer."
+        )
+
+    await report_validate.validate_organization_access(compliance_report_id)
+
+    organization = request.user.organization
+    return await exporter.export(compliance_report_id, organization, False)

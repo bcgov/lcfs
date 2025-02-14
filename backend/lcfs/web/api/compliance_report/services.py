@@ -15,11 +15,12 @@ from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSu
 from lcfs.db.models.user import UserProfile
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.schema import (
-    CompliancePeriodSchema,
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
+    ComplianceReportViewSchema,
 )
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.core.decorators import service_handler
@@ -38,10 +39,10 @@ class ComplianceReportServices:
         self.snapshot_services = snapshot_services
 
     @service_handler
-    async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:
+    async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
         """Fetches all compliance periods and converts them to Pydantic models."""
         periods = await self.repo.get_all_compliance_periods()
-        return [CompliancePeriodSchema.model_validate(period) for period in periods]
+        return [CompliancePeriodBaseSchema.model_validate(period) for period in periods]
 
     @service_handler
     async def create_compliance_report(
@@ -99,10 +100,6 @@ class ComplianceReportServices:
         The report_id can be any report in the series (original or supplemental).
         Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
-        # check if we're passing a specifc user otherwise use request user
-        if not user:
-            user = self.request.user
-
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(
             report_id, is_model=True
@@ -184,6 +181,7 @@ class ComplianceReportServices:
                         ComplianceReportStatusEnum.Recommended_by_manager,
                         ComplianceReportStatusEnum.Submitted,
                     ]
+
         reports, total_count = await self.repo.get_reports_paginated(
             pagination, organization_id
         )
@@ -209,7 +207,17 @@ class ComplianceReportServices:
 
         masked_reports = []
         for report in reports:
-            if report.current_status.status in recommended_statuses:
+            if (
+                isinstance(report, ComplianceReportViewSchema)
+                and report.report_status in recommended_statuses
+            ):
+                report.report_status = ComplianceReportStatusEnum.Submitted.value
+                report.report_status_id = None
+                masked_reports.append(report)
+            elif (
+                isinstance(report, ComplianceReportBaseSchema)
+                and report.current_status.status in recommended_statuses
+            ):
                 report.current_status.status = (
                     ComplianceReportStatusEnum.Submitted.value
                 )
@@ -294,5 +302,5 @@ class ComplianceReportServices:
     @service_handler
     async def get_all_org_reported_years(
         self, organization_id: int
-    ) -> List[CompliancePeriodSchema]:
+    ) -> List[CompliancePeriodBaseSchema]:
         return await self.repo.get_all_org_reported_years(organization_id)

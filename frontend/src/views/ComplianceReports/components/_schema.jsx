@@ -11,7 +11,7 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
     width: 210,
-    valueGetter: ({ data }) => data.compliancePeriod?.description || '',
+    valueGetter: ({ data }) => data.compliancePeriod || '',
     filterParams: {
       buttons: ['clear']
     }
@@ -21,17 +21,13 @@ export const reportsColDefs = (t, bceidRole) => [
     headerName: t('report:reportColLabels.organization'),
     flex: 2,
     hide: bceidRole,
-    valueGetter: ({ data }) => data.organization?.name || ''
+    valueGetter: ({ data }) => data.organizationName || ''
   },
   {
     field: 'type',
     headerName: t('report:reportColLabels.type'),
     flex: 2,
-    valueGetter: ({ data }) => {
-      const typeLabel = t('report:complianceReport')
-      const nickname = data.nickname ? ` - ${data.nickname}` : ''
-      return `${typeLabel}${nickname}`
-    },
+    valueGetter: ({ data }) => data.reportType,
     filter: 'agTextColumnFilter', // Enable text filtering
     filterParams: {
       textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
@@ -47,11 +43,27 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'status',
     headerName: t('report:reportColLabels.status'),
     width: 300,
-    valueGetter: ({ data }) => data.currentStatus?.status || '',
+    valueGetter: ({ data }) => data.reportStatus || '',
+    filterParams: {
+      textFormatter: (value) => value.replace(/\s+/g, '_').toLowerCase(),
+      textCustomComparator: (filter, value, filterText) => {
+        // Split the filter text by comma and trim each value
+        const filterValues = filterText
+          .split(',')
+          .map((text) => text.trim().replace(/\s+/g, '_').toLowerCase())
+
+        const cleanValue = value.replace(/[\s]+/g, '_').toLowerCase()
+
+        // Return true if the value matches any of the filter values
+        return filterValues.some((filterValue) =>
+          cleanValue.includes(filterValue)
+        )
+      },
+      buttons: ['clear']
+    },
     cellRenderer: ReportsStatusRenderer,
     cellRendererParams: {
-      url: ({ data }) =>
-        `${data.compliancePeriod?.description}/${data.complianceReportId}`
+      url: ({ data }) => `${data.compliancePeriod}/${data.complianceReportId}`
     },
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
@@ -62,14 +74,16 @@ export const reportsColDefs = (t, bceidRole) => [
               { id: 1, name: 'Draft' },
               { id: 2, name: 'Submitted' },
               { id: 3, name: 'Assessed' },
-              { id: 4, name: 'Reassessed' }
+              { id: 4, name: 'Reassessed' },
+              { id: 7, name: 'Rejected' }
             ]
           : [
               { id: 2, name: 'Submitted' },
               { id: 5, name: 'Recommended by analyst' },
               { id: 6, name: 'Recommended by manager' },
               { id: 3, name: 'Assessed' },
-              { id: 4, name: 'Reassessed' }
+              { id: 4, name: 'Reassessed' },
+              { id: 7, name: 'Rejected' }
             ],
         isLoading: false
       }),

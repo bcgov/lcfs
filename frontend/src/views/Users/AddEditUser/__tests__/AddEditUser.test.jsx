@@ -37,7 +37,7 @@ vi.mock('@/stores/useUserStore', () => ({
 async function typeAndValidateTextBox(name, value) {
   const textBox = screen.getByRole('textbox', { name })
   expect(textBox).toBeInTheDocument()
-  await userEvent.type(textBox, value)
+  await userEvent.type(textBox, value, { delay: 10 })
   expect(textBox).toHaveValue(value)
 }
 
@@ -81,7 +81,7 @@ describe('AddEditUser component', () => {
     // Check for form fields
     await typeAndValidateTextBox('First name', 'John')
     await typeAndValidateTextBox('Last name', 'Doe')
-    await typeAndValidateTextBox('Job title', 'Compliance manager')
+    await typeAndValidateTextBox('Job title (optional)', 'Compliance manager')
     await typeAndValidateTextBox('BCeID Userid', 'johndoe')
     await typeAndValidateTextBox(
       'Email address associated with the BCeID user account',

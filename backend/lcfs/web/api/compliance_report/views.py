@@ -14,8 +14,8 @@ from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.base import FilterModel, PaginationRequestSchema
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.schema import (
-    CompliancePeriodSchema,
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
     ComplianceReportSummarySchema,
@@ -40,13 +40,13 @@ logger = structlog.get_logger(__name__)
 
 @router.get(
     "/compliance-periods",
-    response_model=List[CompliancePeriodSchema],
+    response_model=List[CompliancePeriodBaseSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
 async def get_compliance_periods(
     request: Request, service: ComplianceReportServices = Depends()
-) -> list[CompliancePeriodSchema]:
+) -> list[CompliancePeriodBaseSchema]:
     """
     Get a list of compliance periods
     """
@@ -64,10 +64,6 @@ async def get_compliance_reports(
     pagination: PaginationRequestSchema = Body(..., embed=False),
     service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportListSchema:
-    # Add filter on statuses so that IDIR users won't be able to see draft reports
-    pagination.filters.append(
-        FilterModel(field="status", filter="Draft", filter_type="text", type="notEqual")
-    )
     return await service.get_compliance_reports_paginated(pagination)
 
 
@@ -173,4 +169,4 @@ async def create_supplemental_report(
     """
     Create a supplemental compliance report.
     """
-    return await service.create_supplemental_report(report_id)
+    return await service.create_supplemental_report(report_id, request.user)

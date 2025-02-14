@@ -7,7 +7,10 @@ import {
 import i18n from '@/i18n'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import {
+  decimalFormatter,
+  formatNumberWithCommas as valueFormatter
+} from '@/utils/formatters'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
@@ -151,30 +154,8 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
       }
       return null
     },
-    cellStyle: (params) => {
-      const style = StandardCellWarningAndErrors(params, errors, warnings)
-      const isFuelCodeScenario =
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      const fuelCodes = fuelType?.fuelCodes || []
-      const fuelCodeRequiredAndMissing =
-        isFuelCodeScenario && !params.data.fuelCode
-
-      if (fuelCodeRequiredAndMissing) {
-        // Required scenario but missing a fuel code
-        style.borderColor = 'red'
-        style.backgroundColor = '#fff'
-      } else if (isFuelCodeScenario && fuelCodes.length > 0) {
-        style.backgroundColor = '#fff'
-        style.borderColor = style.borderColor || 'unset'
-      } else {
-        style.backgroundColor = '#f2f2f2'
-      }
-
-      return style
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 150,
     editable: (params) => {
@@ -207,7 +188,7 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
 
       return params.data.fuelCode
     },
-    tooltipValueGetter: (p) => 'Select the approved fuel code'
+    tooltipValueGetter: () => 'Select the approved fuel code'
   },
   {
     field: 'quantitySupplied',
@@ -317,6 +298,61 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
     cellDataType: 'text',
     editable: (params) => params.data.expectedUse === 'Other',
     minWidth: 300
+  }
+]
+
+export const otherUsesSummaryColDefs = (t) => [
+  {
+    headerName: t('otherUses:otherUsesColLabels.fuelType'),
+    field: 'fuelType',
+    floatingFilter: false,
+    width: '260px'
+  },
+  {
+    headerName: t('otherUses:otherUsesColLabels.fuelCategory'),
+    field: 'fuelCategory',
+    floatingFilter: false
+  },
+  {
+    headerName: t('otherUses:otherUsesColLabels.provisionOfTheAct'),
+    field: 'provisionOfTheAct',
+    floatingFilter: false
+  },
+  {
+    headerName: t('otherUses:otherUsesColLabels.fuelCode'),
+    field: 'fuelCode',
+    floatingFilter: false
+  },
+  {
+    headerName: t('otherUses:otherUsesColLabels.quantitySupplied'),
+    field: 'quantitySupplied',
+    floatingFilter: false,
+    valueFormatter
+  },
+  {
+    headerName: t('otherUses:otherUsesColLabels.units'),
+    field: 'units',
+    floatingFilter: false
+  },
+  {
+    headerName: t('otherUses:otherUsesColLabels.ciOfFuel'),
+    field: 'ciOfFuel',
+    floatingFilter: false,
+    valueFormatter: decimalFormatter
+  },
+  {
+    headerName: t('otherUses:otherUsesColLabels.expectedUse'),
+    field: 'expectedUse',
+    floatingFilter: false,
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: t('otherUses:otherUsesColLabels.otherExpectedUse'),
+    field: 'rationale',
+    floatingFilter: false,
+    flex: 1,
+    minWidth: 200
   }
 ]
 

@@ -21,7 +21,7 @@ from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.services.tfrs.redis_balance import (
     RedisBalanceService,
 )
-from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder
+from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     PaginationResponseSchema,
@@ -98,11 +98,11 @@ class OrganizationsService:
         builder.add_sheet(
             sheet_name="Organizations",
             columns=[
-                "ID",
-                "Organization Name",
-                "Compliance Units",
-                "In Reserve",
-                "Registered",
+                SpreadsheetColumn("ID", "int"),
+                SpreadsheetColumn("Organization Name", "text"),
+                SpreadsheetColumn("Compliance Units", "int"),
+                SpreadsheetColumn("In Reserve", "text"),
+                SpreadsheetColumn("Registered", "date"),
             ],
             rows=data,
             styles={"bold_headers": True},
@@ -409,7 +409,7 @@ class OrganizationsService:
 
         # Check constraints based on transaction action
         if transaction_action == TransactionActionEnum.Reserved:
-            if abs(compliance_units) > available_balance:
+            if compliance_units < 0 and abs(compliance_units) > available_balance:
                 raise ValueError("Reserve amount cannot exceed available balance.")
         elif transaction_action == TransactionActionEnum.Released:
             if abs(compliance_units) > reserved_balance:

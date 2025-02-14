@@ -83,6 +83,7 @@ async def test_create_organization_success(
         "edrmsRecord": "EDRMS123",
         "organizationStatusId": 2,
         "organizationTypeId": 1,
+        "hasEarlyIssuance": False,
         "address": {
             "name": "Test Operating name",
             "streetAddress": "123 Test Street",
@@ -122,6 +123,7 @@ async def test_update_organization_success(
         "edrmsRecord": "EDRMS123",
         "organizationStatusId": 2,
         "organizationTypeId": 1,
+        "hasEarlyIssuance": False,
         "address": {
             "name": "Test Operating name",
             "streetAddress": "123 Test Street",
@@ -161,6 +163,7 @@ async def test_update_organization_failure(
         "edrmsRecord": "EDRMS123",
         "organizationStatusId": 2,
         "organizationTypeId": 1,
+        "hasEarlyIssuance": False,
         "address": {
             "name": "Test Operating name",
             "streetAddress": "123 Test Street",
@@ -296,6 +299,7 @@ async def test_create_organization_unauthorized(
         "edrmsRecord": "EDRMS123",
         "organizationStatusId": 1,
         "organizationTypeId": 1,
+        "hasEarlyIssuance": False,
         "address": {
             "name": "Test Address",
             "streetAddress": "123 Test St",

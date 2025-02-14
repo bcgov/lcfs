@@ -25,7 +25,9 @@ async def get_all_transfers(request: Request, service: TransferServices = Depend
 @router.get("/{transfer_id}", response_model=TransferSchema)
 @view_handler(["*"])
 async def get_transfer(
-    request: Request, transfer_id: int, service: TransferServices = Depends(),
+    request: Request,
+    transfer_id: int,
+    service: TransferServices = Depends(),
     validate: TransferValidation = Depends(),
 ):
     """Endpoint to fetch a transfer by its ID."""

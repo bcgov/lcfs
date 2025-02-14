@@ -66,6 +66,11 @@ function TransferHistory({ transferHistory }) {
     category = 'C'
   }
 
+  // Filter out any DRAFT records, so “Created draft” never shows up
+  const filteredHistory = transferHistory?.filter(
+    (item) => item.transferStatus?.status !== TRANSFER_STATUSES.DRAFT
+  )
+
   return (
     <BCBox mt={2} data-test="transfer-history">
       <BCTypography variant="h6" color="primary">
@@ -107,11 +112,14 @@ function TransferHistory({ transferHistory }) {
                 </BCTypography>
               </li>
             )}
-          {transferHistory?.map((item, index) => {
-            const isRecordedStatus = item.transferStatus?.status === TRANSFER_STATUSES.RECORDED;
-            const isBCeIDUser = !currentUser?.isGovernmentUser;
+          {filteredHistory?.map((item, index) => {
+            const isRecordedStatus =
+              item.transferStatus?.status === TRANSFER_STATUSES.RECORDED
+            const isBCeIDUser = !currentUser?.isGovernmentUser
             return (
-              <li key={(item.transferStatus?.transferStatusId || index) + index}>
+              <li
+                key={(item.transferStatus?.transferStatusId || index) + index}
+              >
                 <BCTypography variant="body2" component="div">
                   <b>{getTransferStatusLabel(item.transferStatus?.status)}</b>
                   <span> on </span>
@@ -119,7 +127,8 @@ function TransferHistory({ transferHistory }) {
                   <span> by </span>
                   {isRecordedStatus && isBCeIDUser ? (
                     <>
-                      the <strong>{t('transfer:director')}</strong> under the <i>{t('underAct')}</i>
+                      the <strong>{t('transfer:director')}</strong> under the{' '}
+                      <i>{t('underAct')}</i>
                     </>
                   ) : (
                     <>
@@ -137,8 +146,8 @@ function TransferHistory({ transferHistory }) {
                   )}
                 </BCTypography>
               </li>
-            )}
-          )}
+            )
+          })}
         </ul>
       </BCBox>
     </BCBox>

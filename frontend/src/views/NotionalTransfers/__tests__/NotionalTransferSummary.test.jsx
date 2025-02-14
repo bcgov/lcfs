@@ -1,15 +1,8 @@
-import { vi, describe, it, expect, afterEach, beforeEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
-import {
-  BrowserRouter as Router,
-  useNavigate,
-  useParams,
-  useLocation
-} from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from '@mui/material'
-import theme from '@/themes'
-import { NotionalTransferSummary } from '@/views/NotionalTransfers'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen } from '@testing-library/react'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { NotionalTransferSummary } from '@/views/NotionalTransfers/index.js'
+import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -49,19 +42,6 @@ vi.mock('@/hooks/useNotionalTransfer', () => ({
   })
 }))
 
-const WrapperComponent = (props) => {
-  const queryClient = new QueryClient()
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider theme={theme}>
-        <Router>
-          <NotionalTransferSummary {...props} />
-        </Router>
-      </ThemeProvider>
-    </QueryClientProvider>
-  )
-}
-
 describe('NotionalTransferSummary Component Tests', () => {
   let navigate
   let location
@@ -84,7 +64,7 @@ describe('NotionalTransferSummary Component Tests', () => {
     }
     vi.mocked(useLocation).mockReturnValue(mockLocation)
 
-    render(<WrapperComponent data={[]} />)
+    render(<NotionalTransferSummary data={[]} />, { wrapper })
     const alertBox = screen.getByTestId('alert-box')
     expect(alertBox).toBeInTheDocument()
     expect(alertBox.textContent).toContain('Test Alert Message')

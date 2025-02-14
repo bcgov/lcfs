@@ -12,6 +12,7 @@ class ComplianceReportStatusEnum(enum.Enum):
     Recommended_by_manager = "Recommended by manager"
     Assessed = "Assessed"
     Reassessed = "Reassessed"
+    Rejected = "Rejected"
 
 
 class ComplianceReportStatus(BaseModel, EffectiveDates):

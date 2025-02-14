@@ -15,6 +15,7 @@ import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
+import { useMemo } from 'react'
 
 export const finalSupplyEquipmentColDefs = (
   optionsData,
@@ -335,7 +336,8 @@ export const finalSupplyEquipmentColDefs = (
     ),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
-      precision: 4,
+      precision: 6,
+      max: 1000,
       showStepperButtons: false
     },
     cellDataType: 'number',
@@ -351,7 +353,8 @@ export const finalSupplyEquipmentColDefs = (
     ),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
-      precision: 4,
+      precision: 6,
+      max: 1000,
       showStepperButtons: false
     },
     cellDataType: 'number',
@@ -366,6 +369,119 @@ export const finalSupplyEquipmentColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     minWidth: 500
+  }
+]
+
+export const finalSupplyEquipmentSummaryColDefs = (t) => [
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
+    ),
+    field: 'organizationName'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
+    ),
+    field: 'supplyFromDate'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
+    ),
+    field: 'supplyToDate'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
+    ),
+    field: 'kwhUsage',
+    valueFormatter: numberFormatter
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
+    ),
+    field: 'registrationNbr'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'
+    ),
+    field: 'serialNbr'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
+    ),
+    field: 'manufacturer'
+  },
+  {
+    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.model'),
+    field: 'model'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
+    ),
+    field: 'levelOfEquipment',
+    valueGetter: (params) => params.data.levelOfEquipment.name
+  },
+  {
+    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'),
+    field: 'ports'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
+    ),
+    field: 'intendedUses',
+    valueGetter: (params) =>
+      params.data.intendedUseTypes.map((use) => use.type).join(', '),
+    cellRenderer: CommonArrayRenderer,
+    cellRendererParams: { marginTop: '0.7em' }
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
+    ),
+    field: 'intendedUsers',
+    valueGetter: (params) =>
+      params.data.intendedUserTypes.map((use) => use.typeName).join(', '),
+    cellRenderer: CommonArrayRenderer,
+    cellRendererParams: { marginTop: '0.7em' }
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
+    ),
+    field: 'streetAddress'
+  },
+  {
+    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.city'),
+    field: 'city'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
+    ),
+    field: 'postalCode'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.latitude'
+    ),
+    field: 'latitude'
+  },
+  {
+    headerName: t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.longitude'
+    ),
+    field: 'longitude'
+  },
+  {
+    headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.notes'),
+    field: 'notes'
   }
 ]
 

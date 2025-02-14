@@ -11,7 +11,7 @@ from lcfs.db.models.compliance import (
     ComplianceReportSummary,
     FuelSupply,
 )
-from lcfs.web.api.compliance_report.schema import ComplianceReportSummarySchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportViewSchema, ComplianceReportSummarySchema
 from lcfs.web.api.base import (
     PaginationRequestSchema,
 )
@@ -184,6 +184,7 @@ async def compliance_reports(
             compliance_report_id=994,
             compliance_period_id=compliance_periods[0].compliance_period_id,
             organization_id=organizations[0].organization_id,
+            nickname="test",
             reporting_frequency=ReportingFrequency.ANNUAL,
             current_status_id=compliance_report_statuses[0].compliance_report_status_id,
             compliance_report_group_uuid=str(uuid.uuid4()),
@@ -193,6 +194,7 @@ async def compliance_reports(
             compliance_report_id=995,
             compliance_period_id=compliance_periods[1].compliance_period_id,
             organization_id=organizations[1].organization_id,
+            nickname="test",
             reporting_frequency=ReportingFrequency.ANNUAL,
             current_status_id=compliance_report_statuses[1].compliance_report_status_id,
             compliance_report_group_uuid=str(uuid.uuid4()),
@@ -630,7 +632,7 @@ async def test_get_reports_paginated_success(
 
     assert isinstance(reports, list)
     assert len(reports) > 0
-    assert isinstance(reports[0], ComplianceReportBaseSchema)
+    assert isinstance(reports[0], ComplianceReportViewSchema)
     assert total_count >= len(reports)
 
 

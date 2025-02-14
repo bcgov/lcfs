@@ -48,26 +48,19 @@ When('the supplier enters a valid fuel supply row', () => {
   cy.get('div[col-id="fuelType"][title="Select the fuel type from the list"]')
     .click()
     .find('input')
-    .type('CNG{enter}')
+    .type('Ethanol{enter}')
 
-  cy.wait(800)
-
-  // Set "Fuel category" to "Gasoline"
-  cy.get(
-    'div[col-id="fuelCategory"][title="Select the fuel category from the list"]'
-  )
-    .click()
-    .find('input')
-    .type('Gasoline{enter}')
   cy.wait(800)
 
   // Set "Determining carbon intensity" to "Default carbon intensity - section 19 (b) (ii)"
   cy.get(
     'div[col-id="provisionOfTheAct"][title="Act Relied Upon to Determine Carbon Intensity: Identify the appropriate provision of the Act relied upon to determine the carbon intensity of each fuel."]'
   ).click()
+  cy.get(
+    '[data-testid="select-Default carbon intensity - section 19 (b) (ii)"]'
+  ).click()
 
   cy.get('body').click()
-  cy.contains('Row updated successfully.').should('be.visible')
   cy.wait(700)
   cy.get('.ag-body-horizontal-scroll-viewport').scrollTo(1000, 0)
   cy.wait(1200)
@@ -102,7 +95,7 @@ Then('the compliance report introduction is shown', () => {
     .and('have.text', 'Status: Draft')
 
   // Assert the Introduction Header
-  cy.contains('div.MuiTypography-h5', 'Introduction')
+  cy.contains('div.MuiTypography-h6', 'Introduction')
     .should('be.visible')
     .and('have.text', 'Introduction')
 
@@ -167,10 +160,11 @@ When('the supplier submits the report', () => {
   cy.wait(2000)
 })
 
-Then('the status should change to Submitted', () => {
-  cy.get('[data-test="compliance-report-status"]')
-    .should('be.visible')
-    .and('have.text', 'Status: Submitted')
+Then('the banner shows success', () => {
+  // Assert the Submitted Message
+  cy.contains('div', 'Compliance report successfully submitted').should(
+    'be.visible'
+  )
 })
 
 Then('they see the previously submitted report', () => {

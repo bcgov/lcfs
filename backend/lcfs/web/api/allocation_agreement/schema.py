@@ -1,14 +1,15 @@
 from typing import Optional, List
-from lcfs.web.api.fuel_supply.schema import FuelTypeOptionsResponse
-from pydantic import Field, field_validator
+
+from pydantic import Field, model_validator
+
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
     SortOrder,
-    PaginationRequestSchema,
     PaginationResponseSchema,
 )
-from enum import Enum
+from lcfs.web.api.fuel_supply.schema import FuelTypeOptionsResponse
+from lcfs.web.utils.schema_validators import fuel_code_required_label
 
 
 class AllocationTransactionTypeSchema(BaseSchema):
@@ -31,6 +32,7 @@ class FuelCodeSchema(BaseSchema):
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
     name: str
+
 
 class FuelTypeSchema(BaseSchema):
     fuel_type_id: int
@@ -68,13 +70,16 @@ class AllocationAgreementCreateSchema(BaseSchema):
     fuel_type_other: Optional[str] = None
     ci_of_fuel: float
     provision_of_the_act: str
-    quantity: int = Field(
-        ..., gt=0, description="Quantity must be greater than 0"
-    )
+    quantity: int = Field(..., gt=0, description="Quantity must be greater than 0")
     units: str
     fuel_category: str
     fuel_code: Optional[str] = None
     deleted: Optional[bool] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_fuel_code_required(cls, values):
+        return fuel_code_required_label(values)
 
 
 class AllocationAgreementSchema(AllocationAgreementCreateSchema):
@@ -113,6 +118,7 @@ class OrganizationDetailsSchema(BaseSchema):
     address: Optional[str]
     email: Optional[str]
     phone: Optional[str]
+
 
 class AllocationAgreementOptionsSchema(FuelTypeOptionsResponse):
     allocation_transaction_types: List[AllocationTransactionTypeSchema]

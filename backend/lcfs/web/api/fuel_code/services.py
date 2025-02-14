@@ -56,6 +56,10 @@ class FuelCodeServices:
         )
 
     @service_handler
+    async def search_fp_facility_location(self, city, province, country):
+        return await self.repo.get_fp_facility_location_by_name(city, province, country)
+
+    @service_handler
     async def get_table_options(self) -> TableOptionsSchema:
         """
         Gets the list of table options related to fuel codes.
@@ -65,7 +69,7 @@ class FuelCodeServices:
         fuel_code_prefixes = await self.repo.get_fuel_code_prefixes()
         latest_fuel_codes = await self.repo.get_latest_fuel_codes()
         field_options_results = await self.repo.get_fuel_code_field_options()
-        fp_locations = await self.repo.get_fp_locations()
+        fp_locations = []
         facility_nameplate_capacity_units = [unit.value for unit in QuantityUnitsEnum]
 
         # Use a set to remove duplicates

@@ -93,6 +93,7 @@ def upgrade() -> None:
         "Recommended_by_manager",
         "Assessed",
         "Reassessed",
+        "Rejected",
         name="compliancereportstatusenum",
     ).create(op.get_bind())
     sa.Enum("ANNUAL", "QUARTERLY", name="reportingfrequency").create(op.get_bind())
@@ -400,6 +401,7 @@ def upgrade() -> None:
                 "Recommended_by_manager",
                 "Assessed",
                 "Reassessed",
+                "Rejected",
                 name="compliancereportstatusenum",
                 create_type=False,
             ),

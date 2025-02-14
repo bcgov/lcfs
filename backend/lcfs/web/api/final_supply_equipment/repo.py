@@ -1,13 +1,27 @@
 import structlog
-from typing import List, Tuple
-from lcfs.db.models.compliance import EndUserType, FinalSupplyEquipment, ComplianceReport
+from typing import List, Tuple, Any, Coroutine, Sequence
+
+from lcfs.db.models import (
+    FinalSupplyEquipment,
+    EndUseType,
+    LevelOfEquipment,
+    EndUserType,
+)
+from lcfs.db.models.compliance import (
+    EndUserType,
+    FinalSupplyEquipment,
+    ComplianceReport,
+)
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
     FinalSupplyEquipmentRegNumber,
 )
 from lcfs.db.models.compliance.LevelOfEquipment import LevelOfEquipment
 from lcfs.db.models.fuel.EndUseType import EndUseType
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema, PortsEnum
+from lcfs.web.api.final_supply_equipment.schema import (
+    FinalSupplyEquipmentCreateSchema,
+    PortsEnum,
+)
 from sqlalchemy import and_, delete, distinct, exists, select, update
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,13 +39,12 @@ class FinalSupplyEquipmentRepository:
         self.db = db
 
     @repo_handler
-    async def get_fse_options(
-        self, organization
-    ) -> Tuple[
-        List[EndUseType],
-        List[LevelOfEquipment],
-        List[PortsEnum],
-        List[str],
+    async def get_fse_options(self, organization) -> tuple[
+        list[EndUseType],
+        list[LevelOfEquipment],
+        list[EndUserType],
+        list[str],
+        list[str],
     ]:
         """
         Retrieve all FSE options in a single database transaction
@@ -116,8 +129,14 @@ class FinalSupplyEquipmentRepository:
             organization_names = (
                 await self.db.execute(
                     select(distinct(FinalSupplyEquipment.organization_name))
-                    .join(ComplianceReport, FinalSupplyEquipment.compliance_report_id == ComplianceReport.compliance_report_id)
-                    .filter(ComplianceReport.organization_id == organization.organization_id)
+                    .join(
+                        ComplianceReport,
+                        FinalSupplyEquipment.compliance_report_id
+                        == ComplianceReport.compliance_report_id,
+                    )
+                    .filter(
+                        ComplianceReport.organization_id == organization.organization_id
+                    )
                     .filter(FinalSupplyEquipment.organization_name.isnot(None))
                 )
             ).all()
@@ -161,8 +180,7 @@ class FinalSupplyEquipmentRepository:
         return (
             (
                 await self.db.execute(
-                    select(LevelOfEquipment).where(
-                        LevelOfEquipment.name == name)
+                    select(LevelOfEquipment).where(LevelOfEquipment.name == name)
                 )
             )
             .unique()
@@ -189,14 +207,12 @@ class FinalSupplyEquipmentRepository:
     @repo_handler
     async def get_fse_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
-    ) -> List[FinalSupplyEquipment]:
+    ) -> tuple[Sequence[FinalSupplyEquipment], Any]:
         """
         Retrieve a list of final supply equipment from the database with pagination
         """
-        conditions = [
-            FinalSupplyEquipment.compliance_report_id == compliance_report_id]
-        offset = 0 if pagination.page < 1 else (
-            pagination.page - 1) * pagination.size
+        conditions = [FinalSupplyEquipment.compliance_report_id == compliance_report_id]
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
         query = (
             select(FinalSupplyEquipment)
@@ -251,8 +267,7 @@ class FinalSupplyEquipmentRepository:
         await self.db.flush()
         await self.db.refresh(
             final_supply_equipment,
-            ["level_of_equipment",
-                "intended_use_types", "intended_user_types"],
+            ["level_of_equipment", "intended_use_types", "intended_user_types"],
         )
         return updated_final_supply_equipment
 
@@ -340,7 +355,9 @@ class FinalSupplyEquipmentRepository:
         return sequence_number
 
     @repo_handler
-    async def check_uniques_of_fse_row(self, row: FinalSupplyEquipmentCreateSchema) -> bool:
+    async def check_uniques_of_fse_row(
+        self, row: FinalSupplyEquipmentCreateSchema
+    ) -> bool:
         """
         Check if a duplicate final supply equipment row exists in the database based on the provided data.
         Returns True if a duplicate is found, False otherwise.

@@ -1,11 +1,11 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import {
+  AsyncSuggestionEditor,
   AutocompleteCellEditor,
-  NumberEditor,
-  RequiredHeader,
   DateEditor,
-  AsyncSuggestionEditor
+  NumberEditor,
+  RequiredHeader
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
@@ -16,38 +16,11 @@ import {
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import {
-  isFuelTypeOther,
-  fuelTypeOtherConditionalStyle
+  fuelTypeOtherConditionalStyle,
+  isFuelTypeOther
 } from '@/utils/fuelTypeOther'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
-
-const cellErrorStyle = (params, errors) => {
-  let style = {}
-  if (
-    errors &&
-    errors[params.data.id] &&
-    errors[params.data.id].includes(params.colDef.field)
-  ) {
-    style = { ...style, borderColor: 'red' }
-  } else {
-    style = { ...style, borderColor: 'unset' }
-  }
-  if (
-    params.colDef.editable ||
-    (typeof params.colDef.editable === 'function' &&
-      params.colDef.editable(params))
-  ) {
-    style = { ...style, backgroundColor: '#fff' }
-  } else {
-    style = {
-      ...style,
-      backgroundColor: '#f2f2f2',
-      border: '0.5px solid #adb5bd'
-    }
-  }
-  return style
-}
 
 export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
   validation,
@@ -351,36 +324,8 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
         openOnFocus: true
       }
     },
-    cellStyle: (params) => {
-      const style = cellErrorStyle(params, errors)
-      const fuelTypeObj = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      const fuelCodes =
-        fuelTypeObj?.fuelCodes.map((item) => item.fuelCode) || []
-      const isFuelCodeScenario =
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-
-      // Check if fuel code is required (scenario) but missing
-      const fuelCodeRequiredAndMissing =
-        isFuelCodeScenario && !params.data.fuelCode
-
-      if (fuelCodeRequiredAndMissing) {
-        // Required scenario but missing a fuel code
-        style.borderColor = 'red'
-        style.backgroundColor = '#fff'
-      } else if (isFuelCodeScenario && fuelCodes.length > 1) {
-        style.backgroundColor = '#fff'
-        style.borderColor = 'unset'
-      } else if (isFuelCodeScenario && fuelCodes.length > 0) {
-        style.backgroundColor = '#fff'
-        style.borderColor = 'unset'
-      } else {
-        style.backgroundColor = '#f2f2f2'
-      }
-
-      return style
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     editable: (params) => {
       const fuelTypeObj = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -588,6 +533,71 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
     valueFormatter,
     minWidth: 100,
     editable: false
+  }
+]
+
+export const fuelExportSummaryColDefs = (t) => [
+  {
+    headerName: t('fuelExport:fuelExportColLabels.complianceUnits'),
+    field: 'complianceUnits',
+    valueFormatter
+  },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.exportDate'),
+    field: 'exportDate'
+  },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.fuelTypeId'),
+    field: 'fuelType',
+    valueGetter: (params) => params.data.fuelType?.fuelType
+  },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data.fuelCategory?.category
+  },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.endUseId'),
+    field: 'endUse',
+    valueGetter: (params) => params.data.endUseType?.type || 'Any'
+  },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.determiningCarbonIntensity'),
+    field: 'determiningCarbonIntensity',
+    valueGetter: (params) => params.data.provisionOfTheAct?.name
+  },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.fuelCode'),
+    field: 'fuelCode',
+    valueGetter: (params) => params.data.fuelCode?.fuelCode
+  },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  },
+  { headerName: t('fuelExport:fuelExportColLabels.units'), field: 'units' },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.targetCI'),
+    field: 'targetCi'
+  },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.ciOfFuel'),
+    field: 'ciOfFuel'
+  },
+  {
+    field: 'uci',
+    headerName: i18n.t('fuelExport:fuelExportColLabels.uci')
+  },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.energyDensity'),
+    field: 'energyDensity'
+  },
+  { headerName: t('fuelExport:fuelExportColLabels.eer'), field: 'eer' },
+  {
+    headerName: t('fuelExport:fuelExportColLabels.energy'),
+    field: 'energy',
+    valueFormatter
   }
 ]
 

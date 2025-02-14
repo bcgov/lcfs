@@ -39,7 +39,7 @@ export const useApiService = (opts = {}) => {
             error.response.status,
             error.response.data
           )
-          if (CONFIG.ENVIRONMENT !== 'production') {
+          if (CONFIG.ENVIRONMENT === 'development') {
             enqueueSnackbar(`${error.response.status} error`, {
               autoHideDuration: 5000,
               variant: 'error'

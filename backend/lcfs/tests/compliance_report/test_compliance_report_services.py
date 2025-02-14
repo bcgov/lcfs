@@ -95,13 +95,13 @@ async def test_create_compliance_report_unexpected_error(
 # get_compliance_reports_paginated
 @pytest.mark.anyio
 async def test_get_compliance_reports_paginated_success(
-    compliance_report_service, mock_repo, compliance_report_base_schema
+    compliance_report_service, mock_repo, compliance_report_schema
 ):
     pagination_mock = AsyncMock()
     pagination_mock.page = 1
     pagination_mock.size = 10
 
-    mock_compliance_report = compliance_report_base_schema()
+    mock_compliance_report = compliance_report_schema()
 
     mock_repo.get_reports_paginated.return_value = ([mock_compliance_report], 1)
 

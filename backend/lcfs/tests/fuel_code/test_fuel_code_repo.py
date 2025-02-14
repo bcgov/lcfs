@@ -734,5 +734,6 @@ async def test_get_additional_carbon_intensity(fuel_code_repo, mock_db):
     mock_result.scalars.return_value.one_or_none.return_value = aci
     mock_db.execute.return_value = mock_result
 
-    result = await fuel_code_repo.get_additional_carbon_intensity(1, 2)
+    # Added the compliance_period as required
+    result = await fuel_code_repo.get_additional_carbon_intensity(1, 2, "2025")
     assert result == aci

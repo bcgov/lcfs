@@ -126,6 +126,7 @@ class OrganizationBase(BaseSchema):
     operating_name: str
     email: Optional[str] = None
     phone: Optional[str] = None
+    has_early_issuance: bool
     edrms_record: Optional[str] = None
     total_balance: Optional[int] = None
     reserved_balance: Optional[int] = None
@@ -151,6 +152,7 @@ class OrganizationCreateSchema(BaseSchema):
     email: Optional[str] = None
     phone: Optional[str] = None
     edrms_record: Optional[str] = None
+    has_early_issuance: bool
     organization_status_id: int
     organization_type_id: int
     address: OrganizationAddressCreateSchema
@@ -163,6 +165,7 @@ class OrganizationUpdateSchema(BaseSchema):
     email: Optional[str] = None
     phone: Optional[str] = None
     edrms_record: Optional[str] = None
+    has_early_issuance: bool
     organization_status_id: Optional[int] = None
     organization_type_id: Optional[int] = None
     address: Optional[OrganizationAddressCreateSchema] = []
@@ -176,6 +179,7 @@ class OrganizationResponseSchema(BaseSchema):
     email: Optional[str] = None
     phone: Optional[str] = None
     edrms_record: Optional[str] = None
+    has_early_issuance: bool
     org_status: Optional[OrganizationStatusSchema] = []
     org_address: Optional[OrganizationAddressSchema] = []
     org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = []

@@ -3,29 +3,33 @@ import { govRoles, nonGovRoles, roles } from '@/constants/roles'
 import { PHONE_REGEX } from '@/constants/common.js'
 
 // Schema for form validation
-export const userInfoSchema = Yup.object({
-  firstName: Yup.string().required('First name is required.'),
-  lastName: Yup.string().required('Last name is required.'),
-  jobTitle: Yup.string().required('Job title is required.'),
-  userName: Yup.string().required('User name is required'),
-  keycloakEmail: Yup.string()
-    .required('Email address is required.')
-    .email('Please enter a valid email address.'),
-  altEmail: Yup.string()
-    .email('Please enter a valid email address.')
-    .optional(),
-  phone: Yup.string()
-    .matches(PHONE_REGEX, 'Phone number is not valid')
-    .nullable(true),
-  mobilePhone: Yup.string()
-    .matches(PHONE_REGEX, 'Phone number is not valid')
-    .nullable(true),
-  status: Yup.string(),
-  adminRole: Yup.array(),
-  idirRole: Yup.string(),
-  bceidRoles: Yup.array(),
-  readOnly: Yup.string()
-})
+export const userInfoSchema = (userType) =>
+  Yup.object({
+    firstName: Yup.string().required('First name is required.'),
+    lastName: Yup.string().required('Last name is required.'),
+    jobTitle:
+      userType === 'bceid'
+        ? Yup.string().optional()
+        : Yup.string().required('Job title is required.'),
+    userName: Yup.string().required('User name is required'),
+    keycloakEmail: Yup.string()
+      .required('Email address is required.')
+      .email('Please enter a valid email address.'),
+    altEmail: Yup.string()
+      .email('Please enter a valid email address.')
+      .optional(),
+    phone: Yup.string()
+      .matches(PHONE_REGEX, 'Phone number is not valid')
+      .nullable(true),
+    mobilePhone: Yup.string()
+      .matches(PHONE_REGEX, 'Phone number is not valid')
+      .nullable(true),
+    status: Yup.string(),
+    adminRole: Yup.array(),
+    idirRole: Yup.string(),
+    bceidRoles: Yup.array(),
+    readOnly: Yup.string()
+  })
 
 export const idirTextFields = (t) => [
   {
@@ -70,7 +74,8 @@ export const bceidTextFields = (t) => [
   },
   {
     name: 'jobTitle',
-    label: t('admin:userForm.jobTitle')
+    label: t('admin:userForm.jobTitle'),
+    optional: true
   },
   {
     name: 'userName',

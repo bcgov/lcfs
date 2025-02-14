@@ -1,8 +1,9 @@
 from enum import Enum
-from typing import ClassVar, Optional, List
+from typing import ClassVar, Optional, List, Union
 from datetime import datetime, date
 from enum import Enum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 
@@ -45,14 +46,6 @@ class ReportingFrequency(str, Enum):
 class PortsEnum(str, Enum):
     SINGLE = "Single port"
     DUAL = "Dual port"
-
-
-class CompliancePeriodSchema(BaseSchema):
-    compliance_period_id: int
-    description: str
-    effective_date: Optional[datetime] = None
-    expiration_date: Optional[datetime] = None
-    display_order: Optional[int] = None
 
 
 class SummarySchema(BaseSchema):
@@ -147,7 +140,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     version: Optional[int]
     supplemental_initiator: Optional[SupplementalInitiatorType]
     compliance_period_id: int
-    compliance_period: CompliancePeriodSchema
+    compliance_period: CompliancePeriodBaseSchema
     organization_id: int
     organization: ComplianceReportOrganizationSchema
     summary: Optional[SummarySchema]
@@ -161,6 +154,20 @@ class ComplianceReportBaseSchema(BaseSchema):
     history: Optional[List[ComplianceReportHistorySchema]] = None
     has_supplemental: bool
     legacy_id: Optional[int] = None
+
+
+class ComplianceReportViewSchema(BaseSchema):
+    compliance_report_id: int
+    compliance_report_group_uuid: str
+    version: int
+    compliance_period_id: int
+    compliance_period: str
+    organization_id: int
+    organization_name: str
+    report_type: str
+    report_status_id: int
+    report_status: str
+    update_date: datetime
 
 
 class ChainedComplianceReportSchema(BaseSchema):
@@ -178,17 +185,19 @@ class ComplianceReportCreateSchema(BaseSchema):
 
 class ComplianceReportListSchema(BaseSchema):
     pagination: PaginationResponseSchema
-    reports: List[ComplianceReportBaseSchema]
+    reports: List[ComplianceReportViewSchema]
 
 
 class ComplianceReportSummaryRowSchema(BaseSchema):
-    line: Optional[int] = None
+    line: Optional[Union[int, str]] = None
     description: Optional[str] = ""
     field: Optional[str] = ""
     gasoline: Optional[float] = 0
     diesel: Optional[float] = 0
     jet_fuel: Optional[float] = 0
     value: Optional[float] = 0
+    units: Optional[str] = ""
+    bold: Optional[bool] = False
     total_value: Optional[float] = 0
     format: Optional[str] = FORMATS.NUMBER.value
 

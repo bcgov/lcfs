@@ -205,9 +205,9 @@ async def test_save_other_uses_row_update(
 
         assert response.status_code == 200
         data = response.json()
-        assert data["otherUsesId"] == 1
-        assert data["quantitySupplied"] == 2000
-        assert data["fuelType"] == "Gasoline"
+        assert data["other_uses_id"] == 1
+        assert data["quantity_supplied"] == 2000
+        assert data["fuel_type"] == "Gasoline"
 
 
 @pytest.mark.anyio

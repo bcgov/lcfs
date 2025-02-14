@@ -1,5 +1,6 @@
-import structlog
 import warnings
+
+import structlog
 
 # Suppress the PendingDeprecationWarning for multipart
 warnings.filterwarnings(
@@ -13,13 +14,11 @@ from typing import Any, AsyncGenerator, List, Callable
 
 import pytest
 from fakeredis import FakeServer, aioredis
-from fakeredis.aioredis import FakeConnection
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from httpx import AsyncClient
-from redis.asyncio import ConnectionPool
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,

@@ -1,10 +1,10 @@
-name: LCFS 0.2.0 Test CI
+name: LCFS 1.0.0 Test CI
 
 on:
   workflow_dispatch:
 
 env:
-  VERSION: 0.2.0
+  VERSION: 1.0.0
   GIT_URL: https://github.com/bcgov/lcfs.git
   DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
   TEST_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-test

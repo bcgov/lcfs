@@ -21,8 +21,6 @@ export const KeycloakProvider = ({ authClient, children }) => {
   }
 
   useEffect(() => {
-    window.addEventListener('click', refreshToken)
-
     return () => {
       window.removeEventListener('click', refreshToken)
     }
@@ -30,6 +28,7 @@ export const KeycloakProvider = ({ authClient, children }) => {
 
   const handleOnEvent = async (event) => {
     if (event === 'onAuthSuccess') {
+      window.addEventListener('click', refreshToken)
       const hasBeenTracked =
         sessionStorage.getItem('keycloak-logged-in') === 'true'
       if (!hasBeenTracked) {

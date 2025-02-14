@@ -1,6 +1,8 @@
 import BCBox from '@/components/BCBox'
+import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import {
   FormControl,
@@ -9,7 +11,7 @@ import {
   TextField,
   InputAdornment
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Controller, useFormContext } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { LabelBox } from './LabelBox'
@@ -19,6 +21,8 @@ import { NumericFormat } from 'react-number-format'
 export const TransferDetails = () => {
   const { t } = useTranslation(['common', 'transfer', 'organization'])
   const [totalValue, setTotalValue] = useState(0.0)
+  const [showAdjustmentAlert, setShowAdjustmentAlert] = useState(false)
+  const { data: balanceData } = useCurrentOrgBalance()
   const {
     register,
     control,
@@ -27,6 +31,12 @@ export const TransferDetails = () => {
   } = useFormContext()
   const { data: currentUser } = useCurrentUser()
   const { data: orgData } = useRegExtOrgs()
+
+  const availableBalance = useMemo(() => {
+    if (!balanceData) return 0
+    // Maximum Allowed = Total Balance - Reserved Balance
+    return balanceData.totalBalance - Math.abs(balanceData.reservedBalance)
+  }, [balanceData])
 
   const organizations =
     orgData?.map((org) => ({
@@ -43,6 +53,14 @@ export const TransferDetails = () => {
       setTotalValue(newTotalValue)
     }
   }, [quantity, pricePerUnit])
+
+  useEffect(() => {
+    if (quantity === availableBalance) {
+      setShowAdjustmentAlert(true)
+    } else if (quantity < availableBalance) {
+      setShowAdjustmentAlert(false)
+    }
+  }, [quantity, availableBalance])
 
   const renderError = (fieldName, sameAsField = null) => {
     // If the sameAsField is provided and is true, hide errors for this field
@@ -71,6 +89,15 @@ export const TransferDetails = () => {
   return (
     <BCBox data-test="transfer-details">
       <LabelBox label={t('transfer:detailsLabel')}>
+      {showAdjustmentAlert && (
+        <BCAlert
+          severity="warning"
+          sx={{ mb: 2 }}
+          onClose={() => setShowAdjustmentAlert(false)}
+        >
+          {t('transfer:quantityAdjusted')}: {availableBalance.toLocaleString()}
+        </BCAlert>
+      )}
         <BCTypography variant="body4" component="div">
           <BCTypography fontWeight="bold" variant="body4" component="span">
             {currentUser?.organization?.name}
@@ -85,7 +112,22 @@ export const TransferDetails = () => {
                 customInput={TextField}
                 thousandSeparator
                 value={value}
-                onValueChange={(vals) => onChange(vals.floatValue)}
+                isAllowed={(values) => {
+                  const { floatValue } = values
+                  if (floatValue > availableBalance) {
+                    onChange(availableBalance)
+                    return
+                  }
+                  return floatValue === undefined || typeof floatValue === 'number'
+                }}
+                onValueChange={(values) => {
+                  const newValue = values.floatValue || 0
+                  if (newValue > availableBalance) {
+                    onChange(availableBalance)
+                    return
+                  }
+                  onChange(newValue)
+                }}
                 onBlur={onBlur}
                 name={name}
                 inputRef={ref}

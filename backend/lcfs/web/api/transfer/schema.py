@@ -1,14 +1,21 @@
-from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
-from lcfs.web.api.base import BaseSchema
 from typing import Optional, List
 from datetime import date, datetime
 from enum import Enum
-from pydantic import ConfigDict, Field
+from pydantic import ConfigDict
+
+from lcfs.web.api.base import BaseSchema
+from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 
 
 class TransferRecommendationEnumSchema(str, Enum):
     Record = "Record"
     Refuse = "Refuse"
+
+
+class TransferCommentSourceEnumSchema(str, Enum):
+    FROM_ORG = "FROM_ORG"
+    TO_ORG = "TO_ORG"
+    GOVERNMENT = "GOVERNMENT"
 
 
 class TransferStatusSchema(BaseSchema):
@@ -40,8 +47,11 @@ class TransferHistorySchema(BaseSchema):
 
 
 class TransferCommentSchema(BaseSchema):
-    name: str
     comment: Optional[str] = None
+    comment_source: TransferCommentSourceEnumSchema
+    created_by: Optional[str] = None
+    created_by_org: Optional[str] = None
+    create_date: Optional[datetime] = None
 
 
 class TransferSchema(BaseSchema):
@@ -52,9 +62,6 @@ class TransferSchema(BaseSchema):
     quantity: int
     price_per_unit: float
     comments: Optional[List[TransferCommentSchema]] = None
-    from_org_comment: Optional[str] = None
-    to_org_comment: Optional[str] = None
-    gov_comment: Optional[str] = None
     current_status: TransferStatusSchema
     transfer_category: Optional[TransferCategorySchema] = None
     transfer_history: Optional[List[TransferHistorySchema]] = None
@@ -78,12 +85,6 @@ class TransferCreateSchema(BaseSchema):
     current_status_id: Optional[int] = None
     current_status: Optional[TransferStatusEnum] = None
     recommendation: Optional[TransferRecommendationEnumSchema] = None
-
-
-class TransferUpdate(BaseSchema):
-    current_status_id: int
-    comments: Optional[str] = None
-    recommendation: Optional[str] = None
 
 
 class CreateTransferHistorySchema(BaseSchema):

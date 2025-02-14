@@ -6,6 +6,7 @@ import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
 } from '@/views/Transactions/constants'
+import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 // Mock translations using the useTranslation hook
 vi.mock('react-i18next', () => ({
@@ -38,6 +39,13 @@ vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
       <div>{content}</div>
     </div>
   )
+}))
+
+// Mock the API service
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({
+    get: vi.fn(() => Promise.resolve({ data: 'mock-data' }))
+  })
 }))
 
 // Define mock data for tests
@@ -109,7 +117,8 @@ describe('OrgTransactionDetails Component', () => {
       <OrgTransactionDetails
         transactionType={INITIATIVE_AGREEMENT}
         transactionData={mockInitiativeAgreementData}
-      />
+      />,
+      { wrapper }
     )
 
     // Validate the presence of key elements
@@ -140,7 +149,8 @@ describe('OrgTransactionDetails Component', () => {
       <OrgTransactionDetails
         transactionType={ADMIN_ADJUSTMENT}
         transactionData={mockAdminAdjustmentData}
-      />
+      />,
+      { wrapper }
     )
 
     // Validate the presence of key elements
@@ -176,7 +186,8 @@ describe('OrgTransactionDetails Component', () => {
       <OrgTransactionDetails
         transactionType={INITIATIVE_AGREEMENT}
         transactionData={transactionDataWithoutHistory}
-      />
+      />,
+      { wrapper }
     )
 
     // Validate the presence of key elements

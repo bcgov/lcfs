@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
@@ -12,6 +13,8 @@ import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { LegacyAssessmentCard } from '@/views/ComplianceReports/components/LegacyAssessmentCard.jsx'
+import LegacyReportDetails from '@/views/ComplianceReports/legacy/LegacyReportDetails.jsx'
+import LegacyReportSummary from './legacy/LegacyReportSummary'
 
 const iconStyle = {
   width: '2rem',
@@ -26,6 +29,7 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
 
+  const { compliancePeriod, complianceReportId } = useParams()
   const scrollToTopOrBottom = () => {
     if (isScrollingUp) {
       window.scrollTo({
@@ -54,6 +58,7 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
   const { data: currentUser, isLoading: isCurrentUserLoading } =
     useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
+  const userRoles = currentUser?.roles
 
   const currentStatus = reportData.report.currentStatus?.status
   const { data: orgData, isLoading } = useOrganization(
@@ -112,6 +117,28 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
             chain={reportData.chain}
           />
         </Stack>
+        <LegacyReportDetails currentStatus={currentStatus} />
+        <LegacyReportSummary
+          reportID={complianceReportId}
+          currentStatus={currentStatus}
+          compliancePeriodYear={compliancePeriod}
+          alertRef={alertRef}
+        />
+        <BCTypography variant="h6" color="primary" sx={{ marginY: '16px' }}>
+          {t('report:questions')}
+        </BCTypography>
+        <BCTypography
+          variant="body4"
+          sx={{
+            '& p': {
+              marginBottom: '16px'
+            },
+            '& p:last-child': {
+              marginBottom: '0'
+            }
+          }}
+          dangerouslySetInnerHTML={{ __html: t('report:contact') }}
+        ></BCTypography>
         <Tooltip
           title={
             isScrollingUp ? t('common:scrollToTop') : t('common:scrollToBottom')

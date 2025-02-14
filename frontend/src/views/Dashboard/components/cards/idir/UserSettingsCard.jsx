@@ -7,9 +7,10 @@ import BCTypography from '@/components/BCTypography'
 import withRole from '@/utils/withRole'
 import { govRoles } from '@/constants/roles'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons'
+import { faShareFromSquare } from '@fortawesome/free-solid-svg-icons'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { ROUTES } from '@/constants/routes'
+import { HELP_GUIDE_URL } from '@/constants/common.js'
 
 const linkStyle = {
   textDecoration: 'underline',
@@ -59,6 +60,16 @@ const UserSettingsCard = () => {
             >
               {t('dashboard:userSettings.configureNotifications')}
             </UserSettingsLink>
+
+            <a href={HELP_GUIDE_URL} target="_blank" rel="noreferrer">
+              <UserSettingsLink>
+                {t('dashboard:userSettings.help')}
+                <FontAwesomeIcon
+                  icon={faShareFromSquare}
+                  style={{ color: '#547D59', marginLeft: 6 }}
+                />
+              </UserSettingsLink>
+            </a>
           </List>
         </Stack>
       }

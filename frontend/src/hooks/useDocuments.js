@@ -15,6 +15,7 @@ export const useDocuments = (parentType, parentID, options) => {
       const res = await client.get(path)
       return res.data
     },
+    enabled: !!parentID,
     ...options
   })
 }
