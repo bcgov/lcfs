@@ -66,10 +66,27 @@ class FuelCodeRepository:
         return result.scalars().all()
 
     @repo_handler
+    async def get_compliance_period_id(self, compliance_period: str) -> int:
+        stmt = select(CompliancePeriod.compliance_period_id).where(
+            CompliancePeriod.description == compliance_period
+        )
+        result = await self.db.execute(stmt)
+        row = result.scalar_one_or_none()
+        if not row:
+            raise ValueError(f"No compliance period found: {compliance_period}")
+        return row
+
+    @repo_handler
     async def get_formatted_fuel_types(
-        self, include_legacy=False
+        self,
+        include_legacy=False,
+        compliance_period: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Get all fuel type options with their associated fuel categories and fuel codes"""
+        # Get compliance period ID if provided
+        compliance_period_id = None
+        if compliance_period:
+            compliance_period_id = await self.get_compliance_period_id(compliance_period)
         # Define the filtering conditions for fuel codes
         current_date = date.today()
         fuel_code_filters = or_(
@@ -84,22 +101,42 @@ class FuelCodeRepository:
         if not include_legacy:
             conditions.append(FuelType.is_legacy == False)
 
-        combined_conditions = and_(*conditions)
-
-        # Build the query with filtered fuel_codes
+        # Build the query with filtered fuel_codes and compliance period joins
         query = (
             select(FuelType)
             .outerjoin(FuelType.fuel_instances)
             .outerjoin(FuelInstance.fuel_category)
             .outerjoin(FuelType.fuel_codes)
-            .where(combined_conditions)
+        )
+
+        # Add compliance period dependent joins if period is provided
+        if compliance_period_id:
+            query = (
+                query.outerjoin(
+                    EnergyDensity,
+                    and_(
+                        EnergyDensity.fuel_type_id == FuelType.fuel_type_id,
+                        EnergyDensity.compliance_period_id == compliance_period_id
+                    )
+                )
+                .outerjoin(
+                    EnergyEffectivenessRatio,
+                    and_(
+                        EnergyEffectivenessRatio.fuel_type_id == FuelType.fuel_type_id,
+                        EnergyEffectivenessRatio.compliance_period_id == compliance_period_id,
+                        EnergyEffectivenessRatio.fuel_category_id == FuelCategory.fuel_category_id
+                    )
+                )
+            )
+
+        query = (
+            query.where(and_(*conditions))
             .options(
-                contains_eager(FuelType.fuel_instances).contains_eager(
-                    FuelInstance.fuel_category
-                ),
+                contains_eager(FuelType.fuel_instances)
+                .contains_eager(FuelInstance.fuel_category),
                 contains_eager(FuelType.fuel_codes),
                 joinedload(FuelType.provision_1),
-                joinedload(FuelType.provision_2),
+                joinedload(FuelType.provision_2)
             )
         )
 
@@ -246,11 +283,13 @@ class FuelCodeRepository:
         )
 
     @repo_handler
-    async def get_energy_density(self, fuel_type_id) -> EnergyDensity:
+    async def get_energy_density(self, fuel_type_id: int, compliance_period_id: int) -> EnergyDensity:
         """Get the energy density for the specified fuel_type_id"""
 
         stmt = select(EnergyDensity).where(
-            EnergyDensity.fuel_type_id == fuel_type_id)
+            EnergyDensity.fuel_type_id == fuel_type_id,
+            EnergyDensity.compliance_period_id == compliance_period_id)
+
         result = await self.db.execute(stmt)
         energy_density = result.scalars().first()
 
@@ -860,13 +899,18 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_energy_effectiveness_ratio(
-        self, fuel_type_id: int, fuel_category_id: int, end_use_type_id: Optional[int]
+        self,
+        fuel_type_id: int,
+        fuel_category_id: int,
+        compliance_period_id: int,
+        end_use_type_id: Optional[int],
     ) -> EnergyEffectivenessRatio:
         """
         Retrieves the Energy Effectiveness Ratio based on fuel type, fuel category,
         and optionally the end use type.
 
         Args:
+            compliance_period_id (int): The ID of the compliance period.
             fuel_type_id (int): The ID of the fuel type.
             fuel_category_id (int): The ID of the fuel category.
             end_use_type_id (Optional[int]): The ID of the end use type (optional).
@@ -876,7 +920,8 @@ class FuelCodeRepository:
         """
         conditions = [
             EnergyEffectivenessRatio.fuel_type_id == fuel_type_id,
-            EnergyEffectivenessRatio.fuel_category_id == fuel_category_id,
+            EnergyEffectivenessRatio.compliance_period_id == compliance_period_id,
+            EnergyEffectivenessRatio.fuel_category_id == fuel_category_id
         ]
 
         if end_use_type_id is not None:
@@ -929,15 +974,17 @@ class FuelCodeRepository:
         """
         Fetch and standardize fuel data values required for compliance calculations.
         """
+        compliance_period_id = await self.get_compliance_period_id(compliance_period)
+
         # Fetch the fuel type details
         fuel_type = await self.get_fuel_type_by_id(fuel_type_id)
         if not fuel_type:
             raise ValueError("Invalid fuel type ID")
 
         # Determine energy density
+        energy_density_result = await self.get_energy_density(fuel_type_id, compliance_period_id)
         energy_density = (
-            (await self.get_energy_density(fuel_type_id)).density
-            if fuel_type.fuel_type != "Other"
+            energy_density_result.density if energy_density_result and fuel_type.fuel_type != "Other"
             else None
         )
 
@@ -956,7 +1003,7 @@ class FuelCodeRepository:
 
         # Get energy effectiveness ratio (EER)
         energy_effectiveness = await self.get_energy_effectiveness_ratio(
-            fuel_type_id, fuel_category_id, end_use_id
+            fuel_type_id, fuel_category_id, compliance_period_id, end_use_id
         )
         eer = energy_effectiveness.ratio if energy_effectiveness else 1.0
 
