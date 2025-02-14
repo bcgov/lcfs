@@ -29,6 +29,7 @@ FUEL_EXPORT_EXCLUDE_FIELDS = {
     "version",
     "action_type",
     "units",
+    "is_new_supplemental_entry",
 }
 
 
@@ -202,22 +203,21 @@ class FuelExportActionService:
             fe_data.group_uuid
         )
 
-        if existing_export and existing_export.action_type == ActionTypeEnum.DELETE:
+        if fe_data.is_new_supplemental_entry:
+            await self.repo.delete_fuel_export(fuel_export_id=fe_data.fuel_export_id)
             return DeleteFuelExportResponseSchema(
-                success=True, message="Fuel export record already deleted."
+                success=True, message="Marked as deleted."
+            )
+        else:
+            delete_export = FuelExport(
+                compliance_report_id=fe_data.compliance_report_id,
+                group_uuid=fe_data.group_uuid,
+                version=(existing_export.version +
+                         1) if existing_export else 0,
+                action_type=ActionTypeEnum.DELETE,
+                user_type=user_type,
             )
 
-        # Create a new version with action_type DELETE
-        delete_export = FuelExport(
-            compliance_report_id=fe_data.compliance_report_id,
-            group_uuid=fe_data.group_uuid,
-            version=(existing_export.version + 1) if existing_export else 0,
-            action_type=ActionTypeEnum.DELETE,
-            user_type=user_type,
-        )
-
-        # Copy over necessary fields from the latest version
-        if existing_export:
             for field in existing_export.__table__.columns.keys():
                 if field not in FUEL_EXPORT_EXCLUDE_FIELDS:
                     setattr(delete_export, field, getattr(

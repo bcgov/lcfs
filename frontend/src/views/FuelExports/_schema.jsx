@@ -19,14 +19,34 @@ import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
 } from '@/utils/fuelTypeOther'
+import colors from '@/themes/base/colors'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
-export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
+const ACTION_STATUS_MAP = {
+  UPDATE: 'Edit',
+  DELETE: 'Delete',
+  CREATE: 'New'
+}
+
+export const fuelExportColDefs = (
+  optionsData,
+  errors,
+  warnings,
+  gridReady,
+  isSupplemental
+) => [
   validation,
-  actions({
-    enableDuplicate: false,
-    enableDelete: true
+  actions((params) => {
+    return {
+      enableDuplicate: false,
+      enableDelete: !params.data.isNewSupplementalEntry,
+      enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
+      enableStatus:
+        isSupplemental &&
+        params.data.isNewSupplementalEntry &&
+        ACTION_STATUS_MAP[params.data.actionType]
+    }
   }),
   {
     field: 'id',
@@ -66,8 +86,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
     minWidth: 100,
     valueFormatter,
     editable: false,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    }
   },
   {
     field: 'exportDate',
@@ -80,8 +107,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
         {params.value ? params.value : 'YYYY-MM-DD'}
       </BCTypography>
     ),
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     suppressKeyboardEvent,
     cellEditor: DateEditor,
     cellEditorPopup: true,
@@ -104,8 +138,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     suppressKeyboardEvent,
     minWidth: 260,
     editable: true,
@@ -150,8 +191,20 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
       api: params.api,
       minWords: 1
     }),
-    cellStyle: (params) =>
-      StandardCellStyle(params, errors, null, fuelTypeOtherConditionalStyle),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellStyle(
+          params,
+          errors,
+          null,
+          fuelTypeOtherConditionalStyle
+        )
+      }
+    },
     valueSetter: (params) => {
       const { newValue: selectedFuelTypeOther, data } = params
       data.fuelTypeOther = selectedFuelTypeOther
@@ -178,8 +231,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCategory = params.newValue
@@ -242,8 +302,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     suppressKeyboardEvent,
     valueGetter: (params) => {
       return params.colDef?.cellEditorParams(params).options.length < 1
@@ -286,8 +353,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     suppressKeyboardEvent,
     minWidth: 370,
     valueSetter: (params) => {
@@ -324,8 +398,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
         openOnFocus: true
       }
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     editable: (params) => {
       const fuelTypeObj = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -390,8 +471,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    }
   },
   {
     field: 'units',
@@ -411,7 +499,18 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
     suppressKeyboardEvent,
     editable: (params) => isFuelTypeOther(params),
     cellStyle: (params) => {
-      StandardCellStyle(params, errors, null, fuelTypeOtherConditionalStyle)
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellStyle(
+          params,
+          errors,
+          null,
+          fuelTypeOtherConditionalStyle
+        )
+      }
     }
   },
   {
@@ -419,8 +518,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
     editable: false,
     minWidth: 100,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     valueGetter: (params) =>
       optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -433,8 +539,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.ciOfFuel'),
     editable: false,
     minWidth: 100,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     valueGetter: (params) => {
       if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
         return optionsData?.fuelTypes
@@ -468,8 +581,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
     field: 'uci',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
     editable: false,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     minWidth: 100
   },
   {
@@ -478,7 +598,18 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
     cellEditor: 'agNumberCellEditor',
     minWidth: 200,
     cellStyle: (params) => {
-      StandardCellStyle(params, errors, null, fuelTypeOtherConditionalStyle)
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellStyle(
+          params,
+          errors,
+          null,
+          fuelTypeOtherConditionalStyle
+        )
+      }
     },
     cellEditorParams: {
       precision: 2,
@@ -502,8 +633,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.eer'),
     editable: false,
     minWidth: 100,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     valueGetter: (params) => {
       const eerOptions = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -527,8 +665,15 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
   },
   {
     field: 'energy',
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
     valueFormatter,
     minWidth: 100,

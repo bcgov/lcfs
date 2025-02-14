@@ -21,8 +21,28 @@ export const useGetFuelExports = (params, pagination, options) => {
     queryFn: async () => {
       const response = await client.post(apiRoutes.getAllFuelExports, {
         ...(typeof params === 'string' && { complianceReportId: params }),
-        ...(typeof params !== 'string' && params),
+        ...(typeof params !== 'string' && params)
+      })
+      return response.data
+    },
+    ...options
+  })
+}
 
+export const useGetFuelExportsList = (
+  { complianceReportId, changelog = false },
+  pagination,
+  options
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['fuel-exports', complianceReportId, changelog],
+    queryFn: async () => {
+      const response = await client.post(apiRoutes.getAllFuelExports, {
+        ...(typeof complianceReportId === 'string' && { complianceReportId }),
+        ...(typeof complianceReportId !== 'string' && complianceReportId),
+        changelog,
+        ...pagination
       })
       return response.data
     },

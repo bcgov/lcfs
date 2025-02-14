@@ -87,16 +87,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -120,16 +112,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -184,16 +168,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellStyle(
           params,
@@ -232,16 +208,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -301,16 +269,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -359,16 +319,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -411,16 +363,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -493,16 +437,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -528,16 +464,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellStyle(
           params,
@@ -555,16 +483,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -583,16 +503,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -605,16 +517,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -627,16 +531,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellStyle(
           params,
@@ -672,16 +568,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
@@ -712,16 +600,8 @@ export const fuelSupplyColDefs = (
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
-          // if (params.data.updated) {
-          //   style.textDecoration = 'line-through'
-          // }
           return { backgroundColor: colors.alerts.warning.background }
         }
-        // if (params.data.actionType === 'DELETE') {
-        //   return {
-        //     textDecoration: 'line-through'
-        //   }
-        // }
       } else {
         return StandardCellWarningAndErrors(params, errors, warnings)
       }

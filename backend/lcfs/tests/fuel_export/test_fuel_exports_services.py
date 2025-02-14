@@ -70,7 +70,7 @@ async def test_get_fuel_export_list_success(fuel_export_service, mock_repo):
     result = await fuel_export_service.get_fuel_export_list(1)
 
     assert isinstance(result, FuelExportsSchema)
-    mock_repo.get_fuel_export_list.assert_called_once_with(1)
+    mock_repo.get_fuel_export_list.assert_called_once_with(1, False)
 
 
 @pytest.mark.anyio
@@ -103,7 +103,8 @@ async def test_get_fuel_exports_paginated_success(fuel_export_service, mock_repo
     assert result.pagination.total == 1
     assert result.pagination.page == 1
     assert result.pagination.size == 10
-    mock_repo.get_fuel_exports_paginated.assert_called_once_with(pagination_mock, 1)
+    mock_repo.get_fuel_exports_paginated.assert_called_once_with(
+        pagination_mock, 1)
 
 
 # FuelExportActionService Tests
@@ -116,7 +117,8 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
         fuel_category_id=1,
         fuel_category=mock_fuel_category.dict(),
         provisionOfTheActId=1,
-        provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Act Provision"},
+        provisionOfTheAct={"provision_of_the_act_id": 1,
+                           "name": "Act Provision"},
         quantity=100,
         units="L",
         export_date=date.today(),
@@ -165,7 +167,8 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         fuel_category=mock_fuel_category.dict(),
         quantity=100,
         provisionOfTheActId=1,
-        provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Act Provision"},
+        provisionOfTheAct={"provision_of_the_act_id": 1,
+                           "name": "Act Provision"},
         units="L",
         export_date=date.today(),
         compliance_period="2024",

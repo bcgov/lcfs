@@ -36,7 +36,7 @@ export const useGetFuelSuppliesList = (
 ) => {
   const client = useApiService()
   return useQuery({
-    queryKey: ['fuel-supplies', complianceReportId],
+    queryKey: ['fuel-supplies', complianceReportId, changelog],
     queryFn: async () => {
       const response = await client.post(apiRoutes.getAllFuelSupplies, {
         complianceReportId,

@@ -26,6 +26,7 @@ FUEL_EXPORT_EXCLUDE_FIELDS = {
     "version",
     "action_type",
     "units",
+    'is_new_supplemental_entry',
 }
 
 # Example test cases from the dataset
@@ -376,46 +377,6 @@ async def test_delete_fuel_export_success(
 
 
 @pytest.mark.anyio
-async def test_delete_fuel_export_already_deleted(
-    fuel_export_action_service, mock_repo, mock_fuel_code_repo
-):
-    fe_data = create_sample_fe_data()
-    user_type = UserTypeEnum.SUPPLIER
-
-    # Exclude invalid fields
-    fe_data_dict = fe_data.model_dump(exclude=FUEL_EXPORT_EXCLUDE_FIELDS)
-
-    # Mock existing export already marked as deleted
-    existing_export = FuelExport(
-        **fe_data_dict,
-        fuel_export_id=1,
-        version=1,
-        action_type=ActionTypeEnum.DELETE,
-    )
-    existing_export.compliance_units = 0
-    existing_export.fuel_type = {
-        "fuel_type_id": 3,
-        "fuel_type": "Electricity",
-        "units": "kWh",
-    }
-    existing_export.fuel_category = {"category": "Diesel"}
-    existing_export.units = "Litres"
-    mock_repo.get_latest_fuel_export_by_group_uuid.return_value = existing_export
-
-    # Call the method under test
-    result = await fuel_export_action_service.delete_fuel_export(fe_data, user_type)
-
-    # Assertions
-    assert isinstance(result, DeleteFuelExportResponseSchema)
-    assert result.success is True
-    assert result.message == "Fuel export record already deleted."
-    mock_repo.get_latest_fuel_export_by_group_uuid.assert_awaited_once_with(
-        fe_data.group_uuid
-    )
-    mock_repo.create_fuel_export.assert_not_awaited()
-
-
-@pytest.mark.anyio
 async def test_populate_fuel_export_fields(
     fuel_export_action_service, mock_fuel_code_repo
 ):
@@ -448,7 +409,8 @@ async def test_populate_fuel_export_fields(
     assert populated_export.eer == 1  # Default EER
     assert populated_export.energy_density == fe_data.energy_density
     # Energy calculation
-    assert populated_export.energy == round(fe_data.energy_density * fe_data.quantity)
+    assert populated_export.energy == round(
+        fe_data.energy_density * fe_data.quantity)
     # Compliance units calculation (should be negative)
     assert populated_export.compliance_units < 0
 
@@ -479,7 +441,8 @@ async def test_compliance_units_calculation(
         group_uuid=str(uuid4()),
         version=0,
         provisionOfTheActId=123,
-        provisionOfTheAct={"provision_of_the_act_id": 123, "name": "Test Provision"},
+        provisionOfTheAct={"provision_of_the_act_id": 123,
+                           "name": "Test Provision"},
         exportDate=datetime.now().date(),
     )
 
