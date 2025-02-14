@@ -10,7 +10,14 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models.compliance import CompliancePeriod, FuelSupply, ComplianceReport
+from lcfs.db.models.compliance import (
+    CompliancePeriod,
+    FuelSupply,
+    ComplianceReport,
+    ComplianceReportStatus,
+)
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+
 from lcfs.db.models.fuel import (
     EnergyDensity,
     EnergyEffectivenessRatio,
@@ -197,7 +204,9 @@ class FuelSupplyRepository:
         }
 
     @repo_handler
-    async def get_fuel_supply_list(self, compliance_report_id: int) -> List[FuelSupply]:
+    async def get_fuel_supply_list(
+        self, compliance_report_id: int, exclude_draft_reports: bool = False
+    ) -> List[FuelSupply]:
         """
         Retrieve the list of effective fuel supplies for a given compliance report.
         """
@@ -211,16 +220,21 @@ class FuelSupplyRepository:
         if not group_uuid:
             return []
 
-        # Retrieve effective fuel supplies using the group UUID
+        # Retrieve effective fuel supplies using the group UUID,
+        # optionally excluding draft records.
         effective_fuel_supplies = await self.get_effective_fuel_supplies(
-            compliance_report_group_uuid=group_uuid
+            compliance_report_group_uuid=group_uuid,
+            exclude_draft_reports=exclude_draft_reports,
         )
 
         return effective_fuel_supplies
 
     @repo_handler
     async def get_fuel_supplies_paginated(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
+        self,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int,
+        exclude_draft_reports: bool = False,
     ) -> List[FuelSupply]:
         """
         Retrieve a paginated list of effective fuel supplies for a given compliance report.
@@ -235,9 +249,11 @@ class FuelSupplyRepository:
         if not group_uuid:
             return [], 0
 
-        # Retrieve effective fuel supplies using the group UUID
+        # Retrieve effective fuel supplies using the group UUID,
+        # optionally excluding draft records.
         effective_fuel_supplies = await self.get_effective_fuel_supplies(
-            compliance_report_group_uuid=group_uuid
+            compliance_report_group_uuid=group_uuid,
+            exclude_draft_reports=exclude_draft_reports,
         )
 
         # Manually apply pagination
@@ -397,19 +413,27 @@ class FuelSupplyRepository:
 
     @repo_handler
     async def get_effective_fuel_supplies(
-        self, compliance_report_group_uuid: str
+        self, compliance_report_group_uuid: str, exclude_draft_reports: bool = False
     ) -> Sequence[FuelSupply]:
         """
         Retrieve effective FuelSupply records associated with the given compliance_report_group_uuid.
         For each group_uuid:
             - Exclude the entire group if any record in the group is marked as DELETE.
             - From the remaining groups, select the record with the highest version and highest priority.
+        Optionally, exclude fuel supplies associated with draft compliance reports if exclude_draft is True.
         """
         # Step 1: Subquery to get all compliance_report_ids in the specified group
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
             ComplianceReport.compliance_report_group_uuid
             == compliance_report_group_uuid
         )
+        if exclude_draft_reports:
+            compliance_reports_select = compliance_reports_select.where(
+                ComplianceReport.current_status.has(
+                    ComplianceReportStatus.status
+                    != ComplianceReportStatusEnum.Draft.value
+                )
+            )
 
         # Step 2: Subquery to identify record group_uuids that have any DELETE action
         delete_group_select = (
@@ -449,23 +473,19 @@ class FuelSupplyRepository:
         query = (
             select(FuelSupply)
             .options(
-                # Use selectinload for collections
                 selectinload(FuelSupply.fuel_code).options(
                     selectinload(FuelCode.fuel_code_status),
                     selectinload(FuelCode.fuel_code_prefix),
                 ),
-                # Use selectinload for one-to-many relationships
                 selectinload(FuelSupply.fuel_category).options(
                     selectinload(FuelCategory.target_carbon_intensities),
                     selectinload(FuelCategory.energy_effectiveness_ratio),
                 ),
-                # Use joinedload for many-to-one relationships
                 joinedload(FuelSupply.fuel_type).options(
                     joinedload(FuelType.energy_density),
                     joinedload(FuelType.additional_carbon_intensity),
                     joinedload(FuelType.energy_effectiveness_ratio),
                 ),
-                # Use joinedload for single relationships
                 joinedload(FuelSupply.provision_of_the_act),
                 selectinload(FuelSupply.end_use_type),
             )
@@ -476,7 +496,7 @@ class FuelSupplyRepository:
                     FuelSupply.version == valid_fuel_supplies_subq.c.max_version,
                     user_type_priority == valid_fuel_supplies_subq.c.max_role_priority,
                 ),
-                isouter=False,  # Explicit inner join
+                isouter=False,
             )
             .order_by(FuelSupply.create_date.asc())
         )

@@ -1,3 +1,4 @@
+import math
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,17 +6,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.db.models.compliance import FuelSupply
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
+from lcfs.web.api.fuel_supply.schema import (
+    FuelSuppliesSchema,
+    PaginationResponseSchema,
+    FuelSupplyResponseSchema,
+)
+from lcfs.web.api.base import PaginationRequestSchema
 
 
 @pytest.fixture
 def mock_db_session():
     session = AsyncMock(spec=AsyncSession)
 
-    # Create a mock that properly mimics SQLAlchemy's async result chain
     async def mock_execute(*args, **kwargs):
-        mock_result = (
-            MagicMock()
-        )  # Changed to MagicMock since the chained methods are sync
+        mock_result = MagicMock()
         mock_result.scalars = MagicMock(return_value=mock_result)
         mock_result.unique = MagicMock(return_value=mock_result)
         mock_result.all = MagicMock(return_value=[MagicMock(spec=FuelSupply)])
@@ -36,24 +40,34 @@ def fuel_supply_repo(mock_db_session):
 
 
 @pytest.mark.anyio
-async def test_get_fuel_supply_list(fuel_supply_repo, mock_db_session):
+async def test_get_fuel_supply_list_exclude_draft_reports(
+    fuel_supply_repo, mock_db_session
+):
     compliance_report_id = 1
-    mock_result = [MagicMock(spec=FuelSupply)]
+    expected_fuel_supplies = [MagicMock(spec=FuelSupply)]
 
-    # Set up the mock to return our desired result
+    # Set up the mock result chain with proper method chaining.
     mock_result_chain = MagicMock()
     mock_result_chain.scalars = MagicMock(return_value=mock_result_chain)
     mock_result_chain.unique = MagicMock(return_value=mock_result_chain)
-    mock_result_chain.all = MagicMock(return_value=mock_result)
+    mock_result_chain.all = MagicMock(return_value=expected_fuel_supplies)
 
-    async def mock_execute(*args, **kwargs):
+    async def mock_execute(query, *args, **kwargs):
         return mock_result_chain
 
     mock_db_session.execute = mock_execute
 
-    result = await fuel_supply_repo.get_fuel_supply_list(compliance_report_id)
+    # Test when drafts should be excluded (e.g. government user).
+    result_gov = await fuel_supply_repo.get_fuel_supply_list(
+        compliance_report_id, exclude_draft_reports=True
+    )
+    assert result_gov == expected_fuel_supplies
 
-    assert result == mock_result
+    # Test when drafts are not excluded.
+    result_non_gov = await fuel_supply_repo.get_fuel_supply_list(
+        compliance_report_id, exclude_draft_reports=False
+    )
+    assert result_non_gov == expected_fuel_supplies
 
 
 @pytest.mark.anyio
@@ -80,19 +94,89 @@ async def test_check_duplicate(fuel_supply_repo, mock_db_session):
         units="L",
     )
 
-    # Set up the mock chain using regular MagicMock since the chained methods are sync
+    # Set up the mock chain using MagicMock for synchronous chained methods.
     mock_result_chain = MagicMock()
     mock_result_chain.scalars = MagicMock(return_value=mock_result_chain)
-    mock_result_chain.first = MagicMock(
-        return_value=MagicMock(spec=FuelSupply))
+    mock_result_chain.first = MagicMock(return_value=MagicMock(spec=FuelSupply))
 
-    # Define an async execute function that returns our mock chain
     async def mock_execute(*args, **kwargs):
         return mock_result_chain
 
-    # Replace the session's execute with our new mock
     mock_db_session.execute = mock_execute
 
     result = await fuel_supply_repo.check_duplicate(fuel_supply_data)
 
     assert result is not None
+
+
+@pytest.mark.anyio
+async def test_get_fuel_supplies_paginated_exclude_draft_reports(fuel_supply_repo):
+    # Define a sample pagination request.
+    pagination = PaginationRequestSchema(page=1, size=10)
+    compliance_report_id = 1
+    total_count = 20
+
+    # Build a valid fuel supply record that passes validation.
+    valid_fuel_supply = {
+        "fuel_supply_id": 1,
+        "complianceReportId": 1,
+        "version": 0,
+        "fuelTypeId": 1,
+        "quantity": 100,
+        "groupUuid": "some-uuid",
+        "userType": "SUPPLIER",
+        "actionType": "CREATE",
+        "fuelType": {"fuel_type_id": 1, "fuelType": "Diesel", "units": "L"},
+        "fuelCategory": {"fuel_category_id": 1, "category": "Diesel"},
+        "endUseType": {"endUseTypeId": 1, "type": "Transport", "subType": "Personal"},
+        "provisionOfTheAct": {"provisionOfTheActId": 1, "name": "Act Provision"},
+        "compliancePeriod": "2024",
+        "units": "L",
+        "fuelCode": {
+            "fuelStatus": {"status": "Approved"},
+            "fuelCode": "FUEL123",
+            "carbonIntensity": 15.0,
+        },
+        "fuelTypeOther": "Optional",
+    }
+    expected_fuel_supplies = [valid_fuel_supply]
+
+    async def mock_get_fuel_supplies_paginated(
+        pagination, compliance_report_id, exclude_draft_reports
+    ):
+        total_pages = math.ceil(total_count / pagination.size) if total_count > 0 else 0
+        pagination_response = PaginationResponseSchema(
+            page=pagination.page,
+            size=pagination.size,
+            total=total_count,
+            total_pages=total_pages,
+        )
+        processed = [
+            FuelSupplyResponseSchema.model_validate(fs) for fs in expected_fuel_supplies
+        ]
+        return FuelSuppliesSchema(
+            pagination=pagination_response, fuel_supplies=processed
+        )
+
+    fuel_supply_repo.get_fuel_supplies_paginated = AsyncMock(
+        side_effect=mock_get_fuel_supplies_paginated
+    )
+
+    result = await fuel_supply_repo.get_fuel_supplies_paginated(
+        pagination, compliance_report_id, exclude_draft_reports=True
+    )
+
+    # Validate pagination values.
+    assert result.pagination.page == pagination.page
+    assert result.pagination.size == pagination.size
+    assert result.pagination.total == total_count
+    expected_total_pages = (
+        math.ceil(total_count / pagination.size) if total_count > 0 else 0
+    )
+    assert result.pagination.total_pages == expected_total_pages
+
+    # Validate that the fuel supplies list is correctly transformed.
+    expected_processed = [
+        FuelSupplyResponseSchema.model_validate(fs) for fs in expected_fuel_supplies
+    ]
+    assert result.fuel_supplies == expected_processed
