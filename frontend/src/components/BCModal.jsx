@@ -28,6 +28,7 @@ const BCModal = ({ open, onClose, data = null }) => {
     primaryButtonText,
     primaryButtonAction,
     primaryButtonColor,
+    primaryButtonDisabled,
     warningText,
     secondaryButtonText,
     secondaryButtonAction,
@@ -107,6 +108,7 @@ const BCModal = ({ open, onClose, data = null }) => {
             autoFocus
             onClick={handlePrimaryButtonClick}
             isLoading={isLoading}
+            disabled={primaryButtonDisabled}
           >
             {primaryButtonText}
           </BCButton>
