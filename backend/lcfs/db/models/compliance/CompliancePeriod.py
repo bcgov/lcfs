@@ -26,6 +26,11 @@ class CompliancePeriod(BaseModel, EffectiveDates):
     compliance_reports = relationship(
         "ComplianceReport", back_populates="compliance_period"
     )
+    energy_density = relationship(
+        "EnergyDensity",
+        back_populates="compliance_period",
+        cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<CompliancePeriod(id={self.compliance_period_id}, description={self.description})>"
