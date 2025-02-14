@@ -1,4 +1,11 @@
-{% set base_url = "https://lowcarbonfuels.gov.bc.ca" %}
+{% if environment == 'dev' %}
+    {% set base_url = "https://lcfs-dev.apps.silver.devops.gov.bc.ca" %}
+{% elif environment == 'test' %}
+    {% set base_url = "https://lcfs-test.apps.silver.devops.gov.bc.ca" %}
+{% else %}
+    {# Default to production #}
+    {% set base_url = "https://lowcarbonfuels.gov.bc.ca" %}
+{% endif %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -27,9 +34,9 @@
     <table style="max-width: 600px; width: 100%; font-family: sans-serif; border-collapse: collapse; border: 2px solid #003366;">
         <tbody>
             <tr style="background: #003366; font-size: 20px; color: white;">
-                <td style="text-align: left; width: 130px; padding-left: 20px;">
+                <td style="text-align: left; width: 130px; padding-left: 20px;" width="130">
                     <img
-                        src="{{ base_url }}/images/BCID_H_rgb_rev.svg"
+                        src="{{ base_url }}/images/logo-email.png"
                         alt="Government of British Columbia"
                         width="100"
                         style="display: block;"
@@ -47,7 +54,7 @@
 
                         <p>
                             <span style="font-weight: bold;">
-                                The following has occurred within the Low Carbon Fuel Standard portal:
+                                The following has occurred within the Low Carbon Fuel Standard Portal:
                                 {{ notification_type }}
                             </span><br/>
 
