@@ -3,6 +3,7 @@ from typing import ClassVar, Optional, List, Union
 from datetime import datetime, date
 from enum import Enum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 
@@ -45,14 +46,6 @@ class ReportingFrequency(str, Enum):
 class PortsEnum(str, Enum):
     SINGLE = "Single port"
     DUAL = "Dual port"
-
-
-class CompliancePeriodSchema(BaseSchema):
-    compliance_period_id: int
-    description: str
-    effective_date: Optional[datetime] = None
-    expiration_date: Optional[datetime] = None
-    display_order: Optional[int] = None
 
 
 class SummarySchema(BaseSchema):
@@ -147,7 +140,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     version: Optional[int]
     supplemental_initiator: Optional[SupplementalInitiatorType]
     compliance_period_id: int
-    compliance_period: CompliancePeriodSchema
+    compliance_period: CompliancePeriodBaseSchema
     organization_id: int
     organization: ComplianceReportOrganizationSchema
     summary: Optional[SummarySchema]

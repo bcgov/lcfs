@@ -967,7 +967,7 @@ class FuelCodeRepository:
         target_ci = target_carbon_intensity.target_carbon_intensity
 
         # Additional Carbon Intensity (UCI)
-        uci = await self.get_additional_carbon_intensity(fuel_type_id, end_use_id)
+        uci = await self.get_additional_carbon_intensity(fuel_type_id, end_use_id, compliance_period)
 
         return CarbonIntensityResult(
             effective_carbon_intensity=effective_carbon_intensity,
@@ -979,12 +979,27 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_additional_carbon_intensity(
-        self, fuel_type_id, end_use_type_id
+        self,
+        fuel_type_id: int,
+        end_use_type_id: int,
+        compliance_period: str
     ) -> Optional[AdditionalCarbonIntensity]:
         """Get a single use of a carbon intensity (UCI), returns None if one does not apply"""
-        query = select(AdditionalCarbonIntensity).where(
-            AdditionalCarbonIntensity.end_use_type_id == end_use_type_id,
-            AdditionalCarbonIntensity.fuel_type_id == fuel_type_id,
+
+        compliance_period_id_subquery = (
+            select(CompliancePeriod.compliance_period_id)
+            .where(CompliancePeriod.description == compliance_period)
+            .scalar_subquery()
+        )
+
+        # Exact match for compliance_period_id
+        query = (
+            select(AdditionalCarbonIntensity)
+            .where(
+                AdditionalCarbonIntensity.end_use_type_id == end_use_type_id,
+                AdditionalCarbonIntensity.fuel_type_id == fuel_type_id,
+                AdditionalCarbonIntensity.compliance_period_id == compliance_period_id_subquery
+            )
         )
 
         result = await self.db.execute(query)
