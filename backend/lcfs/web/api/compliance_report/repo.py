@@ -861,3 +861,20 @@ class ComplianceReportRepository:
             .where(ComplianceReport.legacy_id == legacy_id)
         )
         return result.scalars().unique().first()
+
+    async def get_previous_summary(
+        self, compliance_report: ComplianceReport
+    ) -> ComplianceReportSummary:
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.summary),
+            )
+            .where(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report.compliance_report_group_uuid,
+                ComplianceReport.version == compliance_report.version - 1,
+            )
+            .limit(1)
+        )
+        return result.scalars().first().summary

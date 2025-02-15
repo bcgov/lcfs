@@ -122,17 +122,17 @@ export const CompareReports = () => {
   }, [report1Summary, report2Summary, fuelType])
 
   function onSelectReport1(event) {
-    const description = event.target.value
+    const compliancePeriod = event.target.value
     const report = reports.find(
-      (report) => report.compliancePeriod.description === description
+      (report) => report.compliancePeriod === compliancePeriod
     )
     setReport1(report)
   }
 
   function onSelectReport2(event) {
-    const description = event.target.value
+    const compliancePeriod = event.target.value
     const report = reports.find(
-      (report) => report.compliancePeriod.description === description
+      (report) => report.compliancePeriod === compliancePeriod
     )
     setReport2(report)
   }
@@ -173,18 +173,13 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report1?.compliancePeriod.description}
+              value={report1?.compliancePeriod}
               variant="outlined"
               onChange={onSelectReport1}
             >
               {reports.map((report, index) => (
-                <MenuItem
-                  key={index}
-                  value={report.compliancePeriod.description}
-                >
-                  {`${t('report:complianceReport')} ${
-                    report.compliancePeriod.description
-                  }`}
+                <MenuItem key={index} value={report.compliancePeriod}>
+                  {`${t('report:complianceReport')} ${report.compliancePeriod}`}
                 </MenuItem>
               ))}
             </Select>
@@ -198,18 +193,13 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report2?.compliancePeriod.description}
+              value={report2?.compliancePeriod}
               variant="outlined"
               onChange={onSelectReport2}
             >
               {reports.map((report, index) => (
-                <MenuItem
-                  key={index}
-                  value={report.compliancePeriod.description}
-                >
-                  {`${t('report:complianceReport')} ${
-                    report.compliancePeriod.description
-                  }`}
+                <MenuItem key={index} value={report.compliancePeriod}>
+                  {`${t('report:complianceReport')} ${report.compliancePeriod}`}
                 </MenuItem>
               ))}
             </Select>
@@ -220,8 +210,8 @@ export const CompareReports = () => {
         title={t('report:renewableFuelTargetSummary')}
         columns={renewableFuelColumns(
           t,
-          report1 ? `CR${report1.compliancePeriod.description}` : '',
-          report2 ? `CR${report2.compliancePeriod.description}` : ''
+          report1 ? `CR${report1.compliancePeriod}` : '',
+          report2 ? `CR${report2.compliancePeriod}` : ''
         )}
         data={renewableSummary}
         useParenthesis={true}
@@ -233,8 +223,8 @@ export const CompareReports = () => {
         title={t('report:lowCarbonFuelTargetSummary')}
         columns={lowCarbonColumns(
           t,
-          report1 ? `CR${report1.compliancePeriod.description}` : '',
-          report2 ? `CR${report2.compliancePeriod.description}` : ''
+          report1 ? `CR${report1.compliancePeriod}` : '',
+          report2 ? `CR${report2.compliancePeriod}` : ''
         )}
         data={lowCarbonSummary}
       />
@@ -242,8 +232,8 @@ export const CompareReports = () => {
         title={t('report:nonCompliancePenaltySummary')}
         columns={nonCompliancePenaltyColumns(
           t,
-          report1 ? `CR${report1.compliancePeriod.description}` : '',
-          report2 ? `CR${report2.compliancePeriod.description}` : ''
+          report1 ? `CR${report1.compliancePeriod}` : '',
+          report2 ? `CR${report2.compliancePeriod}` : ''
         )}
         data={nonCompliancePenaltySummary}
       />

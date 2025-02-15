@@ -1,9 +1,9 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
-  useListComplianceReports,
-  useGetComplianceReportSummary
+  useGetComplianceReportSummary,
+  useListComplianceReports
 } from '@/hooks/useComplianceReports'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -21,10 +21,10 @@ describe('CompareReports Component', () => {
 
     const reportData = [
       {
-        compliancePeriod: { description: '2021' },
+        compliancePeriod: '2021',
         complianceReportId: 1
       },
-      { compliancePeriod: { description: '2022' }, complianceReportId: 2 }
+      { compliancePeriod: '2022', complianceReportId: 2 }
     ]
     useListComplianceReports.mockReturnValue({
       data: {
