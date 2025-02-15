@@ -106,8 +106,8 @@ def upgrade():
                 WHEN ft.fuel_type = 'LNG' THEN 4
                 ELSE 1 -- Default unit of measure to prevent NULL values
             END AS uom_id,
-            'no_user',
-            'no_user'
+            'admin',
+            'admin'
         FROM fuel_type ft
         CROSS JOIN compliance_period cp
         WHERE cp.compliance_period_id BETWEEN 4 AND 14
@@ -194,8 +194,8 @@ def upgrade():
 
                 ELSE NULL  -- Ensure NULL values are not inserted
             END AS ratio,
-            'no_user' AS create_user,
-            'no_user' AS update_user,
+            'admin' AS create_user,
+            'admin' AS update_user,
             TRUE AS effective_status
         FROM 
             fuel_type ft
