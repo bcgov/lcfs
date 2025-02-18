@@ -277,19 +277,33 @@ export const formatNumberWithoutCommas = (value) => {
 }
 
 /**
- * Takes a date string and returns the full formatted date with timestamp and timezone
- * @param dateInput {string}
- * @returns {string}
+ * Formats a date with timezone abbreviation safely.
+ * Returns 'Invalid Date' if the input is invalid to prevent app crashes.
+ *
+ * @param {string} dateInput - The date string to format.
+ * @returns {string} - Formatted date string or 'Invalid Date'.
  */
 export const formatDateWithTimezoneAbbr = (dateInput) => {
-  const time = dayjs(dateInput)
-  const formattedDate = time.format('LLL')
+  try {
+    if (!dateInput || !dayjs(dateInput).isValid()) {
+      console.warn('Invalid date provided:', dateInput);
+      return 'Invalid Date';
+    }
 
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZoneName: 'short'
-  })
-  const parts = formatter.formatToParts(time.toDate())
-  const timeZoneName = parts.find((part) => part.type === 'timeZoneName').value
+    const time = dayjs(dateInput);
+    const formattedDate = time.format('LLL');
 
-  return `${formattedDate} ${timeZoneName}`
-}
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZoneName: 'short'
+    });
+
+    const parts = formatter.formatToParts(time.toDate());
+    const timeZoneName = parts.find((part) => part.type === 'timeZoneName')?.value;
+
+    return timeZoneName ? `${formattedDate} ${timeZoneName}` : formattedDate;
+
+  } catch (error) {
+    console.error('Error formatting date:', dateInput, error);
+    return 'Invalid Date';
+  }
+};
