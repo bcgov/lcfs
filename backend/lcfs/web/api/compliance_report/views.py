@@ -25,6 +25,10 @@ from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
     ComplianceReportChangelogSchema
 )
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
 from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
 from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
@@ -200,7 +204,7 @@ async def get_fuel_supply_changelog(
     return await service.get_changelog_data(
         pagination,
         compliance_report_id,
-        'fuel_supplies'
+        FuelSupply
     )
 
 
@@ -226,7 +230,7 @@ async def get_other_uses_changelog(
     changelog = await service.get_changelog_data(
         pagination,
         compliance_report_id,
-        'other_uses'
+        OtherUses
     )
 
     return changelog
@@ -254,7 +258,7 @@ async def get_notional_transfers_changelog(
     return await service.get_changelog_data(
         pagination,
         compliance_report_id,
-        'notional_transfers'
+        NotionalTransfer
     )
 
 
@@ -280,5 +284,5 @@ async def get_fuel_exports_changelog(
     return await service.get_changelog_data(
         pagination,
         compliance_report_id,
-        'fuel_exports'
+        FuelExport
     )

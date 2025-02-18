@@ -44,7 +44,7 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasRoles } = useCurrentUser()
 
   const { data: complianceReportData } = useGetComplianceReport(
     currentUser?.organization?.organizationId,
@@ -52,12 +52,9 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   )
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
-  const isAnalystRole =
-    userRoles.some((role) => role.name === roles.analyst) || false
-  const isSupplierRole =
-    userRoles.some((role) => role.name === roles.supplier) || false
-  const isGovernmentRole =
-    userRoles.some((role) => role.name === roles.government) || false
+  const isAnalystRole = hasRoles('Analyst')
+  const isSupplierRole = hasRoles('Supplier')
+  const isGovernmentRole = hasRoles('Government')
 
   const editSupportingDocs = useMemo(() => {
     return (
