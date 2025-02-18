@@ -11,6 +11,7 @@ from pydantic import (
 )
 from enum import Enum
 
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 
 
@@ -138,6 +139,8 @@ class AdditionalCarbonIntensitySchema(BaseSchema):
     fuel_type: Optional[FuelTypeSchema] = None
     end_use_type_id: Optional[int] = None
     end_use_type: Optional[EndUseTypeSchema] = None
+    compliance_period_id: int
+    compliance_period: CompliancePeriodBaseSchema
     uom_id: Optional[int] = None
     uom: Optional[UOMSchema] = None
     intensity: float = Field(..., pre=True, always=True)
