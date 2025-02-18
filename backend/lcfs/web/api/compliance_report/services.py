@@ -19,8 +19,8 @@ from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSu
 from lcfs.db.models.user import UserProfile
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.schema import (
-    CompliancePeriodSchema,
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
@@ -46,10 +46,10 @@ class ComplianceReportServices:
         self.request = request
 
     @service_handler
-    async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:
+    async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
         """Fetches all compliance periods and converts them to Pydantic models."""
         periods = await self.repo.get_all_compliance_periods()
-        return [CompliancePeriodSchema.model_validate(period) for period in periods]
+        return [CompliancePeriodBaseSchema.model_validate(period) for period in periods]
 
     @service_handler
     async def create_compliance_report(
@@ -311,7 +311,7 @@ class ComplianceReportServices:
     @service_handler
     async def get_all_org_reported_years(
         self, organization_id: int
-    ) -> List[CompliancePeriodSchema]:
+    ) -> List[CompliancePeriodBaseSchema]:
         return await self.repo.get_all_org_reported_years(organization_id)
 
     def _model_to_dict(self, record) -> dict:

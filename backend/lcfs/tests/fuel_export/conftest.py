@@ -1,7 +1,8 @@
 from datetime import datetime
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from lcfs.web.api.compliance_report.schema import CompliancePeriodSchema, ComplianceReportHistorySchema, ComplianceReportOrganizationSchema, ComplianceReportStatusSchema, ComplianceReportUserSchema, SummarySchema
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
+from lcfs.web.api.compliance_report.schema import ComplianceReportHistorySchema, ComplianceReportOrganizationSchema, ComplianceReportStatusSchema, ComplianceReportUserSchema, SummarySchema
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_export.services import FuelExportServices
@@ -49,7 +50,7 @@ def mock_compliance_report_repo():
 
 @pytest.fixture
 def compliance_period_schema():
-    return CompliancePeriodSchema(
+    return CompliancePeriodBaseSchema(
         compliance_period_id=1,
         description="2024",
         effective_date=datetime(2024, 1, 1),

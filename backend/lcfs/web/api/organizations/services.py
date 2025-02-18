@@ -409,7 +409,7 @@ class OrganizationsService:
 
         # Check constraints based on transaction action
         if transaction_action == TransactionActionEnum.Reserved:
-            if abs(compliance_units) > available_balance:
+            if compliance_units < 0 and abs(compliance_units) > available_balance:
                 raise ValueError("Reserve amount cannot exceed available balance.")
         elif transaction_action == TransactionActionEnum.Released:
             if abs(compliance_units) > reserved_balance:
