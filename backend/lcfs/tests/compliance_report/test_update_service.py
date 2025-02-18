@@ -779,3 +779,58 @@ async def test_handle_submitted_status_sufficient_credits(
         organization_id=123,
     )
     assert mock_report.transaction == mock_transaction
+
+
+# Fixture to create a real instance of OrganizationsService with its actual adjust_balance logic.
+@pytest.fixture
+def org_service_instance():
+    # Import the real OrganizationsService (adjust the import path as needed)
+    from lcfs.web.api.organizations.services import OrganizationsService
+
+    service = OrganizationsService()
+    service.calculate_available_balance = AsyncMock(return_value=50)
+    service.calculate_reserved_balance = AsyncMock(return_value=20)
+    dummy_transaction = MagicMock()  # a dummy Transaction instance
+    service.transaction_repo = MagicMock()
+    service.transaction_repo.create_transaction = AsyncMock(
+        return_value=dummy_transaction
+    )
+    service.redis_balance_service = MagicMock()
+    service.redis_balance_service.populate_organization_redis_balance = AsyncMock()
+    return service
+
+
+@pytest.mark.anyio
+async def test_adjust_balance_reserved_positive_allowed(org_service_instance):
+    """
+    Reserved transactions with a positive compliance_units should be allowed without checking available balance.
+    Even if the positive value exceeds the available balance, the transaction should proceed.
+    """
+    compliance_units = 100  # positive value; exceeds available_balance (50)
+    transaction = await org_service_instance.adjust_balance(
+        transaction_action=TransactionActionEnum.Reserved,
+        compliance_units=compliance_units,
+        organization_id=1,
+    )
+    # Verify that the transaction repo's create_transaction method was called with the correct parameters.
+    org_service_instance.transaction_repo.create_transaction.assert_called_once_with(
+        TransactionActionEnum.Reserved, compliance_units, 1
+    )
+    assert transaction is not None
+
+
+@pytest.mark.anyio
+async def test_adjust_balance_reserved_negative_exceeds_balance(org_service_instance):
+    """
+    Reserved transactions with negative compliance_units must not exceed available balance.
+    A negative value whose absolute exceeds the available balance should raise a ValueError.
+    """
+    compliance_units = -60  # negative value; abs(60) > available_balance (50)
+    with pytest.raises(
+        ValueError, match="Reserve amount cannot exceed available balance."
+    ):
+        await org_service_instance.adjust_balance(
+            transaction_action=TransactionActionEnum.Reserved,
+            compliance_units=compliance_units,
+            organization_id=1,
+        )

@@ -29,3 +29,8 @@ class EndUseType(BaseModel, Auditable, DisplayOrder):
         secondary=final_supply_intended_use_association,
         back_populates="intended_use_types",
     )
+    additional_carbon_intensities = relationship(
+        "AdditionalCarbonIntensity",
+        back_populates="end_use_type",
+        overlaps="additional_carbon_intensity"
+    )
