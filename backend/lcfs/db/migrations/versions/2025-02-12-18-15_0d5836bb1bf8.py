@@ -1,7 +1,7 @@
 """Remove the duplicate compliance report records.
 
 Revision ID: 0d5836bb1bf8
-Revises: f0d95904a9dd
+Revises: 44c6f23b71d3
 Create Date: 2025-02-12 18:15:36.744698
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "0d5836bb1bf8"
-down_revision = "f0d95904a9dd"
+down_revision = "44c6f23b71d3"
 branch_labels = None
 depends_on = None
 
