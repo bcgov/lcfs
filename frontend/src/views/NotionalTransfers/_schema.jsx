@@ -11,17 +11,32 @@ import {
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { apiRoutes } from '@/constants/routes'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
+import colors from '@/themes/base/colors'
+
+const ACTION_STATUS_MAP = {
+  UPDATE: 'Edit',
+  DELETE: 'Delete',
+  CREATE: 'New'
+}
 
 export const notionalTransferColDefs = (
   optionsData,
   currentUser,
   errors,
-  warnings
+  warnings,
+  isSupplemental
 ) => [
   validation,
-  actions({
-    enableDuplicate: false,
-    enableDelete: true
+  actions((params) => {
+    return {
+      enableDuplicate: false,
+      enableDelete: !params.data.isNewSupplementalEntry,
+      enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
+      enableStatus:
+        isSupplemental &&
+        params.data.isNewSupplementalEntry &&
+        ACTION_STATUS_MAP[params.data.actionType]
+    }
   }),
   {
     field: 'id',
@@ -88,8 +103,15 @@ export const notionalTransferColDefs = (
       }
       return true
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    }
   },
   {
     field: 'addressForService',
@@ -99,8 +121,15 @@ export const notionalTransferColDefs = (
     headerComponent: RequiredHeader,
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    }
   },
   {
     field: 'fuelCategory',
@@ -118,8 +147,15 @@ export const notionalTransferColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>)
@@ -140,8 +176,15 @@ export const notionalTransferColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    },
     cellRenderer: (params) =>
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>)
@@ -157,8 +200,15 @@ export const notionalTransferColDefs = (
       showStepperButtons: false
     },
     valueFormatter: (params) => valueFormatter({ value: params.value }),
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellWarningAndErrors(params, errors, warnings)
+      }
+    }
   }
 ]
 

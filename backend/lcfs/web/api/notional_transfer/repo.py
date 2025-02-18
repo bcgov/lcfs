@@ -44,7 +44,7 @@ class NotionalTransferRepository:
 
     @repo_handler
     async def get_notional_transfers(
-        self, compliance_report_id: int
+        self, compliance_report_id: int, changelog: bool = False
     ) -> List[NotionalTransferSchema]:
         """
         Queries notional transfers from the database for a specific compliance report.
@@ -59,11 +59,11 @@ class NotionalTransferRepository:
         if not group_uuid:
             return []
 
-        result = await self.get_effective_notional_transfers(group_uuid)
+        result = await self.get_effective_notional_transfers(group_uuid, changelog=changelog)
         return result
 
     async def get_effective_notional_transfers(
-        self, compliance_report_group_uuid: str
+        self, compliance_report_group_uuid: str, changelog: bool = False
     ) -> List[NotionalTransferSchema]:
         """
         Retrieves effective notional transfers for a compliance report group UUID.
@@ -74,22 +74,29 @@ class NotionalTransferRepository:
             == compliance_report_group_uuid
         )
 
-        # Step 2: Identify group_uuids that have any DELETE action
-        delete_group_select = (
-            select(NotionalTransfer.group_uuid)
-            .where(
-                NotionalTransfer.compliance_report_id.in_(compliance_reports_select),
-                NotionalTransfer.action_type == ActionTypeEnum.DELETE,
-            )
-            .distinct()
-        )
-
         # Step 3: Find the maximum version and priority per group_uuid, excluding deleted groups
         user_type_priority = case(
             (NotionalTransfer.user_type == UserTypeEnum.GOVERNMENT, 1),
             (NotionalTransfer.user_type == UserTypeEnum.SUPPLIER, 0),
             else_=0,
         )
+        conditions = [NotionalTransfer.compliance_report_id.in_(
+            compliance_reports_select
+        )]
+        if not changelog:
+            delete_group_select = (
+                select(NotionalTransfer.group_uuid)
+                .where(
+                    NotionalTransfer.compliance_report_id.in_(
+                        compliance_reports_select),
+                    NotionalTransfer.action_type == ActionTypeEnum.DELETE,
+                )
+                .distinct()
+            )
+            conditions.extend([
+                NotionalTransfer.action_type != ActionTypeEnum.DELETE,
+                ~NotionalTransfer.group_uuid.in_(delete_group_select),
+            ])
 
         valid_notional_transfers_select = (
             select(
@@ -97,11 +104,7 @@ class NotionalTransferRepository:
                 func.max(NotionalTransfer.version).label("max_version"),
                 func.max(user_type_priority).label("max_role_priority"),
             )
-            .where(
-                NotionalTransfer.compliance_report_id.in_(compliance_reports_select),
-                NotionalTransfer.action_type != ActionTypeEnum.DELETE,
-                ~NotionalTransfer.group_uuid.in_(delete_group_select),
-            )
+            .where(*conditions)
             .group_by(NotionalTransfer.group_uuid)
         )
         valid_notional_transfers_subq = valid_notional_transfers_select.subquery()
@@ -163,9 +166,10 @@ class NotionalTransferRepository:
 
         # Manually apply pagination
         total_count = len(notional_transfers)
-        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_notional_transfers = notional_transfers[offset : offset + limit]
+        paginated_notional_transfers = notional_transfers[offset: offset + limit]
 
         return paginated_notional_transfers, total_count
 

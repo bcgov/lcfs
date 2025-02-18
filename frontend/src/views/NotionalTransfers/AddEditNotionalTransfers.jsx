@@ -1,22 +1,24 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import BCTypography from '@/components/BCTypography'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
+import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
+import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import { defaultColDef, notionalTransferColDefs } from './_schema'
+import * as ROUTES from '@/constants/routes/routes.js'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
+  useGetAllNotionalTransfersList,
   useNotionalTransferOptions,
-  useGetAllNotionalTransfers,
   useSaveNotionalTransfer
 } from '@/hooks/useNotionalTransfer'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { v4 as uuid } from 'uuid'
-import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import * as ROUTES from '@/constants/routes/routes.js'
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import colors from '@/themes/base/colors'
 import { isArrayEmpty } from '@/utils/array'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { v4 as uuid } from 'uuid'
+import { defaultColDef, notionalTransferColDefs } from './_schema'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -34,11 +36,62 @@ export const AddEditNotionalTransfers = () => {
     isLoading: optionsLoading,
     isFetched
   } = useNotionalTransferOptions()
-  const { data: notionalTransfers, isLoading: transfersLoading } =
-    useGetAllNotionalTransfers(complianceReportId)
   const { mutateAsync: saveRow } = useSaveNotionalTransfer(complianceReportId)
   const navigate = useNavigate()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+  const { data: complianceReport, isLoading: complianceReportLoading } =
+    useGetComplianceReport(
+      currentUser?.organization.organizationId,
+      complianceReportId
+    )
+
+  const [isSupplemental, setIsSupplemental] = useState(false)
+  const { data: notionalTransfers, isLoading: transfersLoading } =
+    useGetAllNotionalTransfersList({
+      complianceReportId,
+      changelog: isSupplemental
+    })
+
+  const gridOptions = useMemo(
+    () => ({
+      getRowStyle: (params) => {
+        if (
+          params.data.actionType === 'CREATE' &&
+          params.data.isNewSupplementalEntry &&
+          isSupplemental
+        ) {
+          return {
+            backgroundColor: colors.alerts.success.background
+          }
+        }
+        if (
+          params.data.actionType === 'UPDATE' &&
+          params.data.isNewSupplementalEntry &&
+          isSupplemental
+        ) {
+          return {
+            backgroundColor: colors.alerts.warning.background
+          }
+        }
+        if (
+          params.data.actionType === 'DELETE' &&
+          params.data.isNewSupplementalEntry &&
+          isSupplemental
+        ) {
+          return {
+            backgroundColor: colors.alerts.error.background
+          }
+        }
+      }
+    }),
+    [isSupplemental]
+  )
+
+  useEffect(() => {
+    if (typeof complianceReport?.report?.version === 'number') {
+      setIsSupplemental(complianceReport.report.version !== 0)
+    }
+  }, [complianceReport?.report?.version])
 
   useEffect(() => {
     if (location?.state?.message) {
@@ -80,6 +133,9 @@ export const AddEditNotionalTransfers = () => {
             return {
               ...row,
               complianceReportId,
+              isNewSupplementalEntry:
+                isSupplemental &&
+                row.complianceReportId === +complianceReportId,
               id: uuid(),
               isValid: false
             }
@@ -117,7 +173,7 @@ export const AddEditNotionalTransfers = () => {
         })
       }, 100)
     },
-    [complianceReportId, notionalTransfers, t]
+    [complianceReportId, isSupplemental, notionalTransfers, t]
   )
 
   const onCellEditingStopped = useCallback(
@@ -189,7 +245,7 @@ export const AddEditNotionalTransfers = () => {
   )
 
   const onAction = async (action, params) => {
-    if (action === 'delete') {
+    if (action === 'delete' || action === 'undo') {
       await handleScheduleDelete(
         params,
         'notionalTransferId',
@@ -209,17 +265,27 @@ export const AddEditNotionalTransfers = () => {
         optionsData,
         currentUser,
         errors,
-        warnings
+        warnings,
+        isSupplemental
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [optionsData, currentUser, errors, warnings, optionsLoading])
+  }, [
+    optionsData,
+    currentUser,
+    errors,
+    warnings,
+    optionsLoading,
+    isSupplemental
+  ])
 
   useEffect(() => {
     if (!transfersLoading && !isArrayEmpty(notionalTransfers)) {
       const updatedRowData = notionalTransfers.map((item) => ({
         ...item,
-        complianceReportId
+        complianceReportId,
+        isNewSupplementalEntry:
+          isSupplemental && item.complianceReportId === +complianceReportId
       }))
       setRowData(updatedRowData)
     } else {
@@ -228,6 +294,7 @@ export const AddEditNotionalTransfers = () => {
   }, [
     compliancePeriod,
     complianceReportId,
+    isSupplemental,
     notionalTransfers,
     transfersLoading
   ])
@@ -247,7 +314,9 @@ export const AddEditNotionalTransfers = () => {
 
   return (
     isFetched &&
-    !transfersLoading && (
+    !transfersLoading &&
+    !currentUserLoading &&
+    !complianceReportLoading && (
       <Grid2 className="add-edit-notional-transfer-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">
@@ -285,6 +354,7 @@ export const AddEditNotionalTransfers = () => {
               confirmText: t('report:incompleteReport'),
               confirmLabel: t('report:returnToReport')
             }}
+            gridOptions={gridOptions}
           />
         </BCBox>
       </Grid2>

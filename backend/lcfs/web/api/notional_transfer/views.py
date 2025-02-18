@@ -28,6 +28,7 @@ from lcfs.web.api.notional_transfer.schema import (
     DeleteNotionalTransferResponseSchema,
     PaginatedNotionalTransferRequestSchema,
     NotionalTransfersAllSchema,
+    NotionalTransfersRequestSchema
 )
 from lcfs.web.api.base import ComplianceReportRequestSchema, PaginationRequestSchema
 from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
@@ -65,7 +66,7 @@ async def get_table_options(
 )
 async def get_notional_transfers(
     request: Request,
-    request_data: ComplianceReportRequestSchema = Body(...),
+    request_data: NotionalTransfersRequestSchema = Body(...),
     response: Response = None,
     service: NotionalTransferServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
@@ -87,7 +88,7 @@ async def get_notional_transfers(
         await report_validate.validate_organization_access(
             request_data.compliance_report_id
         )
-        return await service.get_notional_transfers(request_data.compliance_report_id)
+        return await service.get_notional_transfers(request_data.compliance_report_id, request_data.changelog)
 
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message

@@ -33,6 +33,7 @@ NOTIONAL_TRANSFER_EXCLUDE_FIELDS = {
     "user_type",
     "version",
     "action_type",
+    "is_new_supplemental_entry",
 }
 
 
@@ -105,13 +106,13 @@ class NotionalTransferServices:
 
     @service_handler
     async def get_notional_transfers(
-        self, compliance_report_id: int
+        self, compliance_report_id: int, changelog: bool = False
     ) -> NotionalTransfersAllSchema:
         """
         Gets the list of notional transfers for a specific compliance report.
         """
         notional_transfers = await self.repo.get_notional_transfers(
-            compliance_report_id
+            compliance_report_id, changelog
         )
         return NotionalTransfersAllSchema(
             notional_transfers=[
@@ -219,22 +220,24 @@ class NotionalTransferServices:
             notional_transfer_data.group_uuid
         )
 
-        if existing_transfer.action_type == ActionTypeEnum.DELETE:
-            return DeleteNotionalTransferResponseSchema(message="Already deleted.")
+        if notional_transfer_data.is_new_supplemental_entry:
+            await self.repo.delete_notional_transfer(notional_transfer_id=notional_transfer_data.notional_transfer_id)
+            return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")
+        else:
 
-        deleted_entity = NotionalTransfer(
-            compliance_report_id=notional_transfer_data.compliance_report_id,
-            group_uuid=notional_transfer_data.group_uuid,
-            version=existing_transfer.version + 1,
-            action_type=ActionTypeEnum.DELETE,
-            user_type=user_type,
-        )
+            deleted_entity = NotionalTransfer(
+                compliance_report_id=notional_transfer_data.compliance_report_id,
+                group_uuid=notional_transfer_data.group_uuid,
+                version=existing_transfer.version + 1,
+                action_type=ActionTypeEnum.DELETE,
+                user_type=user_type,
+            )
 
-        # Copy fields from the latest version for the deletion record
-        for field in existing_transfer.__table__.columns.keys():
-            if field not in NOTIONAL_TRANSFER_EXCLUDE_FIELDS:
-                setattr(deleted_entity, field, getattr(
-                    existing_transfer, field))
+            # Copy fields from the latest version for the deletion record
+            for field in existing_transfer.__table__.columns.keys():
+                if field not in NOTIONAL_TRANSFER_EXCLUDE_FIELDS:
+                    setattr(deleted_entity, field, getattr(
+                        existing_transfer, field))
 
         deleted_entity.compliance_report_id = notional_transfer_data.compliance_report_id
 
