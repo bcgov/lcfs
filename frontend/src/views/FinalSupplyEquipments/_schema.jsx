@@ -336,7 +336,8 @@ export const finalSupplyEquipmentColDefs = (
     ),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
-      precision: 4,
+      precision: 6,
+      max: 1000,
       showStepperButtons: false
     },
     cellDataType: 'number',
@@ -352,7 +353,8 @@ export const finalSupplyEquipmentColDefs = (
     ),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
-      precision: 4,
+      precision: 6,
+      max: 1000,
       showStepperButtons: false
     },
     cellDataType: 'number',
