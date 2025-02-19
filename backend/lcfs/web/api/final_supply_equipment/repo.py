@@ -54,7 +54,7 @@ class FinalSupplyEquipmentRepository:
             levels_of_equipment = await self.get_levels_of_equipment()
             intended_user_types = await self.get_intended_user_types()
             organization_names = await self.get_organization_names(organization)
-        ports = list(PortsEnum)
+        ports = [PortsEnum.SINGLE.value, PortsEnum.DUAL.value]
         return (
             intended_use_types,
             levels_of_equipment,

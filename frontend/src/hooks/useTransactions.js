@@ -18,24 +18,22 @@ export const useTransaction = (transactionID, options) => {
 
 export const useTransactionStatuses = (options) => {
   const client = useApiService()
-  const { hasRoles } = useCurrentUser()
+  const { hasAnyRole } = useCurrentUser()
 
   return useQuery({
     queryKey: ['transaction-statuses'],
     queryFn: async () => {
       const optionsData = await client.get('/transactions/statuses/')
-      if (hasRoles(roles.supplier)) {
+      if (hasAnyRole(roles.supplier)) {
         return optionsData.data.filter(
           (val) => val.status !== TRANSFER_STATUSES.RECOMMENDED
         )
       } else {
         return optionsData.data.filter(
           (val) =>
-            ![
-              TRANSFER_STATUSES.DELETED,
-              TRANSFER_STATUSES.DRAFT,
-              TRANSFER_STATUSES.SENT
-            ].includes(val.status)
+            ![TRANSFER_STATUSES.DELETED, TRANSFER_STATUSES.SENT].includes(
+              val.status
+            )
         )
       }
     },

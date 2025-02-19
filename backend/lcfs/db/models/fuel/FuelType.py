@@ -87,3 +87,8 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
         back_populates="fuel_type_provision_2",
     )
     fuel_instances = relationship("FuelInstance", back_populates="fuel_type")
+    additional_carbon_intensities = relationship(
+        "AdditionalCarbonIntensity",
+        back_populates="fuel_type",
+        overlaps="additional_carbon_intensity"
+    )
