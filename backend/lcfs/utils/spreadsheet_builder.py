@@ -15,7 +15,7 @@ MAX_XLS_WIDTH = 65535
 
 class SpreadsheetColumn:
     def __init__(
-        self, label: str, column_type: Literal["float", "int", "text", "date"]
+        self, label: str, column_type: Literal["float", "int", "text", "date", "decimal6"]
     ):
         self.label = label
         self.column_type = column_type
@@ -134,6 +134,9 @@ class SpreadsheetBuilder:
                         cell.alignment = styles.Alignment(horizontal="right")
                     elif column.column_type == "date":
                         cell.number_format = "yyyy-mm-dd"
+                    elif column.column_type == "decimal6":
+                        cell.number_format = "#,##0.00####"
+                        cell.alignment = styles.Alignment(horizontal="right")
 
         self._apply_excel_styling(writer, sheet)
 
