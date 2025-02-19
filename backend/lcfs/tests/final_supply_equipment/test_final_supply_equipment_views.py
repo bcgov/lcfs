@@ -10,12 +10,12 @@ from starlette.responses import StreamingResponse
 from lcfs.db.models import ComplianceReport
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.utils.constants import FILE_MEDIA_TYPE
-from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentsSchema,
     FSEOptionsSchema,
     PortsEnum,
     LevelOfEquipmentSchema,
+    FinalSupplyEquipmentSchema,
 )
 
 
@@ -107,7 +107,10 @@ async def test_get_final_supply_equipments_not_found(
 
 @pytest.mark.anyio
 async def test_save_final_supply_equipment_create_success(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    valid_final_supply_equipment_schema,
 ):
     with patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
@@ -122,30 +125,8 @@ async def test_save_final_supply_equipment_create_success(
             with patch(
                 "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.create_final_supply_equipment"
             ) as mock_create_fse:
-                mock_create_fse.return_value = FinalSupplyEquipmentSchema(
-                    final_supply_equipment_id=1,
-                    compliance_report_id=42,
-                    organization_name="ACME Charging Inc.",
-                    supply_from_date=date(2025, 1, 1),
-                    supply_to_date=date(2025, 12, 31),
-                    registration_nbr="REG-98765",
-                    kwh_usage=123.45,
-                    serial_nbr="SN-ABC-12345",
-                    manufacturer="ACME",
-                    model="Model X",
-                    level_of_equipment=LevelOfEquipmentSchema(
-                        level_of_equipment_id=1, name="", display_order=1
-                    ),
-                    ports=PortsEnum.SINGLE,
-                    intended_use_types=[],
-                    intended_user_types=[],
-                    street_address="123 Main St",
-                    city="Metropolis",
-                    postal_code="A1A 1A1",
-                    latitude=49.2827,
-                    longitude=-123.1207,
-                    notes="Some additional info here",
-                )
+
+                mock_create_fse.return_value = valid_final_supply_equipment_schema
 
                 set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
                 url = fastapi_app.url_path_for("save_final_supply_equipment_row")
