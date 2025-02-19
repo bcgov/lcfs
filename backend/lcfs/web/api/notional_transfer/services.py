@@ -21,6 +21,8 @@ from lcfs.web.api.notional_transfer.schema import (
     DeleteNotionalTransferResponseSchema,
 )
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.db.models.user.Role import RoleEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -58,8 +60,7 @@ class NotionalTransferServices:
         )
         return NotionalTransfer(
             **notional_transfer_data.model_dump(
-                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union(
-                    {"fuel_category"})
+                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union({"fuel_category"})
             ),
             fuel_category_id=fuel_category.fuel_category_id,
         )
@@ -110,8 +111,9 @@ class NotionalTransferServices:
         """
         Gets the list of notional transfers for a specific compliance report.
         """
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         notional_transfers = await self.repo.get_notional_transfers(
-            compliance_report_id
+            compliance_report_id, exclude_draft_reports=is_gov_user
         )
         return NotionalTransfersAllSchema(
             notional_transfers=[
@@ -123,9 +125,10 @@ class NotionalTransferServices:
     async def get_notional_transfers_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ) -> NotionalTransfersSchema:
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         notional_transfers, total_count = (
             await self.repo.get_notional_transfers_paginated(
-                pagination, compliance_report_id
+                pagination, compliance_report_id, exclude_draft_reports=is_gov_user
             )
         )
         return NotionalTransfersSchema(
@@ -159,8 +162,7 @@ class NotionalTransferServices:
         ):
             # Update existing record if compliance report ID matches
             for field, value in notional_transfer_data.model_dump(
-                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union(
-                    {"fuel_category"})
+                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union({"fuel_category"})
             ).items():
                 setattr(existing_transfer, field, value)
 
@@ -233,8 +235,7 @@ class NotionalTransferServices:
         # Copy fields from the latest version for the deletion record
         for field in existing_transfer.__table__.columns.keys():
             if field not in NOTIONAL_TRANSFER_EXCLUDE_FIELDS:
-                setattr(deleted_entity, field, getattr(
-                    existing_transfer, field))
+                setattr(deleted_entity, field, getattr(existing_transfer, field))
 
         await self.repo.create_notional_transfer(deleted_entity)
         return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")
@@ -242,14 +243,16 @@ class NotionalTransferServices:
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
-        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
-            compliance_report_id,
+        compliance_report = (
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id,
+            )
         )
 
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found for this period"
+                detail="Compliance report not found for this period",
             )
 
         return compliance_report
