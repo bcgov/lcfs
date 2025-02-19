@@ -1,5 +1,7 @@
 import pytest
+import json
 from unittest.mock import AsyncMock, MagicMock
+from lcfs.web.api.base import NotificationTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.notification import (
     NotificationChannelSubscription,
@@ -8,9 +10,12 @@ from lcfs.db.models.notification import (
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.notification.repo import NotificationRepository
 from lcfs.web.api.notification.schema import (
+    NotificationRequestSchema,
     SubscriptionSchema,
     NotificationMessageSchema,
 )
+from lcfs.web.api.email.services import CHESEmailService
+
 
 # Mock common data for reuse
 mock_notification_message = NotificationMessage(
@@ -34,13 +39,17 @@ mock_notification_channel_subscription = NotificationChannelSubscription(
 @pytest.fixture
 def notification_service():
     mock_repo = MagicMock(spec=NotificationRepository)
-    service = NotificationService(repo=mock_repo)
-    return service, mock_repo
+
+    mock_email_service = MagicMock(spec=CHESEmailService)
+    mock_email_service.send_notification_email = AsyncMock()
+
+    service = NotificationService(repo=mock_repo, email_service=mock_email_service)
+    return service, mock_repo, mock_email_service
 
 
 @pytest.mark.anyio
 async def test_get_notifications_by_user_id(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
     user_id = 1
 
     mock_repo.get_notification_messages_by_user = AsyncMock(
@@ -66,7 +75,7 @@ async def test_get_notifications_by_user_id(notification_service):
 
 @pytest.mark.anyio
 async def test_get_notification_by_id(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
     notification_id = 1
 
     mock_notification = NotificationMessage(
@@ -95,7 +104,7 @@ async def test_get_notification_by_id(notification_service):
 
 @pytest.mark.anyio
 async def test_count_unread_notifications_by_user_id(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
     user_id = 1
     expected_unread_count = 5
 
@@ -115,7 +124,7 @@ async def test_count_unread_notifications_by_user_id(notification_service):
 
 @pytest.mark.anyio
 async def test_mark_notification_as_read(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
     notification_id = 1
 
     mock_notification = NotificationMessage(
@@ -143,7 +152,7 @@ async def test_mark_notification_as_read(notification_service):
 
 @pytest.mark.anyio
 async def test_create_notification_message(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
 
     notification_data = NotificationMessageSchema(
         message="Test notification",
@@ -190,7 +199,7 @@ async def test_create_notification_message(notification_service):
 
 @pytest.mark.anyio
 async def test_update_notification_message(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
 
     updated_data = NotificationMessageSchema(
         notification_message_id=1,
@@ -241,7 +250,7 @@ async def test_update_notification_message(notification_service):
 
 @pytest.mark.anyio
 async def test_delete_notification_message(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
 
     user_id = 1
     notification_id = 123
@@ -269,7 +278,7 @@ async def test_delete_notification_message(notification_service):
 
 @pytest.mark.anyio
 async def test_create_notification_channel_subscription(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
 
     subscription_data = SubscriptionSchema(
         is_enabled=True,
@@ -312,7 +321,7 @@ async def test_create_notification_channel_subscription(notification_service):
 
 @pytest.mark.anyio
 async def test_get_notification_channel_subscriptions_by_user_id(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
 
     user_id = 1
     # Mock subscription data
@@ -349,7 +358,7 @@ async def test_get_notification_channel_subscriptions_by_user_id(notification_se
 
 @pytest.mark.anyio
 async def test_get_notification_channel_subscription_by_id(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
 
     subscription_id = 123
     expected_subscription = NotificationChannelSubscription(
@@ -374,7 +383,7 @@ async def test_get_notification_channel_subscription_by_id(notification_service)
 
 @pytest.mark.anyio
 async def test_delete_notification_channel_subscription(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
 
     user_profile_id = 1
     subscription_id = 456
@@ -403,7 +412,7 @@ async def test_delete_notification_channel_subscription(notification_service):
 
 @pytest.mark.anyio
 async def test_service_delete_subscriptions_for_user_role(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
     user_profile_id = 1
     role_enum = RoleEnum.ANALYST
 
@@ -418,7 +427,7 @@ async def test_service_delete_subscriptions_for_user_role(notification_service):
 
 @pytest.mark.anyio
 async def test_service_add_subscriptions_for_user_role(notification_service):
-    service, mock_repo = notification_service
+    service, mock_repo, mock_email_service = notification_service
     user_profile_id = 1
     role_enum = RoleEnum.DIRECTOR
 
@@ -429,3 +438,55 @@ async def test_service_add_subscriptions_for_user_role(notification_service):
     mock_repo.add_subscriptions_for_user_role.assert_awaited_once_with(
         user_profile_id, role_enum
     )
+
+
+@pytest.mark.anyio
+async def test_send_notification_skip_analyst(notification_service):
+    service, mock_repo, mock_email_service = notification_service
+
+    # Create the notification request
+    message_data = {
+        "service": "Transfer",
+        "status": "recorded",
+        "toOrganizationId": 2,
+    }
+    notif_msg_schema = NotificationMessageSchema(
+        related_organization_id=1,
+        message=json.dumps(message_data),
+    )
+    notification_req = NotificationRequestSchema(
+        notification_types=[
+            NotificationTypeEnum.BCEID__TRANSFER__DIRECTOR_DECISION,
+            NotificationTypeEnum.IDIR_ANALYST__TRANSFER__DIRECTOR_RECORDED,
+        ],
+        notification_data=notif_msg_schema,
+    )
+
+    # Analyst
+    mock_analyst_sub = MagicMock(spec=NotificationChannelSubscription)
+    mock_analyst_sub.user_profile_id = 2
+    mock_analyst_sub.user_profile = MagicMock()
+    mock_analyst_sub.user_profile.user_roles = [MagicMock(name=RoleEnum.ANALYST)]
+
+    # Non-analyst
+    mock_non_analyst_sub = MagicMock(spec=NotificationChannelSubscription)
+    mock_non_analyst_sub.user_profile_id = 101
+    mock_non_analyst_sub.user_profile = MagicMock()
+    mock_non_analyst_sub.user_profile.user_roles = [MagicMock(name=RoleEnum.TRANSFER)]
+
+    # Configure the repo mock
+    mock_repo.get_subscribed_users_by_channel = AsyncMock(
+        return_value=[mock_analyst_sub, mock_non_analyst_sub]
+    )
+    mock_repo.create_notification_messages = AsyncMock()
+
+    # Call the method
+    await service.send_notification(notification_req)
+
+    # Verify that the email service was not called
+    called_args, _ = mock_repo.create_notification_messages.await_args
+    created_notifications = called_args[0]
+
+    # Ensure that the analyst was skipped
+    assert len(created_notifications) == 2
+    assert created_notifications[0].related_user_profile_id == 2
