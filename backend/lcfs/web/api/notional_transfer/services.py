@@ -3,7 +3,7 @@ import uuid
 from typing import Optional
 
 import structlog
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
@@ -41,10 +41,12 @@ NOTIONAL_TRANSFER_EXCLUDE_FIELDS = {
 class NotionalTransferServices:
     def __init__(
         self,
+        request: Request = None,
         repo: NotionalTransferRepository = Depends(NotionalTransferRepository),
         fuel_repo: FuelCodeRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
+        self.request = request
         self.repo = repo
         self.fuel_repo = fuel_repo
         self.compliance_report_repo = compliance_report_repo
@@ -60,7 +62,8 @@ class NotionalTransferServices:
         )
         return NotionalTransfer(
             **notional_transfer_data.model_dump(
-                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union({"fuel_category"})
+                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union(
+                    {"fuel_category"})
             ),
             fuel_category_id=fuel_category.fuel_category_id,
         )
@@ -162,7 +165,8 @@ class NotionalTransferServices:
         ):
             # Update existing record if compliance report ID matches
             for field, value in notional_transfer_data.model_dump(
-                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union({"fuel_category"})
+                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union(
+                    {"fuel_category"})
             ).items():
                 setattr(existing_transfer, field, value)
 
@@ -235,7 +239,10 @@ class NotionalTransferServices:
         # Copy fields from the latest version for the deletion record
         for field in existing_transfer.__table__.columns.keys():
             if field not in NOTIONAL_TRANSFER_EXCLUDE_FIELDS:
-                setattr(deleted_entity, field, getattr(existing_transfer, field))
+                setattr(deleted_entity, field, getattr(
+                    existing_transfer, field))
+
+        deleted_entity.compliance_report_id = notional_transfer_data.compliance_report_id
 
         await self.repo.create_notional_transfer(deleted_entity)
         return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")

@@ -3,7 +3,7 @@ import uuid
 from typing import Optional
 
 import structlog
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -45,10 +45,12 @@ OTHER_USE_EXCLUDE_FIELDS = {
 class OtherUsesServices:
     def __init__(
         self,
+        request: Request = None,
         repo: OtherUsesRepository = Depends(OtherUsesRepository),
         fuel_repo: FuelCodeRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
+        self.request = request
         self.repo = repo
         self.fuel_repo = fuel_repo
         self.compliance_report_repo = compliance_report_repo
@@ -157,7 +159,8 @@ class OtherUsesServices:
             compliance_report_id, exclude_draft_reports=is_gov_user
         )
         return OtherUsesAllSchema(
-            other_uses=[OtherUsesSchema.model_validate(ou) for ou in other_uses]
+            other_uses=[OtherUsesSchema.model_validate(
+                ou) for ou in other_uses]
         )
 
     @service_handler
@@ -299,7 +302,10 @@ class OtherUsesServices:
         # Copy fields from the latest version for the deletion record
         for field in existing_fuel_supply.__table__.columns.keys():
             if field not in OTHER_USE_EXCLUDE_FIELDS:
-                setattr(deleted_entity, field, getattr(existing_fuel_supply, field))
+                setattr(deleted_entity, field, getattr(
+                    existing_fuel_supply, field))
+
+        deleted_entity.compliance_report_id = other_use_data.compliance_report_id
 
         await self.repo.create_other_use(deleted_entity)
         return DeleteOtherUsesResponseSchema(success=True, message="Marked as deleted.")

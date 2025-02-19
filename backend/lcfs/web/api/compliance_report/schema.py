@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import ClassVar, Optional, List, Union
+from typing import ClassVar, Optional, List, TypeVar, Generic, Union
 from datetime import datetime, date
 from enum import Enum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
@@ -212,3 +212,11 @@ class CommonPaginatedReportRequestSchema(BaseSchema):
 class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
+
+
+T = TypeVar('T')
+
+
+class ComplianceReportChangelogSchema(BaseSchema, Generic[T]):
+    changelog: Optional[List[T]] = []
+    pagination: Optional[PaginationResponseSchema] = {}

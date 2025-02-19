@@ -177,5 +177,7 @@
   "invalidAddress": "Cannot submit: Please fill out all required address fields",
   "addressEdited": " - edited",
   "viewLegacyBtn": "View Full Historical Report in TFRS",
+  "reportAssessed": "Compliance report, Assessed",
+  "changelog": "Change log",
   "documentLabel": "Add file attachments (maximum file size: 50 MB):"
 }
