@@ -18,7 +18,6 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
-    FinalSupplyEquipmentSchema,
 )
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.final_supply_equipment.export import FinalSupplyEquipmentExporter
@@ -27,6 +26,7 @@ from lcfs.web.api.final_supply_equipment.schema import (
     FSEOptionsSchema,
     FinalSupplyEquipmentCreateSchema,
     FinalSupplyEquipmentsSchema,
+    FinalSupplyEquipmentSchema,
 )
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.final_supply_equipment.validation import (
