@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Union, Optional, Sequence
 import structlog
 from fastapi import Depends
 from sqlalchemy import and_, or_, select, func, text, update, distinct, desc, asc
+from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager
 
@@ -513,6 +514,62 @@ class FuelCodeRepository:
         return (await self.db.execute(query)).scalars().all()
 
     @repo_handler
+    async def get_fp_facility_location_by_name(
+        self,
+        city: Optional[str] = None,
+        province: Optional[str] = None,
+        country: Optional[str] = None,
+    ) -> List[str]:
+        """
+        Fetch fuel production locations dynamically based on provided filters.
+
+        - If `city` is provided → Returns "city, province, country"
+        - If `province` is provided → Returns "province, country"
+        - If `country` is provided → Returns "country"
+        """
+        # Start building the query
+        stmt = select()
+
+        if city:
+            stmt = stmt.add_columns(
+                func.concat(
+                    coalesce(FuelCode.fuel_production_facility_city, ""),
+                    ", ",
+                    coalesce(FuelCode.fuel_production_facility_province_state, ""),
+                    ", ",
+                    coalesce(FuelCode.fuel_production_facility_country, ""),
+                ).label("location")
+            ).filter(FuelCode.fuel_production_facility_city.ilike(f"%{city}%"))
+
+        elif province:
+            stmt = stmt.add_columns(
+                func.concat(
+                    coalesce(FuelCode.fuel_production_facility_province_state, ""),
+                    ", ",
+                    coalesce(FuelCode.fuel_production_facility_country, ""),
+                ).label("location")
+            ).filter(
+                FuelCode.fuel_production_facility_province_state.ilike(f"%{province}%")
+            )
+
+        elif country:
+            stmt = stmt.add_columns(
+                coalesce(FuelCode.fuel_production_facility_country, "").label(
+                    "location"
+                )
+            ).filter(FuelCode.fuel_production_facility_country.ilike(f"%{country}%"))
+
+        else:
+            return []  # If no filter is provided, return an empty list.
+
+        # Ensure uniqueness and limit results
+        stmt = stmt.distinct().limit(10)
+
+        # Execute query
+        result = await self.db.execute(stmt)
+        return [row[0] for row in result.unique().all()]
+
+    @repo_handler
     async def get_distinct_fuel_codes_by_code(
         self, fuel_code: str, prefix: str
     ) -> List[str]:
@@ -910,7 +967,7 @@ class FuelCodeRepository:
         target_ci = target_carbon_intensity.target_carbon_intensity
 
         # Additional Carbon Intensity (UCI)
-        uci = await self.get_additional_carbon_intensity(fuel_type_id, end_use_id)
+        uci = await self.get_additional_carbon_intensity(fuel_type_id, end_use_id, compliance_period)
 
         return CarbonIntensityResult(
             effective_carbon_intensity=effective_carbon_intensity,
@@ -922,12 +979,27 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_additional_carbon_intensity(
-        self, fuel_type_id, end_use_type_id
+        self,
+        fuel_type_id: int,
+        end_use_type_id: int,
+        compliance_period: str
     ) -> Optional[AdditionalCarbonIntensity]:
         """Get a single use of a carbon intensity (UCI), returns None if one does not apply"""
-        query = select(AdditionalCarbonIntensity).where(
-            AdditionalCarbonIntensity.end_use_type_id == end_use_type_id,
-            AdditionalCarbonIntensity.fuel_type_id == fuel_type_id,
+
+        compliance_period_id_subquery = (
+            select(CompliancePeriod.compliance_period_id)
+            .where(CompliancePeriod.description == compliance_period)
+            .scalar_subquery()
+        )
+
+        # Exact match for compliance_period_id
+        query = (
+            select(AdditionalCarbonIntensity)
+            .where(
+                AdditionalCarbonIntensity.end_use_type_id == end_use_type_id,
+                AdditionalCarbonIntensity.fuel_type_id == fuel_type_id,
+                AdditionalCarbonIntensity.compliance_period_id == compliance_period_id_subquery
+            )
         )
 
         result = await self.db.execute(query)
