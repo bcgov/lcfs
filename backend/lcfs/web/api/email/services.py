@@ -60,6 +60,9 @@ class CHESEmailService:
             )
             return False
 
+        # Include environment in the context
+        notification_context["environment"] = settings.environment.lower()
+
         # Render the email content
         email_body = self._render_email_template(
             notification_type.value, notification_context
