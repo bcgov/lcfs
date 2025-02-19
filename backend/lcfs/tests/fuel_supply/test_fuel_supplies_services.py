@@ -83,8 +83,6 @@ async def test_get_fuel_supply_list(fuel_supply_service):
     service, mock_repo, _ = fuel_supply_service
 
     # Create a dummy request with a user that supports attribute access.
-    from types import SimpleNamespace
-
     dummy_user = SimpleNamespace(id=1, role_names=[RoleEnum.GOVERNMENT])
     dummy_request = MagicMock()
     dummy_request.user = dummy_user

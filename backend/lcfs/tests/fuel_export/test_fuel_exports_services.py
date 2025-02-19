@@ -16,6 +16,7 @@ from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.base import ActionTypeEnum, UserTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
+from types import SimpleNamespace
 
 # Mock common data for reuse
 mock_fuel_type = FuelTypeSchema(
@@ -38,9 +39,6 @@ mock_fuel_category = FuelCategoryResponseSchema(
 
 @pytest.mark.anyio
 async def test_get_fuel_export_options_success(fuel_export_service, mock_repo):
-    # (If needed, set a dummy request here as well)
-    from types import SimpleNamespace
-
     dummy_user = SimpleNamespace(id=1, role_names=[RoleEnum.GOVERNMENT])
     dummy_request = MagicMock()
     dummy_request.user = dummy_user
@@ -55,8 +53,6 @@ async def test_get_fuel_export_options_success(fuel_export_service, mock_repo):
 @pytest.mark.anyio
 async def test_get_fuel_export_list_success(fuel_export_service, mock_repo):
     # Set up a dummy request with a valid user
-    from types import SimpleNamespace
-
     dummy_user = SimpleNamespace(id=1, role_names=[RoleEnum.GOVERNMENT])
     dummy_request = MagicMock()
     dummy_request.user = dummy_user
@@ -94,8 +90,6 @@ async def test_get_fuel_export_list_success(fuel_export_service, mock_repo):
 @pytest.mark.anyio
 async def test_get_fuel_exports_paginated_success(fuel_export_service, mock_repo):
     # Set up a dummy request with a valid user
-    from types import SimpleNamespace
-
     dummy_user = SimpleNamespace(id=1, role_names=[RoleEnum.GOVERNMENT])
     dummy_request = MagicMock()
     dummy_request.user = dummy_user
