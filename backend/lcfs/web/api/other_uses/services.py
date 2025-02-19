@@ -3,7 +3,7 @@ import uuid
 from typing import Optional
 
 import structlog
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -45,10 +45,12 @@ OTHER_USE_EXCLUDE_FIELDS = {
 class OtherUsesServices:
     def __init__(
         self,
+        request: Request = None,
         repo: OtherUsesRepository = Depends(OtherUsesRepository),
         fuel_repo: FuelCodeRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
+        self.request = request
         self.repo = repo
         self.fuel_repo = fuel_repo
         self.compliance_report_repo = compliance_report_repo
