@@ -87,7 +87,9 @@ async def get_notional_transfers(
         await report_validate.validate_organization_access(
             request_data.compliance_report_id
         )
-        return await service.get_notional_transfers(request_data.compliance_report_id)
+        return await service.get_notional_transfers(
+            request_data.compliance_report_id, request.user
+        )
 
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message

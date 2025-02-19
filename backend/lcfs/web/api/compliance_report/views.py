@@ -23,7 +23,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
     CommonPaginatedReportRequestSchema,
-    ComplianceReportChangelogSchema
+    ComplianceReportChangelogSchema,
 )
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
@@ -119,7 +119,9 @@ async def get_compliance_report_summary(
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
     await validate.validate_organization_access(report_id)
-    return await summary_service.calculate_compliance_report_summary(report_id)
+    return await summary_service.calculate_compliance_report_summary(
+        report_id, request.user
+    )
 
 
 @router.put(
@@ -140,7 +142,7 @@ async def update_compliance_report_summary(
     """
     await validate.validate_organization_access(report_id)
     return await summary_service.update_compliance_report_summary(
-        report_id, summary_data
+        report_id, summary_data, request.user
     )
 
 
@@ -162,7 +164,9 @@ async def update_compliance_report(
 ) -> ComplianceReportBaseSchema:
     """Update an existing compliance report."""
     await validate.validate_organization_access(report_id)
-    return await update_service.update_compliance_report(report_id, report_data)
+    return await update_service.update_compliance_report(
+        report_id, report_data, request.user
+    )
 
 
 @router.post(
@@ -202,9 +206,7 @@ async def get_fuel_supply_changelog(
         filters=request_data.filters,
     )
     return await service.get_changelog_data(
-        pagination,
-        compliance_report_id,
-        FuelSupply
+        pagination, compliance_report_id, FuelSupply
     )
 
 
@@ -228,9 +230,7 @@ async def get_other_uses_changelog(
         filters=request_data.filters,
     )
     changelog = await service.get_changelog_data(
-        pagination,
-        compliance_report_id,
-        OtherUses
+        pagination, compliance_report_id, OtherUses
     )
 
     return changelog
@@ -256,9 +256,7 @@ async def get_notional_transfers_changelog(
         filters=request_data.filters,
     )
     return await service.get_changelog_data(
-        pagination,
-        compliance_report_id,
-        NotionalTransfer
+        pagination, compliance_report_id, NotionalTransfer
     )
 
 
@@ -282,7 +280,5 @@ async def get_fuel_exports_changelog(
         filters=request_data.filters,
     )
     return await service.get_changelog_data(
-        pagination,
-        compliance_report_id,
-        FuelExport
+        pagination, compliance_report_id, FuelExport
     )

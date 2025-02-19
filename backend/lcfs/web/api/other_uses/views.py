@@ -81,7 +81,9 @@ async def get_other_uses(
         await report_validate.validate_organization_access(
             request_data.compliance_report_id
         )
-        return await service.get_other_uses(request_data.compliance_report_id)
+        return await service.get_other_uses(
+            request_data.compliance_report_id, request.user
+        )
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
         raise http_ex
@@ -118,7 +120,9 @@ async def get_other_uses_paginated(
         request_data.compliance_report_id
     )
     compliance_report_id = request_data.compliance_report_id
-    return await service.get_other_uses_paginated(pagination, compliance_report_id)
+    return await service.get_other_uses_paginated(
+        pagination, compliance_report_id, request.user
+    )
 
 
 @router.post(
