@@ -3,7 +3,7 @@ import uuid
 from typing import Optional
 
 import structlog
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, Request, status
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
