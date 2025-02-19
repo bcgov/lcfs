@@ -14,11 +14,12 @@ from lcfs.db.models.compliance.NotionalTransfer import (
     NotionalTransfer,
     ReceivedOrTransferredEnum,
 )
-from lcfs.db.models.compliance import ComplianceReport
+from lcfs.db.models.compliance import ComplianceReport, ComplianceReportStatus
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.notional_transfer.schema import NotionalTransferSchema
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import repo_handler
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -44,7 +45,7 @@ class NotionalTransferRepository:
 
     @repo_handler
     async def get_notional_transfers(
-        self, compliance_report_id: int
+        self, compliance_report_id: int, exclude_draft_reports: bool = False
     ) -> List[NotionalTransferSchema]:
         """
         Queries notional transfers from the database for a specific compliance report.
@@ -59,11 +60,13 @@ class NotionalTransferRepository:
         if not group_uuid:
             return []
 
-        result = await self.get_effective_notional_transfers(group_uuid)
+        result = await self.get_effective_notional_transfers(
+            group_uuid, exclude_draft_reports
+        )
         return result
 
     async def get_effective_notional_transfers(
-        self, compliance_report_group_uuid: str
+        self, compliance_report_group_uuid: str, exclude_draft_reports: bool = False
     ) -> List[NotionalTransferSchema]:
         """
         Retrieves effective notional transfers for a compliance report group UUID.
@@ -73,6 +76,13 @@ class NotionalTransferRepository:
             ComplianceReport.compliance_report_group_uuid
             == compliance_report_group_uuid
         )
+        if exclude_draft_reports:
+            compliance_reports_select = compliance_reports_select.where(
+                ComplianceReport.current_status.has(
+                    ComplianceReportStatus.status
+                    != ComplianceReportStatusEnum.Draft.value
+                )
+            )
 
         # Step 2: Identify group_uuids that have any DELETE action
         delete_group_select = (
@@ -144,7 +154,10 @@ class NotionalTransferRepository:
         ]
 
     async def get_notional_transfers_paginated(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
+        self,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int,
+        exclude_draft_reports: bool = False,
     ) -> Tuple[List[NotionalTransferSchema], int]:
         # Retrieve the compliance report's group UUID
         report_group_query = await self.db.execute(
@@ -158,7 +171,8 @@ class NotionalTransferRepository:
 
         # Retrieve effective notional transfers using the group UUID
         notional_transfers = await self.get_effective_notional_transfers(
-            compliance_report_group_uuid=group_uuid
+            compliance_report_group_uuid=group_uuid,
+            exclude_draft_reports=exclude_draft_reports,
         )
 
         # Manually apply pagination
