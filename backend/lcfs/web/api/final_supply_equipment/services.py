@@ -6,11 +6,11 @@ from fastapi import Depends, HTTPException, Request, status
 from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentCreateSchema,
     FinalSupplyEquipmentsSchema,
     LevelOfEquipmentSchema,
+    FinalSupplyEquipmentSchema,
 )
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
@@ -34,7 +34,7 @@ class FinalSupplyEquipmentServices:
     async def get_fse_options(self):
         """Fetches all FSE options concurrently."""
         try:
-            organization = getattr(self.request.user, 'organization', None)
+            organization = getattr(self.request.user, "organization", None)
             (
                 intended_use_types,
                 levels_of_equipment,
@@ -48,7 +48,8 @@ class FinalSupplyEquipmentServices:
                     EndUseTypeSchema.model_validate(t) for t in intended_use_types
                 ],
                 "levels_of_equipment": [
-                    LevelOfEquipmentSchema.model_validate(l) for l in levels_of_equipment
+                    LevelOfEquipmentSchema.model_validate(l)
+                    for l in levels_of_equipment
                 ],
                 "intended_user_types": [
                     EndUserTypeSchema.model_validate(u) for u in intended_user_types
@@ -60,7 +61,7 @@ class FinalSupplyEquipmentServices:
             logger.error("Error getting FSE options", error=str(e))
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Error retrieving FSE options"
+                detail="Error retrieving FSE options",
             )
 
     async def convert_to_fse_model(self, fse: FinalSupplyEquipmentCreateSchema):
@@ -298,14 +299,16 @@ class FinalSupplyEquipmentServices:
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
-        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
-            compliance_report_id,
+        compliance_report = (
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id,
+            )
         )
 
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found for this period"
+                detail="Compliance report not found for this period",
             )
 
         return compliance_report
