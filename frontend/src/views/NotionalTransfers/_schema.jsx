@@ -1,18 +1,18 @@
-import BCTypography from '@/components/BCTypography'
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import i18n from '@/i18n'
 import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
   NumberEditor,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import BCTypography from '@/components/BCTypography'
 import { apiRoutes } from '@/constants/routes'
-import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
+import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
+import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 export const notionalTransferColDefs = (
   optionsData,
@@ -164,7 +164,7 @@ export const notionalTransferColDefs = (
   }
 ]
 
-export const notionalTransferSummaryColDefs = () => [
+export const notionalTransferSummaryColDefs = [
   {
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
     field: 'legalName',

@@ -1,25 +1,25 @@
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import BCTypography from '@/components/BCTypography'
+import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
   NumberEditor,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
+import BCTypography from '@/components/BCTypography'
+import { apiRoutes } from '@/constants/routes'
 import i18n from '@/i18n'
-import { actions, validation } from '@/components/BCDataGrid/columns'
+import colors from '@/themes/base/colors'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
 } from '@/utils/fuelTypeOther'
+import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import {
   StandardCellStyle,
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
-import { apiRoutes } from '@/constants/routes'
-import colors from '@/themes/base/colors'
-import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -485,7 +485,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   }
 ]
 
-export const fuelSupplySummaryColDef = (t) => [
+export const fuelSupplySummaryColDef = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
     field: 'complianceUnits',

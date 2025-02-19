@@ -538,7 +538,7 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
   }
 ]
 
-export const fuelExportSummaryColDefs = () => [
+export const fuelExportSummaryColDefs = [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',

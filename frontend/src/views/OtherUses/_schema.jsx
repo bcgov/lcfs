@@ -1,19 +1,19 @@
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AutocompleteCellEditor,
-  RequiredHeader,
-  NumberEditor
+  NumberEditor,
+  RequiredHeader
 } from '@/components/BCDataGrid/components'
-import i18n from '@/i18n'
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
+import i18n from '@/i18n'
+import colors from '@/themes/base/colors'
 import {
   decimalFormatter,
   formatNumberWithCommas as valueFormatter
 } from '@/utils/formatters'
-import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
-import colors from '@/themes/base/colors'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
+import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -303,7 +303,7 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
   }
 ]
 
-export const otherUsesSummaryColDefs = (t) => [
+export const otherUsesSummaryColDefs = [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
     field: 'fuelType',
@@ -337,20 +337,20 @@ export const otherUsesSummaryColDefs = (t) => [
     floatingFilter: false
   },
   {
-    headerName: t('otherUses:otherUsesColLabels.ciOfFuel'),
+    headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
     field: 'ciOfFuel',
     floatingFilter: false,
     valueFormatter: decimalFormatter
   },
   {
-    headerName: t('otherUses:otherUsesColLabels.expectedUse'),
+    headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
     field: 'expectedUse',
     floatingFilter: false,
     flex: 1,
     minWidth: 200
   },
   {
-    headerName: t('otherUses:otherUsesColLabels.otherExpectedUse'),
+    headerName: i18n.t('otherUses:otherUsesColLabels.otherExpectedUse'),
     field: 'rationale',
     floatingFilter: false,
     flex: 1,
