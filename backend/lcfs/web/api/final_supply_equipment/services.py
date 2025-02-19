@@ -54,7 +54,7 @@ class FinalSupplyEquipmentServices:
                 "intended_user_types": [
                     EndUserTypeSchema.model_validate(u) for u in intended_user_types
                 ],
-                "ports": [port.value for port in ports],
+                "ports": ports,
                 "organization_names": organization_names,
             }
         except Exception as e:
