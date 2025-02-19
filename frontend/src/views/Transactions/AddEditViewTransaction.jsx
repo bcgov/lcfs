@@ -53,6 +53,10 @@ import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
 } from '@/views/Transactions/constants'
+import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog.jsx'
+import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary.jsx'
+import { useTransactionDocuments } from '@/hooks/useTransactions.js'
+import TransactionDocuments from '@/views/Transactions/components/Documents.jsx'
 
 export const AddEditViewTransaction = () => {
   const queryClient = useQueryClient()
@@ -70,12 +74,14 @@ export const AddEditViewTransaction = () => {
   const [modalData, setModalData] = useState(null)
   const mode = matches[matches.length - 1]?.handle?.mode
   const { transactionId } = useParams()
-  const { data: currentUser, hasRoles, hasAnyRole } = useCurrentUser()
+  const { hasRoles, hasAnyRole } = useCurrentUser()
   const [steps, setSteps] = useState(['Draft', 'Recommended', 'Approved'])
   const alertRef = useRef()
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [internalComment, setInternalComment] = useState('')
+
+  const [isFileDialogOpen, setFileDialogOpen] = useState(false)
 
   const { handleSuccess, handleError } = useTransactionMutation(
     t,
@@ -152,6 +158,11 @@ export const AddEditViewTransaction = () => {
       ? ADMIN_ADJUSTMENT
       : INITIATIVE_AGREEMENT
   }
+
+  const { data: documentData, isLoading: documentsLoading } =
+    useTransactionDocuments(transactionId, txnType, {
+      enabled: !!transactionId && !!txnType
+    })
 
   // Conditionally fetch data if in edit mode and txnType is set
   const transactionDataHook =
@@ -348,7 +359,6 @@ export const AddEditViewTransaction = () => {
         <BCTypography variant="h5" color="primary">
           {title}
         </BCTypography>
-
         {/* Progress bar */}
         <BCBox
           sx={{
@@ -379,7 +389,6 @@ export const AddEditViewTransaction = () => {
             })}
           </Stepper>
         </BCBox>
-
         {/* Transaction Details */}
         {isEditable ? (
           <TransactionDetails
@@ -389,7 +398,6 @@ export const AddEditViewTransaction = () => {
         ) : (
           <TransactionView transaction={transactionData} />
         )}
-
         {/* Comments */}
         {!(isApproved || (isRecommended && hasAnyRole(roles.analyst))) && (
           <Comments
@@ -397,28 +405,31 @@ export const AddEditViewTransaction = () => {
             commentField={'govComment'}
           />
         )}
-
+        {/* Documents */}
+        {isEditable && transactionId && (
+          <TransactionDocuments parentType={txnType} parentID={transactionId} />
+        )}
         {/* Internal Comments */}
-        <BCBox mt={4}>
-          <BCTypography variant="h6" color="primary">
-            {t(`txn:internalCommentsOptional`)}
-          </BCTypography>
-          <BCBox>
-            <Role roles={govRoles}>
-              <InternalComments
-                entityType={txnType}
-                entityId={transactionId ?? null}
-                onCommentChange={handleCommentChange}
-              />
-            </Role>
+        {transactionId && (
+          <BCBox mt={4}>
+            <BCTypography variant="h6" color="primary">
+              {t(`txn:internalCommentsOptional`)}
+            </BCTypography>
+            <BCBox>
+              <Role roles={govRoles}>
+                <InternalComments
+                  entityType={txnType}
+                  entityId={transactionId ?? null}
+                  onCommentChange={handleCommentChange}
+                />
+              </Role>
+            </BCBox>
           </BCBox>
-        </BCBox>
-
+        )}
         {/* Transaction History */}
         {transactionId && (
           <TransactionHistory transactionHistory={transactionData?.history} />
         )}
-
         {/* Buttons */}
         <Stack
           component="div"
@@ -468,6 +479,14 @@ export const AddEditViewTransaction = () => {
           )}
         </Stack>
       </BCBox>
+      <DocumentUploadDialog
+        parentID={transactionId}
+        parentType={txnType}
+        open={isFileDialogOpen}
+        close={() => {
+          setFileDialogOpen(false)
+        }}
+      />
     </FormProvider>
   )
 }

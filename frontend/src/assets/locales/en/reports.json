@@ -131,7 +131,9 @@
   "errorRetrieving": "Error retrieving the record",
   "renewableFuelTarget": "Renewable fuel target",
   "lowCarbonFuelTarget": "Low carbon fuel target",
+  "part2RenewableFuelTargetSummary": "Part 2 - Renewable fuel target summary",
   "renewableFuelTargetSummary": "Renewable fuel target summary",
+  "part3LowCarbonFuelTargetSummary": "Part 3 - Low carbon fuel target summary",
   "lowCarbonFuelTargetSummary": "Low carbon fuel target summary",
   "nonCompliancePenaltySummary": "Non-compliance penalty payable summary",
   "delta": "Delta",
@@ -166,12 +168,16 @@
   "summaryLabels": {
     "line": "Line",
     "value": "Value",
-    "totalValue": "Total Value"
+    "totalValue": "Total Value",
+    "units": "Units"
   },
   "summaryLoadingMsg": "Loading compliance report summary...",
   "noSigningAuthorityTooltip": "Cannot submit: Signing authority role required.",
   "noRecords": "Cannot submit: You must report fuel activity information (FSE data alone is not sufficient)",
   "invalidAddress": "Cannot submit: Please fill out all required address fields",
   "addressEdited": " - edited",
-  "viewLegacyBtn": "View Full Historical Report in TFRS"
+  "viewLegacyBtn": "View Full Historical Report in TFRS",
+  "reportAssessed": "Compliance report, Assessed",
+  "changelog": "Change log",
+  "documentLabel": "Add file attachments (maximum file size: 50 MB):"
 }

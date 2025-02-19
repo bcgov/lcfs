@@ -85,7 +85,7 @@ export const ComplianceReports = () => {
       cellRenderer: LinkRenderer,
       cellRendererParams: {
         url: (data) =>
-          `${data.data.compliancePeriod.description}/${data.data.complianceReportId}`
+          `${data.data.compliancePeriod}/${data.data.complianceReportId}`
       }
     }),
     []

@@ -1,15 +1,14 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema.jsx'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
-import i18n from '@/i18n'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const FuelExportSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -54,77 +53,6 @@ export const FuelExportSummary = ({ data, status }) => {
     [status]
   )
 
-  // TODO: The values for the following columns must be determined
-  const columns = useMemo(
-    () => [
-      {
-        headerName: t('fuelExport:fuelExportColLabels.complianceUnits'),
-        field: 'complianceUnits',
-        valueFormatter
-      },
-      {
-        headerName: t('fuelExport:fuelExportColLabels.exportDate'),
-        field: 'exportDate'
-      },
-      {
-        headerName: t('fuelExport:fuelExportColLabels.fuelTypeId'),
-        field: 'fuelType',
-        valueGetter: (params) => params.data.fuelType?.fuelType
-      },
-      {
-        headerName: t('fuelExport:fuelExportColLabels.fuelCategoryId'),
-        field: 'fuelCategory',
-        valueGetter: (params) => params.data.fuelCategory?.category
-      },
-      {
-        headerName: t('fuelExport:fuelExportColLabels.endUseId'),
-        field: 'endUse',
-        valueGetter: (params) => params.data.endUseType?.type || 'Any'
-      },
-      {
-        headerName: t(
-          'fuelExport:fuelExportColLabels.determiningCarbonIntensity'
-        ),
-        field: 'determiningCarbonIntensity',
-        valueGetter: (params) => params.data.provisionOfTheAct?.name
-      },
-      {
-        headerName: t('fuelExport:fuelExportColLabels.fuelCode'),
-        field: 'fuelCode',
-        valueGetter: (params) => params.data.fuelCode?.fuelCode
-      },
-      {
-        headerName: t('fuelExport:fuelExportColLabels.quantity'),
-        field: 'quantity',
-        valueFormatter
-      },
-      { headerName: t('fuelExport:fuelExportColLabels.units'), field: 'units' },
-      {
-        headerName: t('fuelExport:fuelExportColLabels.targetCI'),
-        field: 'targetCi'
-      },
-      {
-        headerName: t('fuelExport:fuelExportColLabels.ciOfFuel'),
-        field: 'ciOfFuel'
-      },
-      {
-        field: 'uci',
-        headerName: i18n.t('fuelExport:fuelExportColLabels.uci')
-      },
-      {
-        headerName: t('fuelExport:fuelExportColLabels.energyDensity'),
-        field: 'energyDensity'
-      },
-      { headerName: t('fuelExport:fuelExportColLabels.eer'), field: 'eer' },
-      {
-        headerName: t('fuelExport:fuelExportColLabels.energy'),
-        field: 'energy',
-        valueFormatter
-      }
-    ],
-    [t]
-  )
-
   const getRowId = (params) => {
     return params.data.fuelExportId.toString()
   }
@@ -145,7 +73,7 @@ export const FuelExportSummary = ({ data, status }) => {
           query={useGetFuelExports}
           dataKey={'fuelExports'}
           queryParams={{ complianceReportId }}
-          columnDefs={columns}
+          columnDefs={fuelExportSummaryColDefs}
           getRowId={getRowId}
           gridOptions={gridOptions}
           enableCopyButton={false}

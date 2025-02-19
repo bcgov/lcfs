@@ -16,6 +16,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'
 import { ROUTES } from '@/constants/routes'
+import { ROUTES as ROUTES2 } from '@/routes/routes'
 import { roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
 import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary'
@@ -31,27 +32,40 @@ import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
-import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
+import {
+  useComplianceReportDocuments,
+  useGetComplianceReport
+} from '@/hooks/useComplianceReports'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { isArrayEmpty } from '@/utils/array.js'
 
 const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
+  const { data: currentUser, hasRoles } = useCurrentUser()
+
+  const { data: complianceReportData } = useGetComplianceReport(
+    currentUser?.organization?.organizationId,
+    complianceReportId
+  )
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
-  const isAnalystRole =
-    userRoles.some((role) => role.name === roles.analyst) || false
-  const isSupplierRole =
-    userRoles.some((role) => role.name === roles.supplier) || false
+  const isAnalystRole = hasRoles('Analyst')
+  const isSupplierRole = hasRoles('Supplier')
+  const isGovernmentRole = hasRoles('Government')
 
   const editSupportingDocs = useMemo(() => {
     return (
-      isAnalystRole &&
-      (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
-        currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED)
+      // Allow BCeID users to edit in Draft status
+      (isSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) ||
+      // Allow analysts to edit in Submitted or Assessed status
+      (isAnalystRole &&
+        (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
+          currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED))
     )
-  }, [isAnalystRole, currentStatus])
+  }, [isAnalystRole, isSupplierRole, currentStatus])
 
   const editAnalyst = useMemo(() => {
     return (
@@ -69,20 +83,21 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
     }
     return editAnalyst || editSupplier
   }
-
-  const isArrayEmpty = useCallback((data) => {
-    if (Array.isArray(data)) {
-      return data.length === 0
+  const shouldShowChangelogButton = (activityName) => {
+    if (complianceReportData.report.version === 0) {
+      return false
     }
-    if (typeof data === 'object' && data !== null) {
-      const keys = Object.keys(data)
-      const arrayKey = keys.find((key) => key !== 'pagination')
-      if (arrayKey && Array.isArray(data[arrayKey])) {
-        return data[arrayKey].length === 0
-      }
-    }
-    return null
-  }, [])
+    return (
+      (isGovernmentRole || isSupplierRole) &&
+      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED &&
+      [
+        t('report:activityLists.supplyOfFuel'),
+        t('report:activityLists.notionalTransfers'),
+        t('otherUses:summaryTitle'),
+        t('fuelExport:fuelExportTitle')
+      ].includes(activityName)
+    )
+  }
 
   const activityList = useMemo(
     () => [
@@ -96,8 +111,9 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         component: (data) => (
           <>
             <SupportingDocumentSummary
+              parentType="compliance_report"
+              parentID={complianceReportId}
               data={data}
-              reportID={complianceReportId}
             />
             <DocumentUploadDialog
               parentID={complianceReportId}
@@ -124,7 +140,11 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         component: (data) =>
           data.fuelSupplies.length > 0 && (
             <FuelSupplySummary status={currentStatus} data={data} />
-          )
+          ),
+        changelogRoute: ROUTES2.REPORTS.CHANGELOG.SUPPLY_OF_FUEL.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
       },
       {
         name: t('finalSupplyEquipment:fseTitle'),
@@ -169,7 +189,11 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         component: (data) =>
           data.length > 0 && (
             <NotionalTransferSummary status={currentStatus} data={data} />
-          )
+          ),
+        changelogRoute: ROUTES2.REPORTS.CHANGELOG.NOTIONAL_TRANSFERS.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
       },
       {
         name: t('otherUses:summaryTitle'),
@@ -184,7 +208,11 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         component: (data) =>
           data.length > 0 && (
             <OtherUsesSummary status={currentStatus} data={data} />
-          )
+          ),
+        changelogRoute: ROUTES2.REPORTS.CHANGELOG.OTHER_USE_FUELS.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
       },
       {
         name: t('fuelExport:fuelExportTitle'),
@@ -199,15 +227,20 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         component: (data) =>
           !isArrayEmpty(data) && (
             <FuelExportSummary status={currentStatus} data={data} />
-          )
+          ),
+        changelogRoute: ROUTES2.REPORTS.CHANGELOG.FUEL_EXPORTS.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
       }
     ],
     [
-      currentStatus,
       t,
-      navigate,
       compliancePeriod,
       complianceReportId,
+      isFileDialogOpen,
+      navigate,
+      currentStatus,
       isArrayEmpty
     ]
   )
@@ -263,12 +296,12 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
       </BCTypography>
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
-        const isSupportingDocs = activity.name === t('report:supportingDocs')
         return (
-          ((data && !isArrayEmpty(data)) && (
+          data &&
+          !isArrayEmpty(data) && (
             <Accordion
               key={index}
-              expanded={isSupportingDocs || expanded.includes(`panel${index}`)}
+              expanded={expanded.includes(`panel${index}`)}
               onChange={onExpand(`panel${index}`)}
             >
               <AccordionSummary
@@ -286,28 +319,36 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
                   component="div"
                 >
                   {activity.name}&nbsp;&nbsp;
-                  {shouldShowEditIcon(activity.name) && (
+                  {shouldShowChangelogButton(activity.name) && (
                     <>
-                      <Role
-                        roles={[
-                          roles.supplier,
-                          roles.compliance_reporting,
-                          roles.analyst
-                        ]}
+                      |
+                      <Link
+                        component="button"
+                        variant="body2"
+                        onClick={() => navigate(activity.changelogRoute)}
+                        sx={{ ml: 2, mr: 1, textDecoration: 'underline' }}
                       >
-                        <IconButton
-                          color="primary"
-                          size="small"
-                          aria-label="edit"
-                          onClick={activity.action}
-                        >
-                          <FontAwesomeIcon
-                            className="small-icon"
-                            icon={faPen}
-                          />
-                        </IconButton>
-                      </Role>
+                        {t('report:changelog')}
+                      </Link>
                     </>
+                  )}
+                  {shouldShowEditIcon(activity.name) && (
+                    <Role
+                      roles={[
+                        roles.supplier,
+                        roles.compliance_reporting,
+                        roles.analyst
+                      ]}
+                    >
+                      <IconButton
+                        color="primary"
+                        size="small"
+                        aria-label="edit"
+                        onClick={activity.action}
+                      >
+                        <FontAwesomeIcon className="small-icon" icon={faPen} />
+                      </IconButton>
+                    </Role>
                   )}
                 </BCTypography>
               </AccordionSummary>
@@ -323,7 +364,6 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
                 )}
               </AccordionDetails>
             </Accordion>
-            )
           )
         )
       })}

@@ -59,7 +59,9 @@ async def test_export_success():
     assert response.media_type == "text/csv"
     assert "attachment; filename=" in response.headers["Content-Disposition"]
     repo_mock.get_fuel_codes_paginated.assert_called_once_with(
-        pagination=PaginationRequestSchema(page=1, size=1000, filters=[], sortOrders=[])
+        pagination=PaginationRequestSchema(
+            page=1, size=1000, filters=[], sort_orders=[]
+        )
     )
 
     # Verify file content

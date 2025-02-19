@@ -1,11 +1,11 @@
-from typing import ClassVar, Optional, List
 from datetime import date
+from enum import Enum
+from typing import Optional, List
+
+from pydantic import Field
 
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
-from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
-from pydantic import Field
-from enum import Enum
 
 
 class LevelOfEquipmentSchema(BaseSchema):
@@ -49,6 +49,29 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     longitude: float
     notes: Optional[str] = None
     deleted: Optional[bool] = None
+
+
+class FinalSupplyEquipmentSchema(BaseSchema):
+    final_supply_equipment_id: int
+    compliance_report_id: int
+    organization_name: str
+    supply_from_date: date
+    supply_to_date: date
+    registration_nbr: str
+    kwh_usage: Optional[float] = None
+    serial_nbr: str
+    manufacturer: str
+    model: Optional[str] = None
+    level_of_equipment: LevelOfEquipmentSchema
+    ports: Optional[PortsEnum] = None
+    intended_use_types: List[EndUseTypeSchema]
+    intended_user_types: List[EndUserTypeSchema]
+    street_address: str
+    city: str
+    postal_code: str
+    latitude: float
+    longitude: float
+    notes: Optional[str] = None
 
 
 class DeleteFinalSupplyEquipmentResponseSchema(BaseSchema):

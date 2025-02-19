@@ -182,7 +182,8 @@ const SummaryTable = ({
                       style={{
                         fontWeight:
                           column.bold ||
-                          (column.id === 'description' && !row.line)
+                          (column.id === 'description' && !row.line) ||
+                          row.bold
                             ? 'bold'
                             : 'normal',
                         whiteSpace: 'nowrap',

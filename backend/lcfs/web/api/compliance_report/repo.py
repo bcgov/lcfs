@@ -1,20 +1,18 @@
 from collections import defaultdict
 from datetime import datetime
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, Tuple
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import func, select, and_, asc, desc, update
+from sqlalchemy import func, select, and_, asc, desc, update, or_, String, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager, aliased
+from sqlalchemy.inspection import inspect
 
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models.compliance import CompliancePeriod
+from lcfs.db.models.compliance import CompliancePeriod, ComplianceReportListView
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
-from lcfs.db.models.compliance.ComplianceReport import (
-    ComplianceReport,
-    ReportingFrequency,
-)
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
@@ -37,6 +35,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
+    ComplianceReportViewSchema,
     ComplianceReportSummaryUpdateSchema,
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
@@ -57,27 +56,6 @@ class ComplianceReportRepository:
     def apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
             filter_value = filter.filter
-
-            filter_option = filter.type
-            filter_type = filter.filter_type
-            if filter.field == "organization":
-                field = get_field_for_filter(Organization, "name")
-                conditions.append(
-                    apply_filter_conditions(
-                        field, filter_value, filter_option, filter_type
-                    )
-                )
-            elif filter.field == "compliance_period":
-                field = get_field_for_filter(CompliancePeriod, "description")
-                conditions.append(
-                    apply_filter_conditions(
-                        field, filter_value, filter_option, filter_type
-                    )
-                )
-
-    def apply_sub_filters(self, pagination, conditions):
-        for filter in pagination.filters:
-            filter_value = filter.filter
             # check if the date string is selected for filter
             if filter.filter is None:
                 filter_value = [
@@ -94,25 +72,38 @@ class ComplianceReportRepository:
             filter_option = filter.type
             filter_type = filter.filter_type
             if filter.field == "status":
-                field = get_field_for_filter(ComplianceReportStatus, filter.field)
+                field = cast(
+                    get_field_for_filter(
+                        ComplianceReportListView, "report_status"),
+                    String,
+                )
+                # Check if filter_value is a comma-separated string
+                if isinstance(filter_value, str) and "," in filter_value:
+                    filter_value = filter_value.split(",")  # Convert to list
                 if isinstance(filter_value, list):
-                    filter_value = [
-                        ComplianceReportStatusEnum(value) for value in filter_value
-                    ]
+                    filter_value = [value.replace(" ", "_")
+                                    for value in filter_value]
                     filter_type = "set"
                 else:
-                    filter_value = ComplianceReportStatusEnum(filter_value)
-            elif filter.field == "organization":
-                continue
+                    filter_value = filter_value.replace(" ", "_")
             elif filter.field == "type":
-                field = get_field_for_filter(ComplianceReport, "nickname")
+                field = get_field_for_filter(
+                    ComplianceReportListView, "report_type")
+            elif filter.field == "organization":
+                field = get_field_for_filter(
+                    ComplianceReportListView, "organization_name"
+                )
             elif filter.field == "compliance_period":
-                continue
+                field = get_field_for_filter(
+                    ComplianceReportListView, "compliance_period"
+                )
             else:
-                field = get_field_for_filter(ComplianceReport, filter.field)
+                field = get_field_for_filter(
+                    ComplianceReportListView, filter.field)
 
             conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
+                apply_filter_conditions(
+                    field, filter_value, filter_option, filter_type)
             )
 
     @repo_handler
@@ -167,7 +158,8 @@ class ComplianceReportRepository:
         Retrieve a compliance period from the database
         """
         result = await self.db.scalar(
-            select(CompliancePeriod).where(CompliancePeriod.description == period)
+            select(CompliancePeriod).where(
+                CompliancePeriod.description == period)
         )
         return result
 
@@ -206,7 +198,8 @@ class ComplianceReportRepository:
         Retrieve the compliance report status ID from the database based on the description.
         Replaces spaces with underscores in the status description.
         """
-        status_enum = status.replace(" ", "_")  # frontend sends status with spaces
+        status_enum = status.replace(
+            " ", "_")  # frontend sends status with spaces
         result = await self.db.execute(
             select(ComplianceReportStatus).where(
                 ComplianceReportStatus.status
@@ -358,121 +351,71 @@ class ComplianceReportRepository:
         """
         # Base query conditions
         conditions = []
-        sub_conditions = []
+        if organization_id:
+            cr_alias = aliased(ComplianceReport)
+
+            # Subquery: Get latest version for each compliance_report_group_uuid (only for the given organization)
+            latest_versions = (
+                select(
+                    cr_alias.compliance_report_group_uuid,
+                    func.max(cr_alias.version).label("max_version"),
+                )
+                .where(
+                    cr_alias.organization_id == organization_id
+                )  # Filter by organization
+                .group_by(cr_alias.compliance_report_group_uuid)
+                .subquery()
+            )
+
+            # Main query: Join compliance report view with the latest versions subquery
+            query = select(ComplianceReportListView).join(
+                latest_versions,
+                (
+                    ComplianceReportListView.compliance_report_group_uuid
+                    == latest_versions.c.compliance_report_group_uuid
+                )
+                & (ComplianceReportListView.version == latest_versions.c.max_version),
+            )
+        else:
+            query = select(ComplianceReportListView).where(
+                cast(ComplianceReportListView.report_status, String)
+                != ComplianceReportStatusEnum.Draft.value
+            )
 
         if pagination.filters and len(pagination.filters) > 0:
-            self.apply_sub_filters(pagination, sub_conditions)
             self.apply_filters(pagination, conditions)
 
         # Pagination and offset setup
-        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
+        offset = 0 if (pagination.page < 1) else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
 
         # Build the main query
-        latest_version_subquery = select(
-            ComplianceReport.compliance_report_group_uuid,
-            func.max(ComplianceReport.version).label("latest_version"),
-        ).group_by(ComplianceReport.compliance_report_group_uuid)
-        if organization_id:
-            latest_version_subquery = latest_version_subquery.where(
-                ComplianceReport.organization_id == organization_id
-            )
-        else:
-            latest_version_subquery = latest_version_subquery.join(
-                ComplianceReportStatus,
-                ComplianceReport.current_status_id
-                == ComplianceReportStatus.compliance_report_status_id,
-            ).where(ComplianceReportStatus.status != ComplianceReportStatusEnum.Draft)
-        latest_version_subquery = latest_version_subquery.subquery()
-        cr_alias = aliased(ComplianceReport)
-
-        subquery = (
-            select(
-                cr_alias.compliance_report_group_uuid,
-                cr_alias.version.label("latest_version"),
-            )
-            .join(
-                latest_version_subquery,
-                and_(
-                    cr_alias.compliance_report_group_uuid
-                    == latest_version_subquery.c.compliance_report_group_uuid,
-                    cr_alias.version == latest_version_subquery.c.latest_version,
-                ),
-            )
-            .join(
-                ComplianceReportStatus,
-                cr_alias.current_status_id
-                == ComplianceReportStatus.compliance_report_status_id,
-            )
-            .where(and_(*sub_conditions))
-        )
-
-        subquery = subquery.subquery()
-        # Join the main ComplianceReport table with the subquery to get the latest version per group
-        query = (
-            select(
-                ComplianceReport,
-                CompliancePeriod.compliance_period_id,
-                ComplianceReport.update_date,
-            )
-            .join(
-                subquery,
-                and_(
-                    ComplianceReport.compliance_report_group_uuid
-                    == subquery.c.compliance_report_group_uuid,
-                    ComplianceReport.version == subquery.c.latest_version,
-                ),
-            )
-            .join(
-                Organization,
-                ComplianceReport.organization_id == Organization.organization_id,
-            )
-            .join(
-                CompliancePeriod,
-                ComplianceReport.compliance_period_id
-                == CompliancePeriod.compliance_period_id,
-            )
-            .where(and_(*conditions))
-            .options(
-                contains_eager(ComplianceReport.organization),
-                contains_eager(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history)
-                .joinedload(ComplianceReportHistory.user_profile)
-                .joinedload(UserProfile.organization),
-            )
-            .distinct()
-            .order_by(
-                desc(CompliancePeriod.compliance_period_id),
-                desc(ComplianceReport.update_date),
-            )
-        )
+        query = query.where(and_(*conditions))
 
         # Apply sorting from pagination
         if len(pagination.sort_orders) < 1:
-            field = get_field_for_filter(ComplianceReport, "update_date")
+            field = get_field_for_filter(
+                ComplianceReportListView, "update_date")
             query = query.order_by(desc(field))
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
             if order.field == "status":
-                order.field = get_field_for_filter(ComplianceReportStatus, "status")
-                query = query.join(
-                    ComplianceReportStatus,
-                    ComplianceReport.current_status_id
-                    == ComplianceReportStatus.compliance_report_status_id,
+                order.field = get_field_for_filter(
+                    ComplianceReportListView, "report_status"
                 )
-            elif order.field == "compliance_period":
-                order.field = get_field_for_filter(CompliancePeriod, "description")
             elif order.field == "organization":
-                order.field = get_field_for_filter(Organization, "name")
+                order.field = get_field_for_filter(
+                    ComplianceReportListView, "organization_name"
+                )
             elif order.field == "type":
-                order.field = get_field_for_filter(ComplianceReport, "nickname")
+                order.field = get_field_for_filter(
+                    ComplianceReportListView, "report_type"
+                )
             else:
-                order.field = get_field_for_filter(ComplianceReport, order.field)
+                order.field = get_field_for_filter(
+                    ComplianceReportListView, order.field
+                )
             query = query.order_by(sort_method(order.field))
 
         # Execute query with offset and limit for pagination
@@ -488,7 +431,7 @@ class ComplianceReportRepository:
 
         # Transform results into Pydantic schemas
         reports = [
-            ComplianceReportBaseSchema.model_validate(report) for report in query_result
+            ComplianceReportViewSchema.model_validate(report) for report in query_result
         ]
         return reports, total_count
 
@@ -543,7 +486,8 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.transaction),
             )
             .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
-            .order_by(ComplianceReport.version.desc())  # Ensure ordering by version
+            # Ensure ordering by version
+            .order_by(ComplianceReport.version.desc())
         )
 
         compliance_reports = result.scalars().unique().all()
@@ -654,7 +598,8 @@ class ComplianceReportRepository:
             summary_obj = existing_summary
         else:
             raise ValueError(
-                f"No summary found with report ID {summary.compliance_report_id}"
+                f"""No summary found with report ID {
+                    summary.compliance_report_id}"""
             )
 
         summary_obj.is_locked = summary.is_locked
@@ -662,7 +607,8 @@ class ComplianceReportRepository:
         for row in summary.renewable_fuel_target_summary:
             line_number = row.line
             for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
-                column_name = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
+                column_name = f"""line_{line_number}_{
+                    row.field.lower()}_{fuel_type}"""
                 setattr(summary_obj, column_name, int(getattr(row, fuel_type)))
 
         # Update low carbon fuel target summary
@@ -785,13 +731,15 @@ class ComplianceReportRepository:
                 isinstance(record, FuelSupply)
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
-                fuel_category = self._format_category(record.fuel_category.category)
+                fuel_category = self._format_category(
+                    record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity
             elif (
                 isinstance(record, OtherUses)
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
-                fuel_category = self._format_category(record.fuel_category.category)
+                fuel_category = self._format_category(
+                    record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity_supplied
 
         return dict(fuel_quantities)
@@ -928,3 +876,89 @@ class ComplianceReportRepository:
             .where(ComplianceReport.legacy_id == legacy_id)
         )
         return result.scalars().unique().first()
+
+    @repo_handler
+    async def get_compliance_report_group_id(self, report_id):
+        """
+        Retrieve the compliance report group ID
+        """
+        result = await self.db.scalar(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == report_id
+            )
+        )
+        return result
+
+    @repo_handler
+    async def get_changelog_data(
+        self,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int,
+        selection
+    ):
+
+        conditions = [selection.compliance_report_id == compliance_report_id]
+        offset = 0 if pagination.page < 1 else (
+            pagination.page - 1) * pagination.size
+        limit = pagination.size
+
+        # Create an alias for the previous version row.
+        prev_alias = aliased(selection)
+
+        # Dynamically load all relationships for the selection model.
+        mapper = inspect(selection)
+        relationship_options = [
+            joinedload(getattr(selection, rel.key)) for rel in mapper.relationships
+        ]
+        # Create relationship options for the aliased model as well.
+        relationship_options_prev = [
+            joinedload(getattr(prev_alias, rel.key)) for rel in mapper.relationships
+        ]
+
+        # Build a query that retrieves each current record along with its previous version (if any)
+        stmt = (
+            select(selection, prev_alias)
+            .outerjoin(
+                prev_alias,
+                and_(
+                    prev_alias.group_uuid == selection.group_uuid,
+                    prev_alias.version == selection.version - 1,
+                ),
+            )
+            .options(*(relationship_options + relationship_options_prev))
+            .where(and_(*conditions))
+            .order_by(selection.create_date.asc())
+            .offset(offset)
+            .limit(limit)
+        )
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        changelog = []
+        for current, previous in rows:
+            changelog.append(current)
+            if current.action_type.value.upper() == "UPDATE" and previous is not None:
+                previous.action_type = "UPDATE"
+                changelog.append(previous)
+
+        total_count = len(changelog)
+
+        return changelog, total_count
+
+    async def get_previous_summary(
+        self, compliance_report: ComplianceReport
+    ) -> ComplianceReportSummary:
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.summary),
+            )
+            .where(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report.compliance_report_group_uuid,
+                ComplianceReport.version == compliance_report.version - 1,
+            )
+            .limit(1)
+        )
+        return result.scalars().first().summary

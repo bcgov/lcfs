@@ -123,6 +123,50 @@ class PaginatedOtherUsesRequestSchema(BaseSchema):
     sort_orders: List[SortOrder]
 
 
+class OtherUsesChangelogFuelTypeSchema(BaseSchema):
+    fuel_type_id: int
+    fuel_type: str
+    fossil_derived: Optional[bool] = None
+    provision_1_id: Optional[int] = None
+    provision_2_id: Optional[int] = None
+    default_carbon_intensity: Optional[float] = None
+    units: FuelTypeQuantityUnitsEnumSchema
+
+
+class OtherUsesDiffSchema(BaseSchema):
+    fuel_type: Optional[bool] = None
+    fuel_category: Optional[bool] = None
+    provision_of_the_act: Optional[bool] = None
+    fuel_code: Optional[bool] = None
+    quantity_supplied: Optional[bool] = None
+    units: Optional[bool] = None
+    ci_of_fuel: Optional[bool] = None
+    expected_use: Optional[bool] = None
+    rationale: Optional[bool] = None
+
+
+class OtherUsesChangelogSchema(BaseSchema):
+    other_uses_id: Optional[int] = None
+    compliance_report_id: int
+    fuel_type: OtherUsesChangelogFuelTypeSchema
+    fuel_category: FuelCategorySchema
+    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
+    quantity_supplied: int
+    units: str
+    expected_use: ExpectedUseTypeSchema
+    fuel_code: Optional[FuelCodeSchema] = None
+    ci_of_fuel: Optional[float] = None
+    rationale: Optional[str] = None
+    deleted: Optional[bool] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    user_type: Optional[str] = None
+    action_type: Optional[str] = None
+
+    diff: Optional[OtherUsesDiffSchema] = None
+    updated: Optional[bool] = None
+
+
 class OtherUsesListSchema(BaseSchema):
     other_uses: List[OtherUsesSchema]
     pagination: PaginationResponseSchema

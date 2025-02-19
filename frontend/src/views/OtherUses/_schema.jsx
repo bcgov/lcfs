@@ -1,14 +1,19 @@
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AutocompleteCellEditor,
-  RequiredHeader,
-  NumberEditor
+  NumberEditor,
+  RequiredHeader
 } from '@/components/BCDataGrid/components'
-import i18n from '@/i18n'
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import i18n from '@/i18n'
+import colors from '@/themes/base/colors'
+import {
+  decimalFormatter,
+  formatNumberWithCommas as valueFormatter
+} from '@/utils/formatters'
+import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -298,6 +303,61 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
   }
 ]
 
+export const otherUsesSummaryColDefs = [
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
+    field: 'fuelType',
+    floatingFilter: false,
+    width: '260px'
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
+    field: 'fuelCategory',
+    floatingFilter: false
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.provisionOfTheAct'),
+    field: 'provisionOfTheAct',
+    floatingFilter: false
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
+    field: 'fuelCode',
+    floatingFilter: false
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
+    field: 'quantitySupplied',
+    floatingFilter: false,
+    valueFormatter
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.units'),
+    field: 'units',
+    floatingFilter: false
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
+    field: 'ciOfFuel',
+    floatingFilter: false,
+    valueFormatter: decimalFormatter
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
+    field: 'expectedUse',
+    floatingFilter: false,
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.otherExpectedUse'),
+    field: 'rationale',
+    floatingFilter: false,
+    flex: 1,
+    minWidth: 200
+  }
+]
+
 export const defaultColDef = {
   editable: true,
   resizable: true,
@@ -305,4 +365,130 @@ export const defaultColDef = {
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true
+}
+
+export const changelogCommonColDefs = [
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
+    field: 'fuelType',
+    valueGetter: (params) =>
+      params.data.fuelType?.fuelType || params.data.fuelType,
+    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
+    field: 'fuelCategory',
+    valueGetter: (params) =>
+      params.data.fuelCategory?.category || params.data.fuelCategory,
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.provisionOfTheAct'),
+    field: 'provisionOfTheAct',
+    valueGetter: (params) =>
+      params.data.provisionOfTheAct?.name || params.data.provisionOfTheAct,
+    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
+    field: 'fuelCode',
+    valueGetter: (params) => params.data.endUseType?.type || 'Any',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCode')
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
+    field: 'quantitySupplied',
+    valueFormatter,
+    cellStyle: (params) => changelogCellStyle(params, 'quantitySupplied')
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.units'),
+    field: 'units',
+    cellStyle: (params) => changelogCellStyle(params, 'units')
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
+    field: 'ciOfFuel',
+    valueFormatter,
+    cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
+    field: 'expectedUse',
+    valueGetter: (params) =>
+      params.data.expectedUse?.name || params.data.expectedUse,
+    cellStyle: (params) => changelogCellStyle(params, 'expectedUse')
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.otherExpectedUse'),
+    field: 'rationale',
+
+    cellStyle: (params) => changelogCellStyle(params, 'rationale')
+  }
+]
+
+export const changelogColDefs = [
+  {
+    field: 'groupUuid',
+    hide: true,
+    sort: 'desc',
+    sortIndex: 1
+  },
+  { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
+  {
+    field: 'actionType',
+    valueGetter: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        if (params.data.updated) {
+          return 'Edited old'
+        } else {
+          return 'Edited new'
+        }
+      }
+      if (params.data.actionType === 'DELETE') {
+        return 'Deleted'
+      }
+      if (params.data.actionType === 'CREATE') {
+        return 'Added'
+      }
+    },
+    cellStyle: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        return { backgroundColor: colors.alerts.warning.background }
+      }
+    }
+  },
+  ...changelogCommonColDefs
+]
+
+export const changelogDefaultColDefs = {
+  floatingFilter: false,
+  filter: false
+}
+
+export const changelogCommonGridOptions = {
+  overlayNoRowsTemplate: i18n.t('otherUses:noOtherUsesFound'),
+  autoSizeStrategy: {
+    type: 'fitCellContents',
+    defaultMinWidth: 50,
+    defaultMaxWidth: 600
+  },
+  enableCellTextSelection: true, // enables text selection on the grid
+  ensureDomOrder: true
+}
+
+export const changelogGridOptions = {
+  ...changelogCommonGridOptions,
+  getRowStyle: (params) => {
+    if (params.data.actionType === 'DELETE') {
+      return {
+        backgroundColor: colors.alerts.error.background
+      }
+    }
+    if (params.data.actionType === 'CREATE') {
+      return {
+        backgroundColor: colors.alerts.success.background
+      }
+    }
+  }
 }

@@ -1,14 +1,14 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { useGetNotionalTransfers } from '@/hooks/useNotionalTransfer'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema.jsx'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const NotionalTransferSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -39,38 +39,6 @@ export const NotionalTransferSummary = ({ data, status }) => {
     [status]
   )
 
-  const columns = [
-    {
-      headerName: t('notionalTransfer:notionalTransferColLabels.legalName'),
-      field: 'legalName',
-      flex: 1,
-      minWidth: 200
-    },
-    {
-      headerName: t(
-        'notionalTransfer:notionalTransferColLabels.addressForService'
-      ),
-      field: 'addressForService',
-      flex: 1,
-      minWidth: 200
-    },
-    {
-      headerName: t('notionalTransfer:notionalTransferColLabels.fuelCategory'),
-      field: 'fuelCategory'
-    },
-    {
-      headerName: t(
-        'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
-      ),
-      field: 'receivedOrTransferred'
-    },
-    {
-      headerName: t('notionalTransfer:notionalTransferColLabels.quantity'),
-      field: 'quantity',
-      valueFormatter
-    }
-  ]
-
   return (
     <Grid2 className="notional-transfer-container" mx={-1}>
       <div>
@@ -82,9 +50,9 @@ export const NotionalTransferSummary = ({ data, status }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          gridKey={'notional-transfers'}
+          gridKey="notional-transfers"
           getRowId={getRowId}
-          columnDefs={columns}
+          columnDefs={notionalTransferSummaryColDefs}
           defaultColDef={defaultColDef}
           query={useGetNotionalTransfers}
           queryParams={{ complianceReportId }}

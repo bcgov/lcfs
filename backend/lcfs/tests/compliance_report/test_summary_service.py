@@ -1,10 +1,10 @@
 from datetime import datetime
 from typing import List
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from lcfs.db.models import FuelSupply
+from lcfs.db.models import FuelSupply, ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryRowSchema,
@@ -20,7 +20,8 @@ async def test_calculate_low_carbon_fuel_target_summary(
     compliance_period_start = datetime(2024, 1, 1)
     compliance_period_end = datetime(2024, 12, 31)
     organization_id = 1
-    report_id = 1
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 0
 
     # Mock fuel supply records
     mock_fuel_supplies = [
@@ -53,7 +54,10 @@ async def test_calculate_low_carbon_fuel_target_summary(
     # Call the method
     summary, penalty = (
         await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
-            compliance_period_start, compliance_period_end, organization_id, report_id
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
         )
     )
 
@@ -72,6 +76,96 @@ async def test_calculate_low_carbon_fuel_target_summary(
     assert line_values[20] == 200
     assert line_values[21] == 0  # Not calculated yet
     assert line_values[22] == 1200  # Add all the above
+
+    # Verify method calls
+    mock_repo.get_transferred_out_compliance_units.assert_called_once_with(
+        compliance_period_start, compliance_period_end, organization_id
+    )
+    mock_repo.get_received_compliance_units.assert_called_once_with(
+        compliance_period_start, compliance_period_end, organization_id
+    )
+    mock_repo.get_issued_compliance_units.assert_called_once_with(
+        compliance_period_start, compliance_period_end, organization_id
+    )
+    mock_trxn_repo.calculate_available_balance_for_period.assert_called_once_with(
+        organization_id, compliance_period_start.year
+    )
+
+
+@pytest.mark.anyio
+async def test_supplemental_low_carbon_fuel_target_summary(
+    compliance_report_summary_service, mock_trxn_repo, mock_repo
+):
+    # Mock input data
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 1
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 2
+
+    # Mock fuel supply records
+    mock_fuel_supplies = [
+        MagicMock(
+            target_ci=100, eer=1.0, ci_of_fuel=80, quantity=100000, energy_density=10
+        ),  # Expected units: 20
+        MagicMock(
+            target_ci=90, eer=1.2, ci_of_fuel=70, quantity=200000, energy_density=8
+        ),  # Expected units: 60.8
+        MagicMock(
+            target_ci=80, eer=0.5, ci_of_fuel=60, quantity=300000, energy_density=8
+        ),  # Expected units: -48
+    ]
+    compliance_report_summary_service.get_effective_fuel_supplies = AsyncMock(
+        return_value=mock_fuel_supplies
+    )
+
+    # Mock repository method returns
+    mock_repo.get_transferred_out_compliance_units.return_value = 500
+    mock_repo.get_received_compliance_units.return_value = 300
+    mock_repo.get_issued_compliance_units.return_value = 200
+
+    previous_summary = Mock()
+    previous_summary.line_15_banked_units_used = 0
+    previous_summary.line_16_banked_units_remaining = 0
+    previous_summary.line_18_units_to_be_banked = 15
+    previous_summary.line_19_units_to_be_exported = 15
+
+    mock_repo.get_previous_summary.return_value = previous_summary
+    mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=100)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=100)
+    )
+
+    # Call the method
+    summary, penalty = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    # Assertions
+    assert isinstance(summary, list)
+    assert all(isinstance(item, ComplianceReportSummaryRowSchema) for item in summary)
+    assert len(summary) == 11  # Ensure all 11 lines are present
+
+    # Check specific line values
+    line_values = {item.line: item.value for item in summary}
+    assert line_values[12] == 500  # Transferred out
+    assert line_values[13] == 300  # Received
+    assert line_values[14] == 200  # Issued
+    assert line_values[15] == 15  # Previously Issued
+    assert line_values[16] == 15  # Previously Issued
+    assert line_values[18] == 100
+    assert line_values[19] == 100
+    assert line_values[20] == 170  # Wrong
+    assert line_values[21] == 0  # Not calculated yet
+    assert line_values[22] == 1170  # Add all the above
 
     # Verify method calls
     mock_repo.get_transferred_out_compliance_units.assert_called_once_with(
@@ -444,7 +538,7 @@ async def test_calculate_non_compliance_penalty_summary_without_penalty_payable(
 ):
     mock_compliance_report_summary = [
         compliance_report_summary_row_schema(
-            line="11", gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
+            line=11, gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
         )
     ]
 
@@ -464,7 +558,7 @@ async def test_calculate_non_compliance_penalty_summary_with_penalty_payable(
 ):
     mock_compliance_report_summary = [
         compliance_report_summary_row_schema(
-            line="11", gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
+            line=11, gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
         )
     ]
 
@@ -685,8 +779,12 @@ async def test_can_sign_flag_logic(
     mock_fuel_exports = [MagicMock()]
     mock_allocation_agreements = [MagicMock()]
     mock_compliance_report = MagicMock(
+        version=0,
         compliance_report_group_uuid="mock-group-uuid",
-        compliance_period=MagicMock(effective_date=MagicMock(year=2024)),
+        compliance_period=MagicMock(
+            effective_date=MagicMock(year=2024), description="2024"
+        ),
+        nickname="test-report",
         organization_id=1,
         compliance_report_id=1,
         summary=MagicMock(is_locked=False),

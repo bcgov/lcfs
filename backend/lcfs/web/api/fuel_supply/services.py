@@ -24,6 +24,8 @@ from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
 from lcfs.utils.constants import default_ci
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.db.models.user.Role import RoleEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -70,15 +72,13 @@ class FuelSupplyServices:
         )
         eer = EnergyEffectivenessRatioSchema(
             eer_id=row_data["eer_id"],
-            energy_effectiveness_ratio=round(
-                row_data["energy_effectiveness_ratio"], 2),
+            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"], 2),
             fuel_category=fuel_category,
             end_use_type=end_use_type,
         )
         tci = TargetCarbonIntensitySchema(
             target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
-            target_carbon_intensity=round(
-                row_data["target_carbon_intensity"], 2),
+            target_carbon_intensity=round(row_data["target_carbon_intensity"], 2),
             reduction_target_percentage=round(
                 row_data["reduction_target_percentage"], 2
             ),
@@ -99,8 +99,7 @@ class FuelSupplyServices:
         )
         # Find the existing fuel type if it exists
         existing_fuel_type = next(
-            (ft for ft in fuel_types if ft.fuel_type ==
-             row_data["fuel_type"]), None
+            (ft for ft in fuel_types if ft.fuel_type == row_data["fuel_type"]), None
         )
 
         if existing_fuel_type:
@@ -234,10 +233,14 @@ class FuelSupplyServices:
 
     @service_handler
     async def get_fuel_supply_list(
-        self, compliance_report_id: int
+        self,
+        compliance_report_id: int,
     ) -> FuelSuppliesSchema:
         """Get fuel supply list for a compliance report"""
-        fuel_supply_models = await self.repo.get_fuel_supply_list(compliance_report_id)
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        fuel_supply_models = await self.repo.get_fuel_supply_list(
+            compliance_report_id, exclude_draft_reports=is_gov_user
+        )
         fs_list = [
             FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supply_models
         ]
@@ -245,7 +248,9 @@ class FuelSupplyServices:
 
     @service_handler
     async def get_fuel_supplies_paginated(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
+        self,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int,
     ):
         """Get paginated fuel supply list for a compliance report"""
         logger.info(
@@ -254,8 +259,9 @@ class FuelSupplyServices:
             page=pagination.page,
             size=pagination.size,
         )
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         fuel_supplies, total_count = await self.repo.get_fuel_supplies_paginated(
-            pagination, compliance_report_id
+            pagination, compliance_report_id, exclude_draft_reports=is_gov_user
         )
         return FuelSuppliesSchema(
             pagination=PaginationResponseSchema(
@@ -263,8 +269,7 @@ class FuelSupplyServices:
                 size=pagination.size,
                 total=total_count,
                 total_pages=(
-                    math.ceil(total_count /
-                              pagination.size) if total_count > 0 else 0
+                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
                 ),
             ),
             fuel_supplies=[
@@ -275,14 +280,16 @@ class FuelSupplyServices:
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
-        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
-            compliance_report_id,
+        compliance_report = (
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id,
+            )
         )
 
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found for this period"
+                detail="Compliance report not found for this period",
             )
 
         return compliance_report
