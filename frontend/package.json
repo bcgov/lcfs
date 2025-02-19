@@ -75,7 +75,7 @@
     "react-quill": "^2.0.0",
     "react-router-dom": "^6.21.1",
     "react-snowfall": "^1.2.1",
-    "swagger-ui-react": "^5.10.5",
+    "swagger-ui-react": "^5.19.0",
     "uuid": "^9.0.1",
     "vite": "^5.4.6",
     "vite-plugin-svgr": "^4.2.0",
