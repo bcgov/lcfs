@@ -3,7 +3,7 @@ import uuid
 from typing import Optional
 
 import structlog
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -25,6 +25,8 @@ from lcfs.web.api.other_uses.schema import (
     DeleteOtherUsesResponseSchema,
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.db.models.user.Role import RoleEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -43,10 +45,12 @@ OTHER_USE_EXCLUDE_FIELDS = {
 class OtherUsesServices:
     def __init__(
         self,
+        request: Request = None,
         repo: OtherUsesRepository = Depends(OtherUsesRepository),
         fuel_repo: FuelCodeRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
+        self.request = request
         self.repo = repo
         self.fuel_repo = fuel_repo
         self.compliance_report_repo = compliance_report_repo
@@ -150,7 +154,10 @@ class OtherUsesServices:
         """
         Gets the list of other uses for a specific compliance report.
         """
-        other_uses = await self.repo.get_other_uses(compliance_report_id)
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        other_uses = await self.repo.get_other_uses(
+            compliance_report_id, exclude_draft_reports=is_gov_user
+        )
         return OtherUsesAllSchema(
             other_uses=[OtherUsesSchema.model_validate(
                 ou) for ou in other_uses]
@@ -160,8 +167,9 @@ class OtherUsesServices:
     async def get_other_uses_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ) -> OtherUsesListSchema:
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         other_uses, total_count = await self.repo.get_other_uses_paginated(
-            pagination, compliance_report_id
+            pagination, compliance_report_id, exclude_draft_reports=is_gov_user
         )
         return OtherUsesListSchema(
             pagination=PaginationResponseSchema(
@@ -305,14 +313,16 @@ class OtherUsesServices:
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
-        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
-            compliance_report_id,
+        compliance_report = (
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id,
+            )
         )
 
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found for this period"
+                detail="Compliance report not found for this period",
             )
 
         return compliance_report

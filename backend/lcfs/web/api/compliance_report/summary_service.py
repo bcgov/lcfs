@@ -767,6 +767,10 @@ class ComplianceReportSummaryService:
         organization_id: int,
         compliance_report: ComplianceReport,
     ) -> Tuple[List[ComplianceReportSummaryRowSchema], int]:
+        previous_summary = None
+        if compliance_report.version > 0:
+            previous_summary = await self.repo.get_previous_summary(compliance_report)
+
         compliance_units_transferred_out = (
             await self.repo.get_transferred_out_compliance_units(
                 compliance_period_start, compliance_period_end, organization_id
@@ -778,9 +782,18 @@ class ComplianceReportSummaryService:
         compliance_units_issued = await self.repo.get_issued_compliance_units(
             compliance_period_start, compliance_period_end, organization_id
         )  # line 14
-        # TODO - add the logic as required
-        compliance_units_prev_issued_for_fuel_supply = 0  # line 15
-        compliance_units_prev_issued_for_fuel_export = 0  # line 16 - always 0
+        compliance_units_prev_issued_for_fuel_supply = (
+            previous_summary.line_18_units_to_be_banked
+            + previous_summary.line_15_banked_units_used
+            if previous_summary
+            else 0
+        )  # line 15
+        compliance_units_prev_issued_for_fuel_export = (
+            previous_summary.line_19_units_to_be_exported
+            + previous_summary.line_16_banked_units_remaining
+            if previous_summary
+            else 0
+        )  # line 16
         available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(
             organization_id, compliance_period_start.year
         )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
@@ -793,7 +806,9 @@ class ComplianceReportSummaryService:
         compliance_unit_balance_change_from_assessment = (
             compliance_units_curr_issued_for_fuel_supply
             + compliance_units_curr_issued_for_fuel_export
-        )  # line 20
+            - compliance_units_prev_issued_for_fuel_supply  # Subtract Previously Issued
+            - compliance_units_prev_issued_for_fuel_export
+        )  # line 20 = line 18 + line 19 - line 15 - line 16
 
         calculated_penalty_units = int(
             available_balance_for_period

@@ -11,7 +11,7 @@ from sqlalchemy import select, delete, func, case, and_, or_
 from sqlalchemy.orm import joinedload, contains_eager
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from lcfs.db.models.compliance import ComplianceReport
+from lcfs.db.models.compliance import ComplianceReport, ComplianceReportStatus
 from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.FuelCode import FuelCode
@@ -22,7 +22,7 @@ from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import repo_handler
-from sqlalchemy.dialects import postgresql
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -41,7 +41,9 @@ class OtherUsesRepository:
         """Get all table options"""
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
-        fuel_types = await self.get_formatted_fuel_types(include_legacy=include_legacy, compliance_period=int(compliance_period))
+        fuel_types = await self.get_formatted_fuel_types(
+            include_legacy=include_legacy, compliance_period=int(compliance_period)
+        )
         expected_uses = await self.fuel_code_repo.get_expected_use_types()
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
 
@@ -54,11 +56,29 @@ class OtherUsesRepository:
             (await self.db.execute(provisions_select)).scalars().all()
         )
 
-        fuel_codes = (await self.db.execute(select(FuelCode).join(FuelCodeStatus).where(and_(
-            FuelCodeStatus.status == 'Approved',
-            FuelCode.effective_date <= datetime(int(compliance_period), 12, 31), # end of compliance year
-            FuelCode.expiration_date >= datetime(int(compliance_period), 1, 1) # within compliance year
-        )))).scalars().all()
+        fuel_codes = (
+            (
+                await self.db.execute(
+                    select(FuelCode)
+                    .join(FuelCodeStatus)
+                    .where(
+                        and_(
+                            FuelCodeStatus.status == "Approved",
+                            FuelCode.effective_date
+                            <= datetime(
+                                int(compliance_period), 12, 31
+                            ),  # end of compliance year
+                            FuelCode.expiration_date
+                            >= datetime(
+                                int(compliance_period), 1, 1
+                            ),  # within compliance year
+                        )
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
 
         return {
             "fuel_types": fuel_types,
@@ -93,7 +113,9 @@ class OtherUsesRepository:
         return result.unique().scalars().first()
 
     @repo_handler
-    async def get_other_uses(self, compliance_report_id: int) -> List[OtherUsesSchema]:
+    async def get_other_uses(
+        self, compliance_report_id: int, exclude_draft_reports: bool = False
+    ) -> List[OtherUsesSchema]:
         """
         Queries other uses from the database for a specific compliance report.
         """
@@ -108,11 +130,16 @@ class OtherUsesRepository:
         if not group_uuid:
             return []
 
-        result = await self.get_effective_other_uses(group_uuid)
+        result = await self.get_effective_other_uses(
+            group_uuid, False, exclude_draft_reports=exclude_draft_reports
+        )
         return result
 
     async def get_effective_other_uses(
-        self, compliance_report_group_uuid: str, return_model: bool = False
+        self,
+        compliance_report_group_uuid: str,
+        return_model: bool = False,
+        exclude_draft_reports: bool = False,
     ) -> List[OtherUsesSchema]:
         """
         Queries other uses from the database for a specific compliance report.
@@ -123,6 +150,13 @@ class OtherUsesRepository:
             ComplianceReport.compliance_report_group_uuid
             == compliance_report_group_uuid
         )
+        if exclude_draft_reports:
+            compliance_reports_select = compliance_reports_select.where(
+                ComplianceReport.current_status.has(
+                    ComplianceReportStatus.status
+                    != ComplianceReportStatusEnum.Draft.value
+                )
+            )
 
         # Step 2: Subquery to identify record group_uuids that have any DELETE action
         delete_group_select = (
@@ -208,7 +242,10 @@ class OtherUsesRepository:
         ]
 
     async def get_other_uses_paginated(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
+        self,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int,
+        exclude_draft_reports: bool = False,
     ) -> tuple[list[Any], int] | tuple[list[OtherUsesSchema], int]:
         # Retrieve the compliance report's group UUID
         report_group_query = await self.db.execute(
@@ -222,7 +259,8 @@ class OtherUsesRepository:
 
         # Retrieve effective fuel supplies using the group UUID
         other_uses = await self.get_effective_other_uses(
-            compliance_report_group_uuid=group_uuid
+            compliance_report_group_uuid=group_uuid,
+            exclude_draft_reports=exclude_draft_reports,
         )
 
         # Manually apply pagination
@@ -358,13 +396,26 @@ class OtherUsesRepository:
 
         # Prepare the data in the format matching your schema
         formatted_fuel_types = []
-        approved_fuel_code_status_id = (await self.db.execute(select(FuelCodeStatus.fuel_code_status_id).where(FuelCodeStatus.status == "Approved"))).scalar_one_or_none()
+        approved_fuel_code_status_id = (
+            await self.db.execute(
+                select(FuelCodeStatus.fuel_code_status_id).where(
+                    FuelCodeStatus.status == "Approved"
+                )
+            )
+        ).scalar_one_or_none()
         for fuel_type in fuel_types:
             valid_fuel_codes = [
-                fc for fc in fuel_type.fuel_codes
-                if (fc.effective_date is None or fc.effective_date <= date(compliance_period, 12, 31)) and
-                (fc.expiration_date is None or fc.expiration_date >= date(compliance_period, 1, 1)) and
-                (fc.fuel_status_id == approved_fuel_code_status_id)
+                fc
+                for fc in fuel_type.fuel_codes
+                if (
+                    fc.effective_date is None
+                    or fc.effective_date <= date(compliance_period, 12, 31)
+                )
+                and (
+                    fc.expiration_date is None
+                    or fc.expiration_date >= date(compliance_period, 1, 1)
+                )
+                and (fc.fuel_status_id == approved_fuel_code_status_id)
             ]
 
             formatted_fuel_type = {
@@ -386,7 +437,8 @@ class OtherUsesRepository:
                         "fuel_code": fc.fuel_code,
                         "carbon_intensity": fc.carbon_intensity,
                     }
-                    for fc in valid_fuel_codes],
+                    for fc in valid_fuel_codes
+                ],
                 "provision_of_the_act": [],
             }
 

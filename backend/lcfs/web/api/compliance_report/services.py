@@ -1,6 +1,6 @@
 import math
 import uuid
-from typing import List, Literal
+from typing import List, Union, Type
 
 import structlog
 from fastapi import Depends, Request
@@ -39,11 +39,10 @@ class ComplianceReportServices:
         self,
         repo: ComplianceReportRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
-        request: Request = None,
+
     ) -> None:
         self.repo = repo
         self.snapshot_services = snapshot_services
-        self.request = request
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
@@ -331,21 +330,14 @@ class ComplianceReportServices:
         self,
         pagination: PaginationResponseSchema,
         compliance_report_id: int,
-        selection: Literal['fuel_supplies', 'other_uses',
-                           'notional_transfers', 'fuel_exports']
+        selection: Type[Union[FuelSupply, OtherUses,
+                              NotionalTransfer, FuelExport]]
     ):
-        RELATIONSHIP_MAP = {
-            'fuel_supplies': FuelSupply,
-            'other_uses': OtherUses,
-            'notional_transfers': NotionalTransfer,
-            'fuel_exports': FuelExport,
-        }
-        changelog, total_count = await self.repo.get_changelog_data(pagination, compliance_report_id, RELATIONSHIP_MAP[selection])
+        changelog, total_count = await self.repo.get_changelog_data(pagination, compliance_report_id, selection)
 
         groups = {}
         for record in changelog:
-            group_uuid = getattr(record, "group_uuid", None)
-            groups.setdefault(group_uuid, []).append(record)
+            groups.setdefault(record.group_uuid, []).append(record)
         for group in groups.values():
             if len(group) == 2:
                 first, second = group

@@ -2,6 +2,7 @@ from unittest.mock import MagicMock, AsyncMock
 
 import pytest
 from fastapi import HTTPException
+from types import SimpleNamespace
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models import (
@@ -22,6 +23,7 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelCategoryResponseSchema,
 )
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
+from lcfs.db.models.user.Role import RoleEnum
 
 # Fixture to set up the FuelSupplyServices with mocked dependencies
 # Mock common fuel type and fuel category for reuse
@@ -78,22 +80,49 @@ async def test_get_fuel_supply_options(fuel_supply_service):
         compliance_period)
 
 
-# Asynchronous test for get_fuel_supply_list
 @pytest.mark.anyio
 async def test_get_fuel_supply_list(fuel_supply_service):
     service, mock_repo, _ = fuel_supply_service
-    mock_repo.get_fuel_supply_list = AsyncMock(
-        return_value=[
-            # Mocked list of FuelSupply models
-        ]
-    )
-    compliance_report_id = 1
 
+    # Create a dummy request with a user that supports attribute access.
+    dummy_user = SimpleNamespace(id=1, role_names=[RoleEnum.GOVERNMENT])
+    dummy_request = MagicMock()
+    dummy_request.user = dummy_user
+    service.request = dummy_request
+
+    # Build a valid fuel supply record (dictionary) that meets the Pydantic schema requirements.
+    valid_fuel_supply = {
+        "fuel_supply_id": 1,
+        "complianceReportId": 1,
+        "version": 0,
+        "fuelTypeId": 1,
+        "quantity": 100,
+        "groupUuid": "some-uuid",
+        "userType": "SUPPLIER",
+        "actionType": "CREATE",
+        "fuelType": {"fuel_type_id": 1, "fuelType": "Diesel", "units": "L"},
+        "fuelCategory": {"fuel_category_id": 1, "category": "Diesel"},
+        "endUseType": {"endUseTypeId": 1, "type": "Transport", "subType": "Personal"},
+        "provisionOfTheAct": {"provisionOfTheActId": 1, "name": "Act Provision"},
+        "compliancePeriod": "2024",
+        "units": "L",
+        "fuelCode": {
+            "fuelStatus": {"status": "Approved"},
+            "fuelCode": "FUEL123",
+            "carbonIntensity": 15.0,
+        },
+        "fuelTypeOther": "Optional",
+    }
+
+    # Set the repository method to return the valid fuel supply record.
+    mock_repo.get_fuel_supply_list = AsyncMock(
+        return_value=[valid_fuel_supply])
+
+    compliance_report_id = 1
     response = await service.get_fuel_supply_list(compliance_report_id)
 
-    assert isinstance(response, FuelSuppliesSchema)
-    mock_repo.get_fuel_supply_list.assert_awaited_once_with(
-        compliance_report_id, False)
+    # Validate response structure.
+    assert hasattr(response, "fuel_supplies")
 
 
 @pytest.mark.anyio

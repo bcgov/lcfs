@@ -1,24 +1,25 @@
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import BCTypography from '@/components/BCTypography'
+import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
   NumberEditor,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
+import BCTypography from '@/components/BCTypography'
+import { apiRoutes } from '@/constants/routes'
 import i18n from '@/i18n'
-import { actions, validation } from '@/components/BCDataGrid/columns'
+import colors from '@/themes/base/colors'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
 } from '@/utils/fuelTypeOther'
+import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import {
   StandardCellStyle,
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
-import { apiRoutes } from '@/constants/routes'
-import colors from '@/themes/base/colors'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -613,49 +614,54 @@ export const fuelSupplyColDefs = (
   }
 ]
 
-export const fuelSupplySummaryColDef = (t) => [
+export const fuelSupplySummaryColDef = [
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
     field: 'complianceUnits',
     valueFormatter
   },
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
     field: 'fuelType',
     valueGetter: (params) => params.data.fuelType?.fuelType
   },
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
     field: 'fuelCategory',
     valueGetter: (params) => params.data.fuelCategory?.category
   },
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.endUseId'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
     field: 'endUse',
     valueGetter: (params) => params.data.endUseType?.type || 'Any'
   },
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'),
+    headerName: i18n.t(
+      'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
+    ),
     field: 'determiningCarbonIntensity',
     valueGetter: (params) => params.data.provisionOfTheAct?.name
   },
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
     field: 'fuelCode',
     valueGetter: (params) => params.data.fuelCode?.fuelCode
   },
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.quantity'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
     field: 'quantity',
     valueFormatter
   },
-  { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: 'units' },
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.targetCi'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
+    field: 'units'
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
     field: 'targetCi'
   },
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     field: 'ciOfFuel'
   },
   {
@@ -663,12 +669,12 @@ export const fuelSupplySummaryColDef = (t) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci')
   },
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
     field: 'energyDensity'
   },
-  { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: 'eer' },
+  { headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'), field: 'eer' },
   {
-    headerName: t('fuelSupply:fuelSupplyColLabels.energy'),
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
     field: 'energy',
     valueFormatter
   }
@@ -681,4 +687,152 @@ export const defaultColDef = {
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true
+}
+
+export const changelogCommonColDefs = [
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
+    field: 'complianceUnits',
+    valueFormatter,
+    cellStyle: (params) => changelogCellStyle(params, 'complianceUnits')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
+    field: 'fuelType',
+    valueGetter: (params) => params.data.fuelType?.fuelType,
+    cellStyle: (params) => changelogCellStyle(params, 'fuelTypeId')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data.fuelCategory?.category,
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCategoryId')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
+    field: 'endUse',
+    valueGetter: (params) => params.data.endUseType?.type || 'Any',
+    cellStyle: (params) => changelogCellStyle(params, 'endUseId')
+  },
+  {
+    headerName: i18n.t(
+      'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
+    ),
+    field: 'determiningCarbonIntensity',
+    valueGetter: (params) => params.data.provisionOfTheAct?.name,
+    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheActId')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
+    field: 'fuelCode',
+    valueGetter: (params) => params.data.fuelCode?.fuelCode,
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCodeId')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter,
+    cellStyle: (params) => changelogCellStyle(params, 'quantity')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
+    field: 'units',
+    cellStyle: (params) => changelogCellStyle(params, 'units')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
+    field: 'targetCi',
+    cellStyle: (params) => changelogCellStyle(params, 'targetCi')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
+    field: 'ciOfFuel',
+    cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
+  },
+  {
+    field: 'uci',
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
+    cellStyle: (params) => changelogCellStyle(params, 'uci')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
+    field: 'energyDensity',
+    cellStyle: (params) => changelogCellStyle(params, 'energyDensity')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
+    field: 'eer',
+    cellStyle: (params) => changelogCellStyle(params, 'eer')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
+    field: 'energy',
+    valueFormatter,
+    cellStyle: (params) => changelogCellStyle(params, 'energy')
+  }
+]
+
+export const changelogColDefs = [
+  {
+    field: 'groupUuid',
+    hide: true,
+    sort: 'desc',
+    sortIndex: 1
+  },
+  { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
+  {
+    field: 'actionType',
+    valueGetter: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        if (params.data.updated) {
+          return 'Edited old'
+        } else {
+          return 'Edited new'
+        }
+      }
+      if (params.data.actionType === 'DELETE') {
+        return 'Deleted'
+      }
+      if (params.data.actionType === 'CREATE') {
+        return 'Added'
+      }
+    },
+    cellStyle: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        return { backgroundColor: colors.alerts.warning.background }
+      }
+    }
+  },
+  ...changelogCommonColDefs
+]
+
+export const changelogDefaultColDefs = {
+  floatingFilter: false,
+  filter: false
+}
+export const changelogCommonGridOptions = {
+  overlayNoRowsTemplate: i18n.t('fuelSupply:noFuelSuppliesFound'),
+  autoSizeStrategy: {
+    type: 'fitCellContents',
+    defaultMinWidth: 50,
+    defaultMaxWidth: 600
+  },
+  enableCellTextSelection: true, // enables text selection on the grid
+  ensureDomOrder: true
+}
+
+export const changelogGridOptions = {
+  ...changelogCommonGridOptions,
+  getRowStyle: (params) => {
+    if (params.data.actionType === 'DELETE') {
+      return {
+        backgroundColor: colors.alerts.error.background
+      }
+    }
+    if (params.data.actionType === 'CREATE') {
+      return {
+        backgroundColor: colors.alerts.success.background
+      }
+    }
+  }
 }

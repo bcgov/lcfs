@@ -1,16 +1,14 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { useGetNotionalTransfers } from '@/hooks/useNotionalTransfer'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema.jsx'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
-import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema.jsx'
 
 export const NotionalTransferSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -41,10 +39,6 @@ export const NotionalTransferSummary = ({ data, status }) => {
     [status]
   )
 
-  const columns = useMemo(() => {
-    return notionalTransferSummaryColDefs(t)
-  }, [t])
-
   return (
     <Grid2 className="notional-transfer-container" mx={-1}>
       <div>
@@ -58,7 +52,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
         <BCGridViewer
           gridKey="notional-transfers"
           getRowId={getRowId}
-          columnDefs={columns}
+          columnDefs={notionalTransferSummaryColDefs}
           defaultColDef={defaultColDef}
           query={useGetNotionalTransfers}
           queryParams={{ complianceReportId }}

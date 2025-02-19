@@ -1,6 +1,10 @@
 import structlog
 from typing import List, Optional, Tuple
-from lcfs.db.models.compliance import CompliancePeriod, FuelExport
+from lcfs.db.models.compliance import (
+    CompliancePeriod,
+    FuelExport,
+    ComplianceReportStatus,
+)
 from lcfs.db.models.fuel import (
     EnergyDensity,
     EnergyEffectivenessRatio,
@@ -15,6 +19,7 @@ from lcfs.db.models.fuel import (
     UnitOfMeasure,
     EndUseType,
 )
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.utils.constants import LCFS_Constants
@@ -176,7 +181,9 @@ class FuelExportRepository:
         return results
 
     @repo_handler
-    async def get_fuel_export_list(self, compliance_report_id: int, changelog: Optional[bool] = False) -> List[FuelExport]:
+    async def get_fuel_export_list(
+        self, compliance_report_id: int, changelog: Optional[bool] = False, exclude_draft_reports: bool = False
+    ) -> List[FuelExport]:
         """
         Retrieve the list of effective fuel exports for a given compliance report.
         """
@@ -192,14 +199,19 @@ class FuelExportRepository:
 
         # Retrieve effective fuel exports using the group UUID
         effective_fuel_exports = await self.get_effective_fuel_exports(
-            compliance_report_group_uuid=group_uuid, changelog=changelog
+            compliance_report_group_uuid=group_uuid,
+            changelog=changelog,
+            exclude_draft_reports=exclude_draft_reports,
         )
 
         return effective_fuel_exports
 
     @repo_handler
     async def get_fuel_exports_paginated(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
+        self,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int,
+        exclude_draft_reports: bool = False,
     ) -> Tuple[List[FuelExport], int]:
         """
         Retrieve a paginated list of effective fuel exports for a given compliance report.
@@ -216,7 +228,8 @@ class FuelExportRepository:
 
         # Retrieve effective fuel exports using the group UUID
         effective_fuel_exports = await self.get_effective_fuel_exports(
-            compliance_report_group_uuid=group_uuid
+            compliance_report_group_uuid=group_uuid,
+            exclude_draft_reports=exclude_draft_reports,
         )
 
         # Manually apply pagination
@@ -333,7 +346,7 @@ class FuelExportRepository:
 
     @repo_handler
     async def get_effective_fuel_exports(
-        self, compliance_report_group_uuid: str, changelog: Optional[bool] = False
+        self, compliance_report_group_uuid: str, changelog: Optional[bool] = False, exclude_draft_reports: bool = False
     ) -> List[FuelExport]:
         """
         Retrieve effective FuelExport records associated with the given compliance_report_group_uuid.
@@ -344,6 +357,13 @@ class FuelExportRepository:
             ComplianceReport.compliance_report_group_uuid
             == compliance_report_group_uuid
         )
+        if exclude_draft_reports:
+            compliance_reports_select = compliance_reports_select.where(
+                ComplianceReport.current_status.has(
+                    ComplianceReportStatus.status
+                    != ComplianceReportStatusEnum.Draft.value
+                )
+            )
 
         # Step 3: Select to find the max version and priority per group_uuid, excluding DELETE groups
         user_type_priority = case(

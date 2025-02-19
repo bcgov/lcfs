@@ -3,7 +3,7 @@ import uuid
 from typing import Optional
 
 import structlog
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
@@ -21,6 +21,8 @@ from lcfs.web.api.notional_transfer.schema import (
     DeleteNotionalTransferResponseSchema,
 )
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.db.models.user.Role import RoleEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -40,10 +42,12 @@ NOTIONAL_TRANSFER_EXCLUDE_FIELDS = {
 class NotionalTransferServices:
     def __init__(
         self,
+        request: Request = None,
         repo: NotionalTransferRepository = Depends(NotionalTransferRepository),
         fuel_repo: FuelCodeRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
+        self.request = request
         self.repo = repo
         self.fuel_repo = fuel_repo
         self.compliance_report_repo = compliance_report_repo
@@ -111,8 +115,9 @@ class NotionalTransferServices:
         """
         Gets the list of notional transfers for a specific compliance report.
         """
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         notional_transfers = await self.repo.get_notional_transfers(
-            compliance_report_id, changelog
+            compliance_report_id, changelog, exclude_draft_reports=is_gov_user
         )
         return NotionalTransfersAllSchema(
             notional_transfers=[
@@ -124,9 +129,10 @@ class NotionalTransferServices:
     async def get_notional_transfers_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ) -> NotionalTransfersSchema:
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         notional_transfers, total_count = (
             await self.repo.get_notional_transfers_paginated(
-                pagination, compliance_report_id
+                pagination, compliance_report_id, exclude_draft_reports=is_gov_user
             )
         )
         return NotionalTransfersSchema(
@@ -247,14 +253,16 @@ class NotionalTransferServices:
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
-        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
-            compliance_report_id,
+        compliance_report = (
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id,
+            )
         )
 
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found for this period"
+                detail="Compliance report not found for this period",
             )
 
         return compliance_report

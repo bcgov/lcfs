@@ -26,6 +26,8 @@ from lcfs.web.api.fuel_export.schema import (
 )
 from lcfs.web.api.fuel_export.validation import FuelExportValidation
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.db.models.user.Role import RoleEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -239,7 +241,10 @@ class FuelExportServices:
         self, compliance_report_id: int, changelog: bool = False
     ) -> FuelExportsSchema:
         """Get fuel export list for a compliance report"""
-        fuel_export_models = await self.repo.get_fuel_export_list(compliance_report_id, changelog)
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        fuel_export_models = await self.repo.get_fuel_export_list(
+            compliance_report_id, changelog, exclude_draft_reports=is_gov_user
+        )
         fs_list = [FuelExportSchema.model_validate(
             fs) for fs in fuel_export_models]
         return FuelExportsSchema(fuel_exports=fs_list if fs_list else [])
@@ -249,8 +254,9 @@ class FuelExportServices:
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ):
         """Get paginated fuel export list for a compliance report"""
+        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         fuel_exports, total_count = await self.repo.get_fuel_exports_paginated(
-            pagination, compliance_report_id
+            pagination, compliance_report_id, exclude_draft_reports=is_gov_user
         )
         return FuelExportsSchema(
             pagination=PaginationResponseSchema(
@@ -269,14 +275,16 @@ class FuelExportServices:
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
-        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
-            compliance_report_id,
+        compliance_report = (
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id,
+            )
         )
 
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found for this period"
+                detail="Compliance report not found for this period",
             )
 
         return compliance_report
