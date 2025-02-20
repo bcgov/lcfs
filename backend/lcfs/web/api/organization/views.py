@@ -28,11 +28,11 @@ from lcfs.web.api.transfer.schema import (
 from lcfs.web.api.transaction.schema import TransactionListSchema
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.api.user.services import UserServices
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
-    CompliancePeriodSchema,
     ChainedComplianceReportSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
@@ -273,7 +273,7 @@ async def get_compliance_reports(
 
 @router.get(
     "/{organization_id}/reports/reported-years",
-    response_model=List[CompliancePeriodSchema],
+    response_model=List[CompliancePeriodBaseSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
@@ -281,7 +281,7 @@ async def get_all_org_reported_years(
     request: Request,
     organization_id: int,
     report_service: ComplianceReportServices = Depends(),
-) -> List[CompliancePeriodSchema]:
+) -> List[CompliancePeriodBaseSchema]:
     """
     Gets all compliance report years that an organization has reported
     """

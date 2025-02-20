@@ -15,6 +15,7 @@ from lcfs.web.core.decorators import service_handler
 
 FSE_EXPORT_FILENAME = "FSE"
 FSE_EXPORT_SHEETNAME = "FSE"
+VALIDATION_SHEETNAME = "VALUES"
 FSE_EXPORT_COLUMNS = [
     SpreadsheetColumn("Organization", "text"),
     SpreadsheetColumn("Supply from date", "date"),
@@ -30,8 +31,8 @@ FSE_EXPORT_COLUMNS = [
     SpreadsheetColumn("Street address", "text"),
     SpreadsheetColumn("City", "text"),
     SpreadsheetColumn("Postal code", "text"),
-    SpreadsheetColumn("Latitude", "float"),
-    SpreadsheetColumn("Longitude", "float"),
+    SpreadsheetColumn("Latitude", "decimal6"),
+    SpreadsheetColumn("Longitude", "decimal6"),
     SpreadsheetColumn("Notes", "text"),
 ]
 
@@ -66,14 +67,17 @@ class FinalSupplyEquipmentExporter:
             )
         )
 
-        validators = await self._create_validators(compliance_report, organization)
+        # Create a spreadsheet
+        builder = SpreadsheetBuilder(file_format=export_format)
+
+        validators = await self._create_validators(
+            compliance_report, organization, builder
+        )
 
         data = []
         if include_data:
             data = await self.load_fse_data(compliance_report_id)
 
-        # Create a spreadsheet
-        builder = SpreadsheetBuilder(file_format=export_format)
         builder.add_sheet(
             sheet_name=FSE_EXPORT_SHEETNAME,
             columns=FSE_EXPORT_COLUMNS,
@@ -93,7 +97,7 @@ class FinalSupplyEquipmentExporter:
             headers=headers,
         )
 
-    async def _create_validators(self, compliance_report, organization):
+    async def _create_validators(self, compliance_report, organization, builder):
         validators: List[DataValidation] = []
         table_options = await self.repo.get_fse_options(organization)
 
@@ -101,49 +105,51 @@ class FinalSupplyEquipmentExporter:
         org_options = [obj for obj in table_options[4]]
         org_validator = DataValidation(
             type="list",
-            formula1=f'"{",".join(org_options)}"',
+            formula1="=VALUES!$A$2:$A$10",
         )
-        org_validator.add("A2:A100000")
+        org_validator.add("A2:A10000")
         validators.append(org_validator)
 
-        level_of_equipment_options = [obj.name for obj in table_options[1]]
+        level_of_equipment_options = [
+            obj.name for obj in table_options[1]  # Escape Commas
+        ]
         level_of_equipment_validator = DataValidation(
             type="list",
-            formula1=f'"{",".join(level_of_equipment_options)}"',
+            formula1="=VALUES!$H$2:$H$10",
             error="Please select a valid option from the list",
             showDropDown=False,
             showErrorMessage=True,
         )
-        level_of_equipment_validator.add("H2:H100000")
+        level_of_equipment_validator.add("H2:H10000")
         validators.append(level_of_equipment_validator)
 
         port_options = [obj for obj in table_options[3]]
         port_validator = DataValidation(
             type="list",
-            formula1=f'"{",".join(port_options)}"',
+            formula1="=VALUES!$I$2:$I$10",
             error="Please select a valid option from the list",
             showDropDown=False,
             showErrorMessage=True,
         )
-        port_validator.add("I2:I100000")
+        port_validator.add("I2:I10000")
         validators.append(port_validator)
 
         intended_use_options = [obj.type for obj in table_options[0]]
         intended_use_validator = DataValidation(
             type="list",
-            formula1=f'"{",".join(intended_use_options)}"',
+            formula1="=VALUES!$J$2:$J$10",
             showDropDown=False,
         )
-        intended_use_validator.add("J2:J100000")
+        intended_use_validator.add("J2:J10000")
         validators.append(intended_use_validator)
 
         intended_user_options = [obj.type_name for obj in table_options[2]]
         intended_user_validator = DataValidation(
             type="list",
-            formula1=f'"{",".join(intended_user_options)}"',
+            formula1="=VALUES!$K$2:$K$10",
             showDropDown=False,
         )
-        intended_user_validator.add("K2:K100000")
+        intended_user_validator.add("K2:K10000")
         validators.append(intended_user_validator)
 
         # Date Validators
@@ -161,8 +167,8 @@ class FinalSupplyEquipmentExporter:
             errorTitle="Invalid Date",
             error=f"Please enter a date that falls within the {compliance_report.compliance_period.description} calendar year.",
         )
-        date_validator.add("B2:B100000")
-        date_validator.add("C2:C100000")
+        date_validator.add("B2:B10000")
+        date_validator.add("C2:C10000")
         validators.append(date_validator)
 
         # Number Validators
@@ -171,16 +177,56 @@ class FinalSupplyEquipmentExporter:
             showErrorMessage=True,
             error="Please enter a valid decimal.",
         )
-        decimal_validator.add("O2:O100000")
-        decimal_validator.add("P2:P100000")
+        decimal_validator.add("O2:O10000")
+        decimal_validator.add("P2:P10000")
         validators.append(decimal_validator)
         integer_validator = DataValidation(
             type="whole",
             showErrorMessage=True,
             error="Please enter a valid integer.",
         )
-        integer_validator.add("D2:D100000")
+        integer_validator.add("D2:D10000")
         validators.append(integer_validator)
+
+        # We use a second sheet containing validation values, this allows no character restrictions however it needs to be square
+        data = [
+            org_options,
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+            level_of_equipment_options,
+            port_options,
+            intended_use_options,
+            intended_user_options,
+            [],
+            [],
+            [],
+            [],
+            [],
+            [],
+        ]
+
+        # Determine the maximum length among all columns
+        max_length = max(len(options) for options in data)
+
+        # Build rows ensuring each row has an entry for each column (defaulting to None if missing)
+        rows = [
+            [col[i] if i < len(col) else None for col in data]
+            for i in range(max_length)
+        ]
+
+        builder.add_sheet(
+            sheet_name=VALIDATION_SHEETNAME,
+            columns=FSE_EXPORT_COLUMNS,
+            rows=rows,
+            styles={"bold_headers": True},
+            validators=[],
+            position=1,
+        )
+
         return validators
 
     async def load_fse_data(self, compliance_report_id):

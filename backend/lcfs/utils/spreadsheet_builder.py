@@ -15,7 +15,9 @@ MAX_XLS_WIDTH = 65535
 
 class SpreadsheetColumn:
     def __init__(
-        self, label: str, column_type: Literal["float", "int", "text", "date"]
+        self,
+        label: str,
+        column_type: Literal["float", "int", "text", "date", "decimal6"],
     ):
         self.label = label
         self.column_type = column_type
@@ -69,15 +71,17 @@ class SpreadsheetBuilder:
         rows: list,
         styles: dict = None,
         validators: list[DataValidation] = [],
+        position=0,
     ):
-        self.sheets_data.append(
+        self.sheets_data.insert(
+            position,
             {
                 "sheet_name": sheet_name,
                 "columns": columns,
                 "rows": rows,
                 "styles": styles or {},
                 "validators": validators,
-            }
+            },
         )
 
     def build_spreadsheet(self) -> bytes:
@@ -134,6 +138,9 @@ class SpreadsheetBuilder:
                         cell.alignment = styles.Alignment(horizontal="right")
                     elif column.column_type == "date":
                         cell.number_format = "yyyy-mm-dd"
+                    elif column.column_type == "decimal6":
+                        cell.number_format = "#,##0.00####"
+                        cell.alignment = styles.Alignment(horizontal="right")
 
         self._apply_excel_styling(writer, sheet)
 
@@ -201,7 +208,7 @@ class SpreadsheetBuilder:
                 )
                 sheet.write(row_index, col_index, value, cell_style)
 
-    def _auto_adjust_column_width_xlsx(self, writer, sheet_data):
+    def _auto_adjust_column_width_xlsx(self, writer: pd.ExcelWriter, sheet_data):
         worksheet = writer.sheets[sheet_data["sheet_name"]]
         for column in worksheet.columns:
             max_length = 0

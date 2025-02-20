@@ -1,19 +1,14 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { useGetOtherUses } from '@/hooks/useOtherUses'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema.jsx'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
-import {
-  decimalFormatter,
-  formatNumberWithCommas as valueFormatter
-} from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
-import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema.jsx'
+import { useLocation, useParams } from 'react-router-dom'
 
 export const OtherUsesSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -43,9 +38,6 @@ export const OtherUsesSummary = ({ data, status }) => {
     }),
     [status]
   )
-  const columns = useMemo(() => {
-    return otherUsesSummaryColDefs(t)
-  }, [t])
 
   const getRowId = (params) => params.data.otherUsesId
 
@@ -62,7 +54,7 @@ export const OtherUsesSummary = ({ data, status }) => {
         <BCGridViewer
           gridKey="other-uses"
           getRowId={getRowId}
-          columnDefs={columns}
+          columnDefs={otherUsesSummaryColDefs}
           defaultColDef={defaultColDef}
           query={useGetOtherUses}
           queryParams={{ complianceReportId }}

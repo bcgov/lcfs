@@ -2,14 +2,14 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { apiRoutes } from '@/constants/routes'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { fuelSupplySummaryColDef } from '@/views/FuelSupplies/_schema.jsx'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { fuelSupplySummaryColDef } from '@/views/FuelSupplies/_schema.jsx'
 
 export const FuelSupplySummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -55,10 +55,6 @@ export const FuelSupplySummary = ({ data, status }) => {
     [status]
   )
 
-  const columns = useMemo(() => {
-    return fuelSupplySummaryColDef(t)
-  }, [t])
-
   const getRowId = (params) => {
     return params.data.fuelSupplyId.toString()
   }
@@ -83,7 +79,7 @@ export const FuelSupplySummary = ({ data, status }) => {
           apiEndpoint={apiRoutes.getAllFuelSupplies}
           apiData={'fuelSupplies'}
           apiParams={{ complianceReportId }}
-          columnDefs={columns}
+          columnDefs={fuelSupplySummaryColDef}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}

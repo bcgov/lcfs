@@ -1,8 +1,9 @@
 from enum import Enum
-from typing import ClassVar, Optional, List
+from typing import ClassVar, Optional, List, TypeVar, Generic, Union
 from datetime import datetime, date
 from enum import Enum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 
@@ -45,14 +46,6 @@ class ReportingFrequency(str, Enum):
 class PortsEnum(str, Enum):
     SINGLE = "Single port"
     DUAL = "Dual port"
-
-
-class CompliancePeriodSchema(BaseSchema):
-    compliance_period_id: int
-    description: str
-    effective_date: Optional[datetime] = None
-    expiration_date: Optional[datetime] = None
-    display_order: Optional[int] = None
 
 
 class SummarySchema(BaseSchema):
@@ -118,36 +111,13 @@ class FSEOptionsSchema(BaseSchema):
     ports: ClassVar[List[str]] = [port.value for port in PortsEnum]
 
 
-class FinalSupplyEquipmentSchema(BaseSchema):
-    final_supply_equipment_id: int
-    compliance_report_id: int
-    organization_name: str
-    supply_from_date: date
-    supply_to_date: date
-    registration_nbr: str
-    kwh_usage: Optional[float] = None
-    serial_nbr: str
-    manufacturer: str
-    model: Optional[str] = None
-    level_of_equipment: LevelOfEquipmentSchema
-    ports: Optional[PortsEnum] = None
-    intended_use_types: List[EndUseTypeSchema]
-    intended_user_types: List[EndUserTypeSchema]
-    street_address: str
-    city: str
-    postal_code: str
-    latitude: float
-    longitude: float
-    notes: Optional[str] = None
-
-
 class ComplianceReportBaseSchema(BaseSchema):
     compliance_report_id: int
     compliance_report_group_uuid: Optional[str]
     version: Optional[int]
     supplemental_initiator: Optional[SupplementalInitiatorType]
     compliance_period_id: int
-    compliance_period: CompliancePeriodSchema
+    compliance_period: CompliancePeriodBaseSchema
     organization_id: int
     organization: ComplianceReportOrganizationSchema
     summary: Optional[SummarySchema]
@@ -196,13 +166,15 @@ class ComplianceReportListSchema(BaseSchema):
 
 
 class ComplianceReportSummaryRowSchema(BaseSchema):
-    line: Optional[int] = None
+    line: Optional[Union[int, str]] = None
     description: Optional[str] = ""
     field: Optional[str] = ""
     gasoline: Optional[float] = 0
     diesel: Optional[float] = 0
     jet_fuel: Optional[float] = 0
     value: Optional[float] = 0
+    units: Optional[str] = ""
+    bold: Optional[bool] = False
     total_value: Optional[float] = 0
     format: Optional[str] = FORMATS.NUMBER.value
 
@@ -240,3 +212,11 @@ class CommonPaginatedReportRequestSchema(BaseSchema):
 class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
+
+
+T = TypeVar('T')
+
+
+class ComplianceReportChangelogSchema(BaseSchema, Generic[T]):
+    changelog: Optional[List[T]] = []
+    pagination: Optional[PaginationResponseSchema] = {}
