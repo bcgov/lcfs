@@ -93,7 +93,7 @@ const OrganizationList = ({ onOrgChange }) => {
 }
 
 OrganizationList.propTypes = {
-  onOrganizationChange: PropTypes.func.isRequired
+  onOrgChange: PropTypes.func.isRequired
 }
 
 export default OrganizationList

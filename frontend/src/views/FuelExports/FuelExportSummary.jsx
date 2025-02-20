@@ -1,14 +1,14 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema.jsx'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema.jsx'
 
 export const FuelExportSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -53,10 +53,6 @@ export const FuelExportSummary = ({ data, status }) => {
     [status]
   )
 
-  const columns = useMemo(() => {
-    return fuelExportSummaryColDefs(t)
-  }, [t])
-
   const getRowId = (params) => {
     return params.data.fuelExportId.toString()
   }
@@ -77,7 +73,7 @@ export const FuelExportSummary = ({ data, status }) => {
           query={useGetFuelExports}
           dataKey={'fuelExports'}
           queryParams={{ complianceReportId }}
-          columnDefs={columns}
+          columnDefs={fuelExportSummaryColDefs}
           getRowId={getRowId}
           gridOptions={gridOptions}
           enableCopyButton={false}

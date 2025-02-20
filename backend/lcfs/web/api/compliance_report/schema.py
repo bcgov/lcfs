@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import ClassVar, Optional, List, Union
+from typing import ClassVar, Optional, List, TypeVar, Generic, Union
 from datetime import datetime, date
 from enum import Enum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
@@ -111,29 +111,6 @@ class FSEOptionsSchema(BaseSchema):
     ports: ClassVar[List[str]] = [port.value for port in PortsEnum]
 
 
-class FinalSupplyEquipmentSchema(BaseSchema):
-    final_supply_equipment_id: int
-    compliance_report_id: int
-    organization_name: str
-    supply_from_date: date
-    supply_to_date: date
-    registration_nbr: str
-    kwh_usage: Optional[float] = None
-    serial_nbr: str
-    manufacturer: str
-    model: Optional[str] = None
-    level_of_equipment: LevelOfEquipmentSchema
-    ports: Optional[PortsEnum] = None
-    intended_use_types: List[EndUseTypeSchema]
-    intended_user_types: List[EndUserTypeSchema]
-    street_address: str
-    city: str
-    postal_code: str
-    latitude: float
-    longitude: float
-    notes: Optional[str] = None
-
-
 class ComplianceReportBaseSchema(BaseSchema):
     compliance_report_id: int
     compliance_report_group_uuid: Optional[str]
@@ -235,3 +212,11 @@ class CommonPaginatedReportRequestSchema(BaseSchema):
 class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
+
+
+T = TypeVar('T')
+
+
+class ComplianceReportChangelogSchema(BaseSchema, Generic[T]):
+    changelog: Optional[List[T]] = []
+    pagination: Optional[PaginationResponseSchema] = {}

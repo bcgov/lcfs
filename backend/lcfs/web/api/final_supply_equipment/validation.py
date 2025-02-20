@@ -1,13 +1,11 @@
-from typing import List, Optional
+from typing import List
+
 from fastapi import Depends, HTTPException, Request
-from lcfs.db.models.compliance import FinalSupplyEquipment
-from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
-from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
-from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema
 from starlette import status
 
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.utils.constants import LCFS_Constants
+from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
+from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema
 
 
 class FinalSupplyEquipmentValidation:
@@ -36,7 +34,9 @@ class FinalSupplyEquipmentValidation:
                 )
             # TODO: validate each field from the UI
 
-    async def check_equipment_uniqueness_and_overlap(self, data: FinalSupplyEquipmentCreateSchema):
+    async def check_equipment_uniqueness_and_overlap(
+        self, data: FinalSupplyEquipmentCreateSchema
+    ):
         # Check for exact duplicates
         is_duplicate = await self.fse_repo.check_uniques_of_fse_row(data)
         if is_duplicate:
