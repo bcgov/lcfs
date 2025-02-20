@@ -18,7 +18,7 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
   const { complianceReportId } = useParams()
 
   const gridRef = useRef()
-  const { t } = useTranslation(['common', 'finalSupplyEquipments'])
+  const { t } = useTranslation(['common', 'finalSupplyEquipment'])
   const location = useLocation()
 
   useEffect(() => {

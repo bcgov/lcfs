@@ -4,6 +4,7 @@ from typing import Optional, List
 
 from pydantic import Field
 
+from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 
@@ -44,7 +45,7 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     intended_users: List[str]
     street_address: str
     city: str
-    postal_code: str = Field(pattern=r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$")
+    postal_code: str = Field(pattern=POSTAL_REGEX)
     latitude: float
     longitude: float
     notes: Optional[str] = None

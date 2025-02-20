@@ -50,7 +50,6 @@ def service(mock_request, mock_repo, mock_comp_report_repo):
     Instantiate the service class with mocked dependencies.
     """
     return FinalSupplyEquipmentServices(
-        request=mock_request,
         repo=mock_repo,
         compliance_report_repo=mock_comp_report_repo,
     )
@@ -90,7 +89,7 @@ async def test_get_fse_options_success(service, mock_repo, mock_request):
         ["OrgA", "OrgB"],
     )
 
-    result = await service.get_fse_options()
+    result = await service.get_fse_options(mock_request.user)
     assert "intended_use_types" in result
     assert "levels_of_equipment" in result
     assert "intended_user_types" in result
@@ -101,14 +100,14 @@ async def test_get_fse_options_success(service, mock_repo, mock_request):
 
 
 @pytest.mark.anyio
-async def test_get_fse_options_exception(service, mock_repo):
+async def test_get_fse_options_exception(service, mock_repo, mock_request):
     """
     Test get_fse_options raises HTTP 400 if repo call fails.
     """
     mock_repo.get_fse_options.side_effect = Exception("Repo Error")
 
     with pytest.raises(HTTPException, match="Error retrieving FSE options") as exc:
-        await service.get_fse_options()
+        await service.get_fse_options(mock_request.user)
 
     assert exc.value.status_code == 400
 
@@ -235,6 +234,7 @@ async def test_update_final_supply_equipment_not_found(
 async def test_create_final_supply_equipment_success(
     service,
     mock_repo,
+    mock_request,
     valid_final_supply_equipment_schema,
     valid_final_supply_equipment_create_schema,
 ):
@@ -248,7 +248,7 @@ async def test_create_final_supply_equipment_success(
     mock_repo.increment_seq_by_org_and_postal_code.return_value = None
 
     new_fse = await service.create_final_supply_equipment(
-        valid_final_supply_equipment_create_schema
+        valid_final_supply_equipment_create_schema, mock_request.user
     )
     assert new_fse is not None
     mock_repo.create_final_supply_equipment.assert_awaited_once()
@@ -272,7 +272,7 @@ async def test_generate_registration_number_success(service, mock_repo, mock_req
     Test generating a registration number with a valid postal code.
     """
     mock_repo.get_current_seq_by_org_and_postal_code.return_value = 1
-    reg_num = await service.generate_registration_number("A1A 1A1")
+    reg_num = await service.generate_registration_number(mock_request.user, "A1A 1A1")
     # Format => ORGCODE-A1A1A1-002 (for next_number = 2)
     assert reg_num.startswith("TESTORG-A1A1A1-")
     seq_str = reg_num.split("-")[-1]
@@ -280,16 +280,18 @@ async def test_generate_registration_number_success(service, mock_repo, mock_req
 
 
 @pytest.mark.anyio
-async def test_generate_registration_number_invalid_postal(service):
+async def test_generate_registration_number_invalid_postal(service, mock_request):
     """
     Test invalid postal code raises HTTP 400.
     """
     with pytest.raises(ValueError, match="Invalid Canadian postal code format"):
-        await service.generate_registration_number("12345")
+        await service.generate_registration_number(mock_request.user, "12345")
 
 
 @pytest.mark.anyio
-async def test_generate_registration_number_exceeds_limit(service, mock_repo):
+async def test_generate_registration_number_exceeds_limit(
+    service, mock_repo, mock_request
+):
     """
     Test exceeding maximum registration numbers raises ValueError.
     """
@@ -299,7 +301,7 @@ async def test_generate_registration_number_exceeds_limit(service, mock_repo):
         ValueError,
         match="Exceeded maximum registration numbers for the given postal code",
     ):
-        await service.generate_registration_number("A1A 1A1")
+        await service.generate_registration_number(mock_request.user, "A1A 1A1")
 
 
 @pytest.mark.anyio

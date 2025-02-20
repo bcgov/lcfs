@@ -1,11 +1,15 @@
-import structlog
-from typing import List, Tuple, Any, Coroutine, Sequence
+from typing import List, Any, Sequence
 
+import structlog
+from fastapi import Depends
+from sqlalchemy import and_, delete, distinct, exists, select, update
+from sqlalchemy import func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
+
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import (
-    FinalSupplyEquipment,
-    EndUseType,
-    LevelOfEquipment,
-    EndUserType,
+    Organization,
 )
 from lcfs.db.models.compliance import (
     EndUserType,
@@ -22,14 +26,7 @@ from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentCreateSchema,
     PortsEnum,
 )
-from sqlalchemy import and_, delete, distinct, exists, select, update
-from sqlalchemy.orm import joinedload, selectinload
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends
-
 from lcfs.web.core.decorators import repo_handler
-from lcfs.db.dependencies import get_async_db_session
-from sqlalchemy import func
 
 logger = structlog.get_logger(__name__)
 
@@ -40,9 +37,9 @@ class FinalSupplyEquipmentRepository:
 
     @repo_handler
     async def get_fse_options(self, organization) -> tuple[
-        list[EndUseType],
-        list[LevelOfEquipment],
-        list[EndUserType],
+        Sequence[EndUseType],
+        Sequence[LevelOfEquipment],
+        Sequence[EndUserType],
         list[str],
         list[str],
     ]:
@@ -63,7 +60,7 @@ class FinalSupplyEquipmentRepository:
             organization_names,
         )
 
-    async def get_intended_use_types(self) -> List[EndUseType]:
+    async def get_intended_use_types(self) -> Sequence[EndUseType]:
         """
         Retrieve a list of intended use types from the database
         """
@@ -97,7 +94,7 @@ class FinalSupplyEquipmentRepository:
             .scalar_one_or_none()
         )
 
-    async def get_intended_user_types(self) -> List[EndUserType]:
+    async def get_intended_user_types(self) -> Sequence[EndUserType]:
         """
         Retrieve a list of intended user types from the database
         """
@@ -111,13 +108,13 @@ class FinalSupplyEquipmentRepository:
             .all()
         )
 
-    async def get_organization_names(self, organization) -> List[str]:
+    async def get_organization_names(self, organization: Organization) -> List[str]:
         """
         Retrieve unique organization names for Final Supply Equipment records
         associated with the given organization_id via ComplianceReport.
 
         Args:
-            organization_id (int): The ID of the organization.
+            organization (Organization): The organization.
 
         Returns:
             List[str]: A list of unique organization names.
@@ -147,7 +144,7 @@ class FinalSupplyEquipmentRepository:
             return []
 
     @repo_handler
-    async def get_intended_user_by_name(self, intended_user: str) -> EndUseType:
+    async def get_intended_user_by_name(self, intended_user: str) -> EndUserType | None:
         """
         Retrieve intended user type name from the database
         """
@@ -166,7 +163,7 @@ class FinalSupplyEquipmentRepository:
             .scalar_one_or_none()
         )
 
-    async def get_levels_of_equipment(self) -> List[LevelOfEquipment]:
+    async def get_levels_of_equipment(self) -> Sequence[LevelOfEquipment]:
         """
         Retrieve a list of levels of equipment from the database
         """
@@ -188,7 +185,7 @@ class FinalSupplyEquipmentRepository:
         )
 
     @repo_handler
-    async def get_fse_list(self, report_id: int) -> List[FinalSupplyEquipment]:
+    async def get_fse_list(self, report_id: int) -> Sequence[FinalSupplyEquipment]:
         """
         Retrieve a list of final supply equipment from the database
         """
@@ -355,6 +352,22 @@ class FinalSupplyEquipmentRepository:
         return sequence_number
 
     @repo_handler
+    async def reset_seq_by_org(self, organization_code: str):
+        """
+        Resets the sequence number for a given organization code.
+        """
+        await self.db.execute(
+            update(FinalSupplyEquipmentRegNumber)
+            .where(
+                and_(
+                    FinalSupplyEquipmentRegNumber.organization_code
+                    == organization_code,
+                )
+            )
+            .values(current_sequence_number=1)
+        )
+
+    @repo_handler
     async def check_uniques_of_fse_row(
         self, row: FinalSupplyEquipmentCreateSchema
     ) -> bool:
@@ -410,7 +423,7 @@ class FinalSupplyEquipmentRepository:
         return result.scalar()
 
     @repo_handler
-    async def search_manufacturers(self, query: str) -> list[str]:
+    async def search_manufacturers(self, query: str) -> Sequence[str]:
         """
         Search for manufacturers based on the provided query.
         """
@@ -420,3 +433,20 @@ class FinalSupplyEquipmentRepository:
             )
         )
         return result.scalars().all()
+
+    @repo_handler
+    async def delete_all(self, compliance_report_id):
+        """
+        Deletes all FinalSupplyEquipment records corresponding to a specific
+        compliance_report_id.
+
+        :param compliance_report_id: The target compliance report ID.
+        :return: The number of deleted records.
+        """
+        result = await self.db.execute(
+            delete(FinalSupplyEquipment).where(
+                FinalSupplyEquipment.compliance_report_id == compliance_report_id
+            )
+        )
+
+        return result.rowcount

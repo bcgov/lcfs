@@ -48,5 +48,4 @@ class ClamAVService:
                     result=result,
                 )
                 raise VirusScanException(f"Virus detected: {result}")
-
         return result
