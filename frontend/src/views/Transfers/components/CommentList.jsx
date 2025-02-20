@@ -21,56 +21,79 @@ function getInitials(name = '') {
 }
 
 function getAvatarLetters(comment, viewerIsGovernment) {
-  const { createdBy = '', createdByOrg = '' } = comment
+  const user = comment.createdBy || ''
+  const org = comment.createdByOrg || ''
 
-  const isAuthorGov = createdByOrg
+  // Is the author Government of BC?
+  const isAuthorGov = org
     .toLowerCase()
     .includes('government of british columbia')
 
-  // If the author is government and the viewer is not government, always show 'BC'
+  // If gov comment and viewer is not gov, always show 'BC'
   if (isAuthorGov && !viewerIsGovernment) {
     return 'BC'
   }
 
-  // Otherwise, return initials of the author
-  return getInitials(createdBy)
+  // Otherwise, if there's a user, use their initials
+  if (user) {
+    return getInitials(user)
+  }
+
+  // If user is missing but org is present, use the first letter of org
+  if (org) {
+    return org.trim().charAt(0).toUpperCase()
+  }
+
+  // Fallback if neither user nor org is known
+  return '?'
 }
 
 function buildLine(comment, viewerIsGovernment, t) {
   const postedDate = formatDateWithTimezoneAbbr(comment.createDate)
-  const isAuthorGov = (comment.createdByOrg || '')
+  const user = comment.createdBy || ''
+  const org = comment.createdByOrg || ''
+  const message = comment.comment || ''
+
+  // Is the author Government of BC?
+  const isAuthorGov = org
     .toLowerCase()
     .includes('government of british columbia')
 
-  // Fallback if fields are missing
-  const user = comment.createdBy || t('transfer:commentList.unknownUser')
-  const org = comment.createdByOrg || t('transfer:commentList.unknownOrg')
-  const message = comment.comment || ''
-
+  // Gov comment logic
   if (isAuthorGov) {
-    if (viewerIsGovernment) {
+    // If viewer is gov and we actually have a user name
+    if (viewerIsGovernment && user) {
       return t('transfer:commentList.govLineForGov', {
         user,
-        government: t('transfer:commentList.governmentOfBC'),
-        date: postedDate,
-        comment: message
-      })
-    } else {
-      return t('transfer:commentList.govLine', {
-        government: t('transfer:commentList.governmentOfBC'),
         date: postedDate,
         comment: message
       })
     }
+    // Otherwise, just show Government of BC
+    return t('transfer:commentList.govLine', {
+      date: postedDate,
+      comment: message
+    })
   }
 
-  // For a non-government author
-  return t('transfer:commentList.userLine', {
-    user,
-    org,
-    date: postedDate,
-    comment: message
-  })
+  // Non-gov comment logic
+  // If user and org are both present
+  if (user && org) {
+    return t('transfer:commentList.userLine', {
+      user,
+      org,
+      date: postedDate,
+      comment: message
+    })
+  }
+  // If user is missing but org is present
+  if (!user && org) {
+    return t('transfer:commentList.orgLine', {
+      org,
+      date: postedDate,
+      comment: message
+    })
+  }
 }
 
 export const CommentList = ({ comments = [], viewerIsGovernment = false }) => {
