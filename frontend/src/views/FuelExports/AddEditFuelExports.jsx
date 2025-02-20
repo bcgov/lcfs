@@ -68,6 +68,7 @@ export const AddEditFuelExports = () => {
       if (!isArrayEmpty(data)) {
         const updatedRowData = data.fuelExports.map((item) => ({
           ...item,
+          complianceReportId, // This takes current reportId, important for versioning
           compliancePeriod,
           fuelCategory: item.fuelCategory?.category,
           fuelType: item.fuelType?.fuelType,
@@ -78,7 +79,7 @@ export const AddEditFuelExports = () => {
         }))
         setRowData([...updatedRowData, { id: uuid(), compliancePeriod }])
       } else {
-        setRowData([{ id: uuid(), compliancePeriod }])
+        setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
       params.api.sizeColumnsToFit()
 
