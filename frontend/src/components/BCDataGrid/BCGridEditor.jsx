@@ -200,12 +200,12 @@ export const BCGridEditor = ({
   const onCellFocused = (params) => {
     if (params.column) {
       // Ensure the focused column is always visible
-      this.gridApi.ensureColumnVisible(params.column)
+      params.api?.ensureColumnVisible(params.column)
 
       // Scroll to make focused cell align to left
-      const leftPos = params.column.getLeftPosition()
+      const leftPos = params.column?.left
       if (leftPos !== null) {
-        this.gridApi.horizontalScrollTo(leftPos)
+        params.api.horizontalScroll.setScrollPosition(leftPos)
       }
     }
   }
