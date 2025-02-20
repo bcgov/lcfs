@@ -6,9 +6,11 @@ import structlog
 from fastapi import Depends, HTTPException, status, Request
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.models import UserProfile
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
 from lcfs.web.api.notional_transfer.schema import (
@@ -20,9 +22,8 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransfersAllSchema,
     DeleteNotionalTransferResponseSchema,
 )
-from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.role.schema import user_has_roles
-from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
 
@@ -110,12 +111,14 @@ class NotionalTransferServices:
 
     @service_handler
     async def get_notional_transfers(
-        self, compliance_report_id: int, changelog: bool = False
+        self, compliance_report_id: int,
+        user: UserProfile,
+        changelog: bool = False
     ) -> NotionalTransfersAllSchema:
         """
         Gets the list of notional transfers for a specific compliance report.
         """
-        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         notional_transfers = await self.repo.get_notional_transfers(
             compliance_report_id, changelog, exclude_draft_reports=is_gov_user
         )
@@ -127,9 +130,12 @@ class NotionalTransferServices:
 
     @service_handler
     async def get_notional_transfers_paginated(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
+        self,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int,
+        user: UserProfile,
     ) -> NotionalTransfersSchema:
-        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         notional_transfers, total_count = (
             await self.repo.get_notional_transfers_paginated(
                 pagination, compliance_report_id, exclude_draft_reports=is_gov_user

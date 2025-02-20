@@ -2,16 +2,14 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { apiRoutes } from '@/constants/routes'
-import { CommonArrayRenderer, LinkRenderer } from '@/utils/grid/cellRenderers'
+import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { numberFormatter } from '@/utils/formatters.js'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
-import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema.jsx'
 
 export const FinalSupplyEquipmentSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')

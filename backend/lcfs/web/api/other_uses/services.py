@@ -6,11 +6,13 @@ import structlog
 from fastapi import Depends, HTTPException, status, Request
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.other_uses.repo import OtherUsesRepository
-from lcfs.web.core.decorators import service_handler
+from lcfs.db.models import UserProfile
 from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.api.other_uses.schema import (
     OtherUsesCreateSchema,
     OtherUsesSchema,
@@ -24,9 +26,8 @@ from lcfs.web.api.other_uses.schema import (
     FuelCodeSchema,
     DeleteOtherUsesResponseSchema,
 )
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.role.schema import user_has_roles
-from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
 
@@ -151,11 +152,15 @@ class OtherUsesServices:
         )
 
     @service_handler
-    async def get_other_uses(self, compliance_report_id: int, changelog: bool = False) -> OtherUsesListSchema:
+    async def get_other_uses(
+        self, compliance_report_id: int,
+        user: UserProfile,
+        changelog: bool = False
+    ) -> OtherUsesListSchema:
         """
         Gets the list of other uses for a specific compliance report.
         """
-        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         other_uses = await self.repo.get_other_uses(
             compliance_report_id,
             changelog,
@@ -168,9 +173,12 @@ class OtherUsesServices:
 
     @service_handler
     async def get_other_uses_paginated(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
+        self,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int,
+        user: UserProfile,
     ) -> OtherUsesListSchema:
-        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         other_uses, total_count = await self.repo.get_other_uses_paginated(
             pagination, compliance_report_id, exclude_draft_reports=is_gov_user
         )

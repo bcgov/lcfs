@@ -89,7 +89,11 @@ async def get_notional_transfers(
         await report_validate.validate_organization_access(
             compliance_report_id
         )
-        return await service.get_notional_transfers(compliance_report_id, request_data.changelog)
+        return await service.get_notional_transfers(
+            request_data.compliance_report_id,
+            request.user,
+            request_data.changelog
+        )
 
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
@@ -128,7 +132,7 @@ async def get_notional_transfers_paginated(
     )
     compliance_report_id = request_data.compliance_report_id
     return await service.get_notional_transfers_paginated(
-        pagination, compliance_report_id
+        pagination, compliance_report_id, request.user
     )
 
 
