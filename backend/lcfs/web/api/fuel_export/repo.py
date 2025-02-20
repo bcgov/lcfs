@@ -132,7 +132,11 @@ class FuelExportRepository:
                 ),
             )
             .outerjoin(
-                EnergyDensity, EnergyDensity.fuel_type_id == FuelType.fuel_type_id
+                EnergyDensity,
+                and_(
+                    EnergyDensity.fuel_type_id == FuelType.fuel_type_id,
+                    EnergyDensity.compliance_period_id == subquery_compliance_period_id
+                )
             )
             .outerjoin(UnitOfMeasure, EnergyDensity.uom_id == UnitOfMeasure.uom_id)
             .outerjoin(
@@ -141,6 +145,7 @@ class FuelExportRepository:
                     EnergyEffectivenessRatio.fuel_category_id
                     == FuelCategory.fuel_category_id,
                     EnergyEffectivenessRatio.fuel_type_id == FuelInstance.fuel_type_id,
+                    EnergyEffectivenessRatio.compliance_period_id == subquery_compliance_period_id
                 ),
             )
             .outerjoin(
