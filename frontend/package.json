@@ -75,7 +75,7 @@
     "react-quill": "^2.0.0",
     "react-router-dom": "^6.21.1",
     "react-snowfall": "^1.2.1",
-    "swagger-ui-react": "^5.10.5",
+    "swagger-ui-react": "^5.19.0",
     "uuid": "^9.0.1",
     "vite": "^5.4.6",
     "vite-plugin-svgr": "^4.2.0",
@@ -102,8 +102,8 @@
     "@testing-library/user-event": "^14.5.2",
     "@types/react": "^18.2.46",
     "@types/react-dom": "^18.2.18",
-    "@vitest/coverage-v8": "^2.1.4",
-    "@vitest/ui": "^2.1.4",
+    "@vitest/coverage-v8": "^2.1.9",
+    "@vitest/ui": "^2.1.9",
     "axe-core": "^4.8.3",
     "cross-env": "^7.0.3",
     "cypress": "^13.13.3",
@@ -128,7 +128,7 @@
     "prop-types": "^15.8.1",
     "standard": "^17.1.0",
     "storybook": "^8.2.9",
-    "vitest": "^2.1.4"
+    "vitest": "^2.1.9"
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "4.6.1"
