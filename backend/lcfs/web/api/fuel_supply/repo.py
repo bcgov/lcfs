@@ -161,6 +161,7 @@ class FuelSupplyRepository:
                     EnergyEffectivenessRatio.fuel_category_id
                     == FuelCategory.fuel_category_id,
                     EnergyEffectivenessRatio.fuel_type_id == FuelInstance.fuel_type_id,
+                    EnergyEffectivenessRatio.compliance_period_id == subquery_compliance_period_id
                 ),
             )
             .outerjoin(
