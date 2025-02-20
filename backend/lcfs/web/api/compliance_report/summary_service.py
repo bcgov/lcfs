@@ -8,7 +8,7 @@ from fastapi import Depends
 from lcfs.utils.constants import LCFS_Constants
 from sqlalchemy import inspect
 
-from lcfs.db.models import FuelSupply
+from lcfs.db.models import FuelSupply, UserProfile
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.OtherUses import OtherUses
@@ -381,18 +381,19 @@ class ComplianceReportSummaryService:
         self,
         report_id: int,
         summary_data: ComplianceReportSummaryUpdateSchema,
+        user: UserProfile,
     ) -> ComplianceReportSummarySchema:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
         await self.repo.save_compliance_report_summary(summary_data)
-        summary_data = await self.calculate_compliance_report_summary(report_id)
+        summary_data = await self.calculate_compliance_report_summary(report_id, user)
 
         return summary_data
 
     @service_handler
     async def calculate_compliance_report_summary(
-        self, report_id: int
+        self, report_id: int, user: UserProfile
     ) -> ComplianceReportSummarySchema:
         """Several fields on Report Summary are Transient until locked, this function will re-calculate fields as necessary"""
         # TODO this method will have to be updated to handle supplemental reports
@@ -454,9 +455,7 @@ class ComplianceReportSummaryService:
             }
 
         notional_transfers = (
-            await self.notional_transfer_service.get_notional_transfers(
-                compliance_report_id=report_id
-            )
+            await self.notional_transfer_service.get_notional_transfers(report_id, user)
         )
 
         notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
