@@ -32,15 +32,11 @@ export const schemaValidation = Yup.object({
       /^((\d{5}-\d{4})|(\d{5})|([A-Z]\d[A-Z]\s?\d[A-Z]\d))$/i,
       'Please enter a valid Postal / ZIP Code.'
     ),
-  orgAttorneyStreetAddress: Yup.string().required(
-    'Street Address / PO Box is required.'
-  ),
-  orgAttorneyCity: Yup.string().required('City is required.'),
-  orgAttorneyPostalCodeZipCode: Yup.string()
-    .required('Postal / ZIP Code is required.')
-    .matches(
-      /^((\d{5}-\d{4})|(\d{5})|([A-Z]\d[A-Z]\s?\d[A-Z]\d))$/i,
-      'Please enter a valid Postal / ZIP Code.'
-    ),
+  // Head Office fields are now optional
+  orgHeadOfficeStreetAddress: Yup.string().nullable(),
+  orgHeadOfficeCity: Yup.string().nullable(),
+  orgHeadOfficeProvince: Yup.string().nullable(),
+  orgHeadOfficeCountry: Yup.string().nullable(),
+  orgHeadOfficePostalCodeZipCode: Yup.string().nullable(),
   hasEarlyIssuance: Yup.string().required('Early issuance setting is required')
 })
