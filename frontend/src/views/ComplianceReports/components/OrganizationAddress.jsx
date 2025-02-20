@@ -21,8 +21,8 @@ export const OrganizationAddress = ({
   setIsEditing
 }) => {
   const { t } = useTranslation(['common', 'report', 'org'])
-
   const [modalData, setModalData] = useState(null)
+  const [sameAsService, setSameAsService] = useState(false)
 
   const validationSchema = Yup.object({
     name: Yup.string().required('Legal name is required.'),
@@ -33,8 +33,7 @@ export const OrganizationAddress = ({
     email: Yup.string()
       .required('Email address is required.')
       .email('Please enter a valid email address.'),
-    serviceAddress: Yup.string().required('Service Address is required.'),
-    bcAddress: Yup.string().required('B.C. Address is required.')
+    serviceAddress: Yup.string().required('Service Address is required.')
   })
 
   const formFields = (t) => [
@@ -59,21 +58,36 @@ export const OrganizationAddress = ({
       label: t('report:serviceAddrLabel')
     },
     {
-      name: 'bcAddress',
-      label: t('report:bcAddrLabel')
+      name: 'recordsAddress',
+      label: t('report:bcRecordLabel'),
+      checkbox: true,
+      checkboxLabel: 'Same as address for service'
+    },
+    {
+      name: 'headOfficeAddress',
+      label: isEditing
+        ? t('report:hoAddrLabelEdit')
+        : t('report:hoAddrLabelView')
     }
   ]
 
   const { mutate: updateComplianceReport, isLoading: isUpdating } =
     useUpdateOrganizationSnapshot(complianceReportId)
 
-  // User form hook and form validation
   const form = useForm({
     resolver: yupResolver(validationSchema),
     mode: 'onChange',
     defaultValues
   })
   const { handleSubmit, control, setValue, watch, reset } = form
+
+  const serviceAddress = watch('serviceAddress')
+
+  useEffect(() => {
+    if (sameAsService && serviceAddress) {
+      setValue('recordsAddress', serviceAddress)
+    }
+  }, [sameAsService, serviceAddress, setValue])
 
   const onSubmit = async (data) => {
     await updateComplianceReport(data)
@@ -83,6 +97,10 @@ export const OrganizationAddress = ({
   useEffect(() => {
     if (snapshotData) {
       reset(snapshotData)
+      // Check if addresses are the same and set checkbox accordingly
+      setSameAsService(
+        snapshotData.serviceAddress === snapshotData.recordsAddress
+      )
     }
   }, [reset, snapshotData])
 
@@ -110,6 +128,13 @@ export const OrganizationAddress = ({
   const onCancel = () => {
     reset(snapshotData)
     setIsEditing(false)
+  }
+
+  const handleSameAddressChange = (event) => {
+    setSameAsService(event.target.checked)
+    if (event.target.checked) {
+      setValue('recordsAddress', serviceAddress)
+    }
   }
 
   return (
@@ -152,6 +177,17 @@ export const OrganizationAddress = ({
                   label={field.label}
                   name={field.name}
                   optional={field.optional}
+                  checkbox={field.checkbox}
+                  checkboxLabel={field.checkboxLabel}
+                  onCheckboxChange={
+                    field.name === 'recordsAddress'
+                      ? handleSameAddressChange
+                      : undefined
+                  }
+                  isChecked={
+                    field.name === 'recordsAddress' ? sameAsService : undefined
+                  }
+                  disabled={field.name === 'recordsAddress' && sameAsService}
                 />
               ))}
             </Stack>

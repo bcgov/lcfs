@@ -38,6 +38,7 @@
   "bcAddrLabel": "Head office (optional)",
   "bcAddrLabelShort": "Head address (optional)",
   "bcRecordLabel": "Address in B.C. where records are maintained (optional)",
+  "bcRecordLabelShort": "Records address (optional)",
   "sameAddrLabel": "Same as address for service",
   "contactMsg": "to update address information.",
   "usersLabel": "Users",
