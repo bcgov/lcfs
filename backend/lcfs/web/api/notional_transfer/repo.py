@@ -66,7 +66,7 @@ class NotionalTransferRepository:
         return result
 
     async def get_effective_notional_transfers(
-        self, compliance_report_group_uuid: str, changelog: bool = False, exclude_draft_reports: bool = False
+        self, compliance_report_group_uuid: str, exclude_draft_reports: bool = False, changelog: bool = False,
     ) -> List[NotionalTransferSchema]:
         """
         Retrieves effective notional transfers for a compliance report group UUID.
