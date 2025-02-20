@@ -33,7 +33,7 @@ export const BCFormText = ({
           <InputLabel htmlFor={name} component="label" className="form-label">
             <Box display="flex" gap={2} flexWrap="wrap">
               <BCTypography variant="label" component="span">
-                {label}&nbsp;
+                {label}:&nbsp;
                 {optional && (
                   <span className="optional" style={{ fontWeight: 'normal' }}>
                     (optional)
@@ -48,6 +48,7 @@ export const BCFormText = ({
                       onChange={onCheckboxChange}
                       size="small"
                       sx={{
+                        marginTop: 0.5,
                         '& .MuiSvgIcon-root': {
                           border: '0.0625rem solid rgb(63, 65, 68)'
                         }
@@ -55,7 +56,7 @@ export const BCFormText = ({
                     />
                   }
                   label={
-                    <BCTypography variant="body4" component="span">
+                    <BCTypography variant="body4" component="span" color="text">
                       {checkboxLabel}
                     </BCTypography>
                   }
