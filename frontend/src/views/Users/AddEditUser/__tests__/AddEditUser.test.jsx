@@ -118,9 +118,7 @@ describe('AddEditUser component', () => {
       await screen.findByText('Email address is required.')
     ).toBeInTheDocument()
     expect(await screen.findByText('User name is required')).toBeInTheDocument()
-    const phoneNumber = screen.getByRole('textbox', {
-      name: /Phone/i
-    })
+    const phoneNumber = screen.getAllByLabelText(/Phone/i)[0]
     await userEvent.type(phoneNumber, '1234')
     expect(
       await screen.findByText('Phone number is not valid')
