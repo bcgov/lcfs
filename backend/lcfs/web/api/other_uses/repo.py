@@ -1,3 +1,4 @@
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.fuel import FuelCodeStatus
 import structlog
 from datetime import date, datetime
@@ -372,6 +373,15 @@ class OtherUsesRepository:
         if not include_legacy:
             base_conditions.append(FuelType.is_legacy == False)
 
+        # Get compliance period id for default CI lookup
+        compliance_period_id = None
+        if compliance_period:
+            cp_result = await self.db.execute(
+                select(CompliancePeriod.compliance_period_id)
+                .where(CompliancePeriod.description == str(compliance_period))
+            )
+            compliance_period_id = cp_result.scalar_one_or_none()
+
         combined_conditions = and_(*base_conditions)
 
         query = (
@@ -418,10 +428,18 @@ class OtherUsesRepository:
                 and (fc.fuel_status_id == approved_fuel_code_status_id)
             ]
 
+            # Get default CI for compliance period
+            default_ci = next(
+                (dci.default_carbon_intensity
+                for dci in fuel_type.default_carbon_intensities
+                if dci.compliance_period_id == compliance_period_id),
+                None
+            )
+
             formatted_fuel_type = {
                 "fuel_type_id": fuel_type.fuel_type_id,
                 "fuel_type": fuel_type.fuel_type,
-                "default_carbon_intensity": fuel_type.default_carbon_intensity,
+                "default_carbon_intensity": default_ci,
                 "units": fuel_type.units if fuel_type.units else None,
                 "unrecognized": fuel_type.unrecognized,
                 "fuel_categories": [

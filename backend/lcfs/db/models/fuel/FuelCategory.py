@@ -1,3 +1,5 @@
+from typing import Optional
+from pydantic import computed_field
 from sqlalchemy import Column, Integer, Text, Enum, Numeric
 from sqlalchemy.orm import relationship
 
@@ -29,14 +31,15 @@ class FuelCategory(BaseModel, Auditable, DisplayOrder, EffectiveDates):
     description = Column(
         Text, nullable=True, comment="Description of the fuel category"
     )
-    default_carbon_intensity = Column(
-        Numeric(10, 2),
-        nullable=False,
-        comment="Default carbon intensity of the fuel category",
-    )
 
     energy_effectiveness_ratio = relationship("EnergyEffectivenessRatio")
     target_carbon_intensities = relationship(
         "TargetCarbonIntensity", back_populates="fuel_category"
     )
     fuel_instances = relationship("FuelInstance", back_populates="fuel_category")
+    category_carbon_intensities = relationship(
+        "CategoryCarbonIntensity",
+        back_populates="fuel_category",
+        lazy="joined",
+        order_by="CategoryCarbonIntensity.compliance_period_id"
+    )

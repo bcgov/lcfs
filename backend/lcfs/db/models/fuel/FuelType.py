@@ -1,5 +1,7 @@
 import enum
+from typing import Optional
 
+from pydantic import computed_field
 from sqlalchemy import Column, Integer, Text, Boolean, Enum, Numeric, text
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
@@ -46,11 +48,6 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
         ForeignKey("provision_of_the_act.provision_of_the_act_id"),
         nullable=True,
     )
-    default_carbon_intensity = Column(
-        Numeric(10, 2),
-        nullable=True,
-        comment="Carbon intensities: default & prescribed (gCO2e/MJ)",
-    )
     units = Column(
         Enum(QuantityUnitsEnum), nullable=False, comment="Units of fuel quantity"
     )
@@ -91,4 +88,10 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
         "AdditionalCarbonIntensity",
         back_populates="fuel_type",
         overlaps="additional_carbon_intensity"
+    )
+    default_carbon_intensities = relationship(
+        "DefaultCarbonIntensity",
+        back_populates="fuel_type",
+        lazy="joined",
+        order_by="DefaultCarbonIntensity.compliance_period_id"
     )
