@@ -3,7 +3,7 @@ import uuid
 from typing import List, Union, Type
 
 import structlog
-from fastapi import Depends, Request
+from fastapi import Depends
 
 from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,
@@ -29,7 +29,6 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
-from lcfs.db.base import ActionTypeEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -39,7 +38,6 @@ class ComplianceReportServices:
         self,
         repo: ComplianceReportRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
-
     ) -> None:
         self.repo = repo
         self.snapshot_services = snapshot_services
@@ -66,8 +64,7 @@ class ComplianceReportServices:
             report_data.status
         )
         if not draft_status:
-            raise DataNotFoundException(
-                f"Status '{report_data.status}' not found.")
+            raise DataNotFoundException(f"Status '{report_data.status}' not found.")
 
         # Generate a new group_uuid for the new report series
         group_uuid = str(uuid.uuid4())
@@ -173,7 +170,10 @@ class ComplianceReportServices:
 
     @service_handler
     async def get_compliance_reports_paginated(
-        self, pagination, organization_id: int = None, bceid_user: bool = False
+        self,
+        pagination,
+        organization_id: int = None,
+        bceid_user: bool = False,
     ):
         """Fetches all compliance reports"""
         if bceid_user:
@@ -208,8 +208,8 @@ class ComplianceReportServices:
 
     def _mask_report_status(self, reports: List) -> List:
         recommended_statuses = {
-            ComplianceReportStatusEnum.Recommended_by_analyst.value,
-            ComplianceReportStatusEnum.Recommended_by_manager.value,
+            ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
+            ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
         }
 
         masked_reports = []
@@ -263,8 +263,7 @@ class ComplianceReportServices:
 
             if apply_masking:
                 # Apply masking to each report in the chain
-                masked_chain = self._mask_report_status(
-                    compliance_report_chain)
+                masked_chain = self._mask_report_status(compliance_report_chain)
                 # Apply history masking to each report in the chain
                 masked_chain = [
                     self._mask_report_status_for_history(report, apply_masking)
@@ -317,7 +316,7 @@ class ComplianceReportServices:
         """Safely convert a model to a dict, skipping lazy-loaded attributes that raise errors."""
         result = {}
         for key, value in record.__dict__.items():
-            if key == '_sa_instance_state':
+            if key == "_sa_instance_state":
                 continue
             try:
                 result[key] = value
@@ -330,10 +329,11 @@ class ComplianceReportServices:
         self,
         pagination: PaginationResponseSchema,
         compliance_report_id: int,
-        selection: Type[Union[FuelSupply, OtherUses,
-                              NotionalTransfer, FuelExport]]
+        selection: Type[Union[FuelSupply, OtherUses, NotionalTransfer, FuelExport]],
     ):
-        changelog, total_count = await self.repo.get_changelog_data(pagination, compliance_report_id, selection)
+        changelog, total_count = await self.repo.get_changelog_data(
+            pagination, compliance_report_id, selection
+        )
 
         groups = {}
         for record in changelog:
@@ -359,12 +359,13 @@ class ComplianceReportServices:
         changelog = [record for group in groups.values() for record in group]
 
         return {
-            'pagination': PaginationResponseSchema(
+            "pagination": PaginationResponseSchema(
                 total=total_count,
                 page=pagination.page,
                 size=pagination.size,
-                total_pages=math.ceil(
-                    total_count / pagination.size) if pagination.size else 0,
+                total_pages=(
+                    math.ceil(total_count / pagination.size) if pagination.size else 0
+                ),
             ),
-            'changelog': changelog,
+            "changelog": changelog,
         }
