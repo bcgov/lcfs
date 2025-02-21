@@ -2,9 +2,9 @@
 allocation agreements endpoints
 """
 
-import structlog
-from typing import List, Optional, Union
+from typing import List, Optional
 
+import structlog
 from fastapi import (
     APIRouter,
     Body,
@@ -15,26 +15,24 @@ from fastapi import (
     Depends,
     Query,
 )
-from fastapi_cache.decorator import cache
 
 from lcfs.db import dependencies
-from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from lcfs.web.core.decorators import view_handler
-from lcfs.web.api.organizations.services import OrganizationsService
-from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
     AllocationAgreementOptionsSchema,
-    AllocationAgreementSchema,
     AllocationAgreementListSchema,
     DeleteAllocationAgreementResponseSchema,
     PaginatedAllocationAgreementRequestSchema,
     AllocationAgreementAllSchema,
     OrganizationDetailsSchema,
 )
-from lcfs.web.api.base import ComplianceReportRequestSchema, PaginationRequestSchema
+from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
 from lcfs.web.api.allocation_agreement.validation import AllocationAgreementValidation
-from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.base import ComplianceReportRequestSchema, PaginationRequestSchema
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.organizations.services import OrganizationsService
+from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -134,9 +132,6 @@ async def get_allocation_agreements_paginated(
 
 @router.post(
     "/save",
-    response_model=Union[
-        AllocationAgreementSchema, DeleteAllocationAgreementResponseSchema
-    ],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
