@@ -1,5 +1,8 @@
 import React, { useState, useEffect, forwardRef } from 'react'
-import { TextField, Autocomplete, Box } from '@mui/material'
+import { TextField, Autocomplete, Box, Grid } from '@mui/material'
+import { LocationOn as LocationOnIcon } from '@mui/icons-material'
+import parse from 'autosuggest-highlight/parse'
+import match from 'autosuggest-highlight/match'
 
 const AddressAutocomplete = forwardRef(
   ({ value, onChange, onSelectAddress }, ref) => {
@@ -20,7 +23,7 @@ const AddressAutocomplete = forwardRef(
         setLoading(true)
         try {
           const response = await fetch(
-            `https://geocoder.api.gov.bc.ca/addresses.json?minScore=50&maxResults=5&echo=true&brief=true&autoComplete=true&exactSpelling=false&fuzzyMatch=false&matchPrecisionNot=&locationDescriptor=parcelPoint&addressString=${encodeURIComponent(
+            `https://geocoder.api.gov.bc.ca/addresses.json?minScore=50&maxResults=5&echo=true&brief=true&autoComplete=true&exactSpelling=false&fuzzyMatch=false&matchPrecisionNot=&locationDescriptor=frontDoorPoint&addressString=${encodeURIComponent(
               inputValue
             )}`,
             { signal }
@@ -103,11 +106,41 @@ const AddressAutocomplete = forwardRef(
             <TextField {...params} variant="outlined" fullWidth />
           </Box>
         )}
-        renderOption={(props, option) => (
-          <li {...props} key={option.fullAddress}>
-            {option.fullAddress}
-          </li>
-        )}
+        renderOption={(props, option) => {
+          const { key, ...optionProps } = props
+          const [street, city, province] = option.fullAddress.split(', ')
+          const matches = match(option.fullAddress, inputValue, {
+            insideWords: true
+          })
+
+          const parts = parse(option.fullAddress, matches)
+          return (
+            <li key={key} {...optionProps}>
+              <Grid container sx={{ alignItems: 'center' }}>
+                <Grid sx={{ display: 'flex', width: 44 }}>
+                  <LocationOnIcon sx={{ color: 'text.secondary' }} />
+                </Grid>
+                <Grid
+                  sx={{ width: 'calc(100% - 44px)', wordWrap: 'break-word' }}
+                >
+                  {parts.map((part, index) => (
+                    <Box
+                      key={index}
+                      component="span"
+                      sx={{
+                        fontWeight: part.highlight
+                          ? 'fontWeightBold'
+                          : 'fontWeightRegular'
+                      }}
+                    >
+                      {part.text}
+                    </Box>
+                  ))}
+                </Grid>
+              </Grid>
+            </li>
+          )
+        }}
       />
     )
   }

@@ -593,26 +593,22 @@ export const AddEditOrgForm = () => {
                 <InputLabel htmlFor="orgStreetAddress" sx={{ pb: 1 }}>
                   {t('org:streetAddrLabel')}:
                 </InputLabel>
-                {/* <AddressAutocomplete
-                  value={watch('orgStreetAddress')}
-                  onSelectAddress={(address) => {
-                    if (typeof address === 'string') {
-                      setValue('orgStreetAddress', address)
-                    } else {
-                      setValue('orgStreetAddress', address.streetAddress)
-                      setValue('orgCity', address.city)
-                    }
-                  }}
-                /> */}
-                <TextField
-                  required
-                  id="orgStreetAddress"
-                  data-test="orgStreetAddress"
-                  variant="outlined"
-                  fullWidth
-                  error={!!errors.orgStreetAddress}
-                  helperText={errors.orgStreetAddress?.message}
-                  {...register('orgStreetAddress')}
+                <Controller
+                  name="orgStreetAddress"
+                  control={control}
+                  render={({ field }) => (
+                    <AddressAutocomplete
+                      {...field}
+                      onSelectAddress={(address) => {
+                        if (typeof address === 'string') {
+                          setValue('orgStreetAddress', address)
+                        } else {
+                          setValue('orgStreetAddress', address.streetAddress)
+                          setValue('orgCity', address.city)
+                        }
+                      }}
+                    />
+                  )}
                 />
               </Box>
               <Box mb={2}>

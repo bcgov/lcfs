@@ -290,7 +290,7 @@ export const finalSupplyEquipmentColDefs = (
       queryKey: 'fuel-code-search',
       queryFn: async ({ queryKey, client }) => {
         const response = await fetch(
-          `https://geocoder.api.gov.bc.ca/addresses.json?minScore=50&maxResults=5&echo=true&brief=true&autoComplete=true&exactSpelling=false&fuzzyMatch=false&matchPrecisionNot=&locationDescriptor=parcelPoint&addressString=${encodeURIComponent(
+          `https://geocoder.api.gov.bc.ca/addresses.json?minScore=50&maxResults=5&echo=true&brief=true&autoComplete=true&exactSpelling=false&fuzzyMatch=false&matchPrecisionNot=&locationDescriptor=frontDoorPoint&addressString=${encodeURIComponent(
             queryKey[1]
           )}`
         )
