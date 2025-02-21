@@ -1,9 +1,10 @@
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy.exc import NoResultFound
 
+from lcfs.db.models.fuel import DefaultCarbonIntensity
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
 from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
@@ -86,20 +87,78 @@ async def test_get_formatted_fuel_types(fuel_code_repo, mock_db):
     mock_fuel_type = FuelType(
         fuel_type_id=1,
         fuel_type="Diesel",
-        default_carbon_intensity=80.0,
         units="gCO2e/MJ",
         unrecognized=False,
+        default_carbon_intensities=[]  # Initialize the relationship
     )
-    mock_result = MagicMock()
-    mock_result.unique.return_value.scalars.return_value.all.return_value = [
-        mock_fuel_type
-    ]
-    mock_db.execute.return_value = mock_result
+    mock_dci_2024 = DefaultCarbonIntensity(
+        compliance_period_id=1,
+        fuel_type_id=1,
+        default_carbon_intensity=80.0,
+        effective_date=datetime(2024, 1, 1),
+        expiration_date=datetime(2024, 12, 31),
+    )
+    mock_dci_2025 = DefaultCarbonIntensity(
+        compliance_period_id=2,
+        fuel_type_id=1,
+        default_carbon_intensity=82.0,
+        effective_date=datetime(2025, 1, 1),
+        expiration_date=datetime(2025, 12, 31),
+    )
 
-    result = await fuel_code_repo.get_formatted_fuel_types()
-    assert len(result) == 1
-    assert result[0]["fuel_type"] == "Diesel"
-    mock_db.execute.assert_called_once()
+    # Need to mock the compliance period lookup first
+    mock_db.execute.side_effect = [
+        # First call - get compliance period ID for 2024
+        MagicMock(
+            scalar_one_or_none=MagicMock(return_value=1)
+        ),
+        # Second call - get fuel types with their relationships
+        MagicMock(
+            unique=MagicMock(
+                return_value=MagicMock(
+                    scalars=MagicMock(
+                        return_value=MagicMock(
+                            all=MagicMock(return_value=[mock_fuel_type])
+                        )
+                    )
+                )
+            )
+        ),
+        # Third call - get compliance period ID for 2025
+        MagicMock(
+            scalar_one_or_none=MagicMock(return_value=2)
+        ),
+        # Fourth call - get fuel types with their relationships
+        MagicMock(
+            unique=MagicMock(
+                return_value=MagicMock(
+                    scalars=MagicMock(
+                        return_value=MagicMock(
+                            all=MagicMock(return_value=[mock_fuel_type])
+                        )
+                    )
+                )
+            )
+        )
+    ]
+
+    # Add both mock DefaultCarbonIntensity objects to the mock_fuel_type
+    mock_fuel_type.default_carbon_intensities = [mock_dci_2024, mock_dci_2025]
+
+    # Test for compliance period 2024
+    result_2024 = await fuel_code_repo.get_formatted_fuel_types(compliance_period="2024")
+    assert len(result_2024) == 1
+    assert result_2024[0]["fuel_type"] == "Diesel"
+    assert result_2024[0]["default_carbon_intensity"] == 80.0
+
+    # Test for compliance period 2025
+    result_2025 = await fuel_code_repo.get_formatted_fuel_types(compliance_period="2025")
+    assert len(result_2025) == 1
+    assert result_2025[0]["fuel_type"] == "Diesel"
+    assert result_2025[0]["default_carbon_intensity"] == 82.0
+
+    # Verify the mock was called the expected number of times
+    assert mock_db.execute.call_count == 4
 
     # Test with compliance period
     mock_db.execute.reset_mock()
@@ -153,28 +212,31 @@ async def test_get_fuel_type_by_id_not_found(fuel_code_repo, mock_db):
 @pytest.mark.anyio
 async def test_get_fuel_categories(fuel_code_repo, mock_db):
     mock_fc = FuelCategory(
-        fuel_category_id=1, category="Renewable", default_carbon_intensity=0
+        fuel_category_id=1,
+        category="Renewable"
     )
     mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = [mock_fc]
+    mock_result.unique.return_value.scalars.return_value.all.return_value = [mock_fc]
     mock_db.execute.return_value = mock_result
 
     result = await fuel_code_repo.get_fuel_categories()
     assert len(result) == 1
     assert result[0] == mock_fc
 
-
 @pytest.mark.anyio
 async def test_get_fuel_category_by(fuel_code_repo, mock_db):
     mock_fc = FuelCategory(
-        fuel_category_id=2, category="Fossil", default_carbon_intensity=0
+        fuel_category_id=2,
+        category="Fossil"
     )
+    # Update mock to match the actual implementation
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = mock_fc
+    mock_result.unique.return_value.scalar_one_or_none.return_value = mock_fc
     mock_db.execute.return_value = mock_result
 
     result = await fuel_code_repo.get_fuel_category_by(category="Fossil")
     assert result == mock_fc
+    mock_db.execute.assert_called_once()
 
 
 @pytest.mark.anyio
@@ -602,14 +664,17 @@ async def test_get_energy_effectiveness_ratio(fuel_code_repo, mock_db):
 @pytest.mark.anyio
 async def test_get_target_carbon_intensity(fuel_code_repo, mock_db):
     tci = TargetCarbonIntensity(
-        target_carbon_intensity_id=1, target_carbon_intensity=50.0
+        target_carbon_intensity_id=1,
+        target_carbon_intensity=50.0
     )
+
     mock_result = MagicMock()
-    mock_result.scalar_one.return_value = tci
+    mock_result.unique.return_value.scalar_one.return_value = tci
     mock_db.execute.return_value = mock_result
 
     result = await fuel_code_repo.get_target_carbon_intensity(1, "2024")
     assert result == tci
+    mock_db.execute.assert_called_once()
 
 
 @pytest.mark.anyio

@@ -117,6 +117,11 @@ def create_sample_fe_data():
 async def test_create_fuel_export_success(
     fuel_export_action_service, mock_repo, mock_fuel_code_repo
 ):
+    # Convert methods to AsyncMock
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_repo.create_fuel_export = AsyncMock()
+    mock_repo.get_fuel_export_by_id = AsyncMock()
+
     fe_data = create_sample_fe_data()
     user_type = UserTypeEnum.SUPPLIER
 
@@ -138,6 +143,7 @@ async def test_create_fuel_export_success(
 
     # Mock the created fuel export
     created_export = FuelExport(
+        fuel_export_id=1,
         **fe_data_dict,
     )
     created_export.compliance_units = -100
@@ -147,15 +153,25 @@ async def test_create_fuel_export_success(
         "units": "kWh",
     }
     created_export.fuel_category = {"category": "Diesel"}
-    created_export.units = "Litres"
+    created_export.units = "L"
     created_export.provision_of_the_act = {
         "provision_of_the_act_id": 3,
         "name": "Test Provision"
     }
-    mock_repo.create_fuel_export.return_value = created_export
+    created_export.group_uuid = str(uuid4())  # Add group_uuid
+    created_export.user_type = user_type  # Add user_type
+    created_export.action_type = ActionTypeEnum.CREATE  # Add action_type
+    created_export.version = 0  # Add version
 
-    # Call the method under test
-    result = await fuel_export_action_service.create_fuel_export(fe_data, user_type)
+    mock_repo.create_fuel_export.return_value = created_export
+    mock_repo.get_fuel_export_by_id.return_value = created_export
+
+    # Call the method under test with compliance_period
+    result = await fuel_export_action_service.create_fuel_export(
+        fe_data,
+        user_type,
+        compliance_period=fe_data.compliance_period
+    )
 
     # Assertions
     assert result == FuelExportSchema.model_validate(created_export)
@@ -167,7 +183,8 @@ async def test_create_fuel_export_success(
         compliance_period=fe_data.compliance_period,
     )
     mock_repo.create_fuel_export.assert_awaited_once()
-    # Ensure compliance units were calculated correctly
+    mock_repo.get_compliance_period_id.assert_awaited_once()
+    mock_repo.get_fuel_export_by_id.assert_awaited_once_with(1, 1)  # Add assertion for get_fuel_export_by_id
     assert result.compliance_units < 0
 
 
@@ -193,7 +210,7 @@ async def test_update_fuel_export_success_existing_report(
         "units": "kWh",
     }
     existing_export.fuel_category = {"category": "Diesel"}
-    existing_export.units = "Litres"
+    existing_export.units = "L"
     existing_export.provision_of_the_act = {
         "provision_of_the_act_id": 123,
         "name": "Test Provision"
@@ -221,16 +238,20 @@ async def test_update_fuel_export_success_existing_report(
         "units": "kWh",
     }
     updated_export.fuel_category = {"category": "Diesel"}
-    updated_export.units = "Litres"
-
+    updated_export.units = "L"
     updated_export.provision_of_the_act = {
         "provision_of_the_act_id": 123,
         "name": "Test Provision"
     }
     mock_repo.update_fuel_export.return_value = updated_export
+    mock_repo.get_fuel_export_by_id.return_value = updated_export
 
-    # Call the method under test
-    result = await fuel_export_action_service.update_fuel_export(fe_data, user_type)
+    # Call the method under test with compliance_period
+    result = await fuel_export_action_service.update_fuel_export(
+        fe_data,
+        user_type,
+        compliance_period=fe_data.compliance_period
+    )
 
     # Assertions
     assert result == FuelExportSchema.model_validate(updated_export)
@@ -247,6 +268,13 @@ async def test_update_fuel_export_success_existing_report(
 async def test_update_fuel_export_create_new_version(
     fuel_export_action_service, mock_repo, mock_fuel_code_repo
 ):
+
+    # Convert methods to AsyncMock
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_repo.get_fuel_export_version_by_user = AsyncMock()
+    mock_repo.create_fuel_export = AsyncMock()
+    mock_repo.get_fuel_export_by_id = AsyncMock()
+
     fe_data = create_sample_fe_data()
     fe_data.compliance_report_id = 2  # Different compliance report ID
     user_type = UserTypeEnum.SUPPLIER
@@ -303,9 +331,14 @@ async def test_update_fuel_export_create_new_version(
         "name": "Test Provision"
     }
     mock_repo.create_fuel_export.return_value = new_export
+    mock_repo.get_fuel_export_by_id.return_value = new_export
 
     # Call the method under test
-    result = await fuel_export_action_service.update_fuel_export(fe_data, user_type)
+    result = await fuel_export_action_service.update_fuel_export(
+        fe_data,
+        user_type,
+        compliance_period=fe_data.compliance_period
+    )
 
     # Assertions
     assert result == FuelExportSchema.model_validate(new_export)

@@ -22,6 +22,16 @@ from lcfs.web.api.fuel_export.schema import (
     DeleteFuelExportResponseSchema,
 )
 
+class MockCompliancePeriod:
+    def __init__(self, description: str):
+        self.description = description
+
+
+class MockComplianceReport:
+    def __init__(self, compliance_period: MockCompliancePeriod):
+        self.compliance_period = compliance_period
+
+
 
 # get_fuel_export_table_options
 @pytest.mark.anyio
@@ -255,6 +265,7 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
             fuel_category=FuelCategoryResponseSchema(category="Diesel"),
             provisionOfTheActId=1,
             provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Test Provision"},
+            compliance_period="2024",
         )
 
         # Create update payload with all required fields
@@ -270,9 +281,10 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
             quantity=1,
             units="L",
             export_date="2024-01-01",
+            compliance_period="2024",
         )
 
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MockComplianceReport(compliance_period=MockCompliancePeriod(description="2024"))
         mock_update_fuel_export.return_value = mock_fuel_export
 
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
@@ -307,6 +319,7 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
             quantity=1,
             units="L",
             export_date="2024-01-01",
+            compliance_period="2024",
         )
 
         mock_fuel_export = FuelExportSchema(
@@ -325,9 +338,12 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
             fuel_category=FuelCategoryResponseSchema(category="Diesel"),
             provisionOfTheActId=1,
             provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Section 6"},
+            compliance_period="2024",
         )
 
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = MockComplianceReport(
+            compliance_period=MockCompliancePeriod(description="2024")
+        )
         mock_create_fuel_export.return_value = mock_fuel_export
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_fuel_export_row")

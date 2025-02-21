@@ -48,6 +48,11 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
         ForeignKey("provision_of_the_act.provision_of_the_act_id"),
         nullable=True,
     )
+    default_carbon_intensity = Column(
+        Numeric(10, 2),
+        nullable=True,
+        comment="Carbon intensities: default & prescribed (gCO2e/MJ)",
+    )
     units = Column(
         Enum(QuantityUnitsEnum), nullable=False, comment="Units of fuel quantity"
     )

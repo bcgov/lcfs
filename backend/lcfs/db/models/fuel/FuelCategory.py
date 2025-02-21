@@ -32,6 +32,10 @@ class FuelCategory(BaseModel, Auditable, DisplayOrder, EffectiveDates):
         Text, nullable=True, comment="Description of the fuel category"
     )
 
+    default_carbon_intensity = Column(
+        Numeric, nullable=True, comment="Default carbon intensity for the fuel category"
+    )
+
     energy_effectiveness_ratio = relationship("EnergyEffectivenessRatio")
     target_carbon_intensities = relationship(
         "TargetCarbonIntensity", back_populates="fuel_category"

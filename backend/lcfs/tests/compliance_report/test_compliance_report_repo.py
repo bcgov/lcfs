@@ -49,10 +49,16 @@ async def expected_uses(dbsession):
 async def fuel_categories(dbsession):
     fuel_categories = [
         FuelCategory(
-            fuel_category_id=998, category="Gasoline", default_carbon_intensity=0
+            fuel_category_id=998,
+            category="Gasoline",
+            description="Gasoline Description",
+            default_carbon_intensity=90.0,
         ),
         FuelCategory(
-            fuel_category_id=999, category="Diesel", default_carbon_intensity=0
+            fuel_category_id=999,
+            category="Diesel",
+            description="Diesel Description",
+            default_carbon_intensity=95.0,
         ),
     ]
 
@@ -704,6 +710,7 @@ async def test_get_fuel_category_success(compliance_report_repo, fuel_categories
 
     assert isinstance(fuel_category, FuelCategory)
     assert fuel_category.fuel_category_id == fuel_categories[0].fuel_category_id
+    assert fuel_category.description == fuel_categories[0].description
 
 
 @pytest.mark.anyio
