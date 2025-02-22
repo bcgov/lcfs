@@ -151,6 +151,8 @@ async def test_update_fuel_supply_not_found(fuel_supply_action_service):
 async def test_update_fuel_supply_success(fuel_supply_action_service):
     service, mock_repo, mock_fuel_code_repo = fuel_supply_action_service
 
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=2)
+
     # Setup existing fuel supply record
     existing_fuel_supply = FuelSupply(
         fuel_supply_id=1,
@@ -237,6 +239,12 @@ async def test_update_fuel_supply_success(fuel_supply_action_service):
     # Mock the update_fuel_supply method to return the updated fuel supply
     mock_repo.update_fuel_supply = AsyncMock(return_value=updated_fuel_supply)
 
+    # Mock get_default_carbon_intensity
+    mock_repo.get_default_carbon_intensity = AsyncMock(return_value=10.0)
+
+    # Mock get_fuel_supply_by_id to return the updated supply with all relationships
+    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=updated_fuel_supply)
+
     # Prepare the input data for updating the fuel supply
     fs_data = FuelSupplyCreateUpdateSchema(
         fuel_supply_id=1,
@@ -277,6 +285,7 @@ async def test_update_fuel_supply_success(fuel_supply_action_service):
     mock_repo.update_fuel_supply.assert_awaited_once_with(existing_fuel_supply)
     mock_repo.get_compliance_period_id.assert_awaited_once()
     mock_repo.get_fuel_supply_by_id.assert_awaited_once()
+
 
 @pytest.mark.anyio
 async def test_create_fuel_supply(fuel_supply_action_service):
@@ -324,8 +333,7 @@ async def test_create_fuel_supply(fuel_supply_action_service):
     )
     mock_density = MagicMock(spec=EnergyDensity)
     mock_density.density = 30.0
-    mock_fuel_code_repo.get_energy_density = AsyncMock(
-        return_value=mock_density)
+    mock_fuel_code_repo.get_energy_density = AsyncMock(return_value=mock_density)
     mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
     # Mock get_fuel_supply_by_id to return the created_supply
     mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=created_supply)
