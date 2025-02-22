@@ -372,7 +372,10 @@ async def test_delete_fuel_export_success(
     }
     existing_export.fuel_category = {"category": "Diesel"}
     existing_export.units = "Litres"
-    mock_repo.get_latest_fuel_export_by_group_uuid.return_value = existing_export
+
+    # Create async mock function for get_latest_fuel_export_by_group_uuid
+    async def mock_get_latest_export(group_uuid: str):
+        return existing_export
 
     # Mock the deletion export
     deleted_export = FuelExport(
@@ -389,7 +392,16 @@ async def test_delete_fuel_export_success(
     }
     deleted_export.fuel_category = {"category": "Diesel"}
     deleted_export.units = "Litres"
-    mock_repo.create_fuel_export.return_value = deleted_export
+
+    # Create async mock function for create_fuel_export
+    async def mock_create_export(fuel_export: FuelExport):
+        return deleted_export
+
+    # Set up repository mocks with proper async behavior
+    mock_repo.get_latest_fuel_export_by_group_uuid = AsyncMock(
+        side_effect=mock_get_latest_export
+    )
+    mock_repo.create_fuel_export = AsyncMock(side_effect=mock_create_export)
 
     # Call the method under test
     result = await fuel_export_action_service.delete_fuel_export(fe_data, user_type)
@@ -398,6 +410,8 @@ async def test_delete_fuel_export_success(
     assert isinstance(result, DeleteFuelExportResponseSchema)
     assert result.success is True
     assert result.message == "Fuel export record marked as deleted."
+
+    # Verify mock calls
     mock_repo.get_latest_fuel_export_by_group_uuid.assert_awaited_once_with(
         fe_data.group_uuid
     )
