@@ -77,6 +77,7 @@ class OtherUsesRepository:
                     )
                 )
             )
+            .unique()
             .scalars()
             .all()
         )

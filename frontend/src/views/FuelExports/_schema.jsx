@@ -489,7 +489,9 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
     },
     valueGetter: (params) => {
       if (isFuelTypeOther(params)) {
-        return params.data?.energyDensity + ' MJ/' + params.data?.units || 0
+        const density = params.data?.energyDensity || 0
+        const units = params.data?.units || ''
+        return density ? `${density} MJ/${units}` : '0 MJ/' + units
       } else {
         const ed = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
