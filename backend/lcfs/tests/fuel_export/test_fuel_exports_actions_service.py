@@ -430,12 +430,14 @@ async def test_delete_fuel_export_already_deleted(
     existing_export.fuel_category = {"category": "Diesel"}
     existing_export.units = "Litres"
 
-    # Use AsyncMock for get_latest_fuel_export_by_group_uuid
-    mock_repo.get_latest_fuel_export_by_group_uuid = AsyncMock(
-        return_value=existing_export
-    )
+    # Create async mock function that accepts the group_uuid parameter
+    async def mock_get_latest_export(group_uuid: str):
+        return existing_export
 
-    # Use AsyncMock for create_fuel_export
+    # Set up repository mocks with proper async behavior
+    mock_repo.get_latest_fuel_export_by_group_uuid = AsyncMock(
+        side_effect=mock_get_latest_export
+    )
     mock_repo.create_fuel_export = AsyncMock()
 
     # Call the method under test
@@ -445,6 +447,8 @@ async def test_delete_fuel_export_already_deleted(
     assert isinstance(result, DeleteFuelExportResponseSchema)
     assert result.success is True
     assert result.message == "Fuel export record already deleted."
+
+    # Verify mock calls
     mock_repo.get_latest_fuel_export_by_group_uuid.assert_awaited_once_with(
         fe_data.group_uuid
     )
