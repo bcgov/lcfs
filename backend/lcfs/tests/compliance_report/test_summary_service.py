@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
-from lcfs.db.models import FuelSupply, ComplianceReport
+from lcfs.db.models import FuelSupply, ComplianceReport, UserProfile
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryRowSchema,
@@ -842,7 +842,9 @@ async def test_can_sign_flag_logic(
 
     # Call the method
     result = (
-        await compliance_report_summary_service.calculate_compliance_report_summary(1)
+        await compliance_report_summary_service.calculate_compliance_report_summary(
+            1, UserProfile()
+        )
     )
 
     # Assert that `can_sign` is True
@@ -864,7 +866,9 @@ async def test_can_sign_flag_logic(
 
     # Call the method again
     result = (
-        await compliance_report_summary_service.calculate_compliance_report_summary(1)
+        await compliance_report_summary_service.calculate_compliance_report_summary(
+            1, UserProfile()
+        )
     )
 
     # Assert that `can_sign` is False

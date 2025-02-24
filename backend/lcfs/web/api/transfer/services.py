@@ -91,7 +91,17 @@ class TransferServices:
     async def get_transfer(self, transfer_id: int) -> TransferSchema:
         """Fetches a single transfer by its ID and converts it to a Pydantic model."""
         transfer = await self.repo.get_transfer_by_id(transfer_id)
-        if not transfer:
+        # Check if the current viewer is a gov user
+        is_government_viewer = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        if not transfer or (
+            is_government_viewer
+            and transfer.current_status.status
+            in [
+                TransferStatusEnum.Draft,
+                TransferStatusEnum.Sent,
+                TransferStatusEnum.Rescinded,
+            ]
+        ):
             raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
 
         transfer_view = TransferSchema.model_validate(transfer)
@@ -100,9 +110,6 @@ class TransferServices:
         sorted_comments = sorted(
             transfer.transfer_comments, key=lambda c: c.create_date
         )
-
-        # Check if the current viewer is a gov user
-        is_government_viewer = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
 
         # Build the final list of comment schemas
         final_comments = []

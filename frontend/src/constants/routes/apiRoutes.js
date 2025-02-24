@@ -51,6 +51,9 @@ export const apiRoutes = {
   getAllFinalSupplyEquipments: '/final-supply-equipments/list-all',
   saveFinalSupplyEquipments: '/final-supply-equipments/save',
   exportFinalSupplyEquipments: '/final-supply-equipments/export/:reportID',
+  importFinalSupplyEquipments: '/final-supply-equipments/import/:reportID',
+  getImportFinalSupplyEquipmentsJobStatus:
+    '/final-supply-equipments/status/:jobID',
   downloadFinalSupplyEquipmentsTemplate:
     '/final-supply-equipments/template/:reportID',
   searchFinalSupplyEquipments: '/final-supply-equipments/search?',
