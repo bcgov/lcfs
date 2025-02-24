@@ -57,10 +57,13 @@ export const AddEditFuelSupplies = () => {
 
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
-  const { data, isLoading: fuelSuppliesLoading } = useGetFuelSuppliesList({
-    complianceReportId,
-    changelog: isSupplemental
-  })
+  const { data, isLoading: fuelSuppliesLoading } = useGetFuelSuppliesList(
+    {
+      complianceReportId,
+      changelog: complianceReport?.report.version !== 0
+    },
+    { enabled: !!complianceReportLoading }
+  )
 
   const gridOptions = useMemo(
     () => ({
@@ -202,15 +205,16 @@ export const AddEditFuelSupplies = () => {
           id: uuid()
         }
       })
+
       setRowData(updatedRowData)
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
   }, [
+    compliancePeriod,
+    complianceReportId,
     data,
     fuelSuppliesLoading,
-    complianceReportId,
-    compliancePeriod,
     isSupplemental
   ])
 
