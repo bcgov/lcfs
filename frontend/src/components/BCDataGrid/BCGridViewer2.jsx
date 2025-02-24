@@ -74,7 +74,6 @@ export const BCGridViewer2 = forwardRef(
 
     const onGridReady = useCallback(
       (params) => {
-        console.log('onGridReady')
         const filterState = JSON.parse(
           sessionStorage.getItem(`${gridKey}-filter`)
         )
