@@ -91,7 +91,17 @@ class TransferServices:
     async def get_transfer(self, transfer_id: int) -> TransferSchema:
         """Fetches a single transfer by its ID and converts it to a Pydantic model."""
         transfer = await self.repo.get_transfer_by_id(transfer_id)
-        if not transfer:
+        # Check if the current viewer is a gov user
+        is_government_viewer = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        if not transfer or (
+            is_government_viewer
+            and transfer.current_status.status
+            in [
+                TransferStatusEnum.Draft,
+                TransferStatusEnum.Sent,
+                TransferStatusEnum.Rescinded,
+            ]
+        ):
             raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
 
         transfer_view = TransferSchema.model_validate(transfer)
@@ -101,20 +111,29 @@ class TransferServices:
             transfer.transfer_comments, key=lambda c: c.create_date
         )
 
-        # Check if the current viewer is a gov user
-        is_government_viewer = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
-
         # Build the final list of comment schemas
         final_comments = []
         for c in sorted_comments:
             comment_schema = TransferCommentSchema.model_validate(c)
 
-            # If the comment is from GOV, and the viewer is NOT gov, hide 'createdBy'
+            # 1) If created_by is null/empty, fallback to org name or Government
+            if not comment_schema.created_by:
+                if c.comment_source == TransferCommentSourceEnum.FROM_ORG:
+                    comment_schema.created_by_org = transfer.from_organization.name
+                elif c.comment_source == TransferCommentSourceEnum.TO_ORG:
+                    comment_schema.created_by_org = transfer.to_organization.name
+                else:
+                    # c.comment_source == TransferCommentSourceEnum.GOVERNMENT
+                    comment_schema.created_by_org = "Government of British Columbia"
+
+            # 2) If the comment source is GOV, and the viewer is not gov,
+            #    we hide the actual name.
             if (
                 c.comment_source == TransferCommentSourceEnum.GOVERNMENT
                 and not is_government_viewer
             ):
                 comment_schema.created_by = None
+
             final_comments.append(comment_schema)
 
         transfer_view.comments = final_comments
@@ -140,6 +159,7 @@ class TransferServices:
                     transfer_view.transfer_history,
                 )
             )
+
         return transfer_view
 
     @service_handler
