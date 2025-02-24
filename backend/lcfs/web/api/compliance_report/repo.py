@@ -73,22 +73,19 @@ class ComplianceReportRepository:
             filter_type = filter.filter_type
             if filter.field == "status":
                 field = cast(
-                    get_field_for_filter(
-                        ComplianceReportListView, "report_status"),
+                    get_field_for_filter(ComplianceReportListView, "report_status"),
                     String,
                 )
                 # Check if filter_value is a comma-separated string
                 if isinstance(filter_value, str) and "," in filter_value:
                     filter_value = filter_value.split(",")  # Convert to list
                 if isinstance(filter_value, list):
-                    filter_value = [value.replace(" ", "_")
-                                    for value in filter_value]
+                    filter_value = [value.replace(" ", "_") for value in filter_value]
                     filter_type = "set"
                 else:
                     filter_value = filter_value.replace(" ", "_")
             elif filter.field == "type":
-                field = get_field_for_filter(
-                    ComplianceReportListView, "report_type")
+                field = get_field_for_filter(ComplianceReportListView, "report_type")
             elif filter.field == "organization":
                 field = get_field_for_filter(
                     ComplianceReportListView, "organization_name"
@@ -98,12 +95,10 @@ class ComplianceReportRepository:
                     ComplianceReportListView, "compliance_period"
                 )
             else:
-                field = get_field_for_filter(
-                    ComplianceReportListView, filter.field)
+                field = get_field_for_filter(ComplianceReportListView, filter.field)
 
             conditions.append(
-                apply_filter_conditions(
-                    field, filter_value, filter_option, filter_type)
+                apply_filter_conditions(field, filter_value, filter_option, filter_type)
             )
 
     @repo_handler
@@ -158,8 +153,7 @@ class ComplianceReportRepository:
         Retrieve a compliance period from the database
         """
         result = await self.db.scalar(
-            select(CompliancePeriod).where(
-                CompliancePeriod.description == period)
+            select(CompliancePeriod).where(CompliancePeriod.description == period)
         )
         return result
 
@@ -198,8 +192,7 @@ class ComplianceReportRepository:
         Retrieve the compliance report status ID from the database based on the description.
         Replaces spaces with underscores in the status description.
         """
-        status_enum = status.replace(
-            " ", "_")  # frontend sends status with spaces
+        status_enum = status.replace(" ", "_")  # frontend sends status with spaces
         result = await self.db.execute(
             select(ComplianceReportStatus).where(
                 ComplianceReportStatus.status
@@ -302,14 +295,16 @@ class ComplianceReportRepository:
         return ComplianceReportBaseSchema.model_validate(report)
 
     @repo_handler
-    async def get_compliance_report_history(self, report: ComplianceReport):
+    async def get_existing_history_for_status(
+        self, compliance_report_id: int, current_status_id: int
+    ):
         history = await self.db.execute(
             select(ComplianceReportHistory)
             .where(
                 and_(
                     ComplianceReportHistory.compliance_report_id
-                    == report.compliance_report_id,
-                    ComplianceReportHistory.status_id == report.current_status_id,
+                    == compliance_report_id,
+                    ComplianceReportHistory.status_id == current_status_id,
                 )
             )
             .order_by(ComplianceReportHistory.create_date.desc())
@@ -323,7 +318,9 @@ class ComplianceReportRepository:
         """
         Add a new compliance report history record to the database
         """
-        history = await self.get_compliance_report_history(report)
+        history = await self.get_existing_history_for_status(
+            report.compliance_report_id, report.current_status_id
+        )
         if history:
             history.update_date = datetime.now()
             history.create_date = datetime.now()
@@ -335,7 +332,7 @@ class ComplianceReportRepository:
                 compliance_report_id=report.compliance_report_id,
                 status_id=report.current_status_id,
                 user_profile_id=user.user_profile_id,
-                display_name=(f"{user.first_name} {user.last_name}"),
+                display_name=f"{user.first_name} {user.last_name}",
             )
         self.db.add(history)
         await self.db.flush()
@@ -386,8 +383,7 @@ class ComplianceReportRepository:
             self.apply_filters(pagination, conditions)
 
         # Pagination and offset setup
-        offset = 0 if (pagination.page < 1) else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
         # Build the main query
@@ -395,8 +391,7 @@ class ComplianceReportRepository:
 
         # Apply sorting from pagination
         if len(pagination.sort_orders) < 1:
-            field = get_field_for_filter(
-                ComplianceReportListView, "update_date")
+            field = get_field_for_filter(ComplianceReportListView, "update_date")
             query = query.order_by(desc(field))
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
@@ -731,15 +726,13 @@ class ComplianceReportRepository:
                 isinstance(record, FuelSupply)
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
-                fuel_category = self._format_category(
-                    record.fuel_category.category)
+                fuel_category = self._format_category(record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity
             elif (
                 isinstance(record, OtherUses)
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
-                fuel_category = self._format_category(
-                    record.fuel_category.category)
+                fuel_category = self._format_category(record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity_supplied
 
         return dict(fuel_quantities)
@@ -891,15 +884,11 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def get_changelog_data(
-        self,
-        pagination: PaginationRequestSchema,
-        compliance_report_id: int,
-        selection
+        self, pagination: PaginationRequestSchema, compliance_report_id: int, selection
     ):
 
         conditions = [selection.compliance_report_id == compliance_report_id]
-        offset = 0 if pagination.page < 1 else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
         # Create an alias for the previous version row.
