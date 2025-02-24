@@ -229,11 +229,16 @@ export const AddEditViewTransfer = () => {
 
   const currentStatus = transferData?.currentStatus.status
 
-  const {
-    currentStatus: { status: transferStatus } = {},
-    toOrganization: { organizationId: toOrgId } = {},
-    fromOrganization: { organizationId: fromOrgId } = {}
-  } = transferData || {}
+  const fromOrgId =
+    transferData?.fromOrganization?.organizationId ||
+    methods.getValues('fromOrganizationId')
+  const toOrgId =
+    transferData?.toOrganization?.organizationId ||
+    methods.getValues('toOrganizationId')
+  const transferStatus = transferData?.currentStatus?.status
+
+  const commentField =
+    currentUserOrgId === fromOrgId ? 'fromOrgComment' : 'toOrgComment'
 
   useEffect(() => {
     const statusSet = new Set()
@@ -418,7 +423,7 @@ export const AddEditViewTransfer = () => {
                 <Comments
                   editorMode={editorMode}
                   isGovernmentUser={isGovernmentUser}
-                  commentField={'fromOrgComment'}
+                  commentField={commentField}
                 />
               </>
             ) : (

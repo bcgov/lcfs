@@ -86,12 +86,10 @@
   "director": "Director",
   "commentList": {
     "title": "Comments",
-    "unknownUser": "Unknown User",
-    "unknownOrg": "Unknown Org",
-    "governmentOfBC": "Government of British Columbia",
-    "govLineForGov": "{{user}} of {{government}}, {{date}} - {{comment}}",
-    "govLine": "{{government}}, {{date}} - {{comment}}",
-    "userLine": "{{user}} of {{org}}, {{date}} - {{comment}}"
+    "govLineForGov": "{{user}} of Government of British Columbia, {{date}} - {{comment}}",
+    "govLine": "Government of British Columbia, {{date}} - {{comment}}",
+    "userLine": "{{user}} of {{org}}, {{date}} - {{comment}}",
+    "orgLine": "{{org}}, {{date}} - {{comment}}"
   },
   "quantityAdjusted": "Quantity adjusted to maximum available balance"
 }
