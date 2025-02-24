@@ -187,6 +187,12 @@ class FuelSupplyResponseSchema(BaseSchema):
     diff: Optional[FuelSupplyDiffSchema] = None
     updated: Optional[bool] = None
 
+    @field_validator("compliance_units", mode="before")
+    def round_compliance_units(cls, value):
+        if value is not None:
+            return round(value)
+        return value
+
 
 class DeleteFuelSupplyResponseSchema(BaseSchema):
     success: bool
