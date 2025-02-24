@@ -45,7 +45,7 @@ export const AddEditNotionalTransfers = () => {
       complianceReportId
     )
 
-  const isSupplemental = complianceReport.report.version !== 0
+  const isSupplemental = complianceReport?.report?.version !== 0
   const { data: notionalTransfers, isLoading: transfersLoading } =
     useGetAllNotionalTransfersList({
       complianceReportId,

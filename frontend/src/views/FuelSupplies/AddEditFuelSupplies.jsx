@@ -41,7 +41,7 @@ export const AddEditFuelSupplies = () => {
       complianceReportId
     )
 
-  const isSupplemental = complianceReport.report.version !== 0
+  const isSupplemental = complianceReport?.report?.version !== 0
 
   const {
     data: optionsData,

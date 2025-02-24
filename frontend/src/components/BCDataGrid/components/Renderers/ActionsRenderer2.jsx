@@ -9,7 +9,9 @@ export const ActionsRenderer2 = (props) => {
 
   return (
     <Stack direction="row" spacing={0.1} m={0} mt={0.2}>
-      {props.enableStatus && <BCTypography>{props.enableStatus}</BCTypography>}
+      {props.enableStatus && (
+        <BCTypography style={{ flex: 1 }}>{props.enableStatus}</BCTypography>
+      )}
       {props.enableDuplicate && (
         <Tooltip title="duplicate">
           <span>

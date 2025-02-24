@@ -48,7 +48,7 @@ export const AddEditOtherUses = () => {
       currentUser?.organization.organizationId,
       complianceReportId
     )
-  const isSupplemental = complianceReport.report.version !== 0
+  const isSupplemental = complianceReport?.report?.version !== 0
 
   const { data: otherUses, isLoading: usesLoading } = useGetAllOtherUsesList({
     complianceReportId,
