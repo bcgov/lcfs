@@ -17,10 +17,10 @@ import { useSearchParams } from 'react-router-dom'
 const ROW_HEIGHT = 45
 
 export const BCGridBase = forwardRef(
-  ({ autoSizeStrategy, autoHeight, ...props }, ref) => {
+  ({ autoSizeStrategy, autoHeight, ...props }, forwardedRef) => {
     const [searchParams] = useSearchParams()
     const highlightedId = searchParams.get('hid')
-    const gridRef = useRef(null)
+    const ref = useRef(null)
 
     const loadingOverlayComponent = useMemo(() => DataGridLoading, [])
 
@@ -72,7 +72,7 @@ export const BCGridBase = forwardRef(
     }, [determineHeight])
 
     const clearFilters = useCallback(() => {
-      const api = gridRef.current?.api
+      const api = ref.current?.api
       if (api) {
         // Clear filter model
         api.setFilterModel(null)
@@ -86,8 +86,8 @@ export const BCGridBase = forwardRef(
     }, [])
 
     // Expose clearFilters method through ref
-    useImperativeHandle(ref, () => ({
-      ...gridRef.current,
+    useImperativeHandle(forwardedRef, () => ({
+      ...ref.current,
       clearFilters
     }))
 
@@ -101,7 +101,7 @@ export const BCGridBase = forwardRef(
 
     return (
       <AgGridReact
-        ref={gridRef}
+        ref={ref}
         domLayout={domLayout}
         containerStyle={{ height }}
         loadingOverlayComponent={loadingOverlayComponent}
