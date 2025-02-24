@@ -45,7 +45,7 @@ export const AddEditNotionalTransfers = () => {
       complianceReportId
     )
 
-  const [isSupplemental, setIsSupplemental] = useState(false)
+  const isSupplemental = complianceReport.report.version !== 0
   const { data: notionalTransfers, isLoading: transfersLoading } =
     useGetAllNotionalTransfersList({
       complianceReportId,
@@ -86,12 +86,6 @@ export const AddEditNotionalTransfers = () => {
     }),
     [isSupplemental]
   )
-
-  useEffect(() => {
-    if (typeof complianceReport?.report?.version === 'number') {
-      setIsSupplemental(complianceReport.report.version !== 0)
-    }
-  }, [complianceReport?.report?.version])
 
   useEffect(() => {
     if (location?.state?.message) {

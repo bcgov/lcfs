@@ -48,7 +48,7 @@ export const AddEditOtherUses = () => {
       currentUser?.organization.organizationId,
       complianceReportId
     )
-  const [isSupplemental, setIsSupplemental] = useState(false)
+  const isSupplemental = complianceReport.report.version !== 0
 
   const { data: otherUses, isLoading: usesLoading } = useGetAllOtherUsesList({
     complianceReportId,
@@ -89,12 +89,6 @@ export const AddEditOtherUses = () => {
     }),
     [isSupplemental]
   )
-
-  useEffect(() => {
-    if (typeof complianceReport?.report?.version === 'number') {
-      setIsSupplemental(complianceReport.report.version !== 0)
-    }
-  }, [complianceReport?.report?.version])
 
   useEffect(() => {
     if (location.state?.message) {

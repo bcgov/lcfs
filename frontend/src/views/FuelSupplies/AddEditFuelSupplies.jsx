@@ -41,13 +41,7 @@ export const AddEditFuelSupplies = () => {
       complianceReportId
     )
 
-  const [isSupplemental, setIsSupplemental] = useState(false)
-
-  useEffect(() => {
-    if (typeof complianceReport?.report?.version === 'number') {
-      setIsSupplemental(complianceReport.report.version !== 0)
-    }
-  }, [complianceReport?.report?.version])
+  const isSupplemental = complianceReport.report.version !== 0
 
   const {
     data: optionsData,
@@ -57,13 +51,10 @@ export const AddEditFuelSupplies = () => {
 
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
-  const { data, isLoading: fuelSuppliesLoading } = useGetFuelSuppliesList(
-    {
-      complianceReportId,
-      changelog: complianceReport?.report.version !== 0
-    },
-    { enabled: !!complianceReportLoading }
-  )
+  const { data, isLoading: fuelSuppliesLoading } = useGetFuelSuppliesList({
+    complianceReportId,
+    changelog: isSupplemental
+  })
 
   const gridOptions = useMemo(
     () => ({

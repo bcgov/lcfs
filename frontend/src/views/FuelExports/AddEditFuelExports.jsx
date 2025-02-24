@@ -40,13 +40,7 @@ export const AddEditFuelExports = () => {
       complianceReportId
     )
 
-  const [isSupplemental, setIsSupplemental] = useState(false)
-
-  useEffect(() => {
-    if (typeof complianceReport?.report?.version === 'number') {
-      setIsSupplemental(complianceReport.report.version !== 0)
-    }
-  }, [complianceReport?.report?.version])
+  const isSupplemental = complianceReport.report.version !== 0
 
   const {
     data: optionsData,
