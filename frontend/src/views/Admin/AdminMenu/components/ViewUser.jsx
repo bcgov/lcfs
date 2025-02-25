@@ -140,11 +140,15 @@ export const ViewUser = () => {
               id="user-card"
               title={t('admin:userDetails')}
               color="nav"
-              editButton={{
-                text: canEdit ? t('admin:editBtn') : null,
-                route: canEdit ? editButtonRoute : null,
-                id: 'edit-user-button'
-              }}
+              editButton={
+                canEdit
+                  ? {
+                      text: t('admin:editBtn'),
+                      route: editButtonRoute,
+                      id: 'edit-user-button'
+                    }
+                  : null
+              }
               content={
                 <BCBox p={1}>
                   <BCBox
