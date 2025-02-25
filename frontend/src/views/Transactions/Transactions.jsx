@@ -283,7 +283,7 @@ export const Transactions = () => {
           gridKey={gridKey}
           columnDefs={transactionsColDefs(t)}
           query={useGetTransactionList}
-          queryOptions={{ selectedOrgId }}
+          queryParams={{ selectedOrgId }}
           dataKey={'transactions'}
           getRowId={getRowId}
           overlayNoRowsTemplate={t('txn:noTxnsFound')}
