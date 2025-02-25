@@ -101,7 +101,9 @@ class FuelTypeSchema(BaseSchema):
 
     @field_validator("default_carbon_intensity")
     def quantize_default_carbon_intensity(cls, value):
-        return round(value, 2)
+        if value is not None:
+            return round(value, 2)
+        return value
 
 
 class FuelCategoryResponseSchema(BaseSchema):

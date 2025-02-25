@@ -6,6 +6,8 @@ from lcfs.db.models.compliance import (
     ComplianceReportStatus,
 )
 from lcfs.db.models.fuel import (
+    CategoryCarbonIntensity,
+    DefaultCarbonIntensity,
     EnergyDensity,
     EnergyEffectivenessRatio,
     FuelCategory,
@@ -52,10 +54,42 @@ class FuelExportRepository:
                 joinedload(FuelType.energy_density),
                 joinedload(FuelType.additional_carbon_intensity),
                 joinedload(FuelType.energy_effectiveness_ratio),
+                joinedload(FuelType.default_carbon_intensities).options(
+                    selectinload(DefaultCarbonIntensity.compliance_period)
+                ),
             ),
             joinedload(FuelExport.provision_of_the_act),
             joinedload(FuelExport.end_use_type),
         )
+
+    @repo_handler
+    async def get_compliance_period_id(self, compliance_period: str) -> int:
+        """Get compliance period ID from description"""
+        query = (
+            select(CompliancePeriod.compliance_period_id)
+            .where(CompliancePeriod.description == compliance_period)
+        )
+        result = await self.db.execute(query)
+        return result.scalar_one_or_none()
+
+    @repo_handler
+    async def get_default_carbon_intensity(self, fuel_type_id: int, compliance_period_id: int) -> Optional[float]:
+        """
+        Get default carbon intensity for a specific fuel type and compliance period
+        """
+        query = (
+            select(DefaultCarbonIntensity.default_carbon_intensity)
+            .where(
+                and_(
+                    DefaultCarbonIntensity.fuel_type_id == fuel_type_id,
+                    DefaultCarbonIntensity.compliance_period_id == compliance_period_id
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        default_ci = result.scalar_one_or_none()
+        return float(default_ci) if default_ci is not None else None
+
 
     @repo_handler
     async def get_fuel_export_table_options(self, compliance_period: str):
@@ -87,7 +121,8 @@ class FuelExportRepository:
                 FuelInstance.fuel_category_id,
                 FuelType.fuel_type,
                 FuelType.fossil_derived,
-                FuelType.default_carbon_intensity,
+                DefaultCarbonIntensity.default_carbon_intensity,
+                CategoryCarbonIntensity.category_carbon_intensity,
                 FuelCategory.category,
                 ProvisionOfTheAct.provision_of_the_act_id,
                 ProvisionOfTheAct.name.label("provision_of_the_act"),
@@ -117,6 +152,20 @@ class FuelExportRepository:
             .join(
                 FuelCategory,
                 FuelCategory.fuel_category_id == FuelInstance.fuel_category_id,
+            )
+            .outerjoin(
+                DefaultCarbonIntensity,
+                and_(
+                    DefaultCarbonIntensity.fuel_type_id == FuelType.fuel_type_id,
+                    DefaultCarbonIntensity.compliance_period_id == subquery_compliance_period_id
+                ),
+            )
+            .outerjoin(
+                CategoryCarbonIntensity,
+                and_(
+                    CategoryCarbonIntensity.fuel_category_id == FuelCategory.fuel_category_id,
+                    CategoryCarbonIntensity.compliance_period_id == subquery_compliance_period_id
+                ),
             )
             .outerjoin(
                 ProvisionOfTheAct,
@@ -244,13 +293,23 @@ class FuelExportRepository:
         return paginated_exports, total_count
 
     @repo_handler
-    async def get_fuel_export_by_id(self, fuel_export_id: int) -> FuelExport:
+    async def get_fuel_export_by_id(self, fuel_export_id: int, compliance_period_id:int) -> FuelExport:
         """
-        Retrieve a fuel supply row from the database
+        Retrieve a fuel export row from the database with compliance period filtering
         """
         query = self.query.where(FuelExport.fuel_export_id == fuel_export_id)
         result = await self.db.execute(query)
-        return result.unique().scalar_one_or_none()
+        fuel_export = result.unique().scalar_one_or_none()
+
+        if fuel_export and fuel_export.fuel_type and compliance_period_id:
+            default_ci = await self.get_default_carbon_intensity(
+                fuel_export.fuel_type.fuel_type_id,
+                compliance_period_id
+            )
+            # Add default_ci to the fuel type object
+            setattr(fuel_export.fuel_type, 'default_carbon_intensity', default_ci)
+
+        return fuel_export
 
     @repo_handler
     async def update_fuel_export(self, fuel_export: FuelExport) -> FuelExport:

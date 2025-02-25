@@ -142,6 +142,8 @@ async def test_create_fuel_supply_success(
     fe_data = create_sample_fs_data()
     user_type = UserTypeEnum.SUPPLIER
 
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+
     # Mock the response from get_standardized_fuel_data
     mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
         effective_carbon_intensity=50.0,
@@ -176,6 +178,7 @@ async def test_create_fuel_supply_success(
     created_supply.fuel_category = {"category": "Diesel"}
     created_supply.units = "Litres"
     mock_repo.create_fuel_supply.return_value = created_supply
+    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=created_supply)
 
     # Call the method under test
     result = await fuel_supply_action_service.create_fuel_supply(
@@ -210,6 +213,8 @@ async def test_update_fuel_supply_success_existing_report(
 ):
     fe_data = create_sample_fs_data()
     user_type = UserTypeEnum.SUPPLIER
+
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
 
     # Exclude invalid fields
     fe_data_dict = fe_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS)
@@ -260,6 +265,8 @@ async def test_update_fuel_supply_success_existing_report(
     updated_supply.fuel_category = {"category": "Diesel"}
     updated_supply.units = "Litres"
     mock_repo.update_fuel_supply.return_value = updated_supply
+
+    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=updated_supply)
 
     # Call the method under test
     result = await fuel_supply_action_service.update_fuel_supply(
@@ -315,16 +322,6 @@ async def test_update_fuel_supply_create_new_version(
     }
     existing_supply.fuel_category = {"category": "Diesel"}
     existing_supply.units = "Litres"
-    mock_repo.get_fuel_supply_version_by_user.return_value = existing_supply
-
-    # Mock the response from get_standardized_fuel_data
-    mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
-        effective_carbon_intensity=60.0,
-        target_ci=90.0,
-        eer=1.5,
-        energy_density=37.0,
-        uci=None,
-    )
 
     # Mock the newly created supply (new version)
     new_supply = FuelSupply(
@@ -343,8 +340,20 @@ async def test_update_fuel_supply_create_new_version(
     }
     new_supply.fuel_category = {"category": "Diesel"}
     new_supply.units = "Litres"
-    mock_repo.create_fuel_supply.return_value = new_supply
 
+    mock_repo.get_fuel_supply_version_by_user.return_value = existing_supply
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=new_supply)
+
+    # Mock the response from get_standardized_fuel_data
+    mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
+        effective_carbon_intensity=60.0,
+        target_ci=90.0,
+        eer=1.5,
+        energy_density=37.0,
+        uci=None,
+    )
+    mock_repo.create_fuel_supply.return_value = new_supply
     # Call the method under test
     result = await fuel_supply_action_service.update_fuel_supply(
         fe_data, user_type, "2024"
@@ -549,8 +558,42 @@ async def test_create_compliance_units_calculation(
             "units": "kWh",
         }
         fuel_supply.fuel_category = {"category": "Diesel"}
-        fuel_supply.units = "Litres"
+        fuel_supply.units = fe_data.units
+        fuel_supply.group_uuid = str(uuid4())
+        fuel_supply.user_type = UserTypeEnum.SUPPLIER
+        fuel_supply.action_type = ActionTypeEnum.CREATE
+        fuel_supply.compliance_period = "2024"
         return fuel_supply
+
+    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=FuelSupply(
+        fuel_supply_id=1,
+        compliance_report_id=1,
+        group_uuid=str(uuid4()),
+        version=0,
+        user_type=UserTypeEnum.SUPPLIER,
+        action_type=ActionTypeEnum.CREATE,
+        fuel_type_id=3,
+        fuel_category_id=2,
+        end_use_id=1,
+        provision_of_the_act_id=123,
+        quantity=case["input"]["quantity"],
+        units=case["input"]["units"],
+        energy_density=case["input"]["energy_density"],
+        ci_of_fuel=case["input"]["ci_of_fuel"],
+        target_ci=case["input"]["target_ci"],
+        eer=case["input"]["eer"],
+        compliance_units=case["expected_compliance_units"],
+        fuel_type =  {
+            "fuel_type_id": 3,
+            "fuel_type": "Electricity",
+            "units": "kWh",
+        },
+        fuel_category = {"category": "Diesel"},
+        provision_of_the_act = {
+            "provision_of_the_act_id": 123,
+            "name": "Test Provision"
+        }
+    ))
 
     mock_repo.create_fuel_supply.side_effect = create_fuel_supply_side_effect
 

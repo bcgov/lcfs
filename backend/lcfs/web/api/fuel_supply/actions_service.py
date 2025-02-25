@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException
 from lcfs.db.base import ActionTypeEnum, UserTypeEnum
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.fuel_supply.schema import (
@@ -127,6 +128,9 @@ class FuelSupplyActionService:
         Returns:
             FuelSupplyResponseSchema: The newly created fuel supply record as a response schema.
         """
+        # Get compliance period ID
+        compliance_period_id = await self.repo.get_compliance_period_id(compliance_period)
+
         # Assign a unique group UUID for the new fuel supply
         new_group_uuid = str(uuid.uuid4())
         fuel_supply = FuelSupply(
@@ -144,7 +148,13 @@ class FuelSupplyActionService:
 
         # Save the populated fuel supply record
         created_supply = await self.repo.create_fuel_supply(fuel_supply)
-        return FuelSupplyResponseSchema.model_validate(created_supply)
+
+        result = await self.repo.get_fuel_supply_by_id(
+            created_supply.fuel_supply_id,
+            compliance_period_id
+        )
+
+        return FuelSupplyResponseSchema.model_validate(result)
 
     @service_handler
     async def update_fuel_supply(
@@ -172,6 +182,7 @@ class FuelSupplyActionService:
         Raises:
             HTTPException: If the fuel supply record is not found.
         """
+        compliance_period_id = await self.repo.get_compliance_period_id(compliance_period)
         existing_fuel_supply = await self.repo.get_fuel_supply_version_by_user(
             fs_data.group_uuid, fs_data.version, user_type
         )
@@ -193,7 +204,14 @@ class FuelSupplyActionService:
             )
 
             updated_supply = await self.repo.update_fuel_supply(existing_fuel_supply)
-            return FuelSupplyResponseSchema.model_validate(updated_supply)
+
+            # Fetch with compliance period
+            result = await self.repo.get_fuel_supply_by_id(
+                updated_supply.fuel_supply_id,
+                compliance_period_id
+            )
+
+            return FuelSupplyResponseSchema.model_validate(result)
 
         elif existing_fuel_supply:
             # Create a new version if compliance report ID differs
@@ -223,7 +241,14 @@ class FuelSupplyActionService:
 
             # Save the new version
             new_supply = await self.repo.create_fuel_supply(fuel_supply)
-            return FuelSupplyResponseSchema.model_validate(new_supply)
+
+            # Fetch with compliance period
+            result = await self.repo.get_fuel_supply_by_id(
+                new_supply.fuel_supply_id,
+                compliance_period_id
+            )
+
+            return FuelSupplyResponseSchema.model_validate(result)
 
         # Raise an exception if no existing record is found
         raise HTTPException(

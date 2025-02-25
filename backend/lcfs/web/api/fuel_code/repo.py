@@ -11,6 +11,7 @@ from sqlalchemy.orm import joinedload, contains_eager
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.fuel import CategoryCarbonIntensity, DefaultCarbonIntensity
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
 from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
@@ -87,6 +88,7 @@ class FuelCodeRepository:
         compliance_period_id = None
         if compliance_period:
             compliance_period_id = await self.get_compliance_period_id(compliance_period)
+
         # Define the filtering conditions for fuel codes
         current_date = date.today()
         fuel_code_filters = or_(
@@ -101,12 +103,14 @@ class FuelCodeRepository:
         if not include_legacy:
             conditions.append(FuelType.is_legacy == False)
 
-        # Build the query with filtered fuel_codes and compliance period joins
+
+        # Build the query with filtered fuel_codes
         query = (
             select(FuelType)
             .outerjoin(FuelType.fuel_instances)
             .outerjoin(FuelInstance.fuel_category)
             .outerjoin(FuelType.fuel_codes)
+            .outerjoin(FuelType.default_carbon_intensities)
         )
 
         # Add compliance period dependent joins if period is provided
@@ -136,7 +140,8 @@ class FuelCodeRepository:
                 .contains_eager(FuelInstance.fuel_category),
                 contains_eager(FuelType.fuel_codes),
                 joinedload(FuelType.provision_1),
-                joinedload(FuelType.provision_2)
+                joinedload(FuelType.provision_2),
+                joinedload(FuelType.default_carbon_intensities),
             )
         )
 
@@ -146,10 +151,19 @@ class FuelCodeRepository:
         # Prepare the data in the format matching your schema
         formatted_fuel_types = []
         for fuel_type in fuel_types:
+            # Get default CI for specific compliance period if provided
+            default_ci = None
+            if compliance_period_id:
+                default_ci = next(
+                    (dci.default_carbon_intensity
+                    for dci in fuel_type.default_carbon_intensities
+                    if dci.compliance_period_id == compliance_period_id),
+                    None
+                )
             formatted_fuel_type = {
                 "fuel_type_id": fuel_type.fuel_type_id,
                 "fuel_type": fuel_type.fuel_type,
-                "default_carbon_intensity": fuel_type.default_carbon_intensity,
+                "default_carbon_intensity": default_ci,
                 "units": fuel_type.units if fuel_type.units else None,
                 "unrecognized": fuel_type.unrecognized,
                 "fuel_categories": [
@@ -217,13 +231,13 @@ class FuelCodeRepository:
     @repo_handler
     async def get_fuel_categories(self) -> List[FuelCategory]:
         """Get all fuel category options"""
-        return (await self.db.execute(select(FuelCategory))).scalars().all()
+        return (await self.db.execute(select(FuelCategory))).unique().scalars().all()
 
     @repo_handler
     async def get_fuel_category_by(self, **filters: Any) -> FuelCategory:
         """Get a fuel category by any filters"""
         result = await self.db.execute(select(FuelCategory).filter_by(**filters))
-        return result.scalar_one_or_none()
+        return result.unique().scalar_one_or_none()
 
     @repo_handler
     async def get_transport_modes(self) -> List[TransportMode]:
@@ -960,7 +974,7 @@ class FuelCodeRepository:
         )
         result = await self.db.execute(stmt)
 
-        return result.scalar_one()
+        return result.unique().scalar_one()
 
     @repo_handler
     async def get_standardized_fuel_data(
@@ -997,9 +1011,15 @@ class FuelCodeRepository:
             fuel_category = await self.get_fuel_category_by(
                 fuel_category_id=fuel_category_id
             )
-            effective_carbon_intensity = fuel_category.default_carbon_intensity
+            effective_carbon_intensity = await self.get_category_carbon_intensity(
+                fuel_category_id=fuel_category_id,
+                compliance_period=compliance_period
+            )
         else:
-            effective_carbon_intensity = fuel_type.default_carbon_intensity
+            effective_carbon_intensity = await self.get_default_carbon_intensity(
+                fuel_type_id=fuel_type_id,
+                compliance_period=compliance_period
+            )
 
         # Get energy effectiveness ratio (EER)
         energy_effectiveness = await self.get_energy_effectiveness_ratio(
@@ -1051,3 +1071,57 @@ class FuelCodeRepository:
 
         result = await self.db.execute(query)
         return result.scalars().one_or_none()
+
+
+    @repo_handler
+    async def get_default_carbon_intensity(
+        self,
+        fuel_type_id: int,
+        compliance_period: str
+    ) -> Optional[float]:
+        """Get default carbon intensity for specified compliance period"""
+
+        compliance_period_id_subquery = (
+            select(CompliancePeriod.compliance_period_id)
+            .where(CompliancePeriod.description == compliance_period)
+            .scalar_subquery()
+        )
+
+        query = (
+            select(DefaultCarbonIntensity)
+            .where(
+                DefaultCarbonIntensity.fuel_type_id == fuel_type_id,
+                DefaultCarbonIntensity.compliance_period_id == compliance_period_id_subquery
+            )
+        )
+
+        result = await self.db.execute(query)
+        record = result.unique().scalar_one_or_none()
+        return record.default_carbon_intensity if record else 0.0
+
+
+    @repo_handler
+    async def get_category_carbon_intensity(
+        self,
+        fuel_category_id: int,
+        compliance_period: str
+    ) -> Optional[float]:
+        """Get default carbon intensity for specified compliance period and fuel category"""
+
+        compliance_period_id_subquery = (
+            select(CompliancePeriod.compliance_period_id)
+            .where(CompliancePeriod.description == compliance_period)
+            .scalar_subquery()
+        )
+
+        query = (
+            select(CategoryCarbonIntensity)
+            .where(
+                CategoryCarbonIntensity.fuel_category_id == fuel_category_id,
+                CategoryCarbonIntensity.compliance_period_id == compliance_period_id_subquery
+            )
+        )
+
+        result = await self.db.execute(query)
+        record = result.unique().scalar_one_or_none()
+        return record.category_carbon_intensity if record else 0.0
