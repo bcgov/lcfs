@@ -1,4 +1,3 @@
-// utils/keycloak.js
 import Keycloak from 'keycloak-js'
 import { CONFIG } from '@/constants/config'
 
@@ -17,9 +16,9 @@ export const getKeycloak = () => {
   return keycloak
 }
 
-// Variables to track user activity and token refresh state
+// Timers to track user activity and token refresh state
 let inactivityTimer
-const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes in milliseconds
+const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes
 let isRefreshScheduled = false
 const minValidity = 60 // Minimum validity in seconds before refresh
 
