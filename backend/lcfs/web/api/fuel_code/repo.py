@@ -104,13 +104,12 @@ class FuelCodeRepository:
             conditions.append(FuelType.is_legacy == False)
 
 
-        # Build the query with filtered fuel_codes
+        # Build the query with filtered fuel_codes and compliance period joins
         query = (
             select(FuelType)
             .outerjoin(FuelType.fuel_instances)
             .outerjoin(FuelInstance.fuel_category)
             .outerjoin(FuelType.fuel_codes)
-            .outerjoin(FuelType.default_carbon_intensities)
         )
 
         # Add compliance period dependent joins if period is provided
@@ -129,6 +128,13 @@ class FuelCodeRepository:
                         EnergyEffectivenessRatio.fuel_type_id == FuelType.fuel_type_id,
                         EnergyEffectivenessRatio.compliance_period_id == compliance_period_id,
                         EnergyEffectivenessRatio.fuel_category_id == FuelCategory.fuel_category_id
+                    )
+                )
+                .outerjoin(
+                    DefaultCarbonIntensity,
+                    and_(
+                        DefaultCarbonIntensity.fuel_type_id == FuelType.fuel_type_id,
+                        DefaultCarbonIntensity.compliance_period_id == compliance_period_id
                     )
                 )
             )
@@ -151,19 +157,10 @@ class FuelCodeRepository:
         # Prepare the data in the format matching your schema
         formatted_fuel_types = []
         for fuel_type in fuel_types:
-            # Get default CI for specific compliance period if provided
-            default_ci = None
-            if compliance_period_id:
-                default_ci = next(
-                    (dci.default_carbon_intensity
-                    for dci in fuel_type.default_carbon_intensities
-                    if dci.compliance_period_id == compliance_period_id),
-                    None
-                )
             formatted_fuel_type = {
                 "fuel_type_id": fuel_type.fuel_type_id,
                 "fuel_type": fuel_type.fuel_type,
-                "default_carbon_intensity": default_ci,
+                "default_carbon_intensity": fuel_type.default_carbon_intensity,
                 "units": fuel_type.units if fuel_type.units else None,
                 "unrecognized": fuel_type.unrecognized,
                 "fuel_categories": [
@@ -1008,9 +1005,6 @@ class FuelCodeRepository:
             effective_carbon_intensity = fuel_code.carbon_intensity
         # Other Fuel uses the Default CI of the Category
         elif fuel_type.unrecognized:
-            fuel_category = await self.get_fuel_category_by(
-                fuel_category_id=fuel_category_id
-            )
             effective_carbon_intensity = await self.get_category_carbon_intensity(
                 fuel_category_id=fuel_category_id,
                 compliance_period=compliance_period

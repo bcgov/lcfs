@@ -53,7 +53,8 @@ class FuelSupplyServices:
             fuel_category_id=row_data["fuel_category_id"],
             fuel_category=row_data["category"],
             default_and_prescribed_ci=(
-                round(default_ci, 2) if default_ci is not None and row_data["fuel_type"] != "Other"
+                round(default_ci, 2)
+                if default_ci is not None and row_data["fuel_type"] != "Other"
                 else round(category_ci, 2) if category_ci is not None else None
             ),
         )
@@ -205,7 +206,8 @@ class FuelSupplyServices:
                 fuel_type=row_data["fuel_type"],
                 fossil_derived=row_data["fossil_derived"],
                 default_carbon_intensity=(
-                    round(default_ci, 2) if default_ci is not None and row_data["fuel_type"] != "Other"
+                    round(default_ci, 2)
+                    if default_ci is not None and row_data["fuel_type"] != "Other"
                     else round(category_ci, 2) if category_ci is not None else None
                 ),
                 unit=row_data["unit"].value,
