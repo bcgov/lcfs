@@ -162,13 +162,20 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
         fuel_type=mock_fuel_type.dict(),
         fuel_category=mock_fuel_category.dict(),
     )
-    mock_repo.create_fuel_export.return_value = mock_created_export
+    mock_repo.create_fuel_export = AsyncMock(return_value=mock_created_export)
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_repo.get_fuel_export_by_id = AsyncMock(return_value=mock_created_export)
 
     result = await fuel_export_action_service.create_fuel_export(
-        input_data, UserTypeEnum.SUPPLIER
+        input_data,
+        UserTypeEnum.SUPPLIER,
+        compliance_period=input_data.compliance_period,
     )
+
     assert isinstance(result, FuelExportSchema)
-    mock_repo.create_fuel_export.assert_called_once()
+    mock_repo.create_fuel_export.assert_awaited_once()
+    mock_repo.get_compliance_period_id.assert_awaited_once()
+    mock_repo.get_fuel_export_by_id.assert_awaited_once()
 
 
 @pytest.mark.anyio
@@ -207,15 +214,25 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         fuel_type=mock_fuel_type.dict(),
         fuel_category=mock_fuel_category.dict(),
     )
-    mock_repo.get_fuel_export_version_by_user.return_value = mock_existing_export
-    mock_repo.update_fuel_export.return_value = mock_existing_export
+    # Setup async mocks properly
+    mock_repo.get_fuel_export_version_by_user = AsyncMock(
+        return_value=mock_existing_export
+    )
+    mock_repo.update_fuel_export = AsyncMock(return_value=mock_existing_export)
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_repo.get_fuel_export_by_id = AsyncMock(return_value=mock_existing_export)
 
     result = await fuel_export_action_service.update_fuel_export(
-        input_data, UserTypeEnum.SUPPLIER
+        input_data,
+        UserTypeEnum.SUPPLIER,
+        compliance_period=input_data.compliance_period,
     )
+
     assert isinstance(result, FuelExportSchema)
-    mock_repo.get_fuel_export_version_by_user.assert_called_once()
-    mock_repo.update_fuel_export.assert_called_once()
+    mock_repo.get_fuel_export_version_by_user.assert_awaited_once()
+    mock_repo.update_fuel_export.assert_awaited_once()
+    mock_repo.get_compliance_period_id.assert_awaited_once()
+    mock_repo.get_fuel_export_by_id.assert_awaited_once()
 
 
 @pytest.mark.anyio

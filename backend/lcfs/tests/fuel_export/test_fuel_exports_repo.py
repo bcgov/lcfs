@@ -106,6 +106,7 @@ async def test_get_fuel_exports_paginated_success(fuel_export_repo, mock_db):
 @pytest.mark.anyio
 async def test_get_fuel_export_by_id_success(fuel_export_repo, mock_db):
     fuel_export_id = 1
+    compliance_period_id = 1
     expected_fuel_export = FuelExport(fuel_export_id=fuel_export_id)
 
     mock_result = MagicMock()
@@ -114,7 +115,7 @@ async def test_get_fuel_export_by_id_success(fuel_export_repo, mock_db):
     )
     mock_db.execute.return_value = mock_result
 
-    result = await fuel_export_repo.get_fuel_export_by_id(fuel_export_id)
+    result = await fuel_export_repo.get_fuel_export_by_id(fuel_export_id, compliance_period_id)
 
     mock_db.execute.assert_called_once()
     mock_result.unique.assert_called_once()

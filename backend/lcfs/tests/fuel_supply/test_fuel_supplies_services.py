@@ -237,6 +237,9 @@ async def test_update_fuel_supply_success(fuel_supply_action_service):
     # Mock the update_fuel_supply method to return the updated fuel supply
     mock_repo.update_fuel_supply = AsyncMock(return_value=updated_fuel_supply)
 
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=updated_fuel_supply)
+
     # Prepare the input data for updating the fuel supply
     fs_data = FuelSupplyCreateUpdateSchema(
         fuel_supply_id=1,
@@ -290,26 +293,31 @@ async def test_create_fuel_supply(fuel_supply_action_service):
         fuel_type_other=None,
         units="L",
     )
-    mock_repo.create_fuel_supply = AsyncMock(
-        return_value=MagicMock(
-            fuel_supply_id=1,
-            groupUuid="new-uuid",
-            userType="SUPPLIER",
-            actionType="CREATE",
-            fuelTypeOther=None,
-            fuelType={"fuel_type_id": 1, "fuelType": "Diesel", "units": "L"},
-            fuelCategory={"fuel_category_id": 1, "category": "Diesel"},
-            fuelCode={
-                "fuelStatus": {"status": "Approved"},
-                "fuelCode": "FUEL123",
-                "carbonIntensity": 15.0,
-            },
-            provisionOfTheAct={"provisionOfTheActId": 1, "name": "Act Provision"},
-            endUseType={"endUseTypeId": 1, "type": "Transport", "subType": "Personal"},
-            units="L",
-            compliancePeriod="2024",
-        )
+    new_supply = FuelSupply(
+        fuel_supply_id=1,
+        compliance_report_id=1,
+        group_uuid="new-uuid",
+        version=0,
+        user_type=UserTypeEnum.SUPPLIER,
+        action_type=ActionTypeEnum.CREATE,
+        fuel_type_id=1,
+        fuel_category_id=1,
+        provision_of_the_act_id=1,
+        end_use_id=1,
+        quantity=2000,
+        units="L",
+        ci_of_fuel=10.5,
+        energy_density=30.0,
+        eer=1.0,
+        energy=60000,
+        compliance_units=200,
+        fuel_type=fuel_type,
+        fuel_category=fuel_category,
     )
+
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_repo.create_fuel_supply = AsyncMock(return_value=new_supply)
+    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=new_supply)
     mock_fuel_code_repo.get_fuel_type_by_id = AsyncMock(
         return_value=MagicMock(
             spec=FuelType, unrecognized=False, default_carbon_intensity=10.5

@@ -86,6 +86,4 @@ id_prefix_to_transaction_type_map = {
     "IA": "InitiativeAgreement",
 }
 
-default_ci = {"Gasoline": 93.67, "Diesel": 100.21, "Jet fuel": 88.83}
-
 POSTAL_REGEX = r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$"
