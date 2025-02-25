@@ -20,7 +20,7 @@ export const getKeycloak = () => {
 let inactivityTimer
 const INACTIVITY_TIMEOUT = 5 * 60 * 1000 // 5 minutes
 let isRefreshScheduled = false
-const minValidity = 60 // Minimum validity in seconds before refresh
+const MIN_VALIDITY = 60 // Minimum validity in seconds before refresh
 
 export const logout = () => {
   localStorage.removeItem('keycloak-logged-in')
@@ -61,7 +61,7 @@ const scheduleNextRefresh = (expiryTime) => {
 
   // Calculate time until refresh (subtract buffer time to ensure refresh happens before expiry)
   const currentTime = Math.floor(Date.now() / 1000)
-  const timeUntilRefresh = Math.max(1, expiryTime - currentTime - minValidity)
+  const timeUntilRefresh = Math.max(1, expiryTime - currentTime - MIN_VALIDITY)
 
   isRefreshScheduled = true
   setTimeout(() => {
@@ -78,7 +78,7 @@ export const refreshToken = () => {
   if (!keycloak.authenticated) return
 
   keycloak
-    .updateToken(minValidity) // Minimum validity in seconds
+    .updateToken(MIN_VALIDITY) // Minimum validity in seconds
     .then((refreshed) => {
       if (refreshed) {
         console.log('Token refreshed')
@@ -129,8 +129,8 @@ export const registerActivityEvents = () => {
         const currentTime = Math.floor(Date.now() / 1000)
         const timeUntilExpiry = keycloak.tokenParsed.exp - currentTime
 
-        // If token will expire in less than 2x our minValidity, try refreshing
-        if (timeUntilExpiry < minValidity * 2 && !isRefreshScheduled) {
+        // If token will expire in less than 2x our MIN_VALIDITY, try refreshing
+        if (timeUntilExpiry < MIN_VALIDITY * 2 && !isRefreshScheduled) {
           refreshToken()
         }
       }
