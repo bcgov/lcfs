@@ -240,6 +240,9 @@ async def test_update_fuel_supply_success(fuel_supply_action_service):
     # Mock the update_fuel_supply method to return the updated fuel supply
     mock_repo.update_fuel_supply = AsyncMock(return_value=updated_fuel_supply)
 
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=updated_fuel_supply)
+
     # Prepare the input data for updating the fuel supply
     fs_data = FuelSupplyCreateUpdateSchema(
         fuel_supply_id=1,
@@ -315,6 +318,10 @@ async def test_create_fuel_supply(fuel_supply_action_service):
             compliancePeriod="2024",
         )
     )
+
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_repo.create_fuel_supply = AsyncMock(return_value=new_supply)
+    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=new_supply)
     mock_fuel_code_repo.get_fuel_type_by_id = AsyncMock(
         return_value=MagicMock(
             spec=FuelType, unrecognized=False, default_carbon_intensity=10.5

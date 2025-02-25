@@ -95,7 +95,7 @@ class FuelExportActionService:
 
     @service_handler
     async def create_fuel_export(
-        self, fe_data: FuelExportCreateUpdateSchema, user_type: UserTypeEnum
+        self, fe_data: FuelExportCreateUpdateSchema, user_type: UserTypeEnum, compliance_period: str,
     ) -> FuelExportSchema:
         """
         Create a new fuel export record.
@@ -106,6 +106,9 @@ class FuelExportActionService:
 
         Returns the newly created fuel export record as a response schema.
         """
+        # Get compliance period ID
+        compliance_period_id = await self.repo.get_compliance_period_id(compliance_period)
+
         # Assign a unique group UUID for the new fuel export
         new_group_uuid = str(uuid.uuid4())
         fuel_export = FuelExport(
@@ -121,11 +124,18 @@ class FuelExportActionService:
 
         # Save the populated fuel export record
         created_export = await self.repo.create_fuel_export(fuel_export)
-        return FuelExportSchema.model_validate(created_export)
+
+        # Fetch with compliance period
+        result = await self.repo.get_fuel_export_by_id(
+            created_export.fuel_export_id,
+            compliance_period_id
+        )
+
+        return FuelExportSchema.model_validate(result)
 
     @service_handler
     async def update_fuel_export(
-        self, fe_data: FuelExportCreateUpdateSchema, user_type: UserTypeEnum
+        self, fe_data: FuelExportCreateUpdateSchema, user_type: UserTypeEnum, compliance_period: str,
     ) -> FuelExportSchema:
         """
         Update an existing fuel export record or create a new version if necessary.
@@ -137,6 +147,9 @@ class FuelExportActionService:
 
         Returns the updated or new version of the fuel export record.
         """
+        # Get compliance period ID
+        compliance_period_id = await self.repo.get_compliance_period_id(compliance_period)
+
         existing_export = await self.repo.get_fuel_export_version_by_user(
             fe_data.group_uuid, fe_data.version, user_type
         )
@@ -157,7 +170,14 @@ class FuelExportActionService:
             )
 
             updated_export = await self.repo.update_fuel_export(existing_export)
-            return FuelExportSchema.model_validate(updated_export)
+
+            # Fetch with compliance period
+            result = await self.repo.get_fuel_export_by_id(
+                updated_export.fuel_export_id,
+                compliance_period_id
+            )
+
+            return FuelExportSchema.model_validate(result)
 
         elif existing_export:
             # Create a new version if compliance report ID differs
@@ -184,7 +204,14 @@ class FuelExportActionService:
 
             # Save the new version
             new_export = await self.repo.create_fuel_export(fuel_export)
-            return FuelExportSchema.model_validate(new_export)
+
+            # Fetch with compliance period
+            result = await self.repo.get_fuel_export_by_id(
+                new_export.fuel_export_id,
+                compliance_period_id
+            )
+
+            return FuelExportSchema.model_validate(result)
 
         raise HTTPException(status_code=404, detail="Fuel export record not found.")
 

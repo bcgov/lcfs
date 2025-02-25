@@ -1,3 +1,5 @@
+from typing import Optional
+from pydantic import computed_field
 from sqlalchemy import Column, Integer, Text, Enum, Numeric
 from sqlalchemy.orm import relationship
 
@@ -40,3 +42,9 @@ class FuelCategory(BaseModel, Auditable, DisplayOrder, EffectiveDates):
         "TargetCarbonIntensity", back_populates="fuel_category"
     )
     fuel_instances = relationship("FuelInstance", back_populates="fuel_category")
+    category_carbon_intensities = relationship(
+        "CategoryCarbonIntensity",
+        back_populates="fuel_category",
+        lazy="joined",
+        order_by="CategoryCarbonIntensity.compliance_period_id"
+    )

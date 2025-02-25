@@ -23,7 +23,6 @@ from lcfs.web.api.fuel_supply.schema import (
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
-from lcfs.utils.constants import default_ci
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -48,13 +47,14 @@ class FuelSupplyServices:
 
         row_data = dict(zip(column_names, row))
 
+        default_ci = row_data.get("default_carbon_intensity")
+        category_ci = row_data.get("category_carbon_intensity")
         fuel_category = FuelCategorySchema(
             fuel_category_id=row_data["fuel_category_id"],
             fuel_category=row_data["category"],
             default_and_prescribed_ci=(
-                round(row_data["default_carbon_intensity"], 2)
-                if row_data["fuel_type"] != "Other"
-                else default_ci.get(row_data["category"])
+                round(default_ci, 2) if default_ci is not None and row_data["fuel_type"] != "Other"
+                else round(category_ci, 2) if category_ci is not None else None
             ),
         )
         provision = ProvisionOfTheActSchema(
@@ -205,9 +205,8 @@ class FuelSupplyServices:
                 fuel_type=row_data["fuel_type"],
                 fossil_derived=row_data["fossil_derived"],
                 default_carbon_intensity=(
-                    round(row_data["default_carbon_intensity"], 2)
-                    if row_data["fuel_type"] != "Other"
-                    else default_ci.get(row_data["category"])
+                    round(default_ci, 2) if default_ci is not None and row_data["fuel_type"] != "Other"
+                    else round(category_ci, 2) if category_ci is not None else None
                 ),
                 unit=row_data["unit"].value,
                 energy_density=(

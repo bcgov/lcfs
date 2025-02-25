@@ -1,5 +1,7 @@
 import enum
+from typing import Optional
 
+from pydantic import computed_field
 from sqlalchemy import Column, Integer, Text, Boolean, Enum, Numeric, text
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import relationship
@@ -91,4 +93,10 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
         "AdditionalCarbonIntensity",
         back_populates="fuel_type",
         overlaps="additional_carbon_intensity"
+    )
+    default_carbon_intensities = relationship(
+        "DefaultCarbonIntensity",
+        back_populates="fuel_type",
+        lazy="joined",
+        order_by="DefaultCarbonIntensity.compliance_period_id"
     )

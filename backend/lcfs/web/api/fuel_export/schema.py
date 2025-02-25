@@ -77,7 +77,7 @@ class FuelTypeOptionsSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: bool
-    default_carbon_intensity: float
+    default_carbon_intensity: Optional[float] = None
     unit: str
     energy_density: Optional[EnergyDensitySchema]
     provisions: List[ProvisionOfTheActSchema]
@@ -102,7 +102,9 @@ class FuelTypeSchema(BaseSchema):
 
     @field_validator("default_carbon_intensity")
     def quantize_default_carbon_intensity(cls, value):
-        return round(value, 2)
+        if value is not None:
+            return round(value, 2)
+        return value
 
 
 class FuelCategoryResponseSchema(BaseSchema):
