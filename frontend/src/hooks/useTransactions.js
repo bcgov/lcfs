@@ -49,7 +49,14 @@ export const useGetTransactionList = (
   const { hasRoles } = useCurrentUser()
 
   return useQuery({
-    queryKey: ['transactions-list', page, size, sortOrders, filters],
+    queryKey: [
+      'transactions-list',
+      page,
+      size,
+      sortOrders,
+      filters,
+      selectedOrgId
+    ],
     queryFn: async () => {
       const getApiEndpoint = () => {
         if (hasRoles(roles.supplier)) {
