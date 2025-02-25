@@ -1,5 +1,3 @@
-from typing import Optional
-from pydantic import computed_field
 from sqlalchemy import Column, Integer, Text, Enum, Numeric
 from sqlalchemy.orm import relationship
 

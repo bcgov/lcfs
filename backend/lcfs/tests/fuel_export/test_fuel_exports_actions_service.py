@@ -159,7 +159,7 @@ async def test_create_fuel_export_success(
 
     # Call the method under test with compliance_period
     result = await fuel_export_action_service.create_fuel_export(
-        fe_data, user_type, "2024"
+        fe_data, user_type
     )
     # Assertions
     assert result == FuelExportSchema.model_validate(created_export)
@@ -238,7 +238,7 @@ async def test_update_fuel_export_success_existing_report(
 
     # Call the method under test with compliance_period
     result = await fuel_export_action_service.update_fuel_export(
-        fe_data, user_type, "2024"
+        fe_data, user_type
     )
 
     # Assertions
@@ -318,7 +318,7 @@ async def test_update_fuel_export_create_new_version(
 
     # Call the method under test with compliance_period
     result = await fuel_export_action_service.update_fuel_export(
-        fe_data, user_type, "2024"
+        fe_data, user_type
     )
 
     # Assertions
@@ -481,7 +481,6 @@ async def test_compliance_units_calculation(
     case, fuel_export_action_service, mock_repo, mock_fuel_code_repo
 ):
     # Mock repository methods
-    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
     mock_repo.create_fuel_export = AsyncMock()
     mock_repo.get_fuel_export_by_id = AsyncMock()
 
@@ -555,11 +554,10 @@ async def test_compliance_units_calculation(
     # Set up repository mocks
     mock_created_export = await create_fuel_export_side_effect(FuelExport())
     mock_repo.create_fuel_export.return_value = mock_created_export
-    mock_repo.get_fuel_export_by_id.return_value = mock_created_export
 
     # Call service method
     result = await fuel_export_action_service.create_fuel_export(
-        fe_data, UserTypeEnum.SUPPLIER, compliance_period=fe_data.compliance_period
+        fe_data, UserTypeEnum.SUPPLIER
     )
 
     # Assertions
@@ -572,11 +570,7 @@ async def test_compliance_units_calculation(
     assert result.quantity == fe_data.quantity
 
     # Verify mock calls
-    mock_repo.get_compliance_period_id.assert_awaited_once_with(
-        fe_data.compliance_period
-    )
     mock_repo.create_fuel_export.assert_awaited_once()
-    mock_repo.get_fuel_export_by_id.assert_awaited_once_with(1, 1)
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
         fuel_type_id=fe_data.fuel_type_id,
         fuel_category_id=fe_data.fuel_category_id,

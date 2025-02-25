@@ -64,33 +64,6 @@ class FuelSupplyRepository:
             joinedload(FuelSupply.end_use_type),
         )
 
-    @repo_handler
-    async def get_compliance_period_id(self, compliance_period: str) -> int:
-        """Get compliance period ID from description"""
-        query = (
-            select(CompliancePeriod.compliance_period_id)
-            .where(CompliancePeriod.description == compliance_period)
-        )
-        result = await self.db.execute(query)
-        return result.scalar_one_or_none()
-
-    @repo_handler
-    async def get_default_carbon_intensity(self, fuel_type_id: int, compliance_period_id: int) -> Optional[float]:
-        """
-        Get default carbon intensity for a specific fuel type and compliance period
-        """
-        query = (
-            select(DefaultCarbonIntensity.default_carbon_intensity)
-            .where(
-                and_(
-                    DefaultCarbonIntensity.fuel_type_id == fuel_type_id,
-                    DefaultCarbonIntensity.compliance_period_id == compliance_period_id
-                )
-            )
-        )
-        result = await self.db.execute(query)
-        default_ci = result.scalar_one_or_none()
-        return float(default_ci) if default_ci is not None else None
 
     @repo_handler
     async def get_fuel_supply_table_options(self, compliance_period: str):
@@ -320,23 +293,13 @@ class FuelSupplyRepository:
         return paginated_supplies, total_count
 
     @repo_handler
-    async def get_fuel_supply_by_id(self, fuel_supply_id: int,  compliance_period_id: Optional[int] = None) -> FuelSupply:
+    async def get_fuel_supply_by_id(self, fuel_supply_id: int) -> FuelSupply:
         """
         Retrieve a fuel supply row from the database
         """
         query = self.query.where(FuelSupply.fuel_supply_id == fuel_supply_id)
         result = await self.db.execute(query)
-        fuel_supply = result.unique().scalar_one_or_none()
-
-        if fuel_supply and fuel_supply.fuel_type and compliance_period_id:
-            default_ci = await self.get_default_carbon_intensity(
-                fuel_supply.fuel_type.fuel_type_id,
-                compliance_period_id
-            )
-            # Add default carbon intensity to the fuel type object
-            setattr(fuel_supply.fuel_type, 'default_carbon_intensity', default_ci)
-
-        return fuel_supply
+        return result.unique().scalar_one_or_none()
 
     @repo_handler
     async def update_fuel_supply(self, fuel_supply: FuelSupply) -> FuelSupply:

@@ -77,6 +77,7 @@ class OtherUsesRepository:
                     )
                 )
             )
+            .unique()
             .scalars()
             .all()
         )
@@ -429,12 +430,14 @@ class OtherUsesRepository:
             ]
 
             # Get default CI for compliance period
-            default_ci = next(
-                (dci.default_carbon_intensity
-                for dci in fuel_type.default_carbon_intensities
-                if dci.compliance_period_id == compliance_period_id),
-                None
-            )
+            default_ci = None
+            if compliance_period_id:
+                default_ci = next(
+                    (dci.default_carbon_intensity
+                    for dci in fuel_type.default_carbon_intensities
+                    if dci.compliance_period_id == compliance_period_id),
+                    None
+                )
 
             formatted_fuel_type = {
                 "fuel_type_id": fuel_type.fuel_type_id,
