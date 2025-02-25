@@ -121,41 +121,21 @@ export const AddEditViewTransfer = () => {
   useEffect(() => {
     if (!transferId) return
     if (isFetched && transferData) {
-      // Fetch the comments from the transfer data
-      const fromOrgCommentObj = transferData.comments?.find(
-        (c) => c.commentSource === 'FROM_ORG'
-      )
-      const fromOrgCommentText = fromOrgCommentObj?.comment || ''
-
-      const toOrgCommentObj = transferData.comments?.find(
-        (c) => c.commentSource === 'TO_ORG'
-      )
-      const toOrgCommentText = toOrgCommentObj?.comment || ''
-
-      const govCommentObj = transferData.comments?.find(
-        (c) => c.commentSource === 'GOVERNMENT'
-      )
-      const govCommentText = govCommentObj?.comment || ''
-
       // Populate the form with fetched transfer data
-      methods.reset({
+      methods.reset((prevValues) => ({
+        ...prevValues, // Preserve previous values
         fromOrganizationId: transferData.fromOrganization.organizationId,
         toOrganizationId: transferData.toOrganization.organizationId,
         quantity: transferData.quantity,
         pricePerUnit: transferData.pricePerUnit,
-        fromOrgComment: fromOrgCommentText,
-        toOrgComment: toOrgCommentText,
-        govComment: govCommentText,
         agreementDate: transferData.agreementDate
           ? dateFormatter(transferData.agreementDate)
-          : new Date().toISOString().split('T')[0], // Format date or use current date as fallback
+          : new Date().toISOString().split('T')[0],
         recommendation:
-          methods.getValues().recommendation !== undefined
-            ? methods.getValues().recommendation
-            : transferData.recommendation,
+          prevValues.recommendation ?? transferData.recommendation,
         signingAuthorityDeclaration:
-          methods.getValues().signingAuthorityDeclaration ?? false
-      })
+          prevValues.signingAuthorityDeclaration ?? false
+      }))
     }
     if (isLoadingError || queryState?.status === 'error') {
       setAlertMessage(
