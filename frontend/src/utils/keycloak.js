@@ -23,7 +23,7 @@ let isRefreshScheduled = false
 const minValidity = 60 // Minimum validity in seconds before refresh
 
 export const logout = () => {
-  sessionStorage.removeItem('keycloak-logged-in')
+  localStorage.removeItem('keycloak-logged-in')
   clearTimeout(inactivityTimer) // Clear the inactivity timer on logout
 
   const idToken = keycloak.idToken || keycloak.tokenParsed?.idToken

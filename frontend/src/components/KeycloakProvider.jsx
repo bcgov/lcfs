@@ -40,16 +40,16 @@ export const KeycloakProvider = ({ authClient, children }) => {
 
       // Track login if not already tracked
       const hasBeenTracked =
-        sessionStorage.getItem('keycloak-logged-in') === 'true'
+        localStorage.getItem('keycloak-logged-in') === 'true'
       if (!hasBeenTracked) {
         await trackLogin()
-        sessionStorage.setItem('keycloak-logged-in', 'true')
+        localStorage.setItem('keycloak-logged-in', 'true')
       }
 
       return () => cleanup()
     }
     if (event === 'onAuthLogout') {
-      sessionStorage.removeItem('keycloak-logged-in')
+      localStorage.removeItem('keycloak-logged-in')
     }
   }
 
