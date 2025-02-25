@@ -37,8 +37,10 @@ import {
 } from '../keycloak'
 
 describe('Keycloak Utils', () => {
+  let keycloak
   let mockSetTimeout
   let mockClearTimeout
+  let logoutSpy
 
   beforeEach(() => {
     // Reset mocks before each test
