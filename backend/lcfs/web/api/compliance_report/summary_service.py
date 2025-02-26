@@ -381,19 +381,18 @@ class ComplianceReportSummaryService:
         self,
         report_id: int,
         summary_data: ComplianceReportSummaryUpdateSchema,
-        user: UserProfile,
     ) -> ComplianceReportSummarySchema:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
         await self.repo.save_compliance_report_summary(summary_data)
-        summary_data = await self.calculate_compliance_report_summary(report_id, user)
+        summary_data = await self.calculate_compliance_report_summary(report_id)
 
         return summary_data
 
     @service_handler
     async def calculate_compliance_report_summary(
-        self, report_id: int, user: UserProfile
+        self, report_id: int
     ) -> ComplianceReportSummarySchema:
         """Several fields on Report Summary are Transient until locked, this function will re-calculate fields as necessary"""
         # TODO this method will have to be updated to handle supplemental reports
@@ -455,7 +454,9 @@ class ComplianceReportSummaryService:
             }
 
         notional_transfers = (
-            await self.notional_transfer_service.get_notional_transfers(report_id, user)
+            await self.notional_transfer_service.get_notional_transfers(
+                report_id, False
+            )
         )
 
         notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
@@ -559,7 +560,9 @@ class ComplianceReportSummaryService:
 
         # Only save if summary has changed
         if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):
-            logger.debug("Report has changed, updating summary")
+            logger.debug(
+                f"Report has changed, updating summary for report {compliance_report.compliance_report_id}"
+            )
             await self.repo.save_compliance_report_summary(summary)
             return summary
 
