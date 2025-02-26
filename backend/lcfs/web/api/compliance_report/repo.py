@@ -1,12 +1,12 @@
 from collections import defaultdict
 from datetime import datetime
-from typing import List, Optional, Dict, Union, Tuple
+from typing import List, Optional, Dict, Union
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import func, select, and_, asc, desc, update, or_, String, cast
+from sqlalchemy import func, select, and_, asc, desc, update, String, cast
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, contains_eager, aliased
+from sqlalchemy.orm import joinedload, aliased
 from sqlalchemy.inspection import inspect
 
 from lcfs.db.dependencies import get_async_db_session
@@ -73,22 +73,33 @@ class ComplianceReportRepository:
             filter_type = filter.filter_type
             if filter.field == "status":
                 field = cast(
-                    get_field_for_filter(
-                        ComplianceReportListView, "report_status"),
+                    get_field_for_filter(ComplianceReportListView, "report_status"),
                     String,
                 )
                 # Check if filter_value is a comma-separated string
                 if isinstance(filter_value, str) and "," in filter_value:
                     filter_value = filter_value.split(",")  # Convert to list
+
                 if isinstance(filter_value, list):
-                    filter_value = [value.replace(" ", "_")
-                                    for value in filter_value]
+
+                    def underscore_string(val):
+                        """
+                        If the item is an enum member, get its `.value`
+                        Then do .replace(" ", "_") so we get underscores
+                        """
+                        if isinstance(val, ComplianceReportStatusEnum):
+                            val = val.value  # convert enum to string
+                        return val.replace(" ", "_")
+
+                    filter_value = [underscore_string(val) for val in filter_value]
                     filter_type = "set"
                 else:
+                    if isinstance(filter_value, ComplianceReportStatusEnum):
+                        filter_value = filter_value.value
                     filter_value = filter_value.replace(" ", "_")
+
             elif filter.field == "type":
-                field = get_field_for_filter(
-                    ComplianceReportListView, "report_type")
+                field = get_field_for_filter(ComplianceReportListView, "report_type")
             elif filter.field == "organization":
                 field = get_field_for_filter(
                     ComplianceReportListView, "organization_name"
@@ -98,12 +109,10 @@ class ComplianceReportRepository:
                     ComplianceReportListView, "compliance_period"
                 )
             else:
-                field = get_field_for_filter(
-                    ComplianceReportListView, filter.field)
+                field = get_field_for_filter(ComplianceReportListView, filter.field)
 
             conditions.append(
-                apply_filter_conditions(
-                    field, filter_value, filter_option, filter_type)
+                apply_filter_conditions(field, filter_value, filter_option, filter_type)
             )
 
     @repo_handler
@@ -158,8 +167,7 @@ class ComplianceReportRepository:
         Retrieve a compliance period from the database
         """
         result = await self.db.scalar(
-            select(CompliancePeriod).where(
-                CompliancePeriod.description == period)
+            select(CompliancePeriod).where(CompliancePeriod.description == period)
         )
         return result
 
@@ -198,8 +206,7 @@ class ComplianceReportRepository:
         Retrieve the compliance report status ID from the database based on the description.
         Replaces spaces with underscores in the status description.
         """
-        status_enum = status.replace(
-            " ", "_")  # frontend sends status with spaces
+        status_enum = status.replace(" ", "_")  # frontend sends status with spaces
         result = await self.db.execute(
             select(ComplianceReportStatus).where(
                 ComplianceReportStatus.status
@@ -386,8 +393,7 @@ class ComplianceReportRepository:
             self.apply_filters(pagination, conditions)
 
         # Pagination and offset setup
-        offset = 0 if (pagination.page < 1) else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
         # Build the main query
@@ -395,8 +401,7 @@ class ComplianceReportRepository:
 
         # Apply sorting from pagination
         if len(pagination.sort_orders) < 1:
-            field = get_field_for_filter(
-                ComplianceReportListView, "update_date")
+            field = get_field_for_filter(ComplianceReportListView, "update_date")
             query = query.order_by(desc(field))
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
@@ -731,15 +736,13 @@ class ComplianceReportRepository:
                 isinstance(record, FuelSupply)
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
-                fuel_category = self._format_category(
-                    record.fuel_category.category)
+                fuel_category = self._format_category(record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity
             elif (
                 isinstance(record, OtherUses)
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
-                fuel_category = self._format_category(
-                    record.fuel_category.category)
+                fuel_category = self._format_category(record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity_supplied
 
         return dict(fuel_quantities)
@@ -891,15 +894,11 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def get_changelog_data(
-        self,
-        pagination: PaginationRequestSchema,
-        compliance_report_id: int,
-        selection
+        self, pagination: PaginationRequestSchema, compliance_report_id: int, selection
     ):
 
         conditions = [selection.compliance_report_id == compliance_report_id]
-        offset = 0 if pagination.page < 1 else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
         # Create an alias for the previous version row.

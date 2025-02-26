@@ -150,10 +150,14 @@ async def import_async(
                     socket_connect_timeout=5,
                 )
 
-                await _update_progress(redis_client, job_id, 5, "Initializing services...")
+                await _update_progress(
+                    redis_client, job_id, 5, "Initializing services..."
+                )
 
                 if overwrite:
-                    await _update_progress(redis_client, job_id, 10, "Deleting old data...")
+                    await _update_progress(
+                        redis_client, job_id, 10, "Deleting old data..."
+                    )
                     await fse_service.delete_all(compliance_report_id)
                     org_code = user.organization.organization_code
                     await fse_repo.reset_seq_by_org(org_code)
@@ -165,7 +169,9 @@ async def import_async(
                     )
                     clamav_service.scan_file(file)
 
-                await _update_progress(redis_client, job_id, 20, "Loading Excel sheet...")
+                await _update_progress(
+                    redis_client, job_id, 20, "Loading Excel sheet..."
+                )
 
                 try:
                     sheet = _load_sheet(file)
@@ -188,7 +194,9 @@ async def import_async(
                     valid_intended_users = await fse_repo.get_intended_user_types()
                     valid_use_types = await fse_repo.get_intended_use_types()
                     valid_use_type_names = {obj.type for obj in valid_use_types}
-                    valid_user_type_names = {obj.type_name for obj in valid_intended_users}
+                    valid_user_type_names = {
+                        obj.type_name for obj in valid_intended_users
+                    }
 
                     # Iterate through all data rows, skipping the header
                     for row_idx, row in enumerate(
@@ -210,6 +218,10 @@ async def import_async(
                                 errors=errors,
                             )
 
+                        # Check if the entire row is empty
+                        if all(cell is None for cell in row):
+                            continue
+
                         # Validate row
                         error = _validate_row(
                             row, row_idx, valid_use_type_names, valid_user_type_names
@@ -222,7 +234,9 @@ async def import_async(
                         # Parse row data and insert into DB
                         try:
                             fse_data = _parse_row(row, compliance_report_id)
-                            await fse_service.create_final_supply_equipment(fse_data, user)
+                            await fse_service.create_final_supply_equipment(
+                                fse_data, user
+                            )
                             created += 1
                         except Exception as ex:
                             logger.error(str(ex))
@@ -239,7 +253,9 @@ async def import_async(
                         rejected=rejected,
                         errors=errors,
                     )
-                    logger.debug(f"Completed importing FSE data, {created} rows created")
+                    logger.debug(
+                        f"Completed importing FSE data, {created} rows created"
+                    )
 
                     return {
                         "success": True,
@@ -265,6 +281,7 @@ async def import_async(
                     )
     finally:
         await engine.dispose()
+
 
 def _load_sheet(file: UploadFile) -> Worksheet:
     """
@@ -306,10 +323,6 @@ def _validate_row(
         longitude,
         notes,
     ) = row
-
-    # Check if the entire row is empty
-    if all(cell is None for cell in row):
-        return f"Row {row_idx}: Row is empty"
 
     missing_fields = []
     if supply_from_date is None:
@@ -404,15 +417,15 @@ def _parse_row(
         supply_from_date=supply_from_date,
         supply_to_date=supply_to_date,
         kwh_usage=kwh_usage,
-        serial_nbr=serial_number or "",
-        manufacturer=manufacturer or "",
-        model=model or "",
+        serial_nbr=str(serial_number) or "",
+        manufacturer=str(manufacturer) or "",
+        model=str(model) or "",
         level_of_equipment=level_of_equipment or "",
         ports=PortsEnum(ports) if ports else None,
         intended_uses=intended_uses,
         intended_users=intended_users,
-        street_address=street_address or "",
-        city=city or "",
+        street_address=str(street_address) or "",
+        city=str(city) or "",
         postal_code=postal_code or "",
         latitude=latitude,
         longitude=longitude,
