@@ -4,7 +4,7 @@ name: LCFS 1.0.0 Dev CI
 
 on:
   push:
-    branches: [release-1.0.0]
+    branches: [develop]
     paths:
       - frontend/**
       - backend/**
@@ -102,13 +102,13 @@ jobs:
           oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-frontend-${{ env.VERSION }}-${{ env.PRE_RELEASE }} --wait=true
           oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
 
-      - name: Tag the source code
-        run: |
-          git config --global user.email "actions@github.com"
-          git config --global user.name "GitHub Actions"
-          devtag="${{ env.VERSION }}-${{ env.PRE_RELEASE }}"
-          git tag $devtag
-          git push origin $devtag
+      # - name: Tag the source code
+      #   run: |
+      #     git config --global user.email "actions@github.com"
+      #     git config --global user.name "GitHub Actions"
+      #     devtag="${{ env.VERSION }}-${{ env.PRE_RELEASE }}"
+      #     git tag $devtag
+      #     git push origin $devtag
 
   deploy:
     name: Deploy LCFS
