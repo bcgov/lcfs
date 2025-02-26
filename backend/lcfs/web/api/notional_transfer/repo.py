@@ -45,7 +45,7 @@ class NotionalTransferRepository:
 
     @repo_handler
     async def get_notional_transfers(
-        self, compliance_report_id: int, changelog: bool = False, exclude_draft_reports: bool = False
+        self, compliance_report_id: int, changelog: bool = False, include_drafts: bool = True
     ) -> List[NotionalTransferSchema]:
         """
         Queries notional transfers from the database for a specific compliance report.
@@ -61,12 +61,12 @@ class NotionalTransferRepository:
             return []
 
         result = await self.get_effective_notional_transfers(
-            group_uuid, exclude_draft_reports, changelog
+            group_uuid, include_drafts, changelog
         )
         return result
 
     async def get_effective_notional_transfers(
-        self, compliance_report_group_uuid: str, exclude_draft_reports: bool = False, changelog: bool = False,
+        self, compliance_report_group_uuid: str, include_drafts: bool = True, changelog: bool = False,
     ) -> List[NotionalTransferSchema]:
         """
         Retrieves effective notional transfers for a compliance report group UUID.
@@ -76,7 +76,7 @@ class NotionalTransferRepository:
             ComplianceReport.compliance_report_group_uuid
             == compliance_report_group_uuid
         )
-        if exclude_draft_reports:
+        if not include_drafts:
             compliance_reports_select = compliance_reports_select.where(
                 ComplianceReport.current_status.has(
                     ComplianceReportStatus.status
@@ -160,7 +160,7 @@ class NotionalTransferRepository:
         self,
         pagination: PaginationRequestSchema,
         compliance_report_id: int,
-        exclude_draft_reports: bool = False,
+        include_drafts: bool = True,
     ) -> Tuple[List[NotionalTransferSchema], int]:
         # Retrieve the compliance report's group UUID
         report_group_query = await self.db.execute(
@@ -174,8 +174,7 @@ class NotionalTransferRepository:
 
         # Retrieve effective notional transfers using the group UUID
         notional_transfers = await self.get_effective_notional_transfers(
-            compliance_report_group_uuid=group_uuid,
-            exclude_draft_reports=exclude_draft_reports,
+            compliance_report_group_uuid=group_uuid, include_drafts=include_drafts
         )
 
         # Manually apply pagination

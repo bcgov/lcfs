@@ -2,7 +2,6 @@ from fastapi.routing import APIRouter
 
 from lcfs.web.api import (
     echo,
-    fuel_supply,
     monitoring,
     user,
     role,
@@ -21,7 +20,6 @@ from lcfs.web.api import (
     other_uses,
     final_supply_equipment,
     dashboard,
-    allocation_agreement,
     document,
     fuel_type,
     audit_log,
@@ -29,10 +27,16 @@ from lcfs.web.api import (
     organization_snapshot,
 )
 
+from lcfs.web.api.allocation_agreement.views import (
+    router as allocation_agreement_router,
+)
+
+from lcfs.web.api.fuel_supply.views import router as fuel_supply_router
+
 api_router = APIRouter()
 api_router.include_router(monitoring.router)
 api_router.include_router(
-    allocation_agreement.router,
+    allocation_agreement_router,
     prefix="/allocation-agreement",
     tags=["allocation-agreements"],
 )
@@ -81,7 +85,7 @@ api_router.include_router(
     tags=["final_supply_equipments"],
 )
 api_router.include_router(
-    fuel_supply.router, prefix="/fuel-supply", tags=["fuel_supplies"]
+    fuel_supply_router, prefix="/fuel-supply", tags=["fuel_supplies"]
 )
 api_router.include_router(document.router, prefix="/documents", tags=["documents"])
 api_router.include_router(fuel_type.router, prefix="/fuel-type", tags=["fuel_type"])
