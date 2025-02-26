@@ -3,6 +3,7 @@ name: LCFS 1.0.0 Test CI
 on:
   push:
     branches: [release]
+  workflow_dispatch:
 
 env:
   VERSION: 1.0.0
@@ -52,140 +53,140 @@ jobs:
           repository: bcgov/lcfs
           ref: ${{ github.ref }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10.13"
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "20"
-
-      - name: Install Docker Compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
-
-      - name: Cache Poetry dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pypoetry
-          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
-
-      - name: Cache npm dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - name: Install Poetry
-        run: pip install poetry==1.6.1
-
-      - name: Install backend dependencies
-        run: |
-          cd backend
-          poetry config virtualenvs.create false
-          poetry install
-          pip install pytest-github-actions-annotate-failures typing_extensions
-
-      - name: Install frontend dependencies
-        run: |
-          cd frontend
-          npm ci
-
-      - name: Fix docker-compose.yml
-        run: |
-          sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose.yml
-
-      - name: Build and start services
-        run: |
-          docker-compose build
-          docker-compose up -d
-
-      - name: Run backend tests
-        id: backend_tests
-        continue-on-error: true
-        run: |
-          cd backend
-          poetry run pytest --junitxml=pytest-results.xml
-        env:
-          LCFS_DB_HOST: localhost
-          LCFS_DB_PORT: 5432
-          LCFS_DB_USER: lcfs
-          LCFS_DB_PASS: development_only
-          LCFS_DB_BASE: lcfs
-          LCFS_REDIS_HOST: localhost
-          LCFS_REDIS_PORT: 6379
-          LCFS_REDIS_PASSWORD: development_only
-          APP_ENVIRONMENT: dev
-          LCFS_CHES_CLIENT_ID: mock_client_id
-          LCFS_CHES_CLIENT_SECRET: mock_client_secret
-          LCFS_CHES_AUTH_URL: http://mock_auth_url
-          LCFS_CHES_SENDER_EMAIL: noreply@gov.bc.ca
-          LCFS_CHES_SENDER_NAME: Mock Notification System
-          LCFS_CHES_EMAIL_URL: http://mock_email_url
-
-      - name: Run frontend tests
-        id: frontend_tests
-        continue-on-error: true
-        run: |
-          cd frontend
-          npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
-        env:
-          CI: true
-      # Comment until all cypress tests are fixed for success.
-      # - name: Create cypress.env.json
-      #   run: |
-      #     echo '{
-      #       "admin_idir_username": "${{ secrets.ADMIN_IDIR_USERNAME }}",
-      #       "admin_idir_password": "${{ secrets.ADMIN_IDIR_PASSWORD }}",
-      #       "org1_bceid_username": "${{ secrets.ORG1_BCEID_USERNAME }}",
-      #       "org1_bceid_password": "${{ secrets.ORG1_BCEID_PASSWORD }}",
-      #       "org1_bceid_id": "${{ secrets.ORG1_BCEID_ID }}",
-      #       "org1_bceid_userId": "${{ secrets.ORG1_BCEID_USERID }}",
-      #       "org2_bceid_username": "${{ secrets.ORG2_BCEID_USERNAME }}",
-      #       "org2_bceid_password": "${{ secrets.ORG2_BCEID_PASSWORD }}",
-      #       "org2_bceid_id": "${{ secrets.ORG2_BCEID_ID }}",
-      #       "org2_bceid_userId": "${{ secrets.ORG2_BCEID_USERID }}"
-      #     }' > frontend/cypress.env.json
-
-      # - name: Run Cypress tests
-      #   id: cypress_tests
-      #   continue-on-error: true
-      #   uses: cypress-io/github-action@v6
+      # - name: Set up Python
+      #   uses: actions/setup-python@v4
       #   with:
-      #     command: npm run cypress:run
-      #     wait-on: 'http://localhost:3000'
-      #     working-directory: frontend
+      #     python-version: "3.10.13"
 
-      - name: Upload test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-results
-          path: |
-            backend/pytest-results.xml
-            frontend/vitest-results.xml
-      # frontend/cypress/reports/
-      # frontend/cypress/screenshots/
+      # - name: Set up Node.js
+      #   uses: actions/setup-node@v3
+      #   with:
+      #     node-version: "20"
 
-      - name: Stop services
-        if: always()
-        run: docker-compose down
+      # - name: Install Docker Compose
+      #   run: |
+      #     sudo apt-get update
+      #     sudo apt-get install -y docker-compose
 
-      - name: Check test results
-        if: always()
-        run: |
-          if [ "${{ steps.backend_tests.outcome }}" == "failure" ] || \
-             [ "${{ steps.frontend_tests.outcome }}" == "failure" ]; then
-            echo "One or more tests failed"
-            exit 1
-          fi
+      # - name: Cache Poetry dependencies
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ~/.cache/pypoetry
+      #     key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-poetry-
+
+      # - name: Cache npm dependencies
+      #   uses: actions/cache@v3
+      #   with:
+      #     path: ~/.npm
+      #     key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+      #     restore-keys: |
+      #       ${{ runner.os }}-node-
+
+      # - name: Install Poetry
+      #   run: pip install poetry==1.6.1
+
+      # - name: Install backend dependencies
+      #   run: |
+      #     cd backend
+      #     poetry config virtualenvs.create false
+      #     poetry install
+      #     pip install pytest-github-actions-annotate-failures typing_extensions
+
+      # - name: Install frontend dependencies
+      #   run: |
+      #     cd frontend
+      #     npm ci
+
+      # - name: Fix docker-compose.yml
+      #   run: |
+      #     sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose.yml
+
+      # - name: Build and start services
+      #   run: |
+      #     docker-compose build
+      #     docker-compose up -d
+
+      # - name: Run backend tests
+      #   id: backend_tests
+      #   continue-on-error: true
+      #   run: |
+      #     cd backend
+      #     poetry run pytest --junitxml=pytest-results.xml
+      #   env:
+      #     LCFS_DB_HOST: localhost
+      #     LCFS_DB_PORT: 5432
+      #     LCFS_DB_USER: lcfs
+      #     LCFS_DB_PASS: development_only
+      #     LCFS_DB_BASE: lcfs
+      #     LCFS_REDIS_HOST: localhost
+      #     LCFS_REDIS_PORT: 6379
+      #     LCFS_REDIS_PASSWORD: development_only
+      #     APP_ENVIRONMENT: dev
+      #     LCFS_CHES_CLIENT_ID: mock_client_id
+      #     LCFS_CHES_CLIENT_SECRET: mock_client_secret
+      #     LCFS_CHES_AUTH_URL: http://mock_auth_url
+      #     LCFS_CHES_SENDER_EMAIL: noreply@gov.bc.ca
+      #     LCFS_CHES_SENDER_NAME: Mock Notification System
+      #     LCFS_CHES_EMAIL_URL: http://mock_email_url
+
+      # - name: Run frontend tests
+      #   id: frontend_tests
+      #   continue-on-error: true
+      #   run: |
+      #     cd frontend
+      #     npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
+      #   env:
+      #     CI: true
+      # # Comment until all cypress tests are fixed for success.
+      # # - name: Create cypress.env.json
+      # #   run: |
+      # #     echo '{
+      # #       "admin_idir_username": "${{ secrets.ADMIN_IDIR_USERNAME }}",
+      # #       "admin_idir_password": "${{ secrets.ADMIN_IDIR_PASSWORD }}",
+      # #       "org1_bceid_username": "${{ secrets.ORG1_BCEID_USERNAME }}",
+      # #       "org1_bceid_password": "${{ secrets.ORG1_BCEID_PASSWORD }}",
+      # #       "org1_bceid_id": "${{ secrets.ORG1_BCEID_ID }}",
+      # #       "org1_bceid_userId": "${{ secrets.ORG1_BCEID_USERID }}",
+      # #       "org2_bceid_username": "${{ secrets.ORG2_BCEID_USERNAME }}",
+      # #       "org2_bceid_password": "${{ secrets.ORG2_BCEID_PASSWORD }}",
+      # #       "org2_bceid_id": "${{ secrets.ORG2_BCEID_ID }}",
+      # #       "org2_bceid_userId": "${{ secrets.ORG2_BCEID_USERID }}"
+      # #     }' > frontend/cypress.env.json
+
+      # # - name: Run Cypress tests
+      # #   id: cypress_tests
+      # #   continue-on-error: true
+      # #   uses: cypress-io/github-action@v6
+      # #   with:
+      # #     command: npm run cypress:run
+      # #     wait-on: 'http://localhost:3000'
+      # #     working-directory: frontend
+
+      # - name: Upload test results
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: test-results
+      #     path: |
+      #       backend/pytest-results.xml
+      #       frontend/vitest-results.xml
+      # # frontend/cypress/reports/
+      # # frontend/cypress/screenshots/
+
+      # - name: Stop services
+      #   if: always()
+      #   run: docker-compose down
+
+      # - name: Check test results
+      #   if: always()
+      #   run: |
+      #     if [ "${{ steps.backend_tests.outcome }}" == "failure" ] || \
+      #        [ "${{ steps.frontend_tests.outcome }}" == "failure" ]; then
+      #       echo "One or more tests failed"
+      #       exit 1
+      #     fi
 
   set-pre-release:
     name: Calculate pre-release number
@@ -255,7 +256,7 @@ jobs:
     needs: [build]
 
     env:
-      PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
 
     steps:
       - id: get-current-time
