@@ -275,7 +275,36 @@ def upgrade():
     """
     )
 
-    # Insert data into energy_effectiveness_ratio table for compliance periods 2025 and 2026
+    # Insert fuel type Other, fuel category jet fuel into energy_effectiveness_ratio for compliance_period 2024
+    op.execute(
+        """
+        INSERT INTO energy_effectiveness_ratio (
+            fuel_category_id,
+            fuel_type_id,
+            end_use_type_id,
+            compliance_period_id,
+            ratio,
+            create_user,
+            update_user,
+            effective_status,
+            create_date,
+            update_date
+        ) VALUES (
+            3,
+            19,
+            24,
+            15,
+            1.0, 
+            'admin',
+            'admin',
+            TRUE, 
+            '2025-02-26 11:48:00.808-07',
+            '2025-02-26 11:48:00.808-07'
+        );
+        """
+    )
+
+    # Insert data into energy_effectiveness_ratio table for compliance periods 2025 and 2026.
     op.execute(
         """
         INSERT INTO energy_effectiveness_ratio (
@@ -308,6 +337,7 @@ def upgrade():
         )
     """
     )
+
     # Insert data into additional_carbon_intensity table for compliance periods 2025 and 2026
     op.execute(
         """
