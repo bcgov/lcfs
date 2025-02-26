@@ -5,9 +5,9 @@ name: LCFS 1.0.0 Dev CI
 on:
   push:
     branches: [develop]
-    paths:
-      - frontend/**
-      - backend/**
+    # paths:
+    #   - frontend/**
+    #   - backend/**
   workflow_dispatch:
 
 env:
