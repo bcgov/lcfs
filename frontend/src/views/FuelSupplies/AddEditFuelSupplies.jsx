@@ -7,19 +7,16 @@ import {
   useGetFuelSupplies,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
-import { isArrayEmpty, cleanEmptyStringValues } from '@/utils/formatters'
+import { cleanEmptyStringValues } from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import {
-  defaultColDef,
-  fuelSupplyColDefs,
-  PROVISION_APPROVED_FUEL_CODE
-} from './_schema'
+import { defaultColDef, fuelSupplyColDefs } from './_schema'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import { isArrayEmpty } from '@/utils/array.js'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -173,24 +170,14 @@ export const AddEditFuelSupplies = () => {
             fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
           const endUseValue =
             endUseTypes.length === 1 ? endUseTypes[0].type : null
+          const provisionValue =
+            selectedFuelType.provisions.length === 1
+              ? selectedFuelType.provisions[0].name
+              : null
 
           params.node.setDataValue('fuelCategory', categoryValue)
           params.node.setDataValue('endUseType', endUseValue)
-
-          // Reset provisionOfTheAct and provisionOfTheActId fields
-          if (selectedFuelType.provisions.length === 1) {
-            params.node.setDataValue(
-              'provisionOfTheAct',
-              selectedFuelType.provisions[0].name
-            )
-            params.node.setDataValue(
-              'provisionOfTheActId',
-              selectedFuelType.provisions[0].provisionOfTheActId
-            )
-          } else {
-            params.node.setDataValue('provisionOfTheAct', null)
-            params.node.setDataValue('provisionOfTheActId', null)
-          }
+          params.node.setDataValue('provisionOfTheAct', provisionValue)
         }
       }
 
@@ -210,24 +197,13 @@ export const AddEditFuelSupplies = () => {
           // Set to null if multiple options, otherwise use first item
           const endUseValue =
             endUseTypes.length === 1 ? endUseTypes[0].type : null
+          const provisionValue =
+            selectedFuelType.provisions.length === 1
+              ? selectedFuelType.provisions[0].name
+              : null
 
           params.node.setDataValue('endUseType', endUseValue)
-
-          if (selectedFuelType.provisions.length === 1 &&
-            !params.node.data.provisionOfTheAct
-          ) {
-            params.node.setDataValue(
-              'provisionOfTheAct',
-              selectedFuelType.provisions[0].name
-            )
-            params.node.setDataValue(
-              'provisionOfTheActId',
-              selectedFuelType.provisions[0].provisionOfTheActId
-            )
-          } else {
-            params.node.setDataValue('provisionOfTheAct', null)
-            params.node.setDataValue('provisionOfTheActId', null)
-          }
+          params.node.setDataValue('provisionOfTheAct', provisionValue)
         }
       }
     },
@@ -267,27 +243,6 @@ export const AddEditFuelSupplies = () => {
 
       if (updatedData.fuelType === 'Other') {
         updatedData.ciOfFuel = DEFAULT_CI_FUEL[updatedData.fuelCategory]
-      }
-
-      const isFuelCodeScenario =
-        params.node.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      if (isFuelCodeScenario && !params.node.data.fuelCode) {
-        // Set error on the row
-        setErrors({
-          [params.node.data.id]: ['fuelCode']
-        })
-
-        alertRef.current?.triggerAlert({
-          message: t('fuelSupply:fuelCodeFieldRequiredError'),
-          severity: 'error'
-        })
-
-        // Update node data to reflect error state
-        params.node.updateData({
-          ...params.node.data,
-          validationStatus: 'error'
-        })
-        return // Stop saving further
       }
 
       updatedData = await handleScheduleSave({

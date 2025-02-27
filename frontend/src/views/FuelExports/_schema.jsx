@@ -1,11 +1,11 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import BCTypography from '@/components/BCTypography'
 import {
+  AsyncSuggestionEditor,
   AutocompleteCellEditor,
-  NumberEditor,
-  RequiredHeader,
   DateEditor,
-  AsyncSuggestionEditor
+  NumberEditor,
+  RequiredHeader
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
@@ -16,38 +16,13 @@ import {
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import {
-  isFuelTypeOther,
-  fuelTypeOtherConditionalStyle
+  fuelTypeOtherConditionalStyle,
+  isFuelTypeOther
 } from '@/utils/fuelTypeOther'
+import colors from '@/themes/base/colors'
+import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
-
-const cellErrorStyle = (params, errors) => {
-  let style = {}
-  if (
-    errors &&
-    errors[params.data.id] &&
-    errors[params.data.id].includes(params.colDef.field)
-  ) {
-    style = { ...style, borderColor: 'red' }
-  } else {
-    style = { ...style, borderColor: 'unset' }
-  }
-  if (
-    params.colDef.editable ||
-    (typeof params.colDef.editable === 'function' &&
-      params.colDef.editable(params))
-  ) {
-    style = { ...style, backgroundColor: '#fff' }
-  } else {
-    style = {
-      ...style,
-      backgroundColor: '#f2f2f2',
-      border: '0.5px solid #adb5bd'
-    }
-  }
-  return style
-}
 
 export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
   validation,
@@ -351,36 +326,8 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
         openOnFocus: true
       }
     },
-    cellStyle: (params) => {
-      const style = cellErrorStyle(params, errors)
-      const fuelTypeObj = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      const fuelCodes =
-        fuelTypeObj?.fuelCodes.map((item) => item.fuelCode) || []
-      const isFuelCodeScenario =
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-
-      // Check if fuel code is required (scenario) but missing
-      const fuelCodeRequiredAndMissing =
-        isFuelCodeScenario && !params.data.fuelCode
-
-      if (fuelCodeRequiredAndMissing) {
-        // Required scenario but missing a fuel code
-        style.borderColor = 'red'
-        style.backgroundColor = '#fff'
-      } else if (isFuelCodeScenario && fuelCodes.length > 1) {
-        style.backgroundColor = '#fff'
-        style.borderColor = 'unset'
-      } else if (isFuelCodeScenario && fuelCodes.length > 0) {
-        style.backgroundColor = '#fff'
-        style.borderColor = 'unset'
-      } else {
-        style.backgroundColor = '#f2f2f2'
-      }
-
-      return style
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     editable: (params) => {
       const fuelTypeObj = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -591,6 +538,76 @@ export const fuelExportColDefs = (optionsData, errors, warnings, gridReady) => [
   }
 ]
 
+export const fuelExportSummaryColDefs = [
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
+    field: 'complianceUnits',
+    valueFormatter
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
+    field: 'exportDate'
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
+    field: 'fuelType',
+    valueGetter: (params) => params.data.fuelType?.fuelType
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data.fuelCategory?.category
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
+    field: 'endUse',
+    valueGetter: (params) => params.data.endUseType?.type || 'Any'
+  },
+  {
+    headerName: i18n.t(
+      'fuelExport:fuelExportColLabels.determiningCarbonIntensity'
+    ),
+    field: 'determiningCarbonIntensity',
+    valueGetter: (params) => params.data.provisionOfTheAct?.name
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
+    field: 'fuelCode',
+    valueGetter: (params) => params.data.fuelCode?.fuelCode
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
+    field: 'units'
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
+    field: 'targetCi'
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.ciOfFuel'),
+    field: 'ciOfFuel'
+  },
+  {
+    field: 'uci',
+    headerName: i18n.t('fuelExport:fuelExportColLabels.uci')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.energyDensity'),
+    field: 'energyDensity'
+  },
+  { headerName: i18n.t('fuelExport:fuelExportColLabels.eer'), field: 'eer' },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
+    field: 'energy',
+    valueFormatter
+  }
+]
+
 export const defaultColDef = {
   editable: true,
   resizable: true,
@@ -598,4 +615,159 @@ export const defaultColDef = {
   floatingFilter: false,
   sortable: false,
   singleClickEdit: true
+}
+
+export const changelogCommonColDefs = [
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
+    field: 'complianceUnits',
+    valueFormatter,
+    cellStyle: (params) => changelogCellStyle(params, 'complianceUnits')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
+    field: 'exportDate',
+    cellStyle: (params) => changelogCellStyle(params, 'exportDate')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
+    field: 'fuelType',
+    valueGetter: (params) => params.data.fuelType?.fuelType,
+    cellStyle: (params) => changelogCellStyle(params, 'fuelTypeId')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data.fuelCategory?.category,
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCategoryId')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
+    field: 'endUse',
+    valueGetter: (params) => params.data.endUseType?.type || 'Any',
+    cellStyle: (params) => changelogCellStyle(params, 'endUseId')
+  },
+  {
+    headerName: i18n.t(
+      'fuelExport:fuelExportColLabels.determiningCarbonIntensity'
+    ),
+    field: 'determiningCarbonIntensity',
+    valueGetter: (params) => params.data.provisionOfTheAct?.name,
+    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheActId')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
+    field: 'fuelCode',
+    valueGetter: (params) => params.data.fuelCode?.fuelCode,
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCodeId')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter,
+    cellStyle: (params) => changelogCellStyle(params, 'quantity')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.units'),
+    field: 'units',
+    cellStyle: (params) => changelogCellStyle(params, 'units')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.targetCI'),
+    field: 'targetCi',
+    cellStyle: (params) => changelogCellStyle(params, 'targetCi')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.ciOfFuel'),
+    field: 'ciOfFuel',
+    cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.uci'),
+    field: 'uci',
+
+    cellStyle: (params) => changelogCellStyle(params, 'uci')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.energyDensity'),
+    field: 'energyDensity',
+    cellStyle: (params) => changelogCellStyle(params, 'energyDensity')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.eer'),
+    field: 'eer',
+    cellStyle: (params) => changelogCellStyle(params, 'eer')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.energy'),
+    field: 'energy',
+    valueFormatter,
+    cellStyle: (params) => changelogCellStyle(params, 'energy')
+  }
+]
+
+export const changelogColDefs = [
+  {
+    field: 'groupUuid',
+    hide: true,
+    sort: 'desc',
+    sortIndex: 1
+  },
+  { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
+  {
+    field: 'actionType',
+    valueGetter: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        if (params.data.updated) {
+          return 'Edited old'
+        } else {
+          return 'Edited new'
+        }
+      }
+      if (params.data.actionType === 'DELETE') {
+        return 'Deleted'
+      }
+      if (params.data.actionType === 'CREATE') {
+        return 'Added'
+      }
+    },
+    cellStyle: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        return { backgroundColor: colors.alerts.warning.background }
+      }
+    }
+  },
+  ...changelogCommonColDefs
+]
+
+export const changelogDefaultColDefs = {
+  floatingFilter: false,
+  filter: false
+}
+
+export const changelogCommonGridOptions = {
+  overlayNoRowsTemplate: i18n.t('fuelExport:noFuelExportsFound'),
+  autoSizeStrategy: {
+    type: 'fitCellContents',
+    defaultMinWidth: 50,
+    defaultMaxWidth: 600
+  },
+  enableCellTextSelection: true, // enables text selection on the grid
+  ensureDomOrder: true
+}
+
+export const changelogGridOptions = {
+  ...changelogCommonGridOptions,
+  getRowStyle: (params) => {
+    if (params.data.actionType === 'DELETE') {
+      return {
+        backgroundColor: colors.alerts.error.background
+      }
+    }
+    if (params.data.actionType === 'CREATE') {
+      return {
+        backgroundColor: colors.alerts.success.background
+      }
+    }
+  }
 }

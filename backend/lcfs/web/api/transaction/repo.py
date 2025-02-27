@@ -5,13 +5,14 @@ from enum import Enum
 from typing import List, Optional
 
 from fastapi import Depends
-from sqlalchemy import select, update, func, desc, asc, and_, case, or_, extract
+from sqlalchemy import exists, select, update, func, desc, asc, and_, case, or_, extract
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
 from lcfs.db.models.transaction.TransactionStatusView import TransactionStatusView
 from lcfs.db.models.transaction.TransactionView import TransactionView
+from lcfs.db.models.transfer import TransferHistory
 from lcfs.db.models.transfer.TransferStatus import TransferStatus
 from lcfs.web.core.decorators import repo_handler
 
@@ -105,6 +106,21 @@ class TransactionRepository:
                         )
                     ]
                 ),
+                # Add condition for rescinded transfers
+                or_(
+                    TransactionView.status != 'Rescinded',
+                    and_(
+                        TransactionView.status == 'Rescinded',
+                        exists().select_from(TransferHistory).where(
+                            and_(
+                                TransferHistory.transfer_id == TransactionView.transaction_id,
+                                TransferHistory.transfer_status_id == TransferStatus.transfer_status_id,
+                                TransferStatus.status == 'Submitted',
+                                TransferHistory.create_date < TransactionView.update_date
+                            )
+                        )
+                    )
+                )
             )
             gov_non_transfer_condition = TransactionView.transaction_type != "Transfer"
 
@@ -253,7 +269,7 @@ class TransactionRepository:
                             (
                                 Transaction.transaction_action
                                 == TransactionActionEnum.Reserved,
-                                Transaction.compliance_units,
+                                func.abs(Transaction.compliance_units),
                             ),
                             else_=0,
                         )

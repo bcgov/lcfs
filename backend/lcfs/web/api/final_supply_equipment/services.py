@@ -1,16 +1,21 @@
+from typing import Any, Coroutine, Sequence
+
 import structlog
 import math
 import re
 from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy import Row, RowMapping
 
+from lcfs.db.models import UserProfile
 from lcfs.db.models.compliance import FinalSupplyEquipment
+from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.compliance_report.schema import FinalSupplyEquipmentSchema
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentCreateSchema,
     FinalSupplyEquipmentsSchema,
     LevelOfEquipmentSchema,
+    FinalSupplyEquipmentSchema,
 )
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
@@ -22,19 +27,17 @@ logger = structlog.get_logger(__name__)
 class FinalSupplyEquipmentServices:
     def __init__(
         self,
-        request: Request = None,
         repo: FinalSupplyEquipmentRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
-        self.request = request
         self.repo = repo
         self.compliance_report_repo = compliance_report_repo
 
     @service_handler
-    async def get_fse_options(self):
+    async def get_fse_options(self, user):
         """Fetches all FSE options concurrently."""
         try:
-            organization = getattr(self.request.user, 'organization', None)
+            organization = getattr(user, "organization", None)
             (
                 intended_use_types,
                 levels_of_equipment,
@@ -48,19 +51,20 @@ class FinalSupplyEquipmentServices:
                     EndUseTypeSchema.model_validate(t) for t in intended_use_types
                 ],
                 "levels_of_equipment": [
-                    LevelOfEquipmentSchema.model_validate(l) for l in levels_of_equipment
+                    LevelOfEquipmentSchema.model_validate(l)
+                    for l in levels_of_equipment
                 ],
                 "intended_user_types": [
                     EndUserTypeSchema.model_validate(u) for u in intended_user_types
                 ],
-                "ports": [port.value for port in ports],
+                "ports": ports,
                 "organization_names": organization_names,
             }
         except Exception as e:
             logger.error("Error getting FSE options", error=str(e))
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Error retrieving FSE options"
+                detail="Error retrieving FSE options",
             )
 
     async def convert_to_fse_model(self, fse: FinalSupplyEquipmentCreateSchema):
@@ -214,11 +218,13 @@ class FinalSupplyEquipmentServices:
 
     @service_handler
     async def create_final_supply_equipment(
-        self, fse_data: FinalSupplyEquipmentCreateSchema
+        self, fse_data: FinalSupplyEquipmentCreateSchema, user: UserProfile
     ) -> FinalSupplyEquipmentSchema:
         """Create a new final supply equipment"""
         # Generate the registration number
-        registration_nbr = await self.generate_registration_number(fse_data.postal_code)
+        registration_nbr = await self.generate_registration_number(
+            user, fse_data.postal_code
+        )
 
         final_supply_equipment = await self.convert_to_fse_model(fse_data)
         final_supply_equipment.registration_nbr = registration_nbr
@@ -228,7 +234,7 @@ class FinalSupplyEquipmentServices:
 
         # Increment the sequence number for the postal code if creation was successful
         if created_equipment:
-            org_code = self.request.user.organization.organization_code
+            org_code = user.organization.organization_code
             await self.repo.increment_seq_by_org_and_postal_code(
                 org_code, fse_data.postal_code
             )
@@ -243,7 +249,9 @@ class FinalSupplyEquipmentServices:
         return await self.repo.delete_final_supply_equipment(final_supply_equipment_id)
 
     @service_handler
-    async def generate_registration_number(self, postal_code: str) -> str:
+    async def generate_registration_number(
+        self, user: UserProfile, postal_code: str
+    ) -> str:
         """
         Generate a unique registration number for a Final Supply Equipment (FSE).
 
@@ -251,6 +259,7 @@ class FinalSupplyEquipmentServices:
         and a sequential number. The sequential number resets for each new postal code.
 
         Args:
+            user (UserProfile): The current user
             postal_code (str): The postal code of the FSE.
 
         Returns:
@@ -261,12 +270,12 @@ class FinalSupplyEquipmentServices:
                         or if the maximum registration numbers for the given postal code is exceeded.
         """
         # Validate the postal code format
-        postal_code_pattern = re.compile(r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$")
+        postal_code_pattern = re.compile(POSTAL_REGEX)
         if not postal_code_pattern.match(postal_code):
             raise ValueError("Invalid Canadian postal code format")
 
         # Retrieve the organization ID from the user's request
-        org_code = self.request.user.organization.organization_code
+        org_code = user.organization.organization_code
         if not org_code:
             raise ValueError("Organization ID is not available")
 
@@ -291,21 +300,27 @@ class FinalSupplyEquipmentServices:
         return f"{org_code}-{postal_code_no_space}-{formatted_next_number}"
 
     @service_handler
-    async def search_manufacturers(self, query: str) -> list[str]:
+    async def search_manufacturers(self, query: str) -> Sequence[str]:
         """Search for manufacturers based on the provided query."""
         return await self.repo.search_manufacturers(query)
 
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
-        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
-            compliance_report_id,
+        compliance_report = (
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id,
+            )
         )
 
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found for this period"
+                detail="Compliance report not found for this period",
             )
 
         return compliance_report
+
+    @service_handler
+    async def delete_all(self, compliance_report_id: int):
+        return await self.repo.delete_all(compliance_report_id)

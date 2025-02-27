@@ -1,16 +1,17 @@
 from datetime import date
-from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Optional
+
+from pydantic import Field, field_validator, model_validator
+
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
     PaginationResponseSchema,
     SortOrder,
 )
-from pydantic import Field, field_validator, validator
-
 from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+from lcfs.web.utils.schema_validators import fuel_code_required
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -108,6 +109,24 @@ class FuelCategoryResponseSchema(BaseSchema):
     category: str
 
 
+class FuelExportDiffSchema(BaseSchema):
+    compliance_units: Optional[bool] = None
+    export_date: Optional[bool] = None
+    fuel_type_id: Optional[bool] = None
+    fuel_category_id: Optional[bool] = None
+    end_use_id: Optional[bool] = None
+    provision_of_the_act_id: Optional[bool] = None
+    fuel_code_id: Optional[bool] = None
+    quantity: Optional[bool] = None
+    units: Optional[bool] = None
+    target_ci: Optional[bool] = None
+    ci_of_fuel: Optional[bool] = None
+    uci: Optional[bool] = None
+    energy_density: Optional[bool] = None
+    eer: Optional[bool] = None
+    energy: Optional[bool] = None
+
+
 class FuelExportSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
@@ -137,13 +156,8 @@ class FuelExportSchema(BaseSchema):
     energy: Optional[float] = None
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
-
-
-    @validator("quantity")
-    def quantity_must_be_positive(cls, v):
-        if v <= 0:
-            raise ValueError("quantity must be greater than zero")
-        return v
+    diff: Optional[FuelExportDiffSchema] = None
+    updated: Optional[bool] = None
 
 
 class FuelExportCreateUpdateSchema(BaseSchema):
@@ -171,11 +185,18 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     energy: Optional[float] = 0
     deleted: Optional[bool] = None
 
-    @validator("quantity")
-    def quantity_must_be_positive(cls, v):
-        if v <= 0:
+    @model_validator(mode="before")
+    @classmethod
+    def quantity_must_be_positive(cls, values):
+        quantity = values.get("quantity")
+        if quantity and quantity <= 0:
             raise ValueError("quantity must be greater than zero")
-        return v
+        return values
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_fuel_code_required(cls, values):
+        return fuel_code_required(values)
 
 
 class DeleteFuelExportResponseSchema(BaseSchema):

@@ -3,14 +3,16 @@ import uuid
 from typing import Optional
 
 import structlog
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.other_uses.repo import OtherUsesRepository
-from lcfs.web.core.decorators import service_handler
+from lcfs.db.models import UserProfile
 from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.api.other_uses.schema import (
     OtherUsesCreateSchema,
     OtherUsesSchema,
@@ -24,7 +26,8 @@ from lcfs.web.api.other_uses.schema import (
     FuelCodeSchema,
     DeleteOtherUsesResponseSchema,
 )
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
 
@@ -43,10 +46,12 @@ OTHER_USE_EXCLUDE_FIELDS = {
 class OtherUsesServices:
     def __init__(
         self,
+        request: Request = None,
         repo: OtherUsesRepository = Depends(OtherUsesRepository),
         fuel_repo: FuelCodeRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
+        self.request = request
         self.repo = repo
         self.fuel_repo = fuel_repo
         self.compliance_report_repo = compliance_report_repo
@@ -146,21 +151,31 @@ class OtherUsesServices:
         )
 
     @service_handler
-    async def get_other_uses(self, compliance_report_id: int) -> OtherUsesListSchema:
+    async def get_other_uses(
+        self, compliance_report_id: int, user: UserProfile
+    ) -> OtherUsesListSchema:
         """
         Gets the list of other uses for a specific compliance report.
         """
-        other_uses = await self.repo.get_other_uses(compliance_report_id)
+        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        other_uses = await self.repo.get_other_uses(
+            compliance_report_id, exclude_draft_reports=is_gov_user
+        )
         return OtherUsesAllSchema(
-            other_uses=[OtherUsesSchema.model_validate(ou) for ou in other_uses]
+            other_uses=[OtherUsesSchema.model_validate(
+                ou) for ou in other_uses]
         )
 
     @service_handler
     async def get_other_uses_paginated(
-        self, pagination: PaginationRequestSchema, compliance_report_id: int
+        self,
+        pagination: PaginationRequestSchema,
+        compliance_report_id: int,
+        user: UserProfile,
     ) -> OtherUsesListSchema:
+        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         other_uses, total_count = await self.repo.get_other_uses_paginated(
-            pagination, compliance_report_id
+            pagination, compliance_report_id, exclude_draft_reports=is_gov_user
         )
         return OtherUsesListSchema(
             pagination=PaginationResponseSchema(
@@ -293,7 +308,10 @@ class OtherUsesServices:
         # Copy fields from the latest version for the deletion record
         for field in existing_fuel_supply.__table__.columns.keys():
             if field not in OTHER_USE_EXCLUDE_FIELDS:
-                setattr(deleted_entity, field, getattr(existing_fuel_supply, field))
+                setattr(deleted_entity, field, getattr(
+                    existing_fuel_supply, field))
+
+        deleted_entity.compliance_report_id = other_use_data.compliance_report_id
 
         await self.repo.create_other_use(deleted_entity)
         return DeleteOtherUsesResponseSchema(success=True, message="Marked as deleted.")
@@ -301,14 +319,16 @@ class OtherUsesServices:
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
-        compliance_report = await self.compliance_report_repo.get_compliance_report_by_id(
-            compliance_report_id,
+        compliance_report = (
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id,
+            )
         )
 
         if not compliance_report:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found for this period"
+                detail="Compliance report not found for this period",
             )
 
         return compliance_report

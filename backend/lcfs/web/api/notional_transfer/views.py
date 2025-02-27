@@ -87,7 +87,9 @@ async def get_notional_transfers(
         await report_validate.validate_organization_access(
             request_data.compliance_report_id
         )
-        return await service.get_notional_transfers(request_data.compliance_report_id)
+        return await service.get_notional_transfers(
+            request_data.compliance_report_id, request.user
+        )
 
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
@@ -126,7 +128,7 @@ async def get_notional_transfers_paginated(
     )
     compliance_report_id = request_data.compliance_report_id
     return await service.get_notional_transfers_paginated(
-        pagination, compliance_report_id
+        pagination, compliance_report_id, request.user
     )
 
 
@@ -175,21 +177,16 @@ async def save_notional_transfer_row(
             status_code=403, detail="User does not have the required role."
         )
 
+    await validate.validate_compliance_report_id(compliance_report_id, [request_data])
     if request_data.deleted:
         # Delete existing notional transfer
-        await validate.validate_compliance_report_id(
-            compliance_report_id, [request_data]
-        )
+
         return await service.delete_notional_transfer(request_data, current_user_type)
     elif notional_transfer_id:
         # Update existing notional transfer
-        await validate.validate_compliance_report_id(
-            compliance_report_id, [request_data]
-        )
+
         return await service.update_notional_transfer(request_data, current_user_type)
     else:
         # Create new notional transfer
-        await validate.validate_compliance_report_id(
-            compliance_report_id, [request_data]
-        )
+
         return await service.create_notional_transfer(request_data, current_user_type)

@@ -76,7 +76,6 @@ const BaseStatusRenderer = ({
       />
     </BCBox>
   )
-
 }
 
 export const StatusRenderer = (props) => (
@@ -244,10 +243,21 @@ export const ReportsStatusRenderer = (props) => {
     'Recommended by analyst',
     'Recommended by manager',
     'Assessed',
-    'RecoReassessedrded'
+    'Reassessed',
+    'Rejected'
   ]
-  const statusColorArr = ['info', 'info', 'info', 'info', 'success', 'success']
-  const statusIndex = statusArr.indexOf(props.data.currentStatus.status)
+  const statusColorArr = [
+    'info',
+    'info',
+    'info',
+    'info',
+    'success',
+    'success',
+    'error'
+  ]
+  const statusIndex = statusArr.indexOf(
+    props.data.reportStatus.replaceAll('_', ' ')
+  )
   return (
     <Link
       to={
@@ -320,11 +330,11 @@ const GenericChipRenderer = ({
   const [hiddenChipsCount, setHiddenChipsCount] = useState(0)
 
   const options = Array.isArray(value)
-    ? value.filter((item) => item !== "")
+    ? value.filter((item) => item !== '')
     : value
         .split(',')
         .map((item) => item.trim())
-        .filter((item) => item !== "")
+        .filter((item) => item !== '')
 
   const calculateChipWidths = useCallback(() => {
     if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }

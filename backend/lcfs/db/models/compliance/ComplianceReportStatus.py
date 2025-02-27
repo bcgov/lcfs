@@ -12,6 +12,13 @@ class ComplianceReportStatusEnum(enum.Enum):
     Recommended_by_manager = "Recommended by manager"
     Assessed = "Assessed"
     Reassessed = "Reassessed"
+    Rejected = "Rejected"
+
+    def underscore_value(self) -> str:
+        """
+        Return the status as an underscored string.
+        """
+        return self.value.replace(" ", "_")
 
 
 class ComplianceReportStatus(BaseModel, EffectiveDates):

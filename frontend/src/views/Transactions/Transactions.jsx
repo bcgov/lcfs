@@ -2,7 +2,6 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { DownloadButton } from '@/components/DownloadButton'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { apiRoutes, ROUTES } from '@/constants/routes'
@@ -25,6 +24,8 @@ import { govRoles, roles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
 import Loading from '@/components/Loading'
 import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { useGetTransactionList } from '@/hooks/useTransactions'
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -45,12 +46,7 @@ export const Transactions = () => {
 
   const [gridKey, setGridKey] = useState('transactions-grid')
   const [resetGridFn, setResetGridFn] = useState(null)
-  const handleGridKey = useCallback(() => {
-    setGridKey('transactions-grid')
-  }, [])
-  const gridOptions = {
-    overlayNoRowsTemplate: t('txn:noTxnsFound')
-  }
+
   const getRowId = useCallback((params) => {
     return (
       params.data.transactionType.toLowerCase() +
@@ -141,19 +137,6 @@ export const Transactions = () => {
     [currentUser]
   )
 
-  // Determine the appropriate API endpoint
-  const getApiEndpoint = useCallback(() => {
-    if (hasRoles(roles.supplier)) {
-      return apiRoutes.orgTransactions
-    } else if (selectedOrgId) {
-      return apiRoutes.filteredTransactionsByOrg.replace(
-        ':orgID',
-        selectedOrgId
-      )
-    }
-    return apiRoutes.transactions
-  }, [selectedOrgId, currentUser, hasRoles])
-
   // Determine the appropriate export API endpoint
   const getExportApiEndpoint = useCallback(() => {
     if (hasRoles(roles.supplier)) {
@@ -181,8 +164,6 @@ export const Transactions = () => {
       setAlertSeverity('error')
     }
   }
-
-  const apiEndpoint = useMemo(() => getApiEndpoint(), [getApiEndpoint])
 
   useEffect(() => {
     if (location.state?.message) {
@@ -297,22 +278,24 @@ export const Transactions = () => {
         </Grid>
       </Grid>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCDataGridServer
-          key={selectedOrgId || 'all'}
+        <BCGridViewer
           gridRef={gridRef}
-          apiEndpoint={apiEndpoint}
-          apiData={'transactions'}
-          columnDefs={transactionsColDefs(t)}
           gridKey={gridKey}
+          columnDefs={transactionsColDefs(t)}
+          query={useGetTransactionList}
+          queryParams={{ selectedOrgId }}
+          dataKey={'transactions'}
           getRowId={getRowId}
-          defaultSortModel={defaultSortModel}
-          defaultFilterModel={location.state?.filters}
-          gridOptions={gridOptions}
-          handleGridKey={handleGridKey}
-          enableCopyButton={false}
-          highlightedRowId={highlightedId}
+          overlayNoRowsTemplate={t('txn:noTxnsFound')}
+          autoSizeStrategy={{
+            type: 'fitGridWidth',
+            defaultMinWidth: 50,
+            defaultMaxWidth: 600
+          }}
           defaultColDef={defaultColDef}
+          defaultSortModel={defaultSortModel}
           onSetResetGrid={handleSetResetGrid}
+          highlightedRowId={highlightedId}
         />
       </BCBox>
     </>

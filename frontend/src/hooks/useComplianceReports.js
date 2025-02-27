@@ -1,6 +1,8 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCurrentUser } from './useCurrentUser'
+import { roles } from '@/constants/roles'
 
 export const useCompliancePeriod = (options) => {
   const client = useApiService()
@@ -105,18 +107,12 @@ export const useUpdateComplianceReportSummary = (reportID, options) => {
 
 export const useUpdateComplianceReport = (reportID, options) => {
   const client = useApiService()
-  const queryClient = useQueryClient()
   const path = apiRoutes.updateComplianceReport.replace(':reportID', reportID)
 
   return useMutation({
     ...options,
     mutationFn: async (data) => {
       return await client.put(path, data)
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries(['compliance-report', reportID])
-      queryClient.invalidateQueries(['compliance-report-summary', reportID])
-      queryClient.invalidateQueries(['compliance-reports'])
     }
   })
 }
@@ -156,5 +152,45 @@ export const useCreateSupplementalReport = (reportID, options) => {
         options.onError(error)
       }
     }
+  })
+}
+
+export const useGetComplianceReportList = (
+  { page = 1, size = 10, sortOrders = [], filters = [] } = {},
+  options
+) => {
+  const client = useApiService()
+  const { data: currentUser, hasRoles } = useCurrentUser()
+
+  return useQuery({
+    queryKey: ['compliance-reports-list', page, size, sortOrders, filters],
+    queryFn: async () => {
+      if (hasRoles(roles.supplier)) {
+        return (
+          await client.post(
+            apiRoutes.getOrgComplianceReports.replace(
+              ':orgID',
+              currentUser?.organization?.organizationId
+            ),
+            {
+              page,
+              size,
+              sortOrders,
+              filters
+            }
+          )
+        ).data
+      } else {
+        return (
+          await client.post(apiRoutes.getComplianceReports, {
+            page,
+            size,
+            sortOrders,
+            filters
+          })
+        ).data
+      }
+    },
+    ...options
   })
 }

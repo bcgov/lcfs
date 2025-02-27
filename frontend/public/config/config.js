@@ -12,7 +12,8 @@ export const config = {
   },
   feature_flags: {
     supplementalReporting: true,
-    notifications: false
+    fullLegacyReports: true,
+    fseImportExport: true
   }
 }
 

@@ -58,6 +58,7 @@ vi.mock('@/hooks/useOrganization', () => ({
       operatingName: 'Test Operating Name',
       email: 'test@test.com',
       phone: '1234567890',
+      hasEarlyIssuance: false,
       orgAddress: {
         streetAddress: '123 Test St',
         addressOther: 'Unit 101',
@@ -137,5 +138,18 @@ describe('ViewOrganization Component Tests', () => {
     expect(screen.getByText(/Compliance Unit Balance:/i)).toBeInTheDocument()
     expect(screen.getByText(/1,000/i)).toBeInTheDocument()
     expect(screen.getByText(/500/i)).toBeInTheDocument()
+  })
+
+  it('renders the "Registered for transfers" text for a Registered org', () => {
+    expect(
+      screen.getByText(
+        /A registered organization is able to transfer compliance units/i
+      )
+    ).toBeInTheDocument()
+  })
+
+  it('shows "No" for early issuance if hasEarlyIssuance is not provided', () => {
+    expect(screen.getByText(/Early issuance reporting/i)).toBeInTheDocument()
+    expect(screen.getByText(/No/i)).toBeInTheDocument()
   })
 })

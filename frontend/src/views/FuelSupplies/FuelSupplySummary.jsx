@@ -2,15 +2,14 @@ import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { apiRoutes } from '@/constants/routes'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { fuelSupplySummaryColDef } from '@/views/FuelSupplies/_schema.jsx'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import i18n from '@/i18n'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const FuelSupplySummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -56,72 +55,6 @@ export const FuelSupplySummary = ({ data, status }) => {
     [status]
   )
 
-  const columns = useMemo(
-    () => [
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
-        field: 'complianceUnits',
-        valueFormatter
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'),
-        field: 'fuelType',
-        valueGetter: (params) => params.data.fuelType?.fuelType
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
-        field: 'fuelCategory',
-        valueGetter: (params) => params.data.fuelCategory?.category
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.endUseId'),
-        field: 'endUse',
-        valueGetter: (params) => params.data.endUseType?.type || 'Any'
-      },
-      {
-        headerName: t(
-          'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
-        ),
-        field: 'determiningCarbonIntensity',
-        valueGetter: (params) => params.data.provisionOfTheAct?.name
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'),
-        field: 'fuelCode',
-        valueGetter: (params) => params.data.fuelCode?.fuelCode
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.quantity'),
-        field: 'quantity',
-        valueFormatter
-      },
-      { headerName: t('fuelSupply:fuelSupplyColLabels.units'), field: 'units' },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.targetCi'),
-        field: 'targetCi'
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
-        field: 'ciOfFuel'
-      },
-      {
-        field: 'uci',
-        headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci')
-      },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.energyDensity'),
-        field: 'energyDensity'
-      },
-      { headerName: t('fuelSupply:fuelSupplyColLabels.eer'), field: 'eer' },
-      {
-        headerName: t('fuelSupply:fuelSupplyColLabels.energy'),
-        field: 'energy',
-        valueFormatter
-      }
-    ],
-    [t]
-  )
-
   const getRowId = (params) => {
     return params.data.fuelSupplyId.toString()
   }
@@ -146,7 +79,7 @@ export const FuelSupplySummary = ({ data, status }) => {
           apiEndpoint={apiRoutes.getAllFuelSupplies}
           apiData={'fuelSupplies'}
           apiParams={{ complianceReportId }}
-          columnDefs={columns}
+          columnDefs={fuelSupplySummaryColDef}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}

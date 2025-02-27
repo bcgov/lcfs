@@ -54,8 +54,8 @@ vi.mock('../components/NewComplianceReportButton', () => ({
   )
 }))
 
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: () => <div data-test="bc-data-grid">BCDataGridServer</div>
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: () => <div data-test="bc-data-grid">BCGridViewer</div>
 }))
 
 describe('ComplianceReports', () => {
@@ -99,7 +99,7 @@ describe('ComplianceReports', () => {
     expect(screen.getByText('New Report')).toBeInTheDocument()
   })
 
-  it('renders the BCDataGridServer', () => {
+  it('renders the BCGridViewer', () => {
     customRender(<ComplianceReports />)
     expect(screen.getByTestId('bc-data-grid')).toBeInTheDocument()
   })

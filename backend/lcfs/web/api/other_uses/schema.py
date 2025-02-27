@@ -1,21 +1,23 @@
+from enum import Enum
 from typing import Optional, List
-from pydantic import Field, field_validator
+
+from pydantic import Field, field_validator, model_validator
+
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
     SortOrder,
-    PaginationRequestSchema,
     PaginationResponseSchema,
 )
-from enum import Enum
-
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+from lcfs.web.utils.schema_validators import fuel_code_required_label
 
 
 class FuelCodeStatusEnumSchema(str, Enum):
     Draft = "Draft"
     Approved = "Approved"
     Deleted = "Deleted"
+
 
 class FuelCodeSchema(BaseSchema):
     fuel_code_id: int
@@ -96,13 +98,17 @@ class OtherUsesCreateSchema(BaseSchema):
     fuel_code: Optional[str] = None
     ci_of_fuel: Optional[float] = None
     expected_use: str
-    other_uses_id: Optional[int] = None
     rationale: Optional[str] = None
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
     user_type: Optional[str] = None
     action_type: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_fuel_code_required(cls, values):
+        return fuel_code_required_label(values)
 
 
 class OtherUsesSchema(OtherUsesCreateSchema):
@@ -115,6 +121,50 @@ class PaginatedOtherUsesRequestSchema(BaseSchema):
     page: int
     size: int
     sort_orders: List[SortOrder]
+
+
+class OtherUsesChangelogFuelTypeSchema(BaseSchema):
+    fuel_type_id: int
+    fuel_type: str
+    fossil_derived: Optional[bool] = None
+    provision_1_id: Optional[int] = None
+    provision_2_id: Optional[int] = None
+    default_carbon_intensity: Optional[float] = None
+    units: FuelTypeQuantityUnitsEnumSchema
+
+
+class OtherUsesDiffSchema(BaseSchema):
+    fuel_type: Optional[bool] = None
+    fuel_category: Optional[bool] = None
+    provision_of_the_act: Optional[bool] = None
+    fuel_code: Optional[bool] = None
+    quantity_supplied: Optional[bool] = None
+    units: Optional[bool] = None
+    ci_of_fuel: Optional[bool] = None
+    expected_use: Optional[bool] = None
+    rationale: Optional[bool] = None
+
+
+class OtherUsesChangelogSchema(BaseSchema):
+    other_uses_id: Optional[int] = None
+    compliance_report_id: int
+    fuel_type: OtherUsesChangelogFuelTypeSchema
+    fuel_category: FuelCategorySchema
+    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
+    quantity_supplied: int
+    units: str
+    expected_use: ExpectedUseTypeSchema
+    fuel_code: Optional[FuelCodeSchema] = None
+    ci_of_fuel: Optional[float] = None
+    rationale: Optional[str] = None
+    deleted: Optional[bool] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    user_type: Optional[str] = None
+    action_type: Optional[str] = None
+
+    diff: Optional[OtherUsesDiffSchema] = None
+    updated: Optional[bool] = None
 
 
 class OtherUsesListSchema(BaseSchema):

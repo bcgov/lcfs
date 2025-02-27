@@ -13,8 +13,16 @@ import {
 } from '@/hooks/useFinalSupplyEquipment'
 import { v4 as uuid } from 'uuid'
 import * as ROUTES from '@/constants/routes/routes.js'
-import { isArrayEmpty } from '@/utils/formatters'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import { isArrayEmpty } from '@/utils/array.js'
+import { useApiService } from '@/services/useApiService.js'
+import { apiRoutes } from '@/constants/routes/index.js'
+import BCButton from '@/components/BCButton/index.jsx'
+import { Menu, MenuItem } from '@mui/material'
+import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import ImportFuelSupplyEquipmentDialog from '@/views/FinalSupplyEquipments/ImportFuelSupplyEquipmentDialog.jsx'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -22,6 +30,11 @@ export const AddEditFinalSupplyEquipments = () => {
   const [errors, setErrors] = useState({})
   const [warnings, setWarnings] = useState({})
   const [columnDefs, setColumnDefs] = useState([])
+  const [isGridReady, setGridReady] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isOverwrite, setIsOverwrite] = useState(false)
+  const apiService = useApiService()
 
   const alertRef = useRef()
   const location = useLocation()
@@ -41,8 +54,11 @@ export const AddEditFinalSupplyEquipments = () => {
 
   const { mutateAsync: saveRow } =
     useSaveFinalSupplyEquipment(complianceReportId)
-  const { data, isLoading: equipmentsLoading } =
-    useGetFinalSupplyEquipments(complianceReportId)
+  const {
+    data,
+    isLoading: equipmentsLoading,
+    refetch
+  } = useGetFinalSupplyEquipments(complianceReportId)
 
   const gridOptions = useMemo(
     () => ({
@@ -67,8 +83,12 @@ export const AddEditFinalSupplyEquipments = () => {
     }
   }, [location.state])
 
-  const onGridReady = useCallback(
-    async (params) => {
+  const onGridReady = () => {
+    setGridReady(true)
+  }
+
+  useEffect(() => {
+    if (isGridReady && data) {
       if (isArrayEmpty(data)) {
         setRowData([
           {
@@ -95,18 +115,17 @@ export const AddEditFinalSupplyEquipments = () => {
           }
         ])
       }
-      params.api.sizeColumnsToFit()
+      gridRef.current.api.sizeColumnsToFit()
 
       setTimeout(() => {
-        const lastRowIndex = params.api.getLastDisplayedRowIndex()
-        params.api.startEditingCell({
+        const lastRowIndex = gridRef.current.api.getLastDisplayedRowIndex()
+        gridRef.current.api.startEditingCell({
           rowIndex: lastRowIndex,
           colKey: 'organizationName'
         })
       }, 100)
-    },
-    [compliancePeriod, complianceReportId, data]
-  )
+    }
+  }, [compliancePeriod, complianceReportId, data, isGridReady, gridRef])
 
   useEffect(() => {
     if (optionsData?.levelsOfEquipment?.length > 0) {
@@ -204,6 +223,37 @@ export const AddEditFinalSupplyEquipments = () => {
     }
   }
 
+  const handleDownload = async (includeData) => {
+    try {
+      handleCloseDownloadMenu()
+      setIsDownloading(true)
+      await apiService.download(
+        includeData
+          ? apiRoutes.exportFinalSupplyEquipments.replace(
+              ':reportID',
+              complianceReportId
+            )
+          : apiRoutes.downloadFinalSupplyEquipmentsTemplate.replace(
+              ':reportID',
+              complianceReportId
+            )
+      )
+    } catch (error) {
+      console.error(
+        'Error downloading final supply equipment information:',
+        error
+      )
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  const openFileImportDialog = (isOverwrite) => {
+    setIsImportDialogOpen(true)
+    setIsOverwrite(isOverwrite)
+    handleCloseDownloadMenu()
+  }
+
   const handleNavigateBack = useCallback(() => {
     navigate(
       ROUTES.REPORTS_VIEW.replace(
@@ -229,6 +279,23 @@ export const AddEditFinalSupplyEquipments = () => {
     [compliancePeriod, complianceReportId]
   )
 
+  const [downloadAnchorEl, setDownloadAnchorEl] = useState(null)
+  const [importAnchorEl, setImportAnchorEl] = useState(null)
+  const isDownloadOpen = Boolean(downloadAnchorEl)
+  const isImportOpen = Boolean(importAnchorEl)
+  const handleDownloadClick = (event) => {
+    setDownloadAnchorEl(event.currentTarget)
+  }
+  const handleCloseDownloadMenu = () => {
+    setDownloadAnchorEl(null)
+  }
+  const handleImportClick = (event) => {
+    setImportAnchorEl(event.currentTarget)
+  }
+  const handleCloseImportMenu = () => {
+    setImportAnchorEl(null)
+  }
+
   return (
     isFetched &&
     !equipmentsLoading && (
@@ -250,6 +317,105 @@ export const AddEditFinalSupplyEquipments = () => {
             ))}
           </BCBox>
         </div>
+        <BCBox>
+          {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && (
+            <BCButton
+              color="primary"
+              variant="outlined"
+              aria-controls={isDownloadOpen ? 'download-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={isDownloadOpen ? 'true' : undefined}
+              onClick={handleDownloadClick}
+              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+              isLoading={isDownloading}
+            >
+              {t('finalSupplyEquipment:downloadBtn')}
+            </BCButton>
+          )}
+          <Menu
+            id="download-menu"
+            anchorEl={downloadAnchorEl}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right'
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right'
+            }}
+            open={isDownloadOpen}
+            onClose={handleCloseDownloadMenu}
+          >
+            <MenuItem
+              disabled={isDownloading}
+              onClick={() => {
+                handleDownload(true)
+              }}
+            >
+              {t('finalSupplyEquipment:downloadWithDataBtn')}
+            </MenuItem>
+            <MenuItem
+              disabled={isDownloading}
+              onClick={() => {
+                handleDownload(false)
+              }}
+            >
+              {t('finalSupplyEquipment:downloadWithoutDataBtn')}
+            </MenuItem>
+          </Menu>
+          {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && (
+            <BCButton
+              style={{ marginLeft: '12px' }}
+              color="primary"
+              variant="outlined"
+              aria-controls={isImportOpen ? 'import-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={isImportOpen ? 'true' : undefined}
+              onClick={handleImportClick}
+              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+            >
+              {t('finalSupplyEquipment:importBtn')}
+            </BCButton>
+          )}
+          <Menu
+            id="import-menu"
+            slotProps={{
+              paper: {
+                style: {
+                  maxWidth: 240
+                }
+              }
+            }}
+            anchorEl={importAnchorEl}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'right'
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'right'
+            }}
+            open={isImportOpen}
+            onClose={handleCloseImportMenu}
+          >
+            <MenuItem
+              onClick={() => {
+                openFileImportDialog(true)
+                handleCloseImportMenu()
+              }}
+            >
+              {t('finalSupplyEquipment:importOverwriteBtn')}
+            </MenuItem>
+            <MenuItem
+              onClick={() => {
+                openFileImportDialog(false)
+                handleCloseImportMenu()
+              }}
+            >
+              {t('finalSupplyEquipment:importAppendBtn')}
+            </MenuItem>
+          </Menu>
+        </BCBox>
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
@@ -274,6 +440,16 @@ export const AddEditFinalSupplyEquipments = () => {
             }}
           />
         </BCBox>
+        <ImportFuelSupplyEquipmentDialog
+          open={isImportDialogOpen}
+          isOverwrite={isOverwrite}
+          close={() => {
+            setIsImportDialogOpen(false)
+            refetch()
+          }}
+          parentType="report"
+          complianceReportId={complianceReportId}
+        />
       </Grid2>
     )
   )

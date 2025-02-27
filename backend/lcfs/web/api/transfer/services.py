@@ -20,6 +20,7 @@ from lcfs.web.exception.exceptions import DataNotFoundException, ServiceExceptio
 from lcfs.db.models.transfer.Transfer import Transfer
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.db.models.transfer.TransferCategory import TransferCategoryEnum
+from lcfs.db.models.transfer.TransferComment import TransferCommentSourceEnum
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 
 # services
@@ -32,7 +33,6 @@ from lcfs.web.api.transfer.schema import (
     TransferCommentSchema,
     TransferSchema,
     TransferCreateSchema,
-    TransferCategorySchema,
 )
 
 # repo
@@ -66,7 +66,19 @@ class TransferServices:
     async def get_all_transfers(self) -> List[TransferSchema]:
         """Fetches all transfer records and converts them to Pydantic models."""
         transfers = await self.repo.get_all_transfers()
-        return [TransferSchema.model_validate(transfer) for transfer in transfers]
+        result_list = []
+        for t in transfers:
+            # Convert to schema
+            transfer_schema = TransferSchema.model_validate(t)
+            # Sort the existing comments by create_date
+            sorted_comments = sorted(
+                t.transfer_comments, key=lambda c: c.create_date or datetime.min
+            )
+            transfer_schema.comments = [
+                TransferCommentSchema.model_validate(c) for c in sorted_comments
+            ]
+            result_list.append(transfer_schema)
+        return result_list
 
     # @service_handler
     # async def get_transfers_paginated(
@@ -79,42 +91,53 @@ class TransferServices:
     async def get_transfer(self, transfer_id: int) -> TransferSchema:
         """Fetches a single transfer by its ID and converts it to a Pydantic model."""
         transfer = await self.repo.get_transfer_by_id(transfer_id)
-        if not transfer:
+        # Check if the current viewer is a gov user
+        is_government_viewer = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        if not transfer or (
+            is_government_viewer
+            and transfer.current_status.status
+            in [
+                TransferStatusEnum.Draft,
+                TransferStatusEnum.Sent,
+                TransferStatusEnum.Rescinded,
+            ]
+        ):
             raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
 
         transfer_view = TransferSchema.model_validate(transfer)
-        comments: List[TransferCreateSchema] = []
-        if (
-            transfer.from_org_comment != None
-            and transfer.from_org_comment != ""
-            and transfer.current_status.status != TransferStatusEnum.Draft
-        ):
-            comments.append(
-                TransferCommentSchema(
-                    name=transfer.from_organization.name,
-                    comment=transfer.from_org_comment,
-                )
-            )
-        if transfer.to_org_comment != None and transfer.to_org_comment != "":
-            comments.append(
-                TransferCommentSchema(
-                    name=transfer.to_organization.name,
-                    comment=transfer.to_org_comment,
-                )
-            )
-        if (
-            transfer.gov_comment != None
-            and transfer.gov_comment != ""
-            and transfer.current_status.status
-            in [TransferStatusEnum.Recorded, TransferStatusEnum.Refused]
-        ):
-            comments.append(
-                TransferCommentSchema(
-                    name="Government of British Columbia",
-                    comment=transfer.gov_comment,
-                )
-            )
-        transfer_view.comments = comments
+
+        # Gather the comments from the new transfer_comment table
+        sorted_comments = sorted(
+            transfer.transfer_comments, key=lambda c: c.create_date
+        )
+
+        # Build the final list of comment schemas
+        final_comments = []
+        for c in sorted_comments:
+            comment_schema = TransferCommentSchema.model_validate(c)
+
+            # 1) If created_by is null/empty, fallback to org name or Government
+            if not comment_schema.created_by:
+                if c.comment_source == TransferCommentSourceEnum.FROM_ORG:
+                    comment_schema.created_by_org = transfer.from_organization.name
+                elif c.comment_source == TransferCommentSourceEnum.TO_ORG:
+                    comment_schema.created_by_org = transfer.to_organization.name
+                else:
+                    # c.comment_source == TransferCommentSourceEnum.GOVERNMENT
+                    comment_schema.created_by_org = "Government of British Columbia"
+
+            # 2) If the comment source is GOV, and the viewer is not gov,
+            #    we hide the actual name.
+            if (
+                c.comment_source == TransferCommentSourceEnum.GOVERNMENT
+                and not is_government_viewer
+            ):
+                comment_schema.created_by = None
+
+            final_comments.append(comment_schema)
+
+        transfer_view.comments = final_comments
+
         # Hide Recommended status to organizations or if the transfer is returned to analyst by the director and it is in Submitted status
         if (
             self.request.user.organization is not None
@@ -136,6 +159,7 @@ class TransferServices:
                     transfer_view.transfer_history,
                 )
             )
+
         return transfer_view
 
     @service_handler
@@ -149,7 +173,16 @@ class TransferServices:
         fails due to missing data or database issues, appropriate exceptions are raised
         and handled by the @service_handler decorator.
         """
-        transfer = Transfer(**transfer_data.model_dump(exclude={"current_status"}))
+        transfer = Transfer(
+            **transfer_data.model_dump(
+                exclude={
+                    "current_status",
+                    "from_org_comment",
+                    "to_org_comment",
+                    "gov_comment",
+                }
+            )
+        )
         current_status = await self.repo.get_transfer_status_by_name(
             transfer_data.current_status
         )
@@ -161,6 +194,29 @@ class TransferServices:
             await self.sign_and_send_from_supplier(transfer)
 
         transfer = await self.repo.create_transfer(transfer)
+
+        # Upsert the comments
+        if transfer_data.from_org_comment is not None:
+            await self.repo.upsert_transfer_comment(
+                transfer_id=transfer.transfer_id,
+                comment=transfer_data.from_org_comment,
+                comment_source=TransferCommentSourceEnum.FROM_ORG,
+            )
+
+        if transfer_data.to_org_comment is not None:
+            await self.repo.upsert_transfer_comment(
+                transfer_id=transfer.transfer_id,
+                comment=transfer_data.to_org_comment,
+                comment_source=TransferCommentSourceEnum.TO_ORG,
+            )
+
+        if transfer_data.gov_comment is not None:
+            await self.repo.upsert_transfer_comment(
+                transfer_id=transfer.transfer_id,
+                comment=transfer_data.gov_comment,
+                comment_source=TransferCommentSourceEnum.GOVERNMENT,
+            )
+
         # Add a new transfer history record if the status has changed
         await self.repo.add_transfer_history(
             CreateTransferHistorySchema(
@@ -168,7 +224,9 @@ class TransferServices:
                 transfer_id=transfer.transfer_id,
                 transfer_status_id=current_status.transfer_status_id,
                 user_profile_id=self.request.user.user_profile_id,
-                display_name=(f"{self.request.user.first_name} {self.request.user.last_name}"),
+                display_name=(
+                    f"{self.request.user.first_name} {self.request.user.last_name}"
+                ),
             )
         )
         await self._perform_notification_call(transfer, current_status.status)
@@ -210,14 +268,29 @@ class TransferServices:
                 transfer.agreement_date = transfer_data.agreement_date
                 transfer.quantity = transfer_data.quantity
                 transfer.price_per_unit = transfer_data.price_per_unit
-                transfer.from_org_comment = transfer_data.from_org_comment
-        # update comments
-        elif status_has_changed and new_status.status in [
-            TransferStatusEnum.Submitted,
-            TransferStatusEnum.Declined,
-        ]:
-            transfer.to_org_comment = transfer_data.to_org_comment
-        transfer.gov_comment = transfer_data.gov_comment
+
+        # Upsert the comments
+        if transfer_data.from_org_comment is not None:
+            await self.repo.upsert_transfer_comment(
+                transfer_id=transfer.transfer_id,
+                comment=transfer_data.from_org_comment,
+                comment_source=TransferCommentSourceEnum.FROM_ORG,
+            )
+
+        if transfer_data.to_org_comment is not None:
+            await self.repo.upsert_transfer_comment(
+                transfer_id=transfer.transfer_id,
+                comment=transfer_data.to_org_comment,
+                comment_source=TransferCommentSourceEnum.TO_ORG,
+            )
+
+        if transfer_data.gov_comment is not None:
+            await self.repo.upsert_transfer_comment(
+                transfer_id=transfer.transfer_id,
+                comment=transfer_data.gov_comment,
+                comment_source=TransferCommentSourceEnum.GOVERNMENT,
+            )
+
         # if the transfer is returned back to analyst by the director then don't store the history.
         if (
             new_status.status == TransferStatusEnum.Submitted
@@ -316,7 +389,11 @@ class TransferServices:
         message_data = {
             "service": "Transfer",
             "id": transfer.transfer_id,
-            "transactionId": transfer.from_transaction.transaction_id if getattr(transfer, 'from_transaction', None) else None,
+            "transactionId": (
+                transfer.from_transaction.transaction_id
+                if getattr(transfer, "from_transaction", None)
+                else None
+            ),
             "status": status_val,
             "fromOrganizationId": transfer.from_organization.organization_id,
             "fromOrganization": transfer.from_organization.name,

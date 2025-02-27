@@ -61,7 +61,7 @@ export const AddEditUser = ({ userType }) => {
 
   // User form hook and form validation
   const form = useForm({
-    resolver: yupResolver(userInfoSchema),
+    resolver: yupResolver(userInfoSchema(userType)),
     mode: 'onChange',
     defaultValues
   })
@@ -72,7 +72,7 @@ export const AddEditUser = ({ userType }) => {
       hasRoles(roles.supplier) || orgName || userType === 'bceid'
         ? bceidTextFields(t)
         : idirTextFields(t),
-    [hasRoles, orgName, t]
+    [hasRoles, orgName, t, userType]
   )
   const status = watch('status')
   const readOnly = watch('readOnly')

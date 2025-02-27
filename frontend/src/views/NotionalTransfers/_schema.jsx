@@ -1,16 +1,18 @@
-import BCTypography from '@/components/BCTypography'
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { actions, validation } from '@/components/BCDataGrid/columns'
-import i18n from '@/i18n'
 import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
   NumberEditor,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import BCTypography from '@/components/BCTypography'
 import { apiRoutes } from '@/constants/routes'
+import i18n from '@/i18n'
+import colors from '@/themes/base/colors'
+import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 export const notionalTransferColDefs = (
   optionsData,
@@ -36,6 +38,10 @@ export const notionalTransferColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
+    hide: true
+  },
+  {
+    field: 'notionalTransferId',
     hide: true
   },
   {
@@ -158,6 +164,40 @@ export const notionalTransferColDefs = (
   }
 ]
 
+export const notionalTransferSummaryColDefs = [
+  {
+    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
+    field: 'legalName',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.addressForService'
+    ),
+    field: 'addressForService',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.fuelCategory'
+    ),
+    field: 'fuelCategory'
+  },
+  {
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
+    ),
+    field: 'receivedOrTransferred'
+  },
+  {
+    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  }
+]
+
 export const defaultColDef = {
   editable: true,
   resizable: true,
@@ -166,4 +206,109 @@ export const defaultColDef = {
   sortable: false,
   singleClickEdit: true,
   flex: 1
+}
+
+export const changelogCommonColDefs = [
+  {
+    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
+    field: 'legalName',
+
+    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+  },
+  {
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.addressForService'
+    ),
+    field: 'addressForService',
+
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+  },
+  {
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.fuelCategory'
+    ),
+    field: 'fuelCategory',
+    valueGetter: (params) =>
+      params.data.fuelCategory?.category || params.data.fuelCategory,
+    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+  },
+  {
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
+    ),
+    field: 'receivedOrTransferred',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCode')
+  },
+  {
+    headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter,
+    cellStyle: (params) => changelogCellStyle(params, 'quantitySupplied')
+  }
+]
+
+export const changelogColDefs = [
+  {
+    field: 'groupUuid',
+    hide: true,
+    sort: 'desc',
+    sortIndex: 1
+  },
+  { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
+  {
+    field: 'actionType',
+    valueGetter: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        if (params.data.updated) {
+          return 'Edited old'
+        } else {
+          return 'Edited new'
+        }
+      }
+      if (params.data.actionType === 'DELETE') {
+        return 'Deleted'
+      }
+      if (params.data.actionType === 'CREATE') {
+        return 'Added'
+      }
+    },
+    cellStyle: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        return { backgroundColor: colors.alerts.warning.background }
+      }
+    }
+  },
+  ...changelogCommonColDefs
+]
+
+export const changelogDefaultColDefs = {
+  floatingFilter: false,
+  filter: false
+}
+
+export const changelogCommonGridOptions = {
+  overlayNoRowsTemplate: i18n.t('notionalTransfer:noOtherUsesFound'),
+  autoSizeStrategy: {
+    type: 'fitCellContents',
+    defaultMinWidth: 50,
+    defaultMaxWidth: 600
+  },
+  enableCellTextSelection: true, // enables text selection on the grid
+  ensureDomOrder: true
+}
+
+export const changelogGridOptions = {
+  ...changelogCommonGridOptions,
+  getRowStyle: (params) => {
+    if (params.data.actionType === 'DELETE') {
+      return {
+        backgroundColor: colors.alerts.error.background
+      }
+    }
+    if (params.data.actionType === 'CREATE') {
+      return {
+        backgroundColor: colors.alerts.success.background
+      }
+    }
+  }
 }

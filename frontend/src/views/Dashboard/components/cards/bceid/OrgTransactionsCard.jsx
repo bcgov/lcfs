@@ -11,6 +11,8 @@ import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgTransactionCounts } from '@/hooks/useDashboard'
+import { FILTER_KEYS } from '@/constants/common'
+import { TRANSACTION_TYPES, TRANSFER_STATUSES } from '@/constants/statuses'
 
 const CountDisplay = ({ count }) => (
   <BCTypography
@@ -33,17 +35,23 @@ const OrgTransactionsCard = () => {
   const { data: orgData } = useOrganization()
   const { data: counts, isLoading } = useOrgTransactionCounts()
 
-  const handleNavigation = (route, transactionType, statuses) => {
-    const filters = [
-      {
-        field: 'transactionType',
-        filterType: 'text',
-        type: 'equals',
-        filter: transactionType
-      },
-      { field: 'status', filterType: 'set', type: 'set', filter: statuses }
-    ]
-    navigate(route, { state: { filters } })
+  const handleNavigation = (route) => {
+    sessionStorage.setItem(
+      FILTER_KEYS.TRANSACTIONS_GRID,
+      JSON.stringify({
+        status: {
+          filterType: 'set',
+          type: 'set',
+          filter: [TRANSFER_STATUSES.SENT, TRANSFER_STATUSES.SUBMITTED]
+        },
+        transactionType: {
+          filterType: 'text',
+          type: 'equals',
+          filter: TRANSACTION_TYPES.TRANSFER
+        }
+      })
+    )
+    navigate(route)
   }
 
   function openExternalLink(event, url) {
@@ -110,23 +118,12 @@ const OrgTransactionsCard = () => {
             >
               <ListItemButton
                 component="a"
-                onClick={() =>
-                  handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', [
-                    'Draft',
-                    'Sent',
-                    'Submitted'
-                  ])
-                }
+                onClick={() => handleNavigation(ROUTES.TRANSACTIONS)}
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.transfersInProgress'),
                   counts?.transfers || 0,
-                  () =>
-                    handleNavigation(ROUTES.TRANSACTIONS, 'Transfer', [
-                      'Draft',
-                      'Sent',
-                      'Submitted'
-                    ])
+                  () => handleNavigation(ROUTES.TRANSACTIONS)
                 )}
               </ListItemButton>
 

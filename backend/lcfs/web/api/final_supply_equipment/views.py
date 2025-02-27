@@ -1,6 +1,6 @@
-import structlog
 from typing import List, Optional, Union
 
+import structlog
 from fastapi import (
     APIRouter,
     Body,
@@ -10,28 +10,33 @@ from fastapi import (
     Request,
     Response,
     Depends,
+    UploadFile,
+    File,
+    Form,
 )
+from starlette.responses import StreamingResponse, JSONResponse
 
 from lcfs.db import dependencies
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
-    FinalSupplyEquipmentSchema,
 )
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.final_supply_equipment.export import FinalSupplyEquipmentExporter
+from lcfs.web.api.final_supply_equipment.importer import FinalSupplyEquipmentImporter
 from lcfs.web.api.final_supply_equipment.schema import (
     DeleteFinalSupplyEquipmentResponseSchema,
     FSEOptionsSchema,
     FinalSupplyEquipmentCreateSchema,
     FinalSupplyEquipmentsSchema,
+    FinalSupplyEquipmentSchema,
 )
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.final_supply_equipment.validation import (
     FinalSupplyEquipmentValidation,
 )
 from lcfs.web.core.decorators import view_handler
-from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -47,7 +52,7 @@ get_async_db = dependencies.get_async_db_session
 async def get_fse_options(
     request: Request, service: FinalSupplyEquipmentServices = Depends()
 ) -> FSEOptionsSchema:
-    return await service.get_fse_options()
+    return await service.get_fse_options(request.user)
 
 
 @router.post(
@@ -74,11 +79,6 @@ async def get_final_supply_equipments(
         compliance_report = await service.get_compliance_report_by_id(
             compliance_report_id
         )
-        if not compliance_report:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Compliance report not found",
-            )
 
         await report_validate.validate_compliance_report_access(compliance_report)
         await report_validate.validate_organization_access(compliance_report_id)
@@ -142,7 +142,9 @@ async def save_final_supply_equipment_row(
     else:
         await fse_validate.check_equipment_uniqueness_and_overlap(data=request_data)
         # Create new final supply equipment row
-        return await fse_service.create_final_supply_equipment(request_data)
+        return await fse_service.create_final_supply_equipment(
+            request_data, request.user
+        )
 
 
 @router.get("/search", response_model=List[str], status_code=status.HTTP_200_OK)
@@ -158,3 +160,130 @@ async def search_table_options(
     if manufacturer:
         return await service.search_manufacturers(manufacturer)
     return []
+
+
+@router.get(
+    "/export/{report_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def export(
+    request: Request,
+    report_id: str,
+    report_validate: ComplianceReportValidation = Depends(),
+    exporter: FinalSupplyEquipmentExporter = Depends(),
+):
+    """
+    Endpoint to export information of all FSE
+    """
+    try:
+        compliance_report_id = int(report_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid report id. Must be an integer."
+        )
+
+    await report_validate.validate_organization_access(compliance_report_id)
+
+    organization = request.user.organization
+    return await exporter.export(compliance_report_id, organization, True)
+
+
+@router.post(
+    "/import/{report_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def import_fse(
+    request: Request,
+    report_id: str,
+    file: UploadFile = File(...),
+    report_validate: ComplianceReportValidation = Depends(),
+    importer: FinalSupplyEquipmentImporter = Depends(),
+    overwrite: bool = Form(...),
+):
+    """
+    Endpoint to import Final Supply Equipment data from an uploaded Excel file.
+    The Excel must have a sheet named 'FSE' with the same columns as in the exporter.
+
+    Columns:
+    1. Organization
+    2. Supply from date
+    3. Supply to date
+    4. kWh usage
+    5. Serial #
+    6. Manufacturer
+    7. Model
+    8. Level of equipment
+    9. Ports
+    10. Intended use  (comma-separated if multiple)
+    11. Intended users (comma-separated if multiple)
+    12. Street address
+    13. City
+    14. Postal code
+    15. Latitude
+    16. Longitude
+    17. Notes
+    """
+    try:
+        compliance_report_id = int(report_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid report id. Must be an integer."
+        )
+
+    await report_validate.validate_organization_access(compliance_report_id)
+
+    job_id = await importer.import_data(
+        compliance_report_id, request.user, file, overwrite
+    )
+    return JSONResponse(content={"jobId": job_id})
+
+
+@router.get(
+    "/template/{report_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def get_template(
+    request: Request,
+    report_id: str,
+    report_validate: ComplianceReportValidation = Depends(),
+    exporter: FinalSupplyEquipmentExporter = Depends(),
+):
+    """
+    Endpoint to export a template for FSE
+    """
+    try:
+        compliance_report_id = int(report_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=400, detail="Invalid report id. Must be an integer."
+        )
+
+    await report_validate.validate_organization_access(compliance_report_id)
+
+    organization = request.user.organization
+    return await exporter.export(compliance_report_id, organization, False)
+
+
+@router.get(
+    "/status/{job_id}",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def get_job_status(
+    request: Request,
+    job_id: str,
+    importer: FinalSupplyEquipmentImporter = Depends(),
+):
+    """
+    Endpoint to get the current progress of a running FSE job
+    """
+
+    status = await importer.get_status(job_id)
+    return JSONResponse(content=status)

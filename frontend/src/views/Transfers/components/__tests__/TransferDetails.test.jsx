@@ -4,11 +4,15 @@ import { useForm, FormProvider } from 'react-hook-form'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
+import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { calculateTotalValue } from '@/utils/formatters'
 import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganizations')
+vi.mock('@/hooks/useOrganization', () => ({
+  useCurrentOrgBalance: vi.fn()
+}))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key) => key
@@ -28,6 +32,15 @@ const MockFormProvider = ({ children }) => {
   return <FormProvider {...methods}>{children}</FormProvider>
 }
 
+const mockBalance = {
+  data: {
+    availableBalance: 1000,
+    totalBalance: 1500,
+    reservedBalance: 500,
+    name: 'Test Organization'
+  }
+}
+
 describe('TransferDetails Component', () => {
   beforeEach(() => {
     // Reset mocks before each test
@@ -44,6 +57,7 @@ describe('TransferDetails Component', () => {
         { organizationId: 2, name: 'Org Two' }
       ]
     })
+    useCurrentOrgBalance.mockReturnValue(mockBalance)
   })
 
   it('renders correctly with user organization name', () => {
@@ -97,6 +111,25 @@ describe('TransferDetails Component', () => {
         })} CAD.`
       )
     })
+  })
+
+  it('adjusts quantity when exceeding available balance', async () => {
+    render(
+      <MockFormProvider>
+        <TransferDetails />
+      </MockFormProvider>,
+      { wrapper }
+    )
+
+    const quantityInput = screen.getByTestId('quantity')
+    fireEvent.change(quantityInput, { target: { value: '2000' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/transfer:quantityAdjusted: 1,000/)).toBeInTheDocument()
+    })
+
+    // Verify input value was adjusted
+    expect(quantityInput).toHaveValue('1,000')
   })
 
   it('updates total value when inputs change with cents', async () => {

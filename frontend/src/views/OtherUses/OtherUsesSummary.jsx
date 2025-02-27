@@ -1,17 +1,14 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { useGetOtherUses } from '@/hooks/useOtherUses'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema.jsx'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
-import {
-  decimalFormatter,
-  formatNumberWithCommas as valueFormatter
-} from '@/utils/formatters'
 import { useTranslation } from 'react-i18next'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { useLocation, useParams } from 'react-router-dom'
 
 export const OtherUsesSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -42,61 +39,6 @@ export const OtherUsesSummary = ({ data, status }) => {
     [status]
   )
 
-  const columns = [
-    {
-      headerName: t('otherUses:otherUsesColLabels.fuelType'),
-      field: 'fuelType',
-      floatingFilter: false,
-      width: '260px'
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.fuelCategory'),
-      field: 'fuelCategory',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.provisionOfTheAct'),
-      field: 'provisionOfTheAct',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.fuelCode'),
-      field: 'fuelCode',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.quantitySupplied'),
-      field: 'quantitySupplied',
-      floatingFilter: false,
-      valueFormatter
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.units'),
-      field: 'units',
-      floatingFilter: false
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.ciOfFuel'),
-      field: 'ciOfFuel',
-      floatingFilter: false,
-      valueFormatter: decimalFormatter
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.expectedUse'),
-      field: 'expectedUse',
-      floatingFilter: false,
-      flex: 1,
-      minWidth: 200
-    },
-    {
-      headerName: t('otherUses:otherUsesColLabels.otherExpectedUse'),
-      field: 'rationale',
-      floatingFilter: false,
-      flex: 1,
-      minWidth: 200
-    }
-  ]
-
   const getRowId = (params) => params.data.otherUsesId
 
   return (
@@ -110,13 +52,13 @@ export const OtherUsesSummary = ({ data, status }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          gridKey={'other-uses'}
+          gridKey="other-uses"
           getRowId={getRowId}
-          columnDefs={columns}
+          columnDefs={otherUsesSummaryColDefs}
           defaultColDef={defaultColDef}
           query={useGetOtherUses}
           queryParams={{ complianceReportId }}
-          dataKey={'otherUses'}
+          dataKey="otherUses"
           suppressPagination={data?.length <= 10}
           autoSizeStrategy={{
             type: 'fitCellContents',

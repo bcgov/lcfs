@@ -355,35 +355,8 @@ export const allocationAgreementColDefs = (
         openOnFocus: true
       }
     },
-    cellStyle: (params) => {
-      const style = StandardCellWarningAndErrors(params, errors, warnings)
-      const isFuelCodeScenario =
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      const fuelCodes = fuelType?.fuelCodes || []
-      const fuelCodeRequiredAndMissing =
-        isFuelCodeScenario && !params.data.fuelCode
-
-      let conditionalStyle = {}
-
-      // If required and missing, show red border and white background
-      if (fuelCodeRequiredAndMissing) {
-        return style
-      } else {
-        // Apply conditional styling if not missing
-        conditionalStyle =
-          isFuelCodeScenario && fuelCodes.length > 0
-            ? {
-                backgroundColor: '#fff',
-                borderColor: style.borderColor || 'unset'
-              }
-            : { backgroundColor: '#f2f2f2' }
-      }
-
-      return { ...style, ...conditionalStyle }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
     minWidth: 150,
     editable: (params) =>

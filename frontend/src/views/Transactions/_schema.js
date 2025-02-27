@@ -34,6 +34,20 @@ export const transactionsColDefs = (t) => [
     }
   },
   {
+    colId: 'compliancePeriod',
+    field: 'compliancePeriod',
+    headerName: t('txn:txnColLabels.compliancePeriod'),
+    minWidth: 190,
+    valueGetter: (params) => {
+      return params.data?.compliancePeriod || 'N/A'
+    },
+    filter: true,
+    filterParams: {
+      filterOptions: ['startsWith'],
+      buttons: ['clear']
+    }
+  },
+  {
     colId: 'transactionType',
     field: 'transactionType',
     headerName: t('txn:txnColLabels.type'),
@@ -57,6 +71,21 @@ export const transactionsColDefs = (t) => [
       },
       buttons: ['clear']
     },
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'transactionType',
+      labelKey: 'transactionType',
+      optionsQuery: () => ({
+        data: [
+          { transactionType: 'Compliance Report' },
+          { transactionType: 'Admin Adjustment' },
+          { transactionType: 'Transfer' },
+          { transactionType: 'Initiative Agreement' }
+        ],
+        isLoading: false
+      })
+    },
+    suppressFloatingFilterButton: true,
     width: 222
   },
   {
@@ -122,6 +151,23 @@ export const transactionsColDefs = (t) => [
       valueKey: 'status',
       labelKey: 'status',
       optionsQuery: useTransactionStatuses
+    },
+    filterParams: {
+      textFormatter: (value) => value.toLowerCase(),
+      textCustomComparator: (filter, value, filterText) => {
+        // Split the filter text by comma and trim each value
+        const filterValues = filterText
+          .split(',')
+          .map((text) => text.trim().toLowerCase())
+
+        const cleanValue = value.toLowerCase()
+
+        // Return true if the value matches any of the filter values
+        return filterValues.some((filterValue) =>
+          cleanValue.includes(filterValue)
+        )
+      },
+      buttons: ['clear']
     },
     suppressFloatingFilterButton: true,
     minWidth: 180,

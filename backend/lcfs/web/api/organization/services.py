@@ -4,7 +4,7 @@ from typing import List
 
 from fastapi import Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import and_
+from sqlalchemy import and_, cast, String
 
 from lcfs.utils.constants import id_prefix_to_transaction_type_map
 from lcfs.web.api.user.repo import UserRepository
@@ -104,6 +104,17 @@ class OrganizationService:
 
                 if field.description == "transaction_type":
                     filter_value = filter_value.replace(" ", "").lower()
+                elif filter.field == "status":
+                    field = cast(
+                        get_field_for_filter(TransactionView, "status"),
+                        String,
+                    )
+                    # Check if filter_value is a comma-separated string
+                    if isinstance(filter_value, str) and "," in filter_value:
+                        filter_value = filter_value.split(",")  # Convert to list
+                    if isinstance(filter_value, list):
+                        filter.filter_type = "set"
+                        filter.type = "set"
 
                 filter_option = filter.type
                 filter_type = filter.filter_type
@@ -120,13 +131,6 @@ class OrganizationService:
         """
         Get all users for the organization
         """
-        # Add Organization and status to filter
-        if (pagination.filters is None) or (len(pagination.filters) == 0):
-            pagination.filters.append(
-                FilterModel(
-                    filter_type="text", field="is_active", type="equals", filter=status
-                )
-            )
         pagination.filters.append(
             FilterModel(
                 filter_type="number",

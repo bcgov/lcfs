@@ -26,7 +26,14 @@ const BCButton = forwardRef(
         size={size}
         ownerState={{ color, variant, size, circular, iconOnly }}
       >
-        {isLoading ? <CircularProgress size={22} color="white" /> : children}
+        {isLoading ? (
+          <CircularProgress
+            size={22}
+            color={variant === 'outlined' ? 'primary' : 'white'}
+          />
+        ) : (
+          children
+        )}
       </BCButtonRoot>
     )
   }

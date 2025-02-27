@@ -1,13 +1,9 @@
 import json
 from typing import Tuple
-from fastapi import Depends, HTTPException, Request
-from lcfs.web.api.notification.schema import (
-    COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER,
-    NotificationMessageSchema,
-    NotificationRequestSchema,
-)
-from lcfs.web.api.notification.services import NotificationService
 
+from fastapi import Depends, HTTPException
+
+from lcfs.db.models import UserProfile
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
@@ -21,6 +17,12 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
+from lcfs.web.api.notification.schema import (
+    COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER,
+    NotificationMessageSchema,
+    NotificationRequestSchema,
+)
+from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.services import TransactionsService
@@ -31,14 +33,12 @@ class ComplianceReportUpdateService:
     def __init__(
         self,
         repo: ComplianceReportRepository = Depends(),
-        request: Request = None,
         summary_service: ComplianceReportSummaryService = Depends(),
         org_service: OrganizationsService = Depends(OrganizationsService),
         trx_service: TransactionsService = Depends(TransactionsService),
         notfn_service: NotificationService = Depends(NotificationService),
     ):
         self.repo = repo
-        self.request = request
         self.summary_service = summary_service
         self.org_service = org_service
         self.trx_service = trx_service
@@ -61,7 +61,10 @@ class ComplianceReportUpdateService:
         return report
 
     async def update_compliance_report(
-        self, report_id: int, report_data: ComplianceReportUpdateSchema
+        self,
+        report_id: int,
+        report_data: ComplianceReportUpdateSchema,
+        user: UserProfile,
     ) -> ComplianceReport:
         """Updates an existing compliance report."""
         # Get and validate report
@@ -98,16 +101,16 @@ class ComplianceReportUpdateService:
 
         # Handle status change related actions
         if status_has_changed:
-            await self.handle_status_change(report, new_status.status)
+            await self.handle_status_change(report, new_status.status, user)
             # Add history record
-            await self.repo.add_compliance_report_history(report, self.request.user)
+            await self.repo.add_compliance_report_history(report, user)
 
         # Handle notifications
-        await self._perform_notification_call(report, current_status)
+        await self._perform_notification_call(report, current_status, user)
 
         return updated_report
 
-    async def _perform_notification_call(self, report, status):
+    async def _perform_notification_call(self, report, status, user: UserProfile):
         """Send notifications based on the current status of the transfer."""
         status_mapper = status.replace(" ", "_")
         notifications = COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER.get(
@@ -130,7 +133,7 @@ class ComplianceReportUpdateService:
             related_transaction_id=f"CR{report.compliance_report_id}",
             message=json.dumps(message_data),
             related_organization_id=report.organization_id,
-            origin_user_profile_id=self.request.user.user_profile_id,
+            origin_user_profile_id=user.user_profile_id,
         )
         if notifications and isinstance(notifications, list):
             await self.notfn_service.send_notification(
@@ -141,7 +144,10 @@ class ComplianceReportUpdateService:
             )
 
     async def handle_status_change(
-        self, report: ComplianceReport, new_status: ComplianceReportStatusEnum
+        self,
+        report: ComplianceReport,
+        new_status: ComplianceReportStatusEnum,
+        user: UserProfile,
     ):
         """Handle status-specific actions based on the new status."""
         status_handlers = {
@@ -155,21 +161,21 @@ class ComplianceReportUpdateService:
 
         handler = status_handlers.get(new_status)
         if handler:
-            await handler(report)
+            await handler(report, user)
         else:
             raise ServiceException(f"Unsupported status change to {new_status}")
 
-    async def handle_draft_status(self, report: ComplianceReport):
+    async def handle_draft_status(self, report: ComplianceReport, user: UserProfile):
         """Handle actions when a report is set to Draft status."""
         # Implement logic for Draft status
-        user = self.request.user
         has_supplier_role = user_has_roles(user, [RoleEnum.SUPPLIER])
         if not has_supplier_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-    async def handle_submitted_status(self, report: ComplianceReport):
+    async def handle_submitted_status(
+        self, report: ComplianceReport, user: UserProfile
+    ):
         """Handle actions when a report is submitted."""
-        user = self.request.user
         has_supplier_roles = user_has_roles(
             user, [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY]
         )
@@ -183,7 +189,7 @@ class ComplianceReportUpdateService:
         # Calculate a new summary based on the current report data
         calculated_summary = (
             await self.summary_service.calculate_compliance_report_summary(
-                report.compliance_report_id
+                report.compliance_report_id, user
             )
         )
 
@@ -251,44 +257,55 @@ class ComplianceReportUpdateService:
             # Update the report with the new summary
             report.summary = new_summary
 
-        if report.summary.line_20_surplus_deficit_units != 0:
+        credit_change = report.summary.line_20_surplus_deficit_units
+        if credit_change != 0:
             if report.transaction is not None:
                 # Update existing transaction
-                report.transaction.compliance_units = (
-                    report.summary.line_20_surplus_deficit_units
-                )
+                report.transaction.compliance_units = credit_change
             else:
-                # Create a new reserved transaction for receiving organization
-                report.transaction = await self.org_service.adjust_balance(
-                    transaction_action=TransactionActionEnum.Reserved,
-                    compliance_units=report.summary.line_20_surplus_deficit_units,
-                    organization_id=report.organization_id,
+                available_balance = await self.org_service.calculate_available_balance(
+                    report.organization_id
                 )
+                # Only need a Transaction if they have credits
+                if available_balance > 0:
+                    units_to_reserve = credit_change
+
+                    # If not enough credits, reserve what is left
+                    if credit_change < 0 and abs(credit_change) > available_balance:
+                        units_to_reserve = available_balance * -1
+
+                    report.transaction = await self.org_service.adjust_balance(
+                        transaction_action=TransactionActionEnum.Reserved,
+                        compliance_units=units_to_reserve,
+                        organization_id=report.organization_id,
+                    )
+
         await self.repo.update_compliance_report(report)
 
         return calculated_summary
 
-    async def handle_recommended_by_analyst_status(self, report: ComplianceReport):
+    async def handle_recommended_by_analyst_status(
+        self, report: ComplianceReport, user: UserProfile
+    ):
         """Handle actions when a report is Recommended by analyst."""
         # Implement logic for Recommended by analyst status
-        user = self.request.user
         has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
         if not has_analyst_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-    async def handle_recommended_by_manager_status(self, report: ComplianceReport):
+    async def handle_recommended_by_manager_status(
+        self, report: ComplianceReport, user: UserProfile
+    ):
         """Handle actions when a report is Recommended by manager."""
         # Implement logic for Recommended by manager status
-        user = self.request.user
         has_compliance_manager_role = user_has_roles(
             user, [RoleEnum.GOVERNMENT, RoleEnum.COMPLIANCE_MANAGER]
         )
         if not has_compliance_manager_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-    async def handle_assessed_status(self, report: ComplianceReport):
+    async def handle_assessed_status(self, report: ComplianceReport, user: UserProfile):
         """Handle actions when a report is Assessed."""
-        user = self.request.user
         has_director_role = user_has_roles(
             user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
         )

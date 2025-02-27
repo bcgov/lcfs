@@ -1,14 +1,17 @@
+from unittest import mock
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
 
+from lcfs.db.models import UserProfile
 from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
 )
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
@@ -53,6 +56,7 @@ def mock_environment_vars():
 def mock_org_service():
     mock_org_service = MagicMock()
     mock_org_service.adjust_balance = AsyncMock()  # Mock the adjust_balance method
+    mock_org_service.calculate_available_balance = AsyncMock(return_value=1000)
     return mock_org_service
 
 
@@ -85,9 +89,9 @@ async def test_update_compliance_report_status_change(
     mock_repo.update_compliance_report.return_value = mock_report
     compliance_report_update_service._perform_notification_call = AsyncMock()
 
-    # Call the method
+    # Call the method (updated to pass a user profile; in this test we use mock.ANY)
     updated_report = await compliance_report_update_service.update_compliance_report(
-        report_id, report_data
+        report_id, report_data, mock.ANY
     )
 
     # Assertions
@@ -99,14 +103,14 @@ async def test_update_compliance_report_status_change(
         report_data.status
     )
     compliance_report_update_service.handle_status_change.assert_called_once_with(
-        mock_report, new_status.status
+        mock_report, new_status.status, mock.ANY
     )
     mock_repo.add_compliance_report_history.assert_called_once_with(
-        mock_report, compliance_report_update_service.request.user
+        mock_report, UserProfile()
     )
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
     compliance_report_update_service._perform_notification_call.assert_called_once_with(
-        mock_report, "Submitted"
+        mock_report, "Submitted", UserProfile()
     )
 
 
@@ -137,15 +141,15 @@ async def test_update_compliance_report_no_status_change(
     mock_repo.update_compliance_report.return_value = mock_report
     compliance_report_update_service._perform_notification_call = AsyncMock()
 
-    # Call the method
+    # Call the method (now passing a UserProfile)
     updated_report = await compliance_report_update_service.update_compliance_report(
-        report_id, report_data
+        report_id, report_data, UserProfile()
     )
 
     # Assertions
     assert updated_report == mock_report
     compliance_report_update_service._perform_notification_call.assert_called_once_with(
-        mock_report, "Draft"
+        mock_report, "Draft", mock.ANY
     )
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
 
@@ -163,10 +167,10 @@ async def test_update_compliance_report_not_found(
     # Set up mocks
     mock_repo.get_compliance_report_by_id.return_value = None
 
-    # Call the method and check for exception
+    # Call the method and check for exception (UserProfile now passed)
     with pytest.raises(DataNotFoundException):
         await compliance_report_update_service.update_compliance_report(
-            report_id, report_data
+            report_id, report_data, UserProfile()
         )
 
     mock_repo.get_compliance_report_by_id.assert_called_once_with(
@@ -188,7 +192,9 @@ async def test_handle_submitted_status_insufficient_permissions(
 
     # Call the method and check for exception
     with pytest.raises(HTTPException) as exc_info:
-        await compliance_report_update_service.handle_submitted_status(mock_report)
+        await compliance_report_update_service.handle_submitted_status(
+            mock_report, UserProfile()
+        )
 
     assert exc_info.value.status_code == 403
     assert exc_info.value.detail == "Forbidden."
@@ -269,19 +275,21 @@ async def test_handle_submitted_status_with_existing_summary(
     mock_org_service.adjust_balance.return_value = MagicMock()
 
     # Call the method
-    await compliance_report_update_service.handle_submitted_status(mock_report)
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
 
     # Assertions
     mock_user_has_roles.assert_called_once_with(
-        compliance_report_update_service.request.user,
+        mock.ANY,
         [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY],
     )
     mock_repo.get_summary_by_report_id.assert_called_once_with(report_id)
     compliance_report_summary_service.calculate_compliance_report_summary.assert_called_once_with(
-        report_id
+        report_id, mock.ANY
     )
 
-    # Check if the summary is locked
+    # Check if the summary is locked by verifying that the save call includes a UserProfile
     saved_summary = mock_repo.save_compliance_report_summary.call_args[0][0]
     assert saved_summary.is_locked == True
 
@@ -353,16 +361,18 @@ async def test_handle_submitted_status_without_existing_summary(
     # Mock the adjust_balance method to return a mocked transaction result
     mock_org_service.adjust_balance.return_value = MagicMock()
     # Call the method
-    await compliance_report_update_service.handle_submitted_status(mock_report)
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
 
     # Assertions
     mock_repo.get_summary_by_report_id.assert_called_once_with(report_id)
     compliance_report_summary_service.calculate_compliance_report_summary.assert_called_once_with(
-        report_id
+        report_id, mock.ANY
     )
 
     # Check if a new summary is created
-    mock_repo.add_compliance_report_summary.assert_called_once()
+    mock_repo.add_compliance_report_summary.assert_called_once_with(mock.ANY)
     new_summary = mock_repo.add_compliance_report_summary.call_args[0][0]
 
     # Check if calculated values are used
@@ -448,9 +458,12 @@ async def test_handle_submitted_status_partial_existing_values(
     # Mock the adjust_balance method to return a mocked transaction result
     mock_org_service.adjust_balance.return_value = MagicMock()
     # Call the method
-    await compliance_report_update_service.handle_submitted_status(mock_report)
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
 
     # Assertions
+    mock_repo.save_compliance_report_summary.assert_called_once_with(mock.ANY)
     saved_summary = mock_repo.save_compliance_report_summary.call_args[0][0]
     assert (
         saved_summary.renewable_fuel_target_summary[0].gasoline == 1000
@@ -538,9 +551,12 @@ async def test_handle_submitted_status_no_user_edits(
     # Mock the adjust_balance method to return a mocked transaction result
     mock_org_service.adjust_balance.return_value = MagicMock()
     # Call the method
-    await compliance_report_update_service.handle_submitted_status(mock_report)
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
 
     # Assertions
+    mock_repo.save_compliance_report_summary.assert_called_once_with(mock.ANY)
     saved_summary = mock_repo.save_compliance_report_summary.call_args[0][0]
     assert (
         saved_summary.renewable_fuel_target_summary[0].gasoline == 100
@@ -593,4 +609,250 @@ async def test_handle_submitted_no_sign(
     compliance_report_update_service.org_service = mock_org_service
 
     with pytest.raises(ServiceException):
-        await compliance_report_update_service.handle_submitted_status(mock_report)
+        await compliance_report_update_service.handle_submitted_status(
+            mock_report, UserProfile()
+        )
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_no_credits(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
+):
+    """
+    Scenario: The report requires deficit units to be reserved (-100),
+    but available_balance is 0, so no transaction is created.
+    """
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 123
+    # Deficit units is nonzero
+    mock_report.summary = MagicMock(
+        spec=ComplianceReportSummary, line_20_surplus_deficit_units=-100
+    )
+    # No existing transaction
+    mock_report.transaction = None
+
+    # Required roles are present
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Mock the summary so we skip deeper logic
+    mock_repo.get_summary_by_report_id.return_value = None
+
+    # Pretend the final summary can_sign is True
+    calculated_summary = ComplianceReportSummarySchema(
+        can_sign=True,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # available_balance = 0
+    mock_org_service.calculate_available_balance.return_value = 0
+    # If adjust_balance is called, we'll see an assertion fail
+    mock_org_service.adjust_balance = AsyncMock()
+
+    # Execute
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    # Assertions:
+    # 1) We did NOT call adjust_balance, because balance = 0
+    mock_org_service.adjust_balance.assert_not_awaited()
+    # 2) No transaction is created
+    assert mock_report.transaction is None
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_insufficient_credits(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
+):
+    """
+    Scenario: The report requires deficit units of 100,
+    but the org only has 50 credits available. We reserve partial (-50)
+    to match the actual available balance.
+    """
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 123
+    # Need 100 credits, but only 50 are available
+    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
+    mock_report.summary.line_20_surplus_deficit_units = -100
+    mock_report.transaction = None
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Skip deeper summary logic
+    mock_repo.get_summary_by_report_id.return_value = None
+    mock_repo.save_compliance_report_summary = AsyncMock(
+        return_value=mock_report.summary
+    )
+    mock_repo.add_compliance_report_summary = AsyncMock(
+        return_value=mock_report.summary
+    )
+    calculated_summary = ComplianceReportSummarySchema(
+        can_sign=True,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # Org only has 50
+    mock_org_service.calculate_available_balance = AsyncMock(return_value=50)
+    # Mock the result of adjust_balance
+    mock_transaction = MagicMock()
+    mock_org_service.adjust_balance.return_value = mock_transaction
+
+    # Execute
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    # We should have called adjust_balance with -50 units (reserving partial)
+    mock_org_service.adjust_balance.assert_awaited_once_with(
+        transaction_action=TransactionActionEnum.Reserved,
+        compliance_units=-50,
+        organization_id=123,
+    )
+    # And a transaction object is assigned back to the report
+    assert mock_report.transaction == mock_transaction
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_sufficient_credits(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    compliance_report_summary_service,
+):
+    """
+    Scenario: The report requires deficit units of -100,
+    and the org has 200 credits available. We reserve all -100.
+    """
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.organization_id = 123
+    # Need 100 credits
+    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
+    mock_report.summary.line_20_surplus_deficit_units = -100
+    mock_report.transaction = None
+
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Skip deeper summary logic
+    mock_repo.get_summary_by_report_id.return_value = None
+    mock_repo.save_compliance_report_summary = AsyncMock(
+        return_value=mock_report.summary
+    )
+    mock_repo.add_compliance_report_summary = AsyncMock(
+        return_value=mock_report.summary
+    )
+    calculated_summary = ComplianceReportSummarySchema(
+        can_sign=True,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+    )
+    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # Org has enough
+    mock_org_service.calculate_available_balance.return_value = 200
+    mock_transaction = MagicMock()
+    mock_org_service.adjust_balance.return_value = mock_transaction
+
+    # Execute
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    # We should have called adjust_balance with the full -100
+    mock_org_service.adjust_balance.assert_awaited_once_with(
+        transaction_action=TransactionActionEnum.Reserved,
+        compliance_units=-100,
+        organization_id=123,
+    )
+    assert mock_report.transaction == mock_transaction
+
+
+# Fixture to create a real instance of OrganizationsService with its actual adjust_balance logic.
+@pytest.fixture
+def org_service_instance():
+    # Import the real OrganizationsService (adjust the import path as needed)
+    from lcfs.web.api.organizations.services import OrganizationsService
+
+    service = OrganizationsService()
+    service.calculate_available_balance = AsyncMock(return_value=50)
+    service.calculate_reserved_balance = AsyncMock(return_value=20)
+    dummy_transaction = MagicMock()  # a dummy Transaction instance
+    service.transaction_repo = MagicMock()
+    service.transaction_repo.create_transaction = AsyncMock(
+        return_value=dummy_transaction
+    )
+    service.redis_balance_service = MagicMock()
+    service.redis_balance_service.populate_organization_redis_balance = AsyncMock()
+    return service
+
+
+@pytest.mark.anyio
+async def test_adjust_balance_reserved_positive_allowed(org_service_instance):
+    """
+    Reserved transactions with a positive compliance_units should be allowed without checking available balance.
+    Even if the positive value exceeds the available balance, the transaction should proceed.
+    """
+    compliance_units = 100  # positive value; exceeds available_balance (50)
+    transaction = await org_service_instance.adjust_balance(
+        transaction_action=TransactionActionEnum.Reserved,
+        compliance_units=compliance_units,
+        organization_id=1,
+    )
+    # Verify that the transaction repo's create_transaction method was called with the correct parameters.
+    org_service_instance.transaction_repo.create_transaction.assert_called_once_with(
+        TransactionActionEnum.Reserved, compliance_units, 1
+    )
+    assert transaction is not None
+
+
+@pytest.mark.anyio
+async def test_adjust_balance_reserved_negative_exceeds_balance(org_service_instance):
+    """
+    Reserved transactions with negative compliance_units must not exceed available balance.
+    A negative value whose absolute exceeds the available balance should raise a ValueError.
+    """
+    compliance_units = -60  # negative value; abs(60) > available_balance (50)
+    with pytest.raises(
+        ValueError, match="Reserve amount cannot exceed available balance."
+    ):
+        await org_service_instance.adjust_balance(
+            transaction_action=TransactionActionEnum.Reserved,
+            compliance_units=compliance_units,
+            organization_id=1,
+        )

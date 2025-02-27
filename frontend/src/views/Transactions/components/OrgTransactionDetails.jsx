@@ -1,5 +1,5 @@
 import React from 'react'
-import { Box, Grid } from '@mui/material'
+import { Box, Grid, List, ListItemButton } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import {
@@ -9,6 +9,7 @@ import {
 } from '@/utils/formatters'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
+import { useDocuments, useViewDocument } from '@/hooks/useDocuments.js'
 
 export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
   const { t } = useTranslation([
@@ -35,6 +36,15 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
   // Use the transaction effective date or the approved date if no effective date is provided
   const effectiveDate = transactionData.transactionEffectiveDate || approvedDate
 
+  const { data: loadedFiles } = useDocuments(
+    transactionType,
+    transactionData.adminAdjustmentId ?? transactionData.initiativeAgreementId
+  )
+  const viewDocument = useViewDocument(
+    transactionType,
+    transactionData.adminAdjustmentId ?? transactionData.initiativeAgreementId
+  )
+
   // Construct the content based on the transaction type
   const content = (
     <Box component="div" display="flex" flexDirection="column" gap={1}>
@@ -54,6 +64,41 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
         <strong>{t('txn:effectiveDateLabel')}</strong>{' '}
         {dateFormatter({ value: effectiveDate })}
       </BCTypography>
+      {loadedFiles && loadedFiles.length > 0 && (
+        <BCTypography variant="body2" style={{ display: 'inline' }}>
+          <strong>{t('txn:attachments')}</strong>
+          <List
+            component="div"
+            sx={{ maxWidth: '100%', listStyleType: 'disc' }}
+          >
+            {loadedFiles.map((file) => (
+              <ListItemButton
+                sx={{
+                  display: 'list-item',
+                  padding: '0',
+                  marginLeft: '1.2rem'
+                }}
+                component="a"
+                key={file.documentId}
+                alignItems="flex-start"
+                onClick={() => {
+                  viewDocument(file.documentId)
+                }}
+              >
+                <BCTypography
+                  sx={{
+                    textDecoration: 'underline'
+                  }}
+                  variant="subtitle2"
+                  color="link"
+                >
+                  {file.fileName}
+                </BCTypography>
+              </ListItemButton>
+            ))}
+          </List>
+        </BCTypography>
+      )}
       {transactionData.govComment && (
         <BCTypography variant="body2">
           <strong>{t('txn:commentsTextLabel')}</strong>{' '}

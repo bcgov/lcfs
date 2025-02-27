@@ -6,19 +6,15 @@ import {
   useGetFuelExports,
   useSaveFuelExport
 } from '@/hooks/useFuelExport'
-import { isArrayEmpty } from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import {
-  defaultColDef,
-  fuelExportColDefs,
-  PROVISION_APPROVED_FUEL_CODE
-} from './_schema'
+import { defaultColDef, fuelExportColDefs } from './_schema'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import { isArrayEmpty } from '@/utils/array.js'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
@@ -72,6 +68,7 @@ export const AddEditFuelExports = () => {
       if (!isArrayEmpty(data)) {
         const updatedRowData = data.fuelExports.map((item) => ({
           ...item,
+          complianceReportId, // This takes current reportId, important for versioning
           compliancePeriod,
           fuelCategory: item.fuelCategory?.category,
           fuelType: item.fuelType?.fuelType,
@@ -82,7 +79,7 @@ export const AddEditFuelExports = () => {
         }))
         setRowData([...updatedRowData, { id: uuid(), compliancePeriod }])
       } else {
-        setRowData([{ id: uuid(), compliancePeriod }])
+        setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
       params.api.sizeColumnsToFit()
 
@@ -166,30 +163,6 @@ export const AddEditFuelExports = () => {
         }, {})
 
       updatedData.compliancePeriod = compliancePeriod
-
-      // Local validation before saving
-      const isFuelCodeScenario =
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-
-      if (isFuelCodeScenario && !updatedData.fuelCode) {
-        // Fuel code is required but not provided
-        setErrors((prevErrors) => ({
-          ...prevErrors,
-          [params.node.data.id]: ['fuelCode']
-        }))
-
-        alertRef.current?.triggerAlert({
-          message: t('fuelExport:fuelCodeFieldRequiredError'),
-          severity: 'error'
-        })
-
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'error'
-        }
-        params.node.updateData(updatedData)
-        return // Don't proceed with save
-      }
 
       updatedData = await handleScheduleSave({
         alertRef,

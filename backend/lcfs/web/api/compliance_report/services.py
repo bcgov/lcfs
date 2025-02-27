@@ -1,6 +1,6 @@
 import math
 import uuid
-from typing import List
+from typing import List, Union, Type
 
 import structlog
 from fastapi import Depends
@@ -10,16 +10,21 @@ from lcfs.db.models.compliance.ComplianceReport import (
     SupplementalInitiatorType,
     ReportingFrequency,
 )
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.user import UserProfile
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.schema import (
-    CompliancePeriodSchema,
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
+    ComplianceReportViewSchema,
 )
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.core.decorators import service_handler
@@ -38,10 +43,10 @@ class ComplianceReportServices:
         self.snapshot_services = snapshot_services
 
     @service_handler
-    async def get_all_compliance_periods(self) -> List[CompliancePeriodSchema]:
+    async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
         """Fetches all compliance periods and converts them to Pydantic models."""
         periods = await self.repo.get_all_compliance_periods()
-        return [CompliancePeriodSchema.model_validate(period) for period in periods]
+        return [CompliancePeriodBaseSchema.model_validate(period) for period in periods]
 
     @service_handler
     async def create_compliance_report(
@@ -99,10 +104,6 @@ class ComplianceReportServices:
         The report_id can be any report in the series (original or supplemental).
         Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
-        # check if we're passing a specifc user otherwise use request user
-        if not user:
-            user = self.request.user
-
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(
             report_id, is_model=True
@@ -169,7 +170,10 @@ class ComplianceReportServices:
 
     @service_handler
     async def get_compliance_reports_paginated(
-        self, pagination, organization_id: int = None, bceid_user: bool = False
+        self,
+        pagination,
+        organization_id: int = None,
+        bceid_user: bool = False,
     ):
         """Fetches all compliance reports"""
         if bceid_user:
@@ -184,6 +188,7 @@ class ComplianceReportServices:
                         ComplianceReportStatusEnum.Recommended_by_manager,
                         ComplianceReportStatusEnum.Submitted,
                     ]
+
         reports, total_count = await self.repo.get_reports_paginated(
             pagination, organization_id
         )
@@ -202,24 +207,31 @@ class ComplianceReportServices:
         )
 
     def _mask_report_status(self, reports: List) -> List:
-        recommended_statuses = {
-            ComplianceReportStatusEnum.Recommended_by_analyst.value,
-            ComplianceReportStatusEnum.Recommended_by_manager.value,
-        }
-
-        masked_reports = []
         for report in reports:
-            if report.current_status.status in recommended_statuses:
-                report.current_status.status = (
-                    ComplianceReportStatusEnum.Submitted.value
-                )
-                report.current_status.compliance_report_status_id = None
-
-                masked_reports.append(report)
-            else:
-                masked_reports.append(report)
-
-        return masked_reports
+            if isinstance(report, ComplianceReportViewSchema):
+                statuses = {
+                    ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
+                    ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
+                }
+                if report.report_status in statuses:
+                    report.report_status, report.report_status_id = (
+                        ComplianceReportStatusEnum.Submitted.value,
+                        None,
+                    )
+            elif isinstance(report, ComplianceReportBaseSchema):
+                statuses = {
+                    ComplianceReportStatusEnum.Recommended_by_analyst.value,
+                    ComplianceReportStatusEnum.Recommended_by_manager.value,
+                }
+                if report.current_status.status in statuses:
+                    (
+                        report.current_status.status,
+                        report.current_status.compliance_report_status_id,
+                    ) = (
+                        ComplianceReportStatusEnum.Submitted.value,
+                        None,
+                    )
+        return reports
 
     @service_handler
     async def get_compliance_report_by_id(
@@ -294,5 +306,63 @@ class ComplianceReportServices:
     @service_handler
     async def get_all_org_reported_years(
         self, organization_id: int
-    ) -> List[CompliancePeriodSchema]:
+    ) -> List[CompliancePeriodBaseSchema]:
         return await self.repo.get_all_org_reported_years(organization_id)
+
+    def _model_to_dict(self, record) -> dict:
+        """Safely convert a model to a dict, skipping lazy-loaded attributes that raise errors."""
+        result = {}
+        for key, value in record.__dict__.items():
+            if key == "_sa_instance_state":
+                continue
+            try:
+                result[key] = value
+            except Exception:
+                result[key] = None
+        return result
+
+    @service_handler
+    async def get_changelog_data(
+        self,
+        pagination: PaginationResponseSchema,
+        compliance_report_id: int,
+        selection: Type[Union[FuelSupply, OtherUses, NotionalTransfer, FuelExport]],
+    ):
+        changelog, total_count = await self.repo.get_changelog_data(
+            pagination, compliance_report_id, selection
+        )
+
+        groups = {}
+        for record in changelog:
+            groups.setdefault(record.group_uuid, []).append(record)
+        for group in groups.values():
+            if len(group) == 2:
+                first, second = group
+                diff = {}
+                first_dict = self._model_to_dict(first)
+                second_dict = self._model_to_dict(second)
+                keys = set(first_dict.keys()).union(second_dict.keys())
+                for key in keys:
+                    if first_dict.get(key) != second_dict.get(key):
+                        diff[key] = True
+                setattr(first, "diff", diff)
+                setattr(second, "diff", diff)
+                # Identify older record by version and mark it as updated
+                if getattr(first, "version", 0) < getattr(second, "version", 0):
+                    setattr(first, "updated", True)
+                else:
+                    setattr(second, "updated", True)
+
+        changelog = [record for group in groups.values() for record in group]
+
+        return {
+            "pagination": PaginationResponseSchema(
+                total=total_count,
+                page=pagination.page,
+                size=pagination.size,
+                total_pages=(
+                    math.ceil(total_count / pagination.size) if pagination.size else 0
+                ),
+            ),
+            "changelog": changelog,
+        }

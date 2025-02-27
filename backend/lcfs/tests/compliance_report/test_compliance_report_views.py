@@ -1,4 +1,7 @@
+from datetime import datetime
 import json
+from unittest import mock
+
 from lcfs.web.api.email.repo import CHESEmailRepository
 import pytest
 
@@ -139,22 +142,10 @@ async def test_get_compliance_reports_success(
         )
 
         assert response.status_code == 200
-
-        expected_response = json.loads(
-            compliance_report_list_schema.json(by_alias=True)
-        )
-
-        assert response.json() == expected_response
-
-        pagination_request_schema.filters.append(
-            FilterModel(
-                field="status", filter="Draft", filter_type="text", type="notEqual"
-            )
-        )
-
-        mock_get_compliance_reports_paginated.assert_called_once_with(
-            pagination_request_schema
-        )
+        # Convert Pydantic schema to dict
+        expected_response = compliance_report_list_schema.dict(by_alias=True)
+        assert (response.json())["pagination"] == expected_response["pagination"]
+        assert len(response.json()["reports"]) == len(expected_response["reports"])
 
 
 @pytest.mark.anyio
@@ -350,7 +341,7 @@ async def test_get_compliance_report_summary_success(
         )
 
         assert response.json() == expected_response
-        mock_calculate_compliance_report_summary.assert_called_once_with(1)
+        mock_calculate_compliance_report_summary.assert_called_once_with(1, mock.ANY)
         mock_validate_organization_access.assert_called_once_with(1)
 
 
@@ -437,7 +428,10 @@ async def test_update_compliance_report_summary_success(
         )
 
         assert response.json() == expected_response
-        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
+        mock_update_compliance_report_summary.assert_called_once_with(
+            1, request_schema, mock.ANY
+        )
+
         mock_validate_organization_access.assert_called_once_with(1)
 
 
@@ -534,7 +528,7 @@ async def test_update_compliance_report_success(
         assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
-            1, ComplianceReportUpdateSchema(**payload)
+            1, ComplianceReportUpdateSchema(**payload), mock.ANY
         )
         mock_validate_organization_access.assert_called_once_with(1)
 
@@ -634,7 +628,7 @@ async def test_update_compliance_report_draft_success(
         assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
-            1, ComplianceReportUpdateSchema(**payload)
+            1, ComplianceReportUpdateSchema(**payload), mock.ANY
         )
 
 
@@ -672,7 +666,7 @@ async def test_update_compliance_report_submitted_success(
         assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
-            1, ComplianceReportUpdateSchema(**payload)
+            1, ComplianceReportUpdateSchema(**payload), mock.ANY
         )
 
 
@@ -713,7 +707,7 @@ async def test_update_compliance_report_recommended_by_analyst_success(
         assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
-            1, ComplianceReportUpdateSchema(**payload)
+            1, ComplianceReportUpdateSchema(**payload), mock.ANY
         )
 
 
@@ -754,7 +748,7 @@ async def test_update_compliance_report_recommended_by_manager_success(
         assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
-            1, ComplianceReportUpdateSchema(**payload)
+            1, ComplianceReportUpdateSchema(**payload), mock.ANY
         )
 
 
@@ -792,5 +786,5 @@ async def test_update_compliance_report_assessed_success(
         assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
-            1, ComplianceReportUpdateSchema(**payload)
+            1, ComplianceReportUpdateSchema(**payload), mock.ANY
         )

@@ -59,13 +59,14 @@ async def test_export_success():
     assert response.media_type == "text/csv"
     assert "attachment; filename=" in response.headers["Content-Disposition"]
     repo_mock.get_fuel_codes_paginated.assert_called_once_with(
-        pagination=PaginationRequestSchema(page=1, size=1000, filters=[], sortOrders=[])
+        pagination=PaginationRequestSchema(
+            page=1, size=1000, filters=[], sort_orders=[]
+        )
     )
 
     # Verify file content
     headers = await response.body_iterator.__anext__()
     file_content = await response.body_iterator.__anext__()
-    print("-", file_content)
     assert (
         b"Status,Prefix,Fuel code,Carbon intensity,EDRMS#,Company,Contact name,Contact email,Application date,Approval date,Effective date,Expiry date,Fuel,Feedstock,Feedstock location,Misc,Fuel production facility city,Fuel production facility province/state,Fuel production facility country,Facility nameplate capacity,Unit,Feedstock transport mode,Finished fuel transport mode,Former company,Notes\n"
         in headers

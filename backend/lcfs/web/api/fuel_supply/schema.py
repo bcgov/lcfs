@@ -1,7 +1,6 @@
-from enum import Enum
 from typing import List, Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 
 from lcfs.web.api.base import (
     BaseSchema,
@@ -11,6 +10,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+from lcfs.web.utils.schema_validators import fuel_code_required
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -132,6 +132,29 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     class Config:
         use_enum_values = True
 
+    @model_validator(mode="before")
+    @classmethod
+    def check_fuel_code_required(cls, values):
+        return fuel_code_required(values)
+
+
+class FuelSupplyDiffSchema(BaseSchema):
+    compliance_units: Optional[bool] = None
+    fuel_type_id: Optional[bool] = None
+    fuel_category_id: Optional[bool] = None
+    end_use_id: Optional[bool] = None
+    provision_of_the_act_id: Optional[bool] = None
+    fuel_code_id: Optional[bool] = None
+    quantity: Optional[bool] = None
+    fuel_type_other: Optional[bool] = None
+    units: Optional[bool] = None
+    target_ci: Optional[bool] = None
+    ci_of_fuel: Optional[bool] = None
+    uci: Optional[bool] = None
+    energy_density: Optional[bool] = None
+    eer: Optional[bool] = None
+    energy: Optional[bool] = None
+
 
 class FuelSupplyResponseSchema(BaseSchema):
     fuel_supply_id: int
@@ -161,6 +184,8 @@ class FuelSupplyResponseSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
     fuel_type_other: Optional[str] = None
+    diff: Optional[FuelSupplyDiffSchema] = None
+    updated: Optional[bool] = None
 
 
 class DeleteFuelSupplyResponseSchema(BaseSchema):
