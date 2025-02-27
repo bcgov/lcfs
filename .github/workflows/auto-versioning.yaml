@@ -26,4 +26,4 @@ jobs:
         id: version_step # step id used as reference for output values
         uses: gittools/actions/gitversion/execute@v3.1.11
         with:
-              useConfigFile: true
+          useConfigFile: true
