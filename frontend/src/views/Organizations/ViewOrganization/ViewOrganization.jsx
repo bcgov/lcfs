@@ -202,8 +202,15 @@ export const ViewOrganization = () => {
                     <strong>{t('org:regTrnLabel')}:</strong>{' '}
                     {orgData?.orgStatus.status ===
                     ORGANIZATION_STATUSES.REGISTERED
-                      ? 'Yes — A registered organization is able to transfer compliance units.'
-                      : 'No — An organization must be registered to transfer compliance units.'}
+                      ? t('org:registeredTransferYes')
+                      : t('org:registeredTransferNo')}
+                  </BCTypography>
+
+                  <BCTypography variant="body4">
+                    <strong>{t('org:earlyIssuanceIndicator')}:</strong>{' '}
+                    {orgData?.hasEarlyIssuance
+                      ? t('common:yes')
+                      : t('common:no')}
                   </BCTypography>
                 </BCBox>
               </BCBox>
