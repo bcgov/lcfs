@@ -1,5 +1,5 @@
 next-version: 1.1.0
-mode: Mainline
+mode: ContinuousDelivery
 branches:
   auto-versioning:
     regex: ^auto-versioning$
