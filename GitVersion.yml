@@ -1,3 +1,7 @@
+next-version: 1.1.0
 mode: Mainline
 branches:
-  auto-versioning: "beta"
+  auto-versioning:
+    regex: ^auto-versioning$
+    increment: Patch
+    tag: ""
