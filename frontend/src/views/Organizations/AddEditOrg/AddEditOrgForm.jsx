@@ -606,6 +606,9 @@ export const AddEditOrgForm = () => {
                           setValue('orgStreetAddress', address.streetAddress)
                           setValue('orgCity', address.city)
                           setValue('orgPostalCodeZipCode', '')
+                          // Trigger validation for the updated fields
+                          trigger('orgStreetAddress')
+                          trigger('orgCity')
                         }
                       }}
                     />
