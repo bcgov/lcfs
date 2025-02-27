@@ -1,11 +1,13 @@
 name: LCFS 1.0.0 Prod CI
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
 
 env:
+  VERSION: 1.0.0
   GIT_URL: https://github.com/bcgov/lcfs.git
-  TEST_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-test
+  TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
   PROD_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-prod
 
 concurrency:
@@ -39,57 +41,221 @@ jobs:
       - name: Confirm OpenShift CLI is Available
         run: oc version --client
 
-  # Read the image tag from test environment
-  get-image-tag:
-    name: Get the image-tag from values-test.yaml
+  run-tests:
+    name: Run Tests
     runs-on: ubuntu-latest
     needs: [install-oc]
 
-    outputs:
-      IMAGE_TAG: ${{ steps.get-image-tag.outputs.IMAGE_TAG }}
-
     steps:
-      - name: Checkout Manifest repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
-          repository: bcgov-c/tenant-gitops-d2bd59
+          repository: bcgov/lcfs
           ref: main
-          ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
 
-      # to do: verify the frontend image tag is same as the backend image tag
-      - name: Get the image tag from values-test.yaml
-        id: get-image-tag
-        uses: mikefarah/yq@v4.40.5
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          cmd: |
-            imagetag=$(yq eval '.image.tag' lcfs/charts/lcfs-frontend/values-test.yaml)
-            echo "IMAGE_TAG retrieved from Test is $imagetag"
-            echo "IMAGE_TAG=$imagetag" >> $GITHUB_OUTPUT
+          python-version: "3.10.13"
 
-  get-current-time:
-    name: Get Current Time
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "20"
+
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pypoetry
+          key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Poetry
+        run: pip install poetry==1.6.1
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          poetry config virtualenvs.create false
+          poetry install
+          pip install pytest-github-actions-annotate-failures typing_extensions
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Fix docker-compose.yml
+        run: |
+          sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose.yml
+
+      - name: Build and start services
+        run: |
+          docker-compose build
+          docker-compose up -d
+
+      - name: Run backend tests
+        id: backend_tests
+        continue-on-error: true
+        run: |
+          cd backend
+          poetry run pytest --junitxml=pytest-results.xml
+        env:
+          LCFS_DB_HOST: localhost
+          LCFS_DB_PORT: 5432
+          LCFS_DB_USER: lcfs
+          LCFS_DB_PASS: development_only
+          LCFS_DB_BASE: lcfs
+          LCFS_REDIS_HOST: localhost
+          LCFS_REDIS_PORT: 6379
+          LCFS_REDIS_PASSWORD: development_only
+          APP_ENVIRONMENT: dev
+          LCFS_CHES_CLIENT_ID: mock_client_id
+          LCFS_CHES_CLIENT_SECRET: mock_client_secret
+          LCFS_CHES_AUTH_URL: http://mock_auth_url
+          LCFS_CHES_SENDER_EMAIL: noreply@gov.bc.ca
+          LCFS_CHES_SENDER_NAME: Mock Notification System
+          LCFS_CHES_EMAIL_URL: http://mock_email_url
+
+      - name: Run frontend tests
+        id: frontend_tests
+        continue-on-error: true
+        run: |
+          cd frontend
+          npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
+        env:
+          CI: true
+      # Comment until all cypress tests are fixed for success.
+      # - name: Create cypress.env.json
+      #   run: |
+      #     echo '{
+      #       "admin_idir_username": "${{ secrets.ADMIN_IDIR_USERNAME }}",
+      #       "admin_idir_password": "${{ secrets.ADMIN_IDIR_PASSWORD }}",
+      #       "org1_bceid_username": "${{ secrets.ORG1_BCEID_USERNAME }}",
+      #       "org1_bceid_password": "${{ secrets.ORG1_BCEID_PASSWORD }}",
+      #       "org1_bceid_id": "${{ secrets.ORG1_BCEID_ID }}",
+      #       "org1_bceid_userId": "${{ secrets.ORG1_BCEID_USERID }}",
+      #       "org2_bceid_username": "${{ secrets.ORG2_BCEID_USERNAME }}",
+      #       "org2_bceid_password": "${{ secrets.ORG2_BCEID_PASSWORD }}",
+      #       "org2_bceid_id": "${{ secrets.ORG2_BCEID_ID }}",
+      #       "org2_bceid_userId": "${{ secrets.ORG2_BCEID_USERID }}"
+      #     }' > frontend/cypress.env.json
+
+      # - name: Run Cypress tests
+      #   id: cypress_tests
+      #   continue-on-error: true
+      #   uses: cypress-io/github-action@v6
+      #   with:
+      #     command: npm run cypress:run
+      #     wait-on: 'http://localhost:3000'
+      #     working-directory: frontend
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            backend/pytest-results.xml
+            frontend/vitest-results.xml
+      # frontend/cypress/reports/
+      # frontend/cypress/screenshots/
+
+      - name: Stop services
+        if: always()
+        run: docker-compose down
+
+      - name: Check test results
+        if: always()
+        run: |
+          if [ "${{ steps.backend_tests.outcome }}" == "failure" ] || \
+              [ "${{ steps.frontend_tests.outcome }}" == "failure" ]; then
+            echo "One or more tests failed"
+            exit 1
+          fi
+
+  set-pre-release:
+    name: Calculate pre-release number
     runs-on: ubuntu-latest
-    needs: get-image-tag
+    needs: [run-tests]
 
     outputs:
-      CURRENT_TIME: ${{ steps.get-current-time.outputs.CURRENT_TIME }}
+      PRE_RELEASE: ${{ steps.set-pre-release.outputs.PRE_RELEASE }}
 
     steps:
-      - id: get-current-time
-        run: |
-          TZ="America/Vancouver"
-          echo "CURRENT_TIME=$(date '+%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_OUTPUT
+      - id: set-pre-release
+        run: echo "PRE_RELEASE=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
 
-  # Deplog the image which is running on test to prod
-  deploy-on-prod:
-    name: Deploy LCFS on Prod
+  build:
+    name: Build LCFS
     runs-on: ubuntu-latest
-    needs: [get-image-tag, get-current-time]
+    needs: [set-pre-release]
     timeout-minutes: 60
 
     env:
-      IMAGE_TAG: ${{ needs.get-image-tag.outputs.IMAGE_TAG }}
-      CURRENT_TIME: ${{ needs.get-current-time.outputs.CURRENT_TIME }}
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.1.1
+
+      - name: Restore oc command from Cache
+        uses: actions/cache@v4.2.0
+        with:
+          path: /usr/local/bin/oc
+          key: oc-cli-${{ runner.os }}
+
+      - name: Log in to Openshift
+        uses: redhat-actions/oc-login@v1.3
+        with:
+          openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
+          openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
+          insecure_skip_tls_verify: true
+          namespace: ${{ env.TOOLS_NAMESPACE }}
+
+      - name: Build LCFS Backend
+        run: |
+          cd openshift/templates
+          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=main | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          sleep 2s
+          oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-backend-${{ env.VERSION }}-${{ env.PRE_RELEASE }} --wait=true
+
+      - name: Build LCFS Frontend
+        run: |
+          cd openshift/templates
+          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=main | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}    
+          sleep 2s
+          oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-frontend-${{ env.VERSION }}-${{ env.PRE_RELEASE }} --wait=true
+
+      - name: Tag the source code
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          prodtag="${{ env.VERSION }}-${{ env.PRE_RELEASE }}"
+          git tag $prodtag
+          git push origin $prodtag
+
+  deploy-on-prod:
+    name: Deploy LCFS on Prod
+    runs-on: ubuntu-latest
+    needs: [set-pre-release, build]
+    timeout-minutes: 60
+
+    env:
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
 
     steps:
       - name: Checkout Manifest repository
@@ -105,7 +271,7 @@ jobs:
           secret: ${{ github.TOKEN }}
           approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,areyeslo,dhaselhan,Grulin
           minimum-approvals: 2
-          issue-title: "LCFS ${{env.IMAGE_TAG }} Prod Deployment at ${{ env.CURRENT_TIME }}."
+          issue-title: "LCFS ${{env.VERSION }}-${{env.PRE_RELEASE }} Prod Deployment."
 
       - name: Restore oc command from Cache
         uses: actions/cache@v4.2.0
@@ -123,15 +289,15 @@ jobs:
 
       - name: Tag LCFS images from Test to Prod
         run: |
-          oc tag ${{ env.TEST_NAMESPACE }}/lcfs-backend:${{env.IMAGE_TAG }} ${{ env.PROD_NAMESPACE }}/lcfs-backend:${{env.IMAGE_TAG }}
-          oc tag ${{ env.TEST_NAMESPACE }}/lcfs-frontend:${{env.IMAGE_TAG }} ${{ env.PROD_NAMESPACE }}/lcfs-frontend:${{env.IMAGE_TAG }}
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{env.VERSION }}-${{env.PRE_RELEASE }} ${{ env.PROD_NAMESPACE }}/lcfs-backend:${{env.VERSION }}-${{env.PRE_RELEASE }}
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{env.VERSION }}-${{env.PRE_RELEASE }} ${{ env.PROD_NAMESPACE }}/lcfs-frontend:${{env.VERSION }}-${{env.PRE_RELEASE }}
 
       - name: Update frontend tag for prod deployment
         uses: mikefarah/yq@v4.40.5
         with:
           cmd: |
-            yq -i '.image.tag = "${{env.IMAGE_TAG }}"' lcfs/charts/lcfs-frontend/values-prod.yaml
-            yq -i '.image.tag = "${{env.IMAGE_TAG }}"' lcfs/charts/lcfs-backend/values-prod.yaml
+            yq -i '.image.tag = "${{env.VERSION }}-${{env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-prod.yaml
+            yq -i '.image.tag = "${{env.VERSION }}-${{env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-prod.yaml
 
       - name: GitHub Commit & Push
         run: |
@@ -139,15 +305,15 @@ jobs:
           git config --global user.name "GitHub Actions"
           git add lcfs/charts/lcfs-frontend/values-prod.yaml
           git add lcfs/charts/lcfs-backend/values-prod.yaml
-          git commit -m "Update image tag ${{env.IMAGE_TAG }} for prod"
+          git commit -m "Update image tag ${{env.VERSION }}-${{env.PRE_RELEASE }} for prod"
           git push
 
   create-release:
     name: Create release after prod deployment
     runs-on: ubuntu-latest
-    needs: [get-image-tag, deploy-on-prod]
+    needs: [set-pre-release, deploy-on-prod]
     env:
-      IMAGE_TAG: ${{ needs.get-image-tag.outputs.IMAGE_TAG }}
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
 
     steps:
       - name: Check out repository
@@ -165,8 +331,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub
         with:
-          tag_name: ${{env.IMAGE_TAG }} # The pushed tag
-          release_name: "v${{ env.IMAGE_TAG }}" # Release title
+          tag_name: "${{env.VERSION }}-${{env.PRE_RELEASE }}" # The pushed tag
+          release_name: "${{env.VERSION }}-${{env.PRE_RELEASE }}" # Release title
           body: "This is an automated release 🚀" # Release notes
           draft: false # Set to true if you want a draft release
           prerelease: false
