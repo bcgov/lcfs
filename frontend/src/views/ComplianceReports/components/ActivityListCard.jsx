@@ -5,7 +5,7 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import Box from '@mui/material/Box'
 
-export const ActivityListCard = ({ name, period }) => {
+export const ActivityListCard = ({ name, period, currentStatus }) => {
   const { t } = useTranslation(['report'])
 
   return (
@@ -32,7 +32,7 @@ export const ActivityListCard = ({ name, period }) => {
             }}
           />
           <Box>
-            <ActivityLinksList />
+            <ActivityLinksList currentStatus={currentStatus} />
           </Box>
         </BCBox>
       }

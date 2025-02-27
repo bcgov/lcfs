@@ -7,14 +7,18 @@ GET: /reports/<report_id> - retrieve the compliance report by ID
 """
 
 import structlog
+from fastapi import APIRouter, Body, status, Request, Depends
+from starlette.responses import StreamingResponse
 from typing import List
 
-from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
-
+from lcfs.db.models.compliance.FuelExport import FuelExport
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.services.s3.client import DocumentService
-from lcfs.web.api.base import FilterModel, PaginationRequestSchema
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
+from lcfs.web.api.compliance_report.export import ComplianceReportExporter
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
@@ -25,22 +29,16 @@ from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
     ComplianceReportChangelogSchema,
 )
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
-from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
-from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.compliance.FuelExport import FuelExport
-from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
-from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
-from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
-from lcfs.web.api.fuel_export.schema import FuelExportSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from lcfs.web.exception.exceptions import DataNotFoundException
-
+from lcfs.web.api.fuel_export.schema import FuelExportSchema
+from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
+from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
+from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import view_handler
 
@@ -282,3 +280,24 @@ async def get_fuel_exports_changelog(
     return await service.get_changelog_data(
         pagination, compliance_report_id, FuelExport
     )
+
+
+@router.get(
+    "/{report_id}/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def export_compliance_report(
+    request: Request,
+    report_id: int,
+    export_service: ComplianceReportExporter = Depends(),
+    validate: ComplianceReportValidation = Depends(),
+) -> StreamingResponse:
+    """
+    Retrieve the comprehensive compliance report summary for a specific report by ID.
+    """
+    await validate.validate_organization_access(report_id)
+    return await export_service.export(report_id)

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -17,6 +17,9 @@ import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.js
 import { OrganizationAddress } from '@/views/ComplianceReports/components/OrganizationAddress.jsx'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import Loading from '@/components/Loading.jsx'
+import { apiRoutes } from '@/constants/routes/index.js'
+import { useApiService } from '@/services/useApiService.js'
+import { FileDownload } from '@mui/icons-material'
 
 export const AssessmentCard = ({
   orgData,
@@ -31,6 +34,7 @@ export const AssessmentCard = ({
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
+  const apiService = useApiService()
 
   const [isEditing, setIsEditing] = React.useState(false)
 
@@ -40,6 +44,21 @@ export const AssessmentCard = ({
 
   const { data: snapshotData, isLoading: snapshotLoading } =
     useOrganizationSnapshot(complianceReportId)
+
+  const [isDownloading, setIsDownloading] = useState(false)
+  const onDownloadReport = async () => {
+    setIsDownloading(true)
+    try {
+      await apiService.download(
+        apiRoutes.exportComplianceReport.replace(
+          ':reportID',
+          complianceReportId
+        )
+      )
+    } finally {
+      setIsDownloading(false)
+    }
+  }
 
   const { mutate: createSupplementalReport, isLoading } =
     useCreateSupplementalReport(complianceReportId, {
@@ -203,6 +222,24 @@ export const AssessmentCard = ({
                   </>
                 )}
             </Role>
+            {currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
+              <Box>
+                <BCButton
+                  data-test="download-report"
+                  size="small"
+                  className="svg-icon-button"
+                  variant="outlined"
+                  color="primary"
+                  onClick={onDownloadReport}
+                  startIcon={<FileDownload />}
+                  sx={{ mt: 3 }}
+                  loading={isDownloading}
+                  disabled={isDownloading}
+                >
+                  {t('report:downloadExcel')}
+                </BCButton>
+              </Box>
+            )}
             <Role roles={[roles.analyst]}>
               <Box>
                 <BCButton
