@@ -21,12 +21,12 @@ jobs:
         run: git fetch --unshallow
 
       - name: Install GitVersion
-        uses: gittools/actions/gitversion/setup@v4
+        uses: gittools/actions/gitversion/setup@v3.1.11
         with:
           versionSpec: '6.0.x'
 
       - name: Determine Version
         id: version_step # step id used as reference for output values
-        uses: gittools/actions/gitversion/execute@v4
+        uses: gittools/actions/gitversion/execute@v3.1.11
         with:
           useConfigFile: true
