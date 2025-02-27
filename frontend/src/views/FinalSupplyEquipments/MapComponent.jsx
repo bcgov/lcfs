@@ -191,13 +191,6 @@ const MapComponent = ({ complianceReportId }) => {
     nonBcOverlapping: 0
   })
 
-  // Initial pagination state
-  const [pagination, setPagination] = useState({
-    page: 1,
-    pageSize: 1000 // Adjust as needed based on typical data size
-  })
-
-  // Use React Query to fetch data
   const {
     data: supplyEquipmentData,
     isLoading,
@@ -216,7 +209,6 @@ const MapComponent = ({ complianceReportId }) => {
       const combinedId = `${registrationNbr}_${serialNbr}`
 
       return {
-        // Store the combined ID as the main identifier
         id: combinedId,
         // Add a unique identifier for this specific record
         uniqueId: `${combinedId}_${index}`,
@@ -259,8 +251,6 @@ const MapComponent = ({ complianceReportId }) => {
   useEffect(() => {
     if (locations.length > 0 && geofencingStatus === 'idle') {
       setGeofencingStatus('loading')
-
-      // We only need to check one location per coordinate group
       const uniqueLocations = Object.values(groupedLocations).map(
         (group) => group[0]
       )
@@ -272,11 +262,8 @@ const MapComponent = ({ complianceReportId }) => {
           const expandedResults = {}
 
           Object.entries(groupedLocations).forEach(([coordKey, locGroup]) => {
-            // Get the result from the first location in this group
             const firstLocId = locGroup[0].id
             const isInBC = results[firstLocId]
-
-            // Apply the same result to all locations in this group
             locGroup.forEach((loc) => {
               expandedResults[loc.id] = isInBC
             })
@@ -334,13 +321,10 @@ const MapComponent = ({ complianceReportId }) => {
 
   // Initialize and update map
   useEffect(() => {
-    // Only run this on the client side
     if (typeof window === 'undefined') return
     if (Object.keys(groupedLocations).length === 0) return
 
     let mapInstance = null
-
-    // Get the container element
     const container = document.getElementById('map-container')
     if (!container) return
 
