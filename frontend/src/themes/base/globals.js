@@ -249,6 +249,9 @@ const globals = {
     height: '1.15rem',
     width: '6rem'
   },
+  'a .leaflet-attribution-flag': {
+    visibility: 'hidden'
+  },
   '#link-idir': {
     textAlign: 'right',
     color: `${primary.main}`,

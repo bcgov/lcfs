@@ -30,7 +30,7 @@ import Loading from '@/components/Loading'
 import { ROUTES } from '@/constants/routes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
-import AddressAutocomplete from './AddressAutocomplete'
+import { AddressAutocomplete } from '@/components/BCForm/index.js'
 import colors from '@/themes/base/colors'
 
 // Component for adding a new organization
@@ -605,6 +605,7 @@ export const AddEditOrgForm = () => {
                         } else {
                           setValue('orgStreetAddress', address.streetAddress)
                           setValue('orgCity', address.city)
+                          setValue('orgPostalCodeZipCode', '')
                         }
                       }}
                     />

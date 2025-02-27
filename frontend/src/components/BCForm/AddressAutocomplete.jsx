@@ -4,7 +4,7 @@ import { LocationOn as LocationOnIcon } from '@mui/icons-material'
 import parse from 'autosuggest-highlight/parse'
 import match from 'autosuggest-highlight/match'
 
-const AddressAutocomplete = forwardRef(
+export const AddressAutocomplete = forwardRef(
   ({ value, onChange, onSelectAddress }, ref) => {
     const [inputValue, setInputValue] = useState(value || '')
     const [options, setOptions] = useState([])
@@ -147,5 +147,3 @@ const AddressAutocomplete = forwardRef(
 )
 
 AddressAutocomplete.displayName = 'AddressAutocomplete'
-
-export default AddressAutocomplete
