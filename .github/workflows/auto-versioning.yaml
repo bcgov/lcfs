@@ -18,7 +18,9 @@ jobs:
           fetch-depth: 0
 
       - name: Fetch All History
-        run: git fetch --unshallow
+        run: |
+          pwd
+          ls -lrt
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v3.1.11
