@@ -88,15 +88,15 @@ class TransactionsService:
                 # check if the date string is selected for filter
                 if filter.filter is None:
                     filter_value = [
-                        datetime.strptime(filter.date_from, "%Y-%m-%d %H:%M:%S").strftime(
-                            "%Y-%m-%d"
-                        )
+                        datetime.strptime(
+                            filter.date_from, "%Y-%m-%d %H:%M:%S"
+                        ).strftime("%Y-%m-%d")
                     ]
                     if filter.date_to:
                         filter_value.append(
-                            datetime.strptime(filter.date_to, "%Y-%m-%d %H:%M:%S").strftime(
-                                "%Y-%m-%d"
-                            )
+                            datetime.strptime(
+                                filter.date_to, "%Y-%m-%d %H:%M:%S"
+                            ).strftime("%Y-%m-%d")
                         )
                 if filter.field == "status":
                     field = cast(
@@ -189,12 +189,7 @@ class TransactionsService:
         results = await self.repo.get_transactions_paginated(
             0,
             None,
-            [
-                or_(
-                    TransactionView.status == "Approved",
-                    TransactionView.status == "Recorded",
-                )
-            ],
+            [TransactionView.status != "Deleted"],
             [],
             organization_id,
         )
