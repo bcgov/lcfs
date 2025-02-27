@@ -14,13 +14,9 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Fetch All History
-        run: |
-          pwd
-          ls -lrt
+        run: git fetch --unshallow
 
       - name: Install GitVersion
         uses: gittools/actions/gitversion/setup@v3.1.11
