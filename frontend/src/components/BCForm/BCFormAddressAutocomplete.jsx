@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Controller } from 'react-hook-form'
 import { InputLabel, Box } from '@mui/material'
+import InfoIcon from '@mui/icons-material/Info'
 import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
 import FormControlLabel from '@mui/material/FormControlLabel'
@@ -19,6 +20,8 @@ export const BCFormAddressAutocomplete = ({
   disabled,
   onSelectAddress
 }) => {
+  const [showTooltip, setShowTooltip] = useState(false)
+
   return (
     <Controller
       name={name}
@@ -64,12 +67,49 @@ export const BCFormAddressAutocomplete = ({
               )}
             </Box>
           </InputLabel>
-          <AddressAutocomplete
-            value={value}
-            onChange={onChange}
-            onSelectAddress={onSelectAddress}
-            disabled={disabled}
-          />
+          <Box position="relative">
+            <AddressAutocomplete
+              value={value}
+              onChange={(newValue) => {
+                onChange(newValue)
+                // Show tooltip when address is selected or changed
+                if (newValue && newValue.length > 0) {
+                  setShowTooltip(true)
+                  // Hide tooltip after 5 seconds
+                  setTimeout(() => setShowTooltip(false), 5000)
+                }
+              }}
+              onSelectAddress={(addressData) => {
+                if (onSelectAddress) {
+                  onSelectAddress(addressData)
+                }
+                // Show tooltip when an address is selected from dropdown
+                setShowTooltip(true)
+                // Hide tooltip after 5 seconds
+                setTimeout(() => setShowTooltip(false), 5000)
+              }}
+              disabled={disabled}
+            />
+            {showTooltip && (
+              <Box
+                position="absolute"
+                right="10px"
+                top="-35px"
+                display="flex"
+                alignItems="center"
+                bgcolor="rgba(255, 255, 255, 0.95)"
+                p={1}
+                borderRadius="4px"
+                boxShadow="0 2px 5px rgba(0,0,0,0.2)"
+                zIndex={10}
+              >
+                <InfoIcon color="primary" sx={{ mr: 1 }} fontSize="small" />
+                <BCTypography variant="body4" component="span">
+                  Please add postal code to the address
+                </BCTypography>
+              </Box>
+            )}
+          </Box>
           {error && (
             <BCTypography variant="body4" color="error" mt={0.5} ml={1.5}>
               {error.message}

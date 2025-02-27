@@ -3,16 +3,28 @@ import { TextField, Autocomplete, Box, Grid } from '@mui/material'
 import { LocationOn as LocationOnIcon } from '@mui/icons-material'
 import parse from 'autosuggest-highlight/parse'
 import match from 'autosuggest-highlight/match'
+import BCTypography from '../BCTypography'
 
 export const AddressAutocomplete = forwardRef(
-  ({ value, onChange, onSelectAddress }, ref) => {
+  ({ value, onChange, onSelectAddress, disabled }, ref) => {
     const [inputValue, setInputValue] = useState(value || '')
     const [options, setOptions] = useState([])
     const [loading, setLoading] = useState(false)
+    const [isAddressSelected, setIsAddressSelected] = useState(false)
 
     useEffect(() => {
       if (!inputValue || inputValue.length < 3) {
         setOptions([])
+        return
+      }
+
+      // Don't fetch if user is just adding postal code to selected address
+      if (
+        isAddressSelected &&
+        inputValue.includes(',') &&
+        (inputValue.endsWith(' ') ||
+          /[A-Za-z][0-9][A-Za-z]/.test(inputValue.slice(-3)))
+      ) {
         return
       }
 
@@ -53,7 +65,7 @@ export const AddressAutocomplete = forwardRef(
         clearTimeout(delayDebounceFn)
         controller.abort()
       }
-    }, [inputValue])
+    }, [inputValue, isAddressSelected])
 
     return (
       <Autocomplete
@@ -72,6 +84,7 @@ export const AddressAutocomplete = forwardRef(
         loading={loading}
         filterOptions={(x) => x}
         value={value || inputValue}
+        disabled={disabled}
         getOptionLabel={(option) => {
           return typeof option === 'string' ? option : option.fullAddress
         }}
@@ -80,35 +93,60 @@ export const AddressAutocomplete = forwardRef(
             onChange(newInputValue)
           }
           setInputValue(newInputValue)
+
+          // If user is typing after selecting an address, we'll assume they're
+          // modifying it (likely adding postal code), so don't trigger a new search
+          if (isAddressSelected && event && event.type === 'change') {
+            // Keep isAddressSelected true as they're just modifying it
+          } else if (
+            event &&
+            (event.type === 'click' || event.type === 'change')
+          ) {
+            // Reset when user clears the field or starts fresh typing
+            setIsAddressSelected(false)
+          }
         }}
         onChange={(event, newValue) => {
-          if (onSelectAddress && newValue) {
-            if (typeof newValue === 'string') {
-              onSelectAddress(newValue)
-            } else {
-              const [streetAddress, city] = newValue.fullAddress.split(', ')
-              onSelectAddress({
-                fullAddress: newValue.fullAddress,
-                inputValue,
-                streetAddress,
-                city
-              })
+          if (newValue) {
+            // Mark that an address has been selected
+            setIsAddressSelected(true)
+
+            if (onSelectAddress) {
+              if (typeof newValue === 'string') {
+                onSelectAddress(newValue)
+              } else {
+                const [streetAddress, city] = newValue.fullAddress.split(', ')
+                onSelectAddress({
+                  fullAddress: newValue.fullAddress,
+                  inputValue,
+                  streetAddress,
+                  city
+                })
+              }
+            } else if (onChange) {
+              // Default behavior: just set the field value
+              onChange(
+                typeof newValue === 'string' ? newValue : newValue?.fullAddress
+              )
             }
-          } else if (onChange) {
-            // Default behavior: just set the field value
-            onChange(
-              typeof newValue === 'string' ? newValue : newValue?.fullAddress
-            )
           }
         }}
         renderInput={(params) => (
           <Box mb={2}>
-            <TextField {...params} variant="outlined" fullWidth />
+            <TextField
+              {...params}
+              variant="outlined"
+              fullWidth
+              placeholder={
+                isAddressSelected
+                  ? 'Add postal code...'
+                  : 'Start typing address...'
+              }
+            />
           </Box>
         )}
         renderOption={(props, option) => {
           const { key, ...optionProps } = props
-          const [street, city, province] = option.fullAddress.split(', ')
           const matches = match(option.fullAddress, inputValue, {
             insideWords: true
           })
@@ -136,6 +174,13 @@ export const AddressAutocomplete = forwardRef(
                       {part.text}
                     </Box>
                   ))}
+                  <BCTypography
+                    variant="body2"
+                    color="text.secondary"
+                    fontSize="0.75rem"
+                  >
+                    Select and add postal code
+                  </BCTypography>
                 </Grid>
               </Grid>
             </li>

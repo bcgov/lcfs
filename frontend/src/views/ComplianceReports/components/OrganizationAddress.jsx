@@ -3,7 +3,10 @@ import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useUpdateOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { FormProvider, useForm } from 'react-hook-form'
-import { BCFormText, BCFormAddressAutocomplete } from '@/components/BCForm/index.js'
+import {
+  BCFormText,
+  BCFormAddressAutocomplete
+} from '@/components/BCForm/index.js'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { defaultValues } from '@/views/Users/AddEditUser/_schema.js'
 import { Box, Stack, List, ListItem } from '@mui/material'
@@ -121,6 +124,14 @@ export const OrganizationAddress = ({
     }
   }
 
+  const handleSelectRecordsAddress = (addressData) => {
+    if (typeof addressData === 'string') {
+      setValue('recordsAddress', addressData)
+    } else {
+      setValue('recordsAddress', addressData.fullAddress)
+    }
+  }
+
   // Define which form fields use regular text input vs address autocomplete
   const textFormFields = [
     {
@@ -160,7 +171,8 @@ export const OrganizationAddress = ({
       checkboxLabel: 'Same as address for service',
       onCheckboxChange: handleSameAddressChange,
       isChecked: sameAsService,
-      disabled: sameAsService
+      disabled: sameAsService,
+      onSelectAddress: handleSelectRecordsAddress
     }
   ]
 
