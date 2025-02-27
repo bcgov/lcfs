@@ -1,0 +1,10 @@
+mode: Mainline # Uses a linear versioning strategy
+branches:
+  main:
+    tag: "" # No extra tag, e.g., 1.2.3
+  develop:
+    tag: "beta" # Versions will be 1.2.3-beta.1
+  feature:
+    tag: "feature" # Versions will be 1.2.3-feature.1
+  release:
+    tag: "rc" # Versions will be 1.2.3-rc.1
