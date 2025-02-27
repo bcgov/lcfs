@@ -139,8 +139,8 @@ async def save_allocation_agreements_row(
     request: Request,
     request_data: AllocationAgreementCreateSchema = Body(...),
     service: AllocationAgreementServices = Depends(),
-    report_validate: ComplianceReportValidation = Depends(),
     validate: AllocationAgreementValidation = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
 ):
     """Endpoint to save a single allocation agreements row"""
     compliance_report_id = request_data.compliance_report_id
@@ -148,27 +148,32 @@ async def save_allocation_agreements_row(
 
     await report_validate.validate_organization_access(compliance_report_id)
 
-    if request_data.deleted:
-        # Delete existing Allocation agreement
-        await validate.validate_compliance_report_id(
-            compliance_report_id, [request_data]
+    # Determine user type for record creation
+    current_user_type = request.user.user_type
+    if not current_user_type:
+        raise HTTPException(
+            status_code=403, detail="User does not have the required role."
         )
-        await service.delete_allocation_agreement(allocation_agreement_id)
+
+    await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+    if request_data.deleted:
+        # Delete existing allocation agreement
+        await service.delete_allocation_agreement(request_data, current_user_type)
         return DeleteAllocationAgreementResponseSchema(
             message="Allocation agreement deleted successfully"
         )
     elif allocation_agreement_id:
-        # Update existing Allocation agreement
+        # Update existing allocation agreement
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]
         )
-        return await service.update_allocation_agreement(request_data)
+        return await service.update_allocation_agreement(request_data, current_user_type)
     else:
-        # Create new Allocation agreement
+        # Create new allocation agreement
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]
         )
-        return await service.create_allocation_agreement(request_data)
+        return await service.create_allocation_agreement(request_data, current_user_type)
 
 
 @router.get("/search", response_model=List[OrganizationDetailsSchema], status_code=200)

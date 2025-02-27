@@ -1,18 +1,17 @@
-import { ComplianceReports } from '@/views/ComplianceReports'
-import { CompareReports } from '@/views/CompareReports/CompareReports'
-import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector'
-import ROUTES from '../routes'
-import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
 import { AddEditAllocationAgreements } from '@/views/AllocationAgreements/AddEditAllocationAgreements'
-import { AddEditOtherUses } from '@/views/OtherUses/AddEditOtherUses'
+import { CompareReports } from '@/views/CompareReports/CompareReports'
+import { ComplianceReports } from '@/views/ComplianceReports'
+import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector'
 import { AddEditFinalSupplyEquipments } from '@/views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
-import { AddEditFuelSupplies } from '@/views/FuelSupplies/AddEditFuelSupplies'
 import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
-import { element } from 'prop-types'
-import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog'
-import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog'
-import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog'
 import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog'
+import { AddEditFuelSupplies } from '@/views/FuelSupplies/AddEditFuelSupplies'
+import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog'
+import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
+import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog'
+import { AddEditOtherUses } from '@/views/OtherUses/AddEditOtherUses'
+import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog'
+import ROUTES from '../routes'
 
 export const reportRoutes = [
   {
@@ -102,6 +101,13 @@ export const reportRoutes = [
   {
     path: ROUTES.REPORTS.CHANGELOG.FUEL_EXPORTS,
     element: <FuelExportChangelog />,
+    handle: {
+      title: 'Change log'
+    }
+  },
+  {
+    path: ROUTES.REPORTS.CHANGELOG.ALLOCATION_AGREEMENTS,
+    element: <AllocationAgreementChangelog />,
     handle: {
       title: 'Change log'
     }

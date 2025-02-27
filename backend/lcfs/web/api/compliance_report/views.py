@@ -11,6 +11,7 @@ from typing import List
 
 from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
 
+from lcfs.db.models.compliance import AllocationAgreement
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.base import FilterModel, PaginationRequestSchema
@@ -33,6 +34,7 @@ from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
 from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
 from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
 from lcfs.web.api.fuel_export.schema import FuelExportSchema
+from lcfs.web.api.allocation_agreement.schema import AllocationAgreementChangelogSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
@@ -281,4 +283,28 @@ async def get_fuel_exports_changelog(
     )
     return await service.get_changelog_data(
         pagination, compliance_report_id, FuelExport
+    )
+
+
+@router.post(
+    "/allocation_agreements/changelog",
+    response_model=ComplianceReportChangelogSchema[AllocationAgreementChangelogSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_allocation_agreement_changelog(
+    request: Request,
+    request_data: CommonPaginatedReportRequestSchema = Body(...),
+    service: ComplianceReportServices = Depends(),
+) -> ComplianceReportChangelogSchema[AllocationAgreementChangelogSchema]:
+    compliance_report_id = request_data.compliance_report_id
+
+    pagination = PaginationRequestSchema(
+        page=request_data.page,
+        size=request_data.size,
+        sort_orders=request_data.sort_orders,
+        filters=request_data.filters,
+    )
+    return await service.get_changelog_data(
+        pagination, compliance_report_id, AllocationAgreement
     )

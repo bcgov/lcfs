@@ -454,11 +454,258 @@ export const allocationAgreementColDefs = (
   }
 ]
 
+export const allocationAgreementSummaryColDefs = [
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    field: 'allocationTransactionType',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.transactionPartner'),
+    field: 'transactionPartner',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.postalAddress'
+    ),
+    field: 'postalAddress',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+    ),
+    field: 'transactionPartnerEmail',
+    flex: 1
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+    ),
+    field: 'transactionPartnerPhone',
+    flex: 1
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelType'
+    ),
+    field: 'fuelType'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
+    ),
+    field: 'fuelTypeOther'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+    ),
+    field: 'fuelCategory'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
+    ),
+    field: 'provisionOfTheAct'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCode'
+    ),
+    field: 'fuelCode'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
+    ),
+    field: 'ciOfFuel'
+  },
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.units'
+    ),
+    field: 'units'
+  }
+]
+
 export const defaultColDef = {
   editable: true,
   resizable: true,
   filter: false,
   floatingFilter: false,
   sortable: false,
-  singleClickEdit: true
+  singleClickEdit: true,
+  flex: 1
+}
+
+export const changelogCommonColDefs = [
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    field: 'allocationTransactionType',
+    cellStyle: (params) =>
+      changelogCellStyle(params, 'allocationTransactionType')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartner'
+    ),
+    field: 'transactionPartner',
+    cellStyle: (params) => changelogCellStyle(params, 'transactionPartner')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.postalAddress'
+    ),
+    field: 'postalAddress',
+    cellStyle: (params) => changelogCellStyle(params, 'postalAddress')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+    ),
+    field: 'transactionPartnerEmail',
+    cellStyle: (params) =>
+      changelogCellStyle(params, 'transactionPartnerEmail')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+    ),
+    field: 'transactionPartnerPhone',
+    cellStyle: (params) =>
+      changelogCellStyle(params, 'transactionPartnerPhone')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelType'
+    ),
+    field: 'fuelType',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
+    ),
+    field: 'fuelTypeOther',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelTypeOther')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+    ),
+    field: 'fuelCategory',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
+    ),
+    field: 'provisionOfTheAct',
+    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCode'
+    ),
+    field: 'fuelCode',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCode')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
+    ),
+    field: 'ciOfFuel',
+    cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
+  },
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    field: 'quantity',
+    cellStyle: (params) => changelogCellStyle(params, 'quantity')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.units'
+    ),
+    field: 'units',
+    cellStyle: (params) => changelogCellStyle(params, 'units')
+  }
+]
+
+export const changelogColDefs = [
+  {
+    field: 'groupUuid',
+    hide: true,
+    sort: 'desc',
+    sortIndex: 1
+  },
+  { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
+  {
+    field: 'actionType',
+    valueGetter: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        return 'Updated'
+      }
+      if (params.data.actionType === 'DELETE') {
+        return 'Deleted'
+      }
+      if (params.data.actionType === 'CREATE') {
+        return 'Added'
+      }
+      return params.data.actionType // Fallback
+    },
+    cellStyle: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        return { backgroundColor: colors.alerts.warning.background }
+      }
+      if (params.data.actionType === 'DELETE') {
+        return { backgroundColor: colors.alerts.error.background }
+      }
+      if (params.data.actionType === 'CREATE') {
+        return { backgroundColor: colors.alerts.success.background }
+      }
+    }
+  },
+  ...changelogCommonColDefs
+]
+
+export const changelogDefaultColDefs = {
+  floatingFilter: false,
+  filter: false
+}
+
+export const changelogCommonGridOptions = {
+  overlayNoRowsTemplate: i18n.t('allocationAgreement:noOtherUsesFound'),
+  autoSizeStrategy: {
+    type: 'fitCellContents',
+    defaultMinWidth: 50,
+    defaultMaxWidth: 600
+  },
+  enableCellTextSelection: true,
+  ensureDomOrder: true
+}
+
+export const changelogGridOptions = {
+  ...changelogCommonGridOptions,
+  getRowStyle: (params) => {
+    if (params.data.actionType === 'DELETE') {
+      return {
+        backgroundColor: colors.alerts.error.background
+      }
+    }
+    if (params.data.actionType === 'CREATE') {
+      return {
+        backgroundColor: colors.alerts.success.background
+      }
+    }
+  }
 }

@@ -106,7 +106,7 @@ class ComplianceReportUpdateService:
             await self.repo.add_compliance_report_history(report, user)
 
         # Handle notifications
-        await self._perform_notification_call(report, current_status, user)
+        # await self._perform_notification_call(report, current_status, user)
 
         return updated_report
 

@@ -2,6 +2,7 @@ from typing import Optional, List
 
 from pydantic import Field, model_validator
 
+from lcfs.db.base import ActionTypeEnum, UserTypeEnum
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
@@ -58,6 +59,46 @@ class AllocationAgreementTableOptionsSchema(BaseSchema):
     units_of_measure: List[str]
 
 
+class AllocationAgreementDiffSchema(BaseSchema):
+    allocation_transaction_type: Optional[bool] = None
+    transaction_partner: Optional[bool] = None
+    postal_address: Optional[bool] = None
+    transaction_partner_email: Optional[bool] = None
+    transaction_partner_phone: Optional[bool] = None
+    fuel_type: Optional[bool] = None
+    fuel_type_other: Optional[bool] = None
+    fuel_category: Optional[bool] = None
+    provision_of_the_act: Optional[bool] = None
+    fuel_code: Optional[bool] = None
+    quantity: Optional[bool] = None
+    units: Optional[bool] = None
+    ci_of_fuel: Optional[bool] = None
+
+class AllocationAgreementChangelogSchema(BaseSchema):
+    compliance_report_id: int
+    allocation_agreement_id: Optional[int] = None
+    allocation_transaction_type: str
+    transaction_partner: str
+    postal_address: str
+    transaction_partner_email: str
+    transaction_partner_phone: str
+    fuel_type: str
+    fuel_type_other: Optional[str] = None
+    ci_of_fuel: float
+    provision_of_the_act: str
+    quantity: int = Field(..., gt=0, description="Quantity must be greater than 0")
+    units: str
+    fuel_category: str
+    fuel_code: Optional[str] = None
+    deleted: Optional[bool] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    user_type: Optional[UserTypeEnum] = None
+    action_type: Optional[ActionTypeEnum] = None
+    diff: Optional[AllocationAgreementDiffSchema] = None
+    updated: Optional[bool] = None
+
+
 class AllocationAgreementCreateSchema(BaseSchema):
     compliance_report_id: int
     allocation_agreement_id: Optional[int] = None
@@ -75,6 +116,10 @@ class AllocationAgreementCreateSchema(BaseSchema):
     fuel_category: str
     fuel_code: Optional[str] = None
     deleted: Optional[bool] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    user_type: Optional[UserTypeEnum] = None
+    action_type: Optional[ActionTypeEnum] = None
 
     @model_validator(mode="before")
     @classmethod

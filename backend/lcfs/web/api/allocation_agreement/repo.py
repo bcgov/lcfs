@@ -1,17 +1,20 @@
 import structlog
-from typing import List
+from typing import List, Optional
 
 from fastapi import Depends
+from lcfs.db.base import ActionTypeEnum, UserTypeEnum
 from lcfs.db.dependencies import get_async_db_session
 
-from sqlalchemy import select, delete, func, distinct
+from sqlalchemy import and_, case, select, delete, func, distinct
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lcfs.db.models.compliance import ComplianceReport
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.AllocationTransactionType import (
     AllocationTransactionType,
 )
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.FuelCode import FuelCode
 
@@ -113,6 +116,10 @@ class AllocationAgreementRepository:
                     if allocation_agreement.fuel_code
                     else None
                 ),
+                group_uuid=allocation_agreement.group_uuid,
+                version=allocation_agreement.version,
+                user_type=allocation_agreement.user_type,
+                action_type=allocation_agreement.action_type,
             )
             for allocation_agreement in allocation_agreements
         ]
@@ -234,3 +241,107 @@ class AllocationAgreementRepository:
             )
         )
         return result.scalar_one_or_none()
+    
+    @repo_handler
+    async def get_latest_allocation_agreement_by_group_uuid(
+        self, group_uuid: str
+    ) -> Optional[AllocationAgreement]:
+        """
+        Retrieve the latest version of an allocation agreement by group UUID.
+        Government records are prioritized over supplier records.
+        """
+        query = (
+            select(AllocationAgreement)
+            .where(AllocationAgreement.group_uuid == group_uuid)
+            .order_by(
+                # OtherUses.user_type == UserTypeEnum.SUPPLIER evaluates to False for GOVERNMENT,
+                # thus bringing GOVERNMENT records to the top in the ordered results.
+                AllocationAgreement.user_type == UserTypeEnum.SUPPLIER,
+                AllocationAgreement.version.desc(),
+            )
+        )
+
+        result = await self.db.execute(query)
+        return result.unique().scalars().first()
+    
+    @repo_handler
+    async def get_effective_allocation_agreements(
+        self, 
+        compliance_report_group_uuid: str,
+        exclude_draft_reports: bool = False
+    ) -> List[AllocationAgreement]:
+        """
+        Retrieve effective allocation agreements for a compliance report group.
+        Excludes deleted records and prioritizes government records over supplier records.
+        """
+        # Step 1: Get compliance report IDs for the group
+        compliance_reports_query = select(ComplianceReport.compliance_report_id).where(
+            ComplianceReport.compliance_report_group_uuid == compliance_report_group_uuid
+        )
+        if exclude_draft_reports:
+            compliance_reports_query = compliance_reports_query.where(
+                ComplianceReport.current_status != ComplianceReportStatusEnum.Draft
+            )
+
+        # Step 2: Identify groups with DELETE actions
+        deleted_groups = (
+            select(AllocationAgreement.group_uuid)
+            .where(
+                AllocationAgreement.compliance_report_id.in_(compliance_reports_query),
+                AllocationAgreement.action_type == ActionTypeEnum.DELETE,
+            )
+            .distinct()
+            .cte("deleted_groups")
+        )
+
+        # Step 3: Get max version and priority per group
+        user_type_priority = case(
+            (AllocationAgreement.user_type == UserTypeEnum.GOVERNMENT, 2),
+            (AllocationAgreement.user_type == UserTypeEnum.SUPPLIER, 1),
+            else_=0,
+        )
+    
+        latest_versions = (
+            select(
+                AllocationAgreement.group_uuid,
+                func.max(AllocationAgreement.version).label("max_version"),
+                func.max(user_type_priority).label("max_priority"),
+            )
+            .where(
+                AllocationAgreement.compliance_report_id.in_(compliance_reports_query),
+            )
+            .group_by(AllocationAgreement.group_uuid)
+            .cte("latest_versions")
+        )
+
+        # Main query
+        query = (
+            select(AllocationAgreement)
+            .options(
+                joinedload(AllocationAgreement.allocation_transaction_type),
+                joinedload(AllocationAgreement.fuel_type),
+                joinedload(AllocationAgreement.fuel_category),
+                joinedload(AllocationAgreement.provision_of_the_act),
+                joinedload(AllocationAgreement.fuel_code),
+            )
+            .join(
+                latest_versions,
+                and_(
+                    AllocationAgreement.group_uuid == latest_versions.c.group_uuid,
+                    AllocationAgreement.version == latest_versions.c.max_version,
+                    user_type_priority == latest_versions.c.max_priority,
+                ),
+            )
+            .outerjoin(
+                deleted_groups,
+                AllocationAgreement.group_uuid == deleted_groups.c.group_uuid,
+            )
+            .where(
+                deleted_groups.c.group_uuid.is_(None),
+                AllocationAgreement.compliance_report_id.in_(compliance_reports_query),
+            )
+            .order_by(AllocationAgreement.create_date.desc())
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().all()
