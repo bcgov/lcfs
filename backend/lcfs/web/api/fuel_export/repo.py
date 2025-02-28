@@ -419,6 +419,7 @@ class FuelExportRepository:
                     user_type_priority == valid_fuel_exports_subq.c.max_role_priority,
                 ),
             )
+            .order_by(FuelExport.create_date.asc())
         )
 
         result = await self.db.execute(query)
