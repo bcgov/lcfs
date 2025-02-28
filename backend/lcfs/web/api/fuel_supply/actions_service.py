@@ -208,8 +208,7 @@ class FuelSupplyActionService:
             # Copy existing fields, then apply new data
             for field in existing_fuel_supply.__table__.columns.keys():
                 if field not in FUEL_SUPPLY_EXCLUDE_FIELDS:
-                    setattr(fuel_supply, field, getattr(
-                        existing_fuel_supply, field))
+                    setattr(fuel_supply, field, getattr(existing_fuel_supply, field))
 
             for field, value in fs_data.model_dump(
                 exclude=FUEL_SUPPLY_EXCLUDE_FIELDS
@@ -226,8 +225,7 @@ class FuelSupplyActionService:
             return FuelSupplyResponseSchema.model_validate(new_supply)
 
         # Raise an exception if no existing record is found
-        raise HTTPException(
-            status_code=404, detail="Fuel supply record not found.")
+        raise HTTPException(status_code=404, detail="Fuel supply record not found.")
 
     @service_handler
     async def delete_fuel_supply(
@@ -268,8 +266,7 @@ class FuelSupplyActionService:
         # Copy fields from the latest version for the deletion record
         for field in existing_fuel_supply.__table__.columns.keys():
             if field not in FUEL_SUPPLY_EXCLUDE_FIELDS:
-                setattr(delete_supply, field, getattr(
-                    existing_fuel_supply, field))
+                setattr(delete_supply, field, getattr(existing_fuel_supply, field))
 
         delete_supply.compliance_report_id = fs_data.compliance_report_id
 
