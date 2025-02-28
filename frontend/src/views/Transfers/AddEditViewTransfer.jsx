@@ -107,10 +107,6 @@ export const AddEditViewTransfer = () => {
       transferData?.fromOrganization?.organizationId ||
       mode === 'add')
 
-  const { refetch } = useCurrentOrgBalance({
-    enabled: false // Initially, do not automatically run the query
-  })
-
   /**
    * Fetches and populates the form with existing transfer data for editing.
    * This effect runs when `transferId` changes, indicating an edit mode where an existing transfer
@@ -163,69 +159,69 @@ export const AddEditViewTransfer = () => {
   }, [location.state])
 
   // update status for the transfer via mutation function.
-  const {
-    mutate: createUpdateTransfer,
-    isPending: isUpdatingTransfer,
-    isError: isUpdateTransferError
-  } = useCreateUpdateTransfer(currentUserOrgId, transferId, {
-    onSuccess: (response, variables) => {
-      setModalData(null)
-      if (response.data.currentStatus.status === TRANSFER_STATUSES.DRAFT) {
-        navigate(
-          ROUTES.TRANSFERS_EDIT.replace(
-            ':transferId',
-            response.data.transferId
-          ),
-          {
-            state: {
-              message: t(
-                `transfer:actionMsgs.${
-                  transferId ? 'updatedText' : 'createdText'
-                }`
-              ),
-              severity: 'success'
+  const { mutate: createUpdateTransfer, isPending: isUpdatingTransfer } =
+    useCreateUpdateTransfer(currentUserOrgId, transferId, {
+      onSuccess: (response, variables) => {
+        setModalData(null)
+        if (response.data.currentStatus.status === TRANSFER_STATUSES.DRAFT) {
+          navigate(
+            ROUTES.TRANSFERS_EDIT.replace(
+              ':transferId',
+              response.data.transferId
+            ),
+            {
+              state: {
+                message: t(
+                  `transfer:actionMsgs.${
+                    transferId ? 'updatedText' : 'createdText'
+                  }`
+                ),
+                severity: 'success'
+              }
             }
-          }
-        )
-      } else if (
-        transferData?.currentStatus?.status ===
-        response.data.currentStatus.status
-      ) {
-        setAlertMessage(
-          t('transfer:actionMsgs.successText', { status: 'saved' })
-        )
-        setAlertSeverity('success')
-      } else {
-        // Navigate to the transactions list view
-        navigate(TRANSACTIONS + `/?hid=transfer-${response.data.transferId}`, {
-          state: {
-            message: t('transfer:actionMsgs.successText', {
-              status: response.data.currentStatus.status.toLowerCase()
-            }),
-            severity: 'success'
-          }
-        })
+          )
+        } else if (
+          transferData?.currentStatus?.status ===
+          response.data.currentStatus.status
+        ) {
+          setAlertMessage(
+            t('transfer:actionMsgs.successText', { status: 'saved' })
+          )
+          setAlertSeverity('success')
+        } else {
+          // Navigate to the transactions list view
+          navigate(
+            TRANSACTIONS + `/?hid=transfer-${response.data.transferId}`,
+            {
+              state: {
+                message: t('transfer:actionMsgs.successText', {
+                  status: response.data.currentStatus.status.toLowerCase()
+                }),
+                severity: 'success'
+              }
+            }
+          )
+        }
+        alertRef.current?.triggerAlert()
+      },
+      onError: (_error, _variables) => {
+        setModalData(null)
+        const errorMsg = _error.response.data?.detail
+        if (errorMsg) {
+          setAlertMessage(errorMsg)
+        } else {
+          setAlertMessage(
+            transferId
+              ? t('transfer:actionMsgs.errorUpdateText')
+              : t('transfer:actionMsgs.errorCreateText')
+          )
+        }
+        setAlertSeverity('error')
+        alertRef.current.triggerAlert()
+        // Scroll back to the top of the page
+        window.scrollTo(0, 0)
       }
-      alertRef.current?.triggerAlert()
-    },
-    onError: (_error, _variables) => {
-      setModalData(null)
-      const errorMsg = _error.response.data?.detail
-      if (errorMsg) {
-        setAlertMessage(errorMsg)
-      } else {
-        setAlertMessage(
-          transferId
-            ? t('transfer:actionMsgs.errorUpdateText')
-            : t('transfer:actionMsgs.errorCreateText')
-        )
-      }
-      setAlertSeverity('error')
-      alertRef.current.triggerAlert()
-      // Scroll back to the top of the page
-      window.scrollTo(0, 0)
-    }
-  })
+    })
 
   const currentStatus = transferData?.currentStatus.status
 
@@ -250,13 +246,15 @@ export const AddEditViewTransfer = () => {
     } else {
       statusSet.delete(TRANSFER_STATUSES.DRAFT)
 
-      if (!statusSet.has(TRANSFER_STATUSES.SENT))
+      if (!statusSet.has(TRANSFER_STATUSES.SENT)) {
         statusSet.add(TRANSFER_STATUSES.SENT)
+      }
       if (
         !statusSet.has(TRANSFER_STATUSES.SUBMITTED) &&
         !statusSet.has(TRANSFER_STATUSES.DECLINED)
-      )
+      ) {
         statusSet.add(TRANSFER_STATUSES.SUBMITTED)
+      }
       if (!statusSet.has(TRANSFER_STATUSES.RECOMMENDED) && isGovernmentUser) {
         statusSet.add(TRANSFER_STATUSES.RECOMMENDED)
       }
