@@ -1,7 +1,7 @@
 """add record's address to organization
 
 Revision ID: c1e2d64aeea4
-Revises: 9e1da9e38f20
+Revises: 985de92bdf83
 Create Date: 2025-02-19 04:17:03.668963
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "c1e2d64aeea4"
-down_revision = "9e1da9e38f20"
+down_revision = "985de92bdf83"
 branch_labels = None
 depends_on = None
 

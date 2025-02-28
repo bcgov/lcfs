@@ -1,7 +1,22 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
+import {
+  Paper,
+  CircularProgress,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow
+} from '@mui/material'
+import Control from 'react-leaflet-custom-control'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
 import { useGetFinalSupplyEquipments } from '@/hooks/useFinalSupplyEquipment'
+import BCTypography from '@/components/BCTypography'
+import BCButton from '@/components/BCButton'
 
 // Fix Leaflet's default icon issue
 delete L.Icon.Default.prototype._getIconUrl
@@ -12,38 +27,27 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png'
 })
 
-// Custom marker for locations outside BC
-const outsideBCIcon = new L.Icon({
-  iconUrl:
-    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34]
-})
+// Create a marker icons map to avoid URL imports
+const createMarkerIcon = (color) => {
+  return new L.Icon({
+    // iconUrl: require(`../assets/markers/marker-icon-${color}.png`),
+    // shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+    iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
+    shadowUrl:
+      'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34]
+  })
+}
 
-// Custom marker for locations with overlapping periods
-const overlapIcon = new L.Icon({
-  iconUrl:
-    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34]
-})
-
-// Loading status icon
-const loadingIcon = new L.Icon({
-  iconUrl:
-    'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png',
-  shadowUrl:
-    'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34]
-})
+// Prepare marker icons
+const markerIcons = {
+  default: new L.Icon.Default(),
+  red: createMarkerIcon('red'),
+  orange: createMarkerIcon('orange'),
+  grey: createMarkerIcon('grey')
+}
 
 // Geofencing approach using Nominatim for reverse geocoding
 const checkLocationInBC = async (lat, lng) => {
@@ -174,6 +178,225 @@ const groupLocationsByCoordinates = (locations) => {
   })
 
   return grouped
+}
+
+// Component to fit the map bounds when locations change
+const MapBoundsHandler = ({ groupedLocations }) => {
+  const map = useMap()
+
+  useEffect(() => {
+    if (Object.keys(groupedLocations).length > 0) {
+      const bounds = Object.values(groupedLocations).map((group) => [
+        group[0].lat,
+        group[0].lng
+      ])
+
+      if (bounds.length > 0) {
+        map.fitBounds(bounds)
+      }
+    }
+  }, [map, groupedLocations])
+
+  return null
+}
+
+// Legend component for react-leaflet
+const MapLegend = ({ geofencingStatus }) => {
+  return (
+    <Control prepend position="bottomright">
+      <Paper elevation={3} sx={{ p: 1, maxWidth: 300 }}>
+        <BCTypography variant="body2" fontWeight="bold" gutterBottom>
+          Legend
+        </BCTypography>
+
+        {geofencingStatus === 'loading' && (
+          <div style={{ marginBottom: '5px' }}>
+            <img
+              src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png"
+              height="20"
+            />
+            Checking location...
+          </div>
+        )}
+
+        <div style={{ marginBottom: '5px' }}>
+          <img
+            src="https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png"
+            height="20"
+          />
+          <BCTypography variant="body" ml={1} component="span">
+            Inside BC, no overlaps
+          </BCTypography>
+        </div>
+        <div style={{ marginBottom: '5px' }}>
+          <img
+            src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png"
+            height="20"
+          />
+          <BCTypography variant="body" ml={1} component="span">
+            Period overlap (same Reg# & Serial#)
+          </BCTypography>
+        </div>
+        <div>
+          <img
+            src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png"
+            height="20"
+          />
+          <BCTypography variant="body" ml={1} component="span">
+            Outside BC
+          </BCTypography>
+        </div>
+      </Paper>
+    </Control>
+  )
+}
+
+const ExcelStyledTable = ({ uniqueSupplyUnits, overlapMap }) => {
+  return (
+    <TableContainer component={Paper} sx={{ maxHeight: 200, borderRadius: 0 }}>
+      <Table
+        size="small"
+        stickyHeader
+        sx={{
+          '& .MuiTableCell-root': {
+            fontSize: '0.71rem',
+            p: 0,
+            pl: 0.2,
+            pr: 0.2
+          }
+        }}
+      >
+        <TableHead>
+          <TableRow sx={{ backgroundColor: '#f4f4f4' }}>
+            {' '}
+            <TableCell
+              sx={{
+                border: '1px solid #d0d0d0',
+                fontWeight: 'bold',
+                backgroundColor: '#dfe6e9'
+              }}
+            >
+              Reg #
+            </TableCell>
+            <TableCell
+              sx={{
+                border: '1px solid #d0d0d0',
+                fontWeight: 'bold',
+                backgroundColor: '#dfe6e9'
+              }}
+            >
+              Serial #
+            </TableCell>
+            <TableCell
+              sx={{
+                border: '1px solid #d0d0d0',
+                fontWeight: 'bold',
+                backgroundColor: '#dfe6e9'
+              }}
+            >
+              Periods
+            </TableCell>
+            <TableCell
+              sx={{
+                border: '1px solid #d0d0d0',
+                fontWeight: 'bold',
+                backgroundColor: '#dfe6e9'
+              }}
+            >
+              Status
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {Object.values(uniqueSupplyUnits).map((unit, index) => {
+            const sortedRecords = [...unit.records].sort(
+              (a, b) => new Date(a.supplyFromDate) - new Date(b.supplyFromDate)
+            )
+
+            return (
+              <React.Fragment key={index}>
+                <TableRow
+                  sx={{
+                    backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9f9f9',
+                    '&:hover': { backgroundColor: '#e3f2fd' }
+                  }}
+                >
+                  <TableCell
+                    sx={{ border: '1px solid #d0d0d0', fontSize: '14px' }}
+                  >
+                    {unit.regNum}
+                  </TableCell>
+                  <TableCell
+                    sx={{ border: '1px solid #d0d0d0', fontSize: '14px' }}
+                  >
+                    {unit.serialNum}
+                  </TableCell>
+                  <TableCell
+                    sx={{ border: '1px solid #d0d0d0', fontSize: '14px' }}
+                  >
+                    {sortedRecords.map((record, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          color: record.hasOverlap ? 'orange' : 'inherit',
+                          fontWeight: record.hasOverlap ? 'bold' : 'normal'
+                        }}
+                      >
+                        {record.supplyFromDate} → {record.supplyToDate}
+                      </div>
+                    ))}
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      border: '1px solid #d0d0d0',
+                      fontSize: '14px',
+                      color: unit.hasOverlap ? 'orange' : 'green'
+                    }}
+                  >
+                    {unit.hasOverlap ? '⚠️ Period overlap' : '✓ No overlap'}
+                  </TableCell>
+                </TableRow>
+
+                {/* Overlapping Period Details */}
+                {unit.hasOverlap &&
+                  sortedRecords
+                    .filter((record) => record.hasOverlap)
+                    .map((record, idx) => (
+                      <TableRow
+                        key={`detail-${idx}`}
+                        sx={{
+                          backgroundColor: '#fff3e0', // Light orange for warnings
+                          '&:hover': { backgroundColor: '#ffe0b2' } // Darker on hover
+                        }}
+                      >
+                        <TableCell
+                          colSpan={4}
+                          sx={{ border: '1px solid #d0d0d0', pl: 3 }}
+                        >
+                          <strong>Details for period:</strong>{' '}
+                          {record.supplyFromDate} → {record.supplyToDate}
+                          <br />
+                          <strong style={{ color: 'orange' }}>
+                            ⚠️ Overlaps with:
+                          </strong>
+                          <ul style={{ paddingLeft: 20, margin: '5px 0' }}>
+                            {overlapMap[record.uniqueId].map((overlap, i) => (
+                              <li key={i}>
+                                Period: {overlap.supplyFromDate} →{' '}
+                                {overlap.supplyToDate}
+                              </li>
+                            ))}
+                          </ul>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+              </React.Fragment>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  )
 }
 
 const MapComponent = ({ complianceReportId }) => {
@@ -319,308 +542,194 @@ const MapComponent = ({ complianceReportId }) => {
     }
   }, [locations, geofencingResults, geofencingStatus])
 
-  // Initialize and update map
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    if (Object.keys(groupedLocations).length === 0) return
+  // Generate the popup content for a location group
+  const generatePopupContent = (coordKey, locGroup) => {
+    const firstLoc = locGroup[0]
+    const isInBC = geofencingResults[firstLoc.id] || false
 
-    let mapInstance = null
-    const container = document.getElementById('map-container')
-    if (!container) return
-
-    // Initialize map - center it on a view that shows all of BC
-    mapInstance = L.map('map-container').setView([53.7267, -127.6476], 5)
-
-    // Add tile layer
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    }).addTo(mapInstance)
-
-    // Add markers for each location group
-    const markers = {}
-
-    Object.entries(groupedLocations).forEach(([coordKey, locGroup]) => {
-      const firstLoc = locGroup[0]
-      const locationCoords = [firstLoc.lat, firstLoc.lng]
-
-      // Get unique registration/serial combinations at this location
-      const uniqueSupplyUnits = {}
-      locGroup.forEach((loc) => {
-        if (!uniqueSupplyUnits[loc.id]) {
-          uniqueSupplyUnits[loc.id] = {
-            regNum: loc.registrationNbr,
-            serialNum: loc.serialNbr,
-            records: []
-          }
+    // Get unique supply units at this location
+    const uniqueSupplyUnits = {}
+    locGroup.forEach((loc) => {
+      if (!uniqueSupplyUnits[loc.id]) {
+        uniqueSupplyUnits[loc.id] = {
+          regNum: loc.registrationNbr,
+          serialNum: loc.serialNbr,
+          hasOverlap: false,
+          records: []
         }
-        uniqueSupplyUnits[loc.id].records.push(loc)
+      }
+
+      // Check if this specific record has overlaps
+      const hasOverlap =
+        overlapMap[loc.uniqueId] && overlapMap[loc.uniqueId].length > 0
+      if (hasOverlap) {
+        uniqueSupplyUnits[loc.id].hasOverlap = true
+      }
+
+      uniqueSupplyUnits[loc.id].records.push({
+        ...loc,
+        hasOverlap
       })
-
-      // Start with loading icon for all markers
-      const marker = L.marker(locationCoords, {
-        icon: loadingIcon
-      }).addTo(mapInstance)
-
-      // Store marker reference for updating later
-      markers[coordKey] = marker
-
-      // Create a popup showing all units at this location
-      const popupContent = `
-        <strong>${firstLoc.name}</strong><br>
-        <b>Total Supply Units at this location:</b> ${
-          Object.keys(uniqueSupplyUnits).length
-        }<br>
-        ${geofencingStatus === 'loading' ? '<p>Checking location...</p>' : ''}
-      `
-
-      marker.bindPopup(popupContent)
     })
 
-    // Update markers when geofencing results are available
-    if (
-      geofencingStatus === 'completed' &&
-      Object.keys(overlapMap).length > 0
-    ) {
-      Object.entries(groupedLocations).forEach(([coordKey, locGroup]) => {
-        const marker = markers[coordKey]
-        if (!marker) return
+    return (
+      <div style={{ maxWidth: 600 }}>
+        <BCTypography
+          variant="body"
+          fontWeight="bold"
+          gutterBottom
+          component="div"
+        >
+          {firstLoc.name}
+        </BCTypography>
 
-        const firstLoc = locGroup[0]
-        const isInBC = geofencingResults[firstLoc.id]
+        <BCTypography variant="body" component="div" gutterBottom>
+          <strong>Total Supply Units:</strong>{' '}
+          {Object.keys(uniqueSupplyUnits).length}
+        </BCTypography>
 
-        // Check if any locations in this group have overlaps
-        const hasAnyOverlaps = locGroup.some(
-          (loc) =>
-            overlapMap[loc.uniqueId] && overlapMap[loc.uniqueId].length > 0
-        )
+        {!isInBC && (
+          <BCTypography variant="body" sx={{ color: 'red' }} component="p">
+            🚨 Outside BC!
+          </BCTypography>
+        )}
 
-        // Update marker icon based on geofencing and overlap status
-        let markerIcon = new L.Icon.Default()
-        if (!isInBC) {
-          markerIcon = outsideBCIcon
-        } else if (hasAnyOverlaps) {
-          markerIcon = overlapIcon
-        }
+        <BCTypography
+          variant="body"
+          mt={2}
+          fontWeight="bold"
+          component="div"
+          gutterBottom
+        >
+          Supply Units at this location:
+        </BCTypography>
+        <ExcelStyledTable
+          uniqueSupplyUnits={uniqueSupplyUnits}
+          overlapMap={overlapMap}
+        />
+        {/* <TableContainer sx={{ maxHeight: 200, borderRadius: 0 }}>
+          <Table
+            size="small"
+            stickyHeader
+            aria-label="supply units info"
+            sx={{ '& .MuiTableCell-root': { fontSize: '0.7rem', p: 0.5 } }}
+          >
+            <TableHead>
+              <TableRow>
+                <TableCell>Reg #</TableCell>
+                <TableCell>Serial #</TableCell>
+                <TableCell>Periods</TableCell>
+                <TableCell>Status</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody sx={{ fontSize: '14px' }}>
+              {Object.values(uniqueSupplyUnits).map((unit, index) => {
+                // Sort periods by start date
+                const sortedRecords = [...unit.records].sort(
+                  (a, b) =>
+                    new Date(a.supplyFromDate) - new Date(b.supplyFromDate)
+                )
 
-        marker.setIcon(markerIcon)
+                return (
+                  <React.Fragment key={index}>
+                    <TableRow>
+                      <TableCell>{unit.regNum}</TableCell>
+                      <TableCell>{unit.serialNum}</TableCell>
+                      <TableCell>
+                        {sortedRecords.map((record, idx) => (
+                          <div
+                            key={idx}
+                            style={{
+                              color: record.hasOverlap ? 'orange' : 'inherit',
+                              fontWeight: record.hasOverlap ? 'bold' : 'normal'
+                            }}
+                          >
+                            {record.supplyFromDate} → {record.supplyToDate}
+                          </div>
+                        ))}
+                      </TableCell>
+                      <TableCell
+                        sx={{ color: unit.hasOverlap ? 'orange' : 'green' }}
+                      >
+                        {unit.hasOverlap ? '⚠️ Period overlap' : '✓ No overlap'}
+                      </TableCell>
+                    </TableRow>
 
-        // Get unique supply units at this location
-        const uniqueSupplyUnits = {}
-        locGroup.forEach((loc) => {
-          if (!uniqueSupplyUnits[loc.id]) {
-            uniqueSupplyUnits[loc.id] = {
-              regNum: loc.registrationNbr,
-              serialNum: loc.serialNbr,
-              hasOverlap: false,
-              records: []
-            }
-          }
+                    {unit.hasOverlap &&
+                      sortedRecords
+                        .filter((record) => record.hasOverlap)
+                        .map((record, idx) => (
+                          <TableRow key={`detail-${idx}`}>
+                            <TableCell colSpan={4} sx={{ pl: 3 }}>
+                              <BCTypography variant="body2" fontWeight="bold">
+                                Details for period: {record.supplyFromDate} →{' '}
+                                {record.supplyToDate}
+                              </BCTypography>
+                              <BCTypography
+                                variant="body2"
+                                fontWeight="bold"
+                                color="orange"
+                              >
+                                ⚠️ Overlaps with:
+                              </BCTypography>
+                              <ul style={{ paddingLeft: 20, margin: '5px 0' }}>
+                                {overlapMap[record.uniqueId].map(
+                                  (overlap, i) => (
+                                    <li key={i}>
+                                      Period: {overlap.supplyFromDate} →{' '}
+                                      {overlap.supplyToDate}
+                                    </li>
+                                  )
+                                )}
+                              </ul>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                  </React.Fragment>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer> */}
 
-          // Check if this specific record has overlaps
-          const hasOverlap =
-            overlapMap[loc.uniqueId] && overlapMap[loc.uniqueId].length > 0
-          if (hasOverlap) {
-            uniqueSupplyUnits[loc.id].hasOverlap = true
-          }
+        <BCTypography variant="body" component="div" sx={{ mt: 2 }}>
+          Coordinates: {firstLoc.lat.toFixed(4)}, {firstLoc.lng.toFixed(4)}
+        </BCTypography>
+      </div>
+    )
+  }
 
-          uniqueSupplyUnits[loc.id].records.push({
-            ...loc,
-            hasOverlap
-          })
-        })
-
-        // Create updated popup content
-        let popupContent = `
-          <strong>${firstLoc.name}</strong><br>
-          <b>Total Supply Units at this location:</b> ${
-            Object.keys(uniqueSupplyUnits).length
-          }
-          ${!isInBC ? '<p style="color: red">🚨 Outside BC!</p>' : ''}
-        `
-
-        // List all supply units with their IDs and periods
-        popupContent += `
-          <p><strong>Supply Units at this location:</strong></p>
-          <div style="max-height: 200px; overflow-y: auto;">
-            <table style="width: 100%; border-collapse: collapse;">
-              <thead>
-                <tr>
-                  <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">Reg #</th>
-                  <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">Serial #</th>
-                  <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">Periods</th>
-                  <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-        `
-
-        Object.values(uniqueSupplyUnits).forEach((unit) => {
-          const statusColor = unit.hasOverlap ? 'orange' : 'green'
-          const statusIcon = unit.hasOverlap ? '⚠️' : '✓'
-          const statusText = unit.hasOverlap ? 'Period overlap' : 'No overlap'
-
-          // Sort periods by start date
-          const sortedRecords = [...unit.records].sort(
-            (a, b) => new Date(a.supplyFromDate) - new Date(b.supplyFromDate)
-          )
-
-          // Create a list of all periods for this unit
-          const periodsHtml = sortedRecords
-            .map((record) => {
-              const dateStyle = record.hasOverlap
-                ? 'color: orange; font-weight: bold;'
-                : ''
-              return `<div style="${dateStyle}">${record.supplyFromDate} → ${record.supplyToDate}</div>`
-            })
-            .join('')
-
-          popupContent += `
-            <tr>
-              <td style="border: 1px solid #ddd; padding: 4px; vertical-align: top;">${unit.regNum}</td>
-              <td style="border: 1px solid #ddd; padding: 4px; vertical-align: top;">${unit.serialNum}</td>
-              <td style="border: 1px solid #ddd; padding: 4px; vertical-align: top;">
-                ${periodsHtml}
-              </td>
-              <td style="border: 1px solid #ddd; padding: 4px; color: ${statusColor}; vertical-align: top;">
-                ${statusIcon} ${statusText}
-              </td>
-            </tr>
-          `
-
-          // If there are overlaps, show details
-          if (unit.hasOverlap) {
-            // Get all records for this unit that have overlaps
-            const recordsWithOverlaps = unit.records.filter(
-              (record) =>
-                overlapMap[record.uniqueId] &&
-                overlapMap[record.uniqueId].length > 0
-            )
-
-            recordsWithOverlaps.forEach((record) => {
-              popupContent += `
-                <tr>
-                  <td colspan="4" style="border: 1px solid #ddd; padding: 4px;">
-                    <div style="margin-left: 10px;">
-                      <p style="font-weight: bold">Details for period: ${record.supplyFromDate} → ${record.supplyToDate}</p>
-                      <p style="color: orange; font-weight: bold">⚠️ Overlaps with:</p>
-                      <ul style="margin-top: 5px; padding-left: 20px;">
-              `
-
-              overlapMap[record.uniqueId].forEach((overlap) => {
-                popupContent += `
-                  <li>
-                    Period: ${overlap.supplyFromDate} → ${overlap.supplyToDate}
-                  </li>
-                `
-              })
-
-              popupContent += `
-                      </ul>
-                    </div>
-                  </td>
-                </tr>
-              `
-            })
-          }
-        })
-
-        popupContent += `
-              </tbody>
-            </table>
-          </div>
-        `
-
-        popupContent += `<p>Coordinates: ${firstLoc.lat.toFixed(
-          4
-        )}, ${firstLoc.lng.toFixed(4)}</p>`
-
-        // Update the popup content
-        marker.bindPopup(popupContent, {
-          maxWidth: 400,
-          maxHeight: 300
-        })
-      })
-    }
-
-    // Set bounds to show all markers
-    const bounds = Object.values(groupedLocations).map((group) => [
-      group[0].lat,
-      group[0].lng
-    ])
-    if (bounds.length > 0) {
-      mapInstance.fitBounds(bounds)
-    }
-
-    // Add legend to map
-    const legend = L.control({ position: 'bottomright' })
-    legend.onAdd = function () {
-      const div = L.DomUtil.create('div', 'info legend')
-      div.style.backgroundColor = 'white'
-      div.style.padding = '10px'
-      div.style.borderRadius = '5px'
-      div.style.border = '1px solid #ccc'
-
-      div.innerHTML = `
-        <div style="margin-bottom: 5px"><strong>Legend</strong></div>
-        ${
-          geofencingStatus === 'loading'
-            ? `
-          <div style="margin-bottom: 5px">
-            <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-grey.png" height="20"> 
-            Checking location...
-          </div>
-        `
-            : ''
-        }
-        <div style="margin-bottom: 5px">
-          <img src="https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png" height="20"> 
-          Inside BC, no overlaps
-        </div>
-        <div style="margin-bottom: 5px">
-          <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png" height="20"> 
-          Period overlap (same Reg# & Serial#)
-        </div>
-        <div>
-          <img src="https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png" height="20"> 
-          Outside BC
-        </div>
-      `
-      return div
-    }
-    legend.addTo(mapInstance)
-
-    // Cleanup function
-    return () => {
-      if (mapInstance) {
-        mapInstance.remove()
-      }
-    }
-  }, [groupedLocations, geofencingResults, geofencingStatus, overlapMap])
-
-  // Geofencing status indicator
+  // Component for Geofencing Status
   const GeofencingStatus = () => {
     if (geofencingStatus === 'loading') {
       return (
-        <div className="p-4 bg-blue-100 rounded my-4">
-          <h3 className="font-bold mb-2">🔄 Geofencing in progress...</h3>
-          <p>
+        <Alert
+          severity="info"
+          sx={{ mb: 2 }}
+          icon={<CircularProgress size={24} />}
+        >
+          <BCTypography variant="subtitle1" fontWeight="bold">
+            Geofencing in progress...
+          </BCTypography>
+          <BCTypography variant="body2">
             Checking each location to determine if it&apos;s inside BC&apos;s
             boundaries.
-          </p>
-        </div>
+          </BCTypography>
+        </Alert>
       )
     }
 
     if (geofencingStatus === 'error') {
       return (
-        <div className="p-4 bg-red-100 rounded my-4">
-          <h3 className="font-bold mb-2">❌ Geofencing error</h3>
-          <p>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          <BCTypography variant="subtitle1" fontWeight="bold">
+            Geofencing error
+          </BCTypography>
+          <BCTypography variant="body2">
             There was an error checking location boundaries. Using fallback
             method.
-          </p>
-        </div>
+          </BCTypography>
+        </Alert>
       )
     }
 
@@ -632,70 +741,80 @@ const MapComponent = ({ complianceReportId }) => {
     if (geofencingStatus !== 'completed') return null
 
     return (
-      <div
-        className={`p-4 ${
-          overlapStats.overlapping > 0 ? 'bg-orange-100' : 'bg-green-100'
-        } rounded my-4`}
+      <Alert
+        severity={overlapStats.overlapping > 0 ? 'warning' : 'success'}
+        sx={{ mb: 2 }}
       >
-        <h3 className="font-bold mb-2">
+        <BCTypography variant="subtitle1" fontWeight="bold" gutterBottom>
           {overlapStats.overlapping > 0
-            ? '⚠️ Period Overlaps Detected'
-            : '✓ No Period Overlaps'}
-        </h3>
+            ? 'Period Overlaps Detected'
+            : 'No Period Overlaps'}
+        </BCTypography>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p>
-              <strong>Total Supply Units:</strong> {overlapStats.total}
-            </p>
-            <p>
-              <strong>Units with Overlaps:</strong> {overlapStats.overlapping}
-            </p>
-            <p>
-              <strong>Units without Overlaps:</strong>{' '}
-              {overlapStats.nonOverlapping}
-            </p>
-          </div>
-          <div>
-            <p>
-              <strong>BC Units with Overlaps:</strong>{' '}
-              {overlapStats.bcOverlapping}
-            </p>
-            <p>
-              <strong>Outside BC with Overlaps:</strong>{' '}
-              {overlapStats.nonBcOverlapping}
-            </p>
-          </div>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '8px'
+          }}
+        >
+          <BCTypography variant="body2">
+            <strong>Total Supply Units:</strong> {overlapStats.total}
+          </BCTypography>
+          <BCTypography variant="body2">
+            <strong>Units with Overlaps:</strong> {overlapStats.overlapping}
+          </BCTypography>
+          <BCTypography variant="body2">
+            <strong>Units without Overlaps:</strong>{' '}
+            {overlapStats.nonOverlapping}
+          </BCTypography>
+          <BCTypography variant="body2">
+            <strong>BC Units with Overlaps:</strong>{' '}
+            {overlapStats.bcOverlapping}
+          </BCTypography>
+          <BCTypography variant="body2">
+            <strong>Outside BC with Overlaps:</strong>{' '}
+            {overlapStats.nonBcOverlapping}
+          </BCTypography>
         </div>
-      </div>
+      </Alert>
     )
   }
 
-  // Show refresh button
-  const RefreshButton = () => (
-    <button
-      onClick={() => {
-        refetch()
-        setGeofencingStatus('idle')
-      }}
-      className="px-4 py-2 bg-blue-500 text-white rounded mb-4 hover:bg-blue-600"
-    >
-      Refresh Map Data
-    </button>
-  )
+  if (isLoading)
+    return (
+      <Alert
+        severity="info"
+        icon={<CircularProgress size={24} />}
+        sx={{ mb: 2 }}
+      >
+        Loading map data...
+      </Alert>
+    )
 
-  if (isLoading) return <p>Loading map data...</p>
   if (isError || error)
     return (
       <div>
-        <p className="text-red-500">
-          Error: {error?.message || 'Failed to load data'}
-        </p>
-        <p>
-          Please ensure the API provides location data with latitude, longitude,
-          and date fields.
-        </p>
-        <RefreshButton />
+        <Alert severity="error" sx={{ mb: 2 }}>
+          <BCTypography variant="subtitle1" fontWeight="bold">
+            Error: {error?.message || 'Failed to load data'}
+          </BCTypography>
+          <BCTypography variant="body2">
+            Please ensure the API provides location data with latitude,
+            longitude, and date fields.
+          </BCTypography>
+        </Alert>
+        <BCButton
+          variant="outlined"
+          color="dark"
+          onClick={() => {
+            refetch()
+            setGeofencingStatus('idle')
+          }}
+          sx={{ mb: 2 }}
+        >
+          Refresh Map Data
+        </BCButton>
       </div>
     )
 
@@ -706,24 +825,118 @@ const MapComponent = ({ complianceReportId }) => {
   )
     return (
       <div>
-        <p>No location data found.</p>
-        <p>API should return data with the following fields:</p>
-        <ul className="list-disc ml-5 mt-2">
-          <li>registrationNbr and serialNbr (for ID creation)</li>
-          <li>streetAddress, city, postalCode (for location name)</li>
-          <li>latitude and longitude</li>
-          <li>supplyFromDate and supplyToDate</li>
-        </ul>
-        <RefreshButton />
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          <BCTypography variant="subtitle1" fontWeight="bold">
+            No location data found
+          </BCTypography>
+          <BCTypography variant="body2">
+            API should return data with the following fields:
+          </BCTypography>
+          <ul style={{ marginLeft: 20 }}>
+            <li>registrationNbr and serialNbr (for ID creation)</li>
+            <li>streetAddress, city, postalCode (for location name)</li>
+            <li>latitude and longitude</li>
+            <li>supplyFromDate and supplyToDate</li>
+          </ul>
+        </Alert>
+        <BCButton
+          variant="outlined"
+          color="dark"
+          onClick={() => {
+            refetch()
+            setGeofencingStatus('idle')
+          }}
+          sx={{ mb: 2 }}
+        >
+          Refresh Map Data
+        </BCButton>
       </div>
     )
 
   return (
     <div>
-      <RefreshButton />
+      <BCButton
+        variant="outlined"
+        color="dark"
+        size="small"
+        onClick={() => {
+          refetch()
+          setGeofencingStatus('idle')
+        }}
+        sx={{ mb: 2 }}
+      >
+        Refresh Map Data
+      </BCButton>
+
       <GeofencingStatus />
+
       {/* {geofencingStatus === 'completed' && <OverlapSummary />} */}
-      <div id="map-container" style={{ height: '600px', width: '100%' }}></div>
+
+      <Paper
+        elevation={3}
+        sx={{ height: 600, width: '100%', overflow: 'hidden' }}
+      >
+        <MapContainer
+          center={[53.7267, -127.6476]}
+          zoom={5}
+          style={{ height: '100%', width: '100%' }}
+        >
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+
+          <MapBoundsHandler groupedLocations={groupedLocations} />
+          <MapLegend geofencingStatus={geofencingStatus} />
+
+          {Object.entries(groupedLocations).map(([coordKey, locGroup]) => {
+            const firstLoc = locGroup[0]
+            const position = [firstLoc.lat, firstLoc.lng]
+
+            // Determine marker icon based on geofencing results and overlap status
+            let icon = markerIcons.grey // Default to loading icon
+
+            if (geofencingStatus === 'completed') {
+              const isInBC = geofencingResults[firstLoc.id]
+
+              // Check if any locations in this group have overlaps
+              const hasAnyOverlaps = locGroup.some(
+                (loc) =>
+                  overlapMap[loc.uniqueId] &&
+                  overlapMap[loc.uniqueId].length > 0
+              )
+
+              if (!isInBC) {
+                icon = markerIcons.red
+              } else if (hasAnyOverlaps) {
+                icon = markerIcons.orange
+              } else {
+                icon = markerIcons.default
+              }
+            }
+
+            return (
+              <Marker key={coordKey} position={position} icon={icon}>
+                <Popup maxWidth={400}>
+                  {geofencingStatus === 'completed' ? (
+                    generatePopupContent(coordKey, locGroup)
+                  ) : (
+                    <div>
+                      <BCTypography variant="body" component="div">
+                        {firstLoc.name}
+                      </BCTypography>
+                      <CircularProgress size={20} sx={{ mt: 1 }} />
+                      <BCTypography variant="body">
+                        Checking location...
+                      </BCTypography>
+                    </div>
+                  )}
+                </Popup>
+              </Marker>
+            )
+          })}
+        </MapContainer>
+      </Paper>
     </div>
   )
 }
