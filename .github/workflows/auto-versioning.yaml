@@ -28,7 +28,9 @@ jobs:
           useConfigFile: true
 
       - name: Show GitVersion Config
-        run: which gitversion
+        run: |
+          echo $PATH
+          ls -l /opt/hostedtoolcache/GitVersion.Tool
 
       - name: Update package.json Version
         run: |
