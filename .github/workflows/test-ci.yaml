@@ -1,13 +1,15 @@
 name: LCFS 1.0.0 Test CI
 
 on:
+  push:
+    branches: [release]
   workflow_dispatch:
 
 env:
   VERSION: 1.0.0
   GIT_URL: https://github.com/bcgov/lcfs.git
-  DEV_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-dev
   TEST_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-test
+  TOOLS_NAMESPACE: ${{ secrets.OPENSHIFT_NAMESPACE_PLATE }}-tools
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -19,6 +21,9 @@ jobs:
     outputs:
       cache-hit: ${{ steps.cache.outputs.cache-hit }}
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.1.1
+
       - name: Set up cache for OpenShift CLI
         id: cache
         uses: actions/cache@v4.2.0
@@ -184,14 +189,30 @@ jobs:
           fi
 
   set-pre-release:
-    name: Find Dev deployment pre-release number
-    needs: run-tests
+    name: Calculate pre-release number
     runs-on: ubuntu-latest
+    needs: [run-tests]
 
     outputs:
-      output1: ${{ steps.set-pre-release.outputs.PRE_RELEASE }}
+      PRE_RELEASE: ${{ steps.set-pre-release.outputs.PRE_RELEASE }}
 
     steps:
+      - id: set-pre-release
+        run: echo "PRE_RELEASE=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build LCFS
+    runs-on: ubuntu-latest
+    needs: [set-pre-release]
+    timeout-minutes: 60
+
+    env:
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4.1.1
+
       - name: Restore oc command from Cache
         uses: actions/cache@v4.2.0
         with:
@@ -204,64 +225,45 @@ jobs:
           openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
           openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
           insecure_skip_tls_verify: true
-          namespace: ${{ env.DEV_NAMESPACE }}
+          namespace: ${{ env.TOOLS_NAMESPACE }}
 
-      - id: set-pre-release
+      - name: Build LCFS Backend
         run: |
-          check_string() {
-              local string="$1"
+          cd openshift/templates
+          oc process -f ./backend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}
+          sleep 2s
+          oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-backend-${{ env.VERSION }}-${{ env.PRE_RELEASE }} --wait=true
 
-              if [ ${#string} -ne 14 ]; then
-                  echo "String length must be 14 characters"
-                  return 1
-              fi
+      - name: Build LCFS Frontend
+        run: |
+          cd openshift/templates
+          oc process -f ./frontend-bc.yaml VERSION=${{ env.VERSION }}-${{ env.PRE_RELEASE }} GIT_URL=${{ env.GIT_URL }} GIT_REF=release | oc apply --wait=true -f - -n ${{ env.TOOLS_NAMESPACE }}    
+          sleep 2s
+          oc -n ${{ env.TOOLS_NAMESPACE }} start-build lcfs-frontend-${{ env.VERSION }}-${{ env.PRE_RELEASE }} --wait=true
 
-              if ! [[ $string =~ ^[0-9]+$ ]]; then
-                  echo "String can only contain numbers"
-                  return 1
-              fi
-
-              local year="${string:0:4}"
-              local month="${string:4:2}"
-              local day="${string:6:2}"
-              local hour="${string:8:2}"
-              local minute="${string:10:2}"
-              local second="${string:12:2}"
-
-              if ! date -d "$year-$month-$day $hour:$minute:$second" &> /dev/null; then
-                  echo "String format must be yyyymmddhhmmss"
-                  return 1
-              fi
-
-              return 0
-          }
-
-          input_string=$(oc -n ${{ env.DEV_NAMESPACE }} describe deployment/lcfs-frontend-dev | grep Image | awk -F '-' '{print $NF}')
-
-          echo "The retrieved pre-release number on Dev is $input_string "
-          if check_string "$input_string"; then
-              echo "It is valid"
-              echo "PRE_RELEASE=$input_string" >> $GITHUB_OUTPUT
-          else
-              echo "It is not valid"
-              exit 1
-          fi
+      - name: Tag the source code
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          testtag="${{ env.VERSION }}-${{ env.PRE_RELEASE }}"
+          git tag $testtag
+          git push origin $testtag
 
   deploy-on-test:
     name: Deploy LCFS on Test
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    needs: [set-pre-release]
+    needs: [set-pre-release, build]
 
     env:
-      PRE_RELEASE: ${{ needs.set-pre-release.outputs.output1 }}
+      PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
 
     steps:
       - id: get-current-time
         run: |
           echo "CURRENT_TIME=$(TZ='America/Vancouver' date '+%Y-%m-%d %H:%M:%S %Z')" >> $GITHUB_OUTPUT
 
-      - name: Ask for approval for LCFS release-${{ env.VERSION }} Test deployment
+      - name: Ask for approval for LCFS ${{ env.VERSION }}-${{ env.PRE_RELEASE }} Test deployment
         uses: trstringer/manual-approval@v1.6.0
         with:
           secret: ${{ github.TOKEN }}
@@ -281,12 +283,12 @@ jobs:
           openshift_server_url: ${{ secrets.OPENSHIFT_SERVER }}
           openshift_token: ${{ secrets.OPENSHIFT_TOKEN }}
           insecure_skip_tls_verify: true
-          namespace: ${{ env.DEV_NAMESPACE }}
+          namespace: ${{ env.TEST_NAMESPACE }}
 
       - name: Tag LCFS images to Test
         run: |
-          oc tag ${{ env.DEV_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.TEST_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-$PRE_RELEASE
-          oc tag ${{ env.DEV_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE ${{ env.TEST_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-$PRE_RELEASE
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.TEST_NAMESPACE }}/lcfs-backend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
+          oc tag ${{ env.TOOLS_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }} ${{ env.TEST_NAMESPACE }}/lcfs-frontend:${{ env.VERSION }}-${{ env.PRE_RELEASE }}
 
       - name: Checkout Manifest repository
         uses: actions/checkout@v3
@@ -298,12 +300,9 @@ jobs:
       - name: Update frontend tag
         uses: mikefarah/yq@v4.40.5
         with:
-          cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-test.yaml
-
-      - name: Update backend tag
-        uses: mikefarah/yq@v4.40.5
-        with:
-          cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-test.yaml
+          cmd: |
+            yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-test.yaml
+            yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-test.yaml
 
       - name: GitHub Commit & Push
         run: |

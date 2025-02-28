@@ -207,34 +207,31 @@ class ComplianceReportServices:
         )
 
     def _mask_report_status(self, reports: List) -> List:
-        recommended_statuses = {
-            ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
-            ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
-        }
-
-        masked_reports = []
         for report in reports:
-            if (
-                isinstance(report, ComplianceReportViewSchema)
-                and report.report_status in recommended_statuses
-            ):
-                report.report_status = ComplianceReportStatusEnum.Submitted.value
-                report.report_status_id = None
-                masked_reports.append(report)
-            elif (
-                isinstance(report, ComplianceReportBaseSchema)
-                and report.current_status.status in recommended_statuses
-            ):
-                report.current_status.status = (
-                    ComplianceReportStatusEnum.Submitted.value
-                )
-                report.current_status.compliance_report_status_id = None
-
-                masked_reports.append(report)
-            else:
-                masked_reports.append(report)
-
-        return masked_reports
+            if isinstance(report, ComplianceReportViewSchema):
+                statuses = {
+                    ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
+                    ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
+                }
+                if report.report_status in statuses:
+                    report.report_status, report.report_status_id = (
+                        ComplianceReportStatusEnum.Submitted.value,
+                        None,
+                    )
+            elif isinstance(report, ComplianceReportBaseSchema):
+                statuses = {
+                    ComplianceReportStatusEnum.Recommended_by_analyst.value,
+                    ComplianceReportStatusEnum.Recommended_by_manager.value,
+                }
+                if report.current_status.status in statuses:
+                    (
+                        report.current_status.status,
+                        report.current_status.compliance_report_status_id,
+                    ) = (
+                        ComplianceReportStatusEnum.Submitted.value,
+                        None,
+                    )
+        return reports
 
     @service_handler
     async def get_compliance_report_by_id(
