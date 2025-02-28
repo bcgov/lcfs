@@ -90,6 +90,7 @@ def upgrade() -> None:
                         FROM transfer_comment tc
                         WHERE tc.transfer_id = t.transfer_id
                         AND tc.comment_source = 'FROM_ORG'
+                        LIMIT 1
                     ) AS comment,
 
                     tc.category,
@@ -98,6 +99,7 @@ def upgrade() -> None:
                         FROM transfer_history th
                         WHERE th.transfer_id = t.transfer_id
                         AND th.transfer_status_id = 6  -- Recorded
+                        LIMIT 1
                     ) AS recorded_date,
                     NULL AS approved_date,
                     t.transaction_effective_date,
@@ -138,6 +140,7 @@ def upgrade() -> None:
                         FROM initiative_agreement_history iah
                         WHERE iah.initiative_agreement_id = ia.initiative_agreement_id
                         AND iah.initiative_agreement_status_id = 3 -- Approved
+                        LIMIT 1
                     ) AS approved_date,
                     ia.transaction_effective_date,
                     ia.update_date,
@@ -173,6 +176,7 @@ def upgrade() -> None:
                         FROM admin_adjustment_history aah
                         WHERE aah.admin_adjustment_id = aa.admin_adjustment_id
                         AND aah.admin_adjustment_status_id = 3 -- Approved
+                        LIMIT 1
                     ) AS approved_date,
                     aa.transaction_effective_date,
                     aa.update_date,
