@@ -38,10 +38,10 @@ class FuelExport(BaseModel, Auditable, Versioning):
         Enum(QuantityUnitsEnum), nullable=False, comment="Units of fuel quantity"
     )
     compliance_units = Column(
-        Integer, nullable=True, comment="Compliance units for the fuel supply"
+        Numeric(13, 5), nullable=True, comment="Compliance units for the fuel supply"
     )
     target_ci = Column(
-        Numeric(10, 2), nullable=True, comment="CI limit for the fuel supply"
+        Numeric(13, 5), nullable=True, comment="CI limit for the fuel supply"
     )
     ci_of_fuel = Column(
         Numeric(10, 2), nullable=True, comment="CI of fuel for the fuel supply"

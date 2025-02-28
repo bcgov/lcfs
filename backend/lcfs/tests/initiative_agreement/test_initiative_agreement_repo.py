@@ -40,7 +40,6 @@ async def test_get_initiative_agreement_by_id(repository, mock_db_session):
     mock_db_session.execute = mock_query
 
     result = await repository.get_initiative_agreement_by_id(1)
-    # print(result)
     assert result == mock_agreement
 
 

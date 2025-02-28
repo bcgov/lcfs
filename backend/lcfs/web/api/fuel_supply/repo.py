@@ -1,7 +1,7 @@
 from datetime import datetime
+from typing import List, Optional, Sequence, Any
 
 import structlog
-from typing import List, Optional, Sequence
 from fastapi import Depends
 from sqlalchemy import and_, delete, or_, select, case
 from sqlalchemy import func
@@ -17,7 +17,6 @@ from lcfs.db.models.compliance import (
     ComplianceReportStatus,
 )
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
-
 from lcfs.db.models.fuel import (
     EnergyDensity,
     EnergyEffectivenessRatio,
@@ -161,7 +160,8 @@ class FuelSupplyRepository:
                     EnergyEffectivenessRatio.fuel_category_id
                     == FuelCategory.fuel_category_id,
                     EnergyEffectivenessRatio.fuel_type_id == FuelInstance.fuel_type_id,
-                    EnergyEffectivenessRatio.compliance_period_id == subquery_compliance_period_id
+                    EnergyEffectivenessRatio.compliance_period_id
+                    == subquery_compliance_period_id,
                 ),
             )
             .outerjoin(
@@ -196,8 +196,7 @@ class FuelSupplyRepository:
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         if not include_legacy:
             query = query.where(
-                and_(FuelType.is_legacy == False,
-                     ProvisionOfTheAct.is_legacy == False)
+                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
             )
 
         fuel_type_results = (await self.db.execute(query)).all()
@@ -238,8 +237,8 @@ class FuelSupplyRepository:
         pagination: PaginationRequestSchema,
         compliance_report_id: int,
         exclude_draft_reports: bool = False,
-        effective: bool = True
-    ) -> List[FuelSupply]:
+        effective: bool = True,
+    ) -> tuple[list[Any], int] | tuple[Sequence[FuelSupply] | list[FuelSupply], int]:
         """
         Retrieve a paginated list of effective fuel supplies for a given compliance report.
         """
@@ -253,12 +252,11 @@ class FuelSupplyRepository:
         if not group_uuid:
             return [], 0
 
-        fuel_supplies = []
-
         if effective:
             # Retrieve effective fuel supplies using the group UUID
             fuel_supplies = await self.get_effective_fuel_supplies(
-                compliance_report_group_uuid=group_uuid, compliance_report_id=compliance_report_id,
+                compliance_report_group_uuid=group_uuid,
+                compliance_report_id=compliance_report_id,
                 exclude_draft_reports=exclude_draft_reports,
             )
         else:
@@ -266,10 +264,9 @@ class FuelSupplyRepository:
 
         # Manually apply pagination
         total_count = len(fuel_supplies)
-        offset = 0 if pagination.page < 1 else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_supplies = fuel_supplies[offset: offset + limit]
+        paginated_supplies = fuel_supplies[offset : offset + limit]
 
         return paginated_supplies, total_count
 
@@ -324,8 +321,7 @@ class FuelSupplyRepository:
     async def delete_fuel_supply(self, fuel_supply_id: int):
         """Delete a fuel supply row from the database"""
         await self.db.execute(
-            delete(FuelSupply).where(
-                FuelSupply.fuel_supply_id == fuel_supply_id)
+            delete(FuelSupply).where(FuelSupply.fuel_supply_id == fuel_supply_id)
         )
         await self.db.flush()
 
@@ -423,7 +419,10 @@ class FuelSupplyRepository:
 
     @repo_handler
     async def get_effective_fuel_supplies(
-        self, compliance_report_group_uuid: str, exclude_draft_reports: bool = False, compliance_report_id: Optional[int] = None
+        self,
+        compliance_report_group_uuid: str,
+        exclude_draft_reports: bool = False,
+        compliance_report_id: Optional[int] = None,
     ) -> Sequence[FuelSupply]:
         """
         Retrieve effective FuelSupply records associated with the given compliance_report_group_uuid.
@@ -434,7 +433,8 @@ class FuelSupplyRepository:
         """
         # Step 1: Subquery to get all compliance_report_ids in the specified group
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
-            ComplianceReport.compliance_report_group_uuid == compliance_report_group_uuid
+            ComplianceReport.compliance_report_group_uuid
+            == compliance_report_group_uuid
         )
 
         if compliance_report_id is not None:
