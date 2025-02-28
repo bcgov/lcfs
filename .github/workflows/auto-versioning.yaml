@@ -42,4 +42,4 @@ jobs:
 
       - name: Show updated package.json
         run: |
-          cat frontend/package.json
+          head -n 30 frontend/package.json
