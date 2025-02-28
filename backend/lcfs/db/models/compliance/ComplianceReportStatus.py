@@ -10,6 +10,8 @@ class ComplianceReportStatusEnum(enum.Enum):
     Submitted = "Submitted"
     Recommended_by_analyst = "Recommended by analyst"
     Recommended_by_manager = "Recommended by manager"
+    Not_recommended_by_analyst = "Not recommended by analyst"
+    Not_recommended_by_manager = "Not recommended by manager"
     Assessed = "Assessed"
     Reassessed = "Reassessed"
     Rejected = "Rejected"
