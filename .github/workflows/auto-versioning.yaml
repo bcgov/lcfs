@@ -36,10 +36,6 @@ jobs:
           cd frontend
           jq --arg ver "$VERSION" '.version = $ver' package.json > package.tmp.json && mv package.tmp.json package.json
 
-      - name: Show GitVersion.yml
-        run: |
-          cat GitVersion.yml
-
       - name: Show updated package.json
         run: |
           head -n 30 frontend/package.json
