@@ -53,8 +53,8 @@ class FuelExportServices:
             fuel_category_id=row_data["fuel_category_id"],
             fuel_category=row_data["category"],
             default_and_prescribed_ci=(
-                round(default_ci, 2) if default_ci is not None and row_data["fuel_type"] != "Other"
-                else round(category_ci, 2) if category_ci is not None else None
+                default_ci if default_ci is not None and row_data["fuel_type"] != "Other"
+                else category_ci if category_ci is not None else None
             ),
         )
         provision = ProvisionOfTheActSchema(
@@ -205,9 +205,9 @@ class FuelExportServices:
                 fuel_type=row_data["fuel_type"],
                 fossil_derived=row_data["fossil_derived"],
                 default_carbon_intensity=(
-                    round(row_data["default_carbon_intensity"], 2)
+                    row_data["default_carbon_intensity"]
                     if row_data["fuel_type"] != "Other"
-                    else round(category_ci, 2) if category_ci is not None else None
+                    else category_ci if category_ci is not None else None
                 ),
                 unit=row_data["unit"].value,
                 energy_density=(
