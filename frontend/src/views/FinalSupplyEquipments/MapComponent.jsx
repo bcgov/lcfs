@@ -30,8 +30,6 @@ L.Icon.Default.mergeOptions({
 // Create a marker icons map to avoid URL imports
 const createMarkerIcon = (color) => {
   return new L.Icon({
-    // iconUrl: require(`../assets/markers/marker-icon-${color}.png`),
-    // shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
     iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${color}.png`,
     shadowUrl:
       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -52,7 +50,6 @@ const markerIcons = {
 // Geofencing approach using Nominatim for reverse geocoding
 const checkLocationInBC = async (lat, lng) => {
   try {
-    // Using OpenStreetMap's Nominatim service for reverse geocoding
     const response = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=10&addressdetails=1`,
       {
@@ -93,8 +90,6 @@ const batchProcessGeofencing = async (locations) => {
 
   for (let i = 0; i < locations.length; i += batchSize) {
     const batch = locations.slice(i, i + batchSize)
-
-    // Process this batch in parallel
     const batchPromises = batch.map(async (loc) => {
       const isInBC = await checkLocationInBC(loc.lat, loc.lng)
       return { id: loc.id, isInBC }
@@ -106,8 +101,6 @@ const batchProcessGeofencing = async (locations) => {
     batchResults.forEach(({ id, isInBC }) => {
       results[id] = isInBC
     })
-
-    // Add a small delay to avoid rate limiting
     if (i + batchSize < locations.length) {
       await new Promise((resolve) => setTimeout(resolve, 1000))
     }
@@ -128,13 +121,11 @@ const datesOverlap = (start1, end1, start2, end2) => {
 
 // Find all overlapping periods for a given location, only considering same ID
 const findOverlappingPeriods = (currentLoc, allLocations) => {
-  // Extract the base ID (registrationNbr) from the combined ID
   const currentRegNum = currentLoc.id.split('_')[0]
   const currentSerialNum = currentLoc.id.split('_')[1]
 
   return allLocations
     .filter((loc) => {
-      // Split the comparison location's ID
       const locRegNum = loc.id.split('_')[0]
       const locSerialNum = loc.id.split('_')[1]
 
@@ -167,7 +158,6 @@ const groupLocationsByCoordinates = (locations) => {
   const grouped = {}
 
   locations.forEach((location) => {
-    // Create a key based on coordinates (rounded to reduce floating point issues)
     const key = `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`
 
     if (!grouped[key]) {
@@ -432,8 +422,7 @@ const MapComponent = ({ complianceReportId }) => {
       const combinedId = `${registrationNbr}_${serialNbr}`
 
       return {
-        id: combinedId,
-        // Add a unique identifier for this specific record
+        id: row.finalSupplyEquipmentId,
         uniqueId: `${combinedId}_${index}`,
         registrationNbr,
         serialNbr,
@@ -450,7 +439,6 @@ const MapComponent = ({ complianceReportId }) => {
     })
   }, [])
 
-  // Update locations when data changes
   useEffect(() => {
     if (supplyEquipmentData) {
       const transformedData = transformApiData(supplyEquipmentData)
@@ -460,7 +448,6 @@ const MapComponent = ({ complianceReportId }) => {
         setError(new Error('No location data found'))
       } else {
         setLocations(transformedData)
-
         // Group locations by coordinates
         const grouped = groupLocationsByCoordinates(transformedData)
         setGroupedLocations(grouped)
@@ -478,10 +465,8 @@ const MapComponent = ({ complianceReportId }) => {
         (group) => group[0]
       )
 
-      // Start the geofencing process
       batchProcessGeofencing(uniqueLocations)
         .then((results) => {
-          // Expand results to all locations with the same coordinates
           const expandedResults = {}
 
           Object.entries(groupedLocations).forEach(([coordKey, locGroup]) => {
@@ -514,8 +499,6 @@ const MapComponent = ({ complianceReportId }) => {
         bcOverlapping: 0,
         nonBcOverlapping: 0
       }
-
-      // Calculate overlaps
       locations.forEach((loc) => {
         const overlappingPeriods = findOverlappingPeriods(loc, locations)
         overlaps[loc.uniqueId] = overlappingPeriods
@@ -607,90 +590,6 @@ const MapComponent = ({ complianceReportId }) => {
           uniqueSupplyUnits={uniqueSupplyUnits}
           overlapMap={overlapMap}
         />
-        {/* <TableContainer sx={{ maxHeight: 200, borderRadius: 0 }}>
-          <Table
-            size="small"
-            stickyHeader
-            aria-label="supply units info"
-            sx={{ '& .MuiTableCell-root': { fontSize: '0.7rem', p: 0.5 } }}
-          >
-            <TableHead>
-              <TableRow>
-                <TableCell>Reg #</TableCell>
-                <TableCell>Serial #</TableCell>
-                <TableCell>Periods</TableCell>
-                <TableCell>Status</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody sx={{ fontSize: '14px' }}>
-              {Object.values(uniqueSupplyUnits).map((unit, index) => {
-                // Sort periods by start date
-                const sortedRecords = [...unit.records].sort(
-                  (a, b) =>
-                    new Date(a.supplyFromDate) - new Date(b.supplyFromDate)
-                )
-
-                return (
-                  <React.Fragment key={index}>
-                    <TableRow>
-                      <TableCell>{unit.regNum}</TableCell>
-                      <TableCell>{unit.serialNum}</TableCell>
-                      <TableCell>
-                        {sortedRecords.map((record, idx) => (
-                          <div
-                            key={idx}
-                            style={{
-                              color: record.hasOverlap ? 'orange' : 'inherit',
-                              fontWeight: record.hasOverlap ? 'bold' : 'normal'
-                            }}
-                          >
-                            {record.supplyFromDate} → {record.supplyToDate}
-                          </div>
-                        ))}
-                      </TableCell>
-                      <TableCell
-                        sx={{ color: unit.hasOverlap ? 'orange' : 'green' }}
-                      >
-                        {unit.hasOverlap ? '⚠️ Period overlap' : '✓ No overlap'}
-                      </TableCell>
-                    </TableRow>
-
-                    {unit.hasOverlap &&
-                      sortedRecords
-                        .filter((record) => record.hasOverlap)
-                        .map((record, idx) => (
-                          <TableRow key={`detail-${idx}`}>
-                            <TableCell colSpan={4} sx={{ pl: 3 }}>
-                              <BCTypography variant="body2" fontWeight="bold">
-                                Details for period: {record.supplyFromDate} →{' '}
-                                {record.supplyToDate}
-                              </BCTypography>
-                              <BCTypography
-                                variant="body2"
-                                fontWeight="bold"
-                                color="orange"
-                              >
-                                ⚠️ Overlaps with:
-                              </BCTypography>
-                              <ul style={{ paddingLeft: 20, margin: '5px 0' }}>
-                                {overlapMap[record.uniqueId].map(
-                                  (overlap, i) => (
-                                    <li key={i}>
-                                      Period: {overlap.supplyFromDate} →{' '}
-                                      {overlap.supplyToDate}
-                                    </li>
-                                  )
-                                )}
-                              </ul>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                  </React.Fragment>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer> */}
 
         <BCTypography variant="body" component="div" sx={{ mt: 2 }}>
           Coordinates: {firstLoc.lat.toFixed(4)}, {firstLoc.lng.toFixed(4)}
@@ -739,7 +638,7 @@ const MapComponent = ({ complianceReportId }) => {
   // Summary of overlapping periods
   const OverlapSummary = () => {
     if (geofencingStatus !== 'completed') return null
-
+    console.log('Overlap stats:', overlapStats)
     return (
       <Alert
         severity={overlapStats.overlapping > 0 ? 'warning' : 'success'}
@@ -899,7 +798,6 @@ const MapComponent = ({ complianceReportId }) => {
             if (geofencingStatus === 'completed') {
               const isInBC = geofencingResults[firstLoc.id]
 
-              // Check if any locations in this group have overlaps
               const hasAnyOverlaps = locGroup.some(
                 (loc) =>
                   overlapMap[loc.uniqueId] &&
