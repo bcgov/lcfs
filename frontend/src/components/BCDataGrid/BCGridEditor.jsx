@@ -227,7 +227,15 @@ export const BCGridEditor = ({
   }
   const onCellFocused = (params) => {
     if (params.column) {
-      params.api.ensureColumnVisible(params.column, 'auto')
+      const COLUMN_BUFFER = 20
+      const { left, right } = params.api.getHorizontalPixelRange()
+      const columnRight = params.column.left + params.column.actualWidth
+      if (
+        params.column.left < left + COLUMN_BUFFER ||
+        columnRight > right - COLUMN_BUFFER
+      ) {
+        params.api.ensureColumnVisible(params.column, 'middle')
+      }
     }
   }
 
@@ -243,7 +251,7 @@ export const BCGridEditor = ({
     async (numRows) => {
       alertRef.current.clearAlert()
       let newRows = []
-      
+
       if (onAction) {
         try {
           for (let i = 0; i < numRows; i++) {
@@ -300,8 +308,8 @@ export const BCGridEditor = ({
       return
     }
 
-      setShowCloseModal(true)
-    }
+    setShowCloseModal(true)
+  }
 
   return (
     <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>

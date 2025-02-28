@@ -159,9 +159,9 @@ const globals = {
   '.ag-theme-quartz .ag-header-cell-label': {
     justifyContent: 'center'
   },
-  '.ag-theme-quartz .ag-cell-inline-editing .ag-cell:focus, .ag-input-field-input:focus, .ag-picker-field-wrapper:focus':
+  '.ag-theme-quartz .ag-cell:focus, .ag-input-field-input:focus, .ag-picker-field-wrapper:focus':
     {
-      border: `1px solid ${primary.main} !important`
+      border: `2px solid ${primary.main} !important`
     },
   '.ag-theme-quartz .ag-row-editing': {
     '--ag-row-hover-color': white.main
