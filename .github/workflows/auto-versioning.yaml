@@ -27,3 +27,4 @@ jobs:
         uses: gittools/actions/gitversion/execute@v3.1.11
         with:
           useConfigFile: true
+          updateAssemblyInfo: true
