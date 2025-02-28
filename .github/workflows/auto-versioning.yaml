@@ -28,7 +28,7 @@ jobs:
           useConfigFile: true
 
       - name: Show GitVersion Config
-        run: gitversion /showconfig
+        run: which gitversion
 
       - name: Update package.json Version
         run: |
