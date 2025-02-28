@@ -151,7 +151,6 @@ async def test_save_final_supply_equipment_create_success(
                     "notes": "Additional notes about the equipment",
                 }
                 response = await client.post(url, json=payload)
-                print(response.json())
                 assert response.status_code == 201
                 assert "finalSupplyEquipmentId" in response.json()
 

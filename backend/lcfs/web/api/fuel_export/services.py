@@ -77,7 +77,7 @@ class FuelExportServices:
         )
         tci = TargetCarbonIntensitySchema(
             target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
-            target_carbon_intensity=round(row_data["target_carbon_intensity"], 2),
+            target_carbon_intensity=round(row_data["target_carbon_intensity"], 5),
             reduction_target_percentage=round(
                 row_data["reduction_target_percentage"], 2
             ),
