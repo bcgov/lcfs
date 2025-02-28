@@ -27,16 +27,7 @@ jobs:
         with:
           useConfigFile: true
 
-      - run: |
-          echo "FullSemVer (env.fullSemVer)            : ${{ env.fullSemVer }}"
-        name: Display GitVersion variables (without prefix)
-
       - name: Update package.json Version
         run: |
-          # Print GitVersion output for debugging
-          echo "GitVersion JSON output: ${{ steps.version_step.outputs.output }}"
-          # Extract SemVer from GitVersion JSON output
-          VERSION=$(echo '${{ steps.version_step.outputs.output }}' | jq -r '.SemVer')
-          echo "Updating package.json version to: $VERSION"
-          # # Use Node.js to update the version field in package.json
-          # node -e "let pkg = require('./package.json'); pkg.version = '$VERSION'; require('fs').writeFileSync('package.json', JSON.stringify(pkg, null, 2));"
+          # Extract fullSemVer from GitVersion JSON output
+          echo "${{ steps.version_step.outputs.fullSemVer }}"
