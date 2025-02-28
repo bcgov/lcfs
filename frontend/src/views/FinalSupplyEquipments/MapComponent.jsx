@@ -422,7 +422,7 @@ const MapComponent = ({ complianceReportId }) => {
       const combinedId = `${registrationNbr}_${serialNbr}`
 
       return {
-        id: row.finalSupplyEquipmentId,
+        id: combinedId,
         uniqueId: `${combinedId}_${index}`,
         registrationNbr,
         serialNbr,
