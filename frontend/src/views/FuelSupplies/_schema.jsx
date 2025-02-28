@@ -5,7 +5,6 @@ import {
   NumberEditor,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
-import BCTypography from '@/components/BCTypography'
 import { apiRoutes } from '@/constants/routes'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
@@ -20,6 +19,7 @@ import {
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -75,9 +75,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellEditorParams: {
       options: optionsData?.fuelTypes?.map((obj) => obj.fuelType).sort(),
       multiple: false,
@@ -145,7 +143,9 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       data.fuelTypeOther = selectedFuelTypeOther
       return true
     },
-    editable: (params) => isFuelTypeOther(params),
+    editable: (params) => {
+      return isFuelTypeOther(params)
+    },
     minWidth: 250
   },
   {
@@ -153,9 +153,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellEditorParams: (params) => ({
       options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -217,9 +215,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       openOnFocus: true
     }),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
@@ -250,9 +246,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.provisionOfTheActId'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellEditorParams: (params) => ({
       options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -288,6 +282,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'fuelCode',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
     cellEditor: AutocompleteCellEditor,
+    cellRenderer: SelectRenderer,
     cellEditorParams: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -382,9 +377,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     suppressKeyboardEvent,
     editable: (params) => isFuelTypeOther(params),
     cellStyle: (params) =>

@@ -18,6 +18,7 @@ import {
   isFuelTypeOther,
   fuelTypeOtherConditionalStyle
 } from '@/utils/fuelTypeOther'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -70,9 +71,7 @@ export const allocationAgreementColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
@@ -192,9 +191,7 @@ export const allocationAgreementColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
@@ -416,7 +413,7 @@ export const allocationAgreementColDefs = (
       'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
     ),
     valueFormatter: (params) => {
-      return parseFloat(params.value).toFixed(2)
+      return params.value != null ? parseFloat(params.value).toFixed(2) : ''
     },
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),

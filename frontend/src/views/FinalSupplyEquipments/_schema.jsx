@@ -11,7 +11,11 @@ import {
 import i18n from '@/i18n'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import dayjs from 'dayjs'
-import { CommonArrayRenderer } from '@/utils/grid/cellRenderers'
+import {
+  CommonArrayRenderer,
+  MultiSelectRenderer,
+  SelectRenderer
+} from '@/utils/grid/cellRenderers'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
@@ -50,9 +54,7 @@ export const finalSupplyEquipmentColDefs = (
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
     ),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellEditorParams: {
       options: optionsData?.organizationNames?.sort() || [],
       multiple: false,
@@ -207,9 +209,7 @@ export const finalSupplyEquipmentColDefs = (
     },
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
+    cellRenderer: SelectRenderer
   },
   {
     field: 'ports',
@@ -229,9 +229,7 @@ export const finalSupplyEquipmentColDefs = (
     },
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
+    cellRenderer: SelectRenderer
   },
   {
     field: 'intendedUses',
@@ -248,11 +246,7 @@ export const finalSupplyEquipmentColDefs = (
     },
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: (params) =>
-      (params.value && params.value !== '' && (
-        <CommonArrayRenderer disableLink {...params} />
-      )) ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: MultiSelectRenderer,
     suppressKeyboardEvent,
     minWidth: 560
   },

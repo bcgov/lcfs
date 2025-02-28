@@ -15,6 +15,7 @@ import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelExportColDefs } from './_schema'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import { isArrayEmpty } from '@/utils/array.js'
+import { PROVISION_APPROVED_FUEL_CODE } from '@/views/OtherUses/_schema.jsx'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
@@ -127,14 +128,52 @@ export const AddEditFuelExports = () => {
 
   const onCellValueChanged = useCallback(
     async (params) => {
-      if (params.column.colId === 'fuelTypeId') {
-        const options = optionsData?.fuelTypes
-          ?.find((obj) => params.node.data.fuelType === obj.fuelType)
-          ?.fuelCategories.map((item) => item.fuelCategory)
+      if (
+        ['fuelTypeId', 'fuelCode', 'provisionOfTheAct'].includes(
+          params.colDef.field
+        )
+      ) {
+        const selectedFuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.node.data.fuelType === obj.fuelType
+        )
+        if (!selectedFuelType) {
+          return
+        }
 
-        const categoryValue = options.length === 1 ? options[0] : null
+        if (params.column.colId === 'fuelTypeId') {
+          const options = optionsData?.fuelTypes
+            ?.find((obj) => params.node.data.fuelType === obj.fuelType)
+            ?.fuelCategories.map((item) => item.fuelCategory)
 
-        params.node.setDataValue('fuelCategoryId', categoryValue)
+          const categoryValue = options.length === 1 ? options[0] : null
+
+          const endUseTypes = selectedFuelType.eerRatios.map(
+            (item) => item.endUseType
+          )
+
+          const endUseValue =
+            endUseTypes.length === 1 ? endUseTypes[0].type : null
+
+          params.node.setDataValue('endUseType', endUseValue)
+          params.node.setDataValue('fuelCategoryId', categoryValue)
+        }
+
+        const isFuelCodeScenario =
+          params.node.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
+
+        // Auto-populate the "fuelCode" field
+        if (isFuelCodeScenario) {
+          const fuelCodeOptions = selectedFuelType.fuelCodes.map(
+            (code) => code.fuelCode
+          )
+          if (fuelCodeOptions.length === 1) {
+            params.node.setDataValue('fuelCode', fuelCodeOptions[0] ?? null)
+            params.node.setDataValue(
+              'fuelCodeId',
+              selectedFuelType.fuelCodes[0]?.fuelCodeId ?? null
+            )
+          }
+        }
       }
     },
     [optionsData]
