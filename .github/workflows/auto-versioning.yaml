@@ -35,4 +35,11 @@ jobs:
           # Update package.json using jq
           cd frontend
           jq --arg ver "$VERSION" '.version = $ver' package.json > package.tmp.json && mv package.tmp.json package.json
-          cat package.json
+
+      - name: Show GitVersion.yml
+        run: |
+          cat GitVersion.yml
+
+      - name: Show updated package.json
+        run: |
+          cat frontend/package.json
