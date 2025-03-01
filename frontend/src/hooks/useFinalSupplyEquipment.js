@@ -27,6 +27,8 @@ export const useGetFinalSupplyEquipments = (
       )
       return response.data
     },
+    staleTime: 5 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
     ...options
   })
 }
@@ -54,6 +56,14 @@ export const useSaveFinalSupplyEquipment = (complianceReportId, options) => {
         'compliance-report-summary',
         complianceReportId
       ])
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          return (
+            query.queryKey[0] === 'final-supply-equipments' &&
+            query.queryKey[1] === complianceReportId
+          )
+        }
+      })
     }
   })
 }
@@ -86,6 +96,14 @@ export const useImportFinalSupplyEquipment = (complianceReportId, options) => {
         'final-supply-equipments',
         complianceReportId
       ])
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          return (
+            query.queryKey[0] === 'final-supply-equipments' &&
+            query.queryKey[1] === complianceReportId
+          )
+        }
+      })
       if (options.onSuccess) {
         options.onSuccess(data)
       }
