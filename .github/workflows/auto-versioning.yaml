@@ -28,9 +28,10 @@ jobs:
           useConfigFile: true
 
       - name: Show GitVersion Config
-        run: |
-          echo $PATH
-          ls -l /opt/hostedtoolcache/GitVersion.Tool
+        id: show_config
+        uses: gittools/actions/gitversion/execute@v3.1.11
+        with:
+          arguments: "/showconfig"
 
       - name: Update package.json Version
         run: |
