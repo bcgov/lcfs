@@ -30,9 +30,10 @@ jobs:
       - name: Show GitVersion Config
         run: |
           pwd
-          cd /opt/hostedtoolcache/GitVersion.Tool/6.0.0
+          cd /opt/hostedtoolcache/GitVersion.Tool/6.0.0/dotnet-gitversion
           pwd
           ls
+          tree
 
       - name: Update package.json Version
         run: |
