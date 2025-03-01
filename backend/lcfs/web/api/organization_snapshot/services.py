@@ -37,6 +37,7 @@ class OrganizationSnapshotService:
 
         # 2. Derive BC address and service address from OrganizationAddress
         bc_address = None
+        head_office_address = None
         org_address = organization.org_address
         if organization.org_address:
             bc_address_parts = [
@@ -60,7 +61,7 @@ class OrganizationSnapshotService:
                 org_attorney_address.country,
                 org_attorney_address.postalCode_zipCode,
             ]
-            service_address = ", ".join(filter(None, service_addr_parts))
+            head_office_address = ", ".join(filter(None, service_addr_parts))
 
         # 3. Create the Snapshot
         org_snapshot = ComplianceReportOrganizationSnapshot(
@@ -68,7 +69,8 @@ class OrganizationSnapshotService:
             operating_name=organization.operating_name or organization.name,
             email=organization.email,
             phone=organization.phone,
-            bc_address=bc_address,
+            head_office_address=head_office_address,
+            records_address=organization.records_address,
             service_address=service_address,
             compliance_report_id=compliance_report_id,
         )
@@ -92,7 +94,8 @@ class OrganizationSnapshotService:
         snapshot.operating_name = request_data.operating_name
         snapshot.email = request_data.email
         snapshot.phone = request_data.phone
-        snapshot.bc_address = request_data.bc_address
+        snapshot.head_office_address = request_data.head_office_address
+        snapshot.records_address = request_data.records_address
         snapshot.service_address = request_data.service_address
         snapshot.is_edited = True
 

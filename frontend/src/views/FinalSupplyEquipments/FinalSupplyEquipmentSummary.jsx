@@ -10,11 +10,15 @@ import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
+import MapComponent from './MapComponent'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Switch from '@mui/material/Switch'
 
 export const FinalSupplyEquipmentSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState('final-supply-equipments-grid')
+  const [showMap, setShowMap] = useState(false)
   const { complianceReportId } = useParams()
 
   const gridRef = useRef()
@@ -91,6 +95,23 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
           suppressPagination={data.finalSupplyEquipments.length <= 10}
         />
       </BCBox>
+      <>
+        {/* Toggle Map Switch */}
+        <FormControlLabel
+          control={
+            <Switch
+              sx={{ mt: -1 }}
+              checked={showMap}
+              onChange={() => setShowMap(!showMap)}
+            />
+          }
+          label={showMap ? 'Hide Map' : 'Show Map'}
+          sx={{ mt: 2 }}
+        />
+
+        {/* Conditional Rendering of MapComponent */}
+        {showMap && <MapComponent complianceReportId={complianceReportId} />}
+      </>
     </Grid2>
   )
 }

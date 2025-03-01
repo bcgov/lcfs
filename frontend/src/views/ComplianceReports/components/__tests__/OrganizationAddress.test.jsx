@@ -30,8 +30,10 @@ describe('OrganizationAddress', () => {
       phone: '250-123-4567',
       email: 'info@acme.com',
       serviceAddress: '123 Main St.',
-      bcAddress: '456 BC St.'
+      recordsAddress: '456 BC St.',
+      headOfficeAddress: '789 HQ St.'
     }
+
     setIsEditingMock = vi.fn()
     mockMutate = vi.fn()
 
@@ -40,9 +42,10 @@ describe('OrganizationAddress', () => {
       OrganizationSnapshotHooks,
       'useOrganizationSnapshot'
     ).mockReturnValue({
-      data: {},
+      data: snapshotData,
       isLoading: false
     })
+
     vi.spyOn(
       OrganizationSnapshotHooks,
       'useUpdateOrganizationSnapshot'
@@ -68,44 +71,56 @@ describe('OrganizationAddress', () => {
     expect(screen.getByText(snapshotData.name)).toBeInTheDocument()
     expect(screen.getByText('org:operatingNameLabel:')).toBeInTheDocument()
     expect(screen.getByText(snapshotData.operatingName)).toBeInTheDocument()
+    expect(screen.getByText('org:phoneNbrLabel:')).toBeInTheDocument()
+    expect(screen.getByText(snapshotData.phone)).toBeInTheDocument()
   })
 
-  it('renders the form in editing mode', () => {
+  it('renders the form in editing mode', async () => {
     render(
       <OrganizationAddress
         snapshotData={snapshotData}
         complianceReportId={123}
-        isEditing
+        isEditing={true}
         setIsEditing={setIsEditingMock}
       />,
       { wrapper }
     )
 
-    // Expect form fields for editing
-    expect(screen.getByLabelText('org:legalNameLabel')).toBeInTheDocument()
-    expect(screen.getByLabelText('org:operatingNameLabel')).toBeInTheDocument()
-    expect(screen.getByLabelText('org:phoneNbrLabel')).toBeInTheDocument()
+    // Use getByRole with name to find inputs
+    expect(
+      screen.getByRole('textbox', { name: /org:legalNameLabel/i })
+    ).toHaveValue(snapshotData.name)
+    expect(
+      screen.getByRole('textbox', { name: /org:operatingNameLabel/i })
+    ).toHaveValue(snapshotData.operatingName)
+    expect(
+      screen.getByRole('textbox', { name: /org:phoneNbrLabel/i })
+    ).toHaveValue(snapshotData.phone)
   })
 
-  it('calls mutate on form submit', async () => {
+  it('calls mutate on form submit with valid data', async () => {
+    const user = userEvent.setup()
+
     render(
       <OrganizationAddress
         snapshotData={snapshotData}
         complianceReportId={1}
-        isEditing
+        isEditing={true}
         setIsEditing={setIsEditingMock}
       />,
       { wrapper }
     )
 
-    // Change phone
-    const phoneInput = screen.getByLabelText('org:phoneNbrLabel')
-    await userEvent.clear(phoneInput)
-    await userEvent.type(phoneInput, '999-999-9999')
+    // Update phone with valid format using getByRole
+    const phoneInput = screen.getByRole('textbox', {
+      name: /org:phoneNbrLabel/i
+    })
+    await user.clear(phoneInput)
+    await user.type(phoneInput, '999-999-9999')
 
-    // Submit the form
+    // Submit form
     const saveButton = screen.getByRole('button', { name: 'saveBtn' })
-    await userEvent.click(saveButton)
+    await user.click(saveButton)
 
     // Validate mutate call
     await waitFor(() => {
@@ -117,29 +132,63 @@ describe('OrganizationAddress', () => {
     })
   })
 
-  it('clicking Cancel resets data and exits edit mode', async () => {
+  it('shows validation errors for invalid data', async () => {
+    const user = userEvent.setup()
+
     render(
       <OrganizationAddress
         snapshotData={snapshotData}
         complianceReportId={1}
-        isEditing
+        isEditing={true}
         setIsEditing={setIsEditingMock}
       />,
       { wrapper }
     )
 
-    // Change phone
-    const phoneInput = screen.getByLabelText('org:phoneNbrLabel')
-    await userEvent.clear(phoneInput)
-    await userEvent.type(phoneInput, '999-999-9999')
+    // Enter invalid phone number using getByRole
+    const phoneInput = screen.getByRole('textbox', {
+      name: /org:phoneNbrLabel/i
+    })
+    await user.clear(phoneInput)
+    await user.type(phoneInput, '123') // Invalid format
 
-    // Cancel
+    // Submit form
+    const saveButton = screen.getByRole('button', { name: 'saveBtn' })
+    await user.click(saveButton)
+
+    // Check validation error
+    expect(
+      await screen.findByText('Phone number is not valid')
+    ).toBeInTheDocument()
+    expect(mockMutate).not.toHaveBeenCalled()
+  })
+
+  it('clicking Cancel resets form and exits edit mode', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <OrganizationAddress
+        snapshotData={snapshotData}
+        complianceReportId={1}
+        isEditing={true}
+        setIsEditing={setIsEditingMock}
+      />,
+      { wrapper }
+    )
+
+    // Change form values using getByRole
+    const phoneInput = screen.getByRole('textbox', {
+      name: /org:phoneNbrLabel/i
+    })
+    await user.clear(phoneInput)
+    await user.type(phoneInput, '999-999-9999')
+
+    // Click cancel
     const cancelButton = screen.getByRole('button', { name: 'cancelBtn' })
-    await userEvent.click(cancelButton)
+    await user.click(cancelButton)
 
-    // Make sure edit mode is off
+    // Verify reset and edit mode exit
     expect(setIsEditingMock).toHaveBeenCalledWith(false)
-    // (We could confirm phoneInput is reset if the form remains mounted)
-    expect(phoneInput.value).toBe(snapshotData.phone)
+    expect(phoneInput).toHaveValue(snapshotData.phone)
   })
 })

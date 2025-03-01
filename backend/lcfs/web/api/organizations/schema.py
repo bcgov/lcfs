@@ -155,6 +155,7 @@ class OrganizationCreateSchema(BaseSchema):
     has_early_issuance: bool
     organization_status_id: int
     organization_type_id: int
+    records_address: Optional[str] = None
     address: OrganizationAddressCreateSchema
     attorney_address: OrganizationAttorneyAddressCreateSchema
 
@@ -168,6 +169,7 @@ class OrganizationUpdateSchema(BaseSchema):
     has_early_issuance: bool
     organization_status_id: Optional[int] = None
     organization_type_id: Optional[int] = None
+    records_address: Optional[str] = None
     address: Optional[OrganizationAddressCreateSchema] = []
     attorney_address: Optional[OrganizationAttorneyAddressCreateSchema] = []
 
@@ -181,6 +183,7 @@ class OrganizationResponseSchema(BaseSchema):
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     org_status: Optional[OrganizationStatusSchema] = []
+    records_address: Optional[str] = None
     org_address: Optional[OrganizationAddressSchema] = []
     org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = []
 

@@ -10,6 +10,7 @@ const checkbox = {
   styleOverrides: {
     root: {
       padding: 0,
+      marginTop: 3,
       '& .MuiSvgIcon-root': {
         backgroundPosition: 'center',
         backgroundSize: 'contain',
