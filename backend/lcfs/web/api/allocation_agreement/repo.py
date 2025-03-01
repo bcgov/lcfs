@@ -41,7 +41,8 @@ class AllocationAgreementRepository:
 
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
         fuel_types = await self.fuel_code_repo.get_formatted_fuel_types(
-            include_legacy=include_legacy
+            include_legacy=include_legacy,
+            compliance_period=compliance_period
         )
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
         allocation_transaction_types = (
@@ -57,7 +58,7 @@ class AllocationAgreementRepository:
         provisions_of_the_act = (
             (await self.db.execute(provisions_select)).scalars().all()
         )
-        fuel_codes = (await self.db.execute(select(FuelCode))).scalars().all()
+        fuel_codes = (await self.db.execute(select(FuelCode))).unique().scalars().all()
 
         return {
             "allocation_transaction_types": allocation_transaction_types,

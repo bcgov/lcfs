@@ -116,7 +116,9 @@ async def save_fuel_export_row(
 ):
     """Endpoint to save single fuel export row"""
     compliance_report_id = request_data.compliance_report_id
-    await report_validate.validate_organization_access(compliance_report_id)
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
 
     # Determine user type for record creation
     current_user_type = request.user.user_type
