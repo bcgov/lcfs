@@ -82,7 +82,9 @@ export const ROUTES = {
       OTHER_USE_FUELS:
         '/compliance-reporting/:compliancePeriod/:complianceReportId/fuels-other-use/changelog',
       FUEL_EXPORTS:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/fuel-exports/changelog'
+        '/compliance-reporting/:compliancePeriod/:complianceReportId/fuel-exports/changelog',
+      ALLOCATION_AGREEMENTS:
+        '/compliance-reporting/:compliancePeriod/:complianceReportId/allocation-agreements/changelog'
     }
   },
 

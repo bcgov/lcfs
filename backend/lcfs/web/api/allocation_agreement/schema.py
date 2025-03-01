@@ -1,7 +1,10 @@
 from typing import Optional, List
 
-from pydantic import Field, model_validator
+from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+from pydantic import Field, field_validator, model_validator, validator
 
+from lcfs.db.base import ActionTypeEnum, UserTypeEnum
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
@@ -22,6 +25,9 @@ class FuelCategorySchema(BaseSchema):
     category: str
     default_and_prescribed_ci: Optional[float] = None
 
+class FuelCategoryResponseSchema(BaseSchema):
+    fuel_category_id: Optional[int] = None
+    category: str
 
 class FuelCodeSchema(BaseSchema):
     fuel_code_id: int
@@ -57,6 +63,101 @@ class AllocationAgreementTableOptionsSchema(BaseSchema):
     fuel_codes: List[FuelCodeSchema]
     units_of_measure: List[str]
 
+class AllocationAgreementChangelogFuelTypeSchema(BaseSchema):
+    fuel_type_id: int
+    fuel_type: str
+    fossil_derived: Optional[bool] = None
+    provision_1_id: Optional[int] = None
+    provision_2_id: Optional[int] = None
+    default_carbon_intensity: Optional[float] = None
+    units: FuelTypeQuantityUnitsEnumSchema
+
+class AllocationAgreementDiffSchema(BaseSchema):
+    allocation_transaction_type: Optional[bool] = None
+    transaction_partner: Optional[bool] = None
+    postal_address: Optional[bool] = None
+    transaction_partner_email: Optional[bool] = None
+    transaction_partner_phone: Optional[bool] = None
+    fuel_type: Optional[bool] = None
+    fuel_type_other: Optional[bool] = None
+    fuel_category: Optional[bool] = None
+    provision_of_the_act: Optional[bool] = None
+    fuel_code: Optional[bool] = None
+    quantity: Optional[bool] = None
+    units: Optional[bool] = None
+    ci_of_fuel: Optional[bool] = None
+
+class AllocationAgreementResponseSchema(BaseSchema):
+    compliance_report_id: int
+    allocation_agreement_id: int
+    allocation_transaction_type: str
+    transaction_partner: str
+    postal_address: str
+    transaction_partner_email: str
+    transaction_partner_phone: str
+    fuel_type: str
+    fuel_type_other: Optional[str] = None
+    ci_of_fuel: Optional[float] = None
+    provision_of_the_act: str
+    quantity: int
+    units: str
+    fuel_category: str
+    fuel_code: Optional[FuelCodeResponseSchema] = None
+    group_uuid: str
+    version: int
+    user_type: str
+    action_type: str
+    diff: Optional[AllocationAgreementDiffSchema] = None
+    updated: Optional[bool] = None
+
+    class Config:
+        orm_mode = True
+
+    @field_validator("allocation_transaction_type", mode="before")
+    def convert_allocation_transaction_type(cls, v):
+        return v.type if hasattr(v, "type") else v
+
+    @field_validator("provision_of_the_act", mode="before")
+    def convert_provision_of_the_act(cls, v):
+        return v.name if hasattr(v, "name") else v
+
+    @field_validator("fuel_type", mode="before")
+    def convert_fuel_type(cls, v):
+        return v.fuel_type if hasattr(v, "fuel_type") else v
+
+    @field_validator("fuel_category", mode="before")
+    def convert_fuel_category(cls, v):
+        if isinstance(v, str):
+            return v
+        return v.category if hasattr(v, "category") else str(v)
+
+class AllocationAgreementChangelogSchema(BaseSchema):
+    compliance_report_id: int
+    allocation_agreement_id: Optional[int] = None
+    allocation_transaction_type: str
+    transaction_partner: str
+    postal_address: str
+    transaction_partner_email: str
+    transaction_partner_phone: str
+    fuel_type: AllocationAgreementChangelogFuelTypeSchema
+    fuel_type_other: Optional[str] = None
+    ci_of_fuel: float
+    provision_of_the_act: str
+    quantity: int = Field(..., gt=0, description="Quantity must be greater than 0")
+    units: str
+    fuel_category: FuelCategorySchema
+    fuel_code: Optional[FuelCodeSchema] = None
+    deleted: Optional[bool] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    user_type: Optional[str] = None
+    action_type: Optional[str] = None
+    diff: Optional[AllocationAgreementDiffSchema] = None
+    updated: Optional[bool] = None
+
+class FuelCategoryResponseSchema(BaseSchema):
+    fuel_category_id: Optional[int] = None
+    category: str
 
 class AllocationAgreementCreateSchema(BaseSchema):
     compliance_report_id: int
@@ -75,6 +176,10 @@ class AllocationAgreementCreateSchema(BaseSchema):
     fuel_category: str
     fuel_code: Optional[str] = None
     deleted: Optional[bool] = None
+    group_uuid: Optional[str] = None
+    version: Optional[int] = None
+    user_type: Optional[str] = None
+    action_type: Optional[str] = None
 
     @model_validator(mode="before")
     @classmethod
