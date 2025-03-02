@@ -551,8 +551,8 @@ export const changelogCommonColDefs = [
   {
     headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
     field: 'allocationTransactionType',
-    cellStyle: (params) =>
-      changelogCellStyle(params, 'allocationTransactionType')
+    valueGetter: (params) => params.data?.allocationTransactionType?.type || '',
+    cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
   },
   {
     headerName: i18n.t(
@@ -589,6 +589,7 @@ export const changelogCommonColDefs = [
       'allocationAgreement:allocationAgreementColLabels.fuelType'
     ),
     field: 'fuelType',
+    valueGetter: (params) => params.data?.fuelType?.fuelType || '',
     cellStyle: (params) => changelogCellStyle(params, 'fuelType')
   },
   {
@@ -603,6 +604,7 @@ export const changelogCommonColDefs = [
       'allocationAgreement:allocationAgreementColLabels.fuelCategory'
     ),
     field: 'fuelCategory',
+    valueGetter: (params) => params.data?.fuelCategory?.category || '',
     cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
   },
   {
@@ -610,6 +612,7 @@ export const changelogCommonColDefs = [
       'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
     ),
     field: 'provisionOfTheAct',
+    valueGetter: (params) => params.data?.provisionOfTheAct?.name || '',
     cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
   },
   {

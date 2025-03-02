@@ -46,9 +46,17 @@ class FuelTypeSchema(BaseSchema):
     default_carbon_intensity: float
     units: str
     unrecognized: bool
-    fuel_categories: List[FuelCategorySchema]
-    fuel_codes: Optional[List[FuelCodeSchema]] = []
-    provision_of_the_act: Optional[List[ProvisionOfTheActSchema]] = []
+    fuel_categories: Optional[List[FuelCategorySchema]] = Field(default_factory=list)
+    fuel_codes: Optional[List[FuelCodeSchema]] = Field(default_factory=list)
+    provision_of_the_act: Optional[List[ProvisionOfTheActSchema]] = Field(default_factory=list)
+
+
+class FuelTypeChangelogSchema(BaseSchema):
+    fuel_type_id: int
+    fuel_type: str
+    default_carbon_intensity: float
+    units: str
+    unrecognized: bool
 
 
 class ProvisionOfTheActSchema(BaseSchema):
@@ -90,18 +98,20 @@ class AllocationAgreementDiffSchema(BaseSchema):
 class AllocationAgreementResponseSchema(BaseSchema):
     compliance_report_id: int
     allocation_agreement_id: int
-    allocation_transaction_type: str
+    allocation_transaction_type: AllocationTransactionTypeSchema
     transaction_partner: str
     postal_address: str
     transaction_partner_email: str
     transaction_partner_phone: str
-    fuel_type: str
+    fuel_type: FuelTypeChangelogSchema
+    fuel_category_id: Optional[int] = None
+    fuel_category: FuelCategoryResponseSchema
     fuel_type_other: Optional[str] = None
     ci_of_fuel: Optional[float] = None
-    provision_of_the_act: str
+    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
     quantity: int
     units: str
-    fuel_category: str
+    fuel_category: FuelCategoryResponseSchema
     fuel_code: Optional[FuelCodeResponseSchema] = None
     group_uuid: str
     version: int
@@ -109,27 +119,6 @@ class AllocationAgreementResponseSchema(BaseSchema):
     action_type: str
     diff: Optional[AllocationAgreementDiffSchema] = None
     updated: Optional[bool] = None
-
-    class Config:
-        orm_mode = True
-
-    @field_validator("allocation_transaction_type", mode="before")
-    def convert_allocation_transaction_type(cls, v):
-        return v.type if hasattr(v, "type") else v
-
-    @field_validator("provision_of_the_act", mode="before")
-    def convert_provision_of_the_act(cls, v):
-        return v.name if hasattr(v, "name") else v
-
-    @field_validator("fuel_type", mode="before")
-    def convert_fuel_type(cls, v):
-        return v.fuel_type if hasattr(v, "fuel_type") else v
-
-    @field_validator("fuel_category", mode="before")
-    def convert_fuel_category(cls, v):
-        if isinstance(v, str):
-            return v
-        return v.category if hasattr(v, "category") else str(v)
 
 class AllocationAgreementChangelogSchema(BaseSchema):
     compliance_report_id: int
