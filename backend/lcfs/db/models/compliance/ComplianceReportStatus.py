@@ -14,6 +14,12 @@ class ComplianceReportStatusEnum(enum.Enum):
     Reassessed = "Reassessed"
     Rejected = "Rejected"
 
+    def underscore_value(self) -> str:
+        """
+        Return the status as an underscored string.
+        """
+        return self.value.replace(" ", "_")
+
 
 class ComplianceReportStatus(BaseModel, EffectiveDates):
     __tablename__ = "compliance_report_status"

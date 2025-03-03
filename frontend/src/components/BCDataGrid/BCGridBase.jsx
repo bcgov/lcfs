@@ -91,14 +91,6 @@ export const BCGridBase = forwardRef(
       clearFilters
     }))
 
-    const closeSelectsOnScroll = (e) => {
-      const cell = e.api.getFocusedCell()
-
-      if (cell) {
-        e.api.clearFocusedCell()
-      }
-    }
-
     return (
       <AgGridReact
         ref={ref}
@@ -119,7 +111,6 @@ export const BCGridBase = forwardRef(
         enableBrowserTooltips={true}
         suppressPaginationPanel
         suppressScrollOnNewData
-        onBodyScroll={closeSelectsOnScroll}
         onRowDataUpdated={determineHeight}
         getRowStyle={getRowStyle}
         rowHeight={ROW_HEIGHT}

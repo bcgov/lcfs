@@ -39,6 +39,7 @@ test_cases = [
             "eer": 1,
         },
         "expected_compliance_units": 0,
+        "rounded_compliance_units": 0,
     },
     {
         "description": "Diesel, prescribed carbon intensity, liters",
@@ -48,9 +49,10 @@ test_cases = [
             "target_ci": 79.28,
             "ci_of_fuel": 94.38,
             "energy_density": 38.65,
-            "eer": 1,
+            "eer": 1.0,
         },
-        "expected_compliance_units": -58,
+        "expected_compliance_units": -58.3615,
+        "rounded_compliance_units": -58,
     },
     {
         "description": "Gasoline, default carbon intensity, liters",
@@ -62,7 +64,8 @@ test_cases = [
             "energy_density": 34.69,
             "eer": 1,
         },
-        "expected_compliance_units": -52,
+        "expected_compliance_units": -52.00031,
+        "rounded_compliance_units": -52,
     },
     {
         "description": "Diesel, fuel code, kWh",
@@ -74,7 +77,8 @@ test_cases = [
             "energy_density": 3.6,
             "eer": 2.5,
         },
-        "expected_compliance_units": 67,
+        "expected_compliance_units": 66.9816,
+        "rounded_compliance_units": 67,
     },
     {
         "description": "Gasoline, default carbon intensity, m³",
@@ -86,7 +90,8 @@ test_cases = [
             "energy_density": 38.27,
             "eer": 0.9,
         },
-        "expected_compliance_units": 26,
+        "expected_compliance_units": 26.41395,
+        "rounded_compliance_units": 26,
     },
 ]
 
@@ -570,8 +575,8 @@ async def test_create_compliance_units_calculation(
 
     # Assertions
     assert (
-        result.compliance_units == case["expected_compliance_units"]
-    ), f"Failed {case['description']}. Expected {case['expected_compliance_units']}, got {result.compliance_units}"
+        result.compliance_units == case["rounded_compliance_units"]
+    ), f"Failed {case['description']}. Expected {case['rounded_compliance_units']}, got {result.compliance_units}"
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
         fuel_type_id=fe_data.fuel_type_id,
         fuel_category_id=fe_data.fuel_category_id,

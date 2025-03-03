@@ -5,11 +5,10 @@ import {
   NumberEditor,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
-import BCTypography from '@/components/BCTypography'
 import { apiRoutes } from '@/constants/routes'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { formatNumberWithCommas } from '@/utils/formatters'
 import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
@@ -20,6 +19,7 @@ import {
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -65,7 +65,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'complianceUnits',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
     minWidth: 100,
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas,
     editable: false,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings)
@@ -75,9 +75,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellEditorParams: {
       options: optionsData?.fuelTypes?.map((obj) => obj.fuelType).sort(),
       multiple: false,
@@ -145,7 +143,9 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       data.fuelTypeOther = selectedFuelTypeOther
       return true
     },
-    editable: (params) => isFuelTypeOther(params),
+    editable: (params) => {
+      return isFuelTypeOther(params)
+    },
     minWidth: 250
   },
   {
@@ -153,9 +153,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellEditorParams: (params) => ({
       options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -217,9 +215,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       openOnFocus: true
     }),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
@@ -250,9 +246,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.provisionOfTheActId'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellEditorParams: (params) => ({
       options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -288,6 +282,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'fuelCode',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
     cellEditor: AutocompleteCellEditor,
+    cellRenderer: SelectRenderer,
     cellEditorParams: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -360,7 +355,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     field: 'quantity',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
-    valueFormatter: (params) => valueFormatter({ value: params.value }),
+    valueFormatter: formatNumberWithCommas,
     cellEditor: NumberEditor,
     cellEditorParams: {
       precision: 0,
@@ -382,9 +377,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       freeSolo: false,
       openOnFocus: true
     }),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     suppressKeyboardEvent,
     editable: (params) => isFuelTypeOther(params),
     cellStyle: (params) =>
@@ -395,13 +388,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    valueGetter: (params) =>
-      optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.targetCarbonIntensities.find(
-          (item) => item.fuelCategory.fuelCategory === params.data.fuelCategory
-        )?.targetCarbonIntensity || 0
+      StandardCellWarningAndErrors(params, errors, warnings)
   },
   {
     field: 'ciOfFuel',
@@ -479,7 +466,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas,
     minWidth: 100,
     editable: false
   }
@@ -489,7 +476,7 @@ export const fuelSupplySummaryColDef = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
     field: 'complianceUnits',
-    valueFormatter
+    valueFormatter: formatNumberWithCommas
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
@@ -521,7 +508,7 @@ export const fuelSupplySummaryColDef = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
     field: 'quantity',
-    valueFormatter
+    valueFormatter: formatNumberWithCommas
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
@@ -547,7 +534,7 @@ export const fuelSupplySummaryColDef = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
     field: 'energy',
-    valueFormatter
+    valueFormatter: formatNumberWithCommas
   }
 ]
 
@@ -564,7 +551,7 @@ export const changelogCommonColDefs = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
     field: 'complianceUnits',
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas,
     cellStyle: (params) => changelogCellStyle(params, 'complianceUnits')
   },
   {
@@ -602,7 +589,7 @@ export const changelogCommonColDefs = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
     field: 'quantity',
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas,
     cellStyle: (params) => changelogCellStyle(params, 'quantity')
   },
   {
@@ -638,7 +625,7 @@ export const changelogCommonColDefs = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
     field: 'energy',
-    valueFormatter,
+    valueFormatter: formatNumberWithCommas,
     cellStyle: (params) => changelogCellStyle(params, 'energy')
   }
 ]

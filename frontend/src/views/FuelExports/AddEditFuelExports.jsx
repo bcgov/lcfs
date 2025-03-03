@@ -1,20 +1,26 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
+import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/constants/routes'
 import {
   useFuelExportOptions,
   useGetFuelExports,
   useSaveFuelExport
 } from '@/hooks/useFuelExport'
-import BCTypography from '@/components/BCTypography'
+import { isArrayEmpty } from '@/utils/array.js'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelExportColDefs } from './_schema'
+<<<<<<< HEAD
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import { isArrayEmpty } from '@/utils/array.js'
+import { PROVISION_APPROVED_FUEL_CODE } from '@/views/OtherUses/_schema.jsx'
+=======
+>>>>>>> bcaa34c8 (Sort by creation_date for fuel exports)
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
@@ -128,13 +134,58 @@ export const AddEditFuelExports = () => {
   const onCellValueChanged = useCallback(
     async (params) => {
       if (params.column.colId === 'fuelTypeId') {
-        const options = optionsData?.fuelTypes
-          ?.find((obj) => params.node.data.fuelType === obj.fuelType)
-          ?.fuelCategories.map((item) => item.fuelCategory)
+        const selectedFuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.node.data.fuelType === obj.fuelType
+        )
+        if (selectedFuelType) {
+          const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
+            (item) => item.fuelCategory
+          )
 
-        const categoryValue = options.length === 1 ? options[0] : null
+          const endUseTypes = selectedFuelType.eerRatios.map(
+            (item) => item.endUseType
+          )
 
-        params.node.setDataValue('fuelCategoryId', categoryValue)
+          // Set to null if multiple options, otherwise use first item
+          const categoryValue =
+            fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
+          const endUseValue =
+            endUseTypes.length === 1 ? endUseTypes[0].type : 'Any'
+          const provisionValue =
+            selectedFuelType.provisions.length === 1
+              ? selectedFuelType.provisions[0].name
+              : null
+
+          params.node.setDataValue('fuelCategory', categoryValue)
+          params.node.setDataValue('endUseType', endUseValue)
+          params.node.setDataValue('provisionOfTheAct', provisionValue)
+        }
+      }
+
+      if (params.column.colId === 'fuelCategoryId') {
+        const selectedFuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.node.data.fuelType === obj.fuelType
+        )
+
+        if (selectedFuelType) {
+          const endUseTypes = selectedFuelType.eerRatios
+            .filter(
+              (item) =>
+                item.fuelCategory.fuelCategory === params.data.fuelCategory
+            )
+            .map((item) => item.endUseType)
+
+          // Set to null if multiple options, otherwise use first item
+          const endUseValue =
+            endUseTypes.length === 1 ? endUseTypes[0].type : 'Any'
+          const provisionValue =
+            selectedFuelType.provisions.length === 1
+              ? selectedFuelType.provisions[0].name
+              : null
+
+          params.node.setDataValue('endUseType', endUseValue)
+          params.node.setDataValue('provisionOfTheAct', provisionValue)
+        }
       }
     },
     [optionsData]
