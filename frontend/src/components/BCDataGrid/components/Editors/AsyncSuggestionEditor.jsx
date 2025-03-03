@@ -36,10 +36,10 @@ export const AsyncSuggestionEditor = ({
   const [inputValue, setInputValue] = useState('')
   const apiService = useApiService()
 
-  const { data: options, isLoading } = useQuery({
+  const { data: options = [], isLoading } = useQuery({
     queryKey: [queryKey || 'async-suggestion', inputValue],
     queryFn: async ({ queryKey }) => queryFn({ client: apiService, queryKey }),
-    enabled: inputValue.length >= minWords && enabled,
+    enabled: inputValue?.length >= minWords && enabled,
     retry: false,
     refetchOnWindowFocus: false
   })
@@ -55,7 +55,19 @@ export const AsyncSuggestionEditor = ({
     onValueChange(newInputValue)
   }
 
-  const handleKeyDown = (event) => {
+  const handleChange = (_, newValue) => {
+    if (typeof newValue === 'string') {
+      debouncedSetInputValue(newValue)
+      onValueChange(newValue)
+    } else if (newValue && typeof newValue === 'object') {
+      debouncedSetInputValue(newValue[optionLabel])
+      onValueChange(newValue) // Set full object if option is an object
+    } else {
+      onValueChange('')
+    }
+  }
+
+  const handleKeyDown = (event, value) => {
     if (onKeyDownCapture) {
       onKeyDownCapture(event)
     } else if (event.key === 'Tab') {
@@ -97,6 +109,8 @@ export const AsyncSuggestionEditor = ({
         includeInputInList
         value={value}
         onInputChange={handleInputChange}
+        filterOptions={(x) => x}
+        onChange={handleChange} // Handles selection and sets correct value
         onKeyDownCapture={handleKeyDown}
         loading={isLoading}
         noOptionsText="No suggestions..."
