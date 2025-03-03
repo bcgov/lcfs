@@ -15,12 +15,6 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelExportColDefs } from './_schema'
-<<<<<<< HEAD
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
-import { isArrayEmpty } from '@/utils/array.js'
-import { PROVISION_APPROVED_FUEL_CODE } from '@/views/OtherUses/_schema.jsx'
-=======
->>>>>>> bcaa34c8 (Sort by creation_date for fuel exports)
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
@@ -147,7 +141,7 @@ export const AddEditFuelExports = () => {
           )
 
           // Set to null if multiple options, otherwise use first item
-          const categoryValue =
+          const category =
             fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
           const endUseValue =
             endUseTypes.length === 1 ? endUseTypes[0].type : 'Any'
@@ -156,7 +150,7 @@ export const AddEditFuelExports = () => {
               ? selectedFuelType.provisions[0].name
               : null
 
-          params.node.setDataValue('fuelCategory', categoryValue)
+          params.node.setDataValue('fuelCategory', category)
           params.node.setDataValue('endUseType', endUseValue)
           params.node.setDataValue('provisionOfTheAct', provisionValue)
         }
