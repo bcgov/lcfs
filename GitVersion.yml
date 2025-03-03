@@ -1,5 +1,4 @@
 workflow: GitFlow/v1
-mode: ContinuousDelivery
 next-version: 3.0.0
 branches:
   develop:
