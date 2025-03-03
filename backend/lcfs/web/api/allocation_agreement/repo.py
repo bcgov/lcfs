@@ -58,7 +58,7 @@ class AllocationAgreementRepository:
         provisions_of_the_act = (
             (await self.db.execute(provisions_select)).scalars().all()
         )
-        fuel_codes = (await self.db.execute(select(FuelCode))).unique().scalars().all()
+        fuel_codes = (await self.db.execute(select(FuelCode))).scalars().all()
 
         return {
             "allocation_transaction_types": allocation_transaction_types,

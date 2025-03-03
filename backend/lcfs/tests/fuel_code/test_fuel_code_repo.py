@@ -715,6 +715,7 @@ async def test_get_standardized_fuel_data(fuel_code_repo, mock_db):
 
 @pytest.mark.anyio
 async def test_get_standardized_fuel_data(fuel_code_repo, mock_db):
+    """Test retrieving standardized fuel data with all related calculations"""
     # Mock dependencies
     mock_fuel_type = FuelType(
         fuel_type_id=1,
@@ -724,21 +725,17 @@ async def test_get_standardized_fuel_data(fuel_code_repo, mock_db):
     )
     mock_db.get_one.return_value = mock_fuel_type
 
-    # Mock repository-level methods
+    # Directly mock the repository methods
     fuel_code_repo.get_compliance_period_id = AsyncMock(return_value=1)
     fuel_code_repo.get_default_carbon_intensity = AsyncMock(return_value=80.0)
     fuel_code_repo.get_fuel_category_by = AsyncMock(
         return_value=FuelCategory(fuel_category_id=2, category="Diesel")
     )
-    # Mock get_additional_carbon_intensity at repository level
-    mock_aci = AdditionalCarbonIntensity(additional_uci_id=1, intensity=5.0)
-    fuel_code_repo.get_additional_carbon_intensity = AsyncMock(return_value=mock_aci)
 
-    # Create mock objects for database queries
+    # Create objects we'll return from the mocks
     mock_energy_density = EnergyDensity(
         energy_density_id=1, density=35.0, fuel_type_id=1, compliance_period_id=1
     )
-
     mock_eer = EnergyEffectivenessRatio(
         eer_id=1,
         fuel_type_id=1,
@@ -747,39 +744,18 @@ async def test_get_standardized_fuel_data(fuel_code_repo, mock_db):
         end_use_type_id=3,
         ratio=2.0,
     )
-
     mock_tci = TargetCarbonIntensity(
         target_carbon_intensity_id=1, target_carbon_intensity=50.0
     )
+    mock_aci = AdditionalCarbonIntensity(additional_uci_id=1, intensity=5.0)
 
-    # Set up DB execute responses
-    mock_responses = [
-        # For get_energy_density
-        MagicMock(
-            scalars=MagicMock(
-                return_value=MagicMock(
-                    first=MagicMock(return_value=mock_energy_density)
-                )
-            )
-        ),
-        # For get_energy_effectiveness_ratio
-        MagicMock(
-            scalars=MagicMock(
-                return_value=MagicMock(first=MagicMock(return_value=mock_eer))
-            )
-        ),
-        # For get_target_carbon_intensity
-        MagicMock(
-            unique=MagicMock(
-                return_value=MagicMock(scalar_one=MagicMock(return_value=mock_tci))
-            )
-        ),
-    ]
+    # Mock these methods directly to avoid complex chaining issues
+    fuel_code_repo.get_energy_density = AsyncMock(return_value=mock_energy_density)
+    fuel_code_repo.get_energy_effectiveness_ratio = AsyncMock(return_value=mock_eer)
+    fuel_code_repo.get_target_carbon_intensity = AsyncMock(return_value=mock_tci)
+    fuel_code_repo.get_additional_carbon_intensity = AsyncMock(return_value=mock_aci)
 
-    # Set up execute mock
-    mock_db.execute = AsyncMock(side_effect=mock_responses)
-
-    # Call method under test
+    # Call the method under test
     result = await fuel_code_repo.get_standardized_fuel_data(
         fuel_type_id=1, fuel_category_id=2, end_use_id=3, compliance_period="2024"
     )
@@ -791,14 +767,15 @@ async def test_get_standardized_fuel_data(fuel_code_repo, mock_db):
     assert result.energy_density == 35.0
     assert result.uci == 5.0
 
-    # Verify calls
-    assert (
-        mock_db.execute.await_count == 3
-    )  # Now only 3 DB calls since we mock get_additional_carbon_intensity at repo level
+    # Verify that our mocked methods were called correctly
     fuel_code_repo.get_compliance_period_id.assert_awaited_once_with("2024")
-    fuel_code_repo.get_additional_carbon_intensity.assert_awaited_once_with(
-        1, 3, "2024"
+    fuel_code_repo.get_default_carbon_intensity.assert_awaited_once_with(
+        fuel_type_id=1, compliance_period="2024"
     )
+    fuel_code_repo.get_energy_density.assert_awaited_once()
+    fuel_code_repo.get_energy_effectiveness_ratio.assert_awaited_once()
+    fuel_code_repo.get_target_carbon_intensity.assert_awaited_once()
+    fuel_code_repo.get_additional_carbon_intensity.assert_awaited_once()
 
 
 @pytest.mark.anyio

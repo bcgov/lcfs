@@ -14,8 +14,8 @@ class DefaultCarbonIntensity(BaseModel, Auditable, EffectiveDates):
     )
 
     default_carbon_intensity_id = Column(
-        Integer, 
-        primary_key=True, 
+        Integer,
+        primary_key=True,
         autoincrement=True,
         comment="Unique identifier for the default carbon intensity record"
     )
@@ -38,5 +38,5 @@ class DefaultCarbonIntensity(BaseModel, Auditable, EffectiveDates):
     )
 
     # Relationships
-    compliance_period = relationship("CompliancePeriod", lazy="joined")
-    fuel_type = relationship("FuelType", back_populates="default_carbon_intensities", lazy="joined")
+    compliance_period = relationship("CompliancePeriod", lazy="selectin")
+    fuel_type = relationship("FuelType", back_populates="default_carbon_intensities", lazy="selectin")

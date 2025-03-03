@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "4a34a52085f2"
-down_revision = "985de92bdf83"
+down_revision = "c1e2d64aeea4"
 branch_labels = None
 depends_on = None
 
@@ -125,53 +125,53 @@ def upgrade():
                 ft.fuel_type_id,
                 cp.compliance_period_id,
                 CASE
-                    WHEN ft.fuel_type = 'CNG' THEN 
-                        CASE 
+                    WHEN ft.fuel_type = 'CNG' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 7 THEN 62.14
                             WHEN cp.compliance_period_id BETWEEN 8 AND 14 THEN 63.64
-                            WHEN cp.compliance_period_id BETWEEN 15 AND 17 THEN 63.91 
+                            WHEN cp.compliance_period_id BETWEEN 15 AND 17 THEN 63.91
                         END
-                    WHEN ft.fuel_type = 'Electricity' THEN 
-                        CASE 
+                    WHEN ft.fuel_type = 'Electricity' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 7 THEN 11
                             WHEN cp.compliance_period_id BETWEEN 8 AND 14 THEN 19.73
                             WHEN cp.compliance_period_id BETWEEN 15 AND 17 THEN 12.14
                         END
-                    WHEN ft.fuel_type = 'Hydrogen' THEN 
-                        CASE 
+                    WHEN ft.fuel_type = 'Hydrogen' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 7 THEN 95.51
                             WHEN cp.compliance_period_id BETWEEN 8 AND 14 THEN 96.82
                             WHEN cp.compliance_period_id BETWEEN 15 AND 17 THEN 123.96
                         END
-                    WHEN ft.fuel_type = 'LNG' THEN 
-                        CASE 
+                    WHEN ft.fuel_type = 'LNG' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 7 THEN 63.26
                             WHEN cp.compliance_period_id BETWEEN 8 AND 14 THEN 112.65
                             WHEN cp.compliance_period_id BETWEEN 15 AND 17 THEN 90.11
                         END
-                    WHEN ft.fuel_type = 'Propane' THEN 
-                        CASE 
+                    WHEN ft.fuel_type = 'Propane' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 14 THEN 75.35
                             WHEN cp.compliance_period_id BETWEEN 15 AND 17 THEN 79.87
                         END
                     WHEN ft.fuel_type = 'Natural gas-based gasoline' AND cp.compliance_period_id BETWEEN 4 AND 14 THEN 90.07
-                    WHEN ft.fuel_type = 'Renewable Fuel- Diesel' THEN 
-                        CASE 
+                    WHEN ft.fuel_type = 'Renewable Fuel- Diesel' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 7 THEN 93.55
                             WHEN cp.compliance_period_id BETWEEN 8 AND 14 THEN 98.96
                         END
                     WHEN ft.fuel_type = 'Petroleum CI- Diesel' THEN
-                        CASE 
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 7 THEN 93.55
                             WHEN cp.compliance_period_id BETWEEN 8 AND 14 THEN 94.76
                         END
-                    WHEN ft.fuel_type = 'Renewable Fuel- Gasoline' THEN 
-                        CASE 
+                    WHEN ft.fuel_type = 'Renewable Fuel- Gasoline' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 7 THEN 87.29
                             WHEN cp.compliance_period_id BETWEEN 8 AND 14 THEN 88.14
                         END
-                    WHEN ft.fuel_type = 'Petroleum CI- Gasoline' THEN 
-                        CASE 
+                    WHEN ft.fuel_type = 'Petroleum CI- Gasoline' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 7 THEN 87.29
                             WHEN cp.compliance_period_id BETWEEN 8 AND 14 THEN 88.14
                         END
@@ -207,7 +207,7 @@ def upgrade():
             effective_date,
             expiration_date
         )
-        SELECT 
+        SELECT
             fuel_type_id,
             compliance_period_id,
             default_carbon_intensity,
@@ -230,20 +230,20 @@ def upgrade():
                 cp.compliance_period_id,
                 cp.description,
                 CASE
-                    WHEN fc.category = 'Gasoline' THEN 
-                        CASE 
+                    WHEN fc.category = 'Gasoline' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 7 THEN 87.29
                             WHEN cp.compliance_period_id BETWEEN 8 AND 14 THEN 88.14
                             WHEN cp.compliance_period_id BETWEEN 15 AND 17 THEN 93.67
                         END
-                    WHEN fc.category = 'Diesel' THEN 
-                        CASE 
+                    WHEN fc.category = 'Diesel' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 4 AND 7 THEN 93.55
                             WHEN cp.compliance_period_id BETWEEN 8 AND 14 THEN 94.76
                             WHEN cp.compliance_period_id BETWEEN 15 AND 17 THEN 100.21
                         END
-                    WHEN fc.category = 'Jet fuel' THEN 
-                        CASE 
+                    WHEN fc.category = 'Jet fuel' THEN
+                        CASE
                             WHEN cp.compliance_period_id BETWEEN 15 AND 17 THEN 88.83
                         END
                 END AS category_carbon_intensity
@@ -261,7 +261,7 @@ def upgrade():
             effective_date,
             expiration_date
         )
-        SELECT 
+        SELECT
             compliance_period_id,
             fuel_category_id,
             category_carbon_intensity,
@@ -294,10 +294,10 @@ def upgrade():
             19,
             24,
             15,
-            1.0, 
+            1.0,
             'admin',
             'admin',
-            TRUE, 
+            TRUE,
             '2025-02-26 11:48:00.808-07',
             '2025-02-26 11:48:00.808-07'
         );
@@ -317,7 +317,7 @@ def upgrade():
             update_user,
             effective_status
         )
-        SELECT 
+        SELECT
             e.fuel_category_id,
             e.fuel_type_id,
             e.end_use_type_id,
@@ -350,7 +350,7 @@ def upgrade():
             update_user,
             compliance_period_id
         )
-        SELECT 
+        SELECT
             aci.fuel_type_id,
             aci.end_use_type_id,
             aci.uom_id,
@@ -370,7 +370,7 @@ def downgrade():
     # Delete inserted records from energy_effectiveness_ratio for compliance periods 16 and 17
     op.execute(
         """
-        DELETE FROM energy_effectiveness_ratio 
+        DELETE FROM energy_effectiveness_ratio
         WHERE compliance_period_id IN (16, 17);
         """
     )
@@ -378,7 +378,7 @@ def downgrade():
     # Delete inserted records from additional_carbon_intensity for compliance periods 16 and 17
     op.execute(
         """
-        DELETE FROM additional_carbon_intensity 
+        DELETE FROM additional_carbon_intensity
         WHERE compliance_period_id IN (16, 17);
         """
     )

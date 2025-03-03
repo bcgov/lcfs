@@ -7,7 +7,7 @@ from fastapi import Depends
 from sqlalchemy import and_, or_, select, func, text, update, distinct, desc, asc
 from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, contains_eager
+from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
@@ -228,13 +228,13 @@ class FuelCodeRepository:
     @repo_handler
     async def get_fuel_categories(self) -> List[FuelCategory]:
         """Get all fuel category options"""
-        return (await self.db.execute(select(FuelCategory))).unique().scalars().all()
+        return (await self.db.execute(select(FuelCategory))).scalars().all()
 
     @repo_handler
     async def get_fuel_category_by(self, **filters: Any) -> FuelCategory:
         """Get a fuel category by any filters"""
         result = await self.db.execute(select(FuelCategory).filter_by(**filters))
-        return result.unique().scalar_one_or_none()
+        return result.scalar_one_or_none()
 
     @repo_handler
     async def get_transport_modes(self) -> List[TransportMode]:
@@ -965,13 +965,13 @@ class FuelCodeRepository:
                 == compliance_period_id_subquery,
             )
             .options(
-                joinedload(TargetCarbonIntensity.fuel_category),
-                joinedload(TargetCarbonIntensity.compliance_period),
+                selectinload(TargetCarbonIntensity.fuel_category),
+                selectinload(TargetCarbonIntensity.compliance_period),
             )
         )
         result = await self.db.execute(stmt)
 
-        return result.unique().scalar_one()
+        return result.scalar_one()
 
     @repo_handler
     async def get_standardized_fuel_data(
@@ -1090,7 +1090,7 @@ class FuelCodeRepository:
         )
 
         result = await self.db.execute(query)
-        record = result.unique().scalar_one_or_none()
+        record = result.scalar_one_or_none()
         return record.default_carbon_intensity if record else 0.0
 
 
@@ -1117,5 +1117,5 @@ class FuelCodeRepository:
         )
 
         result = await self.db.execute(query)
-        record = result.unique().scalar_one_or_none()
+        record = result.scalar_one_or_none()
         return record.category_carbon_intensity if record else 0.0

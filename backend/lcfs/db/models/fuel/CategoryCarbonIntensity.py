@@ -14,8 +14,8 @@ class CategoryCarbonIntensity(BaseModel, Auditable, EffectiveDates):
     )
 
     category_carbon_intensity_id = Column(
-        Integer, 
-        primary_key=True, 
+        Integer,
+        primary_key=True,
         autoincrement=True,
         comment="Unique identifier for the category carbon intensity record"
     )
@@ -38,5 +38,5 @@ class CategoryCarbonIntensity(BaseModel, Auditable, EffectiveDates):
     )
 
     # Relationships
-    compliance_period = relationship("CompliancePeriod", lazy="joined")
-    fuel_category = relationship("FuelCategory", back_populates="category_carbon_intensities", lazy="joined")
+    compliance_period = relationship("CompliancePeriod", lazy="selectin")
+    fuel_category = relationship("FuelCategory", back_populates="category_carbon_intensities", lazy="selectin")
