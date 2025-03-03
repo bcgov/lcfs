@@ -4,6 +4,7 @@ import { LocationOn as LocationOnIcon } from '@mui/icons-material'
 import parse from 'autosuggest-highlight/parse'
 import match from 'autosuggest-highlight/match'
 import BCTypography from '../BCTypography'
+import { ADDRESS_SEARCH_URL } from '@/constants/common'
 
 export const AddressAutocomplete = forwardRef(
   ({ value, onChange, onSelectAddress, disabled }, ref) => {
@@ -35,10 +36,10 @@ export const AddressAutocomplete = forwardRef(
         setLoading(true)
         try {
           const response = await fetch(
-            `https://geocoder.api.gov.bc.ca/addresses.json?minScore=50&maxResults=5&echo=true&brief=true&autoComplete=true&exactSpelling=false&fuzzyMatch=false&matchPrecisionNot=&locationDescriptor=frontDoorPoint&addressString=${encodeURIComponent(
-              inputValue
-            )}`,
-            { signal }
+            ADDRESS_SEARCH_URL + encodeURIComponent(inputValue),
+            {
+              signal
+            }
           )
 
           if (!response.ok) throw new Error('Network response was not ok')
@@ -156,7 +157,7 @@ export const AddressAutocomplete = forwardRef(
             <li key={key} {...optionProps}>
               <Grid container sx={{ alignItems: 'center' }}>
                 <Grid sx={{ display: 'flex', width: 44 }}>
-                  <LocationOnIcon sx={{ color: 'text.secondary' }} />
+                  <LocationOnIcon sx={{ color: 'text' }} />
                 </Grid>
                 <Grid
                   sx={{ width: 'calc(100% - 44px)', wordWrap: 'break-word' }}
@@ -176,7 +177,7 @@ export const AddressAutocomplete = forwardRef(
                   ))}
                   <BCTypography
                     variant="body2"
-                    color="text.secondary"
+                    color="text"
                     fontSize="0.75rem"
                   >
                     Select and add postal code

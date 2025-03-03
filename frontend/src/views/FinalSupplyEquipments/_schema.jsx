@@ -19,7 +19,7 @@ import {
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
-import { useMemo } from 'react'
+import { ADDRESS_SEARCH_URL } from '@/constants/common'
 
 export const finalSupplyEquipmentColDefs = (
   optionsData,
@@ -284,9 +284,7 @@ export const finalSupplyEquipmentColDefs = (
       queryKey: 'fuel-code-search',
       queryFn: async ({ queryKey, client }) => {
         const response = await fetch(
-          `https://geocoder.api.gov.bc.ca/addresses.json?minScore=50&maxResults=5&echo=true&brief=true&autoComplete=true&exactSpelling=false&fuzzyMatch=false&matchPrecisionNot=&locationDescriptor=frontDoorPoint&addressString=${encodeURIComponent(
-            queryKey[1]
-          )}`
+          ADDRESS_SEARCH_URL + encodeURIComponent(queryKey[1])
         )
         if (!response.ok) throw new Error('Network response was not ok')
         const data = await response.json()

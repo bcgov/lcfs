@@ -10,7 +10,7 @@ import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
-import MapComponent from './MapComponent'
+import GeoMapping from './GeoMapping'
 import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
 
@@ -110,7 +110,7 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
         />
 
         {/* Conditional Rendering of MapComponent */}
-        {showMap && <MapComponent complianceReportId={complianceReportId} />}
+        {showMap && <GeoMapping complianceReportId={complianceReportId} />}
       </>
     </Grid2>
   )
