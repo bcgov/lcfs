@@ -80,7 +80,7 @@ class FuelSupplyServices:
         tci = TargetCarbonIntensitySchema(
             target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
             target_carbon_intensity=round(
-                row_data["target_carbon_intensity"], 2),
+                row_data["target_carbon_intensity"], 5),
             reduction_target_percentage=round(
                 row_data["reduction_target_percentage"], 2
             ),
@@ -268,6 +268,7 @@ class FuelSupplyServices:
         fuel_supplies, total_count = await self.repo.get_fuel_supplies_paginated(
             pagination, compliance_report_id, exclude_draft_reports=is_gov_user
         )
+
         return FuelSuppliesSchema(
             pagination=PaginationResponseSchema(
                 page=pagination.page,

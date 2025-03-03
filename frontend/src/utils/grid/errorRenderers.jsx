@@ -9,17 +9,17 @@ export const StandardCellErrors = (params, errors) => {
     style = { ...style, borderColor: 'unset' }
   }
 
-  if (
-    params.colDef.editable ||
-    (typeof params.colDef.editable === 'function' &&
-      params.colDef.editable(params))
-  ) {
+  const isEditable =
+    typeof params.colDef.editable === 'function'
+      ? params.colDef.editable(params)
+      : params.colDef.editable
+
+  if (isEditable) {
     style = { ...style, backgroundColor: '#fff' }
   } else {
     style = {
       ...style,
-      backgroundColor: '#f2f2f2',
-      border: '0.5px solid #adb5bd'
+      backgroundColor: '#f2f2f2'
     }
   }
   return style

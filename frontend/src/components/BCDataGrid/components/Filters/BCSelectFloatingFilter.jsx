@@ -17,7 +17,7 @@ export const BCSelectFloatingFilter = ({
   multiple = false,
   initialSelectedValues = []
 }) => {
-  const [selectedValues, setSelectedValues] = useState([])
+  const [selectedValues, setSelectedValues] = useState(multiple ? [] : '')
   const [options, setOptions] = useState([])
   const { data: optionsData, isLoading, isError, error } = optionsQuery(params)
 

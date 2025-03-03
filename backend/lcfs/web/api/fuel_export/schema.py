@@ -160,6 +160,12 @@ class FuelExportSchema(BaseSchema):
     diff: Optional[FuelExportDiffSchema] = None
     updated: Optional[bool] = None
 
+    @field_validator("compliance_units", mode="before")
+    def round_compliance_units(cls, value):
+        if value is not None:
+            return round(value)
+        return value
+
 
 class FuelExportCreateUpdateSchema(BaseSchema):
     fuel_export_id: Optional[int] = None

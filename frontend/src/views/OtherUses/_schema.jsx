@@ -14,6 +14,7 @@ import {
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 const ACTION_STATUS_MAP = {
   UPDATE: 'Edit',
@@ -61,8 +62,7 @@ export const otherUsesColDefs = (
       openOnFocus: true
     },
     suppressKeyboardEvent,
-    cellRenderer: (params) =>
-      params.value || <BCTypography variant="body4">Select</BCTypography>,
+    cellRenderer: SelectRenderer,
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
@@ -101,8 +101,7 @@ export const otherUsesColDefs = (
       }
     },
     suppressKeyboardEvent,
-    cellRenderer: (params) =>
-      params.value || <BCTypography variant="body4">Select</BCTypography>,
+    cellRenderer: SelectRenderer,
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
@@ -136,9 +135,7 @@ export const otherUsesColDefs = (
         openOnFocus: true
       }
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
@@ -152,7 +149,7 @@ export const otherUsesColDefs = (
     valueSetter: (params) => {
       if (params.newValue !== params.oldValue) {
         params.data.provisionOfTheAct = params.newValue
-        params.data.fuelCode = '' // Reset fuelCode when provisionOfTheAct changes
+        params.data.fuelCode = undefined // Reset fuelCode when provisionOfTheAct changes
         return true
       }
       return false
@@ -179,20 +176,7 @@ export const otherUsesColDefs = (
         openOnFocus: true
       }
     },
-    cellRenderer: (params) => {
-      const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      if (
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
-        fuelType?.fuelCodes?.length > 0
-      ) {
-        return (
-          params.value || <BCTypography variant="body4">Select</BCTypography>
-        )
-      }
-      return null
-    },
+    cellRenderer: SelectRenderer,
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
@@ -212,27 +196,6 @@ export const otherUsesColDefs = (
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE &&
         fuelType?.fuelCodes?.length > 0
       )
-    },
-    valueGetter: (params) => {
-      const isFuelCodeScenario =
-        params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-      const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      const fuelCodes = fuelType?.fuelCodes || []
-
-      if (
-        isFuelCodeScenario &&
-        !params.data.fuelCode &&
-        fuelCodes.length === 1
-      ) {
-        // Autopopulate if only one fuel code is available
-        const singleFuelCode = fuelCodes[0]
-        params.data.fuelCode = singleFuelCode.fuelCode
-        params.data.fuelCodeId = singleFuelCode.fuelCodeId
-      }
-
-      return params.data.fuelCode
     },
     tooltipValueGetter: () => 'Select the approved fuel code'
   },
@@ -275,13 +238,7 @@ export const otherUsesColDefs = (
         openOnFocus: true
       }
     },
-    cellRenderer: (params) => {
-      return params.value ? (
-        params.value
-      ) : (
-        <BCTypography variant="body4">Select</BCTypography>
-      )
-    },
+    cellRenderer: SelectRenderer,
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
@@ -351,8 +308,7 @@ export const otherUsesColDefs = (
       openOnFocus: true
     },
     suppressKeyboardEvent,
-    cellRenderer: (params) =>
-      params.value || <BCTypography variant="body4">Select</BCTypography>,
+    cellRenderer: SelectRenderer,
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {

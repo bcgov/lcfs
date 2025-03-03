@@ -246,45 +246,54 @@ export const AddEditOtherUses = () => {
           params.colDef.field
         )
       ) {
+        const fuelType = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )
+
+        if (!fuelType) {
+          return
+        }
+
         const ciOfFuel = findCiOfFuel(params.data, optionsData)
         params.node.setDataValue('ciOfFuel', ciOfFuel)
 
         // Auto-populate fields based on the selected fuel type
         if (params.colDef.field === 'fuelType') {
-          const fuelType = optionsData?.fuelTypes?.find(
-            (obj) => params.data.fuelType === obj.fuelType
+          // Auto-populate the "units" field
+          if (fuelType.units) {
+            params.node.setDataValue('units', fuelType.units)
+          } else {
+            params.node.setDataValue('units', '')
+          }
+
+          // Auto-populate the "fuelCategory" field
+          const fuelCategoryOptions = fuelType.fuelCategories.map(
+            (item) => item.category
           )
-          if (fuelType) {
-            // Auto-populate the "units" field
-            if (fuelType.units) {
-              params.node.setDataValue('units', fuelType.units)
-            } else {
-              params.node.setDataValue('units', '')
-            }
 
-            // Auto-populate the "fuelCategory" field
-            const fuelCategoryOptions = fuelType.fuelCategories.map(
-              (item) => item.category
-            )
+          const categoryValue =
+            fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
 
-            const categoryValue =
-              fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
+          params.node.setDataValue('fuelCategory', categoryValue)
 
-            params.node.setDataValue('fuelCategory', categoryValue)
+          // Auto populate the "provisionOfTheAct" field
+          const provisions = fuelType.provisionOfTheAct.map(
+            (provision) => provision.name
+          )
 
-            // Auto populate the "provisionOfTheAct" field
-            const provisions = fuelType.provisionOfTheAct.map(
-              (provision) => provision.name
-            )
+          const provisionValue = provisions.length === 1 ? provisions[0] : null
+          params.node.setDataValue('provisionOfTheAct', provisionValue)
+        }
 
-            const provisionValue =
-              provisions.length === 1 ? provisions[0] : null
-            params.node.setDataValue('provisionOfTheAct', provisionValue)
+        const isFuelCodeScenario =
+          params.node.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
 
-            // Auto-populate the "fuelCode" field
-            const fuelCodeOptions = fuelType.fuelCodes.map(
-              (code) => code.fuelCode
-            )
+        // Auto-populate the "fuelCode" field
+        if (isFuelCodeScenario) {
+          const fuelCodeOptions = fuelType.fuelCodes.map(
+            (code) => code.fuelCode
+          )
+          if (fuelCodeOptions.length === 1) {
             params.node.setDataValue('fuelCode', fuelCodeOptions[0] ?? null)
             params.node.setDataValue(
               'fuelCodeId',

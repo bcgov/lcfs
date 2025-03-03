@@ -13,6 +13,7 @@ import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 const ACTION_STATUS_MAP = {
   UPDATE: 'Edit',
@@ -157,9 +158,7 @@ export const notionalTransferColDefs = (
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
+    cellRenderer: SelectRenderer
   },
   {
     field: 'receivedOrTransferred',
@@ -186,9 +185,7 @@ export const notionalTransferColDefs = (
         return StandardCellWarningAndErrors(params, errors, warnings)
       }
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
+    cellRenderer: SelectRenderer
   },
   {
     field: 'quantity',

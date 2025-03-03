@@ -22,6 +22,7 @@ import { Menu, MenuItem } from '@mui/material'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import ImportFuelSupplyEquipmentDialog from '@/views/FinalSupplyEquipments/ImportFuelSupplyEquipmentDialog.jsx'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -317,18 +318,20 @@ export const AddEditFinalSupplyEquipments = () => {
           </BCBox>
         </div>
         <BCBox>
-          <BCButton
-            color="primary"
-            variant="outlined"
-            aria-controls={isDownloadOpen ? 'download-menu' : undefined}
-            aria-haspopup="true"
-            aria-expanded={isDownloadOpen ? 'true' : undefined}
-            onClick={handleDownloadClick}
-            endIcon={<FontAwesomeIcon icon={faCaretDown} />}
-            isLoading={isDownloading}
-          >
-            {t('finalSupplyEquipment:downloadBtn')}
-          </BCButton>
+          {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && (
+            <BCButton
+              color="primary"
+              variant="outlined"
+              aria-controls={isDownloadOpen ? 'download-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={isDownloadOpen ? 'true' : undefined}
+              onClick={handleDownloadClick}
+              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+              isLoading={isDownloading}
+            >
+              {t('finalSupplyEquipment:downloadBtn')}
+            </BCButton>
+          )}
           <Menu
             id="download-menu"
             anchorEl={downloadAnchorEl}
@@ -360,18 +363,20 @@ export const AddEditFinalSupplyEquipments = () => {
               {t('finalSupplyEquipment:downloadWithoutDataBtn')}
             </MenuItem>
           </Menu>
-          <BCButton
-            style={{ marginLeft: '12px' }}
-            color="primary"
-            variant="outlined"
-            aria-controls={isImportOpen ? 'import-menu' : undefined}
-            aria-haspopup="true"
-            aria-expanded={isImportOpen ? 'true' : undefined}
-            onClick={handleImportClick}
-            endIcon={<FontAwesomeIcon icon={faCaretDown} />}
-          >
-            {t('finalSupplyEquipment:importBtn')}
-          </BCButton>
+          {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && (
+            <BCButton
+              style={{ marginLeft: '12px' }}
+              color="primary"
+              variant="outlined"
+              aria-controls={isImportOpen ? 'import-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={isImportOpen ? 'true' : undefined}
+              onClick={handleImportClick}
+              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+            >
+              {t('finalSupplyEquipment:importBtn')}
+            </BCButton>
+          )}
           <Menu
             id="import-menu"
             slotProps={{

@@ -21,6 +21,7 @@ import {
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -129,9 +130,7 @@ export const fuelExportColDefs = (
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellEditorParams: {
       options: optionsData?.fuelTypes?.map((obj) => obj.fuelType).sort(),
       multiple: false,
@@ -219,9 +218,7 @@ export const fuelExportColDefs = (
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellEditorParams: (params) => ({
       options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -300,9 +297,7 @@ export const fuelExportColDefs = (
       openOnFocus: true
     }),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) => {
       if (isSupplemental && params.data.isNewSupplementalEntry) {
         if (params.data.actionType === 'UPDATE') {
@@ -341,9 +336,7 @@ export const fuelExportColDefs = (
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.provisionOfTheActId'),
     cellEditor: AutocompleteCellEditor,
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellEditorParams: (params) => ({
       options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -494,9 +487,7 @@ export const fuelExportColDefs = (
       freeSolo: false,
       openOnFocus: true
     }),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     suppressKeyboardEvent,
     editable: (params) => isFuelTypeOther(params),
     cellStyle: (params) => {

@@ -47,7 +47,8 @@ async def test_get_snapshot_by_compliance_report_id(
         operating_name="Example Operating Name",
         email="example@example.com",
         phone="123-456-7890",
-        bc_address="123 BC St.",
+        head_office_address="123 BC St.",
+        records_address="789 BC St.",
         service_address="456 Service Rd.",
     )
     mock_org_snapshot_service.get_by_compliance_report_id = AsyncMock(
@@ -61,7 +62,8 @@ async def test_get_snapshot_by_compliance_report_id(
         "operatingName": "Example Operating Name",
         "email": "example@example.com",
         "phone": "123-456-7890",
-        "bcAddress": "123 BC St.",
+        "headOfficeAddress": "123 BC St.",
+        "recordsAddress": "789 BC St.",
         "serviceAddress": "456 Service Rd.",
     }
 
@@ -100,7 +102,8 @@ async def test_update_compliance_report_snapshot(
         operating_name="Updated Operating Name",
         email="updated@example.com",
         phone="987-654-3210",
-        bc_address="789 Updated BC St.",
+        head_office_address="789 Updated BC St.",
+        records_address="756 Updated BC St.",
         service_address="321 Updated Service Rd.",
     ).model_dump()
 
@@ -111,7 +114,8 @@ async def test_update_compliance_report_snapshot(
         "operatingName": "Updated Operating Name",
         "email": "updated@example.com",
         "phone": "987-654-3210",
-        "bcAddress": "789 Updated BC St.",
+        "headOfficeAddress": "789 Updated BC St.",
+        "recordsAddress": "756 Updated BC St.",
         "serviceAddress": "321 Updated Service Rd.",
     }
 

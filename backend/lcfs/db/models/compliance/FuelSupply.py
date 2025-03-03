@@ -28,8 +28,8 @@ class FuelSupply(BaseModel, Auditable, Versioning):
     units = Column(
         Enum(QuantityUnitsEnum), nullable=False, comment="Units of fuel quantity"
     )
-    compliance_units = Column(Integer, nullable=True, comment="Compliance units")
-    target_ci = Column(Numeric(10, 2), nullable=True, comment="Target Carbon Intensity")
+    compliance_units = Column(Numeric(13, 5), nullable=True, comment="Compliance units")
+    target_ci = Column(Numeric(13, 5), nullable=True, comment="Target Carbon Intensity")
     ci_of_fuel = Column(Numeric(10, 2), nullable=True, comment="CI of the fuel")
     energy_density = Column(Numeric(10, 2), nullable=True, comment="Energy density")
     eer = Column(Numeric(10, 2), nullable=True, comment="Energy Effectiveness Ratio")
