@@ -153,7 +153,7 @@ const InternalCommentList = ({
                 <BCBox>
                   <BCTypography
                     variant="body2"
-                    color="text.secondary"
+                    color="text"
                     component="span"
                   >
                     {comment.fullName},{' '}

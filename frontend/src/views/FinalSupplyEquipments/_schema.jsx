@@ -19,7 +19,7 @@ import {
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
-import { useMemo } from 'react'
+import { ADDRESS_SEARCH_URL } from '@/constants/common'
 
 export const finalSupplyEquipmentColDefs = (
   optionsData,
@@ -279,8 +279,42 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
     ),
-    cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
+    cellEditor: AsyncSuggestionEditor,
+    cellEditorParams: (params) => ({
+      queryKey: 'fuel-code-search',
+      queryFn: async ({ queryKey, client }) => {
+        const response = await fetch(
+          ADDRESS_SEARCH_URL + encodeURIComponent(queryKey[1])
+        )
+        if (!response.ok) throw new Error('Network response was not ok')
+        const data = await response.json()
+        return data.features.map((feature) => ({
+          label: feature.properties.fullAddress || '',
+          coordinates: feature.geometry.coordinates
+        }))
+      },
+      optionLabel: 'label'
+    }),
+    valueSetter: async (params) => {
+      if (params.newValue === '' || params.newValue?.name === '') {
+        params.data.streetAddress = ''
+        params.data.city = ''
+        params.data.latitude = ''
+        params.data.longitude = ''
+      } else {
+        const [street = '', city = '', province = ''] = params.newValue.label
+          .split(',')
+          .map((val) => val.trim())
+        const [long, lat] = params.newValue.coordinates
+        params.data.streetAddress = street
+        params.data.city = city
+        params.data.latitude = lat
+        params.data.longitude = long
+      }
+      return true
+    },
+    cellDataType: 'object',
+    suppressKeyboardEvent,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     minWidth: 260
@@ -331,7 +365,8 @@ export const finalSupplyEquipmentColDefs = (
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
       precision: 6,
-      max: 1000,
+      max: 90,
+      min: -90,
       showStepperButtons: false
     },
     cellDataType: 'number',
@@ -348,7 +383,8 @@ export const finalSupplyEquipmentColDefs = (
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {
       precision: 6,
-      max: 1000,
+      max: 180,
+      min: -180,
       showStepperButtons: false
     },
     cellDataType: 'number',

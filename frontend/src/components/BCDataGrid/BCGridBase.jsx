@@ -72,7 +72,7 @@ export const BCGridBase = forwardRef(
     }, [determineHeight])
 
     const clearFilters = useCallback(() => {
-      const api = gridRef.current?.api
+      const api = gridRef?.current?.api
       if (api) {
         // Clear filter model
         api.setFilterModel(null)
@@ -87,7 +87,7 @@ export const BCGridBase = forwardRef(
 
     // Expose clearFilters method through ref
     useImperativeHandle(ref, () => ({
-      ...gridRef.current,
+      ...gridRef?.current,
       clearFilters
     }))
 
