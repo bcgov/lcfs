@@ -8,11 +8,11 @@ branches:
   develop:
     mode: ContinuousDelivery
     label: alpha
-    increment: Minor
+    increment: Patch
     prevent-increment:
       when-current-commit-tagged: false
-    track-merge-target: true
-    track-merge-message: true
+    track-merge-target: false
+    track-merge-message: false
     regex: ^auto-versioning$
     source-branches:
       - main
