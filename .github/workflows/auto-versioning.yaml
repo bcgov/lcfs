@@ -32,15 +32,15 @@ jobs:
           pwd
           /opt/hostedtoolcache/GitVersion.Tool/6.0.5/dotnet-gitversion /showconfig
 
-      - name: Update package.json Version
-        run: |
-          # Extract fullSemVer from GitVersion JSON output
-          VERSION=$(echo "${{ steps.version_step.outputs.SemVer }}")
-          echo "Updating package.json version to: $VERSION"
-          # Update package.json using jq
-          cd frontend
-          jq --arg ver "$VERSION" '.version = $ver' package.json > package.tmp.json && mv package.tmp.json package.json
+      # - name: Update package.json Version
+      #   run: |
+      #     # Extract fullSemVer from GitVersion JSON output
+      #     VERSION=$(echo "${{ steps.version_step.outputs.SemVer }}")
+      #     echo "Updating package.json version to: $VERSION"
+      #     # Update package.json using jq
+      #     cd frontend
+      #     jq --arg ver "$VERSION" '.version = $ver' package.json > package.tmp.json && mv package.tmp.json package.json
 
-      - name: Show updated package.json
-        run: |
-          head -n 30 frontend/package.json
+      # - name: Show updated package.json
+      #   run: |
+      #     head -n 30 frontend/package.json
