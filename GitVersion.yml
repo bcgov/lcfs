@@ -7,7 +7,7 @@ no-bump-message: \+semver:\s?(none|skip)
 branches:
   develop:
     mode: ContinuousDelivery
-    label: alpha
+    label: ""
     increment: Patch
     prevent-increment:
       when-current-commit-tagged: false
