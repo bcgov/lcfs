@@ -18,4 +18,3 @@ This project is under the Apache License 2.0 - see [LICENSE.md](LICENSE.md).
 
 - BC Government for the initiative to simplify compliance through technology.
 - Contributors and maintainers of this project.
-  hello
