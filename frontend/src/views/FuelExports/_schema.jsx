@@ -190,9 +190,9 @@ export const fuelExportColDefs = (
     minWidth: 250
   },
   {
-    field: 'fuelCategoryId',
+    field: 'fuelCategory',
     headerComponent: RequiredHeader,
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
     cellEditorParams: (params) => ({
@@ -227,14 +227,7 @@ export const fuelExportColDefs = (
     suppressKeyboardEvent,
     minWidth: 135,
     valueGetter: (params) => {
-      const options = optionsData?.fuelTypes
-        ?.find((obj) => params.data.fuelType === obj.fuelType)
-        ?.fuelCategories.map((item) => item.fuelCategory)
-      if (options?.length === 1) {
-        return options[0]
-      } else {
-        return params.data.fuelCategory
-      }
+      return params.data.fuelCategory
     },
     editable: (params) =>
       optionsData?.fuelTypes

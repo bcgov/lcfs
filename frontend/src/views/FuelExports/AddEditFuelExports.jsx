@@ -168,7 +168,7 @@ export const AddEditFuelExports = () => {
           )
 
           // Set to null if multiple options, otherwise use first item
-          const categoryValue =
+          const category =
             fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
           const endUseValue =
             endUseTypes.length === 1 ? endUseTypes[0].type : 'Any'
@@ -177,7 +177,7 @@ export const AddEditFuelExports = () => {
               ? selectedFuelType.provisions[0].name
               : null
 
-          params.node.setDataValue('fuelCategory', categoryValue)
+          params.node.setDataValue('fuelCategory', category)
           params.node.setDataValue('endUseType', endUseValue)
           params.node.setDataValue('provisionOfTheAct', provisionValue)
         }
