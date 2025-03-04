@@ -14,12 +14,7 @@ import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
-
-const ACTION_STATUS_MAP = {
-  UPDATE: 'Edit',
-  DELETE: 'Delete',
-  CREATE: 'New'
-}
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const notionalTransferColDefs = (
   optionsData,
@@ -105,15 +100,8 @@ export const notionalTransferColDefs = (
       }
       return true
     },
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    }
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'addressForService',
@@ -123,15 +111,8 @@ export const notionalTransferColDefs = (
     headerComponent: RequiredHeader,
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    }
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'fuelCategory',
@@ -149,15 +130,8 @@ export const notionalTransferColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     cellRenderer: SelectRenderer
   },
   {
@@ -176,15 +150,8 @@ export const notionalTransferColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     cellRenderer: SelectRenderer
   },
   {
@@ -198,15 +165,8 @@ export const notionalTransferColDefs = (
       showStepperButtons: false
     },
     valueFormatter: (params) => valueFormatter({ value: params.value }),
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    }
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   }
 ]
 

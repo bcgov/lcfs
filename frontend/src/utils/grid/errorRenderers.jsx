@@ -1,3 +1,5 @@
+import colors from '@/themes/base/colors'
+
 export const StandardCellErrors = (params, errors) => {
   let style = {}
   if (
@@ -25,17 +27,29 @@ export const StandardCellErrors = (params, errors) => {
   return style
 }
 
-export const StandardCellWarningAndErrors = (params, errors, warnings) => {
-  let style = StandardCellErrors(params, errors)
+export const StandardCellWarningAndErrors = (
+  params,
+  errors,
+  warnings,
+  isSupplemental = false
+) => {
+  if (isSupplemental && params.data.isNewSupplementalEntry) {
+    if (params.data.actionType === 'UPDATE') {
+      return { backgroundColor: colors.alerts.warning.background }
+    }
+  } else {
+    let style = StandardCellErrors(params, errors)
 
-  if (
-    warnings &&
-    warnings[params.data.id] &&
-    warnings[params.data.id].includes(params.colDef.field)
-  ) {
-    style = { ...style, borderColor: '#fcba19', border: '2px solid #fcba19' }
+    if (
+      warnings &&
+      warnings[params.data.id] &&
+      warnings[params.data.id].includes(params.colDef.field)
+    ) {
+      style = { ...style, borderColor: '#fcba19', border: '2px solid #fcba19' }
+    }
+
+    return style
   }
-  return style
 }
 
 export const StandardCellStyle = (

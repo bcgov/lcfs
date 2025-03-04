@@ -15,12 +15,7 @@ import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
-
-const ACTION_STATUS_MAP = {
-  UPDATE: 'Edit',
-  DELETE: 'Delete',
-  CREATE: 'New'
-}
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -63,15 +58,9 @@ export const otherUsesColDefs = (
     },
     suppressKeyboardEvent,
     cellRenderer: SelectRenderer,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     valueSetter: (params) => {
       if (params.newValue) {
         // TODO: Evaluate if additional fields need to be reset when fuel type changes
@@ -102,15 +91,9 @@ export const otherUsesColDefs = (
     },
     suppressKeyboardEvent,
     cellRenderer: SelectRenderer,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     minWidth: 200
   },
   {
@@ -136,15 +119,9 @@ export const otherUsesColDefs = (
       }
     },
     cellRenderer: SelectRenderer,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     valueSetter: (params) => {
       if (params.newValue !== params.oldValue) {
@@ -177,15 +154,9 @@ export const otherUsesColDefs = (
       }
     },
     cellRenderer: SelectRenderer,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     minWidth: 150,
     editable: (params) => {
@@ -210,15 +181,9 @@ export const otherUsesColDefs = (
       precision: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     minWidth: 200
   },
   {
@@ -239,15 +204,9 @@ export const otherUsesColDefs = (
       }
     },
     cellRenderer: SelectRenderer,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     editable: true,
     minWidth: 100
   },
@@ -255,15 +214,9 @@ export const otherUsesColDefs = (
     field: 'ciOfFuel',
     headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
     valueFormatter: (params) => parseFloat(params.value).toFixed(2),
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     editable: false,
     valueGetter: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
@@ -309,15 +262,9 @@ export const otherUsesColDefs = (
     },
     suppressKeyboardEvent,
     cellRenderer: SelectRenderer,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     minWidth: 200
   },
   {
@@ -328,15 +275,8 @@ export const otherUsesColDefs = (
     cellDataType: 'text',
     editable: (params) => params.data.expectedUse === 'Other',
     minWidth: 300,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    }
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   }
 ]
 

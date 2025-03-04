@@ -10,9 +10,9 @@ import {
   useGetFuelSuppliesList,
   useSaveFuelSupply
 } from '@/hooks/useFuelSupply'
-import colors from '@/themes/base/colors'
 import { isArrayEmpty } from '@/utils/array.js'
 import { cleanEmptyStringValues } from '@/utils/formatters'
+import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -64,35 +64,7 @@ export const AddEditFuelSupplies = () => {
         defaultMinWidth: 50,
         defaultMaxWidth: 600
       },
-      getRowStyle: (params) => {
-        if (
-          params.data.actionType === 'CREATE' &&
-          params.data.isNewSupplementalEntry &&
-          isSupplemental
-        ) {
-          return {
-            backgroundColor: colors.alerts.success.background
-          }
-        }
-        if (
-          params.data.actionType === 'UPDATE' &&
-          params.data.isNewSupplementalEntry &&
-          isSupplemental
-        ) {
-          return {
-            backgroundColor: colors.alerts.warning.background
-          }
-        }
-        if (
-          params.data.actionType === 'DELETE' &&
-          params.data.isNewSupplementalEntry &&
-          isSupplemental
-        ) {
-          return {
-            backgroundColor: colors.alerts.error.background
-          }
-        }
-      }
+      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
     }),
     [t, isSupplemental]
   )

@@ -18,6 +18,7 @@ import { defaultColDef, fuelExportColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import colors from '@/themes/base/colors'
+import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
@@ -63,35 +64,7 @@ export const AddEditFuelExports = () => {
         defaultMinWidth: 50,
         defaultMaxWidth: 600
       },
-      getRowStyle: (params) => {
-        if (
-          params.data.actionType === 'CREATE' &&
-          params.data.isNewSupplementalEntry &&
-          isSupplemental
-        ) {
-          return {
-            backgroundColor: colors.alerts.success.background
-          }
-        }
-        if (
-          params.data.actionType === 'UPDATE' &&
-          params.data.isNewSupplementalEntry &&
-          isSupplemental
-        ) {
-          return {
-            backgroundColor: colors.alerts.warning.background
-          }
-        }
-        if (
-          params.data.actionType === 'DELETE' &&
-          params.data.isNewSupplementalEntry &&
-          isSupplemental
-        ) {
-          return {
-            backgroundColor: colors.alerts.error.background
-          }
-        }
-      }
+      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
     }),
     [isSupplemental, t]
   )

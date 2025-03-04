@@ -20,14 +20,9 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
-
-const ACTION_STATUS_MAP = {
-  UPDATE: 'Edit',
-  DELETE: 'Delete',
-  CREATE: 'New'
-}
 
 export const fuelSupplyColDefs = (
   optionsData,
@@ -85,15 +80,8 @@ export const fuelSupplyColDefs = (
     minWidth: 100,
     valueFormatter: formatNumberWithCommas,
     editable: false,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    }
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'fuelType',
@@ -108,15 +96,9 @@ export const fuelSupplyColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     minWidth: 260,
     editable: true,
@@ -204,15 +186,9 @@ export const fuelSupplyColDefs = (
       freeSolo: false,
       openOnFocus: true
     }),
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCategory = params.newValue
@@ -263,15 +239,9 @@ export const fuelSupplyColDefs = (
     }),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     valueGetter: (params) => params.data.endUseType?.type,
     editable: (params) => {
@@ -311,15 +281,9 @@ export const fuelSupplyColDefs = (
       freeSolo: false,
       openOnFocus: true
     }),
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     minWidth: 370,
     valueSetter: (params) => {
@@ -356,15 +320,9 @@ export const fuelSupplyColDefs = (
         openOnFocus: true
       }
     },
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     minWidth: 135,
     editable: (params) => {
@@ -430,15 +388,8 @@ export const fuelSupplyColDefs = (
       min: 0,
       showStepperButtons: false
     },
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    }
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'units',
@@ -474,43 +425,22 @@ export const fuelSupplyColDefs = (
     field: 'targetCi',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
     editable: false,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    }
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'ciOfFuel',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    }
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'uci',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
     editable: false,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    }
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'energyDensity',
@@ -553,15 +483,9 @@ export const fuelSupplyColDefs = (
     field: 'eer',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
     editable: false,
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     valueGetter: (params) => {
       const eerOptions = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -585,15 +509,9 @@ export const fuelSupplyColDefs = (
   },
   {
     field: 'energy',
-    cellStyle: (params) => {
-      if (isSupplemental && params.data.isNewSupplementalEntry) {
-        if (params.data.actionType === 'UPDATE') {
-          return { backgroundColor: colors.alerts.warning.background }
-        }
-      } else {
-        return StandardCellWarningAndErrors(params, errors, warnings)
-      }
-    },
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
     valueFormatter: formatNumberWithCommas,
     minWidth: 100,

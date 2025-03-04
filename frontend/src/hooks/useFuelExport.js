@@ -39,11 +39,11 @@ export const useGetFuelExportsList = (
     queryKey: ['fuel-exports', complianceReportId, changelog],
     queryFn: async () => {
       const response = await client.post(apiRoutes.getAllFuelExports, {
-        ...(typeof complianceReportId === 'string' && { complianceReportId }),
-        ...(typeof complianceReportId !== 'string' && complianceReportId),
+        complianceReportId,
         changelog,
         ...pagination
       })
+
       return response.data
     },
     ...options

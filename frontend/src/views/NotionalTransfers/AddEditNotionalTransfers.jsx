@@ -10,11 +10,11 @@ import {
   useNotionalTransferOptions,
   useSaveNotionalTransfer
 } from '@/hooks/useNotionalTransfer'
-import colors from '@/themes/base/colors'
 import { isArrayEmpty } from '@/utils/array'
+import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
@@ -51,41 +51,6 @@ export const AddEditNotionalTransfers = () => {
       complianceReportId,
       changelog: isSupplemental
     })
-
-  const gridOptions = useMemo(
-    () => ({
-      getRowStyle: (params) => {
-        if (
-          params.data.actionType === 'CREATE' &&
-          params.data.isNewSupplementalEntry &&
-          isSupplemental
-        ) {
-          return {
-            backgroundColor: colors.alerts.success.background
-          }
-        }
-        if (
-          params.data.actionType === 'UPDATE' &&
-          params.data.isNewSupplementalEntry &&
-          isSupplemental
-        ) {
-          return {
-            backgroundColor: colors.alerts.warning.background
-          }
-        }
-        if (
-          params.data.actionType === 'DELETE' &&
-          params.data.isNewSupplementalEntry &&
-          isSupplemental
-        ) {
-          return {
-            backgroundColor: colors.alerts.error.background
-          }
-        }
-      }
-    }),
-    [isSupplemental]
-  )
 
   useEffect(() => {
     if (location?.state?.message) {
@@ -348,7 +313,9 @@ export const AddEditNotionalTransfers = () => {
               confirmText: t('report:incompleteReport'),
               confirmLabel: t('report:returnToReport')
             }}
-            gridOptions={gridOptions}
+            gridOptions={{
+              getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
+            }}
           />
         </BCBox>
       </Grid2>
