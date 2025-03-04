@@ -15,7 +15,7 @@
     "fuelTypeId": "Fuel type",
     "exportDate": "Export date",
     "fuelTypeOther": "Fuel type other",
-    "fuelCategoryId": "Fuel category",
+    "fuelCategory": "Fuel category",
     "endUseId": "End use",
     "provisionOfTheActId": "Determining carbon intensity",
     "fuelCode": "Fuel code",

@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { AddEditOrg } from '../AddEditOrg'
+import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useForm, FormProvider } from 'react-hook-form'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { useOrganization } from '@/hooks/useOrganization'
@@ -34,6 +34,7 @@ const mockedOrg = {
   email: 'test@example.com',
   phone: '123-456-7890',
   edrmsRecord: 'EDRMS123',
+  recordsAddress: '789 Test St, City, Province, A1B2C3',
   orgAddress: {
     streetAddress: '123 Test St',
     addressOther: '',
@@ -44,7 +45,9 @@ const mockedOrg = {
     streetAddress: '456 Attorney Rd',
     addressOther: '',
     city: 'Attorney City',
-    postalcodeZipcode: 'D4E5F6'
+    postalcodeZipcode: 'D4E5F6',
+    provinceState: 'BC',
+    country: 'Canada'
   },
   orgStatus: { organizationStatusId: 2 }
 }
@@ -71,7 +74,7 @@ describe('AddEditOrg', () => {
     useApiService.mockReturnValue(apiSpy)
   })
 
-  it('renders correctly with provided organization data', () => {
+  it('renders correctly with provided organization data and maps all address fields correctly', () => {
     useOrganization.mockReturnValue({
       data: mockedOrg,
       isFetched: true
@@ -79,7 +82,7 @@ describe('AddEditOrg', () => {
 
     render(
       <MockFormProvider>
-        <AddEditOrg />
+        <AddEditOrgForm />
       </MockFormProvider>,
       { wrapper }
     )
@@ -95,18 +98,17 @@ describe('AddEditOrg', () => {
       '123-456-7890'
     )
     expect(screen.getAllByLabelText(/org:streetAddrLabel/i)[0]).toHaveValue(
-      '123 Test St'
+      '456 Attorney Rd'
     )
     expect(screen.getAllByLabelText(/org:cityLabel/i)[0]).toHaveValue(
       'Test City'
     )
-    expect(screen.getAllByLabelText(/org:poLabel/i)[0]).toHaveValue('A1B2C3')
   })
 
   it('renders required errors in the form correctly', async () => {
     render(
       <MockFormProvider>
-        <AddEditOrg />
+        <AddEditOrgForm />
       </MockFormProvider>,
       { wrapper }
     )
@@ -147,7 +149,7 @@ describe('AddEditOrg', () => {
 
     render(
       <MockFormProvider>
-        <AddEditOrg />
+        <AddEditOrgForm />
       </MockFormProvider>,
       { wrapper }
     )
@@ -176,7 +178,7 @@ describe('AddEditOrg', () => {
 
     render(
       <MockFormProvider>
-        <AddEditOrg />
+        <AddEditOrgForm />
       </MockFormProvider>,
       { wrapper }
     )

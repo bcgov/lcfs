@@ -3,7 +3,10 @@ import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useUpdateOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { FormProvider, useForm } from 'react-hook-form'
-import { BCFormText } from '@/components/BCForm/index.js'
+import {
+  BCFormText,
+  BCFormAddressAutocomplete
+} from '@/components/BCForm/index.js'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { defaultValues } from '@/views/Users/AddEditUser/_schema.js'
 import { Box, Stack, List, ListItem } from '@mui/material'
@@ -21,8 +24,9 @@ export const OrganizationAddress = ({
   setIsEditing
 }) => {
   const { t } = useTranslation(['common', 'report', 'org'])
-
   const [modalData, setModalData] = useState(null)
+  const [sameAsService, setSameAsService] = useState(false)
+  const [selectedServiceAddress, setSelectedServiceAddress] = useState(null)
 
   const validationSchema = Yup.object({
     name: Yup.string().required('Legal name is required.'),
@@ -33,47 +37,26 @@ export const OrganizationAddress = ({
     email: Yup.string()
       .required('Email address is required.')
       .email('Please enter a valid email address.'),
-    serviceAddress: Yup.string().required('Service Address is required.'),
-    bcAddress: Yup.string().required('B.C. Address is required.')
+    serviceAddress: Yup.string().required('Service Address is required.')
   })
-
-  const formFields = (t) => [
-    {
-      name: 'name',
-      label: t('org:legalNameLabel')
-    },
-    {
-      name: 'operatingName',
-      label: t('org:operatingNameLabel')
-    },
-    {
-      name: 'phone',
-      label: t('org:phoneNbrLabel')
-    },
-    {
-      name: 'email',
-      label: t('org:emailAddrLabel')
-    },
-    {
-      name: 'serviceAddress',
-      label: t('report:serviceAddrLabel')
-    },
-    {
-      name: 'bcAddress',
-      label: t('report:bcAddrLabel')
-    }
-  ]
 
   const { mutate: updateComplianceReport, isLoading: isUpdating } =
     useUpdateOrganizationSnapshot(complianceReportId)
 
-  // User form hook and form validation
   const form = useForm({
     resolver: yupResolver(validationSchema),
     mode: 'onChange',
     defaultValues
   })
   const { handleSubmit, control, setValue, watch, reset } = form
+
+  const serviceAddress = watch('serviceAddress')
+
+  useEffect(() => {
+    if (sameAsService && serviceAddress) {
+      setValue('recordsAddress', serviceAddress)
+    }
+  }, [sameAsService, serviceAddress, setValue])
 
   const onSubmit = async (data) => {
     await updateComplianceReport(data)
@@ -83,6 +66,10 @@ export const OrganizationAddress = ({
   useEffect(() => {
     if (snapshotData) {
       reset(snapshotData)
+      // Check if addresses are the same and set checkbox accordingly
+      setSameAsService(
+        snapshotData.serviceAddress === snapshotData.recordsAddress
+      )
     }
   }, [reset, snapshotData])
 
@@ -112,6 +99,86 @@ export const OrganizationAddress = ({
     setIsEditing(false)
   }
 
+  const handleSameAddressChange = (event) => {
+    setSameAsService(event.target.checked)
+    if (event.target.checked) {
+      setValue('recordsAddress', serviceAddress)
+    }
+  }
+
+  const handleSelectServiceAddress = (addressData) => {
+    setSelectedServiceAddress(addressData)
+    if (typeof addressData === 'string') {
+      setValue('serviceAddress', addressData)
+    } else {
+      setValue('serviceAddress', addressData.fullAddress)
+    }
+
+    // If "same as service address" is checked, update records address too
+    if (sameAsService) {
+      if (typeof addressData === 'string') {
+        setValue('recordsAddress', addressData)
+      } else {
+        setValue('recordsAddress', addressData.fullAddress)
+      }
+    }
+  }
+
+  const handleSelectRecordsAddress = (addressData) => {
+    if (typeof addressData === 'string') {
+      setValue('recordsAddress', addressData)
+    } else {
+      setValue('recordsAddress', addressData.fullAddress)
+    }
+  }
+
+  // Define which form fields use regular text input vs address autocomplete
+  const textFormFields = [
+    {
+      name: 'name',
+      label: t('org:legalNameLabel')
+    },
+    {
+      name: 'operatingName',
+      label: t('org:operatingNameLabel')
+    },
+    {
+      name: 'phone',
+      label: t('org:phoneNbrLabel')
+    },
+    {
+      name: 'email',
+      label: t('org:emailAddrLabel')
+    },
+    {
+      name: 'headOfficeAddress',
+      label: isEditing
+        ? t('report:hoAddrLabelEdit')
+        : t('report:hoAddrLabelView')
+    }
+  ]
+
+  const addressFormFields = [
+    {
+      name: 'serviceAddress',
+      label: t('report:serviceAddrLabel'),
+      onSelectAddress: handleSelectServiceAddress
+    },
+    {
+      name: 'recordsAddress',
+      label: t('report:bcRecordLabel'),
+      checkbox: true,
+      checkboxLabel: 'Same as address for service',
+      onCheckboxChange: handleSameAddressChange,
+      isChecked: sameAsService,
+      disabled: sameAsService,
+      onSelectAddress: handleSelectRecordsAddress
+    }
+  ]
+
+  // Combined fields for display in view mode
+  const allFormFields = [...textFormFields, ...addressFormFields]
+
   return (
     <BCTypography variant="body4" color="text">
       {!isEditing && (
@@ -127,7 +194,7 @@ export const OrganizationAddress = ({
             }
           }}
         >
-          {formFields(t).map(({ name, label }) => (
+          {allFormFields.map(({ name, label }) => (
             <ListItem key={name} sx={{ display: 'list-item', padding: 0 }}>
               <strong>{label}:</strong>{' '}
               {snapshotData[name] || (
@@ -144,7 +211,8 @@ export const OrganizationAddress = ({
         <form onSubmit={handleSubmit(onSubmit, onError)}>
           <FormProvider {...{ control, setValue }}>
             <Stack spacing={1} mb={3}>
-              {formFields(t).map((field) => (
+              {/* Regular text input fields */}
+              {textFormFields.map((field) => (
                 <BCFormText
                   data-test={field.name}
                   key={field.name}
@@ -152,6 +220,23 @@ export const OrganizationAddress = ({
                   label={field.label}
                   name={field.name}
                   optional={field.optional}
+                />
+              ))}
+
+              {/* Address autocomplete fields */}
+              {addressFormFields.map((field) => (
+                <BCFormAddressAutocomplete
+                  data-test={field.name}
+                  key={field.name}
+                  control={control}
+                  label={field.label}
+                  name={field.name}
+                  checkbox={field.checkbox}
+                  checkboxLabel={field.checkboxLabel}
+                  onCheckboxChange={field.onCheckboxChange}
+                  isChecked={field.isChecked}
+                  disabled={field.disabled}
+                  onSelectAddress={field.onSelectAddress}
                 />
               ))}
             </Stack>

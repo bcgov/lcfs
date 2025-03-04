@@ -27,11 +27,14 @@ class ComplianceReportOrganizationSnapshot(BaseModel, Auditable):
     )
     email = Column(String(255), nullable=True, comment="Organization's email address")
     phone = Column(String(50), nullable=True, comment="Organization's phone number")
-    bc_address = Column(
+    head_office_address = Column(
         String(500), nullable=True, comment="Organization's address in BC"
     )
     service_address = Column(
         String(500), nullable=True, comment="Organization's address for Postal Service"
+    )
+    records_address = Column(
+        String(500), nullable=True, comment="Organization's address in BC where records are maintained."
     )
 
     is_edited = Column(
