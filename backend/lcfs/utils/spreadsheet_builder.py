@@ -1,13 +1,12 @@
-from io import BytesIO
-from typing import Literal, TypedDict, List, Dict, Any
-
-import structlog
 import pandas as pd
+import structlog
+import xlwt
+from io import BytesIO
 from openpyxl import styles
 from openpyxl.utils import get_column_letter
-import xlwt
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.worksheet.worksheet import Worksheet
+from typing import Literal, TypedDict, List, Dict, Any, Optional
 
 logger = structlog.get_logger(__name__)
 MAX_XLS_WIDTH = 65535
@@ -23,6 +22,13 @@ class SpreadsheetColumn:
         self.column_type = column_type
 
 
+class RawSpreadsheet:
+    def __init__(self, label: str, data: List[List[Any]], styles: List[List[Any]]):
+        self.label = label
+        self.data = data
+        self.styles = styles
+
+
 class SheetData(TypedDict):
     sheet_name: str
     columns: List[SpreadsheetColumn]
@@ -35,26 +41,6 @@ class SpreadsheetBuilder:
     """
     A class to build spreadsheets in xlsx, xls, or csv format.
     Allows adding multiple sheets with custom styling and exporting them as a byte stream.
-
-    Note: Only the first sheet data is used for the CSV format,
-          as CSV files do not support multiple sheets.
-
-    Example:
-    --------
-    builder = SpreadsheetBuilder('xlsx') # xlsx, xls, csv
-
-    # First sheet
-    builder.add_sheet(
-        'Employees',
-        ['Name', 'Dept'], # Columns
-        [['Alex', 'HR'], ['Mike', 'IT']], # Rows
-        styles={'bold_headers': True}
-    )
-
-    # Second sheet
-    builder.add_sheet( ... )
-
-    file_content = builder.build_spreadsheet()
     """
 
     def __init__(self, file_format: str = "xls"):
@@ -63,16 +49,19 @@ class SpreadsheetBuilder:
 
         self.file_format = file_format
         self.sheets_data: List[SheetData] = []
+        self.raw_sheets: List[RawSpreadsheet] = []
 
     def add_sheet(
         self,
         sheet_name: str,
-        columns: list[SpreadsheetColumn],
+        columns: List[SpreadsheetColumn],
         rows: list,
-        styles: dict = None,
-        validators: list[DataValidation] = [],
-        position=0,
+        styles: Optional[Dict] = None,
+        validators: Optional[List[DataValidation]] = None,
+        position: int = 0,
     ):
+        # Avoid mutable default arguments by setting validators to an empty list if None.
+        validators = validators or []
         self.sheets_data.insert(
             position,
             {
@@ -83,71 +72,94 @@ class SpreadsheetBuilder:
                 "validators": validators,
             },
         )
+        return self
+
+    def add_raw_sheet(self, data: RawSpreadsheet):
+        self.raw_sheets.append(data)
 
     def build_spreadsheet(self) -> bytes:
         try:
             output = BytesIO()
-            if self.file_format == "xlsx":
-                self._write_xlsx(output)
-            elif self.file_format == "xls":
-                self._write_xls(output)
-            elif self.file_format == "csv":
-                self._write_csv(output)
-
+            # Map file formats to the corresponding writer methods
+            writer_func = {
+                "xlsx": self._write_xlsx,
+                "xls": self._write_xls,
+                "csv": self._write_csv,
+            }[self.file_format]
+            writer_func(output)
             output.seek(0)
             return output.getvalue()
-
         except Exception as e:
             logger.error("Failed to build spreadsheet", error=str(e), exc_info=e)
             raise
 
+    def _set_cell_format(self, cell, cell_type: Optional[str]) -> None:
+        """
+        Helper method to set formatting on a cell based on cell_type.
+        """
+        # Default alignment is left.
+        cell.alignment = styles.Alignment(horizontal="left")
+        if cell_type == "int":
+            cell.number_format = "#,##0"
+            cell.alignment = styles.Alignment(horizontal="right")
+        elif cell_type == "float":
+            cell.number_format = "#,##0.00"
+            cell.alignment = styles.Alignment(horizontal="right")
+        elif cell_type == "date":
+            cell.number_format = "yyyy-mm-dd"
+        elif cell_type == "decimal6":
+            cell.number_format = "#,##0.00####"
+            cell.alignment = styles.Alignment(horizontal="right")
+
     def _write_xlsx(self, output):
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            # Process standard sheets.
             for sheet in self.sheets_data:
                 self._write_sheet_to_excel(writer, sheet)
+                self._auto_adjust_column_width_xlsx(writer, sheet["sheet_name"])
 
-                # Auto-adjusting column widths
-                self._auto_adjust_column_width_xlsx(writer, sheet)
+            # Process raw sheets.
+            for sheet in self.raw_sheets:
+                header, *data = sheet.data
+                df = pd.DataFrame(data, columns=header)
+                df.to_excel(writer, index=False, sheet_name=sheet.label)
+                worksheet: Worksheet = writer.sheets[sheet.label]
+
+                # Apply formatting based on the provided styles.
+                for row_idx, row in enumerate(
+                    worksheet.iter_rows(max_row=len(sheet.data))
+                ):
+                    for col_idx, cell in enumerate(row):
+                        cell_style = sheet.styles[row_idx][col_idx]
+                        cell.font = cell_style.get("font")
+                        cell.border = cell_style.get("border")
+                        self._set_cell_format(cell, cell_style.get("type"))
+
+                self._auto_adjust_column_width_xlsx(writer, sheet.label)
 
     def _write_sheet_to_excel(self, writer, sheet: SheetData):
         columns = [column.label for column in sheet["columns"]]
-
         df = pd.DataFrame(sheet["rows"], columns=columns)
         df.to_excel(writer, index=False, sheet_name=sheet["sheet_name"])
         worksheet: Worksheet = writer.sheets[sheet["sheet_name"]]
 
-        for data_validator in sheet["validators"]:
-            worksheet.add_data_validation(data_validator)
+        # Add data validations.
+        for validator in sheet["validators"]:
+            worksheet.add_data_validation(validator)
 
-        # Apply number formatting based on column type
+        # Apply number formatting based on column type.
         for col_idx, column in enumerate(sheet["columns"]):
-            # Iterate over each cell in the current column, starting from row 2
             for row in worksheet.iter_rows(
-                min_row=2,
-                max_row=10000,  # Apply formatting to the first 10,000 rows even if they don't have data
-                min_col=col_idx + 1,
-                max_col=col_idx + 1,
+                min_row=2, max_row=2000, min_col=col_idx + 1, max_col=col_idx + 1
             ):
                 for cell in row:
-                    cell.alignment = styles.Alignment(horizontal="left")
-                    if column.column_type == "int":
-                        cell.number_format = "#,##0"
-                        cell.alignment = styles.Alignment(horizontal="right")
-                    elif column.column_type == "float":
-                        cell.number_format = "#,##0.00"
-                        cell.alignment = styles.Alignment(horizontal="right")
-                    elif column.column_type == "date":
-                        cell.number_format = "yyyy-mm-dd"
-                    elif column.column_type == "decimal6":
-                        cell.number_format = "#,##0.00####"
-                        cell.alignment = styles.Alignment(horizontal="right")
+                    self._set_cell_format(cell, column.column_type)
 
         self._apply_excel_styling(writer, sheet)
 
     def _apply_excel_styling(self, writer, sheet):
         worksheet = writer.sheets[sheet["sheet_name"]]
-
-        # Apply no border, non-bold font, and left alignment to header cells
+        # Reset header style: no border and non-bold font.
         for cell in worksheet[1]:
             cell.border = styles.Border(
                 left=styles.Side(style=None),
@@ -157,13 +169,13 @@ class SpreadsheetBuilder:
             )
             cell.font = styles.Font(bold=False)
 
+        # Bold headers if specified.
         if sheet["styles"].get("bold_headers"):
             for cell in worksheet[1]:
                 cell.font = styles.Font(bold=True)
 
     def _write_xls(self, output):
         book = xlwt.Workbook()
-
         for sheet_data in self.sheets_data:
             self._write_sheet_to_xls(book, sheet_data)
         book.save(output)
@@ -171,14 +183,14 @@ class SpreadsheetBuilder:
     def _write_sheet_to_xls(self, book: xlwt.Workbook, sheet_data: SheetData):
         sheet: xlwt.Worksheet = book.add_sheet(sheet_data["sheet_name"])
 
-        # Styles for headers
+        # Pre-define styles for headers and cells.
         bold_style = xlwt.XFStyle()
-        font = xlwt.Font()
-        font.bold = True
-        bold_style.font = font
+        bold_font = xlwt.Font()
+        bold_font.bold = True
+        bold_style.font = bold_font
+
         default_style = xlwt.XFStyle()
 
-        # Style for left-aligned numbers
         left_aligned_num_style = xlwt.XFStyle()
         left_aligned_num_style.num_format_str = "#,##0"
         alignment = xlwt.Alignment()
@@ -186,21 +198,19 @@ class SpreadsheetBuilder:
         left_aligned_num_style.alignment = alignment
 
         plain_style = xlwt.XFStyle()
-
-        # Apply bold style for headers if required
         header_style = (
             bold_style if sheet_data["styles"].get("bold_headers") else default_style
         )
 
+        # Write headers.
         for col_index, column in enumerate(sheet_data["columns"]):
             sheet.write(0, col_index, column.label, header_style)
 
-        # Auto-adjusting column widths
         self._auto_adjust_column_width_xls(sheet, sheet_data)
 
+        # Write rows with appropriate styles.
         for row_index, row in enumerate(sheet_data["rows"], start=1):
             for col_index, value in enumerate(row):
-                # Apply left-aligned style for numbers, default style for others
                 cell_style = (
                     left_aligned_num_style
                     if isinstance(value, (int, float))
@@ -208,36 +218,37 @@ class SpreadsheetBuilder:
                 )
                 sheet.write(row_index, col_index, value, cell_style)
 
-    def _auto_adjust_column_width_xlsx(self, writer: pd.ExcelWriter, sheet_data):
-        worksheet = writer.sheets[sheet_data["sheet_name"]]
+    def _auto_adjust_column_width_xlsx(self, writer: pd.ExcelWriter, sheet_name: str):
+        worksheet = writer.sheets[sheet_name]
         for column in worksheet.columns:
-            max_length = 0
+            # Compute the maximum length among all cells in the column.
+            max_length = max(
+                (
+                    len(str(cell.value)) if cell.value is not None else 0
+                    for cell in column
+                ),
+                default=0,
+            )
+            adjusted_width = max_length + 2  # Adding extra space.
             column_letter = get_column_letter(column[0].column)
-
-            for cell in column:
-                try:
-                    cell_length = len(str(cell.value))
-                    if cell_length > max_length:
-                        max_length = cell_length
-                except:
-                    pass
-
-            adjusted_width = max_length + 2  # Adding 2 for a little extra space
             worksheet.column_dimensions[column_letter].width = adjusted_width
 
     def _auto_adjust_column_width_xls(self, sheet, sheet_data):
-        column_labels = [column.label for column in sheet_data["columns"]]
-
-        column_widths = [
-            max(len(str(cell)) for cell in column) + 2
-            for column in zip(*sheet_data["rows"], column_labels)
-        ]
-        for i, width in enumerate(column_widths):
-            sheet.col(i).width = min(256 * width, MAX_XLS_WIDTH)
+        # Calculate the maximum width for each column using header and row values.
+        for col_idx, column in enumerate(sheet_data["columns"]):
+            header_length = len(str(column.label))
+            cell_lengths = [
+                len(str(row[col_idx]))
+                for row in sheet_data["rows"]
+                if len(row) > col_idx
+            ]
+            max_length = (
+                max([header_length] + cell_lengths) if cell_lengths else header_length
+            )
+            sheet.col(col_idx).width = min(256 * (max_length + 2), MAX_XLS_WIDTH)
 
     def _write_csv(self, output):
         if self.sheets_data:
-            column_labels = [column.label for column in self.sheets_data[0]["columns"]]
-
-            df = pd.DataFrame(self.sheets_data[0]["rows"], columns=column_labels)
+            columns = [col.label for col in self.sheets_data[0]["columns"]]
+            df = pd.DataFrame(self.sheets_data[0]["rows"], columns=columns)
             df.to_csv(output, index=False)

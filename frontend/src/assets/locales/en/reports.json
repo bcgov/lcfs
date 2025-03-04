@@ -26,6 +26,7 @@
   "supplementalReport": "Supplemental Report",
   "createSupplementalRptBtn": "Create supplemental report",
   "createReassessmentBtn": "Create reassessment",
+  "downloadExcel": "Download Excel",
   "supplementalCreated": "Supplemental report created successfully.",
   "clickDrag": "Drag and drop your (PDF, JPG, PNG, MSG, DOC, XLS) file(s) here or click to select the file(s) from your machine to upload.",
   "activityLinksList": "Click links to report activities",
@@ -37,7 +38,8 @@
     "notionalTransfers": "Notional transfers of eligible renewable fuel",
     "fuelsOtherUse": "Fuels for other use",
     "exportFuels": "Exporting fuel that was previously marketed in British Columbia",
-    "uploadDocuments": "Upload supporting documents for your report"
+    "uploadDocuments": "Upload supporting documents for your report",
+    "downloadExcel": "Download your report details"
   },
   "activityLabels": {
     "supplyOfFuel": "Supply of fuel",
