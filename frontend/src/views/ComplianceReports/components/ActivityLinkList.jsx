@@ -1,13 +1,18 @@
-import { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Box, List } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
-import { ROUTES } from '@/constants/routes'
+import { apiRoutes, ROUTES } from '@/constants/routes'
 import Chip from '@mui/material/Chip'
 import { styled } from '@mui/material/styles'
 import colors from '@/themes/base/colors.js'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog.jsx'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import BCButton from '@/components/BCButton/index.jsx'
+import AssignmentIcon from '@mui/icons-material/Assignment.js'
+import { useApiService } from '@/services/useApiService.js'
+import { Download, FileDownload } from '@mui/icons-material'
 
 export const StyledChip = styled(Chip)({
   fontWeight: 'bold',
@@ -18,9 +23,10 @@ export const StyledChip = styled(Chip)({
   backgroundColor: colors.nav.main
 })
 
-export const ActivityLinksList = () => {
+export const ActivityLinksList = ({ currentStatus }) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const apiService = useApiService()
   const { compliancePeriod, complianceReportId } = useParams()
 
   const [isOpen, setIsOpen] = useState(false)
@@ -36,6 +42,21 @@ export const ActivityLinksList = () => {
       )
     }
   })
+
+  const [isDownloading, setIsDownloading] = useState(false)
+  const onDownloadReport = async () => {
+    setIsDownloading(true)
+    try {
+      await apiService.download(
+        apiRoutes.exportComplianceReport.replace(
+          ':reportID',
+          complianceReportId
+        )
+      )
+    } finally {
+      setIsDownloading(false)
+    }
+  }
 
   const primaryList = useMemo(
     () => [
@@ -158,6 +179,38 @@ export const ActivityLinksList = () => {
           </Box>
         ))}
       </List>
+      {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
+        <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+          <BCButton
+            data-test="download-report"
+            size="small"
+            className="svg-icon-button"
+            variant="outlined"
+            color="primary"
+            onClick={onDownloadReport}
+            startIcon={<FileDownload />}
+            sx={{ mr: 2 }}
+            isLoading={isDownloading}
+            disabled={isDownloading}
+          >
+            {t('report:downloadExcel')}
+          </BCButton>
+          {!isDownloading && (
+            <BCTypography
+              variant="subtitle2"
+              disabled={isDownloading}
+              color="link"
+              onClick={onDownloadReport}
+              sx={{
+                textDecoration: 'underline',
+                '&:hover': { color: 'info.main' }
+              }}
+            >
+              {t('report:activityLists.downloadExcel')}
+            </BCTypography>
+          )}
+        </Box>
+      )}
       <DocumentUploadDialog
         parentID={complianceReportId}
         parentType="compliance_report"
