@@ -178,7 +178,8 @@ class FuelExportRepository:
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         if not include_legacy:
             query = query.where(
-                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
+                and_(FuelType.is_legacy == False,
+                     ProvisionOfTheAct.is_legacy == False)
             )
 
         results = (await self.db.execute(query)).all()
@@ -186,7 +187,7 @@ class FuelExportRepository:
 
     @repo_handler
     async def get_fuel_export_list(
-        self, compliance_report_id: int, exclude_draft_reports: bool = False
+        self, compliance_report_id: int, changelog: Optional[bool] = False, exclude_draft_reports: bool = False
     ) -> List[FuelExport]:
         """
         Retrieve the list of effective fuel exports for a given compliance report.
@@ -204,6 +205,7 @@ class FuelExportRepository:
         # Retrieve effective fuel exports using the group UUID
         effective_fuel_exports = await self.get_effective_fuel_exports(
             compliance_report_group_uuid=group_uuid,
+            changelog=changelog,
             exclude_draft_reports=exclude_draft_reports,
         )
 
@@ -237,9 +239,10 @@ class FuelExportRepository:
 
         # Manually apply pagination
         total_count = len(effective_fuel_exports)
-        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_exports = effective_fuel_exports[offset : offset + limit]
+        paginated_exports = effective_fuel_exports[offset: offset + limit]
 
         return paginated_exports, total_count
 
@@ -293,7 +296,8 @@ class FuelExportRepository:
     async def delete_fuel_export(self, fuel_export_id: int):
         """Delete a fuel supply row from the database"""
         await self.db.execute(
-            delete(FuelExport).where(FuelExport.fuel_export_id == fuel_export_id)
+            delete(FuelExport).where(
+                FuelExport.fuel_export_id == fuel_export_id)
         )
         await self.db.flush()
 
@@ -347,7 +351,7 @@ class FuelExportRepository:
 
     @repo_handler
     async def get_effective_fuel_exports(
-        self, compliance_report_group_uuid: str, exclude_draft_reports: bool = False
+        self, compliance_report_group_uuid: str, changelog: Optional[bool] = False, exclude_draft_reports: bool = False
     ) -> List[FuelExport]:
         """
         Retrieve effective FuelExport records associated with the given compliance_report_group_uuid.
@@ -366,22 +370,28 @@ class FuelExportRepository:
                 )
             )
 
-        # Step 2: Select to identify group_uuids that have any DELETE action
-        delete_group_select = (
-            select(FuelExport.group_uuid)
-            .where(
-                FuelExport.compliance_report_id.in_(compliance_reports_select),
-                FuelExport.action_type == ActionTypeEnum.DELETE,
-            )
-            .distinct()
-        )
-
         # Step 3: Select to find the max version and priority per group_uuid, excluding DELETE groups
         user_type_priority = case(
             (FuelExport.user_type == UserTypeEnum.GOVERNMENT, 1),
             (FuelExport.user_type == UserTypeEnum.SUPPLIER, 0),
             else_=0,
         )
+        conditions = [FuelExport.compliance_report_id.in_(
+            compliance_reports_select)]
+        if not changelog:
+            delete_group_select = (
+                select(FuelExport.group_uuid)
+                .where(
+                    FuelExport.compliance_report_id.in_(
+                        compliance_reports_select),
+                    FuelExport.action_type == ActionTypeEnum.DELETE,
+                )
+                .distinct()
+            )
+            conditions.extend([
+                FuelExport.action_type != ActionTypeEnum.DELETE,
+                ~FuelExport.group_uuid.in_(delete_group_select)
+            ])
 
         valid_fuel_exports_select = (
             select(
@@ -389,11 +399,7 @@ class FuelExportRepository:
                 func.max(FuelExport.version).label("max_version"),
                 func.max(user_type_priority).label("max_role_priority"),
             )
-            .where(
-                FuelExport.compliance_report_id.in_(compliance_reports_select),
-                FuelExport.action_type != ActionTypeEnum.DELETE,
-                ~FuelExport.group_uuid.in_(delete_group_select),
-            )
+            .where(*conditions)
             .group_by(FuelExport.group_uuid)
         )
 

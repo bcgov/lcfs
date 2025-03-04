@@ -4,7 +4,7 @@ import BCTypography from '@/components/BCTypography'
 import { ROUTES } from '@/constants/routes'
 import {
   useFuelExportOptions,
-  useGetFuelExports,
+  useGetFuelExportsList,
   useSaveFuelExport
 } from '@/hooks/useFuelExport'
 import { isArrayEmpty } from '@/utils/array.js'
@@ -15,6 +15,10 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelExportColDefs } from './_schema'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import colors from '@/themes/base/colors'
+import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
@@ -30,6 +34,14 @@ export const AddEditFuelExports = () => {
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
+  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+  const { data: complianceReport, isLoading: complianceReportLoading } =
+    useGetComplianceReport(
+      currentUser?.organization.organizationId,
+      complianceReportId
+    )
+
+  const isSupplemental = complianceReport?.report?.version !== 0
 
   const {
     data: optionsData,
@@ -38,8 +50,10 @@ export const AddEditFuelExports = () => {
   } = useFuelExportOptions({ compliancePeriod })
   const { mutateAsync: saveRow } = useSaveFuelExport({ complianceReportId })
 
-  const { data, isLoading: fuelExportsLoading } =
-    useGetFuelExports(complianceReportId)
+  const { data, isLoading: fuelExportsLoading } = useGetFuelExportsList({
+    complianceReportId,
+    changelog: isSupplemental
+  })
 
   const gridOptions = useMemo(
     () => ({
@@ -49,9 +63,10 @@ export const AddEditFuelExports = () => {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
-      }
+      },
+      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
     }),
-    [t]
+    [isSupplemental, t]
   )
 
   useEffect(() => {
@@ -68,13 +83,15 @@ export const AddEditFuelExports = () => {
       if (!isArrayEmpty(data)) {
         const updatedRowData = data.fuelExports.map((item) => ({
           ...item,
-          complianceReportId, // This takes current reportId, important for versioning
+          complianceReportId,
           compliancePeriod,
           fuelCategory: item.fuelCategory?.category,
           fuelType: item.fuelType?.fuelType,
           provisionOfTheAct: item.provisionOfTheAct?.name,
           fuelCode: item.fuelCode?.fuelCode,
           endUse: item.endUse?.type || 'Any',
+          isNewSupplementalEntry:
+            isSupplemental && item.complianceReportId === +complianceReportId,
           id: uuid()
         }))
         setRowData([...updatedRowData, { id: uuid(), compliancePeriod }])
@@ -92,7 +109,7 @@ export const AddEditFuelExports = () => {
         setGridReady(true)
       }, 500)
     },
-    [compliancePeriod, data]
+    [compliancePeriod, complianceReportId, data, isSupplemental]
   )
 
   useEffect(() => {
@@ -101,29 +118,39 @@ export const AddEditFuelExports = () => {
         optionsData,
         errors,
         warnings,
-        gridReady
+        gridReady,
+        isSupplemental
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [optionsData, errors, warnings, gridReady])
+  }, [optionsData, errors, warnings, gridReady, isSupplemental])
 
   useEffect(() => {
     if (!fuelExportsLoading && !isArrayEmpty(data)) {
       const updatedRowData = data.fuelExports.map((item) => ({
         ...item,
+        complianceReportId,
+        compliancePeriod,
         fuelCategory: item.fuelCategory?.category,
         fuelType: item.fuelType?.fuelType,
         provisionOfTheAct: item.provisionOfTheAct?.name,
         fuelCode: item.fuelCode?.fuelCode,
         endUse: item.endUse?.type || 'Any',
-        id: uuid(),
-        compliancePeriod
+        isNewSupplementalEntry:
+          isSupplemental && item.complianceReportId === +complianceReportId,
+        id: uuid()
       }))
       setRowData(updatedRowData)
     } else {
-      setRowData([{ id: uuid() }])
+      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
-  }, [compliancePeriod, data, fuelExportsLoading])
+  }, [
+    compliancePeriod,
+    complianceReportId,
+    data,
+    fuelExportsLoading,
+    isSupplemental
+  ])
 
   const onCellValueChanged = useCallback(
     async (params) => {
@@ -227,14 +254,17 @@ export const AddEditFuelExports = () => {
   )
 
   const onAction = async (action, params) => {
-    if (action === 'delete') {
+    if (action === 'delete' || action === 'undo') {
       await handleScheduleDelete(
         params,
         'fuelExportId',
         saveRow,
         alertRef,
         setRowData,
-        {}
+        {
+          complianceReportId,
+          compliancePeriod
+        }
       )
     }
   }
@@ -250,7 +280,9 @@ export const AddEditFuelExports = () => {
 
   return (
     isFetched &&
-    !fuelExportsLoading && (
+    !fuelExportsLoading &&
+    !currentUserLoading &&
+    !complianceReportLoading && (
       <Grid2 className="add-edit-fuel-export-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">

@@ -14,17 +14,26 @@ import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const notionalTransferColDefs = (
   optionsData,
   currentUser,
   errors,
-  warnings
+  warnings,
+  isSupplemental
 ) => [
   validation,
-  actions({
-    enableDuplicate: false,
-    enableDelete: true
+  actions((params) => {
+    return {
+      enableDuplicate: false,
+      enableDelete: !params.data.isNewSupplementalEntry,
+      enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
+      enableStatus:
+        isSupplemental &&
+        params.data.isNewSupplementalEntry &&
+        ACTION_STATUS_MAP[params.data.actionType]
+    }
   }),
   {
     field: 'id',
@@ -92,7 +101,7 @@ export const notionalTransferColDefs = (
       return true
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'addressForService',
@@ -103,7 +112,7 @@ export const notionalTransferColDefs = (
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'fuelCategory',
@@ -122,7 +131,7 @@ export const notionalTransferColDefs = (
       openOnFocus: true
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     cellRenderer: SelectRenderer
   },
   {
@@ -142,7 +151,7 @@ export const notionalTransferColDefs = (
       openOnFocus: true
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     cellRenderer: SelectRenderer
   },
   {
@@ -157,7 +166,7 @@ export const notionalTransferColDefs = (
     },
     valueFormatter: (params) => valueFormatter({ value: params.value }),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   }
 ]
 

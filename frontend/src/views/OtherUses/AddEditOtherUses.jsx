@@ -1,12 +1,18 @@
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
+import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
+import * as ROUTES from '@/constants/routes/routes.js'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
-  useGetAllOtherUses,
+  useGetAllOtherUsesList,
   useOtherUsesOptions,
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
+import { isArrayEmpty } from '@/utils/array'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import BCTypography from '@/components/BCTypography'
+import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -17,8 +23,6 @@ import {
   otherUsesColDefs,
   PROVISION_APPROVED_FUEL_CODE
 } from './_schema'
-import * as ROUTES from '@/constants/routes/routes.js'
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 
 export const AddEditOtherUses = () => {
   const [rowData, setRowData] = useState([])
@@ -35,10 +39,21 @@ export const AddEditOtherUses = () => {
     isLoading: optionsLoading,
     isFetched
   } = useOtherUsesOptions({ compliancePeriod })
-  const { data: otherUses, isLoading: usesLoading } =
-    useGetAllOtherUses(complianceReportId)
+
   const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
   const navigate = useNavigate()
+  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+  const { data: complianceReport, isLoading: complianceReportLoading } =
+    useGetComplianceReport(
+      currentUser?.organization.organizationId,
+      complianceReportId
+    )
+  const isSupplemental = complianceReport?.report?.version !== 0
+
+  const { data: otherUses, isLoading: usesLoading } = useGetAllOtherUsesList({
+    complianceReportId,
+    changelog: isSupplemental
+  })
 
   useEffect(() => {
     if (location.state?.message) {
@@ -62,6 +77,26 @@ export const AddEditOtherUses = () => {
       setRowData(ensureRowIds(otherUses))
     }
   }, [otherUses])
+
+  useEffect(() => {
+    if (!usesLoading && !isArrayEmpty(otherUses)) {
+      const updatedRowData = otherUses.map((item) => ({
+        ...item,
+        complianceReportId,
+        isNewSupplementalEntry:
+          isSupplemental && item.complianceReportId === +complianceReportId
+      }))
+      setRowData(updatedRowData)
+    } else {
+      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
+    }
+  }, [
+    compliancePeriod,
+    complianceReportId,
+    isSupplemental,
+    otherUses,
+    usesLoading
+  ])
 
   const findCiOfFuel = useCallback((data, optionsData) => {
     let ciOfFuel = 0
@@ -105,51 +140,57 @@ export const AddEditOtherUses = () => {
     return true // Proceed with the update
   }
 
-  const onGridReady = (params) => {
-    const ensureRowIds = (rows) => {
-      return rows.map((row) => {
-        if (!row.id) {
-          return {
-            ...row,
-            complianceReportId, // This takes current reportId, important for versioning
-            id: uuid(),
-            isValid: true
+  const onGridReady = useCallback(
+    (params) => {
+      const ensureRowIds = (rows) => {
+        return rows.map((row) => {
+          if (!row.id) {
+            return {
+              ...row,
+              complianceReportId, // This takes current reportId, important for versioning
+              isNewSupplementalEntry:
+                isSupplemental &&
+                row.complianceReportId === +complianceReportId,
+              id: uuid(),
+              isValid: true
+            }
           }
-        }
-        return row
-      })
-    }
-
-    if (otherUses && otherUses.length > 0) {
-      try {
-        setRowData([
-          ...ensureRowIds(otherUses),
-          { id: uuid(), complianceReportId }
-        ])
-      } catch (error) {
-        alertRef.triggerAlert({
-          message: t('otherUses:otherUsesLoadFailMsg'),
-          severity: 'error'
+          return row
         })
       }
-    } else {
-      setRowData([{ id: uuid, complianceReportId }])
-    }
 
-    params.api.sizeColumnsToFit()
+      if (otherUses && otherUses.length > 0) {
+        try {
+          setRowData([
+            ...ensureRowIds(otherUses),
+            { id: uuid(), complianceReportId }
+          ])
+        } catch (error) {
+          alertRef.triggerAlert({
+            message: t('otherUses:otherUsesLoadFailMsg'),
+            severity: 'error'
+          })
+        }
+      } else {
+        setRowData([{ id: uuid, complianceReportId }])
+      }
 
-    setTimeout(() => {
-      const lastRowIndex = params.api.getLastDisplayedRowIndex()
+      params.api.sizeColumnsToFit()
 
-      params.api.startEditingCell({
-        rowIndex: lastRowIndex,
-        colKey: 'fuelType'
-      })
-    }, 100)
-  }
+      setTimeout(() => {
+        const lastRowIndex = params.api.getLastDisplayedRowIndex()
+
+        params.api.startEditingCell({
+          rowIndex: lastRowIndex,
+          colKey: 'fuelType'
+        })
+      }, 100)
+    },
+    [complianceReportId, isSupplemental, otherUses, t]
+  )
 
   const onAction = async (action, params) => {
-    if (action === 'delete') {
+    if (action === 'delete' || action === 'undo') {
       await handleScheduleDelete(
         params,
         'otherUsesId',
@@ -290,7 +331,10 @@ export const AddEditOtherUses = () => {
   }
 
   return (
-    isFetched && (
+    isFetched &&
+    !usesLoading &&
+    !currentUserLoading &&
+    !complianceReportLoading && (
       <Grid2 className="add-edit-other-uses-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">
@@ -305,7 +349,12 @@ export const AddEditOtherUses = () => {
           gridRef={gridRef}
           alertRef={alertRef}
           getRowId={(params) => params.data.id}
-          columnDefs={otherUsesColDefs(optionsData, errors, warnings)}
+          columnDefs={otherUsesColDefs(
+            optionsData,
+            errors,
+            warnings,
+            isSupplemental
+          )}
           defaultColDef={defaultColDef}
           onGridReady={onGridReady}
           rowData={rowData}
@@ -327,6 +376,9 @@ export const AddEditOtherUses = () => {
             onSave: handleNavigateBack,
             confirmText: t('report:incompleteReport'),
             confirmLabel: t('report:returnToReport')
+          }}
+          gridOptions={{
+            getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
           }}
         />
       </Grid2>

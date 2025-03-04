@@ -15,15 +15,26 @@ import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
-export const otherUsesColDefs = (optionsData, errors, warnings) => [
+export const otherUsesColDefs = (
+  optionsData,
+  errors,
+  warnings,
+  isSupplemental
+) => [
   validation,
-  actions({
+  actions((params) => ({
     enableDuplicate: false,
-    enableDelete: true
-  }),
+    enableDelete: !params.data.isNewSupplementalEntry,
+    enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
+    enableStatus:
+      isSupplemental &&
+      params.data.isNewSupplementalEntry &&
+      ACTION_STATUS_MAP[params.data.actionType]
+  })),
   {
     field: 'id',
     hide: true
@@ -48,7 +59,8 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
     suppressKeyboardEvent,
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     valueSetter: (params) => {
       if (params.newValue) {
         // TODO: Evaluate if additional fields need to be reset when fuel type changes
@@ -80,7 +92,8 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
     suppressKeyboardEvent,
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     minWidth: 200
   },
   {
@@ -107,7 +120,8 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
     },
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     valueSetter: (params) => {
       if (params.newValue !== params.oldValue) {
@@ -141,7 +155,8 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
     },
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     minWidth: 150,
     editable: (params) => {
@@ -167,7 +182,8 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
       showStepperButtons: false
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     minWidth: 200
   },
   {
@@ -189,7 +205,8 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
     },
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     editable: true,
     minWidth: 100
   },
@@ -198,7 +215,8 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
     headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
     valueFormatter: (params) => parseFloat(params.value).toFixed(2),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     editable: false,
     valueGetter: (params) => {
       const fuelType = optionsData?.fuelTypes?.find(
@@ -245,7 +263,8 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
     suppressKeyboardEvent,
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     minWidth: 200
   },
   {
@@ -255,7 +274,9 @@ export const otherUsesColDefs = (optionsData, errors, warnings) => [
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     editable: (params) => params.data.expectedUse === 'Other',
-    minWidth: 300
+    minWidth: 300,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   }
 ]
 

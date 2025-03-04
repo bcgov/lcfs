@@ -196,7 +196,8 @@ class FuelSupplyRepository:
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         if not include_legacy:
             query = query.where(
-                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
+                and_(FuelType.is_legacy == False,
+                     ProvisionOfTheAct.is_legacy == False)
             )
 
         fuel_type_results = (await self.db.execute(query)).all()
@@ -207,7 +208,7 @@ class FuelSupplyRepository:
 
     @repo_handler
     async def get_fuel_supply_list(
-        self, compliance_report_id: int, exclude_draft_reports: bool = False
+        self, compliance_report_id: int, changelog: Optional[bool] = False, exclude_draft_reports: bool = False
     ) -> List[FuelSupply]:
         """
         Retrieve the list of effective fuel supplies for a given compliance report.
@@ -226,6 +227,7 @@ class FuelSupplyRepository:
         # optionally excluding draft records.
         effective_fuel_supplies = await self.get_effective_fuel_supplies(
             compliance_report_group_uuid=group_uuid,
+            changelog=changelog,
             exclude_draft_reports=exclude_draft_reports,
         )
 
@@ -264,9 +266,10 @@ class FuelSupplyRepository:
 
         # Manually apply pagination
         total_count = len(fuel_supplies)
-        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_supplies = fuel_supplies[offset : offset + limit]
+        paginated_supplies = fuel_supplies[offset: offset + limit]
 
         return paginated_supplies, total_count
 
@@ -321,7 +324,8 @@ class FuelSupplyRepository:
     async def delete_fuel_supply(self, fuel_supply_id: int):
         """Delete a fuel supply row from the database"""
         await self.db.execute(
-            delete(FuelSupply).where(FuelSupply.fuel_supply_id == fuel_supply_id)
+            delete(FuelSupply).where(
+                FuelSupply.fuel_supply_id == fuel_supply_id)
         )
         await self.db.flush()
 
@@ -423,6 +427,7 @@ class FuelSupplyRepository:
         compliance_report_group_uuid: str,
         exclude_draft_reports: bool = False,
         compliance_report_id: Optional[int] = None,
+        changelog: Optional[bool] = False
     ) -> Sequence[FuelSupply]:
         """
         Retrieve effective FuelSupply records associated with the given compliance_report_group_uuid.
@@ -449,23 +454,28 @@ class FuelSupplyRepository:
                 )
             )
 
-        # Step 2: Subquery to identify record group_uuids that have any DELETE action
-        delete_group_select = (
-            select(FuelSupply.group_uuid)
-            .where(
-                FuelSupply.compliance_report_id.in_(compliance_reports_select),
-                FuelSupply.action_type == ActionTypeEnum.DELETE,
-            )
-            .distinct()
-        )
-
-        # Step 3: Subquery to find the maximum version and priority per group_uuid,
-        # excluding groups with any DELETE action
+        # Step 2 & 3: Build conditions; exclude DELETE rows only when changelog is False
         user_type_priority = case(
             (FuelSupply.user_type == UserTypeEnum.GOVERNMENT, 1),
             (FuelSupply.user_type == UserTypeEnum.SUPPLIER, 0),
             else_=0,
         )
+        conditions = [FuelSupply.compliance_report_id.in_(
+            compliance_reports_select)]
+        if not changelog:
+            delete_group_select = (
+                select(FuelSupply.group_uuid)
+                .where(
+                    FuelSupply.compliance_report_id.in_(
+                        compliance_reports_select),
+                    FuelSupply.action_type == ActionTypeEnum.DELETE,
+                )
+                .distinct()
+            )
+            conditions.extend([
+                FuelSupply.action_type != ActionTypeEnum.DELETE,
+                ~FuelSupply.group_uuid.in_(delete_group_select)
+            ])
 
         valid_fuel_supplies_select = (
             select(
@@ -473,14 +483,9 @@ class FuelSupplyRepository:
                 func.max(FuelSupply.version).label("max_version"),
                 func.max(user_type_priority).label("max_role_priority"),
             )
-            .where(
-                FuelSupply.compliance_report_id.in_(compliance_reports_select),
-                FuelSupply.action_type != ActionTypeEnum.DELETE,
-                ~FuelSupply.group_uuid.in_(delete_group_select),
-            )
+            .where(*conditions)
             .group_by(FuelSupply.group_uuid)
         )
-        # Now create a subquery for use in the JOIN
         valid_fuel_supplies_subq = valid_fuel_supplies_select.subquery()
 
         # Step 4: Main query to retrieve FuelSupply records with necessary eager relationships

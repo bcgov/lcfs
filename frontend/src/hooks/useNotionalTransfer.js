@@ -27,6 +27,25 @@ export const useGetAllNotionalTransfers = (complianceReportId, options) => {
   })
 }
 
+export const useGetAllNotionalTransfersList = (
+  { complianceReportId, changelog = false },
+  options
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['notional-transfers', complianceReportId, changelog],
+    queryFn: async () => {
+      return (
+        await client.post(apiRoutes.getAllNotionalTransfers, {
+          complianceReportId,
+          changelog
+        })
+      ).data.notionalTransfers
+    },
+    ...options
+  })
+}
+
 export const useSaveNotionalTransfer = (complianceReportId, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()

@@ -1,4 +1,5 @@
-import { Cancel, Delete, Edit, Queue } from '@mui/icons-material'
+import BCTypography from '@/components/BCTypography'
+import { Cancel, Delete, Edit, Queue, Replay } from '@mui/icons-material'
 import { IconButton, Stack, Tooltip } from '@mui/material'
 
 export const ActionsRenderer2 = (props) => {
@@ -8,6 +9,9 @@ export const ActionsRenderer2 = (props) => {
 
   return (
     <Stack direction="row" spacing={0.1} m={0} mt={0.2}>
+      {props.enableStatus && (
+        <BCTypography style={{ flex: 1 }}>{props.enableStatus}</BCTypography>
+      )}
       {props.enableDuplicate && (
         <Tooltip title="duplicate">
           <span>
@@ -68,6 +72,17 @@ export const ActionsRenderer2 = (props) => {
             }}
           >
             <Cancel />
+          </IconButton>
+        </Tooltip>
+      )}
+      {props.enableUndo && (
+        <Tooltip title="Undo">
+          <IconButton
+            aria-label="undo row"
+            data-testid="undo-button"
+            data-action="undo"
+          >
+            <Replay style={{ pointerEvents: 'none' }} />
           </IconButton>
         </Tooltip>
       )}

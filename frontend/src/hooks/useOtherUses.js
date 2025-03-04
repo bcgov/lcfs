@@ -26,6 +26,25 @@ export const useGetAllOtherUses = (complianceReportId, options) => {
   })
 }
 
+export const useGetAllOtherUsesList = (
+  { complianceReportId, changelog = false },
+  options
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['other-uses', complianceReportId, changelog],
+    queryFn: async () => {
+      return (
+        await client.post(apiRoutes.getAllOtherUses, {
+          complianceReportId,
+          changelog
+        })
+      ).data.otherUses
+    },
+    ...options
+  })
+}
+
 export const useSaveOtherUses = (complianceReportId, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
