@@ -158,6 +158,9 @@
     "Submitted": "Signed and submitted {{createDate}} by {{displayName}}.",
     "Recommended by analyst": "Recommended {{createDate}} by {{displayName}}.",
     "Recommended by manager": "Recommended {{createDate}} by {{displayName}}.",
+    "Not recommended by analyst": "Not recommended {{createDate}} by {{displayName}}.",
+    "Not recommended by manager": "Not recommended {{createDate}} by {{displayName}}.",
+    "Rejected": "Rejected {{createDate}} by {{displayName}}.",
     "Assessed": "Assessed {{createDate}} by {{displayName}}.",
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
     "Reassessed": "Re-assessed"
