@@ -251,7 +251,7 @@ export const fuelExportColDefs = (
             ?.map((item) => item.endUseType?.type)
             .sort()
         )
-      ].filter((item) => item != null) || ['Any'],
+      ].filter((item) => item != null),
     cellEditorParams: (params) => ({
       options: params.colDef.options(params),
       multiple: false,
@@ -266,11 +266,12 @@ export const fuelExportColDefs = (
 
     suppressKeyboardEvent,
     valueGetter: (params) => {
-      return params.colDef?.cellEditorParams(params).options.length < 1
-        ? 'Any'
-        : params.data?.endUseType?.type
+      return params.data.endUseType?.type
     },
-    editable: (params) => params.colDef?.options(params).length > 0,
+    editable: (params) => {
+      const cellParams = params.colDef?.cellEditorParams(params)
+      return cellParams.options.length > 1
+    },
     valueSetter: (params) => {
       if (params.newValue) {
         const eerRatio = optionsData?.fuelTypes
@@ -321,7 +322,10 @@ export const fuelExportColDefs = (
       }
       return true
     },
-    editable: true,
+    editable: (params) => {
+      const cellParams = params.colDef?.cellEditorParams(params)
+      return cellParams.options?.length > 1
+    },
     tooltipValueGetter: (p) =>
       'Act Relied Upon to Determine Carbon Intensity: Identify the appropriate provision of the Act relied upon to determine the carbon intensity of each fuel.'
   },
