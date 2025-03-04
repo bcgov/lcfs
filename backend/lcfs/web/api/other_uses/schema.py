@@ -8,6 +8,7 @@ from lcfs.web.api.base import (
     FilterModel,
     SortOrder,
     PaginationResponseSchema,
+    ComplianceReportRequestSchema
 )
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.utils.schema_validators import fuel_code_required_label
@@ -104,6 +105,7 @@ class OtherUsesCreateSchema(BaseSchema):
     version: Optional[int] = None
     user_type: Optional[str] = None
     action_type: Optional[str] = None
+    is_new_supplemental_entry: Optional[bool] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -183,3 +185,7 @@ class DeleteOtherUsesSchema(BaseSchema):
 
 class DeleteOtherUsesResponseSchema(BaseSchema):
     message: str
+
+
+class OtherUsesRequestSchema(ComplianceReportRequestSchema):
+    changelog: Optional[bool] = None

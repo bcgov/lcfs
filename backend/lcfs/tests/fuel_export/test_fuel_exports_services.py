@@ -71,7 +71,8 @@ async def test_get_fuel_export_list_success(fuel_export_service, mock_repo):
         export_date=date.today(),
         group_uuid="test-uuid",
         provision_of_the_act_id=1,
-        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Test Provision"},
+        provision_of_the_act={
+            "provision_of_the_act_id": 1, "name": "Test Provision"},
         version=0,
         user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
@@ -83,7 +84,7 @@ async def test_get_fuel_export_list_success(fuel_export_service, mock_repo):
     assert isinstance(result, FuelExportsSchema)
     # Expect the repo call to include exclude_draft_reports=True based on the user
     mock_repo.get_fuel_export_list.assert_called_once_with(
-        1, exclude_draft_reports=True
+        1, False, exclude_draft_reports=True
     )
 
 
@@ -106,7 +107,8 @@ async def test_get_fuel_exports_paginated_success(fuel_export_service, mock_repo
         units="L",
         export_date=date.today(),
         provision_of_the_act_id=1,
-        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Test Provision"},
+        provision_of_the_act={
+            "provision_of_the_act_id": 1, "name": "Test Provision"},
     )
     mock_repo.get_fuel_exports_paginated.return_value = ([mock_export], 1)
 
@@ -138,7 +140,8 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
         fuel_category_id=1,
         fuel_category=mock_fuel_category.dict(),
         provisionOfTheActId=1,
-        provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Act Provision"},
+        provisionOfTheAct={"provision_of_the_act_id": 1,
+                           "name": "Act Provision"},
         quantity=100,
         units="L",
         export_date=date.today(),
@@ -153,7 +156,8 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
         user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
         provision_of_the_act_id=1,
-        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Act Provision"},
+        provision_of_the_act={
+            "provision_of_the_act_id": 1, "name": "Act Provision"},
         fuel_type_id=1,
         fuel_category_id=1,
         quantity=100,
@@ -184,7 +188,8 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         fuel_category=mock_fuel_category.dict(),
         quantity=100,
         provisionOfTheActId=1,
-        provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Act Provision"},
+        provisionOfTheAct={"provision_of_the_act_id": 1,
+                           "name": "Act Provision"},
         units="L",
         export_date=date.today(),
         compliance_period="2024",
@@ -200,7 +205,8 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         fuel_type_id=1,
         fuel_category_id=1,
         provision_of_the_act_id=1,
-        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Act Provision"},
+        provision_of_the_act={
+            "provision_of_the_act_id": 1, "name": "Act Provision"},
         quantity=100,
         units="L",
         export_date=date.today(),

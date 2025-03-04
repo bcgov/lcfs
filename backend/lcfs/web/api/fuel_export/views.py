@@ -88,7 +88,7 @@ async def get_fuel_exports(
                 pagination, compliance_report_id
             )
         else:
-            return await service.get_fuel_export_list(compliance_report_id)
+            return await service.get_fuel_export_list(compliance_report_id, request_data.changelog)
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
         raise http_ex

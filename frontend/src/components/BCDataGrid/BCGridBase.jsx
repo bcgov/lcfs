@@ -112,7 +112,19 @@ export const BCGridBase = forwardRef(
         suppressPaginationPanel
         suppressScrollOnNewData
         onRowDataUpdated={determineHeight}
-        getRowStyle={getRowStyle}
+        getRowStyle={(params) => {
+          const defaultStyle =
+            typeof getRowStyle === 'function' ? getRowStyle(params) : {}
+          const gridOptionStyle =
+            props.gridOptions &&
+            typeof props.gridOptions.getRowStyle === 'function'
+              ? props.gridOptions.getRowStyle(params)
+              : {}
+          return {
+            ...defaultStyle,
+            ...gridOptionStyle
+          }
+        }}
         rowHeight={ROW_HEIGHT}
         headerHeight={40}
         {...props}

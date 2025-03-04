@@ -20,14 +20,27 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
-export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
+export const fuelSupplyColDefs = (
+  optionsData,
+  errors,
+  warnings,
+  isSupplemental
+) => [
   validation,
-  actions({
-    enableDuplicate: false,
-    enableDelete: true
+  actions((params) => {
+    return {
+      enableDuplicate: false,
+      enableDelete: !params.data.isNewSupplementalEntry,
+      enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
+      enableStatus:
+        isSupplemental &&
+        params.data.isNewSupplementalEntry &&
+        ACTION_STATUS_MAP[params.data.actionType]
+    }
   }),
   {
     field: 'id',
@@ -68,7 +81,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     valueFormatter: formatNumberWithCommas,
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'fuelType',
@@ -84,7 +97,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       openOnFocus: true
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     minWidth: 260,
     editable: true,
@@ -131,13 +145,21 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       api: params.api,
       minWords: 1
     }),
-    cellStyle: (params) =>
-      StandardCellStyle(
-        params,
-        errors,
-        warnings,
-        fuelTypeOtherConditionalStyle
-      ),
+
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        )
+      }
+    },
     valueSetter: (params) => {
       const { newValue: selectedFuelTypeOther, data } = params
       data.fuelTypeOther = selectedFuelTypeOther
@@ -165,7 +187,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       openOnFocus: true
     }),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCategory = params.newValue
@@ -217,7 +240,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     valueGetter: (params) => params.data.endUseType?.type,
     editable: (params) => {
@@ -258,7 +282,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       openOnFocus: true
     }),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     minWidth: 370,
     valueSetter: (params) => {
@@ -296,7 +321,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       }
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     suppressKeyboardEvent,
     minWidth: 135,
     editable: (params) => {
@@ -363,7 +389,7 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
       showStepperButtons: false
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'units',
@@ -380,41 +406,60 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     cellRenderer: SelectRenderer,
     suppressKeyboardEvent,
     editable: (params) => isFuelTypeOther(params),
-    cellStyle: (params) =>
-      StandardCellStyle(params, errors, warnings, fuelTypeOtherConditionalStyle)
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        )
+      }
+    }
   },
   {
     field: 'targetCi',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'ciOfFuel',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'uci',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'energyDensity',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
     cellEditor: 'agNumberCellEditor',
-    cellStyle: (params) =>
-      StandardCellStyle(
-        params,
-        errors,
-        warnings,
-        fuelTypeOtherConditionalStyle
-      ),
+    cellStyle: (params) => {
+      if (isSupplemental && params.data.isNewSupplementalEntry) {
+        if (params.data.actionType === 'UPDATE') {
+          return { backgroundColor: colors.alerts.warning.background }
+        }
+      } else {
+        return StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        )
+      }
+    },
     cellEditorParams: {
       precision: 2,
       min: 0,
@@ -439,7 +484,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     valueGetter: (params) => {
       const eerOptions = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
@@ -464,7 +510,8 @@ export const fuelSupplyColDefs = (optionsData, errors, warnings) => [
   {
     field: 'energy',
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
     valueFormatter: formatNumberWithCommas,
     minWidth: 100,

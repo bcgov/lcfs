@@ -1,5 +1,6 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { ActionsRenderer2, ValidationRenderer2 } from './components'
+import { min } from 'lodash'
 
 export const validation = {
   colId: 'validation',
@@ -23,10 +24,10 @@ export const actions = (props) => ({
   cellRenderer: ActionsRenderer2,
   cellRendererParams: props,
   pinned: 'left',
-  maxWidth: 110,
-  minWidth: 90,
+  maxWidth: 200,
+  minWidth: 150,
   editable: false,
   suppressKeyboardEvent,
   filter: false,
-  hide: props.hide,
+  hide: props.hide
 })

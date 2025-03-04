@@ -86,6 +86,7 @@ class OtherUsesServices:
                     "fuel_code",
                     "expected_use",
                     "deleted",
+                    "is_new_supplemental_entry"
                 }
             ),
             fuel_category_id=fuel_category.fuel_category_id,
@@ -152,14 +153,18 @@ class OtherUsesServices:
 
     @service_handler
     async def get_other_uses(
-        self, compliance_report_id: int, user: UserProfile
+        self, compliance_report_id: int,
+        user: UserProfile,
+        changelog: bool = False
     ) -> OtherUsesListSchema:
         """
         Gets the list of other uses for a specific compliance report.
         """
         is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         other_uses = await self.repo.get_other_uses(
-            compliance_report_id, exclude_draft_reports=is_gov_user
+            compliance_report_id,
+            changelog,
+            exclude_draft_reports=is_gov_user
         )
         return OtherUsesAllSchema(
             other_uses=[OtherUsesSchema.model_validate(
@@ -292,24 +297,25 @@ class OtherUsesServices:
             other_use_data.group_uuid
         )
 
-        if existing_fuel_supply.action_type == ActionTypeEnum.DELETE:
+        if other_use_data.is_new_supplemental_entry:
+            await self.repo.delete_other_use(other_uses_id=other_use_data.other_uses_id)
             return DeleteOtherUsesResponseSchema(
-                success=True, message="Already deleted."
+                success=True, message="Marked as deleted."
+            )
+        else:
+            deleted_entity = OtherUses(
+                compliance_report_id=other_use_data.compliance_report_id,
+                group_uuid=other_use_data.group_uuid,
+                version=existing_fuel_supply.version + 1,
+                action_type=ActionTypeEnum.DELETE,
+                user_type=user_type,
             )
 
-        deleted_entity = OtherUses(
-            compliance_report_id=other_use_data.compliance_report_id,
-            group_uuid=other_use_data.group_uuid,
-            version=existing_fuel_supply.version + 1,
-            action_type=ActionTypeEnum.DELETE,
-            user_type=user_type,
-        )
-
-        # Copy fields from the latest version for the deletion record
-        for field in existing_fuel_supply.__table__.columns.keys():
-            if field not in OTHER_USE_EXCLUDE_FIELDS:
-                setattr(deleted_entity, field, getattr(
-                    existing_fuel_supply, field))
+            # Copy fields from the latest version for the deletion record
+            for field in existing_fuel_supply.__table__.columns.keys():
+                if field not in OTHER_USE_EXCLUDE_FIELDS:
+                    setattr(deleted_entity, field, getattr(
+                        existing_fuel_supply, field))
 
         deleted_entity.compliance_report_id = other_use_data.compliance_report_id
 
