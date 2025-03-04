@@ -1,37 +1,55 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2'
+import BCTypography from '@/components/BCTypography'
+import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { DownloadButton } from '@/components/DownloadButton'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { useGetFuelCodes } from '@/hooks/useFuelCode'
 import { useApiService } from '@/services/useApiService'
+import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import withRole from '@/utils/withRole'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack } from '@mui/material'
-import BCTypography from '@/components/BCTypography'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { fuelCodeColDefs } from './_schema'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+
+const initialPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: [],
+  filters: []
+}
 
 const FuelCodesBase = () => {
+  const ref = useRef(null)
+
   const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
-  const [resetGridFn, setResetGridFn] = useState(null)
+
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const downloadButtonRef = useRef(null);
+  const downloadButtonRef = useRef(null)
+
+  const [paginationOptions, setPaginationOptions] = useState(
+    initialPaginationOptions
+  )
 
   const apiService = useApiService()
   const { t } = useTranslation(['common', 'fuelCodes'])
   const navigate = useNavigate()
   const location = useLocation()
+
+  const queryData = useGetFuelCodes(paginationOptions, {
+    cacheTime: 0,
+    staleTime: 0
+  })
 
   useEffect(() => {
     if (location.state?.message) {
@@ -68,15 +86,10 @@ const FuelCodesBase = () => {
     }
   }
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
-    }
-  }, [resetGridFn])
+  const handleClearFilters = () => {
+    ref.current?.resetGrid()
+    setPaginationOptions(initialPaginationOptions)
+  }
 
   return (
     <Grid2 className="fuel-code-container" mx={-1}>
@@ -131,17 +144,22 @@ const FuelCodesBase = () => {
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer
+        <BCGridViewer2
+          ref={ref}
           gridKey={'fuel-codes-grid'}
           columnDefs={fuelCodeColDefs(t)}
-          query={useGetFuelCodes}
-          queryParams={{ cacheTime: 0, staleTime: 0 }}
-          dataKey="fuelCodes"
           getRowId={getRowId}
           overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
           defaultColDef={defaultColDef}
-          defaultFilterModel={location.state?.filters}
-          onSetResetGrid={handleSetResetGrid}
+          queryData={queryData}
+          dataKey="fuelCodes"
+          initialPaginationOptions={initialPaginationOptions}
+          onPaginationChange={(newPagination) =>
+            setPaginationOptions((prev) => ({
+              ...prev,
+              ...newPagination
+            }))
+          }
         />
       </BCBox>
     </Grid2>
