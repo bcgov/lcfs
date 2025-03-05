@@ -541,11 +541,38 @@ export const defaultColDef = {
   flex: 1
 }
 
+export const changelogNestedOverrides = {
+  'allocationTransactionType': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    field: 'allocationTransactionType',
+    valueGetter: (params) => params.data?.allocationTransactionType?.type || '',
+    cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
+  },
+  'fuelType': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelType'),
+    field: 'fuelType',
+    valueGetter: (params) => params.data?.fuelType?.fuelType || '',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+  },
+  'fuelCategory': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelCategory'),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data?.fuelCategory?.category || '',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+  },
+  'provisionOfTheAct': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'),
+    field: 'provisionOfTheAct',
+    valueGetter: (params) => params.data?.provisionOfTheAct?.name || '',
+    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+  }
+}
+
 export const changelogCommonColDefs = [
   {
     headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
     field: 'allocationTransactionType',
-    valueGetter: (params) => params.data?.allocationTransactionType?.type || '',
+    valueGetter: (params) => params.data?.allocationTransactionType || '',
     cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
   },
   {
@@ -583,7 +610,7 @@ export const changelogCommonColDefs = [
       'allocationAgreement:allocationAgreementColLabels.fuelType'
     ),
     field: 'fuelType',
-    valueGetter: (params) => params.data?.fuelType?.fuelType || '',
+    valueGetter: (params) => params.data?.fuelType || '',
     cellStyle: (params) => changelogCellStyle(params, 'fuelType')
   },
   {
@@ -598,7 +625,7 @@ export const changelogCommonColDefs = [
       'allocationAgreement:allocationAgreementColLabels.fuelCategory'
     ),
     field: 'fuelCategory',
-    valueGetter: (params) => params.data?.fuelCategory?.category || '',
+    valueGetter: (params) => params.data?.fuelCategory || '',
     cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
   },
   {
@@ -606,7 +633,7 @@ export const changelogCommonColDefs = [
       'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
     ),
     field: 'provisionOfTheAct',
-    valueGetter: (params) => params.data?.provisionOfTheAct?.name || '',
+    valueGetter: (params) => params.data?.provisionOfTheAct || '',
     cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
   },
   {
@@ -668,7 +695,8 @@ export const changelogColDefs = [
       }
     }
   },
-  ...changelogCommonColDefs
+  // Map through the common columns and replace specific ones with their nested versions
+  ...changelogCommonColDefs.map(col => changelogNestedOverrides[col.field] || col)
 ]
 
 export const changelogDefaultColDefs = {
