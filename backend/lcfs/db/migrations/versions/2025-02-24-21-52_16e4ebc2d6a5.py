@@ -66,14 +66,14 @@ def upgrade() -> None:
     conn = op.get_bind()
 
     statements = [
-        # -- DIESEL (fuel_category_id = 1)
+        # -- DIESEL (fuel_category_id = 2)
         """
         UPDATE target_carbon_intensity
         SET target_carbon_intensity = 79.27920,
             reduction_target_percentage = 16.0,
             update_date = NOW()
         WHERE compliance_period_id = 15
-          AND fuel_category_id = 1;
+          AND fuel_category_id = 2;
         """,
         """
         UPDATE target_carbon_intensity
@@ -81,7 +81,7 @@ def upgrade() -> None:
             reduction_target_percentage = 18.3,
             update_date = NOW()
         WHERE compliance_period_id = 16
-          AND fuel_category_id = 1;
+          AND fuel_category_id = 2;
         """,
         """
         UPDATE target_carbon_intensity
@@ -89,7 +89,7 @@ def upgrade() -> None:
             reduction_target_percentage = 20.6,
             update_date = NOW()
         WHERE compliance_period_id = 17
-          AND fuel_category_id = 1;
+          AND fuel_category_id = 2;
         """,
         """
         UPDATE target_carbon_intensity
@@ -97,7 +97,7 @@ def upgrade() -> None:
             reduction_target_percentage = 23.0,
             update_date = NOW()
         WHERE compliance_period_id = 18
-          AND fuel_category_id = 1;
+          AND fuel_category_id = 2;
         """,
         """
         UPDATE target_carbon_intensity
@@ -105,7 +105,7 @@ def upgrade() -> None:
             reduction_target_percentage = 25.3,
             update_date = NOW()
         WHERE compliance_period_id = 19
-          AND fuel_category_id = 1;
+          AND fuel_category_id = 2;
         """,
         """
         UPDATE target_carbon_intensity
@@ -113,7 +113,7 @@ def upgrade() -> None:
             reduction_target_percentage = 27.7,
             update_date = NOW()
         WHERE compliance_period_id = 20
-          AND fuel_category_id = 1;
+          AND fuel_category_id = 2;
         """,
         """
         UPDATE target_carbon_intensity
@@ -121,16 +121,16 @@ def upgrade() -> None:
             reduction_target_percentage = 30.0,
             update_date = NOW()
         WHERE compliance_period_id = 21
-          AND fuel_category_id = 1;
+          AND fuel_category_id = 2;
         """,
-        # -- GASOLINE (fuel_category_id = 2)
+        # -- GASOLINE (fuel_category_id = 1)
         """
         UPDATE target_carbon_intensity
         SET target_carbon_intensity = 78.68280,
             reduction_target_percentage = 16.0,
             update_date = NOW()
         WHERE compliance_period_id = 15
-          AND fuel_category_id = 2;
+          AND fuel_category_id = 1;
         """,
         """
         UPDATE target_carbon_intensity
@@ -138,7 +138,7 @@ def upgrade() -> None:
             reduction_target_percentage = 18.3,
             update_date = NOW()
         WHERE compliance_period_id = 16
-          AND fuel_category_id = 2;
+          AND fuel_category_id = 1;
         """,
         """
         UPDATE target_carbon_intensity
@@ -146,7 +146,7 @@ def upgrade() -> None:
             reduction_target_percentage = 20.6,
             update_date = NOW()
         WHERE compliance_period_id = 17
-          AND fuel_category_id = 2;
+          AND fuel_category_id = 1;
         """,
         """
         UPDATE target_carbon_intensity
@@ -154,7 +154,7 @@ def upgrade() -> None:
             reduction_target_percentage = 23.0,
             update_date = NOW()
         WHERE compliance_period_id = 18
-          AND fuel_category_id = 2;
+          AND fuel_category_id = 1;
         """,
         """
         UPDATE target_carbon_intensity
@@ -162,7 +162,7 @@ def upgrade() -> None:
             reduction_target_percentage = 25.3,
             update_date = NOW()
         WHERE compliance_period_id = 19
-          AND fuel_category_id = 2;
+          AND fuel_category_id = 1;
         """,
         """
         UPDATE target_carbon_intensity
@@ -170,7 +170,7 @@ def upgrade() -> None:
             reduction_target_percentage = 27.7,
             update_date = NOW()
         WHERE compliance_period_id = 20
-          AND fuel_category_id = 2;
+          AND fuel_category_id = 1;
         """,
         """
         UPDATE target_carbon_intensity
@@ -178,8 +178,8 @@ def upgrade() -> None:
             reduction_target_percentage = 30.0,
             update_date = NOW()
         WHERE compliance_period_id = 21
-          AND fuel_category_id = 2;
-        """,
+          AND fuel_category_id = 1;
+          """,
         # -- JET FUEL (fuel_category_id = 3)
         """
         UPDATE target_carbon_intensity
