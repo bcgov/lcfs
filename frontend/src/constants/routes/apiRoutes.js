@@ -68,6 +68,7 @@ export const apiRoutes = {
   TransactionCounts: '/dashboard/transaction-counts',
   OrgTransactionCounts: '/dashboard/org-transaction-counts',
   getAllAllocationAgreements: '/allocation-agreement/list-all',
+  getAllocationAgreements: '/allocation-agreement/list',
   allocationAgreementOptions: '/allocation-agreement/table-options?',
   saveAllocationAgreements: '/allocation-agreement/save',
   allocationAgreementSearch: '/allocation-agreement/search?',

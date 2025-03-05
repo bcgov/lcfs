@@ -13,6 +13,7 @@ import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog'
 import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog'
 import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog'
 import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog'
+import { AllocationAgreementChangelog } from '@/views/AllocationAgreements/AllocationAgreementChangelog'
 
 export const reportRoutes = [
   {
@@ -102,6 +103,13 @@ export const reportRoutes = [
   {
     path: ROUTES.REPORTS.CHANGELOG.FUEL_EXPORTS,
     element: <FuelExportChangelog />,
+    handle: {
+      title: 'Change log'
+    }
+  },
+  {
+    path: ROUTES.REPORTS.CHANGELOG.ALLOCATION_AGREEMENTS,
+    element: <AllocationAgreementChangelog />,
     handle: {
       title: 'Change log'
     }

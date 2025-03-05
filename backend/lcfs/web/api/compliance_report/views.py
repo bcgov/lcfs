@@ -15,6 +15,9 @@ from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
+from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
+
+from lcfs.db.models.compliance import AllocationAgreement
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
@@ -29,6 +32,15 @@ from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
     ComplianceReportChangelogSchema,
 )
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.compliance.FuelExport import FuelExport
+from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
+from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
+from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
+from lcfs.web.api.fuel_export.schema import FuelExportSchema
+from lcfs.web.api.allocation_agreement.schema import AllocationAgreementChangelogSchema, AllocationAgreementResponseSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
@@ -301,3 +313,65 @@ async def export_compliance_report(
     """
     await validate.validate_organization_access(report_id)
     return await export_service.export(report_id)
+
+
+@router.get(
+    "/{report_id}/export",
+    response_class=StreamingResponse,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
+async def export_compliance_report(
+    request: Request,
+    report_id: int,
+    export_service: ComplianceReportExporter = Depends(),
+    validate: ComplianceReportValidation = Depends(),
+) -> StreamingResponse:
+    """
+    Retrieve the comprehensive compliance report summary for a specific report by ID.
+    """
+    await validate.validate_organization_access(report_id)
+    return await export_service.export(report_id)
+
+
+@router.post(
+    "/allocation-agreements/changelog",
+    response_model=ComplianceReportChangelogSchema[AllocationAgreementResponseSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_allocation_agreement_changelog(
+    request: Request,
+    request_data: CommonPaginatedReportRequestSchema = Body(...),
+    service: ComplianceReportServices = Depends(),
+) -> ComplianceReportChangelogSchema[AllocationAgreementResponseSchema]:
+    compliance_report_id = request_data.compliance_report_id
+
+    pagination = PaginationRequestSchema(
+        page=request_data.page,
+        size=request_data.size,
+        sort_orders=request_data.sort_orders,
+        filters=request_data.filters,
+    )
+    # Get the changelog from the service for AllocationAgreement
+    changelog_response = await service.get_changelog_data(
+        pagination, compliance_report_id, AllocationAgreement
+    )
+
+    # Fetch the associated compliance report data
+    report = await service.get_compliance_report_by_id(compliance_report_id)
+
+    # Convert each allocation agreement to a serializable dict before returning
+    serializable_changelog = [
+        AllocationAgreementResponseSchema.model_validate(record)
+        for record in changelog_response["changelog"]
+    ]
+    response= {
+        **changelog_response,
+        "changelog": serializable_changelog,
+        "report": report,
+    }
+
+    return response

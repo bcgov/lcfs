@@ -94,7 +94,8 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         t('report:activityLists.supplyOfFuel'),
         t('report:activityLists.notionalTransfers'),
         t('otherUses:summaryTitle'),
-        t('fuelExport:fuelExportTitle')
+        t('fuelExport:fuelExportTitle'),
+        t('report:activityLists.allocationAgreements')
       ].includes(activityName)
     )
   }
@@ -174,7 +175,11 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         component: (data) =>
           data.allocationAgreements.length > 0 && (
             <AllocationAgreementSummary status={currentStatus} data={data} />
-          )
+          ),
+        changelogRoute: ROUTES2.REPORTS.CHANGELOG.ALLOCATION_AGREEMENTS.replace(
+          ':compliancePeriod',
+          compliancePeriod
+        ).replace(':complianceReportId', complianceReportId)
       },
       {
         name: t('report:activityLists.notionalTransfers'),

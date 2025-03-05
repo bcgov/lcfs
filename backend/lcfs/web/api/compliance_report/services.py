@@ -14,6 +14,7 @@ from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.compliance.FuelExport import FuelExport
+from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.user import UserProfile
@@ -326,7 +327,7 @@ class ComplianceReportServices:
         self,
         pagination: PaginationResponseSchema,
         compliance_report_id: int,
-        selection: Type[Union[FuelSupply, OtherUses, NotionalTransfer, FuelExport]],
+        selection: Type[Union[FuelSupply, OtherUses, NotionalTransfer, FuelExport, AllocationAgreement]],
     ):
         changelog, total_count = await self.repo.get_changelog_data(
             pagination, compliance_report_id, selection
