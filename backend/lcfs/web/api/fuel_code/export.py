@@ -59,7 +59,7 @@ class FuelCodeExporter:
         results = await self.repo.get_fuel_codes_paginated(
             pagination=PaginationRequestSchema(
                 page=1,
-                size=1000,
+                size=10000,
                 filters=[],
                 sort_orders=[],
             )
