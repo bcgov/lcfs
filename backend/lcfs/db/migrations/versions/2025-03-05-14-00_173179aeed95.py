@@ -2,7 +2,7 @@
 
 Revision ID: 173179aeed95
 Revises: 9e1da9e38f20
-Create Date: 2025-02-26 14:53:46.134309
+Create Date: 2025-03-05 14:00:17.134309
 
 """
 
@@ -12,7 +12,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "173179aeed95"
-down_revision = "985de92bdf83"
+down_revision = "4a34a52085f2"
 branch_labels = None
 depends_on = None
 
@@ -79,3 +79,4 @@ def downgrade():
     op.drop_column("allocation_agreement", "user_type")
     op.drop_column("allocation_agreement", "version")
     op.drop_column("allocation_agreement", "group_uuid")
+
