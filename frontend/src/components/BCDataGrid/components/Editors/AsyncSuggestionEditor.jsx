@@ -61,7 +61,7 @@ export const AsyncSuggestionEditor = ({
       onValueChange(newValue)
     } else if (newValue && typeof newValue === 'object') {
       debouncedSetInputValue(newValue[optionLabel])
-      onValueChange(newValue) // Set full object if option is an object
+      onValueChange(newValue[optionLabel])
     } else {
       onValueChange('')
     }
