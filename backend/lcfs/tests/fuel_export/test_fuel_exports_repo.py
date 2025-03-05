@@ -232,17 +232,3 @@ async def test_update_fuel_export_success(fuel_export_repo, mock_db):
             "end_use_type",
         ],
     )
-
-
-@pytest.mark.anyio
-async def test_delete_fuel_export_success(fuel_export_repo, mock_db):
-    fuel_export_id = 1
-
-    # Mock the execute method for deletion
-    mock_db.execute = AsyncMock()
-    mock_db.flush = AsyncMock()
-
-    await fuel_export_repo.delete_fuel_export(fuel_export_id)
-
-    mock_db.execute.assert_called_once()
-    mock_db.flush.assert_called_once()

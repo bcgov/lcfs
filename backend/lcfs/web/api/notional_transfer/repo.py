@@ -45,7 +45,10 @@ class NotionalTransferRepository:
 
     @repo_handler
     async def get_notional_transfers(
-        self, compliance_report_id: int, changelog: bool = False, exclude_draft_reports: bool = False
+        self,
+        compliance_report_id: int,
+        changelog: bool = False,
+        exclude_draft_reports: bool = False,
     ) -> List[NotionalTransferSchema]:
         """
         Queries notional transfers from the database for a specific compliance report.
@@ -66,7 +69,10 @@ class NotionalTransferRepository:
         return result
 
     async def get_effective_notional_transfers(
-        self, compliance_report_group_uuid: str, exclude_draft_reports: bool = False, changelog: bool = False,
+        self,
+        compliance_report_group_uuid: str,
+        exclude_draft_reports: bool = False,
+        changelog: bool = False,
     ) -> List[NotionalTransferSchema]:
         """
         Retrieves effective notional transfers for a compliance report group UUID.
@@ -90,23 +96,26 @@ class NotionalTransferRepository:
             (NotionalTransfer.user_type == UserTypeEnum.SUPPLIER, 0),
             else_=0,
         )
-        conditions = [NotionalTransfer.compliance_report_id.in_(
-            compliance_reports_select
-        )]
+        conditions = [
+            NotionalTransfer.compliance_report_id.in_(compliance_reports_select)
+        ]
         if not changelog:
             delete_group_select = (
                 select(NotionalTransfer.group_uuid)
                 .where(
                     NotionalTransfer.compliance_report_id.in_(
-                        compliance_reports_select),
+                        compliance_reports_select
+                    ),
                     NotionalTransfer.action_type == ActionTypeEnum.DELETE,
                 )
                 .distinct()
             )
-            conditions.extend([
-                NotionalTransfer.action_type != ActionTypeEnum.DELETE,
-                ~NotionalTransfer.group_uuid.in_(delete_group_select),
-            ])
+            conditions.extend(
+                [
+                    NotionalTransfer.action_type != ActionTypeEnum.DELETE,
+                    ~NotionalTransfer.group_uuid.in_(delete_group_select),
+                ]
+            )
 
         valid_notional_transfers_select = (
             select(
@@ -180,10 +189,9 @@ class NotionalTransferRepository:
 
         # Manually apply pagination
         total_count = len(notional_transfers)
-        offset = 0 if pagination.page < 1 else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_notional_transfers = notional_transfers[offset: offset + limit]
+        paginated_notional_transfers = notional_transfers[offset : offset + limit]
 
         return paginated_notional_transfers, total_count
 
@@ -254,16 +262,6 @@ class NotionalTransferRepository:
         await self.db.flush()
         await self.db.refresh(notional_transfer, ["fuel_category"])
         return notional_transfer
-
-    @repo_handler
-    async def delete_notional_transfer(self, notional_transfer_id: int):
-        """Delete a notional transfer from the database"""
-        await self.db.execute(
-            delete(NotionalTransfer).where(
-                NotionalTransfer.notional_transfer_id == notional_transfer_id
-            )
-        )
-        await self.db.flush()
 
     @repo_handler
     async def get_latest_notional_transfer_by_group_uuid(

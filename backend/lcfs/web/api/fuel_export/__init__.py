@@ -1,4 +1,4 @@
-"""API for internal comments."""
+"""API for export fuels."""
 
 from lcfs.web.api.fuel_export.views import router
 
