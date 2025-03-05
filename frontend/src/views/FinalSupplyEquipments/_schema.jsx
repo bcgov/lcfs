@@ -301,6 +301,9 @@ export const finalSupplyEquipmentColDefs = (
         params.data.city = ''
         params.data.latitude = ''
         params.data.longitude = ''
+      } else if (typeof params.newValue === 'string') {
+        // Directly set the street address if it's a custom input
+        params.data.streetAddress = params.newValue
       } else {
         const [street = '', city = '', province = ''] = params.newValue.label
           .split(',')

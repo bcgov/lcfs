@@ -248,7 +248,11 @@ export const AddEditAllocationAgreements = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'transactionPartner') {
-        if (params.newValue === currentUser.organization.name) {
+        if (
+          params.newValue === currentUser.organization.name ||
+          (typeof params.newValue === 'object' &&
+            params.newValue.name === currentUser.organization.name)
+        ) {
           alertRef.current?.triggerAlert({
             message:
               'You cannot select your own organization as the transaction partner.',
@@ -257,6 +261,12 @@ export const AddEditAllocationAgreements = () => {
           params.node.setDataValue('transactionPartner', '')
           return
         }
+        params.node.setDataValue(
+          'transactionPartner',
+          typeof params.newValue === 'string'
+            ? params.newValue
+            : params.newValue?.name
+        )
       }
 
       const isValid = validate(
