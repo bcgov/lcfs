@@ -89,13 +89,13 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
 
     # Define the relationships
     fuel_code_status = relationship(
-        "FuelCodeStatus", back_populates="fuel_codes", lazy="joined"
+        "FuelCodeStatus", back_populates="fuel_codes", lazy="selectin"
     )
     fuel_code_prefix = relationship(
-        "FuelCodePrefix", back_populates="fuel_codes", lazy="joined"
+        "FuelCodePrefix", back_populates="fuel_codes", lazy="selectin"
     )
     fuel_type = relationship(
-        "FuelType", back_populates="fuel_codes", lazy="joined"
+        "FuelType", back_populates="fuel_codes", lazy="selectin"
     )
 
     feedstock_fuel_transport_modes = relationship(

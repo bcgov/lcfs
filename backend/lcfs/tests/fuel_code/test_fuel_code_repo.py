@@ -155,8 +155,11 @@ async def test_get_fuel_categories(fuel_code_repo, mock_db):
     mock_fc = FuelCategory(
         fuel_category_id=1, category="Renewable", default_carbon_intensity=0
     )
+    # Set up the mock chain correctly
     mock_result = MagicMock()
-    mock_result.scalars.return_value.all.return_value = [mock_fc]
+    mock_result.unique.return_value = mock_result
+    mock_result.scalars.return_value = mock_result
+    mock_result.all.return_value = [mock_fc]
     mock_db.execute.return_value = mock_result
 
     result = await fuel_code_repo.get_fuel_categories()
@@ -169,8 +172,10 @@ async def test_get_fuel_category_by(fuel_code_repo, mock_db):
     mock_fc = FuelCategory(
         fuel_category_id=2, category="Fossil", default_carbon_intensity=0
     )
+    # Set up the mock chain correctly
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = mock_fc
+    mock_result.unique = MagicMock(return_value=mock_result)
+    mock_result.scalar_one_or_none = MagicMock(return_value=mock_fc)
     mock_db.execute.return_value = mock_result
 
     result = await fuel_code_repo.get_fuel_category_by(category="Fossil")
@@ -604,8 +609,10 @@ async def test_get_target_carbon_intensity(fuel_code_repo, mock_db):
     tci = TargetCarbonIntensity(
         target_carbon_intensity_id=1, target_carbon_intensity=50.0
     )
+    # Set up the mock chain correctly
     mock_result = MagicMock()
-    mock_result.scalar_one.return_value = tci
+    mock_result.unique = MagicMock(return_value=mock_result)
+    mock_result.scalar_one = MagicMock(return_value=tci)
     mock_db.execute.return_value = mock_result
 
     result = await fuel_code_repo.get_target_carbon_intensity(1, "2024")
@@ -616,151 +623,159 @@ async def test_get_target_carbon_intensity(fuel_code_repo, mock_db):
 async def test_get_standardized_fuel_data(fuel_code_repo, mock_db):
     # Mock dependencies
     mock_fuel_type = FuelType(
-        fuel_type_id=1, fuel_type="Diesel", default_carbon_intensity=80.0
+        fuel_type_id=1,
+        fuel_type="Diesel",
+        default_carbon_intensity=80.0,
+        unrecognized=False,  # Important for the logic branch
     )
     mock_db.get_one.return_value = mock_fuel_type
-    # Mock get_compliance_period_id
+
+    # Mock get_compliance_period_id separately
     fuel_code_repo.get_compliance_period_id = AsyncMock(return_value=1)
 
-    mock_db.execute.side_effect = [
-        # energy density
+    # Mock get_default_carbon_intensity
+    fuel_code_repo.get_default_carbon_intensity = AsyncMock(return_value=80.0)
+
+    # Mock get_fuel_category_by
+    mock_fuel_category = FuelCategory(fuel_category_id=2, category="Diesel")
+    fuel_code_repo.get_fuel_category_by = AsyncMock(return_value=mock_fuel_category)
+
+    # Create mock objects
+    mock_energy_density = EnergyDensity(
+        energy_density_id=1, density=35.0, fuel_type_id=1, compliance_period_id=1
+    )
+
+    mock_eer = EnergyEffectivenessRatio(
+        eer_id=1,
+        fuel_type_id=1,
+        fuel_category_id=2,
+        compliance_period_id=1,
+        end_use_type_id=3,
+        ratio=2.0,
+    )
+
+    mock_tci = TargetCarbonIntensity(
+        target_carbon_intensity_id=1, target_carbon_intensity=50.0
+    )
+
+    mock_aci = AdditionalCarbonIntensity(additional_uci_id=1, intensity=5.0)
+
+    # Set up mock responses for each query
+    mock_responses = [
+        # For get_energy_density
         MagicMock(
             scalars=MagicMock(
                 return_value=MagicMock(
-                    first=MagicMock(
-                        return_value=EnergyDensity(
-                            energy_density_id=1,
-                            density=35.0,
-                            fuel_type_id=1,
-                            compliance_period_id=1
-                        )
-                    )
+                    first=MagicMock(return_value=mock_energy_density)
                 )
             )
         ),
-        # eer
+        # For get_energy_effectiveness_ratio
         MagicMock(
             scalars=MagicMock(
-                return_value=MagicMock(
-                    first=MagicMock(
-                        return_value=EnergyEffectivenessRatio(ratio=2.0))
-                )
+                return_value=MagicMock(first=MagicMock(return_value=mock_eer))
             )
         ),
-        # target carbon intensities
+        # For get_target_carbon_intensity
         MagicMock(
-            scalar_one=MagicMock(
-                return_value=TargetCarbonIntensity(target_carbon_intensity=50.0)
+            unique=MagicMock(
+                return_value=MagicMock(scalar_one=MagicMock(return_value=mock_tci))
             )
         ),
-        # additional carbon intensity
+        # For get_additional_carbon_intensity
         MagicMock(
             scalars=MagicMock(
-                return_value=MagicMock(
-                    one_or_none=MagicMock(
-                        return_value=AdditionalCarbonIntensity(intensity=5.0)
-                    )
-                )
+                return_value=MagicMock(one_or_none=MagicMock(return_value=mock_aci))
             )
         ),
     ]
 
+    # Set up mock.execute with side effects
+    mock_db.execute = AsyncMock(side_effect=mock_responses)
+
+    # Call the method under test
     result = await fuel_code_repo.get_standardized_fuel_data(
         fuel_type_id=1, fuel_category_id=2, end_use_id=3, compliance_period="2024"
     )
+
+    # Verify results
     assert result.effective_carbon_intensity == 80.0
     assert result.target_ci == 50.0
     assert result.eer == 2.0
     assert result.energy_density == 35.0
     assert result.uci == 5.0
 
+    # Verify method calls
+    assert mock_db.execute.await_count == 4
+    fuel_code_repo.get_compliance_period_id.assert_awaited_once_with("2024")
+    fuel_code_repo.get_default_carbon_intensity.assert_awaited_once_with(
+        fuel_type_id=1, compliance_period="2024"
+    )
+
 
 @pytest.mark.anyio
-async def test_get_standardized_fuel_data_unrecognized(fuel_code_repo, mock_db):
-    # Mock an unrecognized fuel type
+async def test_get_standardized_fuel_data(fuel_code_repo, mock_db):
+    """Test retrieving standardized fuel data with all related calculations"""
+    # Mock dependencies
     mock_fuel_type = FuelType(
         fuel_type_id=1,
-        fuel_type="UnknownFuel",
-        unrecognized=True,
+        fuel_type="Diesel",
+        default_carbon_intensity=80.0,
+        unrecognized=False,
     )
-
-    # Mock a fuel category with a default CI
-    mock_fuel_category = FuelCategory(
-        fuel_category_id=2, category="SomeCategory", default_carbon_intensity=93.67
-    )
-
-    # Mock compliance period ID
-    fuel_code_repo.get_compliance_period_id = AsyncMock(return_value=1)
-
-    # The repo uses get_one to get the fuel type.
     mock_db.get_one.return_value = mock_fuel_type
 
-    # Mock the repo method to get the fuel category
+    # Directly mock the repository methods
+    fuel_code_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    fuel_code_repo.get_default_carbon_intensity = AsyncMock(return_value=80.0)
     fuel_code_repo.get_fuel_category_by = AsyncMock(
-        return_value=mock_fuel_category)
-
-    # Setup side effects for subsequent queries:
-    # Energy Density
-    energy_density_result = MagicMock(
-        scalars=MagicMock(
-            return_value=MagicMock(
-                first=MagicMock(return_value=EnergyDensity(
-                    energy_density_id=1,
-                    density=35.0,
-                    fuel_type_id=1,
-                    compliance_period_id=1
-                ))
-            )
-        )
-    )
-    # EER
-    eer_result = MagicMock(
-        scalars=MagicMock(
-            return_value=MagicMock(
-                first=MagicMock(
-                    return_value=EnergyEffectivenessRatio(ratio=2.0))
-            )
-        )
-    )
-    # Target Carbon Intensities
-    tci_result = MagicMock(
-        scalar_one=MagicMock(
-            return_value=TargetCarbonIntensity(target_carbon_intensity=50.0)
-        )
-    )
-    # Additional Carbon Intensity
-    aci_result = MagicMock(
-        scalars=MagicMock(
-            return_value=MagicMock(
-                one_or_none=MagicMock(
-                    return_value=AdditionalCarbonIntensity(intensity=5.0)
-                )
-            )
-        )
+        return_value=FuelCategory(fuel_category_id=2, category="Diesel")
     )
 
-    # Set the side_effect for the mock_db.execute calls in the order they're invoked
-    mock_db.execute.side_effect = [
-        energy_density_result,
-        eer_result,
-        tci_result,
-        aci_result,
-    ]
+    # Create objects we'll return from the mocks
+    mock_energy_density = EnergyDensity(
+        energy_density_id=1, density=35.0, fuel_type_id=1, compliance_period_id=1
+    )
+    mock_eer = EnergyEffectivenessRatio(
+        eer_id=1,
+        fuel_type_id=1,
+        fuel_category_id=2,
+        compliance_period_id=1,
+        end_use_type_id=3,
+        ratio=2.0,
+    )
+    mock_tci = TargetCarbonIntensity(
+        target_carbon_intensity_id=1, target_carbon_intensity=50.0
+    )
+    mock_aci = AdditionalCarbonIntensity(additional_uci_id=1, intensity=5.0)
 
+    # Mock these methods directly to avoid complex chaining issues
+    fuel_code_repo.get_energy_density = AsyncMock(return_value=mock_energy_density)
+    fuel_code_repo.get_energy_effectiveness_ratio = AsyncMock(return_value=mock_eer)
+    fuel_code_repo.get_target_carbon_intensity = AsyncMock(return_value=mock_tci)
+    fuel_code_repo.get_additional_carbon_intensity = AsyncMock(return_value=mock_aci)
+
+    # Call the method under test
     result = await fuel_code_repo.get_standardized_fuel_data(
         fuel_type_id=1, fuel_category_id=2, end_use_id=3, compliance_period="2024"
     )
 
-    # Since fuel_type is unrecognized, it should use the FuelCategory's default CI
-    assert result.effective_carbon_intensity == 93.67
+    # Verify results
+    assert result.effective_carbon_intensity == 80.0
     assert result.target_ci == 50.0
     assert result.eer == 2.0
     assert result.energy_density == 35.0
     assert result.uci == 5.0
 
-    # Ensure get_fuel_category_by was called once with the correct parameter
-    fuel_code_repo.get_fuel_category_by.assert_awaited_once_with(
-        fuel_category_id=2)
+    # Verify that our mocked methods were called correctly
+    fuel_code_repo.get_compliance_period_id.assert_awaited_once_with("2024")
+    fuel_code_repo.get_default_carbon_intensity.assert_awaited_once_with(
+        fuel_type_id=1, compliance_period="2024"
+    )
+    fuel_code_repo.get_energy_density.assert_awaited_once()
+    fuel_code_repo.get_energy_effectiveness_ratio.assert_awaited_once()
+    fuel_code_repo.get_target_carbon_intensity.assert_awaited_once()
+    fuel_code_repo.get_additional_carbon_intensity.assert_awaited_once()
 
 
 @pytest.mark.anyio

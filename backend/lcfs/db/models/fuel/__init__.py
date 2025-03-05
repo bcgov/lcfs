@@ -1,4 +1,6 @@
 from .AdditionalCarbonIntensity import AdditionalCarbonIntensity
+from .CategoryCarbonIntensity import CategoryCarbonIntensity
+from .DefaultCarbonIntensity import DefaultCarbonIntensity
 from .EndUseType import EndUseType
 from .EnergyDensity import EnergyDensity
 from .EnergyEffectivenessRatio import EnergyEffectivenessRatio
@@ -18,6 +20,8 @@ from .FuelInstance import FuelInstance
 
 __all__ = [
     "AdditionalCarbonIntensity",
+    "CategoryCarbonIntensity",
+    "DefaultCarbonIntensity",
     "EndUseType",
     "EnergyDensity",
     "EnergyEffectivenessRatio",

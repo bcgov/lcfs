@@ -238,6 +238,20 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
 
+        # Create mock classes if not already defined at module level
+        class MockCompliancePeriod:
+            def __init__(self, description: str):
+                self.description = description
+
+        class MockComplianceReport:
+            def __init__(self, compliance_period: MockCompliancePeriod):
+                self.compliance_period = compliance_period
+
+        # Set up mock return value for validate_organization_access
+        mock_compliance_report = MockComplianceReport(
+            compliance_period=MockCompliancePeriod(description="2024")
+        )
+
         mock_fuel_export = FuelExportSchema(
             fuel_export_id=1,
             compliance_report_id=1,
@@ -255,6 +269,7 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
             fuel_category=FuelCategoryResponseSchema(category="Diesel"),
             provisionOfTheActId=1,
             provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Test Provision"},
+            compliance_period="2024",
         )
 
         # Create update payload with all required fields
@@ -272,7 +287,7 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
             export_date="2024-01-01",
         )
 
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = mock_compliance_report
         mock_update_fuel_export.return_value = mock_fuel_export
 
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
@@ -295,6 +310,20 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
 
+        # Create mock classes
+        class MockCompliancePeriod:
+            def __init__(self, description: str):
+                self.description = description
+
+        class MockComplianceReport:
+            def __init__(self, compliance_period: MockCompliancePeriod):
+                self.compliance_period = compliance_period
+
+        # Set up mock return value for validate_organization_access
+        mock_compliance_report = MockComplianceReport(
+            compliance_period=MockCompliancePeriod(description="2024")
+        )
+
         # Create payload with all required fields
         create_payload = FuelExportCreateUpdateSchema(
             compliance_report_id=1,
@@ -307,6 +336,7 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
             quantity=1,
             units="L",
             export_date="2024-01-01",
+            compliance_period="2024",
         )
 
         mock_fuel_export = FuelExportSchema(
@@ -325,9 +355,10 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
             fuel_category=FuelCategoryResponseSchema(category="Diesel"),
             provisionOfTheActId=1,
             provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Section 6"},
+            compliance_period="2024",
         )
 
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = mock_compliance_report
         mock_create_fuel_export.return_value = mock_fuel_export
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_fuel_export_row")
