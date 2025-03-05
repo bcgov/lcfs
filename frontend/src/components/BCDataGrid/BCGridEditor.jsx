@@ -18,6 +18,7 @@ import { faPlus, faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import BCModal from '@/components/BCModal'
 import { useTranslation } from 'react-i18next'
 import { BCAlert2 } from '@/components/BCAlert'
+import { RequiredHeader } from '@/components/BCDataGrid/components'
 
 /**
  * @typedef {import('ag-grid-community').GridOptions} GridOptions
@@ -54,8 +55,35 @@ export const BCGridEditor = ({
   const [anchorEl, setAnchorEl] = useState(null)
   const buttonRef = useRef(null)
   const { t } = useTranslation(['common'])
+  const [showRequiredIndicator, setShowRequiredIndicator] = useState(false)
 
-  // Helper function to find and cache first editable column
+  useEffect(() => {
+    if (!showRequiredIndicator && props.columnDefs?.length) {
+      const foundRequired = props.columnDefs.some(
+        (colDef) => colDef.headerComponent === RequiredHeader
+      )
+      if (foundRequired) {
+        setShowRequiredIndicator(true)
+      }
+    }
+  }, [props.columnDefs, showRequiredIndicator])
+
+  const handleGridReady = useCallback(
+    (params) => {
+      if (!showRequiredIndicator) {
+        const actualCols = params.api.getColumnDefs() || []
+        const foundRequired = actualCols.some(
+          (colDef) => colDef.headerComponent === RequiredHeader
+        )
+        if (foundRequired) {
+          setShowRequiredIndicator(true)
+        }
+      }
+      props.onGridReady?.(params)
+    },
+    [showRequiredIndicator, props.onGridReady]
+  )
+
   const findFirstEditableColumn = useCallback(() => {
     if (!ref.current?.api) return null
 
@@ -199,7 +227,15 @@ export const BCGridEditor = ({
   }
   const onCellFocused = (params) => {
     if (params.column) {
-      params.api.ensureColumnVisible(params.column, 'auto')
+      const COLUMN_BUFFER = 20
+      const { left, right } = params.api.getHorizontalPixelRange()
+      const columnRight = params.column.left + params.column.actualWidth
+      if (
+        params.column.left < left + COLUMN_BUFFER ||
+        columnRight > right - COLUMN_BUFFER
+      ) {
+        params.api.ensureColumnVisible(params.column, 'middle')
+      }
     }
   }
 
@@ -274,19 +310,10 @@ export const BCGridEditor = ({
 
     setShowCloseModal(true)
   }
-  const hasRequiredHeaderComponent = useCallback(() => {
-    const columnDefs = ref.current?.api?.getColumnDefs() || []
-    // Check if any column has `headerComponent` matching "RequiredHeader"
-    return (
-      columnDefs.some(
-        (colDef) => colDef.headerComponent?.name === 'RequiredHeader'
-      ) || columnDefs.some((colDef) => !!colDef.headerComponent)
-    )
-  }, [ref])
 
   return (
     <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
-      {hasRequiredHeaderComponent() && (
+      {showRequiredIndicator && (
         <BCTypography
           variant="body4"
           color="text"
@@ -297,6 +324,7 @@ export const BCGridEditor = ({
       <BCGridBase
         ref={ref}
         className="ag-theme-quartz"
+        onGridReady={handleGridReady}
         onCellValueChanged={handleOnCellValueChanged}
         undoRedoCellEditing
         undoRedoCellEditingLimit={5}
@@ -408,5 +436,6 @@ BCGridEditor.propTypes = {
     onSave: PropTypes.func,
     confirmText: PropTypes.string,
     confirmLabel: PropTypes.string
-  })
+  }),
+  onGridReady: PropTypes.func
 }

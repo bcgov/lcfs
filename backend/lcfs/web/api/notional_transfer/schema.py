@@ -6,7 +6,9 @@ from lcfs.web.api.base import (
     SortOrder,
     PaginationRequestSchema,
     PaginationResponseSchema,
+    ComplianceReportRequestSchema
 )
+
 from enum import Enum
 
 
@@ -19,6 +21,10 @@ class FuelCategorySchema(BaseSchema):
     fuel_category_id: int
     category: str
     description: Optional[str] = None
+
+
+class NotionalTransfersRequestSchema(ComplianceReportRequestSchema):
+    changelog: Optional[bool] = None
 
 
 class NotionalTransferDiffSchema(BaseSchema):
@@ -59,6 +65,7 @@ class NotionalTransferCreateSchema(BaseSchema):
     version: Optional[int] = None
     user_type: Optional[str] = None
     action_type: Optional[str] = None
+    is_new_supplemental_entry: Optional[bool] = None
 
 
 class NotionalTransferSchema(NotionalTransferCreateSchema):

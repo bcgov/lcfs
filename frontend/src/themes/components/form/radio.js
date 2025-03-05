@@ -7,6 +7,7 @@ const radio = {
   styleOverrides: {
     root: {
       padding: 0,
+      marginTop: 3,
       '& .MuiSvgIcon-root': {
         width: pxToRem(20),
         height: pxToRem(20),

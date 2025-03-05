@@ -104,7 +104,7 @@ BCWidgetCard.propTypes = {
   title: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
   content: PropTypes.node.isRequired,
   subHeader: PropTypes.node,
-  editButton: PropTypes.object
+  editButton: PropTypes.oneOf([PropTypes.object, PropTypes.bool])
 }
 
 export default BCWidgetCard

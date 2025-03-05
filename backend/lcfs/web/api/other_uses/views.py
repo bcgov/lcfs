@@ -17,12 +17,12 @@ from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.schema import (
     OtherUsesCreateSchema,
-    OtherUsesSchema,
     OtherUsesTableOptionsSchema,
     DeleteOtherUsesResponseSchema,
     PaginatedOtherUsesRequestSchema,
     OtherUsesListSchema,
     OtherUsesAllSchema,
+    OtherUsesRequestSchema
 )
 from lcfs.web.api.base import ComplianceReportRequestSchema, PaginationRequestSchema
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
@@ -59,7 +59,7 @@ async def get_table_options(
 )
 async def get_other_uses(
     request: Request,
-    request_data: ComplianceReportRequestSchema = Body(...),
+    request_data: OtherUsesRequestSchema = Body(...),
     response: Response = None,
     service: OtherUsesServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
@@ -82,7 +82,9 @@ async def get_other_uses(
             request_data.compliance_report_id
         )
         return await service.get_other_uses(
-            request_data.compliance_report_id, request.user
+            request_data.compliance_report_id,
+            request.user,
+            request_data.changelog
         )
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message

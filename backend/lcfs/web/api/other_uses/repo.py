@@ -1,3 +1,4 @@
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.fuel import FuelCodeStatus
 import structlog
 from datetime import date, datetime
@@ -42,7 +43,8 @@ class OtherUsesRepository:
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
         fuel_types = await self.get_formatted_fuel_types(
-            include_legacy=include_legacy, compliance_period=int(compliance_period)
+            include_legacy=include_legacy, compliance_period=int(
+                compliance_period)
         )
         expected_uses = await self.fuel_code_repo.get_expected_use_types()
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
@@ -114,7 +116,9 @@ class OtherUsesRepository:
 
     @repo_handler
     async def get_other_uses(
-        self, compliance_report_id: int, exclude_draft_reports: bool = False
+        self, compliance_report_id: int,
+        changelog: bool = False,
+        exclude_draft_reports: bool = False
     ) -> List[OtherUsesSchema]:
         """
         Queries other uses from the database for a specific compliance report.
@@ -131,7 +135,10 @@ class OtherUsesRepository:
             return []
 
         result = await self.get_effective_other_uses(
-            group_uuid, False, exclude_draft_reports=exclude_draft_reports
+            group_uuid,
+            False,
+            exclude_draft_reports,
+            changelog
         )
         return result
 
@@ -140,6 +147,7 @@ class OtherUsesRepository:
         compliance_report_group_uuid: str,
         return_model: bool = False,
         exclude_draft_reports: bool = False,
+        changelog: bool = False,
     ) -> List[OtherUsesSchema]:
         """
         Queries other uses from the database for a specific compliance report.
@@ -158,16 +166,6 @@ class OtherUsesRepository:
                 )
             )
 
-        # Step 2: Subquery to identify record group_uuids that have any DELETE action
-        delete_group_select = (
-            select(OtherUses.group_uuid)
-            .where(
-                OtherUses.compliance_report_id.in_(compliance_reports_select),
-                OtherUses.action_type == ActionTypeEnum.DELETE,
-            )
-            .distinct()
-        )
-
         # Step 3: Subquery to find the maximum version and priority per group_uuid,
         # excluding groups with any DELETE action
         user_type_priority = case(
@@ -176,6 +174,25 @@ class OtherUsesRepository:
             else_=0,
         )
 
+        conditions = [
+            OtherUses.compliance_report_id.in_(compliance_reports_select)
+        ]
+        if not changelog:
+            delete_group_select = (
+                select(OtherUses.group_uuid)
+                .where(
+                    OtherUses.compliance_report_id.in_(
+                        compliance_reports_select),
+                    OtherUses.action_type == ActionTypeEnum.DELETE,
+                )
+                .distinct()
+            )
+
+            conditions.extend([
+                OtherUses.action_type != ActionTypeEnum.DELETE,
+                ~OtherUses.group_uuid.in_(delete_group_select)
+            ])
+
         valid_other_uses_select = (
             select(
                 OtherUses.group_uuid,
@@ -183,9 +200,7 @@ class OtherUsesRepository:
                 func.max(user_type_priority).label("max_role_priority"),
             )
             .where(
-                OtherUses.compliance_report_id.in_(compliance_reports_select),
-                OtherUses.action_type != ActionTypeEnum.DELETE,
-                ~OtherUses.group_uuid.in_(delete_group_select),
+                *conditions
             )
             .group_by(OtherUses.group_uuid)
         )
@@ -265,9 +280,10 @@ class OtherUsesRepository:
 
         # Manually apply pagination
         total_count = len(other_uses)
-        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_other_uses = other_uses[offset : offset + limit]
+        paginated_other_uses = other_uses[offset: offset + limit]
 
         return paginated_other_uses, total_count
 
@@ -372,6 +388,15 @@ class OtherUsesRepository:
         if not include_legacy:
             base_conditions.append(FuelType.is_legacy == False)
 
+        # Get compliance period id for default CI lookup
+        compliance_period_id = None
+        if compliance_period:
+            cp_result = await self.db.execute(
+                select(CompliancePeriod.compliance_period_id)
+                .where(CompliancePeriod.description == str(compliance_period))
+            )
+            compliance_period_id = cp_result.scalar_one_or_none()
+
         combined_conditions = and_(*base_conditions)
 
         query = (
@@ -418,10 +443,20 @@ class OtherUsesRepository:
                 and (fc.fuel_status_id == approved_fuel_code_status_id)
             ]
 
+            # Get default CI for compliance period
+            default_ci = None
+            if compliance_period_id:
+                default_ci = next(
+                    (dci.default_carbon_intensity
+                    for dci in fuel_type.default_carbon_intensities
+                    if dci.compliance_period_id == compliance_period_id),
+                    None
+                )
+
             formatted_fuel_type = {
                 "fuel_type_id": fuel_type.fuel_type_id,
                 "fuel_type": fuel_type.fuel_type,
-                "default_carbon_intensity": fuel_type.default_carbon_intensity,
+                "default_carbon_intensity": default_ci,
                 "units": fuel_type.units if fuel_type.units else None,
                 "unrecognized": fuel_type.unrecognized,
                 "fuel_categories": [

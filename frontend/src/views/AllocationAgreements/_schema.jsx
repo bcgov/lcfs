@@ -18,6 +18,7 @@ import {
   isFuelTypeOther,
   fuelTypeOtherConditionalStyle
 } from '@/utils/fuelTypeOther'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -70,9 +71,7 @@ export const allocationAgreementColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
@@ -87,7 +86,7 @@ export const allocationAgreementColDefs = (
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transactionPartner'
     ),
-    cellDataType: 'text',
+    cellDataType: 'object',
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
       queryKey: 'trading-partner-name-search',
@@ -117,21 +116,15 @@ export const allocationAgreementColDefs = (
     editable: true,
     valueSetter: (params) => {
       const { newValue: selectedName, node, data } = params
-      const apiData = node.data.apiDataCache || [] // Safely access cached data or default to an empty array
 
-      // Attempt to find the selected company from the cached API data
-      const selectedOption = apiData.find(
-        (company) => company.name === selectedName
-      )
-
-      if (selectedOption) {
+      if (typeof selectedName === 'object') {
         // Only update related fields if a match is found in the API data
-        data.transactionPartner = selectedOption.name
-        data.postalAddress = selectedOption.address || data.postalAddress
+        data.transactionPartner = selectedName.name
+        data.postalAddress = selectedName.address || data.postalAddress
         data.transactionPartnerEmail =
-          selectedOption.email || data.transactionPartnerEmail
+          selectedName.email || data.transactionPartnerEmail
         data.transactionPartnerPhone =
-          selectedOption.phone || data.transactionPartnerPhone
+          selectedName.phone || data.transactionPartnerPhone
       } else {
         // If no match, only update the transactionPartner field, leave others unchanged
         data.transactionPartner = selectedName
@@ -192,9 +185,7 @@ export const allocationAgreementColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
@@ -416,7 +407,7 @@ export const allocationAgreementColDefs = (
       'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
     ),
     valueFormatter: (params) => {
-      return parseFloat(params.value).toFixed(2)
+      return params.value != null ? parseFloat(params.value).toFixed(2) : ''
     },
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),

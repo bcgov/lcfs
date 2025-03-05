@@ -28,7 +28,7 @@ class TargetCarbonIntensity(BaseModel, Auditable, EffectiveDates):
         comment="Fuel category ID",
     )
     target_carbon_intensity = Column(
-        Numeric(10, 2), nullable=False, comment="Target Carbon Intensity (gCO2e/MJ)"
+        Numeric(13, 5), nullable=False, comment="Target Carbon Intensity (gCO2e/MJ)"
     )
     reduction_target_percentage = Column(
         Float, nullable=False, comment="Reduction target percentage"

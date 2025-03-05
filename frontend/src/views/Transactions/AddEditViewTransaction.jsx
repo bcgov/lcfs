@@ -270,7 +270,11 @@ export const AddEditViewTransaction = () => {
         statusArray.push(status)
       })
 
-      if (!statusArray.includes(TRANSACTION_STATUSES.RECOMMENDED)) {
+      // Only add recommended if its not approved
+      if (
+        !statusArray.includes(TRANSACTION_STATUSES.RECOMMENDED) &&
+        !statusArray.includes(TRANSACTION_STATUSES.APPROVED)
+      ) {
         statusArray.push(TRANSACTION_STATUSES.RECOMMENDED)
       }
       if (!statusArray.includes(TRANSACTION_STATUSES.APPROVED)) {

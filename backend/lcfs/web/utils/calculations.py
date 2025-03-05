@@ -1,6 +1,6 @@
 def calculate_compliance_units(
     TCI: float, EER: float, RCI: float, UCI: float, Q: float, ED: float
-) -> int:
+) -> float:
     """
     Calculate the compliance units using the fuel supply formula.
 
@@ -27,4 +27,4 @@ def calculate_compliance_units(
     compliance_units = (TCI * EER - (RCI + UCI)) * ((Q * ED) / 1_000_000)
 
     # Return the rounded integer
-    return round(compliance_units)
+    return round(compliance_units, 5)

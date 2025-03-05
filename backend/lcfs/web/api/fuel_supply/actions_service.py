@@ -29,6 +29,7 @@ FUEL_SUPPLY_EXCLUDE_FIELDS = {
     "version",
     "action_type",
     "units",
+    "is_new_supplemental_entry"
 }
 
 
@@ -251,32 +252,33 @@ class FuelSupplyActionService:
             fs_data.group_uuid
         )
 
-        if existing_fuel_supply.action_type == ActionTypeEnum.DELETE:
+        if fs_data.is_new_supplemental_entry:
+            await self.repo.delete_fuel_supply(fuel_supply_id=fs_data.fuel_supply_id)
             return DeleteFuelSupplyResponseSchema(
-                success=True, message="Already deleted."
+                success=True, message="Marked as deleted."
+            )
+        else:
+            # Create a new version with action_type DELETE
+            delete_supply = FuelSupply(
+                compliance_report_id=fs_data.compliance_report_id,
+                group_uuid=fs_data.group_uuid,
+                version=existing_fuel_supply.version + 1,
+                action_type=ActionTypeEnum.DELETE,
+                user_type=user_type,
             )
 
-        # Create a new version with action_type DELETE
-        delete_supply = FuelSupply(
-            compliance_report_id=fs_data.compliance_report_id,
-            group_uuid=fs_data.group_uuid,
-            version=existing_fuel_supply.version + 1,
-            action_type=ActionTypeEnum.DELETE,
-            user_type=user_type,
-        )
+            # Copy fields from the latest version for the deletion record
+            for field in existing_fuel_supply.__table__.columns.keys():
+                if field not in FUEL_SUPPLY_EXCLUDE_FIELDS:
+                    setattr(delete_supply, field, getattr(
+                        existing_fuel_supply, field))
 
-        # Copy fields from the latest version for the deletion record
-        for field in existing_fuel_supply.__table__.columns.keys():
-            if field not in FUEL_SUPPLY_EXCLUDE_FIELDS:
-                setattr(delete_supply, field, getattr(
-                    existing_fuel_supply, field))
+            delete_supply.compliance_report_id = fs_data.compliance_report_id
 
-        delete_supply.compliance_report_id = fs_data.compliance_report_id
+            delete_supply.units = QuantityUnitsEnum(fs_data.units)
 
-        delete_supply.units = QuantityUnitsEnum(fs_data.units)
-
-        # Save the deletion record
-        await self.repo.create_fuel_supply(delete_supply)
-        return DeleteFuelSupplyResponseSchema(
-            success=True, message="Marked as deleted."
-        )
+            # Save the deletion record
+            await self.repo.create_fuel_supply(delete_supply)
+            return DeleteFuelSupplyResponseSchema(
+                success=True, message="Marked as deleted."
+            )
