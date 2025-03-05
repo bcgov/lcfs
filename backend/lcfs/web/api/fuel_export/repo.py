@@ -6,6 +6,8 @@ from lcfs.db.models.compliance import (
     ComplianceReportStatus,
 )
 from lcfs.db.models.fuel import (
+    CategoryCarbonIntensity,
+    DefaultCarbonIntensity,
     EnergyDensity,
     EnergyEffectivenessRatio,
     FuelCategory,
@@ -52,10 +54,14 @@ class FuelExportRepository:
                 joinedload(FuelType.energy_density),
                 joinedload(FuelType.additional_carbon_intensity),
                 joinedload(FuelType.energy_effectiveness_ratio),
+                joinedload(FuelType.default_carbon_intensities).options(
+                    selectinload(DefaultCarbonIntensity.compliance_period)
+                ),
             ),
             joinedload(FuelExport.provision_of_the_act),
             joinedload(FuelExport.end_use_type),
         )
+
 
     @repo_handler
     async def get_fuel_export_table_options(self, compliance_period: str):
@@ -87,7 +93,8 @@ class FuelExportRepository:
                 FuelInstance.fuel_category_id,
                 FuelType.fuel_type,
                 FuelType.fossil_derived,
-                FuelType.default_carbon_intensity,
+                DefaultCarbonIntensity.default_carbon_intensity,
+                CategoryCarbonIntensity.category_carbon_intensity,
                 FuelCategory.category,
                 ProvisionOfTheAct.provision_of_the_act_id,
                 ProvisionOfTheAct.name.label("provision_of_the_act"),
@@ -119,6 +126,23 @@ class FuelExportRepository:
                 FuelCategory.fuel_category_id == FuelInstance.fuel_category_id,
             )
             .outerjoin(
+                DefaultCarbonIntensity,
+                and_(
+                    DefaultCarbonIntensity.fuel_type_id == FuelType.fuel_type_id,
+                    DefaultCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
+                ),
+            )
+            .outerjoin(
+                CategoryCarbonIntensity,
+                and_(
+                    CategoryCarbonIntensity.fuel_category_id
+                    == FuelCategory.fuel_category_id,
+                    CategoryCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
+                ),
+            )
+            .outerjoin(
                 ProvisionOfTheAct,
                 or_(
                     and_(
@@ -135,8 +159,8 @@ class FuelExportRepository:
                 EnergyDensity,
                 and_(
                     EnergyDensity.fuel_type_id == FuelType.fuel_type_id,
-                    EnergyDensity.compliance_period_id == subquery_compliance_period_id
-                )
+                    EnergyDensity.compliance_period_id == subquery_compliance_period_id,
+                ),
             )
             .outerjoin(UnitOfMeasure, EnergyDensity.uom_id == UnitOfMeasure.uom_id)
             .outerjoin(
@@ -145,7 +169,8 @@ class FuelExportRepository:
                     EnergyEffectivenessRatio.fuel_category_id
                     == FuelCategory.fuel_category_id,
                     EnergyEffectivenessRatio.fuel_type_id == FuelInstance.fuel_type_id,
-                    EnergyEffectivenessRatio.compliance_period_id == subquery_compliance_period_id
+                    EnergyEffectivenessRatio.compliance_period_id
+                    == subquery_compliance_period_id,
                 ),
             )
             .outerjoin(

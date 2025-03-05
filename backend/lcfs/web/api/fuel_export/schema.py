@@ -28,6 +28,12 @@ class FuelCategorySchema(BaseSchema):
     fuel_category: str
     default_and_prescribed_ci: Optional[float] = None
 
+    @field_validator("default_and_prescribed_ci")
+    def quantize_default_carbon_intensity(cls, value):
+        if value is not None:
+            return round(value, 2)
+        return value
+
 
 class ProvisionOfTheActSchema(BaseSchema):
     provision_of_the_act_id: int
@@ -77,7 +83,7 @@ class FuelTypeOptionsSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: bool
-    default_carbon_intensity: float
+    default_carbon_intensity: Optional[float] = None
     unit: str
     energy_density: Optional[EnergyDensitySchema]
     provisions: List[ProvisionOfTheActSchema]
@@ -85,6 +91,12 @@ class FuelTypeOptionsSchema(BaseSchema):
     eer_ratios: List[EnergyEffectivenessRatioSchema]
     target_carbon_intensities: List[TargetCarbonIntensitySchema]
     fuel_codes: Optional[List[FuelCodeSchema]] = []
+
+    @field_validator("default_carbon_intensity")
+    def quantize_default_carbon_intensity(cls, value):
+        if value is not None:
+            return round(value, 2)
+        return value
 
 
 class FuelTypeOptionsResponse(BaseSchema):
@@ -102,7 +114,9 @@ class FuelTypeSchema(BaseSchema):
 
     @field_validator("default_carbon_intensity")
     def quantize_default_carbon_intensity(cls, value):
-        return round(value, 2)
+        if value is not None:
+            return round(value, 2)
+        return value
 
 
 class FuelCategoryResponseSchema(BaseSchema):
