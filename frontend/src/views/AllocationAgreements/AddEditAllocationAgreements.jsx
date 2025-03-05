@@ -257,6 +257,7 @@ export const AddEditAllocationAgreements = () => {
           params.node.setDataValue('transactionPartner', '')
           return
         }
+        params.node.setDataValue('transactionPartner', params.newValue.name)
       }
 
       const isValid = validate(
