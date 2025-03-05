@@ -58,7 +58,7 @@ export const notionalTransferColDefs = (
     field: 'legalName',
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
     headerComponent: RequiredHeader,
-    cellDataType: 'text',
+    cellDataType: 'object',
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
       queryKey: 'company-details-search',
@@ -84,16 +84,10 @@ export const notionalTransferColDefs = (
     minWidth: 300,
     valueSetter: (params) => {
       const { newValue: selectedName, node, data } = params
-      const apiData = node.data.apiDataCache || []
-      // Attempt to find the selected company from the cached API data
-      const selectedOption = apiData.find(
-        (company) => company.name === selectedName
-      )
-      if (selectedOption) {
-        // Only update related fields if a match is found in the API data
-        data.legalName = selectedOption.name
-        data.addressForService =
-          selectedOption.address || data.addressForService
+      if (typeof selectedName === 'object') {
+        // If selectedName is an object, set the legalName directly
+        data.legalName = selectedName.name
+        data.addressForService = selectedName.address
       } else {
         // If no match, only update the legalName field, leave others unchanged
         data.legalName = selectedName
