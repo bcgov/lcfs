@@ -122,7 +122,7 @@ export const NoDataState = ({ refetch, resetGeofencing }) => (
         API should return data with the following fields:
       </BCTypography>
       <ul style={{ marginLeft: 20 }}>
-        <li>registrationNbr and serialNbr (for ID creation)</li>
+        <li>serialNbr (for ID creation)</li>
         <li>streetAddress, city, postalCode (for location name)</li>
         <li>latitude and longitude</li>
         <li>supplyFromDate and supplyToDate</li>

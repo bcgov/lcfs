@@ -46,15 +46,15 @@ export const transformApiData = (data) => {
   if (!data || !data.finalSupplyEquipments) return []
 
   return data.finalSupplyEquipments.map((row, index) => {
-    // Create a combined ID from registrationNbr and serialNbr
-    const registrationNbr = row.registrationNbr || 'unknown'
+    // Create a combined ID from finalSupplyEquipmentId and serialNbr
+    const finalSupplyEquipmentId = row.finalSupplyEquipmentId || 'unknown'
     const serialNbr = row.serialNbr || 'unknown'
-    const combinedId = `${registrationNbr}_${serialNbr}`
+    const combinedId = `${finalSupplyEquipmentId}_${serialNbr}`
 
     return {
       id: combinedId,
       uniqueId: `${combinedId}_${index}`,
-      registrationNbr,
+      finalSupplyEquipmentId,
       serialNbr,
       name:
         `${row.streetAddress || ''}, ${row.city || ''}, ${
@@ -88,18 +88,18 @@ export const groupLocationsByCoordinates = (locations) => {
 
 // Find all overlapping periods for a given location, only considering same ID
 export const findOverlappingPeriods = (currentLoc, allLocations) => {
-  const currentRegNum = currentLoc.id.split('_')[0]
+  const currentFseId = currentLoc.id.split('_')[0]
   const currentSerialNum = currentLoc.id.split('_')[1]
 
   return allLocations
     .filter((loc) => {
-      const locRegNum = loc.id.split('_')[0]
+      const locFseId = loc.id.split('_')[0]
       const locSerialNum = loc.id.split('_')[1]
 
       // Only check for overlap if this is the same ID but different record
       return (
         currentLoc.uniqueId !== loc.uniqueId && // Different record
-        currentRegNum === locRegNum && // Same registration number
+        currentFseId === locFseId && // Same FSE-ID number
         currentSerialNum === locSerialNum && // Same serial number
         datesOverlap(
           currentLoc.supplyFromDate,
@@ -113,7 +113,7 @@ export const findOverlappingPeriods = (currentLoc, allLocations) => {
       id: loc.id,
       uniqueId: loc.uniqueId,
       name: loc.name,
-      regNum: loc.id.split('_')[0],
+      fseId: loc.id.split('_')[0],
       serialNum: loc.id.split('_')[1],
       supplyFromDate: loc.supplyFromDate,
       supplyToDate: loc.supplyToDate
