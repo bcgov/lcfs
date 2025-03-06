@@ -225,47 +225,6 @@ try {
             }
         }
 
-        // Ensure both address IDs are not null before proceeding
-        // if (organizationAddressId == null || organizationAttorneyAddressId == null) {
-        //     log.error("Failed to insert or retrieve address IDs for record: " + organizationId)
-        //     continue
-        // }
-        // // Step 2: Insert service address into organization_address table and get the generated organization_address_id
-        // PreparedStatement insertAddressStmt = destinationConn.prepareStatement(insertAddressSQL)
-        // def organizationAddressId = null
-        // insertAddressStmt.setString(1, name)
-        // insertAddressStmt.setString(2, serviceStreetAddress)
-        // insertAddressStmt.setString(3, serviceAddressOther)
-        // insertAddressStmt.setString(4, serviceCity)
-        // insertAddressStmt.setString(5, serviceProvinceState)
-        // insertAddressStmt.setString(6, servicePostalCodeZipCode)
-        // insertAddressStmt.setString(7, serviceCountry)
-        // ResultSet addressResultSet = insertAddressStmt.executeQuery()
-        // if (addressResultSet.next()) {
-        //     organizationAddressId = addressResultSet.getInt("organization_address_id")
-        // }
-
-        // // Step 3: Insert attorney address into organization_attorney_address table and get the generated organization_attorney_address_id
-        // PreparedStatement insertAttorneyAddressStmt = destinationConn.prepareStatement(insertAttorneyAddressSQL)
-        // def organizationAttorneyAddressId = null
-        // insertAttorneyAddressStmt.setString(1, name)
-        // insertAttorneyAddressStmt.setString(2, attorneyStreetAddress)
-        // insertAttorneyAddressStmt.setString(3, attorneyAddressOther)
-        // insertAttorneyAddressStmt.setString(4, attorneyCity)
-        // insertAttorneyAddressStmt.setString(5, attorneyProvinceState)
-        // insertAttorneyAddressStmt.setString(6, attorneyPostalCodeZipCode)
-        // insertAttorneyAddressStmt.setString(7, attorneyCountry)
-        // ResultSet attorneyAddressResultSet = insertAttorneyAddressStmt.executeQuery()
-        // if (attorneyAddressResultSet.next()) {
-        //     organizationAttorneyAddressId = attorneyAddressResultSet.getInt("organization_attorney_address_id")
-        // }
-
-        // Ensure both address IDs are not null before proceeding
-        // if (organizationAddressId == null || organizationAttorneyAddressId == null) {
-        //     log.error("Failed to insert or retrieve address IDs for record: " + organizationId)
-        //     continue
-        // }
-
         // Step 4: Generate a unique organization_code
         def organizationCode = null
         while (true) {
