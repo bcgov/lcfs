@@ -1,10 +1,10 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 
-from lcfs.db.base import BaseModel, Auditable, DisplayOrder
+from lcfs.db.base import BaseModel, Auditable, DisplayOrder, Versioning
 
 
-class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
+class AllocationAgreement(BaseModel, Auditable, Versioning, DisplayOrder ):
     __tablename__ = "allocation_agreement"
     __table_args__ = {
         "comment": "Records allocation agreements where the reporting obligation is passed from one party to another. Each party must report their end of the transaction."
@@ -80,11 +80,11 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
         comment="Foreign key to the compliance report",
     )
 
-    allocation_transaction_type = relationship("AllocationTransactionType")
-    fuel_type = relationship("FuelType")
-    fuel_category = relationship("FuelCategory")
-    provision_of_the_act = relationship("ProvisionOfTheAct")
-    fuel_code = relationship("FuelCode")
+    allocation_transaction_type = relationship("AllocationTransactionType", lazy="joined")
+    fuel_type = relationship("FuelType", lazy="joined")
+    fuel_category = relationship("FuelCategory", lazy="joined")
+    provision_of_the_act = relationship("ProvisionOfTheAct", lazy="joined")
+    fuel_code = relationship("FuelCode", lazy="joined")
     compliance_report = relationship(
         "ComplianceReport", back_populates="allocation_agreements"
     )
