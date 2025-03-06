@@ -86,6 +86,15 @@ export const AssessmentCard = ({
 
   const filteredChain = useMemo(() => {
     return chain.filter((report) => {
+      // if user is IDIR and the report is Draft,
+      // skip showing the entire chain item
+      if (
+        isGovernmentUser &&
+        report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.DRAFT
+      )
+        return false
+
+      // keep chain items that have history
       return report.history && report.history.length > 0
     })
   }, [chain])
