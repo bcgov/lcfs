@@ -33,15 +33,6 @@ export const ExcelStyledTable = ({ uniqueSupplyUnits, overlapMap }) => {
                 backgroundColor: '#dfe6e9'
               }}
             >
-              Reg #
-            </TableCell>
-            <TableCell
-              sx={{
-                border: '1px solid #d0d0d0',
-                fontWeight: 'bold',
-                backgroundColor: '#dfe6e9'
-              }}
-            >
               Serial #
             </TableCell>
             <TableCell
@@ -78,11 +69,6 @@ export const ExcelStyledTable = ({ uniqueSupplyUnits, overlapMap }) => {
                     '&:hover': { backgroundColor: '#e3f2fd' }
                   }}
                 >
-                  <TableCell
-                    sx={{ border: '1px solid #d0d0d0', fontSize: '14px' }}
-                  >
-                    {unit.regNum}
-                  </TableCell>
                   <TableCell
                     sx={{ border: '1px solid #d0d0d0', fontSize: '14px' }}
                   >
