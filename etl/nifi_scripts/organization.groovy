@@ -24,7 +24,10 @@ def sourceQuery = """
         oa.address_line_1 as service_street_address,
         oa.address_line_2 as service_address_other,
         oa.city as service_city,
-        oa.state as service_province_state,
+        case
+            when upper(oa.state) SIMILAR TO '%(BC|B.C.|BRITISH COLUMBIA)%' then 'BC'
+            else oa.state
+        end as service_province_state,
         oa.postal_code as "service_postalCode_zipCode",
         oa.country as service_country,
         oa.attorney_street_address,
@@ -53,8 +56,8 @@ def checkOrganizationCodeQuery = "SELECT COUNT(*) FROM organization WHERE organi
 // SQL query to insert new organizations with the generated code
 def insertOrganizationSQL = """
     INSERT INTO organization (
-        effective_status, organization_id, organization_code, name, operating_name, email, phone, edrms_record, organization_status_id, organization_type_id, organization_address_id, organization_attorney_address_id
-    ) VALUES (true, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        effective_status, organization_id, organization_code, name, operating_name, email, phone, edrms_record, organization_status_id, organization_type_id, organization_address_id, organization_attorney_address_id, records_address
+    ) VALUES (true, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (organization_id) DO NOTHING
 """
 
@@ -114,7 +117,7 @@ try {
 
     while (resultSet.next()) {
         def organizationId = resultSet.getInt("organization_id")
-        
+
         // Check if the organization already exists in the destination
         checkDuplicateStmt.setInt(1, organizationId)
         ResultSet duplicateResult = checkDuplicateStmt.executeQuery()
@@ -127,23 +130,23 @@ try {
         // If no duplicate exists, proceed with the insert logic
         def name = resultSet.getString("name") ?: ""
         def operatingName = resultSet.getString("operating_name") ?: "" // not nullable string field
-        def email = resultSet.getString("email") ?: ""                  
-        def phone = resultSet.getString("phone") ?: ""                  
-        def edrmsRecord = resultSet.getString("edrms_record") ?: ""     
-        def orgStatusChar = resultSet.getString("org_status") ?: ""      
+        def email = resultSet.getString("email") ?: ""
+        def phone = resultSet.getString("phone") ?: ""
+        def edrmsRecord = resultSet.getString("edrms_record") ?: ""
+        def orgStatusChar = resultSet.getString("org_status") ?: ""
         def orgTypeChar = resultSet.getString("organization_type") ?: ""
-        def serviceStreetAddress = resultSet.getString("service_street_address") ?: ""      
-        def serviceAddressOther = resultSet.getString("service_address_other") ?: ""        
-        def serviceCity = resultSet.getString("service_city") ?: ""                           
-        def serviceProvinceState = resultSet.getString("service_province_state") ?: ""         
-        def servicePostalCodeZipCode = resultSet.getString("service_postalCode_zipCode") ?: "" 
-        def serviceCountry = resultSet.getString("service_country") ?: ""                     
-        def attorneyStreetAddress = resultSet.getString("attorney_street_address") ?: ""      
-        def attorneyAddressOther = resultSet.getString("attorney_address_other") ?: ""        
-        def attorneyCity = resultSet.getString("attorney_city") ?: ""                        
-        def attorneyProvinceState = resultSet.getString("attorney_province_state") ?: ""      
-        def attorneyPostalCodeZipCode = resultSet.getString("attorney_postalCode_zipCode") ?: "" 
-        def attorneyCountry = resultSet.getString("attorney_country") ?: ""                    
+        def serviceStreetAddress = resultSet.getString("service_street_address") ?: ""
+        def serviceAddressOther = resultSet.getString("service_address_other") ?: ""
+        def serviceCity = resultSet.getString("service_city") ?: ""
+        def serviceProvinceState = resultSet.getString("service_province_state") ?: ""
+        def servicePostalCodeZipCode = resultSet.getString("service_postalCode_zipCode") ?: ""
+        def serviceCountry = resultSet.getString("service_country") ?: ""
+        def attorneyStreetAddress = resultSet.getString("attorney_street_address") ?: ""
+        def attorneyAddressOther = resultSet.getString("attorney_address_other") ?: ""
+        def attorneyCity = resultSet.getString("attorney_city") ?: ""
+        def attorneyProvinceState = resultSet.getString("attorney_province_state") ?: ""
+        def attorneyPostalCodeZipCode = resultSet.getString("attorney_postalCode_zipCode") ?: ""
+        def attorneyCountry = resultSet.getString("attorney_country") ?: ""
 
         // Fetch organization_status_id and organization_type_id
         statusStmt.setString(1, orgStatusChar)
@@ -160,41 +163,108 @@ try {
             continue
         }
 
-        // Step 2: Insert service address into organization_address table and get the generated organization_address_id
-        PreparedStatement insertAddressStmt = destinationConn.prepareStatement(insertAddressSQL)
-        def organizationAddressId = null
-        insertAddressStmt.setString(1, name)
-        insertAddressStmt.setString(2, serviceStreetAddress)
-        insertAddressStmt.setString(3, serviceAddressOther)
-        insertAddressStmt.setString(4, serviceCity)
-        insertAddressStmt.setString(5, serviceProvinceState)
-        insertAddressStmt.setString(6, servicePostalCodeZipCode)
-        insertAddressStmt.setString(7, serviceCountry)
-        ResultSet addressResultSet = insertAddressStmt.executeQuery()
-        if (addressResultSet.next()) {
-            organizationAddressId = addressResultSet.getInt("organization_address_id")
+        // Check if serviceProvinceState is "BC" or "British Columbia"
+        def trimmedServiceProvince = serviceProvinceState.trim()
+        boolean isBC = trimmedServiceProvince.equalsIgnoreCase("BC")
+
+        if (isBC) {
+            // If province is BC, use addresses as they are
+            serviceAddressParams = [name, serviceStreetAddress, serviceAddressOther, serviceCity,
+                               trimmedServiceProvince, servicePostalCodeZipCode, serviceCountry]
+
+            attorneyAddressParams = [] // Head office
+
+            // Combine attorney address into a single line for records_address
+            def addressParts = []
+            if (attorneyStreetAddress) addressParts.add(attorneyStreetAddress)
+            if (attorneyAddressOther) addressParts.add(attorneyAddressOther)
+            if (attorneyCity) addressParts.add(attorneyCity)
+            if (attorneyProvinceState) addressParts.add(attorneyProvinceState)
+            if (attorneyCountry) addressParts.add(attorneyCountry)
+            if (attorneyPostalCodeZipCode) addressParts.add(attorneyPostalCodeZipCode)
+
+            recordsAddress = addressParts.join(", ")
+            log.warn("records_address", recordsAddress)
+        } else {
+            // If province is not BC, swap the addresses
+            serviceAddressParams = [name, attorneyStreetAddress, attorneyAddressOther, attorneyCity,
+                               attorneyProvinceState, attorneyPostalCodeZipCode, attorneyCountry] // Address for service
+
+            attorneyAddressParams = [name, serviceStreetAddress, serviceAddressOther, serviceCity,
+                                serviceProvinceState, servicePostalCodeZipCode, serviceCountry] // Head office address
+
+            // records_address is set to null when not in BC
+            recordsAddress = null
         }
 
-        // Step 3: Insert attorney address into organization_attorney_address table and get the generated organization_attorney_address_id
+        // Step 2: Insert service address into organization_address table
+        PreparedStatement insertAddressStmt = destinationConn.prepareStatement(insertAddressSQL)
+        def organizationAddressId = null
+
+        for (int i = 0; i < serviceAddressParams.size(); i++) {
+            insertAddressStmt.setString(i + 1, serviceAddressParams[i])
+        }
+        if (serviceAddressParams.size() > 0) {
+            ResultSet addressResultSet = insertAddressStmt.executeQuery()
+            if (addressResultSet.next()) {
+                organizationAddressId = addressResultSet.getInt("organization_address_id")
+            }
+        }
+
+        // Step 3: Insert head office address
         PreparedStatement insertAttorneyAddressStmt = destinationConn.prepareStatement(insertAttorneyAddressSQL)
         def organizationAttorneyAddressId = null
-        insertAttorneyAddressStmt.setString(1, name)
-        insertAttorneyAddressStmt.setString(2, attorneyStreetAddress)      
-        insertAttorneyAddressStmt.setString(3, attorneyAddressOther)      
-        insertAttorneyAddressStmt.setString(4, attorneyCity)               
-        insertAttorneyAddressStmt.setString(5, attorneyProvinceState)     
-        insertAttorneyAddressStmt.setString(6, attorneyPostalCodeZipCode) 
-        insertAttorneyAddressStmt.setString(7, attorneyCountry)           
-        ResultSet attorneyAddressResultSet = insertAttorneyAddressStmt.executeQuery()
-        if (attorneyAddressResultSet.next()) {
-            organizationAttorneyAddressId = attorneyAddressResultSet.getInt("organization_attorney_address_id")
+
+        for (int i = 0; i < attorneyAddressParams.size(); i++) {
+            insertAttorneyAddressStmt.setString(i + 1, attorneyAddressParams[i])
+        }
+        if (attorneyAddressParams.size() > 0) {
+            ResultSet attorneyAddressResultSet = insertAttorneyAddressStmt.executeQuery()
+            if (attorneyAddressResultSet.next()) {
+                organizationAttorneyAddressId = attorneyAddressResultSet.getInt("organization_attorney_address_id")
+            }
         }
 
         // Ensure both address IDs are not null before proceeding
-        if (organizationAddressId == null || organizationAttorneyAddressId == null) {
-            log.error("Failed to insert or retrieve address IDs for record: " + organizationId)
-            continue
-        }
+        // if (organizationAddressId == null || organizationAttorneyAddressId == null) {
+        //     log.error("Failed to insert or retrieve address IDs for record: " + organizationId)
+        //     continue
+        // }
+        // // Step 2: Insert service address into organization_address table and get the generated organization_address_id
+        // PreparedStatement insertAddressStmt = destinationConn.prepareStatement(insertAddressSQL)
+        // def organizationAddressId = null
+        // insertAddressStmt.setString(1, name)
+        // insertAddressStmt.setString(2, serviceStreetAddress)
+        // insertAddressStmt.setString(3, serviceAddressOther)
+        // insertAddressStmt.setString(4, serviceCity)
+        // insertAddressStmt.setString(5, serviceProvinceState)
+        // insertAddressStmt.setString(6, servicePostalCodeZipCode)
+        // insertAddressStmt.setString(7, serviceCountry)
+        // ResultSet addressResultSet = insertAddressStmt.executeQuery()
+        // if (addressResultSet.next()) {
+        //     organizationAddressId = addressResultSet.getInt("organization_address_id")
+        // }
+
+        // // Step 3: Insert attorney address into organization_attorney_address table and get the generated organization_attorney_address_id
+        // PreparedStatement insertAttorneyAddressStmt = destinationConn.prepareStatement(insertAttorneyAddressSQL)
+        // def organizationAttorneyAddressId = null
+        // insertAttorneyAddressStmt.setString(1, name)
+        // insertAttorneyAddressStmt.setString(2, attorneyStreetAddress)
+        // insertAttorneyAddressStmt.setString(3, attorneyAddressOther)
+        // insertAttorneyAddressStmt.setString(4, attorneyCity)
+        // insertAttorneyAddressStmt.setString(5, attorneyProvinceState)
+        // insertAttorneyAddressStmt.setString(6, attorneyPostalCodeZipCode)
+        // insertAttorneyAddressStmt.setString(7, attorneyCountry)
+        // ResultSet attorneyAddressResultSet = insertAttorneyAddressStmt.executeQuery()
+        // if (attorneyAddressResultSet.next()) {
+        //     organizationAttorneyAddressId = attorneyAddressResultSet.getInt("organization_attorney_address_id")
+        // }
+
+        // Ensure both address IDs are not null before proceeding
+        // if (organizationAddressId == null || organizationAttorneyAddressId == null) {
+        //     log.error("Failed to insert or retrieve address IDs for record: " + organizationId)
+        //     continue
+        // }
 
         // Step 4: Generate a unique organization_code
         def organizationCode = null
@@ -217,8 +287,19 @@ try {
         insertOrgStmt.setString(7, edrmsRecord)
         insertOrgStmt.setInt(8, orgStatusId)
         insertOrgStmt.setInt(9, orgTypeId)
-        insertOrgStmt.setInt(10, organizationAddressId)         // Service address ID
-        insertOrgStmt.setInt(11, organizationAttorneyAddressId) // Attorney address ID
+        // Address for service in BC
+        if (organizationAddressId != null) {
+            insertOrgStmt.setInt(10, organizationAddressId)
+        } else {
+            insertOrgStmt.setNull(10, java.sql.Types.INTEGER)
+        }
+        // Head office address ID
+        if (organizationAttorneyAddressId != null) {
+            insertOrgStmt.setInt(11, organizationAttorneyAddressId)
+        } else {
+            insertOrgStmt.setNull(11, java.sql.Types.INTEGER)
+        }
+        insertOrgStmt.setString(12, recordsAddress)
         insertOrgStmt.executeUpdate()
     }
 
