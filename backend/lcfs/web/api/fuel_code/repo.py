@@ -79,15 +79,15 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_formatted_fuel_types(
-        self,
-        include_legacy=False,
-        compliance_period: Optional[str] = None
+        self, include_legacy=False, compliance_period: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         """Get all fuel type options with their associated fuel categories and fuel codes"""
         # Get compliance period ID if provided
         compliance_period_id = None
         if compliance_period:
-            compliance_period_id = await self.get_compliance_period_id(compliance_period)
+            compliance_period_id = await self.get_compliance_period_id(
+                compliance_period
+            )
 
         # Define the filtering conditions for fuel codes
         current_date = date.today()
@@ -102,7 +102,6 @@ class FuelCodeRepository:
         # If we don't want to include legacy fuel types, filter them out
         if not include_legacy:
             conditions.append(FuelType.is_legacy == False)
-
 
         # Build the query with filtered fuel_codes and compliance period joins
         query = (
@@ -119,36 +118,37 @@ class FuelCodeRepository:
                     EnergyDensity,
                     and_(
                         EnergyDensity.fuel_type_id == FuelType.fuel_type_id,
-                        EnergyDensity.compliance_period_id == compliance_period_id
-                    )
+                        EnergyDensity.compliance_period_id == compliance_period_id,
+                    ),
                 )
                 .outerjoin(
                     EnergyEffectivenessRatio,
                     and_(
                         EnergyEffectivenessRatio.fuel_type_id == FuelType.fuel_type_id,
-                        EnergyEffectivenessRatio.compliance_period_id == compliance_period_id,
-                        EnergyEffectivenessRatio.fuel_category_id == FuelCategory.fuel_category_id
-                    )
+                        EnergyEffectivenessRatio.compliance_period_id
+                        == compliance_period_id,
+                        EnergyEffectivenessRatio.fuel_category_id
+                        == FuelCategory.fuel_category_id,
+                    ),
                 )
                 .outerjoin(
                     DefaultCarbonIntensity,
                     and_(
                         DefaultCarbonIntensity.fuel_type_id == FuelType.fuel_type_id,
-                        DefaultCarbonIntensity.compliance_period_id == compliance_period_id
-                    )
+                        DefaultCarbonIntensity.compliance_period_id
+                        == compliance_period_id,
+                    ),
                 )
             )
 
-        query = (
-            query.where(and_(*conditions))
-            .options(
-                contains_eager(FuelType.fuel_instances)
-                .contains_eager(FuelInstance.fuel_category),
-                contains_eager(FuelType.fuel_codes),
-                joinedload(FuelType.provision_1),
-                joinedload(FuelType.provision_2),
-                joinedload(FuelType.default_carbon_intensities),
-            )
+        query = query.where(and_(*conditions)).options(
+            contains_eager(FuelType.fuel_instances).contains_eager(
+                FuelInstance.fuel_category
+            ),
+            contains_eager(FuelType.fuel_codes),
+            joinedload(FuelType.provision_1),
+            joinedload(FuelType.provision_2),
+            joinedload(FuelType.default_carbon_intensities),
         )
 
         result = await self.db.execute(query)
@@ -251,8 +251,7 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_transport_mode_by_name(self, mode_name: str) -> TransportMode:
-        query = select(TransportMode).where(
-            TransportMode.transport_mode == mode_name)
+        query = select(TransportMode).where(TransportMode.transport_mode == mode_name)
         result = await self.db.execute(query)
         transport_mode = result.scalar_one()
 
@@ -294,12 +293,15 @@ class FuelCodeRepository:
         )
 
     @repo_handler
-    async def get_energy_density(self, fuel_type_id: int, compliance_period_id: int) -> EnergyDensity:
+    async def get_energy_density(
+        self, fuel_type_id: int, compliance_period_id: int
+    ) -> EnergyDensity:
         """Get the energy density for the specified fuel_type_id"""
 
         stmt = select(EnergyDensity).where(
             EnergyDensity.fuel_type_id == fuel_type_id,
-            EnergyDensity.compliance_period_id == compliance_period_id)
+            EnergyDensity.compliance_period_id == compliance_period_id,
+        )
 
         result = await self.db.execute(stmt)
         energy_density = result.scalars().first()
@@ -353,8 +355,7 @@ class FuelCodeRepository:
             List[FuelCodeSchema]: A list of fuel codes matching the query.
         """
         delete_status = await self.get_fuel_status_by_status("Deleted")
-        conditions = [FuelCode.fuel_status_id !=
-                      delete_status.fuel_code_status_id]
+        conditions = [FuelCode.fuel_status_id != delete_status.fuel_code_status_id]
 
         for filter in pagination.filters:
 
@@ -395,13 +396,11 @@ class FuelCodeRepository:
                 field = get_field_for_filter(FuelCode, filter.field)
 
             conditions.append(
-                apply_filter_conditions(
-                    field, filter_value, filter_option, filter_type)
+                apply_filter_conditions(field, filter_value, filter_option, filter_type)
             )
 
         # setup pagination
-        offset = 0 if (pagination.page < 1) else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
         # Construct the select query with options for eager loading
         query = (
@@ -412,10 +411,8 @@ class FuelCodeRepository:
             .options(
                 contains_eager(FuelCode.fuel_code_status),
                 contains_eager(FuelCode.fuel_code_prefix),
-                contains_eager(FuelCode.fuel_type).joinedload(
-                    FuelType.provision_1),
-                contains_eager(FuelCode.fuel_type).joinedload(
-                    FuelType.provision_2),
+                contains_eager(FuelCode.fuel_type).joinedload(FuelType.provision_1),
+                contains_eager(FuelCode.fuel_type).joinedload(FuelType.provision_2),
                 joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
                     FeedstockFuelTransportMode.feedstock_fuel_transport_mode
                 ),
@@ -443,8 +440,7 @@ class FuelCodeRepository:
 
         # Execute the main query to retrieve all fuel codes
         result = await self.db.execute(
-            query.offset(offset).limit(limit).order_by(
-                FuelCode.create_date.desc())
+            query.offset(offset).limit(limit).order_by(FuelCode.create_date.desc())
         )
         fuel_codes = result.unique().scalars().all()
         return fuel_codes, total_count
@@ -479,10 +475,8 @@ class FuelCodeRepository:
                 joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
                     FinishedFuelTransportMode.finished_fuel_transport_mode
                 ),
-                joinedload(FuelCode.fuel_type).joinedload(
-                    FuelType.provision_1),
-                joinedload(FuelCode.fuel_type).joinedload(
-                    FuelType.provision_2),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
             )
             .where(FuelCode.fuel_code_id == fuel_code_id)
         )
@@ -492,8 +486,7 @@ class FuelCodeRepository:
         self, fuel_code_status: FuelCodeStatusEnum
     ) -> FuelCodeStatus:
         return await self.db.scalar(
-            select(FuelCodeStatus).where(
-                FuelCodeStatus.status == fuel_code_status)
+            select(FuelCodeStatus).where(FuelCodeStatus.status == fuel_code_status)
         )
 
     @repo_handler
@@ -551,8 +544,7 @@ class FuelCodeRepository:
             .where(
                 and_(
                     func.lower(FuelCode.company) == func.lower(company),
-                    func.lower(FuelCode.contact_name) == func.lower(
-                        contact_name),
+                    func.lower(FuelCode.contact_name) == func.lower(contact_name),
                 ),
                 func.lower(FuelCode.contact_email).like(
                     func.lower(contact_email + "%")
@@ -650,10 +642,8 @@ class FuelCodeRepository:
             .options(
                 joinedload(FuelCode.fuel_code_status),
                 joinedload(FuelCode.fuel_code_prefix),
-                joinedload(FuelCode.fuel_type).joinedload(
-                    FuelType.provision_1),
-                joinedload(FuelCode.fuel_type).joinedload(
-                    FuelType.provision_2),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
                 joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
                     FeedstockFuelTransportMode.feedstock_fuel_transport_mode
                 ),
@@ -734,8 +724,21 @@ class FuelCodeRepository:
                 JOIN fuel_code_prefix fcp ON fcp.fuel_code_prefix_id = fc.prefix_id
                 WHERE fcp.prefix = :prefix
             ),
+            range_params AS (
+                SELECT 
+                    CASE 
+                        WHEN :prefix = 'PROXY' THEN 1 
+                        ELSE 101 
+                    END AS min_code
+            ),
             all_possible_codes AS (
-                SELECT generate_series(101, COALESCE((SELECT MAX(base_code) FROM parsed_codes), 101) + 1) AS base_code
+                SELECT generate_series(
+                    (SELECT min_code FROM range_params),
+                    GREATEST(
+                        (SELECT min_code FROM range_params), 
+                        COALESCE((SELECT MAX(base_code) FROM parsed_codes), 0) + 1
+                    )
+                ) AS base_code
             ),
             available_codes AS (
                 SELECT base_code
@@ -794,8 +797,7 @@ class FuelCodeRepository:
         )
         result = (
             await self.db.execute(
-                query, {"input_version": int(
-                    input_version), "prefix_id": prefix_id}
+                query, {"input_version": int(input_version), "prefix_id": prefix_id}
             )
         ).scalar_one_or_none()
         return self.format_decimal(result)
@@ -817,10 +819,8 @@ class FuelCodeRepository:
                 joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
                     FinishedFuelTransportMode.finished_fuel_transport_mode
                 ),
-                joinedload(FuelCode.fuel_type).joinedload(
-                    FuelType.provision_1),
-                joinedload(FuelCode.fuel_type).joinedload(
-                    FuelType.provision_2),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_1),
+                joinedload(FuelCode.fuel_type).joinedload(FuelType.provision_2),
             )
             .filter(FuelCodeStatus.status != FuelCodeStatusEnum.Deleted)
         )
@@ -932,7 +932,7 @@ class FuelCodeRepository:
         conditions = [
             EnergyEffectivenessRatio.fuel_type_id == fuel_type_id,
             EnergyEffectivenessRatio.compliance_period_id == compliance_period_id,
-            EnergyEffectivenessRatio.fuel_category_id == fuel_category_id
+            EnergyEffectivenessRatio.fuel_category_id == fuel_category_id,
         ]
 
         if end_use_type_id is not None:
@@ -993,9 +993,12 @@ class FuelCodeRepository:
             raise ValueError("Invalid fuel type ID")
 
         # Determine energy density
-        energy_density_result = await self.get_energy_density(fuel_type_id, compliance_period_id)
+        energy_density_result = await self.get_energy_density(
+            fuel_type_id, compliance_period_id
+        )
         energy_density = (
-            energy_density_result.density if energy_density_result and fuel_type.fuel_type != "Other"
+            energy_density_result.density
+            if energy_density_result and fuel_type.fuel_type != "Other"
             else None
         )
 
@@ -1006,13 +1009,11 @@ class FuelCodeRepository:
         # Other Fuel uses the Default CI of the Category
         elif fuel_type.unrecognized:
             effective_carbon_intensity = await self.get_category_carbon_intensity(
-                fuel_category_id=fuel_category_id,
-                compliance_period=compliance_period
+                fuel_category_id=fuel_category_id, compliance_period=compliance_period
             )
         else:
             effective_carbon_intensity = await self.get_default_carbon_intensity(
-                fuel_type_id=fuel_type_id,
-                compliance_period=compliance_period
+                fuel_type_id=fuel_type_id, compliance_period=compliance_period
             )
 
         # Get energy effectiveness ratio (EER)
@@ -1028,7 +1029,9 @@ class FuelCodeRepository:
         target_ci = target_carbon_intensity.target_carbon_intensity
 
         # Additional Carbon Intensity (UCI)
-        uci = await self.get_additional_carbon_intensity(fuel_type_id, end_use_id, compliance_period)
+        uci = await self.get_additional_carbon_intensity(
+            fuel_type_id, end_use_id, compliance_period
+        )
 
         return CarbonIntensityResult(
             effective_carbon_intensity=effective_carbon_intensity,
@@ -1040,10 +1043,7 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_additional_carbon_intensity(
-        self,
-        fuel_type_id: int,
-        end_use_type_id: int,
-        compliance_period: str
+        self, fuel_type_id: int, end_use_type_id: int, compliance_period: str
     ) -> Optional[AdditionalCarbonIntensity]:
         """Get a single use of a carbon intensity (UCI), returns None if one does not apply"""
 
@@ -1054,24 +1054,19 @@ class FuelCodeRepository:
         )
 
         # Exact match for compliance_period_id
-        query = (
-            select(AdditionalCarbonIntensity)
-            .where(
-                AdditionalCarbonIntensity.end_use_type_id == end_use_type_id,
-                AdditionalCarbonIntensity.fuel_type_id == fuel_type_id,
-                AdditionalCarbonIntensity.compliance_period_id == compliance_period_id_subquery
-            )
+        query = select(AdditionalCarbonIntensity).where(
+            AdditionalCarbonIntensity.end_use_type_id == end_use_type_id,
+            AdditionalCarbonIntensity.fuel_type_id == fuel_type_id,
+            AdditionalCarbonIntensity.compliance_period_id
+            == compliance_period_id_subquery,
         )
 
         result = await self.db.execute(query)
         return result.scalars().one_or_none()
 
-
     @repo_handler
     async def get_default_carbon_intensity(
-        self,
-        fuel_type_id: int,
-        compliance_period: str
+        self, fuel_type_id: int, compliance_period: str
     ) -> Optional[float]:
         """Get default carbon intensity for specified compliance period"""
 
@@ -1081,24 +1076,19 @@ class FuelCodeRepository:
             .scalar_subquery()
         )
 
-        query = (
-            select(DefaultCarbonIntensity)
-            .where(
-                DefaultCarbonIntensity.fuel_type_id == fuel_type_id,
-                DefaultCarbonIntensity.compliance_period_id == compliance_period_id_subquery
-            )
+        query = select(DefaultCarbonIntensity).where(
+            DefaultCarbonIntensity.fuel_type_id == fuel_type_id,
+            DefaultCarbonIntensity.compliance_period_id
+            == compliance_period_id_subquery,
         )
 
         result = await self.db.execute(query)
         record = result.scalar_one_or_none()
         return record.default_carbon_intensity if record else 0.0
 
-
     @repo_handler
     async def get_category_carbon_intensity(
-        self,
-        fuel_category_id: int,
-        compliance_period: str
+        self, fuel_category_id: int, compliance_period: str
     ) -> Optional[float]:
         """Get default carbon intensity for specified compliance period and fuel category"""
 
@@ -1108,12 +1098,10 @@ class FuelCodeRepository:
             .scalar_subquery()
         )
 
-        query = (
-            select(CategoryCarbonIntensity)
-            .where(
-                CategoryCarbonIntensity.fuel_category_id == fuel_category_id,
-                CategoryCarbonIntensity.compliance_period_id == compliance_period_id_subquery
-            )
+        query = select(CategoryCarbonIntensity).where(
+            CategoryCarbonIntensity.fuel_category_id == fuel_category_id,
+            CategoryCarbonIntensity.compliance_period_id
+            == compliance_period_id_subquery,
         )
 
         result = await self.db.execute(query)
