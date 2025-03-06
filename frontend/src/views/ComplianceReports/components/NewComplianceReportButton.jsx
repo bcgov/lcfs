@@ -1,28 +1,25 @@
+import { useState, forwardRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
-import { useCompliancePeriod } from '@/hooks/useComplianceReports'
-import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
+import { Menu, MenuItem } from '@mui/material'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faCaretDown,
   faCaretUp,
   faCirclePlus
 } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Menu, MenuItem } from '@mui/material'
-import { useRef, useState, forwardRef } from 'react'
-import { useTranslation } from 'react-i18next'
+import { useCompliancePeriod } from '@/hooks/useComplianceReports'
+import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
 
 export const NewComplianceReportButton = forwardRef((props, ref) => {
   const { handleNewReport, isButtonLoading, setIsButtonLoading } = props
   const { data: periods, isLoading, isFetched } = useCompliancePeriod()
   const { data: reportedPeriods } = useGetOrgComplianceReportReportedYears()
+  const { t } = useTranslation(['common', 'report'])
 
-  const reportedPeriodIDs = reportedPeriods?.map(
-    (period) => period.compliancePeriodId
-  )
+  const reportedPeriodIDs = reportedPeriods?.map((p) => p.compliancePeriodId)
 
   const [anchorEl, setAnchorEl] = useState(null)
-  const buttonRef = useRef(null)
-  const { t } = useTranslation(['common', 'report'])
 
   const handleClick = (event) => {
     setAnchorEl(event.currentTarget)
@@ -33,7 +30,7 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
   }
 
   const handleComplianceOptionClick = (option) => {
-    setAnchorEl(null)
+    handleClose()
     setIsButtonLoading(true)
     handleNewReport(option)
   }
@@ -78,26 +75,26 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
       >
         {t('report:newReportBtn')}
       </BCButton>
-      {isFetched && !isButtonLoading && (
+
+      {isFetched && !isButtonLoading && anchorEl && (
         <Menu
-          sx={{ '.MuiMenu-list': { py: 0 } }}
+          sx={{
+            '.MuiMenu-list': { py: 0 },
+            '& .MuiPaper-root': {
+              maxWidth: 'none !important' // explicitly remove max-width limitation of mui default
+            }
+          }}
           anchorEl={anchorEl}
           open={isMenuOpen}
           onClose={handleClose}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'left'
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'left'
-          }}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
           slotProps={{
             paper: {
               style: {
-                width: buttonRef.current?.offsetWidth,
+                width: anchorEl.getBoundingClientRect().width - 8,
                 maxHeight: '10rem',
-                overflowY: 'scroll'
+                overflowY: 'auto'
               }
             }
           }}
