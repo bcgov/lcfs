@@ -160,8 +160,11 @@ async def _update_summaries() -> bool:
                 )
             )
 
+            changes = []
             for compliance_report_id in ids_to_update.scalars():
+                report = await cr_repo.get_compliance_report_by_id(compliance_report_id)
                 summary = await cr_repo.get_summary_by_report_id(compliance_report_id)
+                old_credits = summary.line_20_surplus_deficit_units
 
                 # Unlock
                 was_locked = summary.is_locked
@@ -178,9 +181,23 @@ async def _update_summaries() -> bool:
                     )
                     await session.flush()
 
-                await summary_service.calculate_compliance_report_summary(
-                    compliance_report_id
+                updated_summary = (
+                    await summary_service.calculate_compliance_report_summary(
+                        compliance_report_id
+                    )
                 )
+
+                new_credits = updated_summary.low_carbon_fuel_target_summary[-3].value
+
+                if old_credits != new_credits:
+                    changes.append(
+                        (
+                            report.organization.name,
+                            report.compliance_report_id,
+                            old_credits,
+                            new_credits,
+                        )
+                    )
 
                 # Re-lock
                 if was_locked:
@@ -195,6 +212,7 @@ async def _update_summaries() -> bool:
                         )
                     )
                     await session.flush()
+            _pretty_print_changes(changes)
             await session.commit()
             await session.close()
             await engine.dispose()
@@ -204,3 +222,40 @@ async def _update_summaries() -> bool:
 def _start_loop(loop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
+
+
+def _pretty_print_changes(changes):
+    if not changes:
+        print("No changes found.")
+    else:
+        # Prepare column headers
+        headers = ("Organization", "Report ID", "Old Credits", "New Credits")
+
+        # Determine the width of each column by looking at the headers and row data
+        col_widths = []
+        for i, header in enumerate(headers):
+            # For each column index `i`, find the max width needed
+            max_data_width = max(len(str(row[i])) for row in changes)
+            col_widths.append(max(len(header), max_data_width))
+
+        # Build a format string, for example: "{:<10} | {:<10} | {:>12} | {:>12}"
+        format_str = " | ".join(
+            f"{{:<{w}}}" if i < 2 else f"{{:>{w}}}"
+            # left align for first two columns, right align for credits
+            for i, w in enumerate(col_widths)
+        )
+
+        # Print the header row
+        print(format_str.format(*headers))
+
+        # Print a separator row
+        separators = []
+        for w in col_widths:
+            separators.append("-" * w)
+        print(" | ".join(separators))
+
+        # Print each data row
+        for row in changes:
+            # Convert any non-string values to string
+            row_str = tuple(str(item) for item in row)
+            print(format_str.format(*row_str))
