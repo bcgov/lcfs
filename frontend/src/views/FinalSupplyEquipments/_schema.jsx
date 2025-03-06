@@ -435,7 +435,8 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
     ),
-    field: 'registrationNbr'
+    field: 'registrationNbr',
+    hide: true
   },
   {
     headerName: t(
