@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -27,6 +28,19 @@ export const LegacyAssessmentCard = ({
       '_blank'
     )
   }
+
+  const filteredChain = useMemo(() => {
+    return chain.filter((report) => {
+      if (
+        isGovernmentUser &&
+        report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.DRAFT
+      ) {
+        return false
+      }
+      return true
+    })
+  }, [chain, isGovernmentUser])
+
   return (
     <BCWidgetCard
       component="div"
@@ -67,7 +81,7 @@ export const LegacyAssessmentCard = ({
                 }}
               />
             )}
-            {!!chain.length && (
+            {!!filteredChain.length && (
               <>
                 <BCTypography
                   sx={{ paddingTop: '16px' }}
@@ -77,7 +91,7 @@ export const LegacyAssessmentCard = ({
                 >
                   {t('report:reportHistory')}
                 </BCTypography>
-                {chain.map((report) => (
+                {filteredChain.map((report) => (
                   <HistoryCard key={report.version} report={report} />
                 ))}
               </>

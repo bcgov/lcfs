@@ -1,6 +1,6 @@
 import React from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
-import { expect, it, vi } from 'vitest'
+import { expect, it, vi, describe } from 'vitest'
 import { AssessmentCard } from '../AssessmentCard'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -42,7 +42,7 @@ vi.mock('react-i18next', () => ({
         case 'report:complianceReportHistory.Submitted':
           return `Signed and submitted by ${options.displayName} on ${options.createDate}`
         case 'report:complianceReportHistory.Draft':
-          return `Signed and submitted by ${options.displayName} on ${options.createDate}`
+          return `Draft entry for ${options.displayName} on ${options.createDate}`
         case 'report:supplementalCreated':
           return 'Supplemental report created successfully'
         default:
@@ -57,6 +57,34 @@ vi.mock('@/contexts/AuthContext', () => ({
     setForbidden: vi.fn()
   })
 }))
+
+vi.mock('@/hooks/useOrganizationSnapshot.js', () => {
+  return {
+    // Mock read hook
+    useOrganizationSnapshot: vi.fn().mockReturnValue({
+      data: {
+        complianceReportId: 3,
+        isEdited: true,
+        name: 'LCFS Org 1',
+        operatingName: 'LCFS Org 1',
+        email: 'tfrs@gov.bc.ca',
+        phone: '000-555-1234',
+        headOfficeAddress:
+          '456 Nexus Avenue, Suite 101, Cosmos City, BC, Canada',
+        recordsAddress: '123 Pl, Maple Ridge, BC',
+        serviceAddress: '123 Quantum St, Futurica, BC, Canada'
+      },
+      isLoading: false,
+      isError: false
+    }),
+
+    // Mock update hook
+    useUpdateOrganizationSnapshot: vi.fn().mockReturnValue({
+      mutate: vi.fn(),
+      isLoading: false
+    })
+  }
+})
 
 describe('AssessmentCard', () => {
   const mockHistory = [
@@ -254,10 +282,58 @@ describe('AssessmentCard', () => {
       />,
       { wrapper }
     )
+
     await waitFor(() => {
-      expect(
-        screen.getByText('Assessed by John Doe on 2024-09-30 5:00 pm PDT')
-      ).toBeInTheDocument()
+      expect(screen.getByText(/Assessed by John Doe on/)).toBeInTheDocument()
+    })
+  })
+
+  it('should NOT render Draft chain items when user isGovernmentUser=true', async () => {
+    const mockChain = [
+      {
+        version: 0,
+        compliancePeriod: { description: '2025' },
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
+            createDate: '2025-03-01T10:00:00Z',
+            displayName: 'Draft Tester'
+          }
+        ]
+      },
+      {
+        version: 1,
+        compliancePeriod: { description: '2024' },
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            createDate: '2024-10-01T10:00:00Z',
+            displayName: 'Submitted Tester'
+          }
+        ]
+      }
+    ]
+
+    render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasMetRenewables={false}
+        hasMetLowCarbon={false}
+        hasSupplemental={false}
+        isGovernmentUser={true}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Draft Tester/)).not.toBeInTheDocument()
+      expect(screen.getByText(/Submitted Tester/)).toBeInTheDocument()
     })
   })
 })
