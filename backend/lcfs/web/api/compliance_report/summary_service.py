@@ -937,7 +937,7 @@ class ComplianceReportSummaryService:
         )
 
         # Initialize compliance units sum
-        compliance_units_sum = 0
+        compliance_units_sum = 0.0
 
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
@@ -952,7 +952,7 @@ class ComplianceReportSummaryService:
             compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
             compliance_units_sum += compliance_units
 
-        return int(compliance_units_sum)
+        return round(compliance_units_sum)
 
     @service_handler
     async def calculate_fuel_export_compliance_units(
@@ -967,7 +967,7 @@ class ComplianceReportSummaryService:
         )
 
         # Initialize compliance units sum
-        compliance_units_sum = 0
+        compliance_units_sum = 0.0
         # Calculate compliance units for each fuel export record
         for fuel_export in fuel_export_records:
             TCI = fuel_export.target_ci or 0  # Target Carbon Intensity
@@ -980,11 +980,11 @@ class ComplianceReportSummaryService:
             # Apply the compliance units formula
             compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
             compliance_units = -compliance_units
-            compliance_units = round(compliance_units) if compliance_units < 0 else 0
+            compliance_units = compliance_units if compliance_units < 0 else 0
 
             compliance_units_sum += compliance_units
 
-        return int(compliance_units_sum)
+        return round(compliance_units_sum)
 
 
 #     async def are_identical(

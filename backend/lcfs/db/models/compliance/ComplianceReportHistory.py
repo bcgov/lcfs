@@ -1,11 +1,18 @@
-from sqlalchemy import Column, Integer, ForeignKey, String
+from sqlalchemy import Column, Integer, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable
 
 
 class ComplianceReportHistory(BaseModel, Auditable):
     __tablename__ = "compliance_report_history"
-    __table_args__ = {"comment": "Tracks status changes of compliance reports"}
+    __table_args__ = (
+        UniqueConstraint(
+            'compliance_report_id',
+            'status_id',
+            name='uq_compliance_report_id_status_id'
+        ),
+        {"comment": "Tracks status changes of compliance reports"},
+    )
 
     compliance_report_history_id = Column(
         Integer,
