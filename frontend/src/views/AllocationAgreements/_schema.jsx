@@ -86,7 +86,7 @@ export const allocationAgreementColDefs = (
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transactionPartner'
     ),
-    cellDataType: 'text',
+    cellDataType: 'object',
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
       queryKey: 'trading-partner-name-search',
@@ -116,21 +116,15 @@ export const allocationAgreementColDefs = (
     editable: true,
     valueSetter: (params) => {
       const { newValue: selectedName, node, data } = params
-      const apiData = node.data.apiDataCache || [] // Safely access cached data or default to an empty array
 
-      // Attempt to find the selected company from the cached API data
-      const selectedOption = apiData.find(
-        (company) => company.name === selectedName
-      )
-
-      if (selectedOption) {
+      if (typeof selectedName === 'object') {
         // Only update related fields if a match is found in the API data
-        data.transactionPartner = selectedOption.name
-        data.postalAddress = selectedOption.address || data.postalAddress
+        data.transactionPartner = selectedName.name
+        data.postalAddress = selectedName.address || data.postalAddress
         data.transactionPartnerEmail =
-          selectedOption.email || data.transactionPartnerEmail
+          selectedName.email || data.transactionPartnerEmail
         data.transactionPartnerPhone =
-          selectedOption.phone || data.transactionPartnerPhone
+          selectedName.phone || data.transactionPartnerPhone
       } else {
         // If no match, only update the transactionPartner field, leave others unchanged
         data.transactionPartner = selectedName
