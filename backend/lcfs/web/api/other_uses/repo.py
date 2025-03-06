@@ -32,10 +32,10 @@ class OtherUsesRepository:
     def __init__(
         self,
         db: AsyncSession = Depends(get_async_db_session),
-        fuel_repo: FuelCodeRepository = Depends(),
+        fuel_code_repo: FuelCodeRepository = Depends(),
     ):
         self.db = db
-        self.fuel_code_repo = fuel_repo
+        self.fuel_code_repo = fuel_code_repo
 
     @repo_handler
     async def get_table_options(self, compliance_period: str) -> dict:

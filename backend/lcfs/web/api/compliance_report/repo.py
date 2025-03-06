@@ -1,13 +1,13 @@
 from collections import defaultdict
-from datetime import datetime
-from typing import List, Optional, Dict, Union
 
 import structlog
+from datetime import datetime
 from fastapi import Depends
 from sqlalchemy import func, select, and_, asc, desc, update, String, cast
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, aliased
 from sqlalchemy.inspection import inspect
+from sqlalchemy.orm import joinedload, aliased
+from typing import List, Optional, Dict, Union
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import CompliancePeriod, ComplianceReportListView

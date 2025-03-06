@@ -286,7 +286,7 @@ async def test_handle_submitted_status_with_existing_summary(
     )
     mock_repo.get_summary_by_report_id.assert_called_once_with(report_id)
     compliance_report_summary_service.calculate_compliance_report_summary.assert_called_once_with(
-        report_id, mock.ANY
+        report_id
     )
 
     # Check if the summary is locked by verifying that the save call includes a UserProfile
@@ -368,7 +368,7 @@ async def test_handle_submitted_status_without_existing_summary(
     # Assertions
     mock_repo.get_summary_by_report_id.assert_called_once_with(report_id)
     compliance_report_summary_service.calculate_compliance_report_summary.assert_called_once_with(
-        report_id, mock.ANY
+        report_id
     )
 
     # Check if a new summary is created

@@ -18,6 +18,7 @@ from fastapi_cache.decorator import cache
 
 from lcfs.db import dependencies
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.notional_transfer.schema import (
@@ -28,7 +29,7 @@ from lcfs.web.api.notional_transfer.schema import (
     DeleteNotionalTransferResponseSchema,
     PaginatedNotionalTransferRequestSchema,
     NotionalTransfersAllSchema,
-    NotionalTransfersRequestSchema
+    NotionalTransfersRequestSchema,
 )
 from lcfs.web.api.base import ComplianceReportRequestSchema, PaginationRequestSchema
 from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
@@ -86,13 +87,12 @@ async def get_notional_transfers(
             )
 
         await report_validate.validate_compliance_report_access(compliance_report)
-        await report_validate.validate_organization_access(
-            compliance_report_id
-        )
+        await report_validate.validate_organization_access(compliance_report_id)
+        is_gov_user = user_has_roles(request.user, [RoleEnum.GOVERNMENT])
         return await service.get_notional_transfers(
-            request_data.compliance_report_id,
-            request.user,
-            request_data.changelog
+            compliance_report_id,
+            request_data.changelog,
+            not is_gov_user,
         )
 
     except HTTPException as http_ex:

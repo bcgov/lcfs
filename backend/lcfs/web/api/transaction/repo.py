@@ -288,7 +288,7 @@ class TransactionRepository:
 
         Args:
             organization_id (int): The ID of the organization for which to calculate the available balance.
-            compliance_period_end (datetime): The end date of the compliance period for which to calculate the available balance.
+            compliance_period (int): The compliance period year in integer
 
         Returns:
             int: The available balance of compliance units for the specified organization and period. Returns 0 if no balance is calculated.

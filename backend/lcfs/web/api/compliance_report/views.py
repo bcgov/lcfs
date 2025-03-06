@@ -117,9 +117,7 @@ async def get_compliance_report_summary(
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
     await validate.validate_organization_access(report_id)
-    return await summary_service.calculate_compliance_report_summary(
-        report_id, request.user
-    )
+    return await summary_service.calculate_compliance_report_summary(report_id)
 
 
 @router.put(
@@ -140,7 +138,7 @@ async def update_compliance_report_summary(
     """
     await validate.validate_organization_access(report_id)
     return await summary_service.update_compliance_report_summary(
-        report_id, summary_data, request.user
+        report_id, summary_data
     )
 
 
