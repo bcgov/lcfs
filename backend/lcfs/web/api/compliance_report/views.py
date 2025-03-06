@@ -315,27 +315,6 @@ async def export_compliance_report(
     return await export_service.export(report_id)
 
 
-@router.get(
-    "/{report_id}/export",
-    response_class=StreamingResponse,
-    status_code=status.HTTP_200_OK,
-)
-@view_handler(
-    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
-)
-async def export_compliance_report(
-    request: Request,
-    report_id: int,
-    export_service: ComplianceReportExporter = Depends(),
-    validate: ComplianceReportValidation = Depends(),
-) -> StreamingResponse:
-    """
-    Retrieve the comprehensive compliance report summary for a specific report by ID.
-    """
-    await validate.validate_organization_access(report_id)
-    return await export_service.export(report_id)
-
-
 @router.post(
     "/allocation-agreements/changelog",
     response_model=ComplianceReportChangelogSchema[AllocationAgreementResponseSchema],
