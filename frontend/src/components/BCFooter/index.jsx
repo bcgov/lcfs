@@ -7,8 +7,8 @@ import typography from '@/themes/base/typography'
 
 function Footer({
   repoDetails = {
-    href: 'https://github.com/bcgov/lcfs/releases/tag/v1.0.1',
-    name: 'v1.0.1',
+    href: 'https://github.com/bcgov/lcfs/releases/tag/v1.0.2',
+    name: 'v1.0.2',
     id: 'footer-about-version',
     label: 'LCFS repository changelog'
   },
