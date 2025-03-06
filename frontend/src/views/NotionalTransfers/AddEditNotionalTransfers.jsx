@@ -141,7 +141,11 @@ export const AddEditNotionalTransfers = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'legalName') {
-        if (params.newValue === currentUser.organization.name) {
+        if (
+          (typeof params.newValue === 'object' &&
+            params.newValue?.name === currentUser.organization.name) ||
+          params.newValue === currentUser.organization.name
+        ) {
           alertRef.current?.triggerAlert({
             message:
               'You cannot select your own organization as the transaction partner.',
@@ -150,6 +154,13 @@ export const AddEditNotionalTransfers = () => {
           params.node.setDataValue('legalName', '')
           return
         }
+
+        const legalName =
+          typeof params.newValue === 'string'
+            ? params.newValue
+            : params.newValue?.name || ''
+
+        params.node.setDataValue('legalName', legalName)
       }
 
       const isValid = validate(

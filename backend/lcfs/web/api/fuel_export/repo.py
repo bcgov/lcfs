@@ -6,6 +6,8 @@ from lcfs.db.models.compliance import (
     ComplianceReportStatus,
 )
 from lcfs.db.models.fuel import (
+    CategoryCarbonIntensity,
+    DefaultCarbonIntensity,
     EnergyDensity,
     EnergyEffectivenessRatio,
     FuelCategory,
@@ -52,10 +54,14 @@ class FuelExportRepository:
                 joinedload(FuelType.energy_density),
                 joinedload(FuelType.additional_carbon_intensity),
                 joinedload(FuelType.energy_effectiveness_ratio),
+                joinedload(FuelType.default_carbon_intensities).options(
+                    selectinload(DefaultCarbonIntensity.compliance_period)
+                ),
             ),
             joinedload(FuelExport.provision_of_the_act),
             joinedload(FuelExport.end_use_type),
         )
+
 
     @repo_handler
     async def get_fuel_export_table_options(self, compliance_period: str):
@@ -87,7 +93,8 @@ class FuelExportRepository:
                 FuelInstance.fuel_category_id,
                 FuelType.fuel_type,
                 FuelType.fossil_derived,
-                FuelType.default_carbon_intensity,
+                DefaultCarbonIntensity.default_carbon_intensity,
+                CategoryCarbonIntensity.category_carbon_intensity,
                 FuelCategory.category,
                 ProvisionOfTheAct.provision_of_the_act_id,
                 ProvisionOfTheAct.name.label("provision_of_the_act"),
@@ -119,6 +126,23 @@ class FuelExportRepository:
                 FuelCategory.fuel_category_id == FuelInstance.fuel_category_id,
             )
             .outerjoin(
+                DefaultCarbonIntensity,
+                and_(
+                    DefaultCarbonIntensity.fuel_type_id == FuelType.fuel_type_id,
+                    DefaultCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
+                ),
+            )
+            .outerjoin(
+                CategoryCarbonIntensity,
+                and_(
+                    CategoryCarbonIntensity.fuel_category_id
+                    == FuelCategory.fuel_category_id,
+                    CategoryCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
+                ),
+            )
+            .outerjoin(
                 ProvisionOfTheAct,
                 or_(
                     and_(
@@ -135,8 +159,8 @@ class FuelExportRepository:
                 EnergyDensity,
                 and_(
                     EnergyDensity.fuel_type_id == FuelType.fuel_type_id,
-                    EnergyDensity.compliance_period_id == subquery_compliance_period_id
-                )
+                    EnergyDensity.compliance_period_id == subquery_compliance_period_id,
+                ),
             )
             .outerjoin(UnitOfMeasure, EnergyDensity.uom_id == UnitOfMeasure.uom_id)
             .outerjoin(
@@ -145,7 +169,8 @@ class FuelExportRepository:
                     EnergyEffectivenessRatio.fuel_category_id
                     == FuelCategory.fuel_category_id,
                     EnergyEffectivenessRatio.fuel_type_id == FuelInstance.fuel_type_id,
-                    EnergyEffectivenessRatio.compliance_period_id == subquery_compliance_period_id
+                    EnergyEffectivenessRatio.compliance_period_id
+                    == subquery_compliance_period_id,
                 ),
             )
             .outerjoin(
@@ -178,8 +203,7 @@ class FuelExportRepository:
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         if not include_legacy:
             query = query.where(
-                and_(FuelType.is_legacy == False,
-                     ProvisionOfTheAct.is_legacy == False)
+                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
             )
 
         results = (await self.db.execute(query)).all()
@@ -187,7 +211,10 @@ class FuelExportRepository:
 
     @repo_handler
     async def get_fuel_export_list(
-        self, compliance_report_id: int, changelog: Optional[bool] = False, exclude_draft_reports: bool = False
+        self,
+        compliance_report_id: int,
+        changelog: Optional[bool] = False,
+        exclude_draft_reports: bool = False,
     ) -> List[FuelExport]:
         """
         Retrieve the list of effective fuel exports for a given compliance report.
@@ -239,10 +266,9 @@ class FuelExportRepository:
 
         # Manually apply pagination
         total_count = len(effective_fuel_exports)
-        offset = 0 if pagination.page < 1 else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_exports = effective_fuel_exports[offset: offset + limit]
+        paginated_exports = effective_fuel_exports[offset : offset + limit]
 
         return paginated_exports, total_count
 
@@ -291,15 +317,6 @@ class FuelExportRepository:
             ],
         )
         return fuel_export
-
-    @repo_handler
-    async def delete_fuel_export(self, fuel_export_id: int):
-        """Delete a fuel supply row from the database"""
-        await self.db.execute(
-            delete(FuelExport).where(
-                FuelExport.fuel_export_id == fuel_export_id)
-        )
-        await self.db.flush()
 
     @repo_handler
     async def get_fuel_export_version_by_user(
@@ -351,7 +368,10 @@ class FuelExportRepository:
 
     @repo_handler
     async def get_effective_fuel_exports(
-        self, compliance_report_group_uuid: str, changelog: Optional[bool] = False, exclude_draft_reports: bool = False
+        self,
+        compliance_report_group_uuid: str,
+        changelog: Optional[bool] = False,
+        exclude_draft_reports: bool = False,
     ) -> List[FuelExport]:
         """
         Retrieve effective FuelExport records associated with the given compliance_report_group_uuid.
@@ -376,22 +396,22 @@ class FuelExportRepository:
             (FuelExport.user_type == UserTypeEnum.SUPPLIER, 0),
             else_=0,
         )
-        conditions = [FuelExport.compliance_report_id.in_(
-            compliance_reports_select)]
+        conditions = [FuelExport.compliance_report_id.in_(compliance_reports_select)]
         if not changelog:
             delete_group_select = (
                 select(FuelExport.group_uuid)
                 .where(
-                    FuelExport.compliance_report_id.in_(
-                        compliance_reports_select),
+                    FuelExport.compliance_report_id.in_(compliance_reports_select),
                     FuelExport.action_type == ActionTypeEnum.DELETE,
                 )
                 .distinct()
             )
-            conditions.extend([
-                FuelExport.action_type != ActionTypeEnum.DELETE,
-                ~FuelExport.group_uuid.in_(delete_group_select)
-            ])
+            conditions.extend(
+                [
+                    FuelExport.action_type != ActionTypeEnum.DELETE,
+                    ~FuelExport.group_uuid.in_(delete_group_select),
+                ]
+            )
 
         valid_fuel_exports_select = (
             select(

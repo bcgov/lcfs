@@ -40,3 +40,9 @@ class FuelCategory(BaseModel, Auditable, DisplayOrder, EffectiveDates):
         "TargetCarbonIntensity", back_populates="fuel_category"
     )
     fuel_instances = relationship("FuelInstance", back_populates="fuel_category")
+    category_carbon_intensities = relationship(
+        "CategoryCarbonIntensity",
+        back_populates="fuel_category",
+        lazy="selectin",
+        order_by="CategoryCarbonIntensity.compliance_period_id"
+    )

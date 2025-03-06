@@ -92,3 +92,9 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
         back_populates="fuel_type",
         overlaps="additional_carbon_intensity"
     )
+    default_carbon_intensities = relationship(
+        "DefaultCarbonIntensity",
+        back_populates="fuel_type",
+        lazy="selectin",
+        order_by="DefaultCarbonIntensity.compliance_period_id"
+    )
