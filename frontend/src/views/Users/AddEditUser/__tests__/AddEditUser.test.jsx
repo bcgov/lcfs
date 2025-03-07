@@ -35,7 +35,9 @@ vi.mock('@/stores/useUserStore', () => ({
 }))
 
 async function typeAndValidateTextBox(name, value) {
-  const textBox = screen.getByRole('textbox', { name })
+  const textBox = screen.getByRole('textbox', {
+    name: new RegExp(`^${name}`, 'i')
+  })
   expect(textBox).toBeInTheDocument()
   await userEvent.type(textBox, value, { delay: 10 })
   expect(textBox).toHaveValue(value)
@@ -57,10 +59,9 @@ describe('AddEditUser component', () => {
   it('renders the form to add IDIR user', async () => {
     const { container } = render(<AddEditUser />, { wrapper })
 
-    // Check for the heading with the name "Add user"
-    const addUserHeading = screen.getByRole('heading', { name: 'Add user' })
-    expect(addUserHeading).toBeInTheDocument()
-    // Check if the container HTML element contains the form
+    expect(
+      screen.getByRole('heading', { name: /Add user/i })
+    ).toBeInTheDocument()
     expect(container.querySelector('form#user-form')).toBeInTheDocument()
     // Check for form fields
     await typeAndValidateTextBox('First name', 'John')
@@ -68,8 +69,8 @@ describe('AddEditUser component', () => {
     await typeAndValidateTextBox('Job title', 'Analyst')
     await typeAndValidateTextBox('IDIR user name', 'johndoe')
     await typeAndValidateTextBox('Email address', 'test@test.com')
-    await typeAndValidateTextBox('Phone (optional)', '555-555-5555')
-    await typeAndValidateTextBox('Mobile phone (optional)', '555-555-5555')
+    await typeAndValidateTextBox('Phone', '555-555-5555')
+    await typeAndValidateTextBox('Mobile phone', '555-555-5555')
 
     const saveButton = screen.getByRole('button', { name: /save/i })
     userEvent.click(saveButton)
@@ -81,18 +82,18 @@ describe('AddEditUser component', () => {
     // Check for form fields
     await typeAndValidateTextBox('First name', 'John')
     await typeAndValidateTextBox('Last name', 'Doe')
-    await typeAndValidateTextBox('Job title (optional)', 'Compliance manager')
+    await typeAndValidateTextBox('Job title', 'Compliance manager')
     await typeAndValidateTextBox('BCeID Userid', 'johndoe')
     await typeAndValidateTextBox(
       'Email address associated with the BCeID user account',
       'test@test.com'
     )
     await typeAndValidateTextBox(
-      'Alternate email for notifications (optional)',
+      'Alternate email for notifications',
       'test@test.com'
     )
-    await typeAndValidateTextBox('Phone (optional)', '555-555-5555')
-    await typeAndValidateTextBox('Mobile phone (optional)', '555-555-5555')
+    await typeAndValidateTextBox('Phone', '555-555-5555')
+    await typeAndValidateTextBox('Mobile phone', '555-555-5555')
 
     const saveButton = screen.getByRole('button', { name: /save/i })
     userEvent.click(saveButton)
@@ -117,9 +118,7 @@ describe('AddEditUser component', () => {
       await screen.findByText('Email address is required.')
     ).toBeInTheDocument()
     expect(await screen.findByText('User name is required')).toBeInTheDocument()
-    const phoneNumber = screen.getByRole('textbox', {
-      name: 'Phone (optional)'
-    })
+    const phoneNumber = screen.getAllByLabelText(/Phone/i)[0]
     await userEvent.type(phoneNumber, '1234')
     expect(
       await screen.findByText('Phone number is not valid')

@@ -105,12 +105,13 @@ export const AddEditAllocationAgreements = () => {
       ) {
         const updatedRowData = data.allocationAgreements.map((item) => ({
           ...item,
+          complianceReportId, // This takes current reportId, important for versioning
+          compliancePeriod,
           id: item.id || uuid() // Ensure every item has a unique ID
         }))
         setRowData([...updatedRowData, { id: uuid() }])
       } else {
-        // If allocationAgreements is not available or empty, initialize with a single row
-        setRowData([{ id: uuid() }])
+        setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
 
       params.api.sizeColumnsToFit()
@@ -138,16 +139,15 @@ export const AddEditAllocationAgreements = () => {
   }, [optionsData, currentUser, errors, warnings])
 
   useEffect(() => {
-    if (
-      !allocationAgreementsLoading &&
-      data?.allocationAgreements?.length > 0
-    ) {
-      const updatedRowData = data.allocationAgreements.map((item) => ({
-        ...item,
-        agreementType: item.agreementType?.type,
-        id: uuid()
-      }))
-      setRowData(updatedRowData)
+    if (!allocationAgreementsLoading && data?.allocationAgreements?.length > 0) {
+      const ensureRowIds = (rows) =>
+        rows.map((row) => ({
+          ...row,
+          id: uuid(),
+          isValid: true
+        }))
+
+      setRowData(ensureRowIds(data.allocationAgreements))
     } else {
       setRowData([{ id: uuid() }])
     }
@@ -248,7 +248,11 @@ export const AddEditAllocationAgreements = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'transactionPartner') {
-        if (params.newValue === currentUser.organization.name) {
+        if (
+          params.newValue === currentUser.organization.name ||
+          (typeof params.newValue === 'object' &&
+            params.newValue.name === currentUser.organization.name)
+        ) {
           alertRef.current?.triggerAlert({
             message:
               'You cannot select your own organization as the transaction partner.',
@@ -257,6 +261,12 @@ export const AddEditAllocationAgreements = () => {
           params.node.setDataValue('transactionPartner', '')
           return
         }
+        params.node.setDataValue(
+          'transactionPartner',
+          typeof params.newValue === 'string'
+            ? params.newValue
+            : params.newValue?.name
+        )
       }
 
       const isValid = validate(

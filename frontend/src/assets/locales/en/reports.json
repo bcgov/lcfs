@@ -11,7 +11,10 @@
   },
   "noReportsFound": "No compliance reports found",
   "serviceAddrLabel": "Address for service",
-  "bcAddrLabel": "Address in B.C.",
+  "hoAddrLabel": "Head office (optional)",
+  "hoAddrLabelView": "Head office address",
+  "hoAddrLabelEdit": "Head office address (international)",
+  "bcRecordLabel": "Address in B.C. (where records are maintained)",
   "activityHdrLabel": "Did <b>{{name}}</b> engage in any of the following activities between January 1, {{period}}, and December 31, {{period}}?",
   "reportActivities": "Report activities",
   "orgDetails": "Organization details",
@@ -23,6 +26,7 @@
   "supplementalReport": "Supplemental Report",
   "createSupplementalRptBtn": "Create supplemental report",
   "createReassessmentBtn": "Create reassessment",
+  "downloadExcel": "Download Excel",
   "supplementalCreated": "Supplemental report created successfully.",
   "clickDrag": "Drag and drop your (PDF, JPG, PNG, MSG, DOC, XLS) file(s) here or click to select the file(s) from your machine to upload.",
   "activityLinksList": "Click links to report activities",
@@ -34,7 +38,8 @@
     "notionalTransfers": "Notional transfers of eligible renewable fuel",
     "fuelsOtherUse": "Fuels for other use",
     "exportFuels": "Exporting fuel that was previously marketed in British Columbia",
-    "uploadDocuments": "Upload supporting documents for your report"
+    "uploadDocuments": "Upload supporting documents for your report",
+    "downloadExcel": "Download your report details"
   },
   "activityLabels": {
     "supplyOfFuel": "Supply of fuel",
@@ -155,6 +160,9 @@
     "Submitted": "Signed and submitted {{createDate}} by {{displayName}}.",
     "Recommended by analyst": "Recommended {{createDate}} by {{displayName}}.",
     "Recommended by manager": "Recommended {{createDate}} by {{displayName}}.",
+    "Not recommended by analyst": "Not recommended {{createDate}} by {{displayName}}.",
+    "Not recommended by manager": "Not recommended {{createDate}} by {{displayName}}.",
+    "Rejected": "Rejected {{createDate}} by {{displayName}}.",
     "Assessed": "Assessed {{createDate}} by {{displayName}}.",
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
     "Reassessed": "Re-assessed"

@@ -8,6 +8,7 @@ import {
 import { Link, useLocation } from 'react-router-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import colors from '@/themes/base/colors'
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
 
 export const TextRenderer = (props) => {
   return (
@@ -33,6 +34,76 @@ export const LinkRenderer = (props) => {
   )
 }
 
+export const SelectRenderer = (params) => {
+  const cellParams = params.colDef?.cellEditorParams
+
+  const options =
+    typeof cellParams === 'function'
+      ? cellParams(params).options
+      : cellParams.options
+
+  const hasOptions = options?.length > 1
+
+  const isEditable =
+    typeof params.colDef.editable === 'function'
+      ? params.colDef.editable(params)
+      : params.colDef.editable
+
+  const displayValue =
+    params.value ?? (hasOptions && isEditable ? 'Select' : '')
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}
+    >
+      {displayValue}
+      {hasOptions && isEditable && (
+        <ArrowDropDownIcon sx={{ height: 22, width: 22, color: '#44474e' }} />
+      )}
+    </div>
+  )
+}
+
+export const MultiSelectRenderer = (params) => {
+  const cellParams = params.colDef?.cellEditorParams
+
+  const options =
+    typeof cellParams === 'function'
+      ? cellParams(params).options
+      : cellParams.options
+
+  const hasOptions = options?.length > 1
+
+  const isEditable =
+    typeof params.colDef.editable === 'function'
+      ? params.colDef.editable(params)
+      : params.colDef.editable
+
+  if (params.value && params.value !== '') {
+    return <CommonArrayRenderer disableLink {...params} />
+  }
+  const displayValue =
+    params.value ?? (hasOptions && isEditable ? 'Select' : '')
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}
+    >
+      {displayValue}
+      {hasOptions && isEditable && (
+        <ArrowDropDownIcon sx={{ height: 22, width: 22, color: '#44474e' }} />
+      )}
+    </div>
+  )
+}
+
 export const ConditionalLinkRenderer = (condition) => {
   return (props) => {
     if (condition(props)) {
@@ -42,6 +113,7 @@ export const ConditionalLinkRenderer = (condition) => {
     }
   }
 }
+
 const BaseStatusRenderer = ({
   isView = false,
   value = false,

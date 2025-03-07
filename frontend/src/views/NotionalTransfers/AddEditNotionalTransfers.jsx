@@ -1,22 +1,24 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import BCTypography from '@/components/BCTypography'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
-import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
+import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
+import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import { defaultColDef, notionalTransferColDefs } from './_schema'
+import * as ROUTES from '@/constants/routes/routes.js'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
+  useGetAllNotionalTransfersList,
   useNotionalTransferOptions,
-  useGetAllNotionalTransfers,
   useSaveNotionalTransfer
 } from '@/hooks/useNotionalTransfer'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { v4 as uuid } from 'uuid'
-import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
-import * as ROUTES from '@/constants/routes/routes.js'
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import { isArrayEmpty } from '@/utils/array'
+import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { v4 as uuid } from 'uuid'
+import { defaultColDef, notionalTransferColDefs } from './_schema'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -34,11 +36,21 @@ export const AddEditNotionalTransfers = () => {
     isLoading: optionsLoading,
     isFetched
   } = useNotionalTransferOptions()
-  const { data: notionalTransfers, isLoading: transfersLoading } =
-    useGetAllNotionalTransfers(complianceReportId)
   const { mutateAsync: saveRow } = useSaveNotionalTransfer(complianceReportId)
   const navigate = useNavigate()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+  const { data: complianceReport, isLoading: complianceReportLoading } =
+    useGetComplianceReport(
+      currentUser?.organization.organizationId,
+      complianceReportId
+    )
+
+  const isSupplemental = complianceReport?.report?.version !== 0
+  const { data: notionalTransfers, isLoading: transfersLoading } =
+    useGetAllNotionalTransfersList({
+      complianceReportId,
+      changelog: isSupplemental
+    })
 
   useEffect(() => {
     if (location?.state?.message) {
@@ -80,6 +92,9 @@ export const AddEditNotionalTransfers = () => {
             return {
               ...row,
               complianceReportId,
+              isNewSupplementalEntry:
+                isSupplemental &&
+                row.complianceReportId === +complianceReportId,
               id: uuid(),
               isValid: false
             }
@@ -117,7 +132,7 @@ export const AddEditNotionalTransfers = () => {
         })
       }, 100)
     },
-    [complianceReportId, notionalTransfers, t]
+    [complianceReportId, isSupplemental, notionalTransfers, t]
   )
 
   const onCellEditingStopped = useCallback(
@@ -126,7 +141,11 @@ export const AddEditNotionalTransfers = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'legalName') {
-        if (params.newValue === currentUser.organization.name) {
+        if (
+          (typeof params.newValue === 'object' &&
+            params.newValue?.name === currentUser.organization.name) ||
+          params.newValue === currentUser.organization.name
+        ) {
           alertRef.current?.triggerAlert({
             message:
               'You cannot select your own organization as the transaction partner.',
@@ -135,6 +154,13 @@ export const AddEditNotionalTransfers = () => {
           params.node.setDataValue('legalName', '')
           return
         }
+
+        const legalName =
+          typeof params.newValue === 'string'
+            ? params.newValue
+            : params.newValue?.name || ''
+
+        params.node.setDataValue('legalName', legalName)
       }
 
       const isValid = validate(
@@ -189,7 +215,7 @@ export const AddEditNotionalTransfers = () => {
   )
 
   const onAction = async (action, params) => {
-    if (action === 'delete') {
+    if (action === 'delete' || action === 'undo') {
       await handleScheduleDelete(
         params,
         'notionalTransferId',
@@ -209,17 +235,27 @@ export const AddEditNotionalTransfers = () => {
         optionsData,
         currentUser,
         errors,
-        warnings
+        warnings,
+        isSupplemental
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [optionsData, currentUser, errors, warnings, optionsLoading])
+  }, [
+    optionsData,
+    currentUser,
+    errors,
+    warnings,
+    optionsLoading,
+    isSupplemental
+  ])
 
   useEffect(() => {
     if (!transfersLoading && !isArrayEmpty(notionalTransfers)) {
       const updatedRowData = notionalTransfers.map((item) => ({
         ...item,
-        complianceReportId
+        complianceReportId,
+        isNewSupplementalEntry:
+          isSupplemental && item.complianceReportId === +complianceReportId
       }))
       setRowData(updatedRowData)
     } else {
@@ -228,6 +264,7 @@ export const AddEditNotionalTransfers = () => {
   }, [
     compliancePeriod,
     complianceReportId,
+    isSupplemental,
     notionalTransfers,
     transfersLoading
   ])
@@ -247,7 +284,9 @@ export const AddEditNotionalTransfers = () => {
 
   return (
     isFetched &&
-    !transfersLoading && (
+    !transfersLoading &&
+    !currentUserLoading &&
+    !complianceReportLoading && (
       <Grid2 className="add-edit-notional-transfer-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">
@@ -284,6 +323,9 @@ export const AddEditNotionalTransfers = () => {
               onSave: handleNavigateBack,
               confirmText: t('report:incompleteReport'),
               confirmLabel: t('report:returnToReport')
+            }}
+            gridOptions={{
+              getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
             }}
           />
         </BCBox>

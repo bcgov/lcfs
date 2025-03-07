@@ -16,6 +16,7 @@ from lcfs.web.utils.schema_validators import fuel_code_required
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
+    changelog: Optional[bool] = None
     filters: Optional[List[FilterModel]] = None
     page: Optional[int] = None
     size: Optional[int] = None
@@ -26,6 +27,12 @@ class FuelCategorySchema(BaseSchema):
     fuel_category_id: int
     fuel_category: str
     default_and_prescribed_ci: Optional[float] = None
+
+    @field_validator("default_and_prescribed_ci")
+    def quantize_default_carbon_intensity(cls, value):
+        if value is not None:
+            return round(value, 2)
+        return value
 
 
 class ProvisionOfTheActSchema(BaseSchema):
@@ -76,7 +83,7 @@ class FuelTypeOptionsSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
     fossil_derived: bool
-    default_carbon_intensity: float
+    default_carbon_intensity: Optional[float] = None
     unit: str
     energy_density: Optional[EnergyDensitySchema]
     provisions: List[ProvisionOfTheActSchema]
@@ -84,6 +91,12 @@ class FuelTypeOptionsSchema(BaseSchema):
     eer_ratios: List[EnergyEffectivenessRatioSchema]
     target_carbon_intensities: List[TargetCarbonIntensitySchema]
     fuel_codes: Optional[List[FuelCodeSchema]] = []
+
+    @field_validator("default_carbon_intensity")
+    def quantize_default_carbon_intensity(cls, value):
+        if value is not None:
+            return round(value, 2)
+        return value
 
 
 class FuelTypeOptionsResponse(BaseSchema):
@@ -101,7 +114,9 @@ class FuelTypeSchema(BaseSchema):
 
     @field_validator("default_carbon_intensity")
     def quantize_default_carbon_intensity(cls, value):
-        return round(value, 2)
+        if value is not None:
+            return round(value, 2)
+        return value
 
 
 class FuelCategoryResponseSchema(BaseSchema):
@@ -159,6 +174,12 @@ class FuelExportSchema(BaseSchema):
     diff: Optional[FuelExportDiffSchema] = None
     updated: Optional[bool] = None
 
+    @field_validator("compliance_units", mode="before")
+    def round_compliance_units(cls, value):
+        if value is not None:
+            return round(value)
+        return value
+
 
 class FuelExportCreateUpdateSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
@@ -184,6 +205,7 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     eer: Optional[float] = 0
     energy: Optional[float] = 0
     deleted: Optional[bool] = None
+    is_new_supplemental_entry: Optional[bool] = None
 
     @model_validator(mode="before")
     @classmethod

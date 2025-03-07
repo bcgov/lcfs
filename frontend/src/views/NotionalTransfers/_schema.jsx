@@ -13,17 +13,27 @@ import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const notionalTransferColDefs = (
   optionsData,
   currentUser,
   errors,
-  warnings
+  warnings,
+  isSupplemental
 ) => [
   validation,
-  actions({
-    enableDuplicate: false,
-    enableDelete: true
+  actions((params) => {
+    return {
+      enableDuplicate: false,
+      enableDelete: !params.data.isNewSupplementalEntry,
+      enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
+      enableStatus:
+        isSupplemental &&
+        params.data.isNewSupplementalEntry &&
+        ACTION_STATUS_MAP[params.data.actionType]
+    }
   }),
   {
     field: 'id',
@@ -48,7 +58,7 @@ export const notionalTransferColDefs = (
     field: 'legalName',
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
     headerComponent: RequiredHeader,
-    cellDataType: 'text',
+    cellDataType: 'object',
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
       queryKey: 'company-details-search',
@@ -74,16 +84,10 @@ export const notionalTransferColDefs = (
     minWidth: 300,
     valueSetter: (params) => {
       const { newValue: selectedName, node, data } = params
-      const apiData = node.data.apiDataCache || []
-      // Attempt to find the selected company from the cached API data
-      const selectedOption = apiData.find(
-        (company) => company.name === selectedName
-      )
-      if (selectedOption) {
-        // Only update related fields if a match is found in the API data
-        data.legalName = selectedOption.name
-        data.addressForService =
-          selectedOption.address || data.addressForService
+      if (typeof selectedName === 'object') {
+        // If selectedName is an object, set the legalName directly
+        data.legalName = selectedName.name
+        data.addressForService = selectedName.address
       } else {
         // If no match, only update the legalName field, leave others unchanged
         data.legalName = selectedName
@@ -91,7 +95,7 @@ export const notionalTransferColDefs = (
       return true
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'addressForService',
@@ -102,7 +106,7 @@ export const notionalTransferColDefs = (
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'fuelCategory',
@@ -121,10 +125,8 @@ export const notionalTransferColDefs = (
       openOnFocus: true
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+    cellRenderer: SelectRenderer
   },
   {
     field: 'receivedOrTransferred',
@@ -143,10 +145,8 @@ export const notionalTransferColDefs = (
       openOnFocus: true
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+    cellRenderer: SelectRenderer
   },
   {
     field: 'quantity',
@@ -160,7 +160,7 @@ export const notionalTransferColDefs = (
     },
     valueFormatter: (params) => valueFormatter({ value: params.value }),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   }
 ]
 

@@ -7,6 +7,7 @@ import {
   NumberEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
+import colors from '@/themes/base/colors'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { apiRoutes } from '@/constants/routes'
@@ -18,6 +19,8 @@ import {
   isFuelTypeOther,
   fuelTypeOtherConditionalStyle
 } from '@/utils/fuelTypeOther'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -70,9 +73,7 @@ export const allocationAgreementColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
@@ -87,7 +88,7 @@ export const allocationAgreementColDefs = (
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transactionPartner'
     ),
-    cellDataType: 'text',
+    cellDataType: 'object',
     cellEditor: AsyncSuggestionEditor,
     cellEditorParams: (params) => ({
       queryKey: 'trading-partner-name-search',
@@ -117,21 +118,15 @@ export const allocationAgreementColDefs = (
     editable: true,
     valueSetter: (params) => {
       const { newValue: selectedName, node, data } = params
-      const apiData = node.data.apiDataCache || [] // Safely access cached data or default to an empty array
 
-      // Attempt to find the selected company from the cached API data
-      const selectedOption = apiData.find(
-        (company) => company.name === selectedName
-      )
-
-      if (selectedOption) {
+      if (typeof selectedName === 'object') {
         // Only update related fields if a match is found in the API data
-        data.transactionPartner = selectedOption.name
-        data.postalAddress = selectedOption.address || data.postalAddress
+        data.transactionPartner = selectedName.name
+        data.postalAddress = selectedName.address || data.postalAddress
         data.transactionPartnerEmail =
-          selectedOption.email || data.transactionPartnerEmail
+          selectedName.email || data.transactionPartnerEmail
         data.transactionPartnerPhone =
-          selectedOption.phone || data.transactionPartnerPhone
+          selectedName.phone || data.transactionPartnerPhone
       } else {
         // If no match, only update the transactionPartner field, leave others unchanged
         data.transactionPartner = selectedName
@@ -192,9 +187,7 @@ export const allocationAgreementColDefs = (
       freeSolo: false,
       openOnFocus: true
     },
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     suppressKeyboardEvent,
@@ -416,7 +409,7 @@ export const allocationAgreementColDefs = (
       'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
     ),
     valueFormatter: (params) => {
-      return parseFloat(params.value).toFixed(2)
+      return params.value != null ? parseFloat(params.value).toFixed(2) : ''
     },
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
@@ -454,11 +447,286 @@ export const allocationAgreementColDefs = (
   }
 ]
 
+export const allocationAgreementSummaryColDefs = [
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    field: 'allocationTransactionType',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.transactionPartner'),
+    field: 'transactionPartner',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.postalAddress'
+    ),
+    field: 'postalAddress',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+    ),
+    field: 'transactionPartnerEmail',
+    flex: 1
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+    ),
+    field: 'transactionPartnerPhone',
+    flex: 1
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelType'
+    ),
+    field: 'fuelType'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
+    ),
+    field: 'fuelTypeOther'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+    ),
+    field: 'fuelCategory'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
+    ),
+    field: 'provisionOfTheAct'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCode'
+    ),
+    field: 'fuelCode'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
+    ),
+    field: 'ciOfFuel'
+  },
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.units'
+    ),
+    field: 'units'
+  }
+]
+
 export const defaultColDef = {
   editable: true,
   resizable: true,
   filter: false,
   floatingFilter: false,
   sortable: false,
-  singleClickEdit: true
+  singleClickEdit: true,
+  flex: 1
+}
+
+export const changelogNestedOverrides = {
+  'allocationTransactionType': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    field: 'allocationTransactionType',
+    valueGetter: (params) => params.data?.allocationTransactionType?.type || '',
+    cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
+  },
+  'fuelType': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelType'),
+    field: 'fuelType',
+    valueGetter: (params) => params.data?.fuelType?.fuelType || '',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+  },
+  'fuelCategory': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelCategory'),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data?.fuelCategory?.category || '',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+  },
+  'provisionOfTheAct': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'),
+    field: 'provisionOfTheAct',
+    valueGetter: (params) => params.data?.provisionOfTheAct?.name || '',
+    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+  }
+}
+
+export const changelogCommonColDefs = [
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    field: 'allocationTransactionType',
+    valueGetter: (params) => params.data?.allocationTransactionType || '',
+    cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartner'
+    ),
+    field: 'transactionPartner',
+    cellStyle: (params) => changelogCellStyle(params, 'transactionPartner')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.postalAddress'
+    ),
+    field: 'postalAddress',
+    cellStyle: (params) => changelogCellStyle(params, 'postalAddress')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+    ),
+    field: 'transactionPartnerEmail',
+    cellStyle: (params) =>
+      changelogCellStyle(params, 'transactionPartnerEmail')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+    ),
+    field: 'transactionPartnerPhone',
+    cellStyle: (params) =>
+      changelogCellStyle(params, 'transactionPartnerPhone')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelType'
+    ),
+    field: 'fuelType',
+    valueGetter: (params) => params.data?.fuelType || '',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
+    ),
+    field: 'fuelTypeOther',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelTypeOther')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+    ),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data?.fuelCategory || '',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
+    ),
+    field: 'provisionOfTheAct',
+    valueGetter: (params) => params.data?.provisionOfTheAct || '',
+    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCode'
+    ),
+    field: 'fuelCode',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCode')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
+    ),
+    field: 'ciOfFuel',
+    cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
+  },
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    field: 'quantity',
+    cellStyle: (params) => changelogCellStyle(params, 'quantity')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.units'
+    ),
+    field: 'units',
+    cellStyle: (params) => changelogCellStyle(params, 'units')
+  }
+]
+
+export const changelogColDefs = [
+  {
+    field: 'groupUuid',
+    hide: true,
+    sort: 'desc',
+    sortIndex: 1
+  },
+  { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
+  {
+    field: 'actionType',
+    valueGetter: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        if (params.data.updated) {
+          return 'Edited old'
+        } else {
+          return 'Edited new'
+        }
+      }
+      if (params.data.actionType === 'DELETE') {
+        return 'Deleted'
+      }
+      if (params.data.actionType === 'CREATE') {
+        return 'Added'
+      }
+    },
+    cellStyle: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        return { backgroundColor: colors.alerts.warning.background }
+      }
+    }
+  },
+  // Map through the common columns and replace specific ones with their nested versions
+  ...changelogCommonColDefs.map(col => changelogNestedOverrides[col.field] || col)
+]
+
+export const changelogDefaultColDefs = {
+  floatingFilter: false,
+  filter: false
+}
+
+export const changelogCommonGridOptions = {
+  overlayNoRowsTemplate: i18n.t('allocationAgreement:noAllocationAgreementsFound'),
+  autoSizeStrategy: {
+    type: 'fitCellContents',
+    defaultMinWidth: 50,
+    defaultMaxWidth: 600
+  },
+  enableCellTextSelection: true,
+  ensureDomOrder: true
+}
+
+export const changelogGridOptions = {
+  ...changelogCommonGridOptions,
+  getRowStyle: (params) => {
+    if (params.data.actionType === 'DELETE') {
+      return {
+        backgroundColor: colors.alerts.error.background
+      }
+    }
+    if (params.data.actionType === 'CREATE') {
+      return {
+        backgroundColor: colors.alerts.success.background
+      }
+    }
+  }
 }

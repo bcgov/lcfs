@@ -23,7 +23,6 @@ from lcfs.web.api.fuel_supply.schema import (
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
-from lcfs.utils.constants import default_ci
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -48,13 +47,15 @@ class FuelSupplyServices:
 
         row_data = dict(zip(column_names, row))
 
+        default_ci = row_data.get("default_carbon_intensity")
+        category_ci = row_data.get("category_carbon_intensity")
         fuel_category = FuelCategorySchema(
             fuel_category_id=row_data["fuel_category_id"],
             fuel_category=row_data["category"],
             default_and_prescribed_ci=(
-                round(row_data["default_carbon_intensity"], 2)
-                if row_data["fuel_type"] != "Other"
-                else default_ci.get(row_data["category"])
+                default_ci
+                if default_ci is not None and row_data["fuel_type"] != "Other"
+                else category_ci if category_ci is not None else None
             ),
         )
         provision = ProvisionOfTheActSchema(
@@ -72,13 +73,15 @@ class FuelSupplyServices:
         )
         eer = EnergyEffectivenessRatioSchema(
             eer_id=row_data["eer_id"],
-            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"], 2),
+            energy_effectiveness_ratio=round(
+                row_data["energy_effectiveness_ratio"], 2),
             fuel_category=fuel_category,
             end_use_type=end_use_type,
         )
         tci = TargetCarbonIntensitySchema(
             target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
-            target_carbon_intensity=round(row_data["target_carbon_intensity"], 2),
+            target_carbon_intensity=round(
+                row_data["target_carbon_intensity"], 5),
             reduction_target_percentage=round(
                 row_data["reduction_target_percentage"], 2
             ),
@@ -99,7 +102,8 @@ class FuelSupplyServices:
         )
         # Find the existing fuel type if it exists
         existing_fuel_type = next(
-            (ft for ft in fuel_types if ft.fuel_type == row_data["fuel_type"]), None
+            (ft for ft in fuel_types if ft.fuel_type ==
+             row_data["fuel_type"]), None
         )
 
         if existing_fuel_type:
@@ -202,9 +206,9 @@ class FuelSupplyServices:
                 fuel_type=row_data["fuel_type"],
                 fossil_derived=row_data["fossil_derived"],
                 default_carbon_intensity=(
-                    round(row_data["default_carbon_intensity"], 2)
-                    if row_data["fuel_type"] != "Other"
-                    else default_ci.get(row_data["category"])
+                    round(default_ci, 2)
+                    if default_ci is not None and row_data["fuel_type"] != "Other"
+                    else category_ci if category_ci is not None else None
                 ),
                 unit=row_data["unit"].value,
                 energy_density=(
@@ -235,15 +239,17 @@ class FuelSupplyServices:
     async def get_fuel_supply_list(
         self,
         compliance_report_id: int,
+        changelog: bool = False
     ) -> FuelSuppliesSchema:
         """Get fuel supply list for a compliance report"""
         is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         fuel_supply_models = await self.repo.get_fuel_supply_list(
-            compliance_report_id, exclude_draft_reports=is_gov_user
+            compliance_report_id, changelog, exclude_draft_reports=is_gov_user
         )
         fs_list = [
             FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supply_models
         ]
+
         return FuelSuppliesSchema(fuel_supplies=fs_list if fs_list else [])
 
     @service_handler
@@ -263,13 +269,15 @@ class FuelSupplyServices:
         fuel_supplies, total_count = await self.repo.get_fuel_supplies_paginated(
             pagination, compliance_report_id, exclude_draft_reports=is_gov_user
         )
+
         return FuelSuppliesSchema(
             pagination=PaginationResponseSchema(
                 page=pagination.page,
                 size=pagination.size,
                 total=total_count,
                 total_pages=(
-                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
+                    math.ceil(total_count /
+                              pagination.size) if total_count > 0 else 0
                 ),
             ),
             fuel_supplies=[

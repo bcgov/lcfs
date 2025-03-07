@@ -211,6 +211,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                 name={orgData?.name}
                 period={compliancePeriod}
                 reportID={complianceReportId}
+                currentStatus={currentStatus}
               />
             )}
             <AssessmentCard
