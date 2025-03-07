@@ -24,6 +24,6 @@ def upgrade():
 
 def downgrade():
     """Revert the NUMERIC precision of the 'energy' column"""
-    op.alter_column('fuel_export', 'energy_density',
+    op.alter_column('fuel_export', 'energy',
                     existing_type=sa.Numeric(12, 2),
                     type_=sa.Numeric(10, 2))
