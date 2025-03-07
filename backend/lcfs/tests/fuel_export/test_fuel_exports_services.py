@@ -148,6 +148,21 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
         compliance_period="2024",
     )
 
+    # Changing energy_density from MagicMock to be a real number
+    class MockFuelData:
+        def __init__(self):
+            self.energy_density = 10.0
+            self.effective_carbon_intensity = 90.0
+            self.target_ci = 90.0
+            self.eer = 1.0
+            self.uci = 0.0
+
+    mock_fuel_data = MockFuelData()
+
+    fuel_export_action_service.fuel_repo.get_standardized_fuel_data = AsyncMock(
+        return_value=mock_fuel_data
+    )
+
     mock_created_export = FuelExport(
         fuel_export_id=1,
         compliance_report_id=1,
@@ -195,6 +210,21 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         units="L",
         export_date=date.today(),
         compliance_period="2024",
+    )
+
+    # Changing energy_density from MagicMock to be a real number
+    class MockFuelData:
+        def __init__(self):
+            self.energy_density = 10.0
+            self.effective_carbon_intensity = 90.0
+            self.target_ci = 90.0
+            self.eer = 1.0
+            self.uci = 0.0
+
+    mock_fuel_data = MockFuelData()
+
+    fuel_export_action_service.fuel_repo.get_standardized_fuel_data = AsyncMock(
+        return_value=mock_fuel_data
     )
 
     mock_existing_export = FuelExport(
