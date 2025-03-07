@@ -222,7 +222,7 @@ class FuelExportCreateUpdateSchema(BaseSchema):
 
     @field_validator("energy")
     def validate_energy_range(cls, value):
-        if value is not None and abs(value) >= 99999999999:
+        if value is not None and abs(value) >= 9999999999:
             formatted_value = f"{value:,.2f}"
             raise ValueError(f"Energy value must be less than 99,999,999,999 but got {formatted_value}")
         return value

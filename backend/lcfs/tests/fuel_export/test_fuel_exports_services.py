@@ -1,3 +1,4 @@
+from lcfs.web.exception.exceptions import ValidationErrorException
 import pytest
 from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
@@ -309,3 +310,56 @@ async def test_action_delete_fuel_export_success(fuel_export_action_service, moc
     assert result.message == "Fuel export record marked as deleted."
     mock_repo.get_latest_fuel_export_by_group_uuid.assert_called_once()
     mock_repo.create_fuel_export.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_action_create_fuel_export_energy_too_high(fuel_export_action_service, mock_repo):
+    """Test that creating a fuel export with energy exceeding the maximum raises ValidationErrorException."""
+    # Create input data with extremely high quantity
+    input_data = FuelExportCreateUpdateSchema(
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_type=mock_fuel_type.dict(),
+        fuel_category_id=1,
+        fuel_category=mock_fuel_category.dict(),
+        provisionOfTheActId=1,
+        provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Act Provision"},
+        quantity=1000000000,
+        units="L",
+        export_date=date.today(),
+        compliance_period="2024",
+    )
+
+    # Mock fuel data with high energy density
+    class MockFuelData:
+        def __init__(self):
+            self.energy_density = 141.76  # Hydrogen energy density
+            self.effective_carbon_intensity = 90.0
+            self.target_ci = 90.0
+            self.eer = 1.0
+            self.uci = 0.0
+
+    mock_fuel_data = MockFuelData()
+
+    # Set up the mock
+    fuel_export_action_service.fuel_repo.get_standardized_fuel_data = AsyncMock(
+        return_value=mock_fuel_data
+    )
+
+    # Attempt to create the fuel export and expect a ValidationErrorException
+    with pytest.raises(ValidationErrorException) as exc_info:
+        await fuel_export_action_service.create_fuel_export(
+            input_data,
+            UserTypeEnum.SUPPLIER
+        )
+
+    # Verify exception contains the expected structure and message
+    error_data = exc_info.value.errors
+    assert "errors" in error_data
+    assert isinstance(error_data["errors"], list)
+    assert len(error_data["errors"]) == 1
+    assert "fields" in error_data["errors"][0]
+    assert "message" in error_data["errors"][0]
+    assert error_data["errors"][0]["fields"] == ["quantity"]
+    assert "Reduce quantity" in error_data["errors"][0]["message"]
+    assert "141.76" in error_data["errors"][0]["message"]  # Energy density s
