@@ -58,7 +58,7 @@ class FuelExport(BaseModel, Auditable, Versioning):
         comment="Energy effectiveness ratio of the fuel supplied",
     )
     energy = Column(
-        Numeric(10, 2),
+        Numeric(12, 2),
         nullable=True,
         comment="Energy content of the fuel supplied",
     )

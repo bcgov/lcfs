@@ -16,6 +16,7 @@ from lcfs.web.exception.exceptions import (
     ServiceException,
     DatabaseException,
     DataNotFoundException,
+    ValidationErrorException,
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -194,6 +195,15 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                 )
             except RequestValidationError as e:
                 raise e
+            except ValidationErrorException as e:
+                # Log the error but re-raise it so the registered exception handler handles it
+                source_info = get_source_info(func=func)
+                logger.error(
+                    str(e),
+                    source_info=source_info,
+                    exc_info=e,
+                )
+                raise
             except Exception as e:
                 context = extract_context()
                 log_unhandled_exception(logger, e, context, "view", func=func)
@@ -218,7 +228,7 @@ def service_handler(func):
             return await func(*args, **kwargs)
 
         # raise the error to the view layer
-        except (DatabaseException, HTTPException, DataNotFoundException, ValueError):
+        except (DatabaseException, HTTPException, DataNotFoundException, ValueError, ValidationErrorException):
             raise
         # all other errors that occur in the service layer will log an error
         except Exception as e:
