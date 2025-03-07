@@ -307,7 +307,6 @@ export const AddEditFuelExports = () => {
             showAddRowsButton={true}
             context={{ errors }}
             onAction={onAction}
-            stopEditingWhenCellsLoseFocus
             saveButtonProps={{
               enabled: true,
               text: t('report:saveReturn'),
