@@ -85,17 +85,17 @@ export const AddEditOrgForm = () => {
         hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
         orgRegForTransfers:
           data.orgStatus.organizationStatusId === 2 ? '2' : '1',
-        orgStreetAddress: data.orgAddress.streetAddress,
-        orgAddressOther: data.orgAddress.addressOther,
-        orgCity: data.orgAddress.city,
-        orgPostalCodeZipCode: data.orgAddress.postalcodeZipcode,
-        orgHeadOfficeStreetAddress: data.orgAttorneyAddress.streetAddress,
-        orgHeadOfficeAddressOther: data.orgAttorneyAddress.addressOther,
-        orgHeadOfficeCity: data.orgAttorneyAddress.city,
-        orgHeadOfficeProvince: data.orgAttorneyAddress.provinceState,
-        orgHeadOfficeCountry: data.orgAttorneyAddress.country,
+        orgStreetAddress: data.orgAddress?.streetAddress || '',
+        orgAddressOther: data.orgAddress?.addressOther || '',
+        orgCity: data.orgAddress?.city || '',
+        orgPostalCodeZipCode: data.orgAddress?.postalcodeZipcode || '',
+        orgHeadOfficeStreetAddress: data.orgAttorneyAddress?.streetAddress || '',
+        orgHeadOfficeAddressOther: data.orgAttorneyAddress?.addressOther || '',
+        orgHeadOfficeCity: data.orgAttorneyAddress?.city || '',
+        orgHeadOfficeProvince: data.orgAttorneyAddress?.provinceState || '',
+        orgHeadOfficeCountry: data.orgAttorneyAddress?.country || '',
         orgHeadOfficePostalCodeZipCode:
-          data.orgAttorneyAddress.postalcodeZipcode
+          data.orgAttorneyAddress?.postalcodeZipcode || ''
       })
 
       setSameAsLegalName(shouldSyncNames)
