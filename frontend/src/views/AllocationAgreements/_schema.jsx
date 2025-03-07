@@ -20,6 +20,7 @@ import {
   fuelTypeOtherConditionalStyle
 } from '@/utils/fuelTypeOther'
 import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
@@ -28,12 +29,20 @@ export const allocationAgreementColDefs = (
   optionsData,
   currentUser,
   errors,
-  warnings
+  warnings,
+  isSupplemental
 ) => [
   validation,
-  actions({
-    enableDuplicate: false,
-    enableDelete: true
+  actions((params) => {
+    return {
+      enableDuplicate: false,
+      enableDelete: !params.data.isNewSupplementalEntry,
+      enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
+      enableStatus:
+        isSupplemental &&
+        params.data.isNewSupplementalEntry &&
+        ACTION_STATUS_MAP[params.data.actionType]
+    }
   }),
   {
     field: 'id',
@@ -75,7 +84,7 @@ export const allocationAgreementColDefs = (
     },
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
     minWidth: 120,
     editable: true,
@@ -112,7 +121,7 @@ export const allocationAgreementColDefs = (
         <BCTypography variant="body4">Enter or search a name</BCTypography>
       )),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
     minWidth: 310,
     editable: true,
@@ -145,7 +154,7 @@ export const allocationAgreementColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: true,
     minWidth: 350
   },
@@ -157,7 +166,7 @@ export const allocationAgreementColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: true,
     minWidth: 200
   },
@@ -169,7 +178,7 @@ export const allocationAgreementColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: true,
     minWidth: 200
   },
@@ -189,7 +198,7 @@ export const allocationAgreementColDefs = (
     },
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
     minWidth: 200,
     editable: true,
@@ -268,7 +277,7 @@ export const allocationAgreementColDefs = (
     }),
     suppressKeyboardEvent,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     minWidth: 150,
     valueSetter: (params) => {
       if (params.newValue) {
@@ -310,7 +319,7 @@ export const allocationAgreementColDefs = (
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
     minWidth: 300,
     valueSetter: (params) => {
@@ -349,7 +358,7 @@ export const allocationAgreementColDefs = (
       }
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
     minWidth: 150,
     editable: (params) =>
@@ -412,7 +421,7 @@ export const allocationAgreementColDefs = (
       return params.value != null ? parseFloat(params.value).toFixed(2) : ''
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: false,
     minWidth: 100
   },
@@ -431,7 +440,7 @@ export const allocationAgreementColDefs = (
       showStepperButtons: false
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     minWidth: 100,
     editable: true
   },
@@ -441,7 +450,7 @@ export const allocationAgreementColDefs = (
       'allocationAgreement:allocationAgreementColLabels.units'
     ),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: false,
     minWidth: 80
   }
