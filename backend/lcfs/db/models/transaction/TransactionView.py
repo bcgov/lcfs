@@ -7,7 +7,7 @@ class TransactionViewTypeEnum(enum.Enum):
     Transfer = "Transfer"
     InitiativeAgreement = "InitiativeAgreement"
     AdminAdjustment = "AdminAdjustment"
-    # ComplianceReport = "ComplianceReport"
+    ComplianceReport = "ComplianceReport"
 
 
 # This class represents a database view for transactions. It is intended to consolidate

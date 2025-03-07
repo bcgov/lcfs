@@ -6,10 +6,12 @@ from fastapi.responses import StreamingResponse
 from math import ceil
 from lcfs.db.models.transaction.Transaction import Transaction
 from sqlalchemy import or_, and_, cast, String
-
-from .repo import TransactionRepository  # Adjust import path as needed
+from .repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
-from lcfs.db.models.transaction.TransactionView import TransactionView
+from lcfs.db.models.transaction.TransactionView import (
+    TransactionView,
+)
+from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.web.api.transaction.schema import (
     TransactionStatusSchema,
     TransactionViewSchema,
@@ -17,6 +19,7 @@ from lcfs.web.api.transaction.schema import (
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.api.base import (
     FilterModel,
+    SortOrder,
     PaginationRequestSchema,
     PaginationResponseSchema,
     apply_filter_conditions,
@@ -88,15 +91,15 @@ class TransactionsService:
                 # check if the date string is selected for filter
                 if filter.filter is None:
                     filter_value = [
-                        datetime.strptime(filter.date_from, "%Y-%m-%d %H:%M:%S").strftime(
-                            "%Y-%m-%d"
-                        )
+                        datetime.strptime(
+                            filter.date_from, "%Y-%m-%d %H:%M:%S"
+                        ).strftime("%Y-%m-%d")
                     ]
                     if filter.date_to:
                         filter_value.append(
-                            datetime.strptime(filter.date_to, "%Y-%m-%d %H:%M:%S").strftime(
-                                "%Y-%m-%d"
-                            )
+                            datetime.strptime(
+                                filter.date_to, "%Y-%m-%d %H:%M:%S"
+                            ).strftime("%Y-%m-%d")
                         )
                 if filter.field == "status":
                     field = cast(
@@ -189,19 +192,21 @@ class TransactionsService:
         results = await self.repo.get_transactions_paginated(
             0,
             None,
-            [
-                or_(
-                    TransactionView.status == "Approved",
-                    TransactionView.status == "Recorded",
-                )
-            ],
-            [],
+            [TransactionView.status != "Deleted"],
+            [SortOrder(field="update_date", direction="desc")],
             organization_id,
         )
 
         # Prepare data for the spreadsheet
         data = []
         for result in results[0]:
+            # Mask the status if it matches "Recommended"
+            masked_status = (
+                TransferStatusEnum.Submitted.name
+                if result.status == TransferStatusEnum.Recommended.value
+                else result.status
+            )
+
             data.append(
                 [
                     f"{transaction_type_to_id_prefix_map[result.transaction_type]}{result.transaction_id}",
@@ -212,7 +217,7 @@ class TransactionsService:
                     result.quantity,
                     result.price_per_unit,
                     result.category,
-                    result.status,
+                    masked_status,
                     (
                         result.transaction_effective_date.strftime("%Y-%m-%d")
                         if result.transaction_effective_date
