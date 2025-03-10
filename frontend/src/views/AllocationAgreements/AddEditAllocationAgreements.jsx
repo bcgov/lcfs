@@ -156,14 +156,17 @@ export const AddEditAllocationAgreements = () => {
         rows.map((row) => ({
           ...row,
           id: uuid(),
-          isValid: true
-        }))
-
+          isValid: true,
+          isNewSupplementalEntry: isSupplemental && row.complianceReportId === +complianceReportId,
+        actionType: isSupplemental ?
+          (row.complianceReportId === +complianceReportId ? 'CREATE' : 'EXISTING') :
+          undefined
+      }))
       setRowData(ensureRowIds(data.allocationAgreements))
     } else {
-      setRowData([{ id: uuid() }])
+      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
-  }, [data, allocationAgreementsLoading])
+  }, [data, allocationAgreementsLoading, isSupplemental, complianceReportId, compliancePeriod])
 
   const onCellValueChanged = useCallback(
     async (params) => {
