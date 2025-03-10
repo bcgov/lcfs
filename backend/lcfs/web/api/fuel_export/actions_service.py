@@ -1,7 +1,7 @@
 import uuid
 from logging import getLogger
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 
 from lcfs.db.base import ActionTypeEnum, UserTypeEnum
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
@@ -14,6 +14,7 @@ from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
 )
 from lcfs.web.core.decorators import service_handler
+from lcfs.web.exception.exceptions import ValidationErrorException
 from lcfs.web.utils.calculations import calculate_compliance_units
 
 logger = getLogger(__name__)
@@ -71,12 +72,26 @@ class FuelExportActionService:
         fuel_export.uci = fuel_data.uci
 
         # Calculate total energy if energy density is available
-        fuel_export.energy = (
+        calculated_energy = (
             round(fuel_export.energy_density * fuel_export.quantity)
             if fuel_export.energy_density
             else 0
         )
 
+        if calculated_energy >= 9999999999:
+            formatted_quantity = f"{fuel_export.quantity:,}"
+            formatted_density = f"{fuel_export.energy_density}"
+
+            raise ValidationErrorException({
+                "errors": [
+                    {
+                        "fields": ["quantity"],
+                        "message": f"Reduce quantity ({formatted_quantity}) or choose a fuel with lower energy density ({formatted_density})."
+                    }
+                ]
+            })
+
+        fuel_export.energy = calculated_energy
         # Calculate compliance units using the direct utility function
         compliance_units = calculate_compliance_units(
             TCI=fuel_export.target_ci or 0,
