@@ -102,7 +102,6 @@ export const fuelExportColDefs = (
 
     suppressKeyboardEvent,
     cellEditor: DateEditor,
-    cellEditorPopup: true,
     cellEditorParams: {
       autoOpenLastRow: !gridReady
     }

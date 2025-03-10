@@ -74,13 +74,14 @@ def upgrade() -> None:
                     t.price_per_unit,
                     ts.status::text AS status,
                     CASE 
-                        WHEN ts.status = 'Recorded' THEN EXTRACT(YEAR FROM (
-                            SELECT th.create_date
-                            FROM transfer_history th
-                            WHERE th.transfer_id = t.transfer_id
-                            AND th.transfer_status_id = 6  -- Recorded
-                            LIMIT 1
-                        ))::text
+                        WHEN ts.status = 'Recorded' THEN
+                            EXTRACT(YEAR FROM COALESCE(t.transaction_effective_date, (
+                                SELECT th.create_date
+                                FROM transfer_history th
+                                WHERE th.transfer_id = t.transfer_id
+                                AND th.transfer_status_id = 6  -- Recorded
+                                LIMIT 1
+                            )))::text
                         ELSE 'N/A'
                     END AS compliance_period,
                     
