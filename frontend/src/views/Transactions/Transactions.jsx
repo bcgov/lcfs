@@ -273,7 +273,10 @@ export const Transactions = () => {
           }}
         >
           <Role roles={govRoles}>
-            <OrganizationList onOrgChange={setSelectedOrgId} />
+              <OrganizationList
+                onOrgChange={setSelectedOrgId}
+                onlyRegistered={false}
+              />
           </Role>
         </Grid>
       </Grid>
