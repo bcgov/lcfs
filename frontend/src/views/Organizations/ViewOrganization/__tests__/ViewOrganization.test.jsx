@@ -1,6 +1,7 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, act } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ViewOrganization } from '../ViewOrganization'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
@@ -29,15 +30,28 @@ vi.mock('@/services/useApiService', () => {
   }
 })
 
-// Mock necessary hooks and dependencies
+const mockCurrentUserHook = {
+  data: {
+    roles: [{ name: 'Government' }]
+  },
+  isLoading: false,
+  hasRoles: vi.fn().mockReturnValue(true),
+  hasAnyRole: vi.fn().mockReturnValue(true)
+};
+
+// Then use it in your mock
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({
-    data: {
-      roles: [{ name: 'Government' }]
-    },
-    isLoading: false,
-    hasRoles: vi.fn().mockReturnValue(true),
-    hasAnyRole: vi.fn().mockReturnValue(true)
+  useCurrentUser: () => mockCurrentUserHook
+}));
+
+
+vi.mock('@/hooks/useSetResetGrid', () => ({
+  useSetResetGrid: vi.fn((callback) => {
+    // Store the callback for testing
+    if (callback) {
+      vi.mock.resetGridCallback = callback;
+    }
+    return vi.mock.resetGridCallback || vi.fn();
   })
 }))
 
@@ -47,6 +61,18 @@ vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
   __esModule: true, // This is important for mocking ES modules
   default: () => <div data-test="mockedBCDataGridServer"></div>
 }))
+
+vi.mock('@/components/ClearFiltersButton', () => ({
+  ClearFiltersButton: ({ onClick, ...props }) => (
+    <button
+      data-testid="clear-filters-button"
+      onClick={onClick}
+      {...props}
+    >
+      Clear filters
+    </button>
+  )
+}));
 
 // Mock the useOrganization hook
 vi.mock('@/hooks/useOrganization', () => ({
@@ -110,6 +136,18 @@ const renderComponent = (props) => {
   )
 }
 
+const setupRoleTest = (roleName, hasAdminAccess) => {
+  // Clean up previous render
+  cleanup();
+
+  // Configure mock
+  mockCurrentUserHook.data = { roles: [{ name: roleName }] };
+  mockCurrentUserHook.hasRoles = vi.fn().mockReturnValue(hasAdminAccess);
+
+  // Render with this configuration
+  renderComponent();
+};
+
 describe('ViewOrganization Component Tests', () => {
   beforeEach(() => {
     renderComponent()
@@ -152,4 +190,30 @@ describe('ViewOrganization Component Tests', () => {
     expect(screen.getByText(/Early issuance reporting/i)).toBeInTheDocument()
     expect(screen.getByText(/No/i)).toBeInTheDocument()
   })
+
+  it('has a functioning clear filters button', () => {
+    const clearFilterButtons = screen.getAllByTestId('clear-filters-button');
+    expect(clearFilterButtons.length).toBeGreaterThan(0);
+    expect(clearFilterButtons[0]).not.toBeDisabled();
+
+    const button = clearFilterButtons[0];
+    expect(() => fireEvent.click(button)).not.toThrow();
+  });
+
+  it('shows edit button when user has administrator role', () => {
+    setupRoleTest('Administrator', true);
+    expect(screen.getByText('Edit')).toBeInTheDocument();
+  });
+
+  it('does not show edit button when user lacks administrator role', () => {
+    setupRoleTest('Supplier', false);
+    expect(screen.queryByText('Edit')).not.toBeInTheDocument();
+  });
+
+  it('shows New User button for users with administrator role', () => {
+    setupRoleTest('Administrator', true);
+
+    // Check for the New User button
+    expect(screen.getByText(/new user/i)).toBeInTheDocument();
+  });
 })
