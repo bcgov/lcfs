@@ -5,12 +5,18 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { AddEditAllocationAgreements } from '../AddEditAllocationAgreements'
 import * as useAllocationAgreementHook from '@/hooks/useAllocationAgreement'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
 
 // Mock react-router-dom hooks
 const mockUseLocation = vi.fn()
 const mockUseNavigate = vi.fn()
 const mockUseParams = vi.fn()
+
+vi.mock('@/hooks/useCurrentUser')
+
+vi.mock('@/hooks/useComplianceReports')
 
 vi.mock('@react-keycloak/web', () => ({
   ReactKeycloakProvider: ({ children }) => children,
@@ -117,6 +123,16 @@ describe('AddEditAllocationAgreements', () => {
       useAllocationAgreementHook.useSaveAllocationAgreement
     ).mockReturnValue({
       mutateAsync: vi.fn()
+    })
+
+    useCurrentUser.mockReturnValue({
+      data: {
+        organization: { organizationId: 1 }
+      }
+    })
+
+    useGetComplianceReport.mockImplementation((id) => {
+      return { data: { report: { version: 0 } } }
     })
   })
 
