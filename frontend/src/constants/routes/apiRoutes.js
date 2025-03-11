@@ -90,5 +90,6 @@ export const apiRoutes = {
   saveNotificationSubscriptions: '/notifications/subscriptions/save',
   updateNotificationsEmail: '/users/update-email',
   getOrganizationSnapshot: '/organization_snapshot/:reportID',
-  getChangelog: '/reports/:selection/changelog'
+  getChangelog: '/reports/:selection/changelog',
+  deleteUser: '/users/:userID'
 }

@@ -49,6 +49,7 @@ class UserBaseSchema(BaseSchema):
     organization: Optional[OrganizationSummaryResponseSchema] = None
     roles: Optional[List[RoleSchema]] = None
     is_government_user: Optional[bool] = None
+    is_safe_to_remove: bool = False
 
     @classmethod
     def model_validate(cls, user_profile):

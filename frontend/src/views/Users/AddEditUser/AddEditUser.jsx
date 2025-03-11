@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
 import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { useUser } from '@/hooks/useUser'
+import { useUser, useDeleteUser } from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   userInfoSchema,
@@ -19,9 +19,22 @@ import { ROUTES } from '@/constants/routes'
 import { BCFormRadio, BCFormText } from '@/components/BCForm'
 import colors from '@/themes/base/colors'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import {
+  faFloppyDisk,
+  faArrowLeft,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
-import { Box, Stack } from '@mui/material'
+import {
+  Box,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Tooltip
+} from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import Grid2 from '@mui/material/Unstable_Grid2'
 import BCAlert from '@/components/BCAlert'
@@ -43,6 +56,7 @@ export const AddEditUser = ({ userType }) => {
   const { t } = useTranslation(['common', 'admin'])
   const { userID, orgID } = useParams()
   const [orgName, setOrgName] = useState('')
+  const [openConfirm, setOpenConfirm] = useState(false)
 
   const {
     data,
@@ -58,6 +72,9 @@ export const AddEditUser = ({ userType }) => {
       : { undefined, isLoading: false, isFetched: false }
     : // eslint-disable-next-line react-hooks/rules-of-hooks
       useUser(userID, { enabled: !!userID, retry: false })
+
+  // Determine if user is safe to remove
+  const safeToDelete = data?.isSafeToRemove
 
   // User form hook and form validation
   const form = useForm({
@@ -218,6 +235,40 @@ export const AddEditUser = ({ userType }) => {
     }
   })
 
+  // Delete mutation hook (only used for BCeID users)
+  const { mutate: deleteUser } = useDeleteUser()
+
+  // Handler for confirming deletion
+  const handleConfirmDelete = () => {
+    deleteUser(userID, {
+      onSuccess: () => {
+        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
+          state: {
+            message: t('admin:deleteUser.success'),
+            severity: 'success'
+          }
+        })
+      },
+      onError: (error) => {
+        console.error('Error deleting user:', error)
+      }
+    })
+    setOpenConfirm(false)
+  }
+
+  // Cancel deletion
+  const handleCancelDelete = () => {
+    setOpenConfirm(false)
+  }
+
+  // Handler for delete button click – opens confirmation dialog
+  const handleDelete = () => {
+    // Only allow deletion for BCeID users
+    if (userType === 'bceid' && safeToDelete) {
+      setOpenConfirm(true)
+    }
+  }
+
   if (isUserLoading || isCurrentUserLoading) {
     return <Loading message="Loading..." />
   }
@@ -315,6 +366,69 @@ export const AddEditUser = ({ userType }) => {
                     {t('backBtn')}
                   </BCTypography>
                 </BCButton>
+                {console.log(userType)}
+                {/* Only render delete button for BCeID users */}
+                {userID &&
+                  userType === 'bceid' &&
+                  (safeToDelete ? (
+                    <BCButton
+                      variant="outlined"
+                      size="medium"
+                      sx={{
+                        backgroundColor: 'white.main',
+                        borderColor: colors.error.main,
+                        color: colors.error.main
+                      }}
+                      data-test="delete-user-btn"
+                      startIcon={
+                        <FontAwesomeIcon
+                          icon={faTrash}
+                          className="small-icon"
+                        />
+                      }
+                      onClick={handleDelete}
+                    >
+                      <BCTypography variant="subtitle2" textTransform="none">
+                        {t('admin:deleteUser.button')}
+                      </BCTypography>
+                    </BCButton>
+                  ) : (
+                    <Tooltip title={t('admin:deleteUser.notSafe')}>
+                      <span>
+                        <BCButton
+                          variant="outlined"
+                          size="medium"
+                          sx={{
+                            backgroundColor: 'white.main',
+                            borderColor: colors.error.main,
+                            color: colors.error.main,
+                            '&.Mui-disabled': {
+                              backgroundColor: 'white.main',
+                              borderColor: colors.error.main,
+                              color: colors.error.main,
+                              opacity: 0.5, // slightly faded to indicate disabled state
+                              cursor: 'not-allowed'
+                            }
+                          }}
+                          disabled
+                          data-test="delete-user-btn"
+                          startIcon={
+                            <FontAwesomeIcon
+                              icon={faTrash}
+                              className="small-icon"
+                            />
+                          }
+                        >
+                          <BCTypography
+                            variant="subtitle2"
+                            textTransform="none"
+                          >
+                            {t('admin:deleteUser.button')}
+                          </BCTypography>
+                        </BCButton>
+                      </span>
+                    </Tooltip>
+                  ))}
                 <BCButton
                   type="submit"
                   variant="contained"
@@ -336,6 +450,43 @@ export const AddEditUser = ({ userType }) => {
           </Grid2>
         </FormProvider>
       </form>
+
+      {/* Confirmation Dialog for deletion */}
+      <Dialog open={openConfirm} onClose={handleCancelDelete}>
+        <DialogTitle>
+          <BCTypography variant="h6" color={colors.primary.main}>
+            {t('admin:deleteUser.confirmTitle')}
+          </BCTypography>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <BCTypography variant="body5">
+            {t('admin:deleteUser.confirmMessage')}
+          </BCTypography>
+        </DialogContent>
+        <DialogActions>
+          <BCButton
+            variant="outlined"
+            size="medium"
+            color="primary"
+            data-test="back-btn"
+            sx={{
+              backgroundColor: 'white.main'
+            }}
+            onClick={handleCancelDelete}
+          >
+            {t('cancelBtn')}
+          </BCButton>
+          <BCButton
+            type="submit"
+            variant="contained"
+            size="medium"
+            color="error"
+            onClick={handleConfirmDelete}
+          >
+            {t('admin:deleteUser.button')}
+          </BCButton>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }
