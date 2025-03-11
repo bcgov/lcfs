@@ -39,8 +39,11 @@ export const AssessmentCard = ({
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
-  const { data: currentUser, isLoading: isCurrentUserLoading } =
-    useCurrentUser()
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    hasRoles
+  } = useCurrentUser()
 
   const [isEditing, setIsEditing] = useState(false)
 
@@ -191,7 +194,9 @@ export const AssessmentCard = ({
             )}{' '}
             {reportData.report.assessmentStatement &&
               ((!isGovernmentUser &&
-                [5, 6, 7].includes(reportData.report.currentStatus)) ||
+                ['Assessed', 'Reassessed', 'Rejected'].includes(
+                  reportData.report.currentStatus?.status
+                )) ||
                 isGovernmentUser) && (
                 <>
                   <BCTypography
@@ -200,10 +205,17 @@ export const AssessmentCard = ({
                     variant="h6"
                     color="primary"
                   >
-                    {t('report:assessmentStatement')}{' '}
-                    <span style={{ color: 'red' }}>
-                      {isGovernmentUser && t('report:assessmentStatementEdit')}
-                    </span>
+                    {t('report:assessmentStatement')}
+                    {((hasRoles('Analyst') && currentStatus === 'Submitted') ||
+                      (hasRoles('Compliance Manager') &&
+                        currentStatus === 'Recommended by analyst') ||
+                      (hasRoles('Director') &&
+                        currentStatus === 'Recommended by manager')) && (
+                      <span style={{ color: 'red' }}>
+                        {' '}
+                        {t('report:assessmentStatementEdit')}
+                      </span>
+                    )}
                   </BCTypography>
                   <List sx={{ padding: 0 }}>
                     <StyledListItem>

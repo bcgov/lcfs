@@ -266,6 +266,13 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                 </BCTypography>
                 <BCBox variant="outlined" p={2} mb={2}>
                   <InputBase
+                    disabled={
+                      (hasRoles('Analyst') && currentStatus !== 'Submitted') ||
+                      (hasRoles('Compliance Manager') &&
+                        currentStatus !== 'Recommended by analyst') ||
+                      (hasRoles('Director') &&
+                        currentStatus !== 'Recommended by manager')
+                    }
                     multiline
                     rows={4}
                     sx={{
@@ -275,7 +282,17 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                     }}
                   />
                 </BCBox>
-                <BCButton variant="outlined" color="primary">
+                <BCButton
+                  variant="outlined"
+                  color="primary"
+                  disabled={
+                    (hasRoles('Analyst') && currentStatus !== 'Submitted') ||
+                    (hasRoles('Compliance Manager') &&
+                      currentStatus !== 'Recommended by analyst') ||
+                    (hasRoles('Director') &&
+                      currentStatus !== 'Recommended by manager')
+                  }
+                >
                   {t('report:saveStatement')}
                 </BCButton>
               </BCBox>
