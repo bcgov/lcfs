@@ -187,5 +187,7 @@
   "viewLegacyBtn": "View Full Historical Report in TFRS",
   "reportAssessed": "Compliance report, Assessed",
   "changelog": "Change log",
-  "documentLabel": "Add file attachments (maximum file size: 50 MB):"
+  "documentLabel": "Add file attachments (maximum file size: 50 MB):",
+  "assessmentStatement": "Assessment statement from the director",
+  "assessmentStatementEdit": "(can be edited below)"
 }

@@ -131,6 +131,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     history: Optional[List[ComplianceReportHistorySchema]] = None
     has_supplemental: bool
     legacy_id: Optional[int] = None
+    assessment_statement: Optional[str] = None
 
 
 class ComplianceReportViewSchema(BaseSchema):
