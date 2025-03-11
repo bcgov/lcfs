@@ -24,8 +24,15 @@ import { govRoles, roles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
 import Loading from '@/components/Loading'
 import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2'
 import { useGetTransactionList } from '@/hooks/useTransactions'
+
+const initialPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: defaultSortModel,
+  filters: []
+}
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -44,8 +51,21 @@ export const Transactions = () => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
 
-  const [gridKey, setGridKey] = useState('transactions-grid')
-  const [resetGridFn, setResetGridFn] = useState(null)
+  const [paginationOptions, setPaginationOptions] = useState(
+    initialPaginationOptions
+  )
+  const [selectedOrgId, setSelectedOrgId] = useState(null)
+
+  const queryData = useGetTransactionList(
+    {
+      ...paginationOptions,
+      selectedOrgId
+    },
+    {
+      cacheTime: 0,
+      staleTime: 0
+    }
+  )
 
   const getRowId = useCallback((params) => {
     return (
@@ -54,8 +74,6 @@ export const Transactions = () => {
       params.data.transactionId
     )
   }, [])
-
-  const [selectedOrgId, setSelectedOrgId] = useState(null)
 
   const shouldRenderLink = (props) => {
     return (
@@ -172,15 +190,10 @@ export const Transactions = () => {
     }
   }, [location.state])
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
-    }
-  }, [resetGridFn])
+  const handleClearFilters = () => {
+    gridRef.current?.resetGrid()
+    setPaginationOptions(initialPaginationOptions)
+  }
 
   if (!currentUser) {
     return <Loading />
@@ -273,28 +286,30 @@ export const Transactions = () => {
           }}
         >
           <Role roles={govRoles}>
-            <OrganizationList onOrgChange={setSelectedOrgId} />
+            <OrganizationList
+              onOrgChange={setSelectedOrgId}
+              onlyRegistered={false}
+            />
           </Role>
         </Grid>
       </Grid>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer
-          gridRef={gridRef}
-          gridKey={gridKey}
+        <BCGridViewer2
+          ref={gridRef}
+          gridKey="transactions-grid"
           columnDefs={transactionsColDefs(t)}
-          query={useGetTransactionList}
-          queryParams={{ selectedOrgId }}
-          dataKey={'transactions'}
           getRowId={getRowId}
           overlayNoRowsTemplate={t('txn:noTxnsFound')}
-          autoSizeStrategy={{
-            type: 'fitGridWidth',
-            defaultMinWidth: 50,
-            defaultMaxWidth: 600
-          }}
           defaultColDef={defaultColDef}
-          defaultSortModel={defaultSortModel}
-          onSetResetGrid={handleSetResetGrid}
+          queryData={queryData}
+          dataKey="transactions"
+          initialPaginationOptions={initialPaginationOptions}
+          onPaginationChange={(newPagination) =>
+            setPaginationOptions((prev) => ({
+              ...prev,
+              ...newPagination
+            }))
+          }
           highlightedRowId={highlightedId}
         />
       </BCBox>
