@@ -8,7 +8,7 @@ import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { govRoles } from '@/constants/roles'
-import { Fab, Stack, Tooltip } from '@mui/material'
+import { Fab, InputBase, Stack, Tooltip } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
@@ -251,6 +251,35 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               expanded={location.state?.newReport}
               compliancePeriod={compliancePeriod}
             />
+          )}
+          {isGovernmentUser && (
+            <BCBox mt={4}>
+              <BCTypography variant="h5" color="primary">
+                {t(`report:assessmentRecommendation`)}
+              </BCTypography>
+              <BCTypography variant="h6" color="primary" mb={2}>
+                {t(`report:directorStatement`)}
+              </BCTypography>
+              <BCBox variant="outlined" p={2}>
+                <BCTypography variant="body2" mb={2}>
+                  {t(`report:assessmentStatementInstructions`)}
+                </BCTypography>
+                <BCBox variant="outlined" p={2} mb={2}>
+                  <InputBase
+                    multiline
+                    rows={4}
+                    sx={{
+                      textarea: { resize: 'both' },
+                      width: '100%',
+                      fontSize: '16px'
+                    }}
+                  />
+                </BCBox>
+                <BCButton variant="outlined" color="primary">
+                  {t('report:saveStatement')}
+                </BCButton>
+              </BCBox>
+            </BCBox>
           )}
           {/* Internal Comments */}
           {isGovernmentUser && (

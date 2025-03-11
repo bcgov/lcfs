@@ -132,7 +132,6 @@ export const AssessmentCard = ({
               {orgData?.name}{' '}
               {snapshotData?.isEdited && t('report:addressEdited')}
             </BCTypography>
-
             {snapshotLoading && <Loading />}
             {!snapshotLoading && (
               <OrganizationAddress
@@ -142,7 +141,6 @@ export const AssessmentCard = ({
                 setIsEditing={setIsEditing}
               />
             )}
-
             {(isGovernmentUser ||
               hasSupplemental ||
               currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED) && (
@@ -190,29 +188,34 @@ export const AssessmentCard = ({
                   </StyledListItem>
                 </List>
               </>
-            )}
-            {reportData.report.assessmentStatement && (
-              <>
-                <BCTypography
-                  sx={{ paddingTop: '16px' }}
-                  component="div"
-                  variant="h6"
-                  color="primary"
-                >
-                  {t('report:assessmentStatement')}{' '}
-                  <span style={{ color: 'red' }}>
-                    {isGovernmentUser && t('report:assessmentStatementEdit')}
-                  </span>
-                </BCTypography>
-                <List sx={{ padding: 0 }}>
-                  <StyledListItem>
-                    <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
-                      {reportData.report.assessmentStatement}
-                    </ListItemText>
-                  </StyledListItem>
-                </List>
-              </>
-            )}
+            )}{' '}
+            {reportData.report.assessmentStatement &&
+              ((!isGovernmentUser &&
+                [5, 6, 7].includes(reportData.report.currentStatus)) ||
+                isGovernmentUser) && (
+                <>
+                  <BCTypography
+                    sx={{ paddingTop: '16px' }}
+                    component="div"
+                    variant="h6"
+                    color="primary"
+                  >
+                    {t('report:assessmentStatement')}{' '}
+                    <span style={{ color: 'red' }}>
+                      {isGovernmentUser && t('report:assessmentStatementEdit')}
+                    </span>
+                  </BCTypography>
+                  <List sx={{ padding: 0 }}>
+                    <StyledListItem>
+                      <ListItemText
+                        primaryTypographyProps={{ variant: 'body4' }}
+                      >
+                        {reportData.report.assessmentStatement}
+                      </ListItemText>
+                    </StyledListItem>
+                  </List>
+                </>
+              )}
             {filteredChain.length > 0 &&
               currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
                 <>
@@ -229,7 +232,6 @@ export const AssessmentCard = ({
                   ))}
                 </>
               )}
-
             <Role roles={[roles.supplier]}>
               {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
                 currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
