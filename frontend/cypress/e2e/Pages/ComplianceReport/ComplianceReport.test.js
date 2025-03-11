@@ -172,3 +172,51 @@ Then('they see the previously submitted report', () => {
     .should('be.visible')
     .and('have.text', currentYear)
 })
+
+When('the supplier navigates to the {string} page', (pageName) => {
+  cy.get(`[data-test="schedule-list"]`).contains(pageName).click()
+  cy.contains('.MuiTypography-h5', pageName).should('be.visible')
+})
+
+When('the supplier enters a valid {string} record', (scheduleType) => {
+  cy.get('.ag-root').should('be.visible')
+
+  cy.wait(1000)
+
+  cy.get('div[col-id="fuelType"]').click().find('input').type('Ethanol{enter}')
+  cy.wait(800)
+
+  cy.get('div[col-id="provisionOfTheAct"]').click()
+  cy.get(
+    '[data-testid="select-Default carbon intensity - section 19 (b) (ii)"]'
+  ).click()
+
+  cy.get('body').click()
+  cy.wait(700)
+  cy.get('.ag-body-horizontal-scroll-viewport').scrollTo(1000, 0)
+  cy.wait(1200)
+
+  cy.get('div.ag-cell[col-id="quantity"]')
+    .click()
+    .wait(1200)
+    .find('input')
+    .type('10000{enter}')
+
+  cy.contains('Row updated successfully.').should('be.visible')
+})
+
+When('the supplier returns to the compliance report summary', () => {
+  cy.get('.MuiButton-contained').click()
+  cy.get('[data-test="compliance-report-status"]')
+    .should('be.visible')
+    .and('have.text', 'Status: Draft')
+})
+
+Then(
+  'the compliance report summary should display expandable sections for:',
+  (dataTable) => {
+    dataTable.hashes().forEach((row) => {
+      cy.contains('.MuiTypography-h6', row['Section']).should('be.visible')
+    })
+  }
+)
