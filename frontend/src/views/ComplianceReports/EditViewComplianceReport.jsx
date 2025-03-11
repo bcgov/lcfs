@@ -27,6 +27,7 @@ import { AssessmentCard } from './components/AssessmentCard'
 import InternalComments from '@/components/InternalComments'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { ROUTES } from '@/constants/routes'
+import { AssessmentStatement } from './components/AssessmentStatement'
 
 const iconStyle = {
   width: '2rem',
@@ -252,52 +253,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
-          {isGovernmentUser && (
-            <BCBox mt={4}>
-              <BCTypography variant="h5" color="primary">
-                {t(`report:assessmentRecommendation`)}
-              </BCTypography>
-              <BCTypography variant="h6" color="primary" mb={2}>
-                {t(`report:directorStatement`)}
-              </BCTypography>
-              <BCBox variant="outlined" p={2}>
-                <BCTypography variant="body2" mb={2}>
-                  {t(`report:assessmentStatementInstructions`)}
-                </BCTypography>
-                <BCBox variant="outlined" p={2} mb={2}>
-                  <InputBase
-                    disabled={
-                      (hasRoles('Analyst') && currentStatus !== 'Submitted') ||
-                      (hasRoles('Compliance Manager') &&
-                        currentStatus !== 'Recommended by analyst') ||
-                      (hasRoles('Director') &&
-                        currentStatus !== 'Recommended by manager')
-                    }
-                    multiline
-                    rows={4}
-                    sx={{
-                      textarea: { resize: 'both' },
-                      width: '100%',
-                      fontSize: '16px'
-                    }}
-                  />
-                </BCBox>
-                <BCButton
-                  variant="outlined"
-                  color="primary"
-                  disabled={
-                    (hasRoles('Analyst') && currentStatus !== 'Submitted') ||
-                    (hasRoles('Compliance Manager') &&
-                      currentStatus !== 'Recommended by analyst') ||
-                    (hasRoles('Director') &&
-                      currentStatus !== 'Recommended by manager')
-                  }
-                >
-                  {t('report:saveStatement')}
-                </BCButton>
-              </BCBox>
-            </BCBox>
-          )}
+          {isGovernmentUser && <AssessmentStatement />}
           {/* Internal Comments */}
           {isGovernmentUser && (
             <BCBox mt={4}>
