@@ -167,23 +167,6 @@ export const buttonClusterConfigFn = ({
           content: t('report:assessConfirmText')
         })
       }
-    },
-    reAssessReport: {
-      ...containedButton(t('report:actionBtns.reAssessReportBtn')),
-      id: 're-assess-report-btn',
-      handler: (formData) => {
-        setModalData({
-          primaryButtonAction: () =>
-            updateComplianceReport({
-              ...formData,
-              status: COMPLIANCE_REPORT_STATUSES.REASSESSED
-            }),
-          primaryButtonText: t('report:actionBtns.reAssessReportBtn'),
-          secondaryButtonText: t('cancelBtn'),
-          title: t('confirmation'),
-          content: t('report:reAssessConfirmText')
-        })
-      }
     }
   }
 
@@ -204,6 +187,11 @@ export const buttonClusterConfigFn = ({
           ]
         : [])
     ],
+    [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: [
+      ...(isGovernmentUser && hasRoles('Analyst')
+        ? [reportButtons.recommendByAnalyst]
+        : [])
+    ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: [
       ...(isGovernmentUser && hasRoles('Compliance Manager')
         ? [reportButtons.recommendByManager, reportButtons.returnToAnalyst]
@@ -212,11 +200,6 @@ export const buttonClusterConfigFn = ({
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: [
       ...(isGovernmentUser && hasRoles('Director')
         ? [reportButtons.assessReport, reportButtons.returnToManager]
-        : [])
-    ],
-    [COMPLIANCE_REPORT_STATUSES.ASSESSED]: [
-      ...(isGovernmentUser && hasRoles('Analyst')
-        ? [reportButtons.reAssessReport]
         : [])
     ]
   }

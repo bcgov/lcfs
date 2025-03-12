@@ -7,7 +7,7 @@ import BCModal from '@/components/BCModal'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import { govRoles } from '@/constants/roles'
+import { govRoles, roles } from '@/constants/roles'
 import { Fab, Stack, Tooltip } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -27,6 +27,7 @@ import { AssessmentCard } from './components/AssessmentCard'
 import InternalComments from '@/components/InternalComments'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { ROUTES } from '@/constants/routes'
+import { AssessmentRecommendation } from '@/views/ComplianceReports/components/AssessmentRecommendation.jsx'
 
 const iconStyle = {
   width: '2rem',
@@ -85,16 +86,20 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
-  // hooks
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
-    hasRoles
+    hasRoles,
+    hasAnyRole
   } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
-  const userRoles = currentUser?.roles
-
   const currentStatus = reportData?.report.currentStatus?.status
+  const canEdit =
+    (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT &&
+      hasAnyRole(roles.compliance_reporting, roles.signing_authority)) ||
+    (currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT &&
+      hasRoles(roles.analyst))
+
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report.organizationId
   )
@@ -206,7 +211,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         </BCBox>
         <Stack direction="column" mt={2}>
           <Stack direction={{ md: 'column', lg: 'row' }} spacing={2} pb={2}>
-            {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
+            {canEdit && (
               <ActivityListCard
                 name={orgData?.name}
                 period={compliancePeriod}
@@ -216,7 +221,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             )}
             <AssessmentCard
               orgData={orgData}
-              history={reportData?.report.history}
               isGovernmentUser={isGovernmentUser}
               hasMetRenewables={hasMetRenewables}
               hasMetLowCarbon={hasMetLowCarbon}
@@ -231,9 +235,10 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             <>
               <ReportDetails
                 currentStatus={currentStatus}
-                userRoles={userRoles}
+                userRoles={currentUser?.userRoles}
               />
               <ComplianceReportSummary
+                canEdit={canEdit}
                 reportID={complianceReportId}
                 currentStatus={currentStatus}
                 compliancePeriodYear={compliancePeriod}
@@ -250,6 +255,12 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             <Introduction
               expanded={location.state?.newReport}
               compliancePeriod={compliancePeriod}
+            />
+          )}
+          {hasRoles(roles.analyst) && (
+            <AssessmentRecommendation
+              complianceReportId={complianceReportId}
+              currentStatus={currentStatus}
             />
           )}
           {/* Internal Comments */}

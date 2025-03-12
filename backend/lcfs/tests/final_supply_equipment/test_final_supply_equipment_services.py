@@ -272,7 +272,7 @@ async def test_generate_registration_number_success(service, mock_repo, mock_req
     Test generating a registration number with a valid postal code.
     """
     mock_repo.get_current_seq_by_org_and_postal_code.return_value = 1
-    reg_num = await service.generate_registration_number(mock_request.user, "A1A 1A1")
+    reg_num = await service.generate_registration_number("TESTORG", "A1A 1A1")
     # Format => ORGCODE-A1A1A1-002 (for next_number = 2)
     assert reg_num.startswith("TESTORG-A1A1A1-")
     seq_str = reg_num.split("-")[-1]

@@ -53,7 +53,6 @@ export const useGetFuelExportsList = (
 export const useSaveFuelExport = (params, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
-  const { data: currentUser } = useCurrentUser()
 
   return useMutation({
     ...options,
@@ -62,12 +61,7 @@ export const useSaveFuelExport = (params, options) => {
         complianceReportId: params.complianceReportId,
         ...data
       }
-      return await client.post(
-        apiRoutes.saveFuelExports
-          .replace(':orgID', currentUser.organization.organizationId)
-          .replace(':reportID', params.complianceReportId),
-        modifedData
-      )
+      return await client.post(apiRoutes.saveFuelExports, modifedData)
     },
     onSettled: () => {
       queryClient.invalidateQueries(['fuel-exports', params.complianceReportId])
