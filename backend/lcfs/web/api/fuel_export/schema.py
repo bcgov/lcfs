@@ -148,7 +148,6 @@ class FuelExportSchema(BaseSchema):
     export_date: date
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     compliance_period: Optional[str] = None
     fuel_type_id: int
@@ -187,7 +186,6 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     export_date: date
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     compliance_period: Optional[str] = None
     fuel_type_other: Optional[str] = None
@@ -224,8 +222,11 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     def validate_energy_range(cls, value):
         if value is not None and abs(value) >= 9999999999:
             formatted_value = f"{value:,.2f}"
-            raise ValueError(f"Energy value must be less than 99,999,999,999 but got {formatted_value}")
+            raise ValueError(
+                f"Energy value must be less than 99,999,999,999 but got {formatted_value}"
+            )
         return value
+
 
 class DeleteFuelExportResponseSchema(BaseSchema):
     success: bool

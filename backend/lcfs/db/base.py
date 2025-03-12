@@ -131,11 +131,6 @@ class Versioning(Base):
         default=0,
         comment="Version number of the record",
     )
-    user_type = Column(
-        Enum(UserTypeEnum),
-        nullable=False,
-        comment="Indicates whether the record was created/modified by a supplier or government user",
-    )
     action_type = Column(
         Enum(ActionTypeEnum),
         nullable=False,

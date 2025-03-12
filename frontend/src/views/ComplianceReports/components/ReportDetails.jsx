@@ -52,30 +52,31 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   )
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
-  const isAnalystRole = hasRoles('Analyst')
-  const isSupplierRole = hasRoles('Supplier')
-  const isGovernmentRole = hasRoles('Government')
+  const hasAnalystRole = hasRoles('Analyst')
+  const hasSupplierRole = hasRoles('Supplier')
+  const hasGovernmentRole = hasRoles('Government')
 
   const editSupportingDocs = useMemo(() => {
     return (
       // Allow BCeID users to edit in Draft status
-      (isSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) ||
+      (hasSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) ||
       // Allow analysts to edit in Submitted or Assessed status
-      (isAnalystRole &&
+      (hasAnalystRole &&
         (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
           currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED))
     )
-  }, [isAnalystRole, isSupplierRole, currentStatus])
+  }, [hasAnalystRole, hasSupplierRole, currentStatus])
 
   const editAnalyst = useMemo(() => {
     return (
-      isAnalystRole && currentStatus === COMPLIANCE_REPORT_STATUSES.REASSESSED
+      hasAnalystRole &&
+      currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
     )
-  }, [isAnalystRole, currentStatus])
+  }, [hasAnalystRole, currentStatus])
 
   const editSupplier = useMemo(() => {
-    return isSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
-  }, [isSupplierRole, currentStatus])
+    return hasSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
+  }, [hasSupplierRole, currentStatus])
 
   const shouldShowEditIcon = (activityName) => {
     if (activityName === t('report:supportingDocs')) {
@@ -88,7 +89,7 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
       return false
     }
     return (
-      (isGovernmentRole || isSupplierRole) &&
+      (hasGovernmentRole || hasSupplierRole) &&
       currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED &&
       [
         t('report:activityLists.supplyOfFuel'),

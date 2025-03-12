@@ -1,5 +1,7 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, Mock
+
+from lcfs.db.models import UserProfile
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
@@ -109,7 +111,7 @@ async def test_get_compliance_reports_paginated_success(
     mock_repo.get_reports_paginated.return_value = ([mock_compliance_report], 1)
 
     result = await compliance_report_service.get_compliance_reports_paginated(
-        pagination_mock
+        pagination_mock, UserProfile()
     )
 
     assert result.pagination.total == 1
@@ -133,7 +135,7 @@ async def test_get_compliance_reports_paginated_not_found(
 
     # Act
     result = await compliance_report_service.get_compliance_reports_paginated(
-        pagination_mock
+        pagination_mock, UserProfile()
     )
 
     # Assert: Verify the service returns an empty list and correct pagination metadata
@@ -154,7 +156,9 @@ async def test_get_compliance_reports_paginated_unexpected_error(
     mock_repo.get_reports_paginated.side_effect = Exception("Unexpected error occurred")
 
     with pytest.raises(ServiceException):
-        await compliance_report_service.get_compliance_reports_paginated(AsyncMock(), 1)
+        await compliance_report_service.get_compliance_reports_paginated(
+            AsyncMock(), UserProfile()
+        )
 
 
 # get_compliance_report_by_id
@@ -170,12 +174,13 @@ async def test_get_compliance_report_by_id_success(
 
     mock_repo.get_compliance_report_by_id.return_value = mock_compliance_report
 
-    result = await compliance_report_service.get_compliance_report_by_id(1)
+    mock_user = UserProfile()
+    result = await compliance_report_service.get_compliance_report_by_id(1, mock_user)
 
     assert result == mock_compliance_report
     mock_repo.get_compliance_report_by_id.assert_called_once_with(1)
     compliance_report_service._mask_report_status_for_history.assert_called_once_with(
-        mock_compliance_report, False
+        mock_compliance_report, mock_user
     )
 
 
@@ -186,7 +191,7 @@ async def test_get_compliance_report_by_id_not_found(
     mock_repo.get_compliance_report_by_id.return_value = None
 
     with pytest.raises(DataNotFoundException):
-        await compliance_report_service.get_compliance_report_by_id(999)
+        await compliance_report_service.get_compliance_report_by_id(999, UserProfile())
 
 
 @pytest.mark.anyio
@@ -196,7 +201,7 @@ async def test_get_compliance_report_by_id_unexpected_error(
     mock_repo.get_compliance_report_by_id.side_effect = Exception("Unexpected error")
 
     with pytest.raises(ServiceException):
-        await compliance_report_service.get_compliance_report_by_id(1)
+        await compliance_report_service.get_compliance_report_by_id(1, UserProfile())
 
 
 # get_all_org_reported_years

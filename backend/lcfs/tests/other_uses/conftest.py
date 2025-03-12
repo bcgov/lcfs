@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models import OtherUses
 from lcfs.web.api.other_uses.schema import OtherUsesCreateSchema
 
@@ -18,7 +18,6 @@ def create_mock_entity(overrides: dict):
     mock_entity.version = 1
     mock_entity.quantity_supplied = 1000
     mock_entity.action_type = ActionTypeEnum.CREATE
-    mock_entity.user_type = UserTypeEnum.SUPPLIER
 
     # Apply overrides
     if overrides:
@@ -38,10 +37,9 @@ def create_mock_schema(overrides: dict):
         units="L",
         rationale="Test rationale",
         provision_of_the_act="Provision A",
-        fuel_code = "FuelCode123",
+        fuel_code="FuelCode123",
         group_uuid="test-group-uuid",
         version=1,
-        user_type="Supplier",
         action_type="Create",
     )
 

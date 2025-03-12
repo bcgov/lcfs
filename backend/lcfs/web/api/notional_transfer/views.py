@@ -87,11 +87,8 @@ async def get_notional_transfers(
 
         await report_validate.validate_compliance_report_access(compliance_report)
         await report_validate.validate_organization_access(compliance_report_id)
-        is_gov_user = user_has_roles(request.user, [RoleEnum.GOVERNMENT])
         return await service.get_notional_transfers(
-            compliance_report_id,
-            request_data.changelog,
-            is_gov_user,
+            request_data.compliance_report_id, request_data.changelog
         )
 
     except HTTPException as http_ex:
@@ -131,7 +128,8 @@ async def get_notional_transfers_paginated(
     )
     compliance_report_id = request_data.compliance_report_id
     return await service.get_notional_transfers_paginated(
-        pagination, compliance_report_id, request.user
+        pagination,
+        compliance_report_id,
     )
 
 
@@ -159,7 +157,9 @@ async def get_notional_transfer(
     response_model=Union[NotionalTransferSchema, DeleteNotionalTransferResponseSchema],
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST]
+)
 async def save_notional_transfer_row(
     request: Request,
     request_data: NotionalTransferCreateSchema = Body(...),
@@ -171,25 +171,15 @@ async def save_notional_transfer_row(
     compliance_report_id = request_data.compliance_report_id
     notional_transfer_id: Optional[int] = request_data.notional_transfer_id
 
-    await report_validate.validate_organization_access(compliance_report_id)
-
-    # Determine user type for record creation
-    current_user_type = request.user.user_type
-    if not current_user_type:
-        raise HTTPException(
-            status_code=403, detail="User does not have the required role."
-        )
-
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
+    await report_validate.validate_compliance_report_access(compliance_report)
     await validate.validate_compliance_report_id(compliance_report_id, [request_data])
+
     if request_data.deleted:
-        # Delete existing notional transfer
-
-        return await service.delete_notional_transfer(request_data, current_user_type)
+        return await service.delete_notional_transfer(request_data)
     elif notional_transfer_id:
-        # Update existing notional transfer
-
-        return await service.update_notional_transfer(request_data, current_user_type)
+        return await service.update_notional_transfer(request_data)
     else:
-        # Create new notional transfer
-
-        return await service.create_notional_transfer(request_data, current_user_type)
+        return await service.create_notional_transfer(request_data)
