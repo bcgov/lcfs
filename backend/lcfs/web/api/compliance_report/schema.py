@@ -213,6 +213,7 @@ class CommonPaginatedReportRequestSchema(BaseSchema):
 class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
+    assessment_statement: Optional[str] = None
 
 
 T = TypeVar('T')

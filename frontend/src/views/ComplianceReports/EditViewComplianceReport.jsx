@@ -1,33 +1,33 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import BCModal from '@/components/BCModal'
 import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
+import BCTypography from '@/components/BCTypography'
+import InternalComments from '@/components/InternalComments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { govRoles } from '@/constants/roles'
-import { Fab, InputBase, Stack, Tooltip } from '@mui/material'
-import BCTypography from '@/components/BCTypography'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import colors from '@/themes/base/colors.js'
-import { useTranslation } from 'react-i18next'
+import { ROUTES } from '@/constants/routes'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { useUpdateComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
-import { Introduction } from './components/Introduction'
-import { useUpdateComplianceReport } from '@/hooks/useComplianceReports'
-import ComplianceReportSummary from './components/ComplianceReportSummary'
-import ReportDetails from './components/ReportDetails'
+import colors from '@/themes/base/colors.js'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import { Fab, Stack, Tooltip } from '@mui/material'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { ActivityListCard } from './components/ActivityListCard'
 import { AssessmentCard } from './components/AssessmentCard'
-import InternalComments from '@/components/InternalComments'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { ROUTES } from '@/constants/routes'
 import { AssessmentStatement } from './components/AssessmentStatement'
+import ComplianceReportSummary from './components/ComplianceReportSummary'
+import { Introduction } from './components/Introduction'
+import ReportDetails from './components/ReportDetails'
 
 const iconStyle = {
   width: '2rem',
@@ -253,7 +253,14 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
-          {isGovernmentUser && <AssessmentStatement />}
+          {isGovernmentUser &&
+            ((hasRoles('Analyst') && currentStatus === 'Submitted') ||
+              (hasRoles('Compliance Manager') &&
+                currentStatus === 'Recommended by analyst') ||
+              (hasRoles('Director') &&
+                currentStatus === 'Recommended by manager')) && (
+              <AssessmentStatement />
+            )}
           {/* Internal Comments */}
           {isGovernmentUser && (
             <BCBox mt={4}>
@@ -280,7 +287,12 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                         size="small"
                         variant={config.variant}
                         color={config.color}
-                        onClick={methods.handleSubmit(config.handler)}
+                        onClick={methods.handleSubmit(() =>
+                          config.handler({
+                            assessmentStatement:
+                              reportData?.report.assessmentStatement
+                          })
+                        )}
                         startIcon={
                           config.startIcon && (
                             <FontAwesomeIcon
