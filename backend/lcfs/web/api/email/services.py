@@ -109,7 +109,9 @@ class CHESEmailService:
             logger.info("Email sent successfully.")
             return True
         except Exception as e:
-            logger.error(f"Email sending failed: {e}")
+            logger.error(
+                f"Email sending failed: {e}. Response: {response.text} Payload: {payload}"
+            )
             return False
 
     def _render_email_template(
@@ -122,7 +124,7 @@ class CHESEmailService:
         try:
             template_file = TEMPLATE_MAPPING[template_name]
             template = self.template_env.get_template(template_file)
-            return template.render(**context)
+            return template.render(**context).strip()
         except Exception as e:
             logger.error(f"Template rendering error: {str(e)}")
             raise ValueError(f"Failed to render email template for {template_name}")
@@ -135,7 +137,7 @@ class CHESEmailService:
         """
         return {
             "bcc": recipients,
-            "to": ["Undisclosed recipients<donotreply@gov.bc.ca>"],
+            "to": ["donotreply@gov.bc.ca"],
             "from": f"{settings.ches_sender_name} <{settings.ches_sender_email}>",
             "delayTS": 0,
             "encoding": "utf-8",
