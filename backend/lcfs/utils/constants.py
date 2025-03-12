@@ -78,12 +78,14 @@ transaction_type_to_id_prefix_map = {
     "Transfer": "CT",
     "AdminAdjustment": "AA",
     "InitiativeAgreement": "IA",
+    "ComplianceReport": "CR",
 }
 
 id_prefix_to_transaction_type_map = {
     "CT": "Transfer",
     "AA": "AdminAdjustment",
     "IA": "InitiativeAgreement",
+    "CR": "ComplianceReport",
 }
 
 POSTAL_REGEX = r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$"
