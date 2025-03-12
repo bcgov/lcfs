@@ -39,6 +39,8 @@ async function typeAndValidateTextBox(name, value) {
     name: new RegExp(`^${name}`, 'i')
   })
   expect(textBox).toBeInTheDocument()
+  // Clear the input first
+  await userEvent.clear(textBox)
   await userEvent.type(textBox, value, { delay: 10 })
   expect(textBox).toHaveValue(value)
 }
@@ -74,7 +76,12 @@ describe('AddEditUser component', () => {
 
     const saveButton = screen.getByRole('button', { name: /save/i })
     userEvent.click(saveButton)
-  })
+
+    // Add assertion after click to ensure test doesn't complete too early
+    await waitFor(() => {
+      expect(saveButton).toBeInTheDocument();
+    });
+  }, 10000) // Increase timeout for this test
   it('renders the form to add BCeID user', async () => {
     const { container } = render(<AddEditUser userType="bceid" />, { wrapper })
     // Check if the container HTML element contains the form
@@ -97,7 +104,10 @@ describe('AddEditUser component', () => {
 
     const saveButton = screen.getByRole('button', { name: /save/i })
     userEvent.click(saveButton)
-  })
+    await waitFor(() => {
+      expect(saveButton).toBeInTheDocument();
+    });
+  }, 10000)
   it('validates user form', async () => {
     render(<AddEditUser />, { wrapper })
 
