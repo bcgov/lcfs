@@ -47,8 +47,7 @@ class AllocationAgreementRepository:
 
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
         fuel_types = await self.fuel_code_repo.get_formatted_fuel_types(
-            include_legacy=include_legacy,
-            compliance_period=compliance_period
+            include_legacy=include_legacy, compliance_period=compliance_period
         )
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
         allocation_transaction_types = (
@@ -198,7 +197,7 @@ class AllocationAgreementRepository:
                 version=allocation_agreement.version,
                 user_type=allocation_agreement.user_type,
                 action_type=allocation_agreement.action_type,
-            ).model_dump()
+            )
             for allocation_agreement in allocation_agreements
         ]
 
