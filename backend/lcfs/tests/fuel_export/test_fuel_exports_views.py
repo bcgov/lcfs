@@ -1,6 +1,10 @@
 import datetime
 import json
-import pytest
+from unittest.mock import patch
+
+from lcfs.db.models import ComplianceReport
+from lcfs.db.models.user.Role import RoleEnum
+from httpx import AsyncClient
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from httpx import AsyncClient
@@ -197,13 +201,14 @@ async def test_save_fuel_export_row_delete_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.actions_service.FuelExportActionService.delete_fuel_export"
     ) as mock_delete_fuel_export, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
-
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
+        mock_validate_organization_access.return_value = ComplianceReport()
         mock_delete_response = DeleteFuelExportResponseSchema(
             success=True, message="fuel export row deleted successfully"
         )
 
-        mock_validate_organization_access.return_value = None
         mock_delete_fuel_export.return_value = mock_delete_response
 
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
@@ -236,7 +241,10 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.actions_service.FuelExportActionService.update_fuel_export"
     ) as mock_update_fuel_export, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
+        mock_validate_organization_access.return_value = ComplianceReport()
 
         # Create mock classes if not already defined at module level
         class MockCompliancePeriod:
@@ -310,7 +318,10 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.actions_service.FuelExportActionService.create_fuel_export"
     ) as mock_create_fuel_export, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
+        mock_validate_organization_access.return_value = ComplianceReport()
 
         # Create mock classes
         class MockCompliancePeriod:

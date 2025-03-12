@@ -5,6 +5,7 @@ from typing import List, Union, Type
 import structlog
 from fastapi import Depends
 
+from lcfs.db.models import UserRole
 from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,
     SupplementalInitiatorType,
@@ -17,7 +18,8 @@ from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-from lcfs.db.models.user import UserProfile
+from lcfs.db.models.user import UserProfile, Role
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
@@ -28,6 +30,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportViewSchema,
 )
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
+from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
@@ -97,6 +100,72 @@ class ComplianceReportServices:
         return ComplianceReportBaseSchema.model_validate(report)
 
     @service_handler
+    async def created_analyst_adjustment_report(
+        self, existing_report_id: int, user: UserProfile
+    ) -> ComplianceReportBaseSchema:
+        """
+        Creates a new supplemental compliance report.
+        The report_id can be any report in the series (original or supplemental).
+        Supplemental reports are only allowed if the status of the current report is 'Assessed'.
+        """
+        # Fetch the current report using the provided report_id
+        current_report = await self.repo.get_compliance_report_by_id(
+            existing_report_id, is_model=True
+        )
+        if not current_report:
+            raise DataNotFoundException("Compliance report not found.")
+
+        # Validate that the status of the current report is 'Submitted'
+        if current_report.current_status.status != ComplianceReportStatusEnum.Submitted:
+            raise ServiceException(
+                "An analyst adjustment can only be created if the current report's status is 'Submitted'."
+            )
+
+        # Get the group_uuid from the current report
+        group_uuid = current_report.compliance_report_group_uuid
+
+        # Fetch the latest version number for the given group_uuid
+        latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
+        if not latest_report:
+            raise DataNotFoundException("Latest compliance report not found.")
+
+        new_version = latest_report.version + 1
+
+        analyst_adjustment_status = (
+            await self.repo.get_compliance_report_status_by_desc(
+                ComplianceReportStatusEnum.Analyst_adjustment.value
+            )
+        )
+        if not analyst_adjustment_status:
+            raise DataNotFoundException("Draft status not found.")
+
+        # Create the new supplemental compliance report
+        new_report = ComplianceReport(
+            compliance_period_id=current_report.compliance_period_id,
+            organization_id=current_report.organization_id,
+            current_status_id=analyst_adjustment_status.compliance_report_status_id,
+            reporting_frequency=current_report.reporting_frequency,
+            compliance_report_group_uuid=group_uuid,  # Use the same group_uuid
+            version=new_version,  # Increment the version
+            supplemental_initiator=SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
+            nickname=f"Government adjustment {new_version}",
+            summary=ComplianceReportSummary(),  # Create an empty summary object
+        )
+
+        # Add the new supplemental report
+        new_report = await self.repo.create_compliance_report(new_report)
+
+        # Snapshot the Organization Details
+        await self.snapshot_services.create_organization_snapshot(
+            new_report.compliance_report_id, current_report.organization_id
+        )
+
+        # Create the history record for the new supplemental report
+        await self.repo.add_compliance_report_history(new_report, user)
+
+        return ComplianceReportBaseSchema.model_validate(new_report)
+
+    @service_handler
     async def create_supplemental_report(
         self, report_id: int, user: UserProfile = None, legacy_id: int = None
     ) -> ComplianceReportBaseSchema:
@@ -138,7 +207,9 @@ class ComplianceReportServices:
         new_version = latest_report.version + 1
 
         # Get the 'Draft' status
-        draft_status = await self.repo.get_compliance_report_status_by_desc("Draft")
+        draft_status = await self.repo.get_compliance_report_status_by_desc(
+            ComplianceReportStatusEnum.Draft.value
+        )
         if not draft_status:
             raise DataNotFoundException("Draft status not found.")
 
@@ -207,11 +278,11 @@ class ComplianceReportServices:
     async def get_compliance_reports_paginated(
         self,
         pagination,
-        organization_id: int = None,
-        bceid_user: bool = False,
+        user: UserProfile,
     ):
         """Fetches all compliance reports"""
-        if bceid_user:
+        is_bceid_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        if is_bceid_user:
             for filter in pagination.filters:
                 if (
                     filter.field == "status"
@@ -224,12 +295,9 @@ class ComplianceReportServices:
                         ComplianceReportStatusEnum.Submitted,
                     ]
 
-        reports, total_count = await self.repo.get_reports_paginated(
-            pagination, organization_id
-        )
+        reports, total_count = await self.repo.get_reports_paginated(pagination, user)
 
-        if bceid_user and reports:
-            reports = self._mask_report_status(reports)
+        reports = self._mask_report_status(reports, user)
 
         return ComplianceReportListSchema(
             pagination=PaginationResponseSchema(
@@ -241,39 +309,72 @@ class ComplianceReportServices:
             reports=reports,
         )
 
-    def _mask_report_status(self, reports: List) -> List:
-        for report in reports:
-            if isinstance(report, ComplianceReportViewSchema):
-                statuses = {
-                    ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
-                    ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
-                }
-                if report.report_status in statuses:
-                    report.report_status, report.report_status_id = (
-                        ComplianceReportStatusEnum.Submitted.value,
-                        None,
-                    )
-            elif isinstance(report, ComplianceReportBaseSchema):
-                statuses = {
-                    ComplianceReportStatusEnum.Recommended_by_analyst.value,
-                    ComplianceReportStatusEnum.Recommended_by_manager.value,
-                }
-                if report.current_status.status in statuses:
-                    (
-                        report.current_status.status,
-                        report.current_status.compliance_report_status_id,
-                    ) = (
-                        ComplianceReportStatusEnum.Submitted.value,
-                        None,
-                    )
+    def _mask_report_status(self, reports: List, user: UserProfile) -> List:
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+        is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
+
+        becid_only_statuses = {
+            ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
+            ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
+        }
+
+        becid_only_statuses_regular = {
+            ComplianceReportStatusEnum.Recommended_by_analyst.value,
+            ComplianceReportStatusEnum.Recommended_by_manager.value,
+        }
+
+        analyst_only_statuses = {
+            ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
+        }
+
+        analyst_only_statuses_regular = {
+            ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
+        }
+
+        if is_supplier:
+            for report in reports:
+                if isinstance(report, ComplianceReportViewSchema):
+                    if is_supplier and report.report_status in becid_only_statuses:
+                        report.report_status, report.report_status_id = (
+                            ComplianceReportStatusEnum.Submitted.value,
+                            None,
+                        )
+                    if not is_analyst and report.report_status in analyst_only_statuses:
+                        report.report_status, report.report_status_id = (
+                            ComplianceReportStatusEnum.Submitted.value,
+                            None,
+                        )
+                elif isinstance(report, ComplianceReportBaseSchema):
+                    if (
+                        is_supplier
+                        and report.current_status.status in becid_only_statuses_regular
+                    ):
+                        (
+                            report.current_status.status,
+                            report.current_status.compliance_report_status_id,
+                        ) = (
+                            ComplianceReportStatusEnum.Submitted.value,
+                            None,
+                        )
+                    if (
+                        not is_analyst
+                        and report.current_status.status
+                        in analyst_only_statuses_regular
+                    ):
+                        (
+                            report.current_status.status,
+                            report.current_status.compliance_report_status_id,
+                        ) = (
+                            ComplianceReportStatusEnum.Submitted.value,
+                            None,
+                        )
         return reports
 
     @service_handler
     async def get_compliance_report_by_id(
         self,
         report_id: int,
-        apply_masking: bool = False,
-        is_gov: bool = False,
+        user: UserProfile,
         get_chain: bool = False,
     ):
         """
@@ -284,47 +385,25 @@ class ComplianceReportServices:
             raise DataNotFoundException("Compliance report not found.")
 
         validated_report = ComplianceReportBaseSchema.model_validate(report)
-
-        # Remove 'Draft' entries from the report history
-        if is_gov:
-            validated_report = self._remove_draft_entries(validated_report)
-
-        masked_report = (
-            self._mask_report_status([validated_report])[0]
-            if apply_masking
-            else validated_report
-        )
+        masked_report = self._mask_report_status([validated_report], user)[0]
 
         history_masked_report = self._mask_report_status_for_history(
-            masked_report, apply_masking
+            masked_report, user
         )
 
         if get_chain:
             compliance_report_chain = await self.repo.get_compliance_report_chain(
-                report.compliance_report_group_uuid
+                report.compliance_report_group_uuid, report.version
             )
 
-            # Remove 'Draft' reports from the chain
-            compliance_report_chain = self._remove_draft_reports(
-                compliance_report_chain
-            )
-
-            # Remove 'Draft' entries from the report history
-            draft_cleaned_chain = []
-            for item in compliance_report_chain:
-                cleaned_item = self._remove_draft_entries(item)
-                if cleaned_item:
-                    draft_cleaned_chain.append(cleaned_item)
-
-            if apply_masking:
-                # Apply masking to each report in the chain
-                masked_chain = self._mask_report_status(draft_cleaned_chain)
-                # Apply history masking to each report in the chain
-                masked_chain = [
-                    self._mask_report_status_for_history(report, apply_masking)
-                    for report in masked_chain
-                ]
-                compliance_report_chain = masked_chain
+            # Apply masking to each report in the chain
+            masked_chain = self._mask_report_status(compliance_report_chain, user)
+            # Apply history masking to each report in the chain
+            masked_chain = [
+                self._mask_report_status_for_history(report, user)
+                for report in masked_chain
+            ]
+            compliance_report_chain = masked_chain
 
             return {
                 "report": history_masked_report,
@@ -334,29 +413,33 @@ class ComplianceReportServices:
         return history_masked_report
 
     def _mask_report_status_for_history(
-        self, report: ComplianceReportBaseSchema, apply_masking: bool = False
+        self, report: ComplianceReportBaseSchema, user: UserProfile
     ) -> ComplianceReportBaseSchema:
-        recommended_statuses = {
+        is_bceid = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+        bceid_only_status = {
             ComplianceReportStatusEnum.Recommended_by_analyst.value,
             ComplianceReportStatusEnum.Recommended_by_manager.value,
         }
         if (
-            apply_masking
+            not is_bceid
             or report.current_status.status
             == ComplianceReportStatusEnum.Submitted.value
         ):
             report.history = [
-                h for h in report.history if h.status.status not in recommended_statuses
+                h for h in report.history if h.status.status not in bceid_only_status
             ]
-        elif (
-            report.current_status.status
-            == ComplianceReportStatusEnum.Recommended_by_analyst.value
+
+        if (
+            not is_analyst
+            and report.current_status.status
+            == ComplianceReportStatusEnum.Analyst_adjustment.value
         ):
             report.history = [
                 h
                 for h in report.history
                 if h.status.status
-                != ComplianceReportStatusEnum.Recommended_by_manager.value
+                != ComplianceReportStatusEnum.Analyst_adjustment.value
             ]
 
         return report

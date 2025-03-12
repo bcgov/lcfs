@@ -403,8 +403,6 @@ class ComplianceReportSummaryService:
         self, report_id: int
     ) -> ComplianceReportSummarySchema:
         """Several fields on Report Summary are Transient until locked, this function will re-calculate fields as necessary"""
-        # TODO this method will have to be updated to handle supplemental reports
-
         # Fetch the compliance report details
         compliance_report = await self.repo.get_compliance_report_by_id(
             report_id, is_model=True
@@ -462,9 +460,7 @@ class ComplianceReportSummaryService:
             }
 
         notional_transfers = (
-            await self.notional_transfer_service.get_notional_transfers(
-                report_id, False
-            )
+            await self.notional_transfer_service.get_notional_transfers(report_id)
         )
 
         notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
@@ -481,13 +477,17 @@ class ComplianceReportSummaryService:
                 notional_transfers_sums[normalized_category] -= transfer.quantity
 
         # Get effective fuel supplies using the updated logic
-        effective_fuel_supplies = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid
+        effective_fuel_supplies = (
+            await self.fuel_supply_repo.get_effective_fuel_supplies(
+                compliance_report.compliance_report_group_uuid,
+                compliance_report.compliance_report_id,
+            )
         )
 
         # Get effective other uses
         effective_other_uses = await self.other_uses_repo.get_effective_other_uses(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_id,
             return_model=True,
         )
 
@@ -542,12 +542,13 @@ class ComplianceReportSummaryService:
         existing_summary = self.convert_summary_to_dict(summary_model)
 
         fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
-            compliance_report.compliance_report_group_uuid
+            compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_id,
         )
 
         allocation_agreements = (
             await self.allocation_agreement_repo.get_allocation_agreements(
-                compliance_report_id=compliance_report.compliance_report_id
+                compliance_report.compliance_report_id
             )
         )
 
@@ -984,7 +985,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel export records
         fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
-            report.compliance_report_group_uuid
+            report.compliance_report_group_uuid, report.compliance_report_id
         )
 
         # Initialize compliance units sum

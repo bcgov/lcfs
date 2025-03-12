@@ -261,13 +261,11 @@ async def create_compliance_report(
 @view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def get_compliance_reports(
     request: Request,
-    organization_id: int,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     report_service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportListSchema:
-    organization_id = request.user.organization.organization_id
     return await report_service.get_compliance_reports_paginated(
-        pagination, organization_id, bceid_user=True
+        pagination, request.user
     )
 
 
@@ -305,9 +303,10 @@ async def get_compliance_report_by_id(
     Endpoint to get information of a user by ID
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
-    await report_validate.validate_organization_access(report_id)
+    compliance_report = await report_validate.validate_organization_access(report_id)
+    await report_validate.validate_compliance_report_access(compliance_report)
     return await report_service.get_compliance_report_by_id(
-        report_id, apply_masking=True, get_chain=True
+        report_id, request.user, True
     )
 
 

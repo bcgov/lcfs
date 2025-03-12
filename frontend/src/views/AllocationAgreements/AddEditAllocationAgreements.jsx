@@ -33,8 +33,12 @@ export const AddEditAllocationAgreements = () => {
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'allocationAgreement', 'reports'])
-  const guides = useMemo(() =>
-    t('allocationAgreement:allocationAgreementGuides', { returnObjects: true })
+  const guides = useMemo(
+    () =>
+      t('allocationAgreement:allocationAgreementGuides', {
+        returnObjects: true
+      }),
+    []
   )
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
@@ -42,7 +46,7 @@ export const AddEditAllocationAgreements = () => {
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
   const isSupplemental = complianceReport?.report?.version !== 0
@@ -275,10 +279,11 @@ export const AddEditAllocationAgreements = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'transactionPartner') {
+        const orgName = currentUser.organization?.name
         if (
-          params.newValue === currentUser.organization.name ||
+          params.newValue === orgName ||
           (typeof params.newValue === 'object' &&
-            params.newValue.name === currentUser.organization.name)
+            params.newValue.name === orgName)
         ) {
           alertRef.current?.triggerAlert({
             message:

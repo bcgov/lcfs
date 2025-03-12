@@ -235,7 +235,7 @@ async def import_async(
                         try:
                             fse_data = _parse_row(row, compliance_report_id)
                             await fse_service.create_final_supply_equipment(
-                                fse_data, user
+                                fse_data, "FIXME"
                             )
                             created += 1
                         except Exception as ex:

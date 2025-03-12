@@ -312,13 +312,14 @@ export const ReportsStatusRenderer = (props) => {
   const statusArr = [
     'Draft',
     'Submitted',
+    'Analyst adjustment',
     'Recommended by analyst',
     'Recommended by manager',
     'Assessed',
-    'Reassessed',
     'Rejected'
   ]
   const statusColorArr = [
+    'info',
     'info',
     'info',
     'info',

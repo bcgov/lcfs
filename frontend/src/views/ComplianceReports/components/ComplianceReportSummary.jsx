@@ -32,6 +32,7 @@ import { TogglePanel } from '@/components/TogglePanel.jsx'
 const ComplianceReportSummary = ({
   reportID,
   currentStatus,
+  canEdit,
   compliancePeriodYear,
   setIsSigningAuthorityDeclared,
   buttonClusterConfig,
@@ -127,6 +128,18 @@ const ComplianceReportSummary = ({
           </BCTypography>
         </AccordionSummary>
         <AccordionDetails>
+          <SummaryTable
+            data-test="renewable-summary"
+            title={t('report:renewableFuelTargetSummary')}
+            columns={
+              summaryData
+                ? renewableFuelColumns(
+                    t,
+                    summaryData?.renewableFuelTargetSummary,
+                    canEdit,
+                    compliancePeriodYear
+                  )
+                : []
           <TogglePanel
             label="Compare mode"
             disabled={!enableCompareMode}
