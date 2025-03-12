@@ -86,11 +86,10 @@ export const useDownloadDocument = (parentType, parentID, options) => {
     const link = document.createElement('a')
     link.href = fileURL
 
-    // Extract filename from headers if available, otherwise set a default
-    const contentDisposition = res.headers['content-disposition']
-    const match =
-      contentDisposition && contentDisposition.match(/filename="(.+)"/)
-    link.download = match ? match[1] : 'downloaded-file'
+    // Extract filename from headers and set on link
+    const contentDisposition = res.headers['content-disposition'] || ''
+    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/)
+    link.download = decodeURIComponent(filenameMatch[1])
 
     // Append to the body, trigger click, then remove
     document.body.appendChild(link)
