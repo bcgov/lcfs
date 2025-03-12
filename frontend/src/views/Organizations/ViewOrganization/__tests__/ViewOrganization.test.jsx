@@ -29,15 +29,26 @@ vi.mock('@/services/useApiService', () => {
   }
 })
 
-// Mock necessary hooks and dependencies
+const mockCurrentUserHook = {
+  data: {
+    roles: [{ name: 'Government' }]
+  },
+  isLoading: false,
+  hasRoles: vi.fn().mockReturnValue(true),
+  hasAnyRole: vi.fn().mockReturnValue(true)
+};
+
 vi.mock('@/hooks/useCurrentUser', () => ({
-  useCurrentUser: () => ({
-    data: {
-      roles: [{ name: 'Government' }]
-    },
-    isLoading: false,
-    hasRoles: vi.fn().mockReturnValue(true),
-    hasAnyRole: vi.fn().mockReturnValue(true)
+  useCurrentUser: () => mockCurrentUserHook
+}));
+
+vi.mock('@/hooks/useSetResetGrid', () => ({
+  useSetResetGrid: vi.fn((callback) => {
+    // Store the callback for testing
+    if (callback) {
+      vi.mock.resetGridCallback = callback;
+    }
+    return vi.mock.resetGridCallback || vi.fn();
   })
 }))
 
@@ -48,7 +59,18 @@ vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
   default: () => <div data-test="mockedBCDataGridServer"></div>
 }))
 
-// Mock the useOrganization hook
+vi.mock('@/components/ClearFiltersButton', () => ({
+  ClearFiltersButton: ({ onClick, ...props }) => (
+    <button
+      data-testid="clear-filters-button"
+      onClick={onClick}
+      {...props}
+    >
+      Clear filters
+    </button>
+  )
+}));
+
 vi.mock('@/hooks/useOrganization', () => ({
   useOrganization: vi.fn((orgId) => ({
     data: {
@@ -110,6 +132,17 @@ const renderComponent = (props) => {
   )
 }
 
+const setupRoleTest = (roleName, hasAdminAccess) => {
+  cleanup();
+
+  // Configure mock
+  mockCurrentUserHook.data = { roles: [{ name: roleName }] };
+  mockCurrentUserHook.hasRoles = vi.fn().mockReturnValue(hasAdminAccess);
+
+  // Render with this configuration
+  renderComponent();
+};
+
 describe('ViewOrganization Component Tests', () => {
   beforeEach(() => {
     renderComponent()
@@ -152,4 +185,30 @@ describe('ViewOrganization Component Tests', () => {
     expect(screen.getByText(/Early issuance reporting/i)).toBeInTheDocument()
     expect(screen.getByText(/No/i)).toBeInTheDocument()
   })
+
+  it('has a functioning clear filters button', () => {
+    const clearFilterButtons = screen.getAllByTestId('clear-filters-button');
+    expect(clearFilterButtons.length).toBeGreaterThan(0);
+    expect(clearFilterButtons[0]).not.toBeDisabled();
+
+    const button = clearFilterButtons[0];
+    expect(() => fireEvent.click(button)).not.toThrow();
+  });
+
+  it('shows edit button when user has administrator role', () => {
+    setupRoleTest('Administrator', true);
+    expect(screen.getByText('Edit')).toBeInTheDocument();
+  });
+
+  it('does not show edit button when user lacks administrator role', () => {
+    setupRoleTest('Supplier', false);
+    expect(screen.queryByText('Edit')).not.toBeInTheDocument();
+  });
+
+  it('shows New User button for users with administrator role', () => {
+    setupRoleTest('Administrator', true);
+
+    // Check for the New User button
+    expect(screen.getByText(/new user/i)).toBeInTheDocument();
+  });
 })
