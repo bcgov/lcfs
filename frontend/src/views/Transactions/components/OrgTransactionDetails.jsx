@@ -9,7 +9,7 @@ import {
 } from '@/utils/formatters'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { ADMIN_ADJUSTMENT } from '@/views/Transactions/constants'
-import { useDocuments, useViewDocument } from '@/hooks/useDocuments.js'
+import { useDocuments, useDownloadDocument } from '@/hooks/useDocuments.js'
 
 export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
   const { t } = useTranslation([
@@ -40,7 +40,7 @@ export const OrgTransactionDetails = ({ transactionType, transactionData }) => {
     transactionType,
     transactionData.adminAdjustmentId ?? transactionData.initiativeAgreementId
   )
-  const viewDocument = useViewDocument(
+  const viewDocument = useDownloadDocument(
     transactionType,
     transactionData.adminAdjustmentId ?? transactionData.initiativeAgreementId
   )
