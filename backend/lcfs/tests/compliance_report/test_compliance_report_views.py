@@ -341,7 +341,7 @@ async def test_get_compliance_report_summary_success(
         )
 
         assert response.json() == expected_response
-        mock_calculate_compliance_report_summary.assert_called_once_with(1, mock.ANY)
+        mock_calculate_compliance_report_summary.assert_called_once_with(1)
         mock_validate_organization_access.assert_called_once_with(1)
 
 

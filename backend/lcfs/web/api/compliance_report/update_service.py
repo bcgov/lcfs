@@ -190,7 +190,7 @@ class ComplianceReportUpdateService:
         # Calculate a new summary based on the current report data
         calculated_summary = (
             await self.summary_service.calculate_compliance_report_summary(
-                report.compliance_report_id, user
+                report.compliance_report_id
             )
         )
 
