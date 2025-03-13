@@ -15,7 +15,7 @@ from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
-from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
+from fastapi import APIRouter, Body, status, Request, Depends
 
 from lcfs.db.models.compliance import AllocationAgreement
 from lcfs.db.models.user.Role import RoleEnum
@@ -40,7 +40,9 @@ from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
 from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
 from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
 from lcfs.web.api.fuel_export.schema import FuelExportSchema
-from lcfs.web.api.allocation_agreement.schema import AllocationAgreementChangelogSchema, AllocationAgreementResponseSchema
+from lcfs.web.api.allocation_agreement.schema import (
+    AllocationAgreementResponseSchema,
+)
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
@@ -102,10 +104,14 @@ async def get_compliance_report_by_id(
     compliance_report = await validate.validate_organization_access(report_id)
     await validate.validate_compliance_report_access(compliance_report)
 
+    is_gov = user_has_roles(request.user, [RoleEnum.GOVERNMENT])
     mask_statuses = not user_has_roles(request.user, [RoleEnum.GOVERNMENT])
 
     result = await service.get_compliance_report_by_id(
-        report_id, mask_statuses, get_chain=True
+        report_id,
+        mask_statuses,
+        is_gov,
+        get_chain=True,
     )
 
     return result
@@ -347,7 +353,7 @@ async def get_allocation_agreement_changelog(
         AllocationAgreementResponseSchema.model_validate(record)
         for record in changelog_response["changelog"]
     ]
-    response= {
+    response = {
         **changelog_response,
         "changelog": serializable_changelog,
         "report": report,
