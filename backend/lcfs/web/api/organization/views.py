@@ -297,8 +297,6 @@ async def get_all_org_reported_years(
 @view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def get_compliance_report_by_id(
     request: Request,
-    organization_id: int,
-    response: Response = None,
     report_id: int = None,
     report_service: ComplianceReportServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),

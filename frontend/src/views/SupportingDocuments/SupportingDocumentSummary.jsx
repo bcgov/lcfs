@@ -1,26 +1,10 @@
 import Box from '@mui/material/Box'
 import { List, ListItemButton } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
-import { apiRoutes } from '@/constants/routes'
-import { useApiService } from '@/services/useApiService'
+import { useDownloadDocument } from '@/hooks/useDocuments.js'
 
 export const SupportingDocumentSummary = ({ parentID, parentType, data }) => {
-  const apiService = useApiService()
-
-  const viewDocument = async (documentID) => {
-    if (!parentID || !documentID) return
-    const res = await apiService.get(
-      apiRoutes.getDocument
-        .replace(':parentType', parentType)
-        .replace(':parentID', parentID)
-        .replace(':documentID', documentID),
-      {
-        responseType: 'blob'
-      }
-    )
-    const fileURL = URL.createObjectURL(res.data)
-    window.open(fileURL, '_blank')
-  }
+  const downloadDocument = useDownloadDocument(parentType, parentID)
 
   return (
     <Box>
@@ -32,7 +16,7 @@ export const SupportingDocumentSummary = ({ parentID, parentType, data }) => {
             key={file.documentId}
             alignItems="flex-start"
             onClick={() => {
-              viewDocument(file.documentId)
+              downloadDocument(file.documentId)
             }}
           >
             <BCTypography
