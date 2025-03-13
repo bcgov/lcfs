@@ -147,9 +147,8 @@ class ComplianceReportExporter:
         builder = SpreadsheetBuilder(file_format=export_format)
 
         # Include draft data if report status is Draft
-        is_draft = (
-            compliance_report.current_status.status
-            == ComplianceReportStatusEnum.Draft.value
+        include_draft = (
+            compliance_report.current_status.status == ComplianceReportStatusEnum.Draft
         )
 
         # Add sheets (in reverse desired order)
@@ -159,16 +158,16 @@ class ComplianceReportExporter:
         )
         await self.add_fse_sheet(builder, compliance_report_id)
         await self.add_export_fuel_sheet(
-            builder, compliance_report.compliance_report_group_uuid, is_draft
+            builder, compliance_report.compliance_report_group_uuid, include_draft
         )
         await self.add_fuels_for_other_use_sheet(
-            builder, compliance_report.compliance_report_group_uuid, is_draft
+            builder, compliance_report.compliance_report_group_uuid, include_draft
         )
         await self.add_notional_transfer_sheet(
-            builder, compliance_report.compliance_report_group_uuid, is_draft
+            builder, compliance_report.compliance_report_group_uuid, include_draft
         )
         await self.add_fuel_supply_sheet(
-            builder, compliance_report.compliance_report_group_uuid, is_draft
+            builder, compliance_report.compliance_report_group_uuid, include_draft
         )
 
         compliance_period = compliance_report.compliance_period.description
@@ -321,7 +320,7 @@ class ComplianceReportExporter:
         self, compliance_report_group_uuid: str, is_draft: bool
     ) -> List[List]:
         results: List[OtherUsesSchema] = await self.ou_repo.get_effective_other_uses(
-            compliance_report_group_uuid, False, not is_draft
+            compliance_report_group_uuid, False, not is_draft, False
         )
         return [
             [
@@ -357,7 +356,7 @@ class ComplianceReportExporter:
         self, compliance_report_group_uuid: str, is_draft: bool
     ) -> List[List]:
         results = await self.ef_repo.get_effective_fuel_exports(
-            compliance_report_group_uuid, not is_draft
+            compliance_report_group_uuid, False, not is_draft
         )
         return [
             [
