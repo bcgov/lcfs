@@ -267,7 +267,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
-          {shouldDisplayAssessment && <AssessmentStatement />}
+          {shouldDisplayAssessment() && <AssessmentStatement />}
           {/* Internal Comments */}
           {isGovernmentUser && (
             <BCBox mt={4}>
