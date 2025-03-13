@@ -13,6 +13,7 @@ from lcfs.web.api.compliance_report.schema import (
     RETURN_STATUS_MAPPER,
     ComplianceReportUpdateSchema,
     ReturnStatus,
+    ComplianceReportBaseSchema,
 )
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
@@ -65,7 +66,7 @@ class ComplianceReportUpdateService:
         report_id: int,
         report_data: ComplianceReportUpdateSchema,
         user: UserProfile,
-    ) -> ComplianceReport:
+    ) -> ComplianceReportBaseSchema:
         """Updates an existing compliance report."""
         # Get and validate report
         report = await self._check_report_exists(report_id)

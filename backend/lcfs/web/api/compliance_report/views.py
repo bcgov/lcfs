@@ -1,24 +1,16 @@
-"""
-Compliance reports endpoints
-GET: /reports/compliance-periods (to retreieve the list of compliance periods)
-POST: /reports/list (Includes ability to perform sort, filter and pagination) - retrieve the list of compliance reports
-GET: /reports/fse-options - retrieve the options that assists the user in filling up the Final Supply Equipment rows.
-GET: /reports/<report_id> - retrieve the compliance report by ID
-"""
-
 import structlog
 from fastapi import APIRouter, Body, status, Request, Depends
 from starlette.responses import StreamingResponse
 from typing import List
-
+from lcfs.db.models.compliance import AllocationAgreement
 from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
-from fastapi import APIRouter, Body, status, Request, Depends
-
-from lcfs.db.models.compliance import AllocationAgreement
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.allocation_agreement.schema import (
+    AllocationAgreementResponseSchema,
+)
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.export import ComplianceReportExporter
@@ -32,27 +24,16 @@ from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
     ComplianceReportChangelogSchema,
 )
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
-from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
-from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
 from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
 from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
 from lcfs.web.api.fuel_export.schema import FuelExportSchema
-from lcfs.web.api.allocation_agreement.schema import (
-    AllocationAgreementResponseSchema,
-)
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from lcfs.web.api.fuel_export.schema import FuelExportSchema
-from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
-from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
-from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import view_handler
 
