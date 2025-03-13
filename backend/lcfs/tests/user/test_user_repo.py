@@ -1,10 +1,10 @@
 from unittest.mock import Mock
-
 import pytest
-
 from lcfs.db.models import UserProfile, UserLoginHistory
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.tests.user.user_payloads import user_orm_model
+from unittest.mock import AsyncMock, MagicMock
+from sqlalchemy import text
 
 
 @pytest.fixture
@@ -75,3 +75,41 @@ async def test_update_email_success(dbsession, user_repo):
 
     # Assert: Check if the email was updated
     assert updated_user.email == "new_email@domain.com"
+
+
+@pytest.mark.anyio
+async def test_is_user_safe_to_remove(dbsession):
+    # Simulate dbsession.execute returning a result whose scalar() returns True
+    expected_safe = True
+    mock_result = MagicMock()
+    mock_result.scalar.return_value = expected_safe
+    dbsession.execute = AsyncMock(return_value=mock_result)
+
+    repo = UserRepository(db=dbsession)
+    keycloak_username = "testuser"
+    result = await repo.is_user_safe_to_remove(keycloak_username)
+
+    assert result is True
+
+    # Compare string representations of the SQL text clauses
+    expected_clause = str(text("SELECT is_user_safe_to_remove(:username) AS safe"))
+    actual_clause = str(dbsession.execute.await_args[0][0])
+    assert (
+        expected_clause == actual_clause
+    ), f"Expected clause: {expected_clause}, got: {actual_clause}"
+    assert dbsession.execute.await_args[0][1] == {"username": keycloak_username}
+
+
+@pytest.mark.anyio
+async def test_delete_user(dbsession):
+    repo = UserRepository(db=dbsession)
+    fake_user = MagicMock(spec=UserProfile)
+
+    dbsession.delete = AsyncMock()
+    dbsession.flush = AsyncMock()
+
+    result = await repo.delete_user(fake_user)
+
+    dbsession.delete.assert_awaited_once_with(fake_user)
+    dbsession.flush.assert_awaited_once()
+    assert result is None

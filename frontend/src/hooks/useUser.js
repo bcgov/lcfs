@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes'
 
@@ -57,5 +57,22 @@ export const useGetUserActivities = (
         })
       ).data,
     ...options
+  })
+}
+
+export function useDeleteUser(options = {}) {
+  const apiClient = useApiService()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    ...options,
+    mutationFn: async (userID) => {
+      const path = apiRoutes.deleteUser.replace(':userID', userID)
+      return await apiClient.delete(path)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['user', options.userID])
+      queryClient.invalidateQueries(['users'])
+    }
   })
 }

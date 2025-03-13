@@ -23,3 +23,10 @@ class RoleServices:
         if len(roles) == 0:
             raise DataNotFoundException("No roles found")
         return roles
+
+    @service_handler
+    async def remove_roles_for_user(self, user_profile_id: int) -> None:
+        """
+        Removes all user roles from the given user.
+        """
+        await self.repo.delete_roles_for_user(user_profile_id)
