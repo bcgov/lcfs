@@ -150,6 +150,20 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     ]
   )
 
+  const shouldDisplayAssessment = () => {
+    if (!isGovernmentUser) return false
+
+    const roleStatusMap = {
+      Analyst: 'Submitted',
+      'Compliance Manager': 'Recommended by analyst',
+      Director: 'Recommended by manager'
+    }
+
+    return Object.entries(roleStatusMap).some(
+      ([role, status]) => hasRoles(role) && currentStatus === status
+    )
+  }
+
   useEffect(() => {
     if (location.state?.message) {
       alertRef.current?.triggerAlert({
@@ -253,14 +267,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
-          {isGovernmentUser &&
-            ((hasRoles('Analyst') && currentStatus === 'Submitted') ||
-              (hasRoles('Compliance Manager') &&
-                currentStatus === 'Recommended by analyst') ||
-              (hasRoles('Director') &&
-                currentStatus === 'Recommended by manager')) && (
-              <AssessmentStatement />
-            )}
+          {shouldDisplayAssessment && <AssessmentStatement />}
           {/* Internal Comments */}
           {isGovernmentUser && (
             <BCBox mt={4}>
