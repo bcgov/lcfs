@@ -89,7 +89,7 @@ export const AddEditFuelExports = () => {
           fuelType: item.fuelType?.fuelType,
           provisionOfTheAct: item.provisionOfTheAct?.name,
           fuelCode: item.fuelCode?.fuelCode,
-          endUse: item.endUse?.type || 'Any',
+          endUse: item.endUse?.type,
           isNewSupplementalEntry:
             isSupplemental && item.complianceReportId === +complianceReportId,
           id: uuid()
@@ -135,7 +135,7 @@ export const AddEditFuelExports = () => {
         fuelType: item.fuelType?.fuelType,
         provisionOfTheAct: item.provisionOfTheAct?.name,
         fuelCode: item.fuelCode?.fuelCode,
-        endUse: item.endUse?.type || 'Any',
+        endUse: item.endUse?.type,
         isNewSupplementalEntry:
           isSupplemental && item.complianceReportId === +complianceReportId,
         id: uuid()
@@ -163,15 +163,20 @@ export const AddEditFuelExports = () => {
             (item) => item.fuelCategory
           )
 
-          const endUseTypes = selectedFuelType.eerRatios.map(
-            (item) => item.endUseType
+          const uniqueEndUseTypes = Array.from(
+            new Map(
+              selectedFuelType.eerRatios.map((item) => [
+                item.endUseType.endUseTypeId,
+                item.endUseType
+              ])
+            ).values()
           )
 
           // Set to null if multiple options, otherwise use first item
           const category =
             fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
           const endUseValue =
-            endUseTypes.length === 1 ? endUseTypes[0].type : 'Any'
+            uniqueEndUseTypes.length === 1 ? uniqueEndUseTypes[0].type : null
           const provisionValue =
             selectedFuelType.provisions.length === 1
               ? selectedFuelType.provisions[0].name
@@ -183,22 +188,24 @@ export const AddEditFuelExports = () => {
         }
       }
 
-      if (params.column.colId === 'fuelCategoryId') {
+      if (params.column.colId === 'fuelCategory') {
         const selectedFuelType = optionsData?.fuelTypes?.find(
           (obj) => params.node.data.fuelType === obj.fuelType
         )
 
         if (selectedFuelType) {
-          const endUseTypes = selectedFuelType.eerRatios
-            .filter(
-              (item) =>
-                item.fuelCategory.fuelCategory === params.data.fuelCategory
-            )
-            .map((item) => item.endUseType)
+          const uniqueEndUseTypes = Array.from(
+            new Map(
+              selectedFuelType.eerRatios.map((item) => [
+                item.endUseType.endUseTypeId,
+                item.endUseType
+              ])
+            ).values()
+          )
 
           // Set to null if multiple options, otherwise use first item
           const endUseValue =
-            endUseTypes.length === 1 ? endUseTypes[0].type : 'Any'
+            uniqueEndUseTypes.length === 1 ? uniqueEndUseTypes[0].type : null
           const provisionValue =
             selectedFuelType.provisions.length === 1
               ? selectedFuelType.provisions[0].name
