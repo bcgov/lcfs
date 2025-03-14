@@ -65,6 +65,7 @@ export const AddEditFinalSupplyEquipments = () => {
       overlayNoRowsTemplate: t(
         'finalSupplyEquipment:noFinalSupplyEquipmentsFound'
       ),
+      stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
@@ -133,11 +134,12 @@ export const AddEditFinalSupplyEquipments = () => {
         optionsData,
         compliancePeriod,
         errors,
-        warnings
+        warnings,
+        isGridReady
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [compliancePeriod, errors, warnings, optionsData])
+  }, [compliancePeriod, errors, warnings, optionsData, isGridReady])
 
   const onCellEditingStopped = useCallback(
     async (params) => {
@@ -428,7 +430,6 @@ export const AddEditFinalSupplyEquipments = () => {
             gridOptions={gridOptions}
             loading={optionsLoading || equipmentsLoading}
             onCellEditingStopped={onCellEditingStopped}
-            stopEditingWhenCellsLoseFocus
             onAction={onAction}
             showAddRowsButton={true}
             saveButtonProps={{
