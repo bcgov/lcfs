@@ -58,7 +58,7 @@ export default defineConfig({
         clearComplianceReports() {
           return new Promise((resolve, reject) => {
             const client = new Client({
-              user: process.env.DB_CYPRESS_USER || 'lcfs',
+              user: process.env.DB_CYPRESS_USER,
               host: process.env.DB_CYPRESS_HOST || 'localhost',
               database: process.env.DB_CYPRESS_NAME || 'lcfs',
               password: process.env.DB_CYPRESS_PASSWORD,
