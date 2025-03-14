@@ -5,7 +5,6 @@ import { apiRoutes } from '@/constants/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import ROUTES from '@/routes/routes'
-import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -16,6 +15,7 @@ import {
   changelogDefaultColDefs,
   changelogGridOptions
 } from './_schema'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
 export const FuelSupplyChangelog = () => {
   const { complianceReportId, compliancePeriod } = useParams()
@@ -33,10 +33,7 @@ export const FuelSupplyChangelog = () => {
   // Replace the current version lookup with a reducer using 'version' for the most recent assessed/reassessed report
   const latestAssessedReport = currentReportData?.chain?.reduce(
     (latest, report) => {
-      if (
-        report.currentStatus.status === 'Assessed' ||
-        report.currentStatus.status === 'Reassessed'
-      ) {
+      if (report.currentStatus.status === COMPLIANCE_REPORT_STATUSES.ASSESSED) {
         return !latest || report.version > latest.version ? report : latest
       }
       return latest

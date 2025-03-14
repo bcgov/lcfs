@@ -4,7 +4,11 @@ from typing import Tuple
 from fastapi import Depends, HTTPException
 
 from lcfs.db.models import UserProfile
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance import ComplianceReportSummary
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    SupplementalInitiatorType,
+)
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
@@ -14,6 +18,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ReturnStatus,
     ComplianceReportBaseSchema,
+    ComplianceReportSummarySchema,
 )
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
@@ -44,22 +49,6 @@ class ComplianceReportUpdateService:
         self.org_service = org_service
         self.trx_service = trx_service
         self.notfn_service = notfn_service
-
-    async def _handle_return_status(
-        self, report_data: ComplianceReportUpdateSchema
-    ) -> Tuple[str, bool]:
-        """Handle return status logic and return new status and change flag."""
-        mapped_status = RETURN_STATUS_MAPPER.get(report_data.status)
-        return mapped_status, False
-
-    async def _check_report_exists(self, report_id: int) -> ComplianceReport:
-        """Verify report exists and return it."""
-        report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
-        if not report:
-            raise DataNotFoundException(
-                f"Compliance report with ID {report_id} not found"
-            )
-        return report
 
     async def update_compliance_report(
         self,
@@ -154,10 +143,10 @@ class ComplianceReportUpdateService:
         status_handlers = {
             ComplianceReportStatusEnum.Draft: self.handle_draft_status,
             ComplianceReportStatusEnum.Submitted: self.handle_submitted_status,
+            ComplianceReportStatusEnum.Analyst_adjustment: self.handle_analyst_adjustment_status,
             ComplianceReportStatusEnum.Recommended_by_analyst: self.handle_recommended_by_analyst_status,
             ComplianceReportStatusEnum.Recommended_by_manager: self.handle_recommended_by_manager_status,
             ComplianceReportStatusEnum.Assessed: self.handle_assessed_status,
-            ComplianceReportStatusEnum.Reassessed: self.handle_reassessed_status,
         }
 
         handler = status_handlers.get(new_status)
@@ -165,6 +154,15 @@ class ComplianceReportUpdateService:
             await handler(report, user)
         else:
             raise ServiceException(f"Unsupported status change to {new_status}")
+
+    async def _check_report_exists(self, report_id: int) -> ComplianceReport:
+        """Verify report exists and return it."""
+        report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
+        if not report:
+            raise DataNotFoundException(
+                f"Compliance report with ID {report_id} not found"
+            )
+        return report
 
     async def handle_draft_status(self, report: ComplianceReport, user: UserProfile):
         """Handle actions when a report is set to Draft status."""
@@ -182,21 +180,109 @@ class ComplianceReportUpdateService:
         )
         if not has_supplier_roles:
             raise HTTPException(status_code=403, detail="Forbidden.")
+        calculated_summary = await self._calculate_and_lock_summary(report, user)
+        credit_change = report.summary.line_20_surplus_deficit_units
+        await self._create_or_update_reserve_transaction(credit_change, report)
+        await self.repo.update_compliance_report(report)
+
+        return calculated_summary
+
+    async def _handle_return_status(
+        self, report_data: ComplianceReportUpdateSchema
+    ) -> Tuple[str, bool]:
+        """Handle return status logic and return new status and change flag."""
+        mapped_status = RETURN_STATUS_MAPPER.get(report_data.status)
+        return mapped_status, False
+
+    async def handle_analyst_adjustment_status(
+        self, report: ComplianceReport, user: UserProfile
+    ):
+        """Handle actions when a report is Recommended by analyst."""
+        # Implement logic for Recommended by analyst status
+        has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+        if not has_analyst_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+
+    async def handle_recommended_by_analyst_status(
+        self, report: ComplianceReport, user: UserProfile
+    ):
+        """Handle actions when a report is Recommended by analyst."""
+        # Implement logic for Recommended by analyst status
+        has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+        if not has_analyst_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+
+        # If its a government adjustment, create a transaction and lock the summary
+        if (
+            report.supplemental_initiator
+            and report.supplemental_initiator
+            == SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+        ):
+            summary = await self._calculate_and_lock_summary(report, user)
+            credit_change = summary.line_20_surplus_deficit_units
+            await self._create_or_update_reserve_transaction(credit_change, report)
+
+    async def handle_recommended_by_manager_status(
+        self, report: ComplianceReport, user: UserProfile
+    ):
+        """Handle actions when a report is Recommended by manager."""
+        # Implement logic for Recommended by manager status
+        has_compliance_manager_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.COMPLIANCE_MANAGER]
+        )
+        if not has_compliance_manager_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+
+    async def handle_assessed_status(self, report: ComplianceReport, user: UserProfile):
+        """Handle actions when a report is Assessed."""
+        has_director_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
+        )
+        if not has_director_role:
+            raise HTTPException(status_code=403, detail="Forbidden.")
+
+        if report.transaction:
+            # Update the transaction to assessed
+            report.transaction.transaction_action = TransactionActionEnum.Adjustment
+            report.transaction.update_user = user.keycloak_username
+        await self.repo.update_compliance_report(report)
+
+    async def _create_or_update_reserve_transaction(self, credit_change, report):
+        if report.transaction is not None:
+            report.transaction.compliance_units = credit_change
+        elif credit_change != 0:
+            available_balance = await self.org_service.calculate_available_balance(
+                report.organization_id
+            )
+            # Only need a Transaction if they have credits
+            if available_balance > 0:
+                units_to_reserve = credit_change
+
+                # If not enough credits, reserve what is left
+                if credit_change < 0 and abs(credit_change) > available_balance:
+                    units_to_reserve = available_balance * -1
+
+                report.transaction = await self.org_service.adjust_balance(
+                    transaction_action=TransactionActionEnum.Reserved,
+                    compliance_units=units_to_reserve,
+                    organization_id=report.organization_id,
+                )
+
+    async def _calculate_and_lock_summary(
+        self, report, user
+    ) -> ComplianceReportSummary:
         # Fetch the existing summary from the database, if any
         existing_summary = await self.repo.get_summary_by_report_id(
             report.compliance_report_id
         )
-
         # Calculate a new summary based on the current report data
         calculated_summary = (
             await self.summary_service.calculate_compliance_report_summary(
                 report.compliance_report_id
             )
         )
-
         if not calculated_summary.can_sign:
             raise ServiceException("ComplianceReportSummary is not able to be signed")
-
         # If there's an existing summary, preserve user-edited values
         if existing_summary:
             for row in calculated_summary.renewable_fuel_target_summary:
@@ -240,86 +326,18 @@ class ComplianceReportUpdateService:
                         existing_summary.line_8_obligation_deferred_jet_fuel
                         or row.jet_fuel
                     )
-
         # Lock the summary to prevent further edits
         calculated_summary.is_locked = True
-
         # Save the summary
         if report.summary:
-            # Update existing summary
-            report.summary = await self.repo.save_compliance_report_summary(
+            new_summary = await self.repo.save_compliance_report_summary(
                 calculated_summary
             )
+            report.summary = new_summary
         else:
             # Create new summary if it doesn't exist
             new_summary = await self.repo.add_compliance_report_summary(
                 calculated_summary
             )
-            # Update the report with the new summary
             report.summary = new_summary
-
-        credit_change = report.summary.line_20_surplus_deficit_units
-        if credit_change != 0:
-            if report.transaction is not None:
-                # Update existing transaction
-                report.transaction.compliance_units = credit_change
-            else:
-                available_balance = await self.org_service.calculate_available_balance(
-                    report.organization_id
-                )
-                # Only need a Transaction if they have credits
-                if available_balance > 0:
-                    units_to_reserve = credit_change
-
-                    # If not enough credits, reserve what is left
-                    if credit_change < 0 and abs(credit_change) > available_balance:
-                        units_to_reserve = available_balance * -1
-
-                    report.transaction = await self.org_service.adjust_balance(
-                        transaction_action=TransactionActionEnum.Reserved,
-                        compliance_units=units_to_reserve,
-                        organization_id=report.organization_id,
-                    )
-
-        await self.repo.update_compliance_report(report)
-
-        return calculated_summary
-
-    async def handle_recommended_by_analyst_status(
-        self, report: ComplianceReport, user: UserProfile
-    ):
-        """Handle actions when a report is Recommended by analyst."""
-        # Implement logic for Recommended by analyst status
-        has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
-        if not has_analyst_role:
-            raise HTTPException(status_code=403, detail="Forbidden.")
-
-    async def handle_recommended_by_manager_status(
-        self, report: ComplianceReport, user: UserProfile
-    ):
-        """Handle actions when a report is Recommended by manager."""
-        # Implement logic for Recommended by manager status
-        has_compliance_manager_role = user_has_roles(
-            user, [RoleEnum.GOVERNMENT, RoleEnum.COMPLIANCE_MANAGER]
-        )
-        if not has_compliance_manager_role:
-            raise HTTPException(status_code=403, detail="Forbidden.")
-
-    async def handle_assessed_status(self, report: ComplianceReport, user: UserProfile):
-        """Handle actions when a report is Assessed."""
-        has_director_role = user_has_roles(
-            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
-        )
-        if not has_director_role:
-            raise HTTPException(status_code=403, detail="Forbidden.")
-
-        if report.transaction:
-            # Update the transaction to assessed
-            report.transaction.transaction_action = TransactionActionEnum.Adjustment
-            report.transaction.update_user = user.keycloak_username
-        await self.repo.update_compliance_report(report)
-
-    async def handle_reassessed_status(self, report: ComplianceReport):
-        """Handle actions when a report is Reassessed."""
-        # Implement logic for Reassessed status
-        pass
+        return report.summary

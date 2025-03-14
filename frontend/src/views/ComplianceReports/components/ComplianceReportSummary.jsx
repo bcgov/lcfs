@@ -30,6 +30,7 @@ import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 const ComplianceReportSummary = ({
   reportID,
   currentStatus,
+  canEdit,
   compliancePeriodYear,
   setIsSigningAuthorityDeclared,
   buttonClusterConfig,
@@ -153,7 +154,7 @@ const ComplianceReportSummary = ({
                 ? renewableFuelColumns(
                     t,
                     summaryData?.renewableFuelTargetSummary,
-                    currentStatus === 'Draft',
+                    canEdit,
                     compliancePeriodYear
                   )
                 : []

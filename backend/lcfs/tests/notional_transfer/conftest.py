@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock
 
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance import NotionalTransfer
 from lcfs.web.api.notional_transfer.schema import NotionalTransferCreateSchema
 
@@ -17,7 +17,6 @@ def create_mock_entity(overrides: dict):
     mock_entity.group_uuid = "test-group-uuid"
     mock_entity.version = 1
     mock_entity.action_type = ActionTypeEnum.CREATE
-    mock_entity.user_type = UserTypeEnum.SUPPLIER
 
     # Apply overrides
     if overrides:

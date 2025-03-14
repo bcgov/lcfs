@@ -1,10 +1,9 @@
-from lcfs.web.exception.exceptions import ValidationErrorException
 import pytest
 from datetime import date
 from types import SimpleNamespace
 from unittest.mock import MagicMock, AsyncMock
 
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.fuel_export.schema import (
@@ -16,6 +15,7 @@ from lcfs.web.api.fuel_export.schema import (
     FuelTypeOptionsResponse,
     DeleteFuelExportResponseSchema,
 )
+from lcfs.web.exception.exceptions import ValidationErrorException
 
 # Mock common data for reuse
 mock_fuel_type = FuelTypeSchema(
@@ -72,7 +72,6 @@ async def test_get_fuel_export_list_success(fuel_export_service, mock_repo):
         provision_of_the_act_id=1,
         provision_of_the_act={"provision_of_the_act_id": 1, "name": "Test Provision"},
         version=0,
-        user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
     )
     mock_repo.get_fuel_export_list.return_value = [mock_export]
@@ -120,9 +119,7 @@ async def test_get_fuel_exports_paginated_success(fuel_export_service, mock_repo
     assert result.pagination.page == 1
     assert result.pagination.size == 10
     # Expect the extra parameter to be passed
-    mock_repo.get_fuel_exports_paginated.assert_called_once_with(
-        pagination_mock, 1, exclude_draft_reports=True
-    )
+    mock_repo.get_fuel_exports_paginated.assert_called_once_with(pagination_mock, 1)
 
 
 # FuelExportActionService Tests
@@ -164,7 +161,6 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
         compliance_report_id=1,
         group_uuid="test-uuid",
         version=0,
-        user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
         provision_of_the_act_id=1,
         provision_of_the_act={"provision_of_the_act_id": 1, "name": "Act Provision"},
@@ -179,9 +175,7 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
     )
     mock_repo.create_fuel_export = AsyncMock(return_value=mock_created_export)
 
-    result = await fuel_export_action_service.create_fuel_export(
-        input_data, UserTypeEnum.SUPPLIER
-    )
+    result = await fuel_export_action_service.create_fuel_export(input_data)
 
     assert isinstance(result, FuelExportSchema)
     mock_repo.create_fuel_export.assert_awaited_once()
@@ -226,7 +220,6 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         compliance_report_id=1,
         group_uuid="test-uuid",
         version=0,
-        user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
         fuel_type_id=1,
         fuel_category_id=1,
@@ -240,18 +233,15 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         fuel_category=mock_fuel_category.dict(),
     )
     # Setup async mocks properly
-    mock_repo.get_fuel_export_version_by_user = AsyncMock(
-        return_value=mock_existing_export
-    )
+    mock_repo.get_fuel_export_by_id = AsyncMock(return_value=mock_existing_export)
     mock_repo.update_fuel_export = AsyncMock(return_value=mock_existing_export)
 
     result = await fuel_export_action_service.update_fuel_export(
         input_data,
-        UserTypeEnum.SUPPLIER,
     )
 
     assert isinstance(result, FuelExportSchema)
-    mock_repo.get_fuel_export_version_by_user.assert_awaited_once()
+    mock_repo.get_fuel_export_by_id.assert_awaited_once()
     mock_repo.update_fuel_export.assert_awaited_once()
 
 
@@ -277,7 +267,6 @@ async def test_action_delete_fuel_export_success(fuel_export_action_service, moc
         compliance_report_id=1,
         group_uuid="test-uuid",
         version=0,
-        user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
         fuel_type_id=1,
         fuel_category_id=1,
@@ -293,9 +282,7 @@ async def test_action_delete_fuel_export_success(fuel_export_action_service, moc
     mock_repo.get_latest_fuel_export_by_group_uuid.return_value = mock_latest_export
     mock_repo.create_fuel_export.return_value = None
 
-    result = await fuel_export_action_service.delete_fuel_export(
-        input_data, UserTypeEnum.SUPPLIER
-    )
+    result = await fuel_export_action_service.delete_fuel_export(input_data)
 
     assert isinstance(result, DeleteFuelExportResponseSchema)
     assert result.success is True
@@ -343,9 +330,7 @@ async def test_action_create_fuel_export_energy_too_high(
 
     # Attempt to create the fuel export and expect a ValidationErrorException
     with pytest.raises(ValidationErrorException) as exc_info:
-        await fuel_export_action_service.create_fuel_export(
-            input_data, UserTypeEnum.SUPPLIER
-        )
+        await fuel_export_action_service.create_fuel_export(input_data)
 
     # Verify exception contains the expected structure and message
     error_data = exc_info.value.errors

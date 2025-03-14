@@ -602,7 +602,7 @@ export const fuelExportSummaryColDefs = [
     valueGetter: (params) => params.data.fuelType?.fuelType
   },
   {
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory',
     valueGetter: (params) => params.data.fuelCategory?.category
   },
@@ -684,7 +684,7 @@ export const changelogCommonColDefs = [
     cellStyle: (params) => changelogCellStyle(params, 'fuelTypeId')
   },
   {
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory',
     valueGetter: (params) => params.data.fuelCategory?.category,
     cellStyle: (params) => changelogCellStyle(params, 'fuelCategoryId')
