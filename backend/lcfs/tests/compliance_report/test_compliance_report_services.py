@@ -1,7 +1,10 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
 
 
@@ -229,7 +232,8 @@ async def test_delete_supplemental_report_success(compliance_report_service, moc
 
     mock_user = MagicMock(organization_id=998)
     mock_report = MagicMock(
-        organization_id=998, current_status=MagicMock(status="Draft")
+        organization_id=998,
+        current_status=MagicMock(status=ComplianceReportStatusEnum.Draft),
     )
 
     # Mock repository methods
@@ -274,11 +278,11 @@ async def test_delete_supplemental_report_no_permission(
 
     mock_repo.get_compliance_report_by_id.return_value = mock_report
 
-    with pytest.raises(
-        ServiceException,
-        match="You do not have permission to delete a supplemental report",
-    ):
+    with pytest.raises(ServiceException) as exc:
         await compliance_report_service.delete_supplemental_report(996, mock_user)
+    assert "You do not have permission to delete a supplemental report" in str(
+        exc.value
+    )
 
     mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
     mock_repo.delete_supplemental_report.assert_not_called()
@@ -297,11 +301,12 @@ async def test_delete_supplemental_report_wrong_status(
 
     mock_repo.get_compliance_report_by_id.return_value = mock_report
 
-    with pytest.raises(
-        ServiceException,
-        match="A supplemental report can only be deleted if the status is 'Draft'.",
-    ):
+    with pytest.raises(ServiceException) as exc_info:
         await compliance_report_service.delete_supplemental_report(996, mock_user)
+
+    assert "A supplemental report can only be deleted if the status is 'Draft'." in str(
+        exc_info.value
+    ), f"Expected error message to match but got: {str(exc_info.value)}"
 
     mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
     mock_repo.delete_supplemental_report.assert_not_called()
