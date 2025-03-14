@@ -1,9 +1,8 @@
 name: Cypress Daily
 
 on:
-  push:
-  # schedule:
-  #   - cron: "0 16 * * *" # Runs daily at 16:00 UTC (8 AM PST)
+  schedule:
+    - cron: "0 16 * * *" # Runs daily at 16:00 UTC (8 AM PST)
   workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
