@@ -1,8 +1,9 @@
 name: Cypress Daily
 
 on:
-  schedule:
-    - cron: "0 16 * * *" # Runs daily at 16:00 UTC (8 AM PST)
+  push:
+  # schedule:
+  #   - cron: "0 16 * * *" # Runs daily at 16:00 UTC (8 AM PST)
   workflow_dispatch: # Allows manual triggering of the workflow
 
 jobs:
@@ -51,7 +52,7 @@ jobs:
         run: docker exec backend poetry run python /app/lcfs/db/seeders/seed_database.py
 
       - name: Build Frontend Service
-        run: docker build -t frontend-service -f ./frontend/Dockerfile.dev ./frontend
+        run: docker build -t frontend-service -f ./frontend/Dockerfile.dev ./frontend -e DB_CYPRESS_PASS=development_only
 
       - name: Run Frontend Service
         run: docker run -d --name frontend --network=host frontend-service

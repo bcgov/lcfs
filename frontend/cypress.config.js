@@ -58,11 +58,11 @@ export default defineConfig({
         clearComplianceReports() {
           return new Promise((resolve, reject) => {
             const client = new Client({
-              user: 'lcfs',
-              host: 'localhost',
-              database: 'lcfs',
-              password: 'development_only',
-              port: 5432
+              user: process.env.DB_CYPRESS_USER || 'lcfs',
+              host: process.env.DB_CYPRESS_HOST || 'localhost',
+              database: process.env.DB_CYPRESS_NAME || 'lcfs',
+              password: process.env.DB_CYPRESS_PASSWORD,
+              port: parseInt(process.env.DB_PORT || '5432')
             })
 
             client.connect()
