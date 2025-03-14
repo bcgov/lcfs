@@ -117,10 +117,10 @@ export const useUpdateComplianceReport = (reportID, options) => {
   })
 }
 
-export const useDeleteComplianceReport = (reportID, options) => {
+export const useDeleteComplianceReport = (orgID, reportID, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
-  const path = apiRoutes.deleteComplianceReport.replace(':reportID', reportID)
+  const path = apiRoutes.deleteSupplementalReport.replace(':orgID', orgID).replace(':reportID', reportID)
   return useMutation({
     ...options,
     mutationFn: async () => {
