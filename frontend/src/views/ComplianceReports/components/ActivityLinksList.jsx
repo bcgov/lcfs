@@ -81,7 +81,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
         ROUTES.REPORTS_ADD_FUEL_EXPORTS
       )
     ],
-    [t, navigate, compliancePeriod, complianceReportId]
+    [t, navigate, compliancePeriod, complianceReportId, createActivity]
   )
 
   const secondaryList = useMemo(
@@ -104,7 +104,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
         }
       }
     ],
-    [t, navigate, compliancePeriod, complianceReportId]
+    [t, navigate, compliancePeriod, complianceReportId, createActivity]
   )
 
   return (

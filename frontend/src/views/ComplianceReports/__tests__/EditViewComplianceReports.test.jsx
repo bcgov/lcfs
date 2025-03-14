@@ -60,7 +60,7 @@ vi.mock('@/hooks/useComplianceReports')
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganization')
 
-vi.mock('../components/ActivityLinkList', () => ({
+vi.mock('../components/ActivityLinksList', () => ({
   ActivityLinksList: () => <div>Activity Links List</div>
 }))
 

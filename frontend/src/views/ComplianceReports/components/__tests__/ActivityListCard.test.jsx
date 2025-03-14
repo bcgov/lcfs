@@ -20,7 +20,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/services/useApiService')
 
 // Mock the ActivityLinksList component
-vi.mock('./ActivityLinkList', () => ({
+vi.mock('./ActivityLinksList', () => ({
   ActivityLinksList: () => <div key="1">Mocked Activity Links List</div>
 }))
 
