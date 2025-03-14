@@ -133,9 +133,11 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         t,
         setModalData,
         updateComplianceReport,
+        deleteSupplementalReport,
         compliancePeriod,
         isGovernmentUser,
-        isSigningAuthorityDeclared
+        isSigningAuthorityDeclared,
+        supplementalInitiator: reportData?.report?.supplementalInitiator
       }),
     [
       hasRoles,
@@ -145,7 +147,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       updateComplianceReport,
       compliancePeriod,
       isGovernmentUser,
-      isSigningAuthorityDeclared
+      isSigningAuthorityDeclared,
+      reportData?.report
     ]
   )
 

@@ -170,6 +170,38 @@ class ComplianceReportServices:
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
+    async def delete_supplemental_report(
+        self, report_id: int, user: UserProfile = None
+    ):
+        """
+        Deletes a supplemental compliance report.
+        The report_id can be any report in the series (original or supplemental).
+        Supplemental reports are only allowed if the status of the current report is 'Assessed'.
+        """
+        # Fetch the current report using the provided report_id
+        current_report = await self.repo.get_compliance_report_by_id(
+            report_id, is_model=True
+        )
+        if not current_report:
+            raise DataNotFoundException("Compliance report not found.")
+
+        # Validate that the user has permission to delete a supplemental report
+        if user.organization_id != current_report.organization_id:
+            raise ServiceException(
+                "You do not have permission to delete a supplemental report for this organization."
+            )
+
+        # Validate that the status of the current report is 'Draft'
+        if current_report.current_status.status != ComplianceReportStatusEnum.Draft:
+            raise ServiceException(
+                "A supplemental report can only be deleted if the status is 'Draft'."
+            )
+
+        # Delete the supplemental report
+        await self.repo.delete_supplemental_report(report_id)
+        return True
+
+    @service_handler
     async def get_compliance_reports_paginated(
         self,
         pagination,
