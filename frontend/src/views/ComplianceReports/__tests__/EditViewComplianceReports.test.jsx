@@ -523,6 +523,9 @@ describe('EditViewComplianceReport', () => {
       isLoading: false
     })
 
+    vi.mock('../components/OrganizationAddress', () => ({
+      default: () => <div>Organization Address</div>
+    }))
     const mocks = setupMocks({
       reportData: {
         report: {
@@ -545,11 +548,11 @@ describe('EditViewComplianceReport', () => {
     // Ensure translated delete button text is present
     await waitFor(() => {
       expect(
-        screen.getByText('report:deleteSupplementalReport')
+        screen.getByText('report:actionBtns.deleteSupplementalReportBtn')
       ).toBeInTheDocument()
     })
 
-    fireEvent.click(screen.getByText('report:deleteSupplementalReport'))
+    fireEvent.click(screen.getByText('report:actionBtns.deleteSupplementalReportBtn'))
 
     await waitFor(() => {
       expect(deleteSupplementalReportMock).toHaveBeenCalledTimes(1)
