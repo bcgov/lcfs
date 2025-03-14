@@ -162,21 +162,15 @@ export const AddEditFuelExports = () => {
           const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
             (item) => item.fuelCategory
           )
-
-          const uniqueEndUseTypes = Array.from(
-            new Map(
-              selectedFuelType.eerRatios.map((item) => [
-                item.endUseType.endUseTypeId,
-                item.endUseType
-              ])
-            ).values()
+          const endUseTypes = selectedFuelType.eerRatios.map(
+            (item) => item.endUseType
           )
 
           // Set to null if multiple options, otherwise use first item
           const category =
             fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
           const endUseValue =
-            uniqueEndUseTypes.length === 1 ? uniqueEndUseTypes[0].type : null
+            endUseTypes.length === 1 ? endUseTypes[0].type : null
           const provisionValue =
             selectedFuelType.provisions.length === 1
               ? selectedFuelType.provisions[0].name
@@ -194,18 +188,16 @@ export const AddEditFuelExports = () => {
         )
 
         if (selectedFuelType) {
-          const uniqueEndUseTypes = Array.from(
-            new Map(
-              selectedFuelType.eerRatios.map((item) => [
-                item.endUseType.endUseTypeId,
-                item.endUseType
-              ])
-            ).values()
-          )
+          const endUseTypes = selectedFuelType.eerRatios
+            .filter(
+              (item) =>
+                item.fuelCategory.fuelCategory === params.data.fuelCategory
+            )
+            .map((item) => item.endUseType)
 
           // Set to null if multiple options, otherwise use first item
           const endUseValue =
-            uniqueEndUseTypes.length === 1 ? uniqueEndUseTypes[0].type : null
+            endUseTypes.length === 1 ? endUseTypes[0].type : null
           const provisionValue =
             selectedFuelType.provisions.length === 1
               ? selectedFuelType.provisions[0].name

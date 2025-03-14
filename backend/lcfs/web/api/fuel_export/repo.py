@@ -1,3 +1,4 @@
+from datetime import datetime
 import structlog
 from typing import List, Optional, Tuple
 from lcfs.db.models.compliance import (
@@ -86,6 +87,21 @@ class FuelExportRepository:
             .scalar_subquery()
         )
 
+        try:
+            current_year = int(compliance_period)
+        except ValueError as e:
+            logger.error(
+                "Invalid compliance_period: not an integer",
+                compliance_period=compliance_period,
+                error=str(e),
+            )
+            raise ValueError(
+                f"""Invalid compliance_period: '{
+                    compliance_period}' must be an integer."""
+            ) from e
+
+        start_of_compliance_year = datetime(current_year, 1, 1)
+        end_of_compliance_year = datetime(current_year, 12, 31)
         query = (
             select(
                 FuelType.fuel_type_id,
@@ -193,6 +209,8 @@ class FuelExportRepository:
                     FuelCode.fuel_status_id == subquery_fuel_code_status_id,
                     ProvisionOfTheAct.provision_of_the_act_id
                     == subquery_provision_of_the_act_id,
+                    FuelCode.expiration_date >= start_of_compliance_year,
+                    FuelCode.effective_date <= end_of_compliance_year,
                 ),
             )
             .outerjoin(
