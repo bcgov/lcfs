@@ -90,6 +90,11 @@ class NotificationRequestSchema(BaseSchema):
     notification_data: Optional[NotificationMessageSchema] = None
 
 
+class NotificationBatchOperationSchema(BaseSchema):
+    applyToAll: bool = False
+    notification_ids: Optional[List[int]] = []
+
+
 COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER = {
     ComplianceReportStatusEnum.Submitted: [
         NotificationTypeEnum.IDIR_ANALYST__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW,
@@ -119,7 +124,7 @@ COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER = {
     ],
     "Return to supplier": [
         NotificationTypeEnum.BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT
-    ]
+    ],
 }
 
 
@@ -159,7 +164,7 @@ INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER = {
     ],
     InitiativeAgreementStatusEnum.Approved: [
         NotificationTypeEnum.BCEID__INITIATIVE_AGREEMENT__DIRECTOR_APPROVAL,
-        NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST
+        NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST,
     ],
     "Return to analyst": [
         NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST
