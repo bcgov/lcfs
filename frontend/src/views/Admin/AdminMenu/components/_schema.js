@@ -14,6 +14,7 @@ import {
   BCSelectFloatingFilter,
   BCDateFloatingFilter
 } from '@/components/BCDataGrid/components/index'
+import { RoleSelectFloatingFilter } from './RoleSelectFloatingFilter'
 import {
   COMPLIANCE_REPORT_STATUSES,
   TRANSACTION_TYPES,
@@ -52,10 +53,9 @@ export const usersColumnDefs = (t) => [
       },
       suppressFilterButton: true
     },
-    floatingFilterComponent: BCSelectFloatingFilter,
     suppressFloatingFilterButton: true,
+    floatingFilterComponent: RoleSelectFloatingFilter,
     floatingFilterComponentParams: {
-      optionsQuery: useRoleList,
       params: 'government_roles_only=true',
       valueKey: 'name',
       labelKey: 'name'

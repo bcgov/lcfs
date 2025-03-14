@@ -6,7 +6,7 @@ export const useRoleList = (params, options) => {
   const client = useApiService()
   const path = apiRoutes.roles + (params ? `?${params}` : '')
   return useQuery({
-    queryKey: ['roles'],
+    queryKey: ['roles', params || 'all'],
     queryFn: async () => (await client.get(path)).data,
     ...options
   })
