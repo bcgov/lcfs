@@ -131,6 +131,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     history: Optional[List[ComplianceReportHistorySchema]] = None
     has_supplemental: bool
     legacy_id: Optional[int] = None
+    assessment_statement: Optional[str] = None
 
 
 class ComplianceReportViewSchema(BaseSchema):
@@ -212,6 +213,7 @@ class CommonPaginatedReportRequestSchema(BaseSchema):
 class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
+    assessment_statement: Optional[str] = None
 
 
 T = TypeVar('T')

@@ -46,7 +46,8 @@ compliance_report_document_association = Table(
     Column(
         "compliance_report_id",
         Integer,
-        ForeignKey("compliance_report.compliance_report_id", ondelete="CASCADE"),
+        ForeignKey("compliance_report.compliance_report_id",
+                   ondelete="CASCADE"),
         primary_key=True,
     ),
     Column(
@@ -132,12 +133,18 @@ class ComplianceReport(BaseModel, Auditable):
         nullable=True,
         comment="Supplemental note for the compliance report",
     )
+    assessment_statement = Column(
+        String,
+        nullable=True,
+        comment="Assessment statement for the compliance report",
+    )
 
     # Relationships
     compliance_period = relationship(
         "CompliancePeriod", back_populates="compliance_reports"
     )
-    organization = relationship("Organization", back_populates="compliance_reports")
+    organization = relationship(
+        "Organization", back_populates="compliance_reports")
     current_status = relationship("ComplianceReportStatus")
     transaction = relationship("Transaction")
 
@@ -161,8 +168,10 @@ class ComplianceReport(BaseModel, Auditable):
     notional_transfers = relationship(
         "NotionalTransfer", back_populates="compliance_report"
     )
-    fuel_supplies = relationship("FuelSupply", back_populates="compliance_report")
-    fuel_exports = relationship("FuelExport", back_populates="compliance_report")
+    fuel_supplies = relationship(
+        "FuelSupply", back_populates="compliance_report")
+    fuel_exports = relationship(
+        "FuelExport", back_populates="compliance_report")
     allocation_agreements = relationship(
         "AllocationAgreement", back_populates="compliance_report"
     )

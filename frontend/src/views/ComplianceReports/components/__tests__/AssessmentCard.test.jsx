@@ -1,9 +1,11 @@
-import React from 'react'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import * as useCurrentUserHook from '@/hooks/useCurrentUser.js'
+import * as useComplianceReportHook from '@/hooks/useComplianceReports'
+import { wrapper } from '@/tests/utils/wrapper'
 import { render, screen, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 import { AssessmentCard } from '../AssessmentCard'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { wrapper } from '@/tests/utils/wrapper'
+import { AssessmentStatement } from '../AssessmentStatement'
 
 // Mock BCWidgetCard component
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
@@ -58,6 +60,10 @@ vi.mock('@/contexts/AuthContext', () => ({
   })
 }))
 
+vi.mock('@/hooks/useCurrentUser')
+vi.mock('@/hooks/useComplianceReports')
+vi.mock('@/hooks/useCreateSupplementalReport')
+
 describe('AssessmentCard', () => {
   const mockHistory = [
     {
@@ -80,7 +86,34 @@ describe('AssessmentCard', () => {
     orgAttorneyAddress: '456 Attorney Ave, Legal City, LC'
   }
 
+  it('renders loading state', () => {
+    vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
+      isLoading: true
+    })
+    vi.mocked(useComplianceReportHook.useGetComplianceReport).mockReturnValue({
+      isLoading: true,
+      data: {}
+    })
+    vi.mocked(
+      useComplianceReportHook.useCreateSupplementalReport
+    ).mockReturnValue({
+      mutate: vi.fn()
+    })
+
+    render(<AssessmentCard chain={[]} />, { wrapper })
+    expect(screen.getByTestId('loading')).toBeInTheDocument()
+  })
+
   it('renders without crashing', async () => {
+    vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
+      hasRoles: vi.fn(() => true),
+      isLoading: false
+    })
+    vi.mocked(useComplianceReportHook.useGetComplianceReport).mockReturnValue({
+      isLoading: false,
+      data: { report: { curentStatus: { status: 'Assessed' } } }
+    })
+
     render(
       <AssessmentCard
         orgData={mockOrgData}
@@ -258,6 +291,39 @@ describe('AssessmentCard', () => {
       expect(
         screen.getByText('Assessed by John Doe on 2024-09-30 5:00 pm PDT')
       ).toBeInTheDocument()
+    })
+  })
+  it('renders assessment statement', async () => {
+    vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
+      hasRoles: vi.fn(() => true),
+      isLoading: false
+    })
+    vi.mocked(useComplianceReportHook.useGetComplianceReport).mockReturnValue({
+      isLoading: false,
+      data: {
+        report: {
+          curentStatus: { status: 'Assessed' },
+          assessmentStatement: 'assessment statement test'
+        }
+      }
+    })
+    render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasMetRenewables={false}
+        hasMetLowCarbon={false}
+        hasSupplemental={false}
+        isGovernmentUser={true}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={[]}
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('assessment statement test')).toBeInTheDocument()
     })
   })
 })
