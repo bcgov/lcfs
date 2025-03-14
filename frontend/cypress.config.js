@@ -2,6 +2,8 @@ import { defineConfig } from 'cypress'
 import createBundler from '@bahmutov/cypress-esbuild-preprocessor'
 import { addCucumberPreprocessorPlugin } from '@badeball/cypress-cucumber-preprocessor'
 import { createEsbuildPlugin } from '@badeball/cypress-cucumber-preprocessor/esbuild'
+import pg from 'pg'
+const { Client } = pg
 
 export default defineConfig({
   e2e: {
@@ -52,6 +54,24 @@ export default defineConfig({
           console.table(message)
 
           return null
+        },
+        clearComplianceReports() {
+          return new Promise((resolve, reject) => {
+            const client = new Client({
+              user: 'lcfs',
+              host: 'localhost',
+              database: 'lcfs',
+              password: 'development_only',
+              port: 5432
+            })
+
+            client.connect()
+            client.query('truncate compliance_report cascade;', (err, res) => {
+              client.end()
+              if (err) reject(err)
+              else resolve('Compliance reports cleared')
+            })
+          })
         }
       })
 

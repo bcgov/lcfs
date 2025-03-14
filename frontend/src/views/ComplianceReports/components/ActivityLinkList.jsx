@@ -129,6 +129,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
             key={activity.name}
             alignItems="flex-start"
             onClick={activity.action}
+            data-test={activity.label}
           >
             <BCTypography
               variant="subtitle2"
@@ -164,6 +165,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
             key={activity.name}
             alignItems="flex-start"
             onClick={activity.action}
+            data-test={activity.label}
           >
             <BCTypography
               variant="subtitle2"
