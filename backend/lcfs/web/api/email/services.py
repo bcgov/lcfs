@@ -47,7 +47,8 @@ class CHESEmailService:
             return False
 
         # Validate configuration before performing any operations
-        self._validate_configuration()
+        if not self._validate_configuration():
+            return
 
         # Retrieve subscribed user emails
         recipient_emails = await self.repo.get_subscribed_user_emails(
@@ -85,7 +86,8 @@ class CHESEmailService:
             return False
 
         try:
-            self._validate_configuration()
+            if not self._validate_configuration():
+                return False
         except Exception as e:
             logger.info(f"Email configuration error: {e}")
             return False
@@ -153,7 +155,8 @@ class CHESEmailService:
         Retrieve and cache the CHES access token.
         """
         try:
-            self._validate_configuration()
+            if not self._validate_configuration():
+                return None
 
             if self._access_token and datetime.now().timestamp() < self._token_expiry:
                 return self._access_token
@@ -198,7 +201,7 @@ class CHESEmailService:
         if not settings.ches_sender_name:
             missing_configs.append("ches_sender_name")
 
-        if missing_configs:
-            raise ValueError(
-                f"Missing CHES configuration: {', '.join(missing_configs)}"
-            )
+        if missing_configs or len(missing_configs) > 0:
+            logger.error(f"Missing CHES configuration: {', '.join(missing_configs)}")
+            return False
+        return True

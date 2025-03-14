@@ -43,6 +43,10 @@ export const COMPLIANCE_REPORT_STATUSES = {
   RETURN_TO_MANAGER: 'Return to manager',
   RETURN_TO_SUPPLIER: 'Return to supplier'
 }
+export const SUPPLEMENTAL_INITIATOR_TYPE = {
+  SUPPLIER_SUPPLEMENTAL: 'Supplier Supplemental',
+  GOVERNMENT_REASSESSMENT: 'Government Reassessment'
+}
 export function getAllOrganizationStatuses() {
   return Object.values(ORGANIZATION_STATUSES)
 }

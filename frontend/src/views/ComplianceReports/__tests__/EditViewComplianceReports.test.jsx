@@ -134,6 +134,9 @@ describe('EditViewComplianceReport', () => {
       useComplianceReportsHook.useUpdateComplianceReport
     ).mockReturnValue({ mutate: vi.fn() })
     vi.mocked(
+      useComplianceReportsHook.useDeleteComplianceReport
+    ).mockReturnValue({ mutate: vi.fn() })
+    vi.mocked(
       useComplianceReportsHook.useCreateSupplementalReport
     ).mockReturnValue({
       mutate: vi.fn(),

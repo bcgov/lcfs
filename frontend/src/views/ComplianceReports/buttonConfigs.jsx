@@ -1,7 +1,10 @@
 // complianceReportButtonConfigs.js
 
-import { faPencil } from '@fortawesome/free-solid-svg-icons'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import {
+  COMPLIANCE_REPORT_STATUSES,
+  SUPPLEMENTAL_INITIATOR_TYPE
+} from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 
 const outlineBase = {
@@ -42,9 +45,11 @@ export const buttonClusterConfigFn = ({
   t,
   setModalData,
   updateComplianceReport,
+  deleteSupplementalReport = () => {},
   compliancePeriod,
   isGovernmentUser,
-  isSigningAuthorityDeclared
+  isSigningAuthorityDeclared,
+  supplementalInitiator
 }) => {
   const reportButtons = {
     submitReport: {
@@ -184,6 +189,23 @@ export const buttonClusterConfigFn = ({
           content: t('report:reAssessConfirmText')
         })
       }
+    },
+    deleteSupplementalReport: {
+      ...redOutlinedButton(
+        t('report:actionBtns.deleteSupplementalReportBtn'),
+        faTrash
+      ),
+      id: 'delete-supplemental-report-btn',
+      handler: (formData) => {
+        setModalData({
+          primaryButtonAction: () => deleteSupplementalReport(formData),
+          primaryButtonText: t('report:actionBtns.deleteSupplementalReportBtn'),
+          primaryButtonColor: 'error',
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:deleteConfirmText')
+        })
+      }
     }
   }
 
@@ -195,7 +217,13 @@ export const buttonClusterConfigFn = ({
   }
 
   const buttons = {
-    [COMPLIANCE_REPORT_STATUSES.DRAFT]: [reportButtons.submitReport],
+    [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
+      reportButtons.submitReport,
+      ...(supplementalInitiator ===
+      SUPPLEMENTAL_INITIATOR_TYPE.SUPPLIER_SUPPLEMENTAL
+        ? [reportButtons.deleteSupplementalReport]
+        : [])
+    ],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
       ...(isGovernmentUser && hasRoles('Analyst')
         ? [

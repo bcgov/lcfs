@@ -1,18 +1,27 @@
+import asyncio
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional, Dict, Union
 
+from lcfs.db.models.comment import ComplianceReportInternalComment
+from lcfs.db.models.compliance.FuelExport import FuelExport
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 import structlog
-from fastapi import Depends
-from sqlalchemy import func, select, and_, asc, desc, update, String, cast
+from fastapi import Depends, HTTPException
+from sqlalchemy import delete, func, select, and_, asc, desc, update, String, cast
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, aliased
 from sqlalchemy.inspection import inspect
 
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models.compliance import CompliancePeriod, ComplianceReportListView
+from lcfs.db.models.compliance import (
+    CompliancePeriod,
+    ComplianceReportListView,
+    ComplianceReportOrganizationSnapshot,
+    FinalSupplyEquipment,
+)
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport, compliance_report_document_association
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
@@ -459,9 +468,9 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.history).joinedload(
                     ComplianceReportHistory.status
                 ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ).joinedload(UserProfile.organization),
+                joinedload(ComplianceReport.history)
+                .joinedload(ComplianceReportHistory.user_profile)
+                .joinedload(UserProfile.organization),
                 joinedload(ComplianceReport.transaction),
             )
             .where(ComplianceReport.compliance_report_id == report_id)
@@ -965,3 +974,98 @@ class ComplianceReportRepository:
             .limit(1)
         )
         return result.scalars().first().summary
+
+    @repo_handler
+    async def delete_supplemental_report(self, compliance_report_id: int) -> bool:
+        """
+        Deletes a compliance report and all its related data by ID using concurrent operations.
+
+        This performs a cascading delete of all related entities including:
+        - ComplianceReportSummary
+        - ComplianceReportHistory
+        - ComplianceReportInternalComment
+        - NotionalTransfer
+        - FuelSupply
+        - FuelExport
+        - AllocationAgreement
+        - OtherUses
+        - FinalSupplyEquipment
+        - ComplianceReportOrganizationSnapshot
+        - Document associations
+        """
+        # Create a list of delete operations
+        delete_operations = [
+            # Child tables with no interdependencies
+            self.db.execute(
+                delete(compliance_report_document_association).where(
+                    compliance_report_document_association.c.compliance_report_id
+                    == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(ComplianceReportOrganizationSnapshot).where(
+                    ComplianceReportOrganizationSnapshot.compliance_report_id
+                    == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(ComplianceReportSummary).where(
+                    ComplianceReportSummary.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(ComplianceReportHistory).where(
+                    ComplianceReportHistory.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(ComplianceReportInternalComment).where(
+                    ComplianceReportInternalComment.compliance_report_id
+                    == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(NotionalTransfer).where(
+                    NotionalTransfer.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(FuelSupply).where(
+                    FuelSupply.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(FuelExport).where(
+                    FuelExport.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(AllocationAgreement).where(
+                    AllocationAgreement.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(OtherUses).where(
+                    OtherUses.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(FinalSupplyEquipment).where(
+                    FinalSupplyEquipment.compliance_report_id == compliance_report_id
+                )
+            ),
+        ]
+
+        # Execute all child table deletes concurrently
+        await asyncio.gather(*delete_operations)
+
+        # After all child records are deleted, delete the parent report
+        await self.db.execute(
+            delete(ComplianceReport).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
+        )
+
+        await self.db.flush()
+        logger.info(f"Successfully deleted compliance report {compliance_report_id}")
+        return True
