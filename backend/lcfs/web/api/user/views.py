@@ -53,7 +53,7 @@ async def export_users(
 
 
 @router.post("/list", response_model=UsersSchema, status_code=status.HTTP_200_OK)
-@view_handler([RoleEnum.ADMINISTRATOR])
+@view_handler([RoleEnum.GOVERNMENT])
 async def get_users(
     request: Request,
     pagination: PaginationRequestSchema = Body(..., embed=False),
