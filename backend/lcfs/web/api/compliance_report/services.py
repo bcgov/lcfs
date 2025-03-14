@@ -176,7 +176,7 @@ class ComplianceReportServices:
         """
         Deletes a supplemental compliance report.
         The report_id can be any report in the series (original or supplemental).
-        Supplemental reports are only allowed if the status of the current report is 'Assessed'.
+        Supplemental reports are only allowed if the status of the current report is 'Draft'.
         """
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(
