@@ -62,6 +62,7 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
         variant="contained"
         size="small"
         color="primary"
+        className="new-compliance-report-button"
         startIcon={
           <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
         }
@@ -104,6 +105,7 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
               key={period.compliancePeriodId}
               onClick={() => handleComplianceOptionClick(period)}
               disabled={reportedPeriodIDs?.includes(period.compliancePeriodId)}
+              className={`compliance-period-${period.description}`}
             >
               {period.description}
             </MenuItem>

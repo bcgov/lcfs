@@ -131,7 +131,14 @@ class UserAuthentication(AuthenticationBackend):
 
         # Normalize
         preferred_username = user_token.get("preferred_username", "").lower()
-        email = user_token.get("email", "").lower()
+        email = user_token.get(
+            "email",
+            (
+                "lcfstest@gov.bc.ca"
+                if user_token.get("idir_username", "").lower() == "lcfstest"
+                else ""
+            ),
+        ).lower()
 
         # Attempt #1: look up by keycloak_user_id
         user = None

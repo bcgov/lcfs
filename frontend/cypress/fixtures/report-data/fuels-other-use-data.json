@@ -1,0 +1,22 @@
+{
+  "otherUses": [
+    {
+      "fuelType": "Ethanol",
+      "fuelCategory": "Gasoline",
+      "provisionOfTheAct": "Default carbon intensity - section 19 (b) (ii)",
+      "quantitySupplied": 100000,
+      "units": "L",
+      "expectedUse": "Heating oil",
+      "ciOfFuel": 93.67
+    },
+    {
+      "fuelType": "Biodiesel",
+      "fuelCategory": "Diesel",
+      "provisionOfTheAct": "Default carbon intensity - section 19 (b) (ii)",
+      "quantitySupplied": 150000,
+      "units": "L",
+      "expectedUse": "Heating oil",
+      "ciOfFuel": 100.21
+    }
+  ]
+}

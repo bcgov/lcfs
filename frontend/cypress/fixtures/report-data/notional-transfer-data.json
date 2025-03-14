@@ -1,0 +1,18 @@
+{
+  "notionalTransfers": [
+    {
+      "legalName": "Partner 1",
+      "addressForService": "123 Street Addr",
+      "fuelCategory": "Diesel",
+      "receivedOrTransferred": "Received",
+      "quantity": 100000
+    },
+    {
+      "legalName": "Partner 2",
+      "addressForService": "345 Street Addr",
+      "fuelCategory": "Gasoline",
+      "receivedOrTransferred": "Received",
+      "quantity": 50000
+    }
+  ]
+}
