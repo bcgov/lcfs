@@ -309,3 +309,21 @@ async def get_compliance_report_by_id(
     return await report_service.get_compliance_report_by_id(
         report_id, apply_masking=True, get_chain=True
     )
+
+@router.delete(
+    "/{organization_id}/{report_id}/supplemental",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def delete_supplemental_report(
+    request: Request,
+    report_id: int,
+    report_service: ComplianceReportServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
+) -> None:
+    """
+    Delete a supplemental compliance report.
+    """
+    # validate current user permissions
+    await report_validate.validate_organization_access(report_id)
+    await report_service.delete_supplemental_report(report_id, request.user)
