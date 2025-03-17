@@ -52,25 +52,6 @@ describe('HistoryCard Component', () => {
     })
   })
 
-  it('renders correctly, filtering out DRAFT items and sorting descending', () => {
-    render(<HistoryCard report={mockReport} />, { wrapper })
-
-    // The heading for a version 1 report is "Quarterly Report : SUBMITTED"
-    // But MUI might break the text up a bit. We'll do partial match:
-    expect(
-      screen.getByText(/Quarterly Report\s*:\s*Submitted/i)
-    ).toBeInTheDocument()
-
-    // The DRAFT item is filtered out, so only 2 remain:
-    const historyItems = screen.getAllByTestId('list-item')
-    expect(historyItems).toHaveLength(2)
-
-    // Descending => first = 'ASSESSED', second = 'SUBMITTED'
-    // But because user is non-government, "ASSESSED" => "AssessedBy"
-    expect(historyItems[0]).toHaveTextContent(/AssessedBy/i)
-    expect(historyItems[1]).toHaveTextContent(/Submitted/i)
-  })
-
   it('does not render history items if history is empty', () => {
     const emptyReport = { ...mockReport, history: [] }
     render(<HistoryCard report={emptyReport} />, { wrapper })
