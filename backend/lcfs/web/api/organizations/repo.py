@@ -1,3 +1,4 @@
+from lcfs.db.base import BaseModel
 from lcfs.db.models.transaction import Transaction
 from lcfs.web.api.transaction.schema import TransactionActionEnum
 import structlog
@@ -148,6 +149,9 @@ class OrganizationsRepository:
         await self.db.refresh(organization)
 
         return OrganizationResponseSchema.model_validate(organization)
+
+    def add(self, entity: BaseModel):
+        self.db.add(entity)
 
     @repo_handler
     async def get_organization_lite(self, organization_id: int) -> Organization:

@@ -94,7 +94,8 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         ForeignKey("organization_attorney_address.organization_attorney_address_id"),
     )
     records_address = Column(
-        String(2000), comment="Organization's address in BC where records are maintained"
+        String(2000),
+        comment="Organization's address in BC where records are maintained",
     )
 
     org_type = relationship(
@@ -103,9 +104,13 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     org_status = relationship(
         "OrganizationStatus", back_populates="organizations", lazy="joined"
     )
-    org_address = relationship("OrganizationAddress", back_populates="organization")
+    org_address = relationship(
+        "OrganizationAddress", back_populates="organization", uselist=False
+    )
     org_attorney_address = relationship(
-        "OrganizationAttorneyAddress", back_populates="organization"
+        "OrganizationAttorneyAddress",
+        back_populates="organization",
+        uselist=False,
     )
     user_profiles = relationship("UserProfile", back_populates="organization")
     transactions = relationship("Transaction", back_populates="organization")
