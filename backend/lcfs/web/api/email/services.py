@@ -47,7 +47,7 @@ class CHESEmailService:
             return False
 
         # Validate configuration before performing any operations
-        if (not self._validate_configuration()):
+        if not self._validate_configuration():
             return
 
         # Retrieve subscribed user emails
@@ -86,7 +86,7 @@ class CHESEmailService:
             return False
 
         try:
-            if (not self._validate_configuration()):
+            if not self._validate_configuration():
                 return False
         except Exception as e:
             logger.info(f"Email configuration error: {e}")
@@ -155,7 +155,7 @@ class CHESEmailService:
         Retrieve and cache the CHES access token.
         """
         try:
-            if (not self._validate_configuration()):
+            if not self._validate_configuration():
                 return None
 
             if self._access_token and datetime.now().timestamp() < self._token_expiry:
