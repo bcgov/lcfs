@@ -11,7 +11,10 @@ from lcfs.db.models.compliance import (
     ComplianceReportSummary,
     FuelSupply,
 )
-from lcfs.web.api.compliance_report.schema import ComplianceReportViewSchema, ComplianceReportSummarySchema
+from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportViewSchema,
+    ComplianceReportSummarySchema,
+)
 from lcfs.web.api.base import (
     PaginationRequestSchema,
 )
@@ -968,9 +971,7 @@ async def test_get_all_org_reported_years_not_found(
 def test_aggregate_fuel_supplies(
     compliance_report_repo, fuel_supplies, fossil_derived, expected
 ):
-    result = compliance_report_repo.aggregate_quantities(
-        fuel_supplies, fossil_derived
-    )
+    result = compliance_report_repo.aggregate_quantities(fuel_supplies, fossil_derived)
 
     assert result == expected
 
@@ -1001,3 +1002,24 @@ async def test_aggregate_allocation_agreements(compliance_report_repo, dbsession
 
     assert result == {"biogas": 25.0, "biodiesel": 100.0}
     dbsession.execute.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_delete_supplemental_report_success(compliance_report_repo, dbsession):
+    """Test successful deletion of a supplemental compliance report"""
+
+    compliance_report_id = 996  # Use an existing ID from supplemental_reports fixture
+
+    # Mock `execute` and `flush` calls
+    dbsession.execute = AsyncMock(return_value=None)
+    dbsession.flush = AsyncMock(return_value=None)
+
+    # Call the delete function
+    result = await compliance_report_repo.delete_supplemental_report(
+        compliance_report_id
+    )
+
+    # Ensure all delete operations were executed
+    assert result is True
+    dbsession.execute.assert_called()  # Ensure delete commands were called
+    dbsession.flush.assert_awaited_once()  # Ensure flush was called to commit changes
