@@ -9,7 +9,10 @@ import { Role } from '@/components/Role'
 import { govRoles } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { useUpdateComplianceReport } from '@/hooks/useComplianceReports'
+import {
+  useDeleteComplianceReport,
+  useUpdateComplianceReport
+} from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import colors from '@/themes/base/colors.js'
@@ -21,13 +24,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import ComplianceReportSummary from './components/ComplianceReportSummary'
+import { Introduction } from './components/Introduction'
+import ReportDetails from './components/ReportDetails'
+
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { ActivityListCard } from './components/ActivityListCard'
 import { AssessmentCard } from './components/AssessmentCard'
 import { AssessmentStatement } from './components/AssessmentStatement'
-import ComplianceReportSummary from './components/ComplianceReportSummary'
-import { Introduction } from './components/Introduction'
-import ReportDetails from './components/ReportDetails'
 
 const iconStyle = {
   width: '2rem',
@@ -124,6 +128,28 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     }
   )
 
+  const { mutate: deleteSupplementalReport } = useDeleteComplianceReport(
+    reportData?.report.organizationId,
+    complianceReportId,
+    {
+      onSuccess: () => {
+        setModalData(null)
+        navigate(ROUTES.REPORTS, {
+          state: {
+            message: t('report:supplementalReportDeleted'),
+            severity: 'success'
+          }
+        })
+      },
+      onError: (error) => {
+        setModalData(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    }
+  )
   const methods = useForm() // TODO we will need this for summary line inputs
 
   const buttonClusterConfig = useMemo(
@@ -134,9 +160,11 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         t,
         setModalData,
         updateComplianceReport,
+        deleteSupplementalReport,
         compliancePeriod,
         isGovernmentUser,
-        isSigningAuthorityDeclared
+        isSigningAuthorityDeclared,
+        supplementalInitiator: reportData?.report?.supplementalInitiator
       }),
     [
       hasRoles,
@@ -144,9 +172,11 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       t,
       setModalData,
       updateComplianceReport,
+      deleteSupplementalReport,
       compliancePeriod,
       isGovernmentUser,
-      isSigningAuthorityDeclared
+      isSigningAuthorityDeclared,
+      reportData?.report
     ]
   )
 

@@ -59,26 +59,29 @@ class OrganizationsRepository:
                 Organization.organization_id,
                 Organization.name,
                 OrganizationStatus.status,
-                func.sum(
-                    case(
-                        (
-                            Transaction.transaction_action
-                            == TransactionActionEnum.Reserved,
-                            Transaction.compliance_units,
-                        ),
-                        else_=0,
-                    )
-                ).label("reserved_balance"),
-                (
+                func.abs(
                     func.sum(
                         case(
                             (
-                                Transaction.transaction_action
-                                == TransactionActionEnum.Adjustment,
+                                and_(
+                                    Transaction.transaction_action
+                                    == TransactionActionEnum.Reserved,
+                                    Transaction.compliance_units < 0,
+                                ),
                                 Transaction.compliance_units,
                             ),
                             else_=0,
                         )
+                    )
+                ).label("reserved_balance"),
+                func.sum(
+                    case(
+                        (
+                            Transaction.transaction_action
+                            == TransactionActionEnum.Adjustment,
+                            Transaction.compliance_units,
+                        ),
+                        else_=0,
                     )
                 ).label("total_balance"),
             )
@@ -102,7 +105,7 @@ class OrganizationsRepository:
                 org_id,
                 name,
                 total_balance or 0,
-                ((reserved_balance or 0) * -1),
+                reserved_balance or 0,
                 status.value,
             ]
             for org_id, name, status, reserved_balance, total_balance in result

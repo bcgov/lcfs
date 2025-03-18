@@ -60,7 +60,7 @@ vi.mock('@/hooks/useComplianceReports')
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganization')
 
-vi.mock('../components/ActivityLinkList', () => ({
+vi.mock('../components/ActivityLinksList', () => ({
   ActivityLinksList: () => <div>Activity Links List</div>
 }))
 
@@ -150,6 +150,9 @@ describe('EditViewComplianceReport', () => {
     )
     vi.mocked(
       useComplianceReportsHook.useUpdateComplianceReport
+    ).mockReturnValue({ mutate: vi.fn() })
+    vi.mocked(
+      useComplianceReportsHook.useDeleteComplianceReport
     ).mockReturnValue({ mutate: vi.fn() })
     vi.mocked(
       useComplianceReportsHook.useCreateSupplementalReport

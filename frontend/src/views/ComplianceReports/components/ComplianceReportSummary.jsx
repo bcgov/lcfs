@@ -96,14 +96,15 @@ const ComplianceReportSummary = ({
 
   useEffect(() => {
     if (snapshotData) {
+      // Exclude headOfficeAddress and recordsAddress from the validity check
+      const { headOfficeAddress, recordsAddress, ...rest } = snapshotData
       const dataToCheck = {
-        ...snapshotData,
+        ...rest,
         isEdited: true // Hardcode since we don't want it in the validity check
       }
       const hasValidAddress = Object.values(dataToCheck).reduce(
-        (previousValue, currentValue) => {
-          return currentValue && !!previousValue
-        }
+        (previousValue, currentValue) => currentValue && !!previousValue,
+        true
       )
       setHasValidAddress(hasValidAddress)
     }
