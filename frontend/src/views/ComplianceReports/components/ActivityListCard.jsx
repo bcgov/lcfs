@@ -1,6 +1,6 @@
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { useTranslation } from 'react-i18next'
-import { ActivityLinksList } from './ActivityLinkList'
+import { ActivityLinksList } from './ActivityLinksList'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import Box from '@mui/material/Box'
