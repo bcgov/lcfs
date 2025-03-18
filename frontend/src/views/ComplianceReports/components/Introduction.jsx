@@ -62,7 +62,7 @@ export const Introduction = ({ expanded, compliancePeriod }) => {
             {t('report:introduction')}
           </BCTypography>
         </AccordionSummary>
-        <AccordionDetails>
+        <AccordionDetails data-test='intro-details'>
           {/* Render each section using map */}
           {sections.map((section, index) => (
             <Section key={index} header={section.header} content={section.content} />

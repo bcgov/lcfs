@@ -20,6 +20,7 @@ import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
 import { ADDRESS_SEARCH_URL } from '@/constants/common'
+import { sortMixedStrings } from './components/utils'
 
 export const finalSupplyEquipmentColDefs = (
   optionsData,
@@ -57,7 +58,7 @@ export const finalSupplyEquipmentColDefs = (
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
     cellEditorParams: {
-      options: optionsData?.organizationNames?.sort() || [],
+      options: sortMixedStrings(optionsData?.organizationNames ?? []),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: true,

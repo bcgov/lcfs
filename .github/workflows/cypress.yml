@@ -51,7 +51,7 @@ jobs:
         run: docker exec backend poetry run python /app/lcfs/db/seeders/seed_database.py
 
       - name: Build Frontend Service
-        run: docker build -t frontend-service -f ./frontend/Dockerfile.dev ./frontend
+        run: docker build -t frontend-service -f ./frontend/Dockerfile.dev ./frontend -e DB_CYPRESS_PASS=development_only -e DB_CYPRESS_USER=lcfs
 
       - name: Run Frontend Service
         run: docker run -d --name frontend --network=host frontend-service
