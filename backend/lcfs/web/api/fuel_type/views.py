@@ -1,4 +1,4 @@
-from logging import getLogger
+import structlog
 from typing import List
 
 from fastapi import (
@@ -13,7 +13,7 @@ from lcfs.web.core.decorators import view_handler
 from lcfs.web.api.fuel_type.services import FuelTypeServices
 
 router = APIRouter()
-logger = getLogger("fuel_type_view")
+logger = structlog.get_logger("fuel_type_view")
 get_async_db = dependencies.get_async_db_session
 
 

@@ -99,7 +99,7 @@ export const findOverlappingPeriods = (currentLoc, allLocations) => {
       // Only check for overlap if this is the same ID but different record
       return (
         currentLoc.uniqueId !== loc.uniqueId && // Different record
-        currentFseId === locFseId && // Same FSE-ID number
+        currentFseId !== locFseId && // Same FSE-ID number
         currentSerialNum === locSerialNum && // Same serial number
         datesOverlap(
           currentLoc.supplyFromDate,
@@ -180,4 +180,52 @@ export const batchProcessGeofencing = async (locations) => {
   }
 
   return results
+}
+
+/**
+ * Sorts an array of strings containing a mix of alphabets and numbers.
+ * - Strings with prefixed numbers appear first
+ * - Followed by alphabetical sorting (case insensitive)
+ * - Numbers within or after alphabets do not affect sorting priority
+ *
+ * @param {string[]} arr - Array of strings to sort
+ * @returns {string[]} - Sorted array
+ */
+export const sortMixedStrings = (arr) => {
+  return arr.slice().sort((a, b) => {
+    const aStartsWithNumber = /^\d/.test(a)
+    const bStartsWithNumber = /^\d/.test(b)
+
+    if (aStartsWithNumber && !bStartsWithNumber) {
+      return -1
+    }
+    if (!aStartsWithNumber && bStartsWithNumber) {
+      return 1 
+    }
+
+    if (aStartsWithNumber && bStartsWithNumber) {
+      const aNumPrefix = parseInt(a.match(/^\d+/)[0])
+      const bNumPrefix = parseInt(b.match(/^\d+/)[0])
+
+      if (aNumPrefix !== bNumPrefix) {
+        return aNumPrefix - bNumPrefix
+      }
+
+      const aRemainder = a.replace(/^\d+/, '')
+      const bRemainder = b.replace(/^\d+/, '')
+      return aRemainder.localeCompare(bRemainder, undefined, {
+        sensitivity: 'base'
+      })
+    }
+
+    const aMatch = a.match(/^(.*?)(\d+)$/)
+    const bMatch = b.match(/^(.*?)(\d+)$/)
+
+    if (aMatch && bMatch && aMatch[1] === bMatch[1]) {
+      return parseInt(aMatch[2]) - parseInt(bMatch[2])
+    }
+
+    // Default: case insensitive alphabetical sort
+    return a.localeCompare(b, undefined, { sensitivity: 'base' })
+  })
 }

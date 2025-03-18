@@ -1,0 +1,30 @@
+{
+  "allocationAgreements": [
+    {
+      "allocationTransactionType": "Allocated from",
+      "transactionPartner": "Partner 1",
+      "postalAddress": "123 Street Addr",
+      "transactionPartnerEmail": "test@test.com",
+      "transactionPartnerPhone": "1234567890",
+      "fuelType": "Ethanol",
+      "ciOfFuel": 93.67,
+      "provisionOfTheAct": "Default carbon intensity - section 19 (b) (ii)",
+      "quantity": 100000,
+      "units": "L",
+      "fuelCategory": "Gasoline"
+    },
+    {
+      "allocationTransactionType": "Allocated from",
+      "transactionPartner": "Partner 1",
+      "postalAddress": "123 Street Addr",
+      "transactionPartnerEmail": "test@test.com",
+      "transactionPartnerPhone": "1234567890",
+      "fuelType": "Biodiesel",
+      "ciOfFuel": 100.21,
+      "provisionOfTheAct": "Default carbon intensity - section 19 (b) (ii)",
+      "quantity": 100000,
+      "units": "L",
+      "fuelCategory": "Diesel"
+    }
+  ]
+}

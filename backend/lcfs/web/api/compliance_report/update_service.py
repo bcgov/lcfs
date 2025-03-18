@@ -87,7 +87,8 @@ class ComplianceReportUpdateService:
         else:
             # Handle normal status change
             status_has_changed = report.current_status.status != getattr(
-                ComplianceReportStatusEnum, report_data.status.replace(" ", "_")
+                ComplianceReportStatusEnum, report_data.status.replace(
+                    " ", "_")
             )
 
         # Get new status object
@@ -98,6 +99,7 @@ class ComplianceReportUpdateService:
         # Update report
         report.current_status = new_status
         report.supplemental_note = report_data.supplemental_note
+        report.assessment_statement = report_data.assessment_statement
         updated_report = await self.repo.update_compliance_report(report)
 
         # Handle status change related actions
@@ -164,7 +166,8 @@ class ComplianceReportUpdateService:
         if handler:
             await handler(report, user)
         else:
-            raise ServiceException(f"Unsupported status change to {new_status}")
+            raise ServiceException(
+                f"Unsupported status change to {new_status}")
 
     async def handle_draft_status(self, report: ComplianceReport, user: UserProfile):
         """Handle actions when a report is set to Draft status."""
@@ -195,7 +198,8 @@ class ComplianceReportUpdateService:
         )
 
         if not calculated_summary.can_sign:
-            raise ServiceException("ComplianceReportSummary is not able to be signed")
+            raise ServiceException(
+                "ComplianceReportSummary is not able to be signed")
 
         # If there's an existing summary, preserve user-edited values
         if existing_summary:
@@ -290,7 +294,8 @@ class ComplianceReportUpdateService:
     ):
         """Handle actions when a report is Recommended by analyst."""
         # Implement logic for Recommended by analyst status
-        has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+        has_analyst_role = user_has_roles(
+            user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
         if not has_analyst_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 

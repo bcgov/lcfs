@@ -142,8 +142,7 @@ class FuelExportServices:
                     (
                         e
                         for e in existing_fuel_type.eer_ratios
-                        if e.end_use_type == row_data["end_use_type"]
-                        and e.fuel_category == fuel_category
+                        if e.eer_id == eer.eer_id
                     ),
                     None,
                 )

@@ -299,7 +299,11 @@ export const fuelExportColDefs = (
           ?.provisions.find(
             (item) => item.name === params.newValue
           )?.provisionOfTheActId
-        params.data.fuelCode = undefined
+
+        if (params.newValue !== PROVISION_APPROVED_FUEL_CODE) {
+          params.data.fuelCode = null;
+          params.data.fuelCodeId = null;
+        }
       }
       return true
     },
