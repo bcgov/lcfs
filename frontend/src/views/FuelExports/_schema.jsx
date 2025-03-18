@@ -102,7 +102,6 @@ export const fuelExportColDefs = (
 
     suppressKeyboardEvent,
     cellEditor: DateEditor,
-    cellEditorPopup: true,
     cellEditorParams: {
       autoOpenLastRow: !gridReady
     }
@@ -263,7 +262,6 @@ export const fuelExportColDefs = (
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-
     suppressKeyboardEvent,
     valueGetter: (params) => {
       return params.data.endUseType?.type
@@ -274,16 +272,19 @@ export const fuelExportColDefs = (
     },
     valueSetter: (params) => {
       if (params.newValue) {
-        const eerRatio = optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.eerRatios.filter(
-            (item) =>
-              item.fuelCategory.fuelCategory === params.data.fuelCategory
-          )
-          .find((eerRatio) => eerRatio.endUseType.type === params.newValue)
-
-        params.data.endUseType = eerRatio.endUseType
-        params.data.endUseId = eerRatio.endUseType.endUseTypeId
+        const selectedFuel = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )
+        const eerOptions = selectedFuel?.eerRatios.filter(
+          (item) => item.fuelCategory.fuelCategory === params.data.fuelCategory
+        )
+        const selectedRatio = eerOptions.find(
+          (eerRatio) => eerRatio.endUseType.type === params.newValue
+        )
+        if (selectedRatio) {
+          params.data.endUseType = selectedRatio.endUseType
+          params.data.endUseId = selectedRatio.endUseType.endUseTypeId
+        }
       }
       return true
     },
@@ -318,7 +319,11 @@ export const fuelExportColDefs = (
           ?.provisions.find(
             (item) => item.name === params.newValue
           )?.provisionOfTheActId
-        params.data.fuelCode = undefined
+
+        if (params.newValue !== PROVISION_APPROVED_FUEL_CODE) {
+          params.data.fuelCode = null;
+          params.data.fuelCodeId = null;
+        }
       }
       return true
     },
@@ -607,7 +612,7 @@ export const fuelExportSummaryColDefs = [
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
-    field: 'endUse',
+    field: 'endUseType',
     valueGetter: (params) => params.data.endUseType?.type || 'Any'
   },
   {
@@ -690,8 +695,8 @@ export const changelogCommonColDefs = [
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
-    field: 'endUse',
-    valueGetter: (params) => params.data.endUseType?.type || 'Any',
+    field: 'endUseType',
+    valueGetter: (params) => params.data.endUseType?.type,
     cellStyle: (params) => changelogCellStyle(params, 'endUseId')
   },
   {

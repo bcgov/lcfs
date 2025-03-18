@@ -18,7 +18,10 @@ import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { Introduction } from './components/Introduction'
-import { useUpdateComplianceReport } from '@/hooks/useComplianceReports'
+import {
+  useDeleteComplianceReport,
+  useUpdateComplianceReport
+} from '@/hooks/useComplianceReports'
 import ComplianceReportSummary from './components/ComplianceReportSummary'
 import ReportDetails from './components/ReportDetails'
 import { buttonClusterConfigFn } from './buttonConfigs'
@@ -123,6 +126,28 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     }
   )
 
+  const { mutate: deleteSupplementalReport } = useDeleteComplianceReport(
+    reportData?.report.organizationId,
+    complianceReportId,
+    {
+      onSuccess: () => {
+        setModalData(null)
+        navigate(ROUTES.REPORTS, {
+          state: {
+            message: t('report:supplementalReportDeleted'),
+            severity: 'success'
+          }
+        })
+      },
+      onError: (error) => {
+        setModalData(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    }
+  )
   const methods = useForm() // TODO we will need this for summary line inputs
 
   const buttonClusterConfig = useMemo(
@@ -133,9 +158,11 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         t,
         setModalData,
         updateComplianceReport,
+        deleteSupplementalReport,
         compliancePeriod,
         isGovernmentUser,
-        isSigningAuthorityDeclared
+        isSigningAuthorityDeclared,
+        supplementalInitiator: reportData?.report?.supplementalInitiator
       }),
     [
       hasRoles,
@@ -143,9 +170,11 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       t,
       setModalData,
       updateComplianceReport,
+      deleteSupplementalReport,
       compliancePeriod,
       isGovernmentUser,
-      isSigningAuthorityDeclared
+      isSigningAuthorityDeclared,
+      reportData?.report
     ]
   )
 

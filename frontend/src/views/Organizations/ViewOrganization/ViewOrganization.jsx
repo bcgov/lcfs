@@ -266,6 +266,7 @@ export const ViewOrganization = () => {
             </BCButton>
           </Role>
           <ClearFiltersButton
+            data-test="clear-filters-button"
             onClick={handleClearFilters}
             sx={{
               marginRight: '8px',

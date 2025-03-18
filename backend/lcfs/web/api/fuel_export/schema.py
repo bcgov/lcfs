@@ -193,7 +193,7 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     fuel_type_other: Optional[str] = None
     fuel_type_id: int
     fuel_category_id: int
-    end_use_id: Optional[int] = None
+    end_use_id: int
     provision_of_the_act_id: int
     fuel_code_id: Optional[int] = None
     quantity: int = Field(..., gt=0)
@@ -220,6 +220,12 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     def check_fuel_code_required(cls, values):
         return fuel_code_required(values)
 
+    @field_validator("energy")
+    def validate_energy_range(cls, value):
+        if value is not None and abs(value) >= 9999999999:
+            formatted_value = f"{value:,.2f}"
+            raise ValueError(f"Energy value must be less than 99,999,999,999 but got {formatted_value}")
+        return value
 
 class DeleteFuelExportResponseSchema(BaseSchema):
     success: bool

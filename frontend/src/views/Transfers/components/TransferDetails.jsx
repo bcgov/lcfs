@@ -34,8 +34,11 @@ export const TransferDetails = () => {
 
   const availableBalance = useMemo(() => {
     if (!balanceData) return 0
-    // Maximum Allowed = Total Balance - Reserved Balance
-    return balanceData.totalBalance - Math.abs(balanceData.reservedBalance)
+    // Maximum Allowed = Total Balance - Reserved Balance, but never less than zero.
+    return Math.max(
+      balanceData.totalBalance - Math.abs(balanceData.reservedBalance),
+      0
+    )
   }, [balanceData])
 
   const organizations =
@@ -89,15 +92,19 @@ export const TransferDetails = () => {
   return (
     <BCBox data-test="transfer-details">
       <LabelBox label={t('transfer:detailsLabel')}>
-      {showAdjustmentAlert && (
-        <BCAlert
-          severity="warning"
-          sx={{ mb: 2 }}
-          onClose={() => setShowAdjustmentAlert(false)}
-        >
-          {t('transfer:quantityAdjusted')}: {availableBalance.toLocaleString()}
-        </BCAlert>
-      )}
+        {showAdjustmentAlert && (
+          <BCAlert
+            severity="warning"
+            sx={{ mb: 2 }}
+            onClose={() => setShowAdjustmentAlert(false)}
+          >
+            {availableBalance === 0
+              ? `${t('transfer:noAvailableBalance')}: 0`
+              : `${t(
+                  'transfer:quantityAdjusted'
+                )}: ${availableBalance.toLocaleString()}`}
+          </BCAlert>
+        )}
         <BCTypography variant="body4" component="div">
           <BCTypography fontWeight="bold" variant="body4" component="span">
             {currentUser?.organization?.name}
@@ -118,7 +125,9 @@ export const TransferDetails = () => {
                     onChange(availableBalance)
                     return
                   }
-                  return floatValue === undefined || typeof floatValue === 'number'
+                  return (
+                    floatValue === undefined || typeof floatValue === 'number'
+                  )
                 }}
                 onValueChange={(values) => {
                   const newValue = values.floatValue || 0

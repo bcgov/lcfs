@@ -23,7 +23,8 @@ from lcfs.logging_config import setup_logging, correlation_id_var
 from lcfs.services.keycloak.authentication import UserAuthentication
 from lcfs.settings import settings
 from lcfs.web.api.router import api_router
-from lcfs.web.exception.exception_handler import validation_exception_handler
+from lcfs.web.exception.exceptions import ValidationErrorException
+from lcfs.web.exception.exception_handler import validation_error_exception_handler_no_details, validation_exception_handler
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 
 origins = [
@@ -153,6 +154,7 @@ def get_app() -> FastAPI:
 
     # Register exception handlers
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
+    app.add_exception_handler(ValidationErrorException, validation_error_exception_handler_no_details)
     app.add_exception_handler(Exception, global_exception_handler)
 
     # Adds prometheus metrics instrumentation.

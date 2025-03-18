@@ -31,6 +31,12 @@ export const transactionsColDefs = (t) => [
     },
     filterParams: {
       buttons: ['clear']
+    },
+    comparator: (valueA, valueB) => {
+      const numberA = parseInt(valueA.slice(1), 10)
+      const numberB = parseInt(valueB.slice(1), 10)
+
+      return numberB - numberA
     }
   },
   {

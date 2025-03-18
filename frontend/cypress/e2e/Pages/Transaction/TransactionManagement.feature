@@ -22,7 +22,7 @@ Feature: Transaction Management
     And the analyst recommends the transaction
     Then a success message for recommendation is displayed
 
-  Scenario Outline: Director approves a recommended transaction
+  Scenario Outline: Director approves a recommended initiative agreement
     Given the director is on the login page
     When the director logs in with valid credentials
     And the director selects a recommended transaction
