@@ -183,7 +183,7 @@ admin_adjustment_orm = AdminAdjustment(
 reserved_transaction_orm = Transaction(
     transaction_id=4,
     transaction_action=TransactionActionEnum.Reserved,
-    compliance_units=100,
+    compliance_units=-100,
     organization_id=test_org_id,
     create_date=datetime.now(),
 )
