@@ -40,9 +40,7 @@ def fuel_supply_repo(mock_db_session):
 
 
 @pytest.mark.anyio
-async def test_get_fuel_supply_list_exclude_draft_reports(
-    fuel_supply_repo, mock_db_session
-):
+async def test_get_fuel_supply_list(fuel_supply_repo, mock_db_session):
     compliance_report_id = 1
     expected_fuel_supplies = [MagicMock(spec=FuelSupply)]
 
@@ -58,16 +56,8 @@ async def test_get_fuel_supply_list_exclude_draft_reports(
     mock_db_session.execute = mock_execute
 
     # Test when drafts should be excluded (e.g. government user).
-    result_gov = await fuel_supply_repo.get_fuel_supply_list(
-        compliance_report_id, exclude_draft_reports=True
-    )
+    result_gov = await fuel_supply_repo.get_fuel_supply_list(compliance_report_id)
     assert result_gov == expected_fuel_supplies
-
-    # Test when drafts are not excluded.
-    result_non_gov = await fuel_supply_repo.get_fuel_supply_list(
-        compliance_report_id, exclude_draft_reports=False
-    )
-    assert result_non_gov == expected_fuel_supplies
 
 
 @pytest.mark.anyio

@@ -1,18 +1,25 @@
-from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.tests.allocation_agreement.conftest import create_mock_delete_schema, create_mock_schema, create_mock_response_schema, create_mock_update_response_schema, create_mock_update_schema
-from lcfs.web.api.allocation_agreement.schema import AllocationAgreementResponseSchema, AllocationTransactionTypeSchema, FuelCategorySchema, FuelTypeSchema, ProvisionOfTheActSchema
+from lcfs.tests.allocation_agreement.conftest import (
+    create_mock_delete_schema,
+    create_mock_schema,
+    create_mock_response_schema,
+    create_mock_update_response_schema,
+    create_mock_update_schema,
+)
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+
 
 @pytest.fixture
 def mock_allocation_agreement_service():
     return MagicMock(spec=AllocationAgreementServices)
+
 
 @pytest.fixture
 def mock_allocation_agreement_validation():
@@ -20,6 +27,7 @@ def mock_allocation_agreement_validation():
     validation.validate_organization_access = AsyncMock()
     validation.validate_compliance_report_id = AsyncMock()
     return validation
+
 
 @pytest.mark.anyio
 async def test_save_allocation_agreement_create(
@@ -37,7 +45,9 @@ async def test_save_allocation_agreement_create(
         payload = create_mock_schema({}).model_dump()
 
         # Mock the service method to return a valid schema object
-        mock_allocation_agreement_service.create_allocation_agreement.return_value = create_mock_response_schema({})
+        mock_allocation_agreement_service.create_allocation_agreement.return_value = (
+            create_mock_response_schema({})
+        )
 
         mock_validate_organization_access.return_value = True
 
@@ -56,6 +66,7 @@ async def test_save_allocation_agreement_create(
         assert data["quantity"] == 100
         assert data["fuelType"]["fuelType"] == "Biodiesel"
 
+
 @pytest.mark.anyio
 async def test_save_allocation_agreement_update(
     client: AsyncClient,
@@ -71,7 +82,9 @@ async def test_save_allocation_agreement_update(
         url = fastapi_app.url_path_for("save_allocation_agreements_row")
         payload = create_mock_update_schema({}).model_dump()
 
-        mock_allocation_agreement_service.update_allocation_agreement.return_value = create_mock_update_response_schema({})
+        mock_allocation_agreement_service.update_allocation_agreement.return_value = (
+            create_mock_update_response_schema({})
+        )
 
         mock_validate_organization_access.return_value = True
 
@@ -108,7 +121,9 @@ async def test_save_allocation_agreement_delete(
         url = fastapi_app.url_path_for("save_allocation_agreements_row")
         payload = create_mock_delete_schema({}).model_dump()
 
-        mock_allocation_agreement_service.delete_allocation_agreement.return_value = create_mock_update_response_schema({})
+        mock_allocation_agreement_service.delete_allocation_agreement.return_value = (
+            create_mock_update_response_schema({})
+        )
 
         mock_validate_organization_access.return_value = True
 

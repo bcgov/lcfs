@@ -145,7 +145,9 @@ class DocumentService:
 
     async def _verify_compliance_report_access(self, parent_id, user):
         compliance_report = (
-            await self.compliance_report_service.get_compliance_report_by_id(parent_id)
+            await self.compliance_report_service.get_compliance_report_by_id(
+                parent_id, user
+            )
         )
         if not compliance_report:
             raise HTTPException(status_code=404, detail="Compliance report not found")

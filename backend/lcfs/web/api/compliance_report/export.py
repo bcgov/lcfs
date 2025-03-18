@@ -146,11 +146,6 @@ class ComplianceReportExporter:
 
         builder = SpreadsheetBuilder(file_format=export_format)
 
-        # Include draft data if report status is Draft
-        include_draft = (
-            compliance_report.current_status.status == ComplianceReportStatusEnum.Draft
-        )
-
         # Add sheets (in reverse desired order)
         await self.add_summary_sheet(builder, compliance_report.summary)
         await self.add_allocation_agreement_sheet(
@@ -158,16 +153,24 @@ class ComplianceReportExporter:
         )
         await self.add_fse_sheet(builder, compliance_report_id)
         await self.add_export_fuel_sheet(
-            builder, compliance_report.compliance_report_group_uuid, include_draft
+            builder,
+            compliance_report.compliance_report_group_uuid,
+            compliance_report_id,
         )
         await self.add_fuels_for_other_use_sheet(
-            builder, compliance_report.compliance_report_group_uuid, include_draft
+            builder,
+            compliance_report.compliance_report_group_uuid,
+            compliance_report_id,
         )
         await self.add_notional_transfer_sheet(
-            builder, compliance_report.compliance_report_group_uuid, include_draft
+            builder,
+            compliance_report.compliance_report_group_uuid,
+            compliance_report_id,
         )
         await self.add_fuel_supply_sheet(
-            builder, compliance_report.compliance_report_group_uuid, include_draft
+            builder,
+            compliance_report.compliance_report_group_uuid,
+            compliance_report_id,
         )
 
         compliance_period = compliance_report.compliance_period.description
@@ -227,9 +230,11 @@ class ComplianceReportExporter:
         self,
         builder: SpreadsheetBuilder,
         compliance_report_group_uuid: str,
-        is_draft: bool,
+        compliance_report_id: int,
     ) -> SpreadsheetBuilder:
-        data = await self.load_fuel_supply_data(compliance_report_group_uuid, is_draft)
+        data = await self.load_fuel_supply_data(
+            compliance_report_group_uuid, compliance_report_id
+        )
         builder.add_sheet(
             sheet_name=FS_EXPORT_NAME,
             columns=FS_EXPORT_COLUMNS,
@@ -239,10 +244,10 @@ class ComplianceReportExporter:
         return builder
 
     async def load_fuel_supply_data(
-        self, compliance_report_group_uuid: str, is_draft: bool
+        self, compliance_report_group_uuid: str, compliance_report_id: int
     ) -> List[List]:
         results = await self.fs_repo.get_effective_fuel_supplies(
-            compliance_report_group_uuid, not is_draft
+            compliance_report_group_uuid, compliance_report_id
         )
         return [
             [
@@ -269,10 +274,10 @@ class ComplianceReportExporter:
         self,
         builder: SpreadsheetBuilder,
         compliance_report_group_uuid: str,
-        is_draft: bool,
+        compliance_report_id: int,
     ) -> SpreadsheetBuilder:
         data = await self.load_notional_transfer_data(
-            compliance_report_group_uuid, is_draft
+            compliance_report_group_uuid, compliance_report_id
         )
         builder.add_sheet(
             sheet_name=NT_EXPORT_NAME,
@@ -283,10 +288,10 @@ class ComplianceReportExporter:
         return builder
 
     async def load_notional_transfer_data(
-        self, compliance_report_group_uuid: str, is_draft: bool
+        self, compliance_report_group_uuid: str, compliance_report_id: int
     ) -> List[List]:
         results = await self.nt_repo.get_effective_notional_transfers(
-            compliance_report_group_uuid, not is_draft
+            compliance_report_group_uuid, compliance_report_id
         )
         return [
             [
@@ -303,10 +308,10 @@ class ComplianceReportExporter:
         self,
         builder: SpreadsheetBuilder,
         compliance_report_group_uuid: str,
-        is_draft: bool,
+        compliance_report_id: int,
     ) -> SpreadsheetBuilder:
         data = await self.load_fuels_for_other_use_data(
-            compliance_report_group_uuid, is_draft
+            compliance_report_group_uuid, compliance_report_id
         )
         builder.add_sheet(
             sheet_name=OU_EXPORT_NAME,
@@ -317,10 +322,12 @@ class ComplianceReportExporter:
         return builder
 
     async def load_fuels_for_other_use_data(
-        self, compliance_report_group_uuid: str, is_draft: bool
+        self,
+        compliance_report_group_uuid: str,
+        compliance_report_id: int,
     ) -> List[List]:
         results: List[OtherUsesSchema] = await self.ou_repo.get_effective_other_uses(
-            compliance_report_group_uuid, False, not is_draft, False
+            compliance_report_group_uuid, compliance_report_id
         )
         return [
             [
@@ -341,9 +348,11 @@ class ComplianceReportExporter:
         self,
         builder: SpreadsheetBuilder,
         compliance_report_group_uuid: str,
-        is_draft: bool,
+        compliance_report_id: int,
     ) -> SpreadsheetBuilder:
-        data = await self.load_export_fuel_data(compliance_report_group_uuid, is_draft)
+        data = await self.load_export_fuel_data(
+            compliance_report_group_uuid, compliance_report_id
+        )
         builder.add_sheet(
             sheet_name=EF_EXPORT_NAME,
             columns=EF_EXPORT_COLUMNS,
@@ -353,10 +362,10 @@ class ComplianceReportExporter:
         return builder
 
     async def load_export_fuel_data(
-        self, compliance_report_group_uuid: str, is_draft: bool
+        self, compliance_report_group_uuid: str, compliance_report_id: int
     ) -> List[List]:
         results = await self.ef_repo.get_effective_fuel_exports(
-            compliance_report_group_uuid, False, not is_draft
+            compliance_report_group_uuid, compliance_report_id
         )
         return [
             [

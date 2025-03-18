@@ -73,15 +73,13 @@ class FuelSupplyServices:
         )
         eer = EnergyEffectivenessRatioSchema(
             eer_id=row_data["eer_id"],
-            energy_effectiveness_ratio=round(
-                row_data["energy_effectiveness_ratio"], 2),
+            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"], 2),
             fuel_category=fuel_category,
             end_use_type=end_use_type,
         )
         tci = TargetCarbonIntensitySchema(
             target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
-            target_carbon_intensity=round(
-                row_data["target_carbon_intensity"], 5),
+            target_carbon_intensity=round(row_data["target_carbon_intensity"], 5),
             reduction_target_percentage=round(
                 row_data["reduction_target_percentage"], 2
             ),
@@ -102,8 +100,7 @@ class FuelSupplyServices:
         )
         # Find the existing fuel type if it exists
         existing_fuel_type = next(
-            (ft for ft in fuel_types if ft.fuel_type ==
-             row_data["fuel_type"]), None
+            (ft for ft in fuel_types if ft.fuel_type == row_data["fuel_type"]), None
         )
 
         if existing_fuel_type:
@@ -237,14 +234,11 @@ class FuelSupplyServices:
 
     @service_handler
     async def get_fuel_supply_list(
-        self,
-        compliance_report_id: int,
-        changelog: bool = False
+        self, compliance_report_id: int, changelog: bool = False
     ) -> FuelSuppliesSchema:
         """Get fuel supply list for a compliance report"""
-        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         fuel_supply_models = await self.repo.get_fuel_supply_list(
-            compliance_report_id, changelog, exclude_draft_reports=is_gov_user
+            compliance_report_id, changelog
         )
         fs_list = [
             FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supply_models
@@ -259,15 +253,8 @@ class FuelSupplyServices:
         compliance_report_id: int,
     ):
         """Get paginated fuel supply list for a compliance report"""
-        logger.info(
-            "Getting paginated fuel supply list",
-            compliance_report_id=compliance_report_id,
-            page=pagination.page,
-            size=pagination.size,
-        )
-        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         fuel_supplies, total_count = await self.repo.get_fuel_supplies_paginated(
-            pagination, compliance_report_id, exclude_draft_reports=is_gov_user
+            pagination, compliance_report_id
         )
 
         return FuelSuppliesSchema(
@@ -276,8 +263,7 @@ class FuelSupplyServices:
                 size=pagination.size,
                 total=total_count,
                 total_pages=(
-                    math.ceil(total_count /
-                              pagination.size) if total_count > 0 else 0
+                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
                 ),
             ),
             fuel_supplies=[

@@ -35,18 +35,16 @@ export const COMPLIANCE_REPORT_STATUSES = {
   DRAFT: 'Draft',
   DELETED: 'Deleted',
   SUBMITTED: 'Submitted',
-  ASSESSED: 'Assessed',
-  REASSESSED: 'Reassessed',
+  ANALYST_ADJUSTMENT: 'Analyst adjustment',
   RECOMMENDED_BY_ANALYST: 'Recommended by analyst',
   RECOMMENDED_BY_MANAGER: 'Recommended by manager',
+  ASSESSED: 'Assessed',
+  REJECTED: 'Rejected',
   RETURN_TO_ANALYST: 'Return to analyst',
   RETURN_TO_MANAGER: 'Return to manager',
   RETURN_TO_SUPPLIER: 'Return to supplier'
 }
-export const SUPPLEMENTAL_INITIATOR_TYPE = {
-  SUPPLIER_SUPPLEMENTAL: 'Supplier Supplemental',
-  GOVERNMENT_REASSESSMENT: 'Government Reassessment'
-}
+
 export function getAllOrganizationStatuses() {
   return Object.values(ORGANIZATION_STATUSES)
 }

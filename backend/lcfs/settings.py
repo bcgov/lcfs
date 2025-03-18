@@ -85,7 +85,7 @@ class Settings(BaseSettings):
     rabbitmq_vhost: str = "lcfs"
     rabbitmq_transaction_queue: str = "transaction_queue"
 
-    ches_enabled: bool = True
+    ches_enabled: bool = False
     ches_auth_url: str = ""
     ches_email_url: str = ""
     ches_client_id: str = ""

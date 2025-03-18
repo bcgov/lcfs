@@ -41,7 +41,7 @@ export const AddEditNotionalTransfers = () => {
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
 
@@ -141,10 +141,11 @@ export const AddEditNotionalTransfers = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'legalName') {
+        const orgName = currentUser.organization?.name
         if (
           (typeof params.newValue === 'object' &&
-            params.newValue?.name === currentUser.organization.name) ||
-          params.newValue === currentUser.organization.name
+            params.newValue?.name === orgName) ||
+          params.newValue === orgName
         ) {
           alertRef.current?.triggerAlert({
             message:

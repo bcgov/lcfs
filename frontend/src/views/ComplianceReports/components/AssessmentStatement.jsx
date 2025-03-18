@@ -9,9 +9,11 @@ import {
 } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { InputBase } from '@mui/material'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
+import { roles } from '@/constants/roles.js'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
 export const AssessmentStatement = () => {
   const ref = useRef(null)
@@ -31,17 +33,27 @@ export const AssessmentStatement = () => {
     reportData?.report.assessmentStatement
   )
 
-  const { mutate: saveAssessmentStatement, isPending } =
+  const { mutate: saveAssessmentStatement } =
     useUpdateComplianceReport(complianceReportId)
 
   const currentStatus = reportData?.report.currentStatus?.status
 
-  const disabled =
-    (hasRoles('Analyst') && currentStatus !== 'Submitted') ||
-    (hasRoles('Compliance Manager') &&
-      currentStatus !== 'Recommended by analyst') ||
-    (hasRoles('Director') && currentStatus !== 'Recommended by manager') ||
-    isPending
+  const canEdit = useMemo(() => {
+    const roleStatusMap = {
+      [roles.analyst]: [
+        COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      ],
+      [roles.compliance_manager]: [
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+      ],
+      [roles.director]: [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]
+    }
+
+    return Object.entries(roleStatusMap).some(
+      ([role, statuses]) => hasRoles(role) && statuses.includes(currentStatus)
+    )
+  }, [currentStatus, hasRoles])
 
   const handleSaveAssessmentStatement = () =>
     saveAssessmentStatement(
@@ -83,7 +95,7 @@ export const AssessmentStatement = () => {
           </BCTypography>
           <BCBox variant="outlined" p={2} mb={2}>
             <InputBase
-              disabled={disabled}
+              disabled={!canEdit}
               multiline
               rows={4}
               sx={{
@@ -98,7 +110,7 @@ export const AssessmentStatement = () => {
           <BCButton
             variant="outlined"
             color="primary"
-            disabled={disabled}
+            disabled={!canEdit}
             onClick={handleSaveAssessmentStatement}
           >
             {t('report:saveStatement')}
