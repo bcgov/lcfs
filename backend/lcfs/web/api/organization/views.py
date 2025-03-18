@@ -180,7 +180,7 @@ async def get_transactions_paginated_for_org(
 @view_handler([RoleEnum.SUPPLIER])
 async def export_transactions_for_org(
     request: Request,
-    format: str = Query(default="xls", description="File export format"),
+    format: str = Query(default="xlsx", description="File export format"),
     txn_service: TransactionsService = Depends(),
 ):
     """
@@ -309,6 +309,7 @@ async def get_compliance_report_by_id(
     return await report_service.get_compliance_report_by_id(
         report_id, apply_masking=True, get_chain=True
     )
+
 
 @router.delete(
     "/{organization_id}/{report_id}/supplemental",
