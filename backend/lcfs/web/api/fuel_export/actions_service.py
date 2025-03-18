@@ -1,5 +1,5 @@
 import uuid
-from logging import getLogger
+import structlog
 
 from fastapi import Depends, HTTPException, status
 
@@ -17,7 +17,7 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import ValidationErrorException
 from lcfs.web.utils.calculations import calculate_compliance_units
 
-logger = getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Constants defining which fields to exclude during model operations
 FUEL_EXPORT_EXCLUDE_FIELDS = {
@@ -187,7 +187,8 @@ class FuelExportActionService:
             # Copy existing fields, then apply new data
             for field in existing_export.__table__.columns.keys():
                 if field not in FUEL_EXPORT_EXCLUDE_FIELDS:
-                    setattr(fuel_export, field, getattr(existing_export, field))
+                    setattr(fuel_export, field, getattr(
+                        existing_export, field))
 
             for field, value in fe_data.model_dump(
                 exclude=FUEL_EXPORT_EXCLUDE_FIELDS
@@ -201,7 +202,8 @@ class FuelExportActionService:
             new_export = await self.repo.create_fuel_export(fuel_export)
             return FuelExportSchema.model_validate(new_export)
 
-        raise HTTPException(status_code=404, detail="Fuel export record not found.")
+        raise HTTPException(
+            status_code=404, detail="Fuel export record not found.")
 
     @service_handler
     async def delete_fuel_export(
@@ -233,7 +235,8 @@ class FuelExportActionService:
 
             for field in existing_export.__table__.columns.keys():
                 if field not in FUEL_EXPORT_EXCLUDE_FIELDS:
-                    setattr(delete_export, field, getattr(existing_export, field))
+                    setattr(delete_export, field, getattr(
+                        existing_export, field))
 
         delete_export.compliance_report_id = fe_data.compliance_report_id
 
