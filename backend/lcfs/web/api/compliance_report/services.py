@@ -100,13 +100,13 @@ class ComplianceReportServices:
         return ComplianceReportBaseSchema.model_validate(report)
 
     @service_handler
-    async def created_analyst_adjustment_report(
+    async def create_analyst_adjustment_report(
         self, existing_report_id: int, user: UserProfile
     ) -> ComplianceReportBaseSchema:
         """
-        Creates a new supplemental compliance report.
+        Creates a new analyst adjustment report.
         The report_id can be any report in the series (original or supplemental).
-        Supplemental reports are only allowed if the status of the current report is 'Assessed'.
+        Analyst adjustments are only allowed if the status of the current report is 'Submitted'.
         """
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(

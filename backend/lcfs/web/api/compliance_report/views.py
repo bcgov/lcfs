@@ -192,7 +192,7 @@ async def create_government_adjustment(
     """
     Create a government adjustment.
     """
-    return await service.created_analyst_adjustment_report(report_id, request.user)
+    return await service.create_analyst_adjustment_report(report_id, request.user)
 
 
 @router.post(

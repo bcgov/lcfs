@@ -33,9 +33,6 @@ export const AssessmentRecommendation = ({
             }
           }
         )
-      },
-      onError: (error) => {
-        //TODO: Something
       }
     })
 
@@ -56,9 +53,6 @@ export const AssessmentRecommendation = ({
 
   return (
     <BCBox sx={{ mt: 2 }}>
-      <BCTypography variant="h5" color="primary" mb={2}>
-        Assessment recommendation
-      </BCTypography>
       {currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED && (
         <BCTypography variant="body2">
           The analyst can make changes to the reported activity information if

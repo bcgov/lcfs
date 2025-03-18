@@ -7,7 +7,6 @@ import InternalComments from '@/components/InternalComments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { govRoles, roles } from '@/constants/roles'
-import { ROUTES } from '@/routes/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useDeleteComplianceReport,
@@ -22,9 +21,18 @@ import ReportDetails from './components/ReportDetails'
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { ActivityListCard } from './components/ActivityListCard'
 import { AssessmentCard } from './components/AssessmentCard'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { ROUTES } from '@/constants/routes'
 import { AssessmentRecommendation } from '@/views/ComplianceReports/components/AssessmentRecommendation.jsx'
+import { AssessmentStatement } from '@/views/ComplianceReports/components/AssessmentStatement.jsx'
+import { useOrganization } from '@/hooks/useOrganization.js'
+import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/useCurrentUser.js'
+import { Fab, Stack, Tooltip } from '@mui/material'
+import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
+import colors from '@/themes/base/colors.js'
+import ROUTES from '@/routes/routes.js'
 
 const iconStyle = {
   width: '2rem',
@@ -94,21 +102,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report.organizationId
   )
-
-  const editAnalyst = useMemo(() => {
-    return (
-      hasRoles(roles.analyst) &&
-      currentStatus === COMPLIANCE_REPORT_STATUSES.REASSESSED
-    )
-  }, [hasRoles, currentStatus])
-
-  const editSupplier = useMemo(() => {
-    return (
-      hasRoles(roles.supplier) &&
-      currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
-    )
-  }, [hasRoles, currentStatus])
-  const canEdit = editAnalyst || editSupplier
 
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
@@ -186,20 +179,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       reportData?.report
     ]
   )
-
-  const shouldDisplayAssessment = () => {
-    if (!isGovernmentUser) return false
-
-    const roleStatusMap = {
-      Analyst: 'Submitted',
-      'Compliance Manager': 'Recommended by analyst',
-      Director: 'Recommended by manager'
-    }
-
-    return Object.entries(roleStatusMap).some(
-      ([role, status]) => hasRoles(role) && currentStatus === status
-    )
-  }
 
   useEffect(() => {
     if (location.state?.message) {
@@ -302,6 +281,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
+          {isGovernmentUser && <AssessmentStatement />}
           {hasRoles(roles.analyst) && (
             <AssessmentRecommendation
               complianceReportId={complianceReportId}
@@ -317,7 +297,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <BCBox>
                 <Role roles={govRoles}>
                   <InternalComments
-                    entityType={'complianceReport'}
+                    entityType="complianceReport"
                     entityId={parseInt(complianceReportId)}
                   />
                 </Role>

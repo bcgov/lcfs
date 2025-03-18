@@ -1,19 +1,15 @@
 import datetime
 import json
-from unittest.mock import patch
-
-from lcfs.db.models import ComplianceReport
-from lcfs.db.models.user.Role import RoleEnum
-from httpx import AsyncClient
+import pytest
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from httpx import AsyncClient
 from unittest.mock import patch
 
+from lcfs.db.models import ComplianceReport
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.tests.compliance_report.conftest import (
     compliance_report_base_schema,
-    summary_schema,
 )
 from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,

@@ -12,6 +12,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportOrganizationSchema,
     ComplianceReportStatusSchema,
     ComplianceReportUserSchema,
+    SummarySchema,
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_export.actions_service import FuelExportActionService
@@ -74,7 +75,12 @@ def compliance_report_organization_schema():
 
 @pytest.fixture
 def summary_schema():
-    return SummarySchema(summary_id=1, is_locked=False)
+    return SummarySchema(
+        summary_id=1,
+        is_locked=False,
+        line_11_fossil_derived_base_fuel_total=0,
+        line_21_non_compliance_penalty_payable=0,
+    )
 
 
 @pytest.fixture

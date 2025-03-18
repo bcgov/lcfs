@@ -38,7 +38,6 @@ const ComplianceReportSummary = ({
   buttonClusterConfig,
   methods,
   enableCompareMode,
-  canEdit,
   alertRef
 }) => {
   const [summaryData, setSummaryData] = useState(null)
@@ -128,18 +127,6 @@ const ComplianceReportSummary = ({
           </BCTypography>
         </AccordionSummary>
         <AccordionDetails>
-          <SummaryTable
-            data-test="renewable-summary"
-            title={t('report:renewableFuelTargetSummary')}
-            columns={
-              summaryData
-                ? renewableFuelColumns(
-                    t,
-                    summaryData?.renewableFuelTargetSummary,
-                    canEdit,
-                    compliancePeriodYear
-                  )
-                : []
           <TogglePanel
             label="Compare mode"
             disabled={!enableCompareMode}
