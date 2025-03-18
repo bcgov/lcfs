@@ -1,10 +1,7 @@
 // complianceReportButtonConfigs.js
 
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
-import {
-  COMPLIANCE_REPORT_STATUSES,
-  SUPPLEMENTAL_INITIATOR_TYPE
-} from '@/constants/statuses'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 
 const outlineBase = {
@@ -199,14 +196,8 @@ export const buttonClusterConfigFn = ({
     return currentDate <= deadlineDate
   }
 
-  const buttons = {
-    [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
-      reportButtons.submitReport,
-      ...(supplementalInitiator ===
-      SUPPLEMENTAL_INITIATOR_TYPE.SUPPLIER_SUPPLEMENTAL
-        ? [reportButtons.deleteSupplementalReport]
-        : [])
-    ],
+  return {
+    [COMPLIANCE_REPORT_STATUSES.DRAFT]: [reportButtons.submitReport],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
       ...(isGovernmentUser && hasRoles('Analyst')
         ? [
@@ -231,6 +222,4 @@ export const buttonClusterConfigFn = ({
         : [])
     ]
   }
-
-  return buttons
 }

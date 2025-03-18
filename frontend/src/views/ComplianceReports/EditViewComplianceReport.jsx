@@ -32,6 +32,7 @@ import { AssessmentCard } from './components/AssessmentCard'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { ROUTES } from '@/constants/routes'
 import { AssessmentRecommendation } from '@/views/ComplianceReports/components/AssessmentRecommendation.jsx'
+import { AssessmentStatement } from '@/views/ComplianceReports/components/AssessmentStatement.jsx'
 
 const iconStyle = {
   width: '2rem',
@@ -184,20 +185,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     ]
   )
 
-  const shouldDisplayAssessment = () => {
-    if (!isGovernmentUser) return false
-
-    const roleStatusMap = {
-      Analyst: 'Submitted',
-      'Compliance Manager': 'Recommended by analyst',
-      Director: 'Recommended by manager'
-    }
-
-    return Object.entries(roleStatusMap).some(
-      ([role, status]) => hasRoles(role) && currentStatus === status
-    )
-  }
-
   useEffect(() => {
     if (location.state?.message) {
       alertRef.current?.triggerAlert({
@@ -301,6 +288,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
+          {isGovernmentUser && <AssessmentStatement />}
           {hasRoles(roles.analyst) && (
             <AssessmentRecommendation
               complianceReportId={complianceReportId}
@@ -316,7 +304,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <BCBox>
                 <Role roles={govRoles}>
                   <InternalComments
-                    entityType={'complianceReport'}
+                    entityType="complianceReport"
                     entityId={parseInt(complianceReportId)}
                     onCommentChange={handleCommentChange}
                   />
