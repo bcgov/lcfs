@@ -87,26 +87,6 @@ export const fuelExportColDefs = (
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
-    field: 'exportDate',
-    headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
-    headerComponent: RequiredHeader,
-    maxWidth: 220,
-    minWidth: 200,
-    cellRenderer: (params) => (
-      <BCTypography variant="body4">
-        {params.value ? params.value : 'YYYY-MM-DD'}
-      </BCTypography>
-    ),
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-
-    suppressKeyboardEvent,
-    cellEditor: DateEditor,
-    cellEditorParams: {
-      autoOpenLastRow: !gridReady
-    }
-  },
-  {
     field: 'fuelTypeId',
     headerComponent: RequiredHeader,
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
@@ -352,6 +332,8 @@ export const fuelExportColDefs = (
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
 
     editable: (params) => {
+      if (params.data.provisionOfTheAct === 'Unknown') return false
+
       const fuelTypeObj = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
@@ -401,6 +383,30 @@ export const fuelExportColDefs = (
       }
 
       return true
+    }
+  },
+  {
+    field: 'exportDate',
+    headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
+    maxWidth: 220,
+    minWidth: 200,
+    cellRenderer: (params) => (
+      <BCTypography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </BCTypography>
+    ),
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
+    suppressKeyboardEvent,
+    cellEditor: DateEditor,
+
+    editable: (params) => {
+      return !!params.data.provisionOfTheAct
+    },
+
+    cellEditorParams: {
+      autoOpenLastRow: !gridReady
     }
   },
   {
@@ -472,7 +478,37 @@ export const fuelExportColDefs = (
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
 
     valueGetter: (params) => {
-      if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
+      if (params.data.provisionOfTheAct === 'Unknown') {
+        const exportDateValue = params.data.exportDate
+        if (!exportDateValue) {
+          return 0
+        }
+        const exportDateObj = new Date(exportDateValue)
+        if (Number.isNaN(exportDateObj.getTime())) {
+          return 0
+        }
+        const fuelTypeObj = optionsData?.fuelTypes?.find(
+          (obj) => obj.fuelType === params.data.fuelType
+        )
+        if (!fuelTypeObj) return 0
+
+        const twelveMonthsAgo = new Date(exportDateObj)
+        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
+
+        const validCodes = (fuelTypeObj.fuelCodes || []).filter((fc) => {
+          const fcDate = new Date(fc.fuelCodeEffectiveDate)
+          return fcDate >= twelveMonthsAgo && fcDate <= exportDateObj
+        })
+        if (!validCodes.length) {
+          return 0
+        }
+        const minCI = Math.min(
+          ...validCodes.map((fc) => fc.fuelCodeCarbonIntensity)
+        )
+        return minCI
+      }
+      
+      if (/Fuel code/i.test(params.data.provisionOfTheAct)) {
         return optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
           ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)

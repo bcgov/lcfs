@@ -104,7 +104,7 @@ export const AddEditFuelExports = () => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
         params.api.startEditingCell({
           rowIndex: lastRowIndex,
-          colKey: 'exportDate'
+          colKey: 'fuelTypeId'
         })
         setGridReady(true)
       }, 500)

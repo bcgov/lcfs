@@ -31,6 +31,7 @@ FUEL_EXPORT_EXCLUDE_FIELDS = {
     "action_type",
     "units",
     "is_new_supplemental_entry",
+    "provision_of_the_act",
 }
 
 
@@ -82,14 +83,16 @@ class FuelExportActionService:
             formatted_quantity = f"{fuel_export.quantity:,}"
             formatted_density = f"{fuel_export.energy_density}"
 
-            raise ValidationErrorException({
-                "errors": [
-                    {
-                        "fields": ["quantity"],
-                        "message": f"Reduce quantity ({formatted_quantity}) or choose a fuel with lower energy density ({formatted_density})."
-                    }
-                ]
-            })
+            raise ValidationErrorException(
+                {
+                    "errors": [
+                        {
+                            "fields": ["quantity"],
+                            "message": f"Reduce quantity ({formatted_quantity}) or choose a fuel with lower energy density ({formatted_density}).",
+                        }
+                    ]
+                }
+            )
 
         fuel_export.energy = calculated_energy
         # Calculate compliance units using the direct utility function
@@ -225,8 +228,7 @@ class FuelExportActionService:
             delete_export = FuelExport(
                 compliance_report_id=fe_data.compliance_report_id,
                 group_uuid=fe_data.group_uuid,
-                version=(existing_export.version +
-                         1) if existing_export else 0,
+                version=(existing_export.version + 1) if existing_export else 0,
                 action_type=ActionTypeEnum.DELETE,
                 user_type=user_type,
             )
