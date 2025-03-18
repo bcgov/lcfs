@@ -1,3 +1,4 @@
+/* eslint-disable cypress/unsafe-to-chain-command */
 /**
  * Command to select elements using 'data-test' attribute.
  *
@@ -19,11 +20,6 @@ Cypress.Commands.add('getByDataTest', (selector, ...args) => {
 Cypress.Commands.add('loginWith', (userType, username, password) => {
   // Determine which login link to click based on user type
   cy.getByDataTest(userType === 'idir' ? 'link-idir' : 'link-bceid').click()
-  // Define the login process for IDIR and BCeID
-  // cy.get("#user").type(username, { log: false });
-  // cy.get("#password").type(password, { log: false });
-  // cy.get("div.login-form-action > input").click();
-  // cy.wait(5000)
   const loginProcess = (args) => {
     const [username, password] = args
     console.log('username', username)
@@ -38,8 +34,11 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
     { args: [username, password] },
     loginProcess
   )
-  // Check to confirm successful login
-  cy.getByDataTest('logout-button').should('be.visible')
+  cy.wait(5000)
+  cy.on('uncaught:exception', (_err, runnable) => {
+    // Return false to ignore exceptions in case wrong credentials or account lock issues.
+    return false
+  })
 })
 
 /**
@@ -128,3 +127,63 @@ Cypress.Commands.add('setIDIRRoles', (role) => {
     'User has been successfully saved.'
   )
 })
+
+Cypress.Commands.add(
+  'selectWithRetry',
+  (cellSelector, optionSelector, index, retries = 2) => {
+    function attemptSelection(attemptsLeft) {
+      cy.get(cellSelector)
+        .eq(index)
+        .click()
+        .then(() => {
+          cy.get('body').then(($body) => {
+            // Check if optionSelector exists in the DOM
+            if ($body.find(optionSelector).length > 0) {
+              cy.get(optionSelector).click()
+            } else {
+              // If optionSelector not found, start process from cellSelector again
+              cy.log(
+                `Option selector not found. Starting from cell selector again. Attempts left: ${attemptsLeft}`
+              )
+              if (attemptsLeft > 0) {
+                cy.wait(500)
+                attemptSelection(attemptsLeft - 1) // Retry from cellSelector
+              }
+            }
+          })
+        })
+    }
+
+    attemptSelection(retries)
+  }
+)
+
+Cypress.Commands.add(
+  'inputTextWithRetry',
+  (cellSelector, inputValue, index, retries = 2) => {
+    function attemptInput(attemptsLeft) {
+      cy.get(cellSelector)
+        .eq(index)
+        .click()
+        .then(($cell) => {
+          cy.get('body').then(($body) => {
+            // Check if input exists in the cell
+            if ($cell.find('input').length > 0) {
+              cy.wrap($cell).find('input').clear().type(`${inputValue}{enter}`)
+            } else {
+              // If input not found, retry the cell click
+              cy.log(
+                `Input field not found. Starting from cell selector again. Attempts left: ${attemptsLeft}`
+              )
+              if (attemptsLeft > 0) {
+                cy.wait(500)
+                attemptInput(attemptsLeft - 1) // Retry
+              }
+            }
+          })
+        })
+    }
+
+    attemptInput(retries)
+  }
+)

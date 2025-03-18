@@ -251,12 +251,13 @@ export const AddEditNotionalTransfers = () => {
 
   useEffect(() => {
     if (!transfersLoading && !isArrayEmpty(notionalTransfers)) {
-      const updatedRowData = notionalTransfers.map((item) => ({
-        ...item,
-        complianceReportId,
-        isNewSupplementalEntry:
-          isSupplemental && item.complianceReportId === +complianceReportId
-      }))
+      const updatedRowData =
+        notionalTransfers?.map((item) => ({
+          ...item,
+          complianceReportId,
+          isNewSupplementalEntry:
+            isSupplemental && item.complianceReportId === +complianceReportId
+        })) ?? []
       setRowData(updatedRowData)
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])

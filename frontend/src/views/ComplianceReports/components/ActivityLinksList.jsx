@@ -81,7 +81,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
         ROUTES.REPORTS_ADD_FUEL_EXPORTS
       )
     ],
-    [t, navigate, compliancePeriod, complianceReportId]
+    [t, navigate, compliancePeriod, complianceReportId, createActivity]
   )
 
   const secondaryList = useMemo(
@@ -104,7 +104,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
         }
       }
     ],
-    [t, navigate, compliancePeriod, complianceReportId]
+    [t, navigate, compliancePeriod, complianceReportId, createActivity]
   )
 
   return (
@@ -129,6 +129,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
             key={activity.name}
             alignItems="flex-start"
             onClick={activity.action}
+            data-test={activity.label}
           >
             <BCTypography
               variant="subtitle2"
@@ -164,6 +165,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
             key={activity.name}
             alignItems="flex-start"
             onClick={activity.action}
+            data-test={activity.label}
           >
             <BCTypography
               variant="subtitle2"
