@@ -64,6 +64,20 @@ vi.mock('../components/ActivityLinksList', () => ({
   ActivityLinksList: () => <div>Activity Links List</div>
 }))
 
+vi.mock('../components/ActivityListCard', () => ({
+  ActivityListCard: () => <div>Activity Links List</div>
+}))
+
+vi.mock('../components/AssessmentCard', () => ({
+  AssessmentCard: () => (
+    <div>
+      <div>report:assessment</div>
+      <div>report:reportHistory</div>
+      <div>report:complianceReportHistory.AssessedBy</div>
+    </div>
+  )
+}))
+
 vi.mock('../components/ReportDetails', () => ({
   default: () => <div>Report Details</div>
 }))
@@ -74,6 +88,10 @@ vi.mock('../components/ComplianceReportSummary', () => ({
 
 vi.mock('../components/Introduction', () => ({
   Introduction: () => <div>Introduction</div>
+}))
+
+vi.mock('../components/AssessmentStatement', () => ({
+  AssessmentStatement: () => <div>Assessment Statement</div>
 }))
 
 describe('EditViewComplianceReport', () => {
