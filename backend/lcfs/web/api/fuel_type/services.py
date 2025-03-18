@@ -1,10 +1,10 @@
-from logging import getLogger
+import structlog
 from fastapi import Depends, Request
 from typing import List
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.fuel_type.repo import FuelTypeRepository
 
-logger = getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class FuelTypeServices:
