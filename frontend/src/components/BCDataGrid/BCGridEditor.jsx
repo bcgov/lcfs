@@ -345,6 +345,7 @@ export const BCGridEditor = ({
             <BCButton
               ref={buttonRef}
               variant="outlined"
+              data-test="add-row-btn"
               color="dark"
               startIcon={
                 <FontAwesomeIcon icon={faPlus} className="small-icon" />
@@ -393,6 +394,7 @@ export const BCGridEditor = ({
             <BCButton
               onClick={onSaveExit}
               variant="contained"
+              data-test="save-btn"
               color="primary"
               style={{
                 marginLeft: 20
