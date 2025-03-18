@@ -163,7 +163,7 @@ class UvicornFormatter(logging.Formatter):
                             message = f"{request} {status_code}"
                         else:
                             message = request
-            print('========', record)
+
             # Extract status code from args if not already found
             if status_code is None and hasattr(record, 'args') and isinstance(record.args, tuple) and len(record.args) >= 5:
                 status_code = record.args[4]
