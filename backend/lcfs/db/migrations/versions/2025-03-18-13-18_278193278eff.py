@@ -2,8 +2,8 @@
 Add is_user_safe_to_remove function that checks references in create_user/update_user columns
 
 Revision ID: 278193278eff
-Revises: 937c793bf7b8
-Create Date: 2025-03-10 13:18:24.603159
+Revises: e77de76bb555
+Create Date: 2025-03-18 13:18:24.603159
 """
 
 import sqlalchemy as sa
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "278193278eff"
-down_revision = "937c793bf7b8"
+down_revision = "e77de76bb555"
 branch_labels = None
 depends_on = None
 
