@@ -569,13 +569,9 @@ class NotificationRepository:
         """
         Delete all NotificationChannelSubscription rows referencing the user.
         """
-        subs_query = select(NotificationChannelSubscription).where(
-            NotificationChannelSubscription.user_profile_id == user_profile_id
+        await self.db.execute(
+            delete(NotificationChannelSubscription).where(
+                NotificationChannelSubscription.user_profile_id == user_profile_id
+            )
         )
-        result = await self.db.execute(subs_query)
-        subs = result.scalars().all()
-
-        for sub_obj in subs:
-            await self.db.delete(sub_obj)
-
         await self.db.flush()

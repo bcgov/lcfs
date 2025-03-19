@@ -4,7 +4,7 @@ from typing import List
 from fastapi import Depends
 from lcfs.db.dependencies import get_async_db_session
 
-from sqlalchemy import and_, select
+from sqlalchemy import and_, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
@@ -50,11 +50,7 @@ class RoleRepository:
         """
         Delete all UserRole entries for the given user_profile_id.
         """
-        query = select(UserRole).where(UserRole.user_profile_id == user_profile_id)
-        result = await self.session.execute(query)
-        user_roles = result.scalars().all()
-
-        for role_obj in user_roles:
-            await self.session.delete(role_obj)
-
+        await self.session.execute(
+            delete(UserRole).where(UserRole.user_profile_id == user_profile_id)
+        )
         await self.session.flush()
