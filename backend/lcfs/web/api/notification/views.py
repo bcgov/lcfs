@@ -17,6 +17,7 @@ from lcfs.web.api.notification.schema import (
     SubscriptionSchema,
     NotificationMessageSchema,
     NotificationCountSchema,
+    NotificationBatchOperationSchema,
 )
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.core.decorators import view_handler
@@ -67,15 +68,18 @@ async def get_notification_messages_by_user_id(
 @view_handler(["*"])
 async def update_notification_messages_to_read(
     request: Request,
-    notification_ids: List[int] = Body(..., embed=False),
-    response: Response = None,
+    payload: NotificationBatchOperationSchema = Body(...),
     service: NotificationService = Depends(),
 ):
     """
-    Update notifications (mark the messages as read)
+    Mark notifications as read.
+
+    If payload.applyToAll is True, mark all notifications as read.
+    Otherwise, mark just the given notification_ids.
     """
     return await service.update_notification_messages(
-        request.user.user_profile_id, notification_ids
+        request.user.user_profile_id,
+        payload=payload.model_dump(),
     )
 
 
@@ -83,15 +87,18 @@ async def update_notification_messages_to_read(
 @view_handler(["*"])
 async def delete_notification_messages(
     request: Request,
-    notification_ids: List[int] = Body(..., embed=False),
-    response: Response = None,
+    payload: NotificationBatchOperationSchema = Body(...),
     service: NotificationService = Depends(),
 ):
     """
-    Delete notification messages
+    Delete notifications.
+
+    If payload.applyToAll is True, delete all notifications.
+    Otherwise, delete just the given notification_ids.
     """
     return await service.delete_notification_messages(
-        request.user.user_profile_id, notification_ids
+        request.user.user_profile_id,
+        payload=payload.model_dump(),
     )
 
 

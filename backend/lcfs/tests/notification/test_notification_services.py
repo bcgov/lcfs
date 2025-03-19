@@ -490,3 +490,68 @@ async def test_send_notification_skip_analyst(notification_service):
     # Ensure that the analyst was skipped
     assert len(created_notifications) == 2
     assert created_notifications[0].related_user_profile_id == 2
+
+
+@pytest.mark.anyio
+async def test_update_notifications_global(notification_service):
+    service, mock_repo, mock_email_service = notification_service
+    user_id = 1
+    payload = {"applyToAll": True}
+    expected_ids = [1, 2, 3, 4]
+
+    mock_repo.mark_all_notifications_as_read_for_user = AsyncMock(
+        return_value=expected_ids
+    )
+
+    result = await service.update_notification_messages(user_id, payload)
+
+    assert result == expected_ids
+    mock_repo.mark_all_notifications_as_read_for_user.assert_awaited_once_with(user_id)
+
+
+@pytest.mark.anyio
+async def test_delete_notifications_global(notification_service):
+    service, mock_repo, mock_email_service = notification_service
+    user_id = 1
+    payload = {"applyToAll": True}
+    expected_ids = [10, 20, 30]
+
+    mock_repo.delete_all_notifications_for_user = AsyncMock(return_value=expected_ids)
+
+    result = await service.delete_notification_messages(user_id, payload)
+
+    assert result == expected_ids
+    mock_repo.delete_all_notifications_for_user.assert_awaited_once_with(user_id)
+
+
+@pytest.mark.anyio
+async def test_update_notifications_partial(notification_service):
+    service, mock_repo, mock_email_service = notification_service
+    user_id = 1
+    payload = {"applyToAll": False, "notification_ids": [5, 6]}
+
+    # Set up the repo method for partial update
+    mock_repo.mark_notifications_as_read = AsyncMock(
+        return_value=payload["notification_ids"]
+    )
+
+    result = await service.update_notification_messages(user_id, payload)
+
+    assert result == [5, 6]
+    mock_repo.mark_notifications_as_read.assert_awaited_once_with(user_id, [5, 6])
+
+
+@pytest.mark.anyio
+async def test_delete_notifications_partial(notification_service):
+    service, mock_repo, mock_email_service = notification_service
+    user_id = 1
+    payload = {"applyToAll": False, "notification_ids": [7, 8, 9]}
+
+    mock_repo.delete_notification_messages = AsyncMock(
+        return_value=payload["notification_ids"]
+    )
+
+    result = await service.delete_notification_messages(user_id, payload)
+
+    assert result == [7, 8, 9]
+    mock_repo.delete_notification_messages.assert_awaited_once_with(user_id, [7, 8, 9])

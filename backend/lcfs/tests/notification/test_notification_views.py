@@ -252,3 +252,82 @@ async def test_delete_subscription(client, fastapi_app, set_mock_user):
         mock_delete_subscription.assert_called_once_with(
             1, 1
         )  # subscription_id, user_profile_id
+
+
+@pytest.mark.anyio
+async def test_update_notifications_to_read_global(client, fastapi_app, set_mock_user):
+    with patch(
+        "lcfs.web.api.notification.views.NotificationService.update_notification_messages"
+    ) as mock_update:
+        mock_update.return_value = [1, 2, 3]
+
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
+        url = fastapi_app.url_path_for("update_notification_messages_to_read")
+        payload = {"applyToAll": True}
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+        assert response.json() == [1, 2, 3]
+
+        mock_update.assert_called_once_with(
+            1, payload={"applyToAll": True, "notification_ids": []}
+        )
+
+
+@pytest.mark.anyio
+async def test_delete_notifications_global(client, fastapi_app, set_mock_user):
+    with patch(
+        "lcfs.web.api.notification.views.NotificationService.delete_notification_messages"
+    ) as mock_delete:
+        mock_delete.return_value = [10, 20, 30]
+
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
+        url = fastapi_app.url_path_for("delete_notification_messages")
+        payload = {"applyToAll": True}
+        response = await client.request("DELETE", url, json=payload)
+
+        assert response.status_code == 200
+        assert response.json() == [10, 20, 30]
+        mock_delete.assert_called_once_with(
+            1, payload={"applyToAll": True, "notification_ids": []}
+        )
+
+
+@pytest.mark.anyio
+async def test_update_notifications_to_read_partial(client, fastapi_app, set_mock_user):
+    with patch(
+        "lcfs.web.api.notification.views.NotificationService.update_notification_messages"
+    ) as mock_update:
+        mock_update.return_value = [5, 6]
+
+        set_mock_user(
+            fastapi_app, [RoleEnum.GOVERNMENT], user_details={"user_profile_id": 1}
+        )
+        url = fastapi_app.url_path_for("update_notification_messages_to_read")
+        payload = {"applyToAll": False, "notification_ids": [5, 6]}
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+        assert response.json() == [5, 6]
+        mock_update.assert_called_once_with(1, payload=payload)
+
+
+@pytest.mark.anyio
+async def test_delete_notifications_partial(client, fastapi_app, set_mock_user):
+    with patch(
+        "lcfs.web.api.notification.views.NotificationService.delete_notification_messages"
+    ) as mock_delete:
+        mock_delete.return_value = [7, 8, 9]
+
+        set_mock_user(
+            fastapi_app, [RoleEnum.GOVERNMENT], user_details={"user_profile_id": 1}
+        )
+        url = fastapi_app.url_path_for("delete_notification_messages")
+        payload = {"applyToAll": False, "notification_ids": [7, 8, 9]}
+        response = await client.request("DELETE", url, json=payload)
+
+        assert response.status_code == 200
+        assert response.json() == [7, 8, 9]
+        mock_delete.assert_called_once_with(1, payload=payload)
