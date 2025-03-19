@@ -116,7 +116,7 @@ export const ViewOrganization = () => {
   return (
     <>
       {alertMessage && (
-        <BCAlert data-test="alert-box" severity={alertSeverity}>
+        <BCAlert data-test="alert-box" severity={alertSeverity} sx={{ mb: 4 }}>
           {alertMessage}
         </BCAlert>
       )}

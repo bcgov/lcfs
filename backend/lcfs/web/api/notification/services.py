@@ -277,9 +277,10 @@ class NotificationService:
                 pass
 
         # Decide if this is a Transfer that is Recorded/Refused
-        is_recorded_or_refused = (
-            service_val == "transfer" and status_val in ["recorded", "refused"]
-        )
+        is_recorded_or_refused = service_val == "transfer" and status_val in [
+            "recorded",
+            "refused",
+        ]
 
         for notification_type in notification.notification_types:
             in_app_subscribed_users = await self.repo.get_subscribed_users_by_channel(
@@ -297,7 +298,9 @@ class NotificationService:
                     # Check if user is Analyst
                     roles = [ur.role.name for ur in sub.user_profile.user_roles]
                     if RoleEnum.ANALYST in roles:
-                        org_we_are_notifying = notification.notification_data.related_organization_id
+                        org_we_are_notifying = (
+                            notification.notification_data.related_organization_id
+                        )
                         if to_org_id and org_we_are_notifying != to_org_id:
                             skip = True
 
@@ -342,3 +345,10 @@ class NotificationService:
         Adds subscriptions for a user based on their role.
         """
         await self.repo.add_subscriptions_for_user_role(user_profile_id, role_id)
+
+    @service_handler
+    async def remove_subscriptions_for_user(self, user_profile_id: int) -> None:
+        """
+        Removes all notification channel subscriptions for this user.
+        """
+        await self.repo.delete_subscriptions_for_user(user_profile_id)
