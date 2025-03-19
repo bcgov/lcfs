@@ -366,7 +366,6 @@ export const AddEditUser = ({ userType }) => {
                     {t('backBtn')}
                   </BCTypography>
                 </BCButton>
-                {console.log(userType)}
                 {/* Only render delete button for BCeID users */}
                 {userID &&
                   userType === 'bceid' &&
