@@ -28,7 +28,7 @@ get_async_db = dependencies.get_async_db_session
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_users(
     request: Request,
-    format: str = Query(default="xls", description="File export format"),
+    format: str = Query(default="xlsx", description="File export format"),
     service: UserServices = Depends(),
 ):
     """

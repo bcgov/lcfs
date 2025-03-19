@@ -253,7 +253,7 @@ async def test_get_compliance_report_by_id_success(
 
         assert response.json() == expected_response
         mock_get_compliance_report_by_id.assert_called_once_with(
-            1, False, get_chain=True
+            1, False, True, get_chain=True
         )
         mock_validate_organization_access.assert_called_once_with(1)
 
@@ -341,7 +341,7 @@ async def test_get_compliance_report_summary_success(
         )
 
         assert response.json() == expected_response
-        mock_calculate_compliance_report_summary.assert_called_once_with(1, mock.ANY)
+        mock_calculate_compliance_report_summary.assert_called_once_with(1)
         mock_validate_organization_access.assert_called_once_with(1)
 
 

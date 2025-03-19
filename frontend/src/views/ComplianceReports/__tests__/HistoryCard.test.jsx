@@ -87,12 +87,6 @@ describe('HistoryCard', () => {
   it('sorts history in descending order by createDate and filters out DRAFT', async () => {
     const history = [
       {
-        status: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
-        createDate: '2024-10-02',
-        userProfile: { firstName: 'Draft', lastName: 'User' },
-        displayName: 'Draft User'
-      },
-      {
         status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
         createDate: '2024-10-01T10:00:00Z',
         userProfile: { firstName: 'John', lastName: 'Doe' },
@@ -113,7 +107,6 @@ describe('HistoryCard', () => {
     // SUBMITTED first because 2024-10-03 is later than 2024-10-01
     await waitFor(() => {
       const items = screen.getAllByTestId('list-item')
-      expect(items.length).toBe(2) // DRAFT is filtered out
       // The first item should be RECOMMENDED_BY_ANALYST (2024-10-03)
       expect(items[0].textContent).toContain(
         'report:complianceReportHistory.Recommended by analyst: Jane Smith'

@@ -67,7 +67,6 @@ export const HistoryCard = ({ report }) => {
         }
         return item
       })
-      .filter((item) => item.status.status !== COMPLIANCE_REPORT_STATUSES.DRAFT)
   }, [isGovernmentUser, report.history])
 
   return (

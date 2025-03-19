@@ -47,7 +47,8 @@ class CHESEmailService:
             return False
 
         # Validate configuration before performing any operations
-        self._validate_configuration()
+        if not self._validate_configuration():
+            return
 
         # Retrieve subscribed user emails
         recipient_emails = await self.repo.get_subscribed_user_emails(
@@ -85,7 +86,8 @@ class CHESEmailService:
             return False
 
         try:
-            self._validate_configuration()
+            if not self._validate_configuration():
+                return False
         except Exception as e:
             logger.info(f"Email configuration error: {e}")
             return False
@@ -109,7 +111,9 @@ class CHESEmailService:
             logger.info("Email sent successfully.")
             return True
         except Exception as e:
-            logger.error(f"Email sending failed: {e}")
+            logger.error(
+                f"Email sending failed: {e}. Response: {response.text} Payload: {payload}"
+            )
             return False
 
     def _render_email_template(
@@ -122,7 +126,7 @@ class CHESEmailService:
         try:
             template_file = TEMPLATE_MAPPING[template_name]
             template = self.template_env.get_template(template_file)
-            return template.render(**context)
+            return template.render(**context).strip()
         except Exception as e:
             logger.error(f"Template rendering error: {str(e)}")
             raise ValueError(f"Failed to render email template for {template_name}")
@@ -135,7 +139,7 @@ class CHESEmailService:
         """
         return {
             "bcc": recipients,
-            "to": ["Undisclosed recipients<donotreply@gov.bc.ca>"],
+            "to": ["donotreply@gov.bc.ca"],
             "from": f"{settings.ches_sender_name} <{settings.ches_sender_email}>",
             "delayTS": 0,
             "encoding": "utf-8",
@@ -151,7 +155,8 @@ class CHESEmailService:
         Retrieve and cache the CHES access token.
         """
         try:
-            self._validate_configuration()
+            if not self._validate_configuration():
+                return None
 
             if self._access_token and datetime.now().timestamp() < self._token_expiry:
                 return self._access_token
@@ -196,7 +201,7 @@ class CHESEmailService:
         if not settings.ches_sender_name:
             missing_configs.append("ches_sender_name")
 
-        if missing_configs:
-            raise ValueError(
-                f"Missing CHES configuration: {', '.join(missing_configs)}"
-            )
+        if missing_configs or len(missing_configs) > 0:
+            logger.error(f"Missing CHES configuration: {', '.join(missing_configs)}")
+            return False
+        return True

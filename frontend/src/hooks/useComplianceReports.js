@@ -1,8 +1,8 @@
+import { roles } from '@/constants/roles'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
-import { roles } from '@/constants/roles'
 
 export const useCompliancePeriod = (options) => {
   const client = useApiService()
@@ -108,11 +108,33 @@ export const useUpdateComplianceReportSummary = (reportID, options) => {
 export const useUpdateComplianceReport = (reportID, options) => {
   const client = useApiService()
   const path = apiRoutes.updateComplianceReport.replace(':reportID', reportID)
+  const queryClient = useQueryClient()
 
   return useMutation({
     ...options,
     mutationFn: async (data) => {
       return await client.put(path, data)
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries(['compliance-report', reportID])
+    }
+  })
+}
+
+export const useDeleteComplianceReport = (orgID, reportID, options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const path = apiRoutes.deleteSupplementalReport.replace(':orgID', orgID).replace(':reportID', reportID)
+  return useMutation({
+    ...options,
+    mutationFn: async () => {
+      return await client.delete(path)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['compliance-reports'])
+      if (options && options.onSuccess) {
+        options.onSuccess()
+      }
     }
   })
 }

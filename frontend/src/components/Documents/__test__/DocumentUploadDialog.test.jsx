@@ -14,7 +14,7 @@ vi.mock('@/hooks/useDocuments', () => ({
   useDocuments: vi.fn(),
   useDeleteDocument: vi.fn(),
   useUploadDocument: vi.fn(),
-  useViewDocument: vi.fn()
+  useDownloadDocument: vi.fn()
 }))
 
 describe('DocumentUploadDialog', () => {

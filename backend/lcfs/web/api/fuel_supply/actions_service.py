@@ -1,5 +1,5 @@
 import uuid
-from logging import getLogger
+import structlog
 
 from fastapi import Depends, HTTPException
 
@@ -16,7 +16,7 @@ from lcfs.web.api.fuel_supply.schema import (
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
 
-logger = getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Constants defining which fields to exclude during model operations
 FUEL_SUPPLY_EXCLUDE_FIELDS = {

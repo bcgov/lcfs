@@ -170,6 +170,38 @@ class ComplianceReportServices:
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
+    async def delete_supplemental_report(
+        self, report_id: int, user: UserProfile = None
+    ):
+        """
+        Deletes a supplemental compliance report.
+        The report_id can be any report in the series (original or supplemental).
+        Supplemental reports are only allowed if the status of the current report is 'Draft'.
+        """
+        # Fetch the current report using the provided report_id
+        current_report = await self.repo.get_compliance_report_by_id(
+            report_id, is_model=True
+        )
+        if not current_report:
+            raise DataNotFoundException("Compliance report not found.")
+
+        # Validate that the user has permission to delete a supplemental report
+        if user.organization_id != current_report.organization_id:
+            raise ServiceException(
+                "You do not have permission to delete a supplemental report for this organization."
+            )
+
+        # Validate that the status of the current report is 'Draft'
+        if current_report.current_status.status != ComplianceReportStatusEnum.Draft:
+            raise ServiceException(
+                "A supplemental report can only be deleted if the status is 'Draft'."
+            )
+
+        # Delete the supplemental report
+        await self.repo.delete_supplemental_report(report_id)
+        return True
+
+    @service_handler
     async def get_compliance_reports_paginated(
         self,
         pagination,
@@ -236,14 +268,25 @@ class ComplianceReportServices:
 
     @service_handler
     async def get_compliance_report_by_id(
-        self, report_id: int, apply_masking: bool = False, get_chain: bool = False
+        self,
+        report_id: int,
+        apply_masking: bool = False,
+        is_gov: bool = False,
+        get_chain: bool = False,
     ):
-        """Fetches a specific compliance report by ID."""
+        """
+        Fetches a specific compliance report by ID.
+        """
         report = await self.repo.get_compliance_report_by_id(report_id)
         if report is None:
             raise DataNotFoundException("Compliance report not found.")
 
         validated_report = ComplianceReportBaseSchema.model_validate(report)
+
+        # Remove 'Draft' entries from the report history
+        if is_gov:
+            validated_report = self._remove_draft_entries(validated_report)
+
         masked_report = (
             self._mask_report_status([validated_report])[0]
             if apply_masking
@@ -259,9 +302,21 @@ class ComplianceReportServices:
                 report.compliance_report_group_uuid
             )
 
+            # Remove 'Draft' reports from the chain
+            compliance_report_chain = self._remove_draft_reports(
+                compliance_report_chain
+            )
+
+            # Remove 'Draft' entries from the report history
+            draft_cleaned_chain = []
+            for item in compliance_report_chain:
+                cleaned_item = self._remove_draft_entries(item)
+                if cleaned_item:
+                    draft_cleaned_chain.append(cleaned_item)
+
             if apply_masking:
                 # Apply masking to each report in the chain
-                masked_chain = self._mask_report_status(compliance_report_chain)
+                masked_chain = self._mask_report_status(draft_cleaned_chain)
                 # Apply history masking to each report in the chain
                 masked_chain = [
                     self._mask_report_status_for_history(report, apply_masking)
@@ -327,7 +382,11 @@ class ComplianceReportServices:
         self,
         pagination: PaginationResponseSchema,
         compliance_report_id: int,
-        selection: Type[Union[FuelSupply, OtherUses, NotionalTransfer, FuelExport, AllocationAgreement]],
+        selection: Type[
+            Union[
+                FuelSupply, OtherUses, NotionalTransfer, FuelExport, AllocationAgreement
+            ]
+        ],
     ):
         changelog, total_count = await self.repo.get_changelog_data(
             pagination, compliance_report_id, selection
@@ -367,3 +426,32 @@ class ComplianceReportServices:
             ),
             "changelog": changelog,
         }
+
+    def _remove_draft_entries(
+        self, report: ComplianceReportBaseSchema
+    ) -> Union[ComplianceReportBaseSchema, None]:
+        """
+        Removes 'Draft' entries from the report history.
+        """
+        # Filter out 'Draft' from the history
+        new_history = [
+            h
+            for h in report.history
+            if h.status.status != ComplianceReportStatusEnum.Draft.value
+        ]
+        report.history = new_history
+
+        return report
+
+    def _remove_draft_reports(
+        self, reports: List[ComplianceReportBaseSchema]
+    ) -> List[ComplianceReportBaseSchema]:
+        """
+        Removes 'Draft' reports from the compliance report chain.
+        """
+        filtered = []
+        for r in reports:
+            if r.current_status.status == ComplianceReportStatusEnum.Draft.value:
+                continue
+            filtered.append(r)
+        return filtered

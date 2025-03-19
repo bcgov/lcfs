@@ -39,4 +39,6 @@ class OrganizationAddress(BaseModel, Auditable, EffectiveDates):
     country = Column(String(100), nullable=True)
     postalCode_zipCode = Column(String(10), nullable=True)
 
-    organization = relationship("Organization", back_populates="org_address")
+    organization = relationship(
+        "Organization", back_populates="org_address", uselist=False
+    )

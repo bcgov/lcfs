@@ -76,11 +76,11 @@ export const Organizations = () => {
   const navigate = useNavigate()
   const location = useLocation()
   useEffect(() => {
-    if (location.state?.message) {
+    if (location?.state?.message) {
       setAlertMessage(location.state.message)
       setAlertSeverity(location.state.severity || 'info')
     }
-  }, [location.state])
+  }, [location?.state])
 
   // Download handlers
   const handleDownloadOrgs = async () => {

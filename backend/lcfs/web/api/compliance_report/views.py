@@ -1,24 +1,16 @@
-"""
-Compliance reports endpoints
-GET: /reports/compliance-periods (to retreieve the list of compliance periods)
-POST: /reports/list (Includes ability to perform sort, filter and pagination) - retrieve the list of compliance reports
-GET: /reports/fse-options - retrieve the options that assists the user in filling up the Final Supply Equipment rows.
-GET: /reports/<report_id> - retrieve the compliance report by ID
-"""
-
 import structlog
 from fastapi import APIRouter, Body, status, Request, Depends
 from starlette.responses import StreamingResponse
 from typing import List
-
+from lcfs.db.models.compliance import AllocationAgreement
 from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
-from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
-
-from lcfs.db.models.compliance import AllocationAgreement
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.web.api.allocation_agreement.schema import (
+    AllocationAgreementResponseSchema,
+)
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.export import ComplianceReportExporter
@@ -32,25 +24,16 @@ from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
     ComplianceReportChangelogSchema,
 )
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
-from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
-from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
 from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
 from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
 from lcfs.web.api.fuel_export.schema import FuelExportSchema
-from lcfs.web.api.allocation_agreement.schema import AllocationAgreementChangelogSchema, AllocationAgreementResponseSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from lcfs.web.api.fuel_export.schema import FuelExportSchema
-from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
-from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
-from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import view_handler
 
@@ -102,10 +85,14 @@ async def get_compliance_report_by_id(
     compliance_report = await validate.validate_organization_access(report_id)
     await validate.validate_compliance_report_access(compliance_report)
 
+    is_gov = user_has_roles(request.user, [RoleEnum.GOVERNMENT])
     mask_statuses = not user_has_roles(request.user, [RoleEnum.GOVERNMENT])
 
     result = await service.get_compliance_report_by_id(
-        report_id, mask_statuses, get_chain=True
+        report_id,
+        mask_statuses,
+        is_gov,
+        get_chain=True,
     )
 
     return result
@@ -129,9 +116,7 @@ async def get_compliance_report_summary(
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
     await validate.validate_organization_access(report_id)
-    return await summary_service.calculate_compliance_report_summary(
-        report_id, request.user
-    )
+    return await summary_service.calculate_compliance_report_summary(report_id)
 
 
 @router.put(
@@ -347,7 +332,7 @@ async def get_allocation_agreement_changelog(
         AllocationAgreementResponseSchema.model_validate(record)
         for record in changelog_response["changelog"]
     ]
-    response= {
+    response = {
         **changelog_response,
         "changelog": serializable_changelog,
         "report": report,
