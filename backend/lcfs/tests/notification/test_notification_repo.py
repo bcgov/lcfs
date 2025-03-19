@@ -438,9 +438,15 @@ async def test_delete_subscriptions_for_user(mock_db_session):
     mock_db_session.execute = AsyncMock(return_value=mock_result)
 
     repo = NotificationRepository(db=mock_db_session)
-
+    
     user_profile_id = 42
     await repo.delete_subscriptions_for_user(user_profile_id)
 
-    assert mock_db_session.delete.await_count == 2
+    mock_db_session.execute.assert_called_once()
+    expected_query = delete(NotificationChannelSubscription).where(
+        NotificationChannelSubscription.user_profile_id == user_profile_id
+    )
+    actual_query = mock_db_session.execute.call_args[0][0]
+    assert str(actual_query) == str(expected_query)
+
     mock_db_session.flush.assert_awaited_once()
