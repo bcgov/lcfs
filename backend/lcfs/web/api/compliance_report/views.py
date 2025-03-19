@@ -137,7 +137,7 @@ async def update_compliance_report_summary(
     """
     await validate.validate_organization_access(report_id)
     return await summary_service.update_compliance_report_summary(
-        report_id, summary_data, request.user
+        report_id, summary_data
     )
 
 
