@@ -84,9 +84,7 @@ class TransactionRepository:
             non_transfer_condition = and_(
                 TransactionView.transaction_type != "Transfer",
                 TransactionView.to_organization_id == organization_id,
-                TransactionView.status.in_(
-                    ["Approved", "Assessed"]
-                ),
+                TransactionView.status.in_(["Approved", "Assessed"]),
             )
 
             # Combine conditions since an organization can be both transferor and transferee, or neither for non-"Transfer" transactions
@@ -108,19 +106,24 @@ class TransactionRepository:
                 ),
                 # Add condition for rescinded transfers
                 or_(
-                    TransactionView.status != 'Rescinded',
+                    TransactionView.status != "Rescinded",
                     and_(
-                        TransactionView.status == 'Rescinded',
-                        exists().select_from(TransferHistory).where(
+                        TransactionView.status == "Rescinded",
+                        exists()
+                        .select_from(TransferHistory)
+                        .where(
                             and_(
-                                TransferHistory.transfer_id == TransactionView.transaction_id,
-                                TransferHistory.transfer_status_id == TransferStatus.transfer_status_id,
-                                TransferStatus.status == 'Submitted',
-                                TransferHistory.create_date < TransactionView.update_date
+                                TransferHistory.transfer_id
+                                == TransactionView.transaction_id,
+                                TransferHistory.transfer_status_id
+                                == TransferStatus.transfer_status_id,
+                                TransferStatus.status == "Submitted",
+                                TransferHistory.create_date
+                                < TransactionView.update_date,
                             )
-                        )
-                    )
-                )
+                        ),
+                    ),
+                ),
             )
             gov_non_transfer_condition = TransactionView.transaction_type != "Transfer"
 
@@ -226,14 +229,19 @@ class TransactionRepository:
         """
         reserved_balance = await self.db.scalar(
             select(
-                func.sum(
-                    case(
-                        (
-                            Transaction.transaction_action
-                            == TransactionActionEnum.Reserved,
-                            Transaction.compliance_units,
-                        ),
-                        else_=0,
+                func.abs(
+                    func.sum(
+                        case(
+                            (
+                                and_(
+                                    Transaction.transaction_action
+                                    == TransactionActionEnum.Reserved,
+                                    Transaction.compliance_units < 0,
+                                ),
+                                Transaction.compliance_units,
+                            ),
+                            else_=0,
+                        )
                     )
                 ).label("reserved_balance")
             ).where(Transaction.organization_id == organization_id)
@@ -288,7 +296,7 @@ class TransactionRepository:
 
         Args:
             organization_id (int): The ID of the organization for which to calculate the available balance.
-            compliance_period_end (datetime): The end date of the compliance period for which to calculate the available balance.
+            compliance_period (int): The compliance period year in integer
 
         Returns:
             int: The available balance of compliance units for the specified organization and period. Returns 0 if no balance is calculated.

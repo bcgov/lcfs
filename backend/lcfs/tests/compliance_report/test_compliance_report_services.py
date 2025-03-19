@@ -1,7 +1,10 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
 from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
 
 
@@ -221,3 +224,85 @@ async def test_get_all_org_reported_years_unexpected_error(
 
     with pytest.raises(ServiceException):
         await compliance_report_service.get_all_org_reported_years(1)
+
+
+@pytest.mark.anyio
+async def test_delete_supplemental_report_success(compliance_report_service, mock_repo):
+    """Test successful deletion of a supplemental compliance report"""
+
+    mock_user = MagicMock(organization_id=998)
+    mock_report = MagicMock(
+        organization_id=998,
+        current_status=MagicMock(status=ComplianceReportStatusEnum.Draft),
+    )
+
+    # Mock repository methods
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    mock_repo.delete_supplemental_report = AsyncMock(return_value=True)
+
+    result = await compliance_report_service.delete_supplemental_report(996, mock_user)
+
+    assert result is True
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.delete_supplemental_report.assert_called_once_with(996)
+
+
+@pytest.mark.anyio
+async def test_delete_supplemental_report_not_found(
+    compliance_report_service, mock_repo
+):
+    """Test deletion fails when compliance report does not exist"""
+
+    mock_user = MagicMock(organization_id=998)
+
+    # Mock repo to return None
+    mock_repo.get_compliance_report_by_id.return_value = None
+
+    with pytest.raises(DataNotFoundException, match="Compliance report not found."):
+        await compliance_report_service.delete_supplemental_report(1000, mock_user)
+
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(1000, is_model=True)
+    mock_repo.delete_supplemental_report.assert_not_called()  # Ensure delete is not called
+
+
+@pytest.mark.anyio
+async def test_delete_supplemental_report_no_permission(
+    compliance_report_service, mock_repo
+):
+    """Test deletion fails when user does not have permission"""
+
+    mock_user = MagicMock(organization_id=999)  # Different org
+    mock_report = MagicMock(
+        organization_id=998, current_status=MagicMock(status="Draft")
+    )
+
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+
+    with pytest.raises(Exception) as exc:
+        await compliance_report_service.delete_supplemental_report(996, mock_user)
+    assert exc.typename == "ServiceException"
+
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.delete_supplemental_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_delete_supplemental_report_wrong_status(
+    compliance_report_service, mock_repo
+):
+    """Test deletion fails when compliance report is not in 'Draft' status"""
+
+    mock_user = MagicMock(organization_id=998)
+    mock_report = MagicMock(
+        organization_id=998, current_status=MagicMock(status="Assessed")  # Not Draft
+    )
+
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+
+    with pytest.raises(Exception) as exc_info:
+        await compliance_report_service.delete_supplemental_report(996, mock_user)
+
+    assert exc_info.typename == "ServiceException"
+
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.delete_supplemental_report.assert_not_called()

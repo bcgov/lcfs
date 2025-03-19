@@ -1,7 +1,7 @@
 export const apiRoutes = {
   dummy: '/dummy',
   currentUser: '/users/current',
-  exportUsers: '/users/export?format=xls',
+  exportUsers: '/users/export?format=xlsx',
   listUsers: '/users/list',
   roles: '/roles/',
   orgUsers: '/organization/:orgID/users/list',
@@ -41,6 +41,7 @@ export const apiRoutes = {
   updateComplianceReportSummary: '/reports/:reportID/summary',
   exportComplianceReport: '/reports/:reportID/export',
   createSupplementalReport: '/reports/:reportID/supplemental',
+  deleteSupplementalReport: '/organization/:orgID/:reportID/supplemental',
   getDocuments: '/documents/:parentType/:parentID',
   uploadDocument: '/documents/:parentType/:parentID',
   getDocument: '/documents/:parentType/:parentID/:documentID',

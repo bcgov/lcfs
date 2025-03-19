@@ -1,4 +1,5 @@
 import asyncio
+import structlog
 import logging
 
 import aio_pika
@@ -9,7 +10,7 @@ from lcfs.settings import settings
 
 logging.getLogger("aiormq").setLevel(logging.WARNING)
 logging.getLogger("aio_pika").setLevel(logging.WARNING)
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 class BaseConsumer:
@@ -32,17 +33,19 @@ class BaseConsumer:
             durable=True,
         )
 
-        logger.debug(f"Queue '{self.queue_name}' declared and ready for consuming")
+        logger.info(
+            f"Queue '{self.queue_name}' declared and ready for consuming")
 
     async def start_consuming(self):
         """Start consuming messages from the queue."""
         if not self.queue:
-            raise RuntimeError("Queue is not initialized. Call connect() first.")
+            raise RuntimeError(
+                "Queue is not initialized. Call connect() first.")
 
         async with self.queue.iterator() as queue_iter:
             async for message in queue_iter:
                 async with message.process():
-                    logger.debug(f"Received message: {message.body.decode()}")
+                    logger.info(f"Received message: {message.body.decode()}")
                     await self.process_message(message.body)
 
     async def process_message(self, body: bytes):
@@ -54,5 +57,5 @@ class BaseConsumer:
     async def close_connection(self):
         """Close the RabbitMQ connection."""
         if self.connection:
-            logger.debug("Closing RabbitMQ Connection")
+            logger.info("Closing RabbitMQ Connection")
             await self.connection.close()

@@ -537,8 +537,8 @@ export const fuelSupplySummaryColDef = [
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
-    field: 'endUse',
-    valueGetter: (params) => params.data.endUseType?.type || 'Any'
+    field: 'endUseType',
+    valueGetter: (params) => params.data.endUseType?.type
   },
   {
     headerName: i18n.t(
@@ -615,8 +615,8 @@ export const changelogCommonColDefs = [
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
-    field: 'endUse',
-    valueGetter: (params) => params.data.endUseType?.type || 'Any',
+    field: 'endUseType',
+    valueGetter: (params) => params.data.endUseType?.type,
     cellStyle: (params) => changelogCellStyle(params, 'endUseId')
   },
   {

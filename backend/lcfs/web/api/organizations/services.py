@@ -40,6 +40,7 @@ from .schema import (
     OrganizationCreateSchema,
     OrganizationSummaryResponseSchema,
     OrganizationDetailsSchema,
+    OrganizationUpdateSchema,
 )
 
 
@@ -90,7 +91,7 @@ class OrganizationsService:
         """
         data = await self.repo.get_organizations_with_balances()
 
-        export_format = "xls"
+        export_format = "xlsx"
 
         # Create a spreadsheet
         builder = SpreadsheetBuilder(file_format=export_format)
@@ -147,12 +148,11 @@ class OrganizationsService:
 
     @service_handler
     async def update_organization(
-        self, organization_id: int, organization_data: OrganizationCreateSchema
+        self, organization_id: int, organization_data: OrganizationUpdateSchema
     ):
         """handles updating an organization"""
 
         organization = await self.repo.get_organization(organization_id)
-
         if not organization:
             raise DataNotFoundException("Organization not found")
 
@@ -160,22 +160,35 @@ class OrganizationsService:
             if hasattr(organization, key):
                 setattr(organization, key, value)
 
-        if organization.organization_address_id:
-            org_address = await self.repo.get_organization_address(
-                organization.organization_address_id
-            )
-
-            if not org_address:
-                raise DataNotFoundException("Organization address not found")
+        if organization_data.address:
+            if organization.organization_address_id:
+                org_address = await self.repo.get_organization_address(
+                    organization.organization_address_id
+                )
+            else:
+                org_address = OrganizationAddress(
+                    organization=organization,
+                )
+                organization.organization_address = org_address
+                self.repo.add(org_address)
 
             for key, value in organization_data.address.dict().items():
                 if hasattr(org_address, key):
                     setattr(org_address, key, value)
 
-        if organization.organization_attorney_address_id:
-            org_attorney_address = await self.repo.get_organization_attorney_address(
-                organization.organization_attorney_address_id
-            )
+        if organization_data.attorney_address:
+            if organization.organization_attorney_address_id:
+                org_attorney_address = (
+                    await self.repo.get_organization_attorney_address(
+                        organization.organization_attorney_address_id
+                    )
+                )
+            else:
+                org_attorney_address = OrganizationAttorneyAddress(
+                    organization=organization,
+                )
+                organization.organization_attorney_address = org_attorney_address
+                self.repo.add(org_attorney_address)
 
             if not org_attorney_address:
                 raise DataNotFoundException("Organization attorney address not found")

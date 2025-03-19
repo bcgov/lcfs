@@ -40,9 +40,11 @@ export const OrganizationAddress = ({
     serviceAddress: Yup.string().required('Service Address is required.')
   })
 
+  // Hook for updating the organization snapshot
   const { mutate: updateComplianceReport, isLoading: isUpdating } =
     useUpdateOrganizationSnapshot(complianceReportId)
 
+  // Setting up the form
   const form = useForm({
     resolver: yupResolver(validationSchema),
     mode: 'onChange',
@@ -52,26 +54,18 @@ export const OrganizationAddress = ({
 
   const serviceAddress = watch('serviceAddress')
 
+  // If 'same as service address' is checked, automatically update records address
   useEffect(() => {
     if (sameAsService && serviceAddress) {
       setValue('recordsAddress', serviceAddress)
     }
   }, [sameAsService, serviceAddress, setValue])
 
+  // Submission handlers
   const onSubmit = async (data) => {
     await updateComplianceReport(data)
     setIsEditing(false)
   }
-
-  useEffect(() => {
-    if (snapshotData) {
-      reset(snapshotData)
-      // Check if addresses are the same and set checkbox accordingly
-      setSameAsService(
-        snapshotData.serviceAddress === snapshotData.recordsAddress
-      )
-    }
-  }, [reset, snapshotData])
 
   const onError = () => {
     const formData = form.getValues()
@@ -99,6 +93,7 @@ export const OrganizationAddress = ({
     setIsEditing(false)
   }
 
+  // Checkbox to keep records address synced with service address
   const handleSameAddressChange = (event) => {
     setSameAsService(event.target.checked)
     if (event.target.checked) {
@@ -106,6 +101,7 @@ export const OrganizationAddress = ({
     }
   }
 
+  // Helpers to select addresses
   const handleSelectServiceAddress = (addressData) => {
     setSelectedServiceAddress(addressData)
     if (typeof addressData === 'string') {
@@ -113,8 +109,7 @@ export const OrganizationAddress = ({
     } else {
       setValue('serviceAddress', addressData.fullAddress)
     }
-
-    // If "same as service address" is checked, update records address too
+    // If 'same as service address' is checked, automatically update records too
     if (sameAsService) {
       if (typeof addressData === 'string') {
         setValue('recordsAddress', addressData)
@@ -131,6 +126,25 @@ export const OrganizationAddress = ({
       setValue('recordsAddress', addressData.fullAddress)
     }
   }
+
+  // Sync state with snapshot data on load
+  useEffect(() => {
+    if (snapshotData) {
+      reset(snapshotData)
+      setSameAsService(
+        snapshotData.serviceAddress === snapshotData.recordsAddress
+      )
+    }
+  }, [reset, snapshotData])
+
+  // Required fields for the read-only view
+  const requiredFields = [
+    'name',
+    'operatingName',
+    'phone',
+    'email',
+    'serviceAddress'
+  ]
 
   // Define which form fields use regular text input vs address autocomplete
   const textFormFields = [
@@ -176,8 +190,11 @@ export const OrganizationAddress = ({
     }
   ]
 
-  // Combined fields for display in view mode
+  // Merge text + address fields for read-only view
   const allFormFields = [...textFormFields, ...addressFormFields]
+
+  // Helper to show either the value or 'Required' in read-only mode
+  const displayAddressValue = (value) => (value?.trim() ? value : '')
 
   return (
     <BCTypography variant="body4" color="text">
@@ -195,13 +212,16 @@ export const OrganizationAddress = ({
           }}
         >
           {allFormFields.map(({ name, label }) => (
-            <ListItem key={name} sx={{ display: 'list-item', padding: 0 }}>
+            <ListItem key={name} sx={{ display: 'flex' }}>
               <strong>{label}:</strong>{' '}
-              {snapshotData[name] || (
-                <BCTypography variant="body4" color="error">
-                  Required
-                </BCTypography>
-              )}
+              <span>
+                {displayAddressValue(snapshotData[name]) ||
+                  (requiredFields.includes(name) && (
+                    <BCTypography variant="body4" color="error">
+                      Required
+                    </BCTypography>
+                  ))}
+              </span>
             </ListItem>
           ))}
         </List>
@@ -211,7 +231,7 @@ export const OrganizationAddress = ({
         <form onSubmit={handleSubmit(onSubmit, onError)}>
           <FormProvider {...{ control, setValue }}>
             <Stack spacing={1} mb={3}>
-              {/* Regular text input fields */}
+              {/* Regular text fields */}
               {textFormFields.map((field) => (
                 <BCFormText
                   data-test={field.name}
@@ -219,7 +239,6 @@ export const OrganizationAddress = ({
                   control={control}
                   label={field.label}
                   name={field.name}
-                  optional={field.optional}
                 />
               ))}
 
@@ -237,6 +256,7 @@ export const OrganizationAddress = ({
                   isChecked={field.isChecked}
                   disabled={field.disabled}
                   onSelectAddress={field.onSelectAddress}
+                  optional={field.name !== 'serviceAddress'}
                 />
               ))}
             </Stack>

@@ -8,7 +8,7 @@ import { roles } from '@/constants/roles'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
 import { numberFormatter } from '@/utils/formatters'
-import { useDocuments, useViewDocument } from '@/hooks/useDocuments.js'
+import { useDocuments, useDownloadDocument } from '@/hooks/useDocuments.js'
 import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
@@ -39,7 +39,7 @@ export const TransactionView = ({ transaction }) => {
     transactionType,
     transaction.adminAdjustmentId ?? transaction.initiativeAgreementId
   )
-  const viewDocument = useViewDocument(
+  const viewDocument = useDownloadDocument(
     transactionType,
     transaction.adminAdjustmentId ?? transaction.initiativeAgreementId
   )

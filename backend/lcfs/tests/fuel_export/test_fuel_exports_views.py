@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 import json
 from unittest.mock import patch
@@ -158,6 +160,7 @@ async def test_save_fuel_export_row_forbidden(
         "fuel_type_id": 1,
         "fuel_category": "",
         "fuel_category_id": 1,
+        "end_use_id": 1,
         "provision_of_the_act": "",
         "provision_of_the_act_id": 1,
         "quantity": 1,
@@ -211,16 +214,14 @@ async def test_save_fuel_export_row_delete_success(client, fastapi_app, set_mock
         payload = FuelExportCreateUpdateSchema(
             fuel_export_id=1,
             compliance_report_id=1,
-            fuel_type="Diesel",
             fuel_type_id=1,
-            fuel_category="Diesel",
             fuel_category_id=1,
-            provision_of_the_act="Section 6",
+            end_use_id=1,
             provision_of_the_act_id=1,
             quantity=100,
             units="L",
-            export_date="2024-01-01",
             deleted=True,
+            export_date=datetime.date(2024, 1, 1),
         ).dict(exclude_none=True)
 
         response = await client.post(url, json=jsonable_encoder(payload))
@@ -264,27 +265,29 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
             ),
             quantity=1,
             units="L",
-            export_date="2024-01-01",
+            export_date=datetime.date(2024, 1, 1),
             fuel_category_id=1,
+            end_use_id=1,
             fuel_category=FuelCategoryResponseSchema(category="Diesel"),
-            provisionOfTheActId=1,
-            provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Test Provision"},
             compliance_period="2024",
+            provision_of_the_act_id=1,
+            provision_of_the_act=ProvisionOfTheActSchema(
+                provision_of_the_act_id=1,
+                name="Test Provision",
+            ),
         )
 
         # Create update payload with all required fields
         update_payload = FuelExportCreateUpdateSchema(
             fuel_export_id=1,
             compliance_report_id=1,
-            fuel_type="Diesel",
             fuel_type_id=1,
-            fuel_category="Diesel",
             fuel_category_id=1,
-            provision_of_the_act="Section 6",
+            end_use_id=1,
             provision_of_the_act_id=1,
             quantity=1,
             units="L",
-            export_date="2024-01-01",
+            export_date=datetime.date(2024, 1, 1),
         )
 
         mock_validate_organization_access.return_value = mock_compliance_report
@@ -327,15 +330,13 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
         # Create payload with all required fields
         create_payload = FuelExportCreateUpdateSchema(
             compliance_report_id=1,
-            fuel_type="Diesel",
             fuel_type_id=1,
-            fuel_category="Diesel",
             fuel_category_id=1,
-            provision_of_the_act="Section 6",
+            end_use_id=1,
             provision_of_the_act_id=1,
             quantity=1,
             units="L",
-            export_date="2024-01-01",
+            export_date=datetime.date(2024, 1, 1),
             compliance_period="2024",
         )
 
@@ -350,12 +351,16 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
             ),
             quantity=1,
             units="L",
-            export_date="2024-01-01",
+            export_date=datetime.date(2024, 1, 1),
             fuel_category_id=1,
+            end_use_id=1,
             fuel_category=FuelCategoryResponseSchema(category="Diesel"),
-            provisionOfTheActId=1,
-            provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Section 6"},
             compliance_period="2024",
+            provision_of_the_act_id=1,
+            provision_of_the_act=ProvisionOfTheActSchema(
+                provision_of_the_act_id=1,
+                name="Test Provision",
+            ),
         )
 
         mock_validate_organization_access.return_value = mock_compliance_report
