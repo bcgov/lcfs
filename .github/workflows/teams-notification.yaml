@@ -9,7 +9,7 @@ on:
     branches:
       - "*"
   workflow_run:
-    workflows: ["Testing pipeline"]
+    workflows: ["Testing pipeline", "Feat: LCFS - Investigate GitHub App/Bot for Workflow Notifications #2127"]
     types: [completed]
 
 permissions:
