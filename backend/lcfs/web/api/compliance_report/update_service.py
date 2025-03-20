@@ -26,6 +26,7 @@ from lcfs.web.api.notification.schema import (
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
@@ -37,29 +38,15 @@ class ComplianceReportUpdateService:
         summary_service: ComplianceReportSummaryService = Depends(),
         org_service: OrganizationsService = Depends(OrganizationsService),
         trx_service: TransactionsService = Depends(TransactionsService),
+        trx_repo: TransactionRepository = Depends(TransactionRepository),
         notfn_service: NotificationService = Depends(NotificationService),
     ):
+        self.trx_repo = trx_repo
         self.repo = repo
         self.summary_service = summary_service
         self.org_service = org_service
         self.trx_service = trx_service
         self.notfn_service = notfn_service
-
-    async def _handle_return_status(
-        self, report_data: ComplianceReportUpdateSchema
-    ) -> Tuple[str, bool]:
-        """Handle return status logic and return new status and change flag."""
-        mapped_status = RETURN_STATUS_MAPPER.get(report_data.status)
-        return mapped_status, False
-
-    async def _check_report_exists(self, report_id: int) -> ComplianceReport:
-        """Verify report exists and return it."""
-        report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
-        if not report:
-            raise DataNotFoundException(
-                f"Compliance report with ID {report_id} not found"
-            )
-        return report
 
     async def update_compliance_report(
         self,
@@ -84,11 +71,11 @@ class ComplianceReportUpdateService:
             # Handle "Return to supplier"
             if current_status == ReturnStatus.SUPPLIER.value:
                 await self.repo.reset_summary_lock(report.compliance_report_id)
+                await self.trx_repo.delete_transaction(report.transaction_id, report_id)
         else:
             # Handle normal status change
             status_has_changed = report.current_status.status != getattr(
-                ComplianceReportStatusEnum, report_data.status.replace(
-                    " ", "_")
+                ComplianceReportStatusEnum, report_data.status.replace(" ", "_")
             )
 
         # Get new status object
@@ -166,8 +153,16 @@ class ComplianceReportUpdateService:
         if handler:
             await handler(report, user)
         else:
-            raise ServiceException(
-                f"Unsupported status change to {new_status}")
+            raise ServiceException(f"Unsupported status change to {new_status}")
+
+    async def _check_report_exists(self, report_id: int) -> ComplianceReport:
+        """Verify report exists and return it."""
+        report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
+        if not report:
+            raise DataNotFoundException(
+                f"Compliance report with ID {report_id} not found"
+            )
+        return report
 
     async def handle_draft_status(self, report: ComplianceReport, user: UserProfile):
         """Handle actions when a report is set to Draft status."""
@@ -175,6 +170,14 @@ class ComplianceReportUpdateService:
         has_supplier_role = user_has_roles(user, [RoleEnum.SUPPLIER])
         if not has_supplier_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
+
+    async def _handle_return_status(
+        self, report_data: ComplianceReportUpdateSchema
+    ) -> Tuple[str, bool]:
+        """Handle return status logic and return new status and change flag."""
+        mapped_status = RETURN_STATUS_MAPPER.get(report_data.status)
+
+        return mapped_status, False
 
     async def handle_submitted_status(
         self, report: ComplianceReport, user: UserProfile
@@ -198,8 +201,7 @@ class ComplianceReportUpdateService:
         )
 
         if not calculated_summary.can_sign:
-            raise ServiceException(
-                "ComplianceReportSummary is not able to be signed")
+            raise ServiceException("ComplianceReportSummary is not able to be signed")
 
         # If there's an existing summary, preserve user-edited values
         if existing_summary:
@@ -294,8 +296,7 @@ class ComplianceReportUpdateService:
     ):
         """Handle actions when a report is Recommended by analyst."""
         # Implement logic for Recommended by analyst status
-        has_analyst_role = user_has_roles(
-            user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+        has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
         if not has_analyst_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
