@@ -2,9 +2,12 @@ name: Teams Notification
 
 on:
   pull_request:
-    types: [opened, closed, reopened, review_requested]
+    types: [opened, closed, reopened, review_requested, synchronize]
   pull_request_review:
     types: [submitted]
+  push:
+    branches:
+      - "*"
   workflow_run:
     workflows: ["Testing pipeline"]
     types: [completed]
@@ -75,6 +78,40 @@ jobs:
               }
             }
 
+            // Function to find PR associated with a push event
+            async function getPrInfoFromPush(ref) {
+              const octokit = github.rest;
+              try {
+                // Get the branch name from the ref
+                const branch = ref.replace('refs/heads/', '');
+                
+                // Find PRs associated with this branch
+                const response = await octokit.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: 'open',
+                  head: `${context.repo.owner}:${branch}`
+                });
+                
+                if (response.data.length > 0) {
+                  const pr = response.data[0];
+                  return {
+                    number: pr.number,
+                    title: pr.title,
+                    html_url: pr.html_url,
+                    user: {
+                      login: pr.user.login,
+                      avatar_url: pr.user.avatar_url
+                    }
+                  };
+                }
+                return null;
+              } catch (error) {
+                console.log(`Error finding PR for push: ${error}`);
+                return null;
+              }
+            }
+
             // Set thread identifier based on PR number to group messages
             let threadId = "";
 
@@ -113,6 +150,15 @@ jobs:
                     { "name": "Closed at", "value": new Date(pr.closed_at).toLocaleString() }
                   ];
                 }
+              } else if (action === 'synchronize') {
+                // This is triggered when new commits are pushed to the PR
+                message = `PR #${prNumber} updated with new commits: **${prTitle}**\n[View PR](${pr.html_url})`;
+                color = "0076D7"; // blue
+                facts = [
+                  { "name": "Status", "value": "New Commits" },
+                  { "name": "Updated by", "value": payload.sender.login },
+                  { "name": "Updated at", "value": new Date().toLocaleString() }
+                ];
               } else if (action === 'review_requested') {
                 reviewers = payload.requested_reviewers.map(reviewer => reviewer.login).join(', ');
                 message = `Review requested for PR #${prNumber}: **${prTitle}**\n[View PR](${pr.html_url})`;
@@ -121,6 +167,56 @@ jobs:
                   { "name": "Status", "value": "Review Requested" },
                   { "name": "Reviewer(s)", "value": reviewers },
                   { "name": "Requested by", "value": payload.sender.login }
+                ];
+              }
+            } else if (event === 'push') {
+              // Handle push events
+              const commits = payload.commits;
+              const ref = payload.ref;
+              const branch = ref.replace('refs/heads/', '');
+              userName = payload.pusher.name;
+              userAvatar = `https://github.com/${payload.pusher.name}.png`;
+              
+              // Try to find associated PR
+              const prInfo = await getPrInfoFromPush(ref);
+              
+              if (prInfo) {
+                // Push is associated with a PR
+                prNumber = prInfo.number;
+                prTitle = prInfo.title;
+                threadId = `pr-${prNumber}`;
+                
+                // Create commit list for message
+                const commitList = commits.map(commit => 
+                  `• ${commit.message.split('\n')[0]} ([${commit.id.substring(0, 7)}](${commit.url}))`
+                ).join('\n');
+                
+                message = `PR #${prNumber} received ${commits.length} new commit${commits.length > 1 ? 's' : ''}: **${prTitle}**\n\n${commitList}\n\n[View PR](${prInfo.html_url})`;
+                color = "0076D7"; // blue
+                
+                facts = [
+                  { "name": "Status", "value": "New Commits" },
+                  { "name": "Branch", "value": branch },
+                  { "name": "Pushed by", "value": userName },
+                  { "name": "Commit count", "value": commits.length.toString() }
+                ];
+              } else {
+                // Push is not associated with a PR (direct push to branch)
+                threadId = `branch-${branch}`;
+                
+                // Create commit list for message
+                const commitList = commits.map(commit => 
+                  `• ${commit.message.split('\n')[0]} ([${commit.id.substring(0, 7)}](${commit.url}))`
+                ).join('\n');
+                
+                message = `Branch **${branch}** received ${commits.length} new commit${commits.length > 1 ? 's' : ''}\n\n${commitList}\n\n[View changes](${payload.compare})`;
+                color = "0076D7"; // blue
+                
+                facts = [
+                  { "name": "Branch", "value": branch },
+                  { "name": "Pushed by", "value": userName },
+                  { "name": "Commit count", "value": commits.length.toString() },
+                  { "name": "Repository", "value": `${context.repo.owner}/${context.repo.repo}` }
                 ];
               }
             } else if (event === 'pull_request_review') {
@@ -226,10 +322,12 @@ jobs:
                 "@type": "MessageCard",
                 "@context": "http://schema.org/extensions",
                 "themeColor": color,
-                "summary": `GitHub Notification for PR #${prNumber}`,
+                "summary": `GitHub Notification for ${prNumber ? `PR #${prNumber}` : 'Repository'}`,
                 "sections": [
                   {
-                    "activityTitle": `GitHub Notification for PR #${prNumber}`,
+                    "activityTitle": prNumber 
+                      ? `GitHub Notification for PR #${prNumber}` 
+                      : `GitHub Notification for ${context.repo.owner}/${context.repo.repo}`,
                     "activitySubtitle": `Repository: ${context.repo.owner}/${context.repo.repo}`,
                     "activityImage": userAvatar,
                     "facts": facts,
@@ -248,7 +346,9 @@ jobs:
                         "os": "default",
                         "uri": event === 'workflow_run' 
                           ? payload.workflow_run.html_url 
-                          : payload.pull_request?.html_url || payload.repository.html_url
+                          : event === 'push'
+                            ? payload.compare
+                            : payload.pull_request?.html_url || payload.repository.html_url
                       }
                     ]
                   }
