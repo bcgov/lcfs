@@ -9,6 +9,12 @@ on:
     workflows: ["Testing pipeline"]
     types: [completed]
 
+permissions:
+  # Required for workflow_run events to access other workflow details
+  actions: read
+  contents: read
+  pull-requests: read
+
 jobs:
   notify:
     runs-on: ubuntu-latest
@@ -16,44 +22,61 @@ jobs:
       - name: Microsoft Teams Notification
         uses: actions/github-script@v6
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const event = context.eventName;
             const payload = context.payload;
-            
+
             // Prepare variables based on event type
             let message = "";
             let color = "";
             let prNumber = "";
             let prTitle = "";
-            
+
             // Function to extract PR info from workflow run
             async function getPrInfoFromWorkflowRun(run) {
-              const octokit = github.rest;
               try {
-                // Find the PR associated with this workflow run
-                const response = await octokit.repos.listPullRequestsAssociatedWithCommit({
+                // Get PR number from workflow run
+                console.log("Finding PR for workflow run:", run.id);
+                
+                // First try to find from run details
+                if (run.pull_requests && run.pull_requests.length > 0) {
+                  const pr = run.pull_requests[0];
+                  console.log(`Found PR #${pr.number} directly from workflow run`);
+                  return {
+                    number: pr.number,
+                    title: pr.title || `Pull Request #${pr.number}`
+                  };
+                }
+                
+                // If not found directly, try to find PR from commit
+                console.log("Looking up PR by commit:", run.head_sha);
+                const prResponse = await github.rest.repos.listPullRequestsAssociatedWithCommit({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   commit_sha: run.head_sha
                 });
                 
-                if (response.data.length > 0) {
-                  const pr = response.data[0];
+                if (prResponse.data.length > 0) {
+                  const pr = prResponse.data[0];
+                  console.log(`Found PR #${pr.number} by commit lookup`);
                   return {
                     number: pr.number,
                     title: pr.title
                   };
                 }
+                
+                console.log("No PR found for this workflow run");
                 return null;
               } catch (error) {
                 console.log(`Error finding PR for workflow: ${error}`);
                 return null;
               }
             }
-            
+
             // Set thread identifier based on PR number to group messages
             let threadId = "";
-            
+
             if (event === 'pull_request') {
               const pr = payload.pull_request;
               prNumber = pr.number;
@@ -95,10 +118,16 @@ jobs:
                 color = "0076D7"; // blue
               }
             } else if (event === 'workflow_run') {
+              console.log("Processing workflow_run event");
               const run = payload.workflow_run;
+              
+              console.log("Workflow:", run.name);
+              console.log("Workflow conclusion:", run.conclusion);
+              console.log("Workflow branch:", run.head_branch);
               
               // Get associated PR information
               const prInfo = await getPrInfoFromWorkflowRun(run);
+              
               if (prInfo) {
                 prNumber = prInfo.number;
                 prTitle = prInfo.title;
@@ -108,18 +137,7 @@ jobs:
                   message = `✅ All tests passed for PR #${prNumber}: **${prTitle}**\n\n**Backend tests**: Passed ✅\n**Frontend tests**: Passed ✅\n\n[View test details](${run.html_url})`;
                   color = "2CBE4E"; // green
                 } else if (run.conclusion === 'failure') {
-                  // Try to determine which tests failed
-                  let backendStatus = "Unknown";
-                  let frontendStatus = "Unknown";
-                  
-                  // This is a simplification - ideally we would parse the actual job results
-                  if (run.name === "Testing pipeline") {
-                    // Try to determine which specific tests failed based on job output
-                    // Since we can't access job details directly in this context, we make an educated guess
-                    message = `❌ Tests failed for PR #${prNumber}: **${prTitle}**\n\nOne or more tests failed in the pipeline.\n\n[View test details](${run.html_url})`;
-                  } else {
-                    message = `❌ Workflow "${run.name}" failed for PR #${prNumber}: **${prTitle}**\n\n[View test details](${run.html_url})`;
-                  }
+                  message = `❌ Tests failed for PR #${prNumber}: **${prTitle}**\n\nOne or more tests failed in the pipeline.\n\n[View test details](${run.html_url})`;
                   color = "D73A49"; // red
                 } else {
                   message = `⚠️ Workflow "${run.name}" for PR #${prNumber}: **${prTitle}** completed with status: ${run.conclusion}\n\n[View test details](${run.html_url})`;
@@ -131,20 +149,23 @@ jobs:
                 color = run.conclusion === 'success' ? "2CBE4E" : (run.conclusion === 'failure' ? "D73A49" : "FBAB19");
                 threadId = `workflow-${run.id}`;
               }
+              
+              console.log("Message prepared:", message.substring(0, 100) + "...");
             }
-            
+
             // Only proceed if we have a message to send
             if (message) {
+              console.log(`Sending message for ${event} event with thread ID: ${threadId}`);
               const webhookUrl = process.env.TEAMS_WEBHOOK_URL;
               
               const card = {
                 "@type": "MessageCard",
                 "@context": "http://schema.org/extensions",
                 "themeColor": color,
-                "summary": `GitHub Notification for PR #${prNumber}`,
+                "summary": prNumber ? `GitHub Notification for PR #${prNumber}` : "GitHub Notification",
                 "sections": [
                   {
-                    "activityTitle": `GitHub Notification for PR #${prNumber}`,
+                    "activityTitle": prNumber ? `GitHub Notification for PR #${prNumber}` : "GitHub Notification",
                     "activitySubtitle": `Repository: ${context.repo.owner}/${context.repo.repo}`,
                     "text": message
                   }
@@ -166,6 +187,7 @@ jobs:
                 }
               };
               
+              console.log("Sending webhook request to Teams...");
               const req = https.request(options, (res) => {
                 console.log(`Teams notification status: ${res.statusCode}`);
                 
@@ -181,9 +203,9 @@ jobs:
               
               req.write(JSON.stringify(card));
               req.end();
+              console.log("Webhook request sent");
             } else {
               console.log('No notification configured for this event type or action');
             }
         env:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
