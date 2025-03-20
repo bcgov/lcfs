@@ -26,13 +26,17 @@ jobs:
           script: |
             const event = context.eventName;
             const payload = context.payload;
-            
+
             // Prepare variables based on event type
             let message = "";
             let color = "";
             let prNumber = "";
             let prTitle = "";
-            
+            let userName = "";
+            let userAvatar = "";
+            let facts = [];
+            let reviewers = "";
+
             // Function to extract PR info from workflow run
             async function getPrInfoFromWorkflowRun(run) {
               const octokit = github.rest;
@@ -46,9 +50,22 @@ jobs:
                 
                 if (response.data.length > 0) {
                   const pr = response.data[0];
+                  
+                  // Get PR comments if available
+                  const commentsResponse = await octokit.issues.listComments({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: pr.number
+                  });
+                  
                   return {
                     number: pr.number,
-                    title: pr.title
+                    title: pr.title,
+                    user: {
+                      login: pr.user.login,
+                      avatar_url: pr.user.avatar_url
+                    },
+                    comments: commentsResponse.data
                   };
                 }
                 return null;
@@ -57,50 +74,83 @@ jobs:
                 return null;
               }
             }
-            
+
             // Set thread identifier based on PR number to group messages
             let threadId = "";
-            
+
             if (event === 'pull_request') {
               const pr = payload.pull_request;
               prNumber = pr.number;
               prTitle = pr.title;
+              userName = pr.user.login;
+              userAvatar = pr.user.avatar_url;
               threadId = `pr-${prNumber}`;
               
               const action = payload.action;
               if (action === 'opened' || action === 'reopened') {
-                message = `📣 New PR #${prNumber} opened: **${prTitle}**\nBy: ${pr.user.login}\n[View PR](${pr.html_url})`;
+                message = `New PR #${prNumber} opened: **${prTitle}**\n[View PR](${pr.html_url})`;
                 color = "0076D7"; // blue
+                facts = [
+                  { "name": "Status", "value": action === 'opened' ? "Newly Opened" : "Reopened" },
+                  { "name": "Base Branch", "value": pr.base.ref },
+                  { "name": "Created", "value": new Date(pr.created_at).toLocaleString() }
+                ];
               } else if (action === 'closed') {
                 if (pr.merged) {
-                  message = `✅ PR #${prNumber} merged: **${prTitle}**\nBy: ${pr.user.login}\n[View PR](${pr.html_url})`;
+                  message = `PR #${prNumber} merged: **${prTitle}**\n[View PR](${pr.html_url})`;
                   color = "2CBE4E"; // green
+                  facts = [
+                    { "name": "Status", "value": "Merged" },
+                    { "name": "Merged by", "value": payload.sender.login },
+                    { "name": "Merged at", "value": new Date(pr.merged_at).toLocaleString() }
+                  ];
                 } else {
-                  message = `❌ PR #${prNumber} closed without merging: **${prTitle}**\nBy: ${pr.user.login}\n[View PR](${pr.html_url})`;
+                  message = `PR #${prNumber} closed without merging: **${prTitle}**\n[View PR](${pr.html_url})`;
                   color = "D73A49"; // red
+                  facts = [
+                    { "name": "Status", "value": "Closed" },
+                    { "name": "Closed by", "value": payload.sender.login },
+                    { "name": "Closed at", "value": new Date(pr.closed_at).toLocaleString() }
+                  ];
                 }
               } else if (action === 'review_requested') {
-                const reviewers = payload.requested_reviewers.map(reviewer => reviewer.login).join(', ');
-                message = `👀 Review requested for PR #${prNumber}: **${prTitle}**\nReviewers: ${reviewers}\n[View PR](${pr.html_url})`;
+                reviewers = payload.requested_reviewers.map(reviewer => reviewer.login).join(', ');
+                message = `Review requested for PR #${prNumber}: **${prTitle}**\n[View PR](${pr.html_url})`;
                 color = "FBAB19"; // orange
+                facts = [
+                  { "name": "Status", "value": "Review Requested" },
+                  { "name": "Reviewer(s)", "value": reviewers },
+                  { "name": "Requested by", "value": payload.sender.login }
+                ];
               }
             } else if (event === 'pull_request_review') {
               const review = payload.review;
               const pr = payload.pull_request;
               prNumber = pr.number;
               prTitle = pr.title;
+              userName = review.user.login;
+              userAvatar = review.user.avatar_url;
               threadId = `pr-${prNumber}`;
               
+              let reviewStatus = "";
               if (review.state === 'approved') {
-                message = `✅ PR #${prNumber} approved by ${review.user.login}: **${prTitle}**\n[View PR](${pr.html_url})`;
+                message = `PR #${prNumber} approved: **${prTitle}**\n[View PR](${pr.html_url})`;
                 color = "2CBE4E"; // green
+                reviewStatus = "Approved";
               } else if (review.state === 'changes_requested') {
-                message = `🔨 Changes requested on PR #${prNumber} by ${review.user.login}: **${prTitle}**\n[View PR](${pr.html_url})`;
+                message = `Changes requested on PR #${prNumber}: **${prTitle}**\n[View PR](${pr.html_url})`;
                 color = "FBAB19"; // orange
+                reviewStatus = "Changes Requested";
               } else if (review.state === 'commented') {
-                message = `💬 PR #${prNumber} received comments from ${review.user.login}: **${prTitle}**\n[View PR](${pr.html_url})`;
+                message = `PR #${prNumber} received comments: **${prTitle}**\n[View PR](${pr.html_url})`;
                 color = "0076D7"; // blue
+                reviewStatus = "Commented";
               }
+              
+              facts = [
+                { "name": "Review Status", "value": reviewStatus },
+                { "name": "Review Comment", "value": review.body || "(No comment provided)" }
+              ];
             } else if (event === 'workflow_run') {
               const run = payload.workflow_run;
               
@@ -109,37 +159,65 @@ jobs:
               if (prInfo) {
                 prNumber = prInfo.number;
                 prTitle = prInfo.title;
+                userName = prInfo.user.login;
+                userAvatar = prInfo.user.avatar_url;
                 threadId = `pr-${prNumber}`;
                 
+                // Base facts for all workflow runs
+                facts = [
+                  { "name": "Workflow", "value": run.name },
+                  { "name": "Branch", "value": run.head_branch },
+                  { "name": "Triggered by", "value": run.triggering_actor.login }
+                ];
+                
                 if (run.conclusion === 'success') {
-                  message = `✅ All tests passed for PR #${prNumber}: **${prTitle}**\n\n**Backend tests**: Passed ✅\n**Frontend tests**: Passed ✅\n\n[View test details](${run.html_url})`;
+                  message = `All tests passed for PR #${prNumber}: **${prTitle}**\n\n**Backend tests**: Passed ✅\n**Frontend tests**: Passed ✅\n\n[View test details](${run.html_url})`;
                   color = "2CBE4E"; // green
+                  facts.push({ "name": "Test Status", "value": "All tests passed" });
                 } else if (run.conclusion === 'failure') {
                   // Try to determine which tests failed
-                  let backendStatus = "Unknown";
-                  let frontendStatus = "Unknown";
-                  
-                  // This is a simplification - ideally we would parse the actual job results
-                  if (run.name === "Testing pipeline") {
-                    // Try to determine which specific tests failed based on job output
-                    // Since we can't access job details directly in this context, we make an educated guess
-                    message = `❌ Tests failed for PR #${prNumber}: **${prTitle}**\n\nOne or more tests failed in the pipeline.\n\n[View test details](${run.html_url})`;
-                  } else {
-                    message = `❌ Workflow "${run.name}" failed for PR #${prNumber}: **${prTitle}**\n\n[View test details](${run.html_url})`;
-                  }
+                  message = `Tests failed for PR #${prNumber}: **${prTitle}**\n\nOne or more tests failed in the pipeline.\n\n[View test details](${run.html_url})`;
                   color = "D73A49"; // red
+                  facts.push({ "name": "Test Status", "value": "One or more tests failed" });
                 } else {
-                  message = `⚠️ Workflow "${run.name}" for PR #${prNumber}: **${prTitle}** completed with status: ${run.conclusion}\n\n[View test details](${run.html_url})`;
+                  message = `Workflow "${run.name}" for PR #${prNumber}: **${prTitle}** completed with status: ${run.conclusion}\n\n[View test details](${run.html_url})`;
                   color = "FBAB19"; // orange
+                  facts.push({ "name": "Test Status", "value": run.conclusion });
+                }
+                
+                // Add recent PR comments section if any exist
+                if (prInfo.comments && prInfo.comments.length > 0) {
+                  // Get the last 3 comments to keep it manageable
+                  const recentComments = prInfo.comments
+                    .slice(-3)
+                    .map(comment => {
+                      return {
+                        "name": `${comment.user.login} wrote:`,
+                        "value": `"${comment.body.length > 100 ? comment.body.substring(0, 100) + '...' : comment.body}" [view](${comment.html_url})`
+                      };
+                    });
+                  
+                  // Add comment facts
+                  facts.push({ "name": "Recent Comments", "value": " " });
+                  facts = facts.concat(recentComments);
                 }
               } else {
                 // Fallback if we can't link to a PR
                 message = `Workflow "${run.name}" on branch ${run.head_branch} completed with status: ${run.conclusion}\n[View details](${run.html_url})`;
                 color = run.conclusion === 'success' ? "2CBE4E" : (run.conclusion === 'failure' ? "D73A49" : "FBAB19");
                 threadId = `workflow-${run.id}`;
+                userName = run.triggering_actor.login;
+                userAvatar = run.triggering_actor.avatar_url;
+                
+                facts = [
+                  { "name": "Workflow", "value": run.name },
+                  { "name": "Branch", "value": run.head_branch },
+                  { "name": "Status", "value": run.conclusion },
+                  { "name": "Triggered by", "value": run.triggering_actor.login }
+                ];
               }
             }
-            
+
             // Only proceed if we have a message to send
             if (message) {
               const webhookUrl = process.env.TEAMS_WEBHOOK_URL;
@@ -153,11 +231,28 @@ jobs:
                   {
                     "activityTitle": `GitHub Notification for PR #${prNumber}`,
                     "activitySubtitle": `Repository: ${context.repo.owner}/${context.repo.repo}`,
-                    "text": message
+                    "activityImage": userAvatar,
+                    "facts": facts,
+                    "text": message,
+                    "markdown": true
                   }
                 ],
                 // Add correlation ID to group messages for the same PR
-                "correlationId": threadId
+                "correlationId": threadId,
+                "potentialAction": [
+                  {
+                    "@type": "OpenUri",
+                    "name": "View on GitHub",
+                    "targets": [
+                      {
+                        "os": "default",
+                        "uri": event === 'workflow_run' 
+                          ? payload.workflow_run.html_url 
+                          : payload.pull_request?.html_url || payload.repository.html_url
+                      }
+                    ]
+                  }
+                ]
               };
               
               // Send notification to Teams
