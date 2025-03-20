@@ -1,11 +1,16 @@
 name: Teams Notification
 
 on:
+  pull_request:
+    types: [opened, closed, reopened, review_requested]
+  pull_request_review:
+    types: [submitted]
   workflow_run:
-    workflows: ["Testing pipeline"] # Add all workflows to wait for completion
+    workflows: ["Testing pipeline"]
     types: [completed]
 
 permissions:
+  # Required for workflow_run events to access other workflow details
   actions: read
   contents: read
   pull-requests: read
@@ -21,26 +26,29 @@ jobs:
           script: |
             const event = context.eventName;
             const payload = context.payload;
-            const run = payload.workflow_run;
-            const octokit = github.rest;
-
-            // Get associated PR information
+            
+            // Prepare variables based on event type
+            let message = "";
+            let color = "";
+            let prNumber = "";
+            let prTitle = "";
+            
+            // Function to extract PR info from workflow run
             async function getPrInfoFromWorkflowRun(run) {
+              const octokit = github.rest;
               try {
+                // Find the PR associated with this workflow run
                 const response = await octokit.repos.listPullRequestsAssociatedWithCommit({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   commit_sha: run.head_sha
                 });
-
+                
                 if (response.data.length > 0) {
                   const pr = response.data[0];
                   return {
                     number: pr.number,
-                    title: pr.title,
-                    url: pr.html_url,
-                    author: pr.user.login,
-                    avatar: pr.user.avatar_url
+                    title: pr.title
                   };
                 }
                 return null;
@@ -49,87 +57,139 @@ jobs:
                 return null;
               }
             }
-
-            const prInfo = await getPrInfoFromWorkflowRun(run);
-            let message = "";
-            let color = "";
+            
+            // Set thread identifier based on PR number to group messages
             let threadId = "";
-
-            if (prInfo) {
-              threadId = `pr-${prInfo.number}`;
-              const { number, title, url, author, avatar } = prInfo;
-
-              if (run.conclusion === 'success') {
-                message = `✅ **All tests passed** for PR #${number}: **${title}**`;
-                color = "2CBE4E"; // Green
-              } else if (run.conclusion === 'failure') {
-                message = `❌ **Tests failed** for PR #${number}: **${title}**`;
-                color = "D73A49"; // Red
-              } else {
-                message = `⚠️ **Workflow completed** for PR #${number}: **${title}** with status: ${run.conclusion}`;
-                color = "FBAB19"; // Orange
+            
+            if (event === 'pull_request') {
+              const pr = payload.pull_request;
+              prNumber = pr.number;
+              prTitle = pr.title;
+              threadId = `pr-${prNumber}`;
+              
+              const action = payload.action;
+              if (action === 'opened' || action === 'reopened') {
+                message = `📣 New PR #${prNumber} opened: **${prTitle}**\nBy: ${pr.user.login}\n[View PR](${pr.html_url})`;
+                color = "0076D7"; // blue
+              } else if (action === 'closed') {
+                if (pr.merged) {
+                  message = `✅ PR #${prNumber} merged: **${prTitle}**\nBy: ${pr.user.login}\n[View PR](${pr.html_url})`;
+                  color = "2CBE4E"; // green
+                } else {
+                  message = `❌ PR #${prNumber} closed without merging: **${prTitle}**\nBy: ${pr.user.login}\n[View PR](${pr.html_url})`;
+                  color = "D73A49"; // red
+                }
+              } else if (action === 'review_requested') {
+                const reviewers = payload.requested_reviewers.map(reviewer => reviewer.login).join(', ');
+                message = `👀 Review requested for PR #${prNumber}: **${prTitle}**\nReviewers: ${reviewers}\n[View PR](${pr.html_url})`;
+                color = "FBAB19"; // orange
               }
-
+            } else if (event === 'pull_request_review') {
+              const review = payload.review;
+              const pr = payload.pull_request;
+              prNumber = pr.number;
+              prTitle = pr.title;
+              threadId = `pr-${prNumber}`;
+              
+              if (review.state === 'approved') {
+                message = `✅ PR #${prNumber} approved by ${review.user.login}: **${prTitle}**\n[View PR](${pr.html_url})`;
+                color = "2CBE4E"; // green
+              } else if (review.state === 'changes_requested') {
+                message = `🔨 Changes requested on PR #${prNumber} by ${review.user.login}: **${prTitle}**\n[View PR](${pr.html_url})`;
+                color = "FBAB19"; // orange
+              } else if (review.state === 'commented') {
+                message = `💬 PR #${prNumber} received comments from ${review.user.login}: **${prTitle}**\n[View PR](${pr.html_url})`;
+                color = "0076D7"; // blue
+              }
+            } else if (event === 'workflow_run') {
+              const run = payload.workflow_run;
+              
+              // Get associated PR information
+              const prInfo = await getPrInfoFromWorkflowRun(run);
+              if (prInfo) {
+                prNumber = prInfo.number;
+                prTitle = prInfo.title;
+                threadId = `pr-${prNumber}`;
+                
+                if (run.conclusion === 'success') {
+                  message = `✅ All tests passed for PR #${prNumber}: **${prTitle}**\n\n**Backend tests**: Passed ✅\n**Frontend tests**: Passed ✅\n\n[View test details](${run.html_url})`;
+                  color = "2CBE4E"; // green
+                } else if (run.conclusion === 'failure') {
+                  // Try to determine which tests failed
+                  let backendStatus = "Unknown";
+                  let frontendStatus = "Unknown";
+                  
+                  // This is a simplification - ideally we would parse the actual job results
+                  if (run.name === "Testing pipeline") {
+                    // Try to determine which specific tests failed based on job output
+                    // Since we can't access job details directly in this context, we make an educated guess
+                    message = `❌ Tests failed for PR #${prNumber}: **${prTitle}**\n\nOne or more tests failed in the pipeline.\n\n[View test details](${run.html_url})`;
+                  } else {
+                    message = `❌ Workflow "${run.name}" failed for PR #${prNumber}: **${prTitle}**\n\n[View test details](${run.html_url})`;
+                  }
+                  color = "D73A49"; // red
+                } else {
+                  message = `⚠️ Workflow "${run.name}" for PR #${prNumber}: **${prTitle}** completed with status: ${run.conclusion}\n\n[View test details](${run.html_url})`;
+                  color = "FBAB19"; // orange
+                }
+              } else {
+                // Fallback if we can't link to a PR
+                message = `Workflow "${run.name}" on branch ${run.head_branch} completed with status: ${run.conclusion}\n[View details](${run.html_url})`;
+                color = run.conclusion === 'success' ? "2CBE4E" : (run.conclusion === 'failure' ? "D73A49" : "FBAB19");
+                threadId = `workflow-${run.id}`;
+              }
+            }
+            
+            // Only proceed if we have a message to send
+            if (message) {
+              const webhookUrl = process.env.TEAMS_WEBHOOK_URL;
+              
               const card = {
                 "@type": "MessageCard",
                 "@context": "http://schema.org/extensions",
                 "themeColor": color,
-                "summary": `GitHub Notification for PR #${number}`,
+                "summary": `GitHub Notification for PR #${prNumber}`,
                 "sections": [
                   {
-                    "activityTitle": `GitHub Notification for PR #${number}`,
+                    "activityTitle": `GitHub Notification for PR #${prNumber}`,
                     "activitySubtitle": `Repository: ${context.repo.owner}/${context.repo.repo}`,
-                    "activityImage": avatar, 
-                    "facts": [
-                      { "name": "Pull Request", "value": `[#${number} - ${title}](${url})` },
-                      { "name": "Author", "value": `[${author}](https://github.com/${author})` },
-                      { "name": "Workflow Status", "value": `${run.conclusion}` },
-                      { "name": "Completed At", "value": `${new Date(run.updated_at).toLocaleString()}` }
-                    ],
-                    "markdown": true
+                    "text": message
                   }
                 ],
-                "potentialAction": [
-                  {
-                    "@type": "OpenUri",
-                    "name": "View PR",
-                    "targets": [{ "os": "default", "uri": url }]
-                  },
-                  {
-                    "@type": "OpenUri",
-                    "name": "View Workflow Logs",
-                    "targets": [{ "os": "default", "uri": run.html_url }]
-                  }
-                ],
+                // Add correlation ID to group messages for the same PR
                 "correlationId": threadId
               };
-
+              
               // Send notification to Teams
-              const webhookUrl = process.env.TEAMS_WEBHOOK_URL;
               const https = require('https');
               const url = new URL(webhookUrl);
-
+              
               const options = {
                 hostname: url.hostname,
                 path: url.pathname + url.search,
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: {
+                  'Content-Type': 'application/json'
+                }
               };
-
+              
               const req = https.request(options, (res) => {
                 console.log(`Teams notification status: ${res.statusCode}`);
-                res.on('data', (chunk) => console.log(`Response: ${chunk}`));
+                
+                res.on('data', (chunk) => {
+                  console.log(`Response: ${chunk}`);
+                });
               });
-
+              
               req.on('error', (error) => {
                 console.error(`Error sending Teams notification: ${error}`);
                 core.setFailed(`Failed to send Teams notification: ${error.message}`);
               });
-
+              
               req.write(JSON.stringify(card));
               req.end();
             } else {
-              console.log('No associated PR found for this workflow run.');
+              console.log('No notification configured for this event type or action');
             }
         env:
           TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
