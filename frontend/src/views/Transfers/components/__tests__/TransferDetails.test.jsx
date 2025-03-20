@@ -32,9 +32,9 @@ const MockFormProvider = ({ children }) => {
   return <FormProvider {...methods}>{children}</FormProvider>
 }
 
+// Default balance mock: availableBalance computed as 1500 - 500 = 1000
 const mockBalance = {
   data: {
-    availableBalance: 1000,
     totalBalance: 1500,
     reservedBalance: 500,
     name: 'Test Organization'
@@ -99,7 +99,6 @@ describe('TransferDetails Component', () => {
     fireEvent.change(quantityInput, { target: { value: '10' } })
     fireEvent.change(priceInput, { target: { value: '5.25' } })
 
-    // Wait for state updates
     await waitFor(() => {
       const expectedTotalValue = calculateTotalValue(10, 5.25)
       expect(totalValueDisplay).toHaveTextContent(
@@ -113,7 +112,7 @@ describe('TransferDetails Component', () => {
     })
   })
 
-  it('adjusts quantity when exceeding available balance', async () => {
+  it('adjusts quantity when exceeding available balance (non-zero case)', async () => {
     render(
       <MockFormProvider>
         <TransferDetails />
@@ -122,13 +121,16 @@ describe('TransferDetails Component', () => {
     )
 
     const quantityInput = screen.getByTestId('quantity')
+    // Attempt to enter a quantity greater than the computed available balance (1000)
     fireEvent.change(quantityInput, { target: { value: '2000' } })
 
     await waitFor(() => {
-      expect(screen.getByText(/transfer:quantityAdjusted: 1,000/)).toBeInTheDocument()
+      expect(
+        screen.getByText(/transfer:quantityAdjusted: 1,000/)
+      ).toBeInTheDocument()
     })
 
-    // Verify input value was adjusted
+    // Verify the input value is adjusted to the available balance
     expect(quantityInput).toHaveValue('1,000')
   })
 
@@ -143,7 +145,7 @@ describe('TransferDetails Component', () => {
     const priceInput = screen.getByTestId('price-per-unit')
     const totalValueDisplay = screen.getByTestId('transfer-total-value')
 
-    // Initial values with cents
+    // Set initial values with cents
     fireEvent.change(quantityInput, { target: { value: '5' } })
     fireEvent.change(priceInput, { target: { value: '2.50' } })
 
@@ -191,5 +193,36 @@ describe('TransferDetails Component', () => {
     expect(
       screen.getByText('transfer:zeroDollarInstructionText')
     ).toBeInTheDocument()
+  })
+
+  it('displays zero available balance warning when reserved exceeds total balance', async () => {
+    // Override useCurrentOrgBalance mock with a scenario where reserved > total, resulting in available balance of 0.
+    useCurrentOrgBalance.mockReturnValue({
+      data: {
+        totalBalance: 1000,
+        reservedBalance: 1500,
+        name: 'Test Organization'
+      }
+    })
+
+    render(
+      <MockFormProvider>
+        <TransferDetails />
+      </MockFormProvider>,
+      { wrapper }
+    )
+
+    const quantityInput = screen.getByTestId('quantity')
+    // Attempt to enter any positive quantity; NumericFormat will adjust it to 0.
+    fireEvent.change(quantityInput, { target: { value: '100' } })
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/transfer:noAvailableBalance: 0/)
+      ).toBeInTheDocument()
+    })
+
+    // Verify the input value is adjusted to 0.
+    expect(quantityInput).toHaveValue('0')
   })
 })

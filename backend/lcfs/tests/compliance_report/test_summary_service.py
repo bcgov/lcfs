@@ -842,9 +842,7 @@ async def test_can_sign_flag_logic(
 
     # Call the method
     result = (
-        await compliance_report_summary_service.calculate_compliance_report_summary(
-            1, UserProfile()
-        )
+        await compliance_report_summary_service.calculate_compliance_report_summary(1)
     )
 
     # Assert that `can_sign` is True
@@ -866,9 +864,7 @@ async def test_can_sign_flag_logic(
 
     # Call the method again
     result = (
-        await compliance_report_summary_service.calculate_compliance_report_summary(
-            1, UserProfile()
-        )
+        await compliance_report_summary_service.calculate_compliance_report_summary(1)
     )
 
     # Assert that `can_sign` is False

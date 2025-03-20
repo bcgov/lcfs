@@ -187,6 +187,16 @@ class FinalSupplyEquipmentExporter:
         )
         integer_validator.add("D2:D10000")
         validators.append(integer_validator)
+        # Postal code validator (Canadian format A1A 1A1)
+        postal_code_validator = DataValidation(
+            type="custom",
+            formula1='=AND(LEN(N2)=7,OR(CODE(MID(N2,1,1))>=65,CODE(MID(N2,1,1))<=90),ISNUMBER(--MID(N2,2,1)),OR(CODE(MID(N2,3,1))>=65,CODE(MID(N2,3,1))<=90),MID(N2,4,1)=" ",ISNUMBER(--MID(N2,5,1)),OR(CODE(MID(N2,6,1))>=65,CODE(MID(N2,6,1))<=90),ISNUMBER(--MID(N2,7,1)))',
+            showErrorMessage=True,
+            errorTitle="Invalid Postal Code",
+            error="Please enter a valid Canadian postal code in the format 'A1A 1A1'",
+        )
+        postal_code_validator.add("N2:N10000")  # Column N is the postal code column
+        validators.append(postal_code_validator)
 
         # We use a second sheet containing validation values, this allows no character restrictions however it needs to be square
         data = [

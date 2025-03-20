@@ -1,9 +1,8 @@
 import math
-import uuid
-from typing import Optional
-
 import structlog
-from fastapi import Depends, HTTPException, status, Request
+import uuid
+from fastapi import Depends, HTTPException, status
+from typing import Optional
 
 from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 from lcfs.db.models import UserProfile
@@ -43,12 +42,10 @@ NOTIONAL_TRANSFER_EXCLUDE_FIELDS = {
 class NotionalTransferServices:
     def __init__(
         self,
-        request: Request = None,
         repo: NotionalTransferRepository = Depends(NotionalTransferRepository),
         fuel_repo: FuelCodeRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
-        self.request = request
         self.repo = repo
         self.fuel_repo = fuel_repo
         self.compliance_report_repo = compliance_report_repo
@@ -64,8 +61,7 @@ class NotionalTransferServices:
         )
         return NotionalTransfer(
             **notional_transfer_data.model_dump(
-                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union(
-                    {"fuel_category"})
+                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union({"fuel_category"})
             ),
             fuel_category_id=fuel_category.fuel_category_id,
         )
@@ -111,16 +107,13 @@ class NotionalTransferServices:
 
     @service_handler
     async def get_notional_transfers(
-        self, compliance_report_id: int,
-        user: UserProfile,
-        changelog: bool = False
+        self, compliance_report_id: int, changelog=False, exclude_draft_reports=False
     ) -> NotionalTransfersAllSchema:
         """
         Gets the list of notional transfers for a specific compliance report.
         """
-        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         notional_transfers = await self.repo.get_notional_transfers(
-            compliance_report_id, changelog, exclude_draft_reports=is_gov_user
+            compliance_report_id, changelog, exclude_draft_reports=exclude_draft_reports
         )
         return NotionalTransfersAllSchema(
             notional_transfers=[
@@ -172,8 +165,7 @@ class NotionalTransferServices:
         ):
             # Update existing record if compliance report ID matches
             for field, value in notional_transfer_data.model_dump(
-                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union(
-                    {"fuel_category"})
+                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union({"fuel_category"})
             ).items():
                 setattr(existing_transfer, field, value)
 
@@ -233,7 +225,9 @@ class NotionalTransferServices:
         )
 
         if notional_transfer_data.is_new_supplemental_entry:
-            await self.repo.delete_notional_transfer(notional_transfer_id=notional_transfer_data.notional_transfer_id)
+            await self.repo.delete_notional_transfer(
+                notional_transfer_id=notional_transfer_data.notional_transfer_id
+            )
             return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")
         else:
 
@@ -248,10 +242,11 @@ class NotionalTransferServices:
             # Copy fields from the latest version for the deletion record
             for field in existing_transfer.__table__.columns.keys():
                 if field not in NOTIONAL_TRANSFER_EXCLUDE_FIELDS:
-                    setattr(deleted_entity, field, getattr(
-                        existing_transfer, field))
+                    setattr(deleted_entity, field, getattr(existing_transfer, field))
 
-        deleted_entity.compliance_report_id = notional_transfer_data.compliance_report_id
+        deleted_entity.compliance_report_id = (
+            notional_transfer_data.compliance_report_id
+        )
 
         await self.repo.create_notional_transfer(deleted_entity)
         return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")

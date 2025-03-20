@@ -6,9 +6,9 @@ import { useTranslation } from 'react-i18next'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { numberFormatter } from '@/utils/formatters'
 
-const OrganizationList = ({ onOrgChange }) => {
+const OrganizationList = ({ onOrgChange, onlyRegistered = true }) => {
   const { t } = useTranslation(['transaction'])
-  const { data, isLoading } = useOrganizationNames()
+  const { data, isLoading } = useOrganizationNames(onlyRegistered)
   const [optionsList, setOptionsList] = useState([])
   const [org, setOrg] = useState(null)
 

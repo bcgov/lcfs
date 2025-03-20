@@ -191,4 +191,32 @@ describe('OrganizationAddress', () => {
     expect(setIsEditingMock).toHaveBeenCalledWith(false)
     expect(phoneInput).toHaveValue(snapshotData.phone)
   })
+
+  it('does not display "Required" for headOfficeAddress or recordsAddress when empty in read-only mode', () => {
+    const emptySnapshotData = {
+      ...snapshotData,
+      headOfficeAddress: '',
+      recordsAddress: '' // both optional fields empty
+    }
+
+    render(
+      <OrganizationAddress
+        snapshotData={emptySnapshotData}
+        complianceReportId={123}
+        isEditing={false}
+        setIsEditing={setIsEditingMock}
+      />,
+      { wrapper }
+    )
+
+    // The read-only label is visible
+    expect(screen.getByText('report:hoAddrLabelView:')).toBeInTheDocument()
+    // The field is empty, so check that "Required" is NOT displayed
+    expect(screen.queryByText('Required')).not.toBeInTheDocument()
+
+    // The same check applies to the records address label:
+    expect(screen.getByText('report:bcRecordLabel:')).toBeInTheDocument()
+    // No "Required" label for empty optional address
+    expect(screen.queryByText('Required')).not.toBeInTheDocument()
+  })
 })

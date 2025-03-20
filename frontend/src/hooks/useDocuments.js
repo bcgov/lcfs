@@ -65,7 +65,7 @@ export const useDeleteDocument = (parentType, parentID, options) => {
   })
 }
 
-export const useViewDocument = (parentType, parentID, options) => {
+export const useDownloadDocument = (parentType, parentID, options) => {
   const client = useApiService()
 
   return async (documentID) => {
@@ -83,11 +83,20 @@ export const useViewDocument = (parentType, parentID, options) => {
 
     // Create a URL for the document data
     const fileURL = URL.createObjectURL(res.data)
-    window.open(fileURL, '_blank')
+    const link = document.createElement('a')
+    link.href = fileURL
 
-    // Revoke the object URL after opening
+    // Extract filename from headers and set on link
+    const contentDisposition = res.headers['content-disposition'] || ''
+    const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/)
+    link.download = decodeURIComponent(filenameMatch[1])
+
+    // Append to the body, trigger click, then remove
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
     setTimeout(() => URL.revokeObjectURL(fileURL), 100)
-
     return res.data
   }
 }

@@ -1,5 +1,6 @@
 from http.client import HTTPException
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.web.api.admin_adjustment.validation import AdminAdjustmentValidation
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 import structlog
 from typing import List
@@ -12,6 +13,8 @@ from starlette.responses import StreamingResponse
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
 from lcfs.services.s3.schema import FileResponseSchema
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.initiative_agreement.validation import InitiativeAgreementValidation
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
@@ -67,12 +70,25 @@ async def stream_document(
     parent_type: str,
     document_id: int,
     document_service: DocumentService = Depends(),
+    cr_validate: ComplianceReportValidation = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+    aa_validate: AdminAdjustmentValidation = Depends(),
 ):
-    # TODO: Use parent ID and parent type to check permissions / security
+    print("PARENT TYPE:", parent_type)
+
+    if parent_type == "compliance_report":
+        await cr_validate.validate_organization_access(parent_id)
+
+    if parent_type == "initiativeAgreement":
+        await ia_validate.validate_organization_access(parent_id)
+
+    if parent_type == "adminAdjustment":
+        await aa_validate.validate_organization_access(parent_id)
+
     file, document = await document_service.get_object(document_id)
 
     headers = {
-        "Content-Disposition": f'inline; filename="{document.file_name}"',
+        "Content-Disposition": f'attachment; filename="{document.file_name}"',
         "content-length": str(file["ContentLength"]),
     }
 
@@ -90,7 +106,18 @@ async def delete_file(
     parent_id: int,
     document_id: int,
     document_service: DocumentService = Depends(),
+    cr_validate: ComplianceReportValidation = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+    aa_validate: AdminAdjustmentValidation = Depends(),
 ):
-    # TODO: Use parent ID and parent type to check permissions / security
+    if parent_type == "compliance_report":
+        await cr_validate.validate_organization_access(parent_id)
+    elif parent_type == "initiativeAgreement":
+        await ia_validate.validate_organization_access(parent_id)
+    elif parent_type == "administrativeAdjustment":
+        await aa_validate.validate_organization_access(parent_id)
+    else:
+        raise HTTPException(403, "Unable to verify authorization for document download")
+
     await document_service.delete_file(document_id)
     return {"message": "File and metadata deleted successfully"}

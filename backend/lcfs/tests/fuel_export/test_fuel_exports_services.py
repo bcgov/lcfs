@@ -1,4 +1,12 @@
+from lcfs.web.exception.exceptions import ValidationErrorException
 import pytest
+from datetime import date
+from types import SimpleNamespace
+from unittest.mock import MagicMock, AsyncMock
+
+from lcfs.db.base import ActionTypeEnum, UserTypeEnum
+from lcfs.db.models.compliance.FuelExport import FuelExport
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
     FuelExportCreateUpdateSchema,
@@ -8,15 +16,6 @@ from lcfs.web.api.fuel_export.schema import (
     FuelTypeOptionsResponse,
     DeleteFuelExportResponseSchema,
 )
-from datetime import date
-from unittest.mock import MagicMock, patch, AsyncMock
-from lcfs.web.api.fuel_export.services import FuelExportServices
-from lcfs.web.api.fuel_export.actions_service import FuelExportActionService
-from lcfs.web.api.fuel_export.repo import FuelExportRepository
-from lcfs.db.models.compliance.FuelExport import FuelExport
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
-from lcfs.db.models.user.Role import RoleEnum
-from types import SimpleNamespace
 
 # Mock common data for reuse
 mock_fuel_type = FuelTypeSchema(
@@ -71,8 +70,7 @@ async def test_get_fuel_export_list_success(fuel_export_service, mock_repo):
         export_date=date.today(),
         group_uuid="test-uuid",
         provision_of_the_act_id=1,
-        provision_of_the_act={
-            "provision_of_the_act_id": 1, "name": "Test Provision"},
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Test Provision"},
         version=0,
         user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
@@ -107,8 +105,7 @@ async def test_get_fuel_exports_paginated_success(fuel_export_service, mock_repo
         units="L",
         export_date=date.today(),
         provision_of_the_act_id=1,
-        provision_of_the_act={
-            "provision_of_the_act_id": 1, "name": "Test Provision"},
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Test Provision"},
     )
     mock_repo.get_fuel_exports_paginated.return_value = ([mock_export], 1)
 
@@ -138,14 +135,28 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
         fuel_type_id=1,
         fuel_type=mock_fuel_type.dict(),
         fuel_category_id=1,
-        fuel_category=mock_fuel_category.dict(),
+        end_use_id=1,
         provisionOfTheActId=1,
-        provisionOfTheAct={"provision_of_the_act_id": 1,
-                           "name": "Act Provision"},
+        provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Act Provision"},
         quantity=100,
         units="L",
         export_date=date.today(),
         compliance_period="2024",
+    )
+
+    # Changing energy_density from MagicMock to be a real number
+    class MockFuelData:
+        def __init__(self):
+            self.energy_density = 10.0
+            self.effective_carbon_intensity = 90.0
+            self.target_ci = 90.0
+            self.eer = 1.0
+            self.uci = 0.0
+
+    mock_fuel_data = MockFuelData()
+
+    fuel_export_action_service.fuel_repo.get_standardized_fuel_data = AsyncMock(
+        return_value=mock_fuel_data
     )
 
     mock_created_export = FuelExport(
@@ -156,10 +167,10 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
         user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
         provision_of_the_act_id=1,
-        provision_of_the_act={
-            "provision_of_the_act_id": 1, "name": "Act Provision"},
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Act Provision"},
         fuel_type_id=1,
         fuel_category_id=1,
+        end_use_id=1,
         quantity=100,
         units="L",
         export_date=date.today(),
@@ -169,8 +180,7 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
     mock_repo.create_fuel_export = AsyncMock(return_value=mock_created_export)
 
     result = await fuel_export_action_service.create_fuel_export(
-        input_data,
-        UserTypeEnum.SUPPLIER
+        input_data, UserTypeEnum.SUPPLIER
     )
 
     assert isinstance(result, FuelExportSchema)
@@ -187,14 +197,28 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         fuel_type_id=1,
         fuel_type=mock_fuel_type.dict(),
         fuel_category_id=1,
-        fuel_category=mock_fuel_category.dict(),
+        end_use_id=1,
         quantity=100,
         provisionOfTheActId=1,
-        provisionOfTheAct={"provision_of_the_act_id": 1,
-                           "name": "Act Provision"},
+        provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Act Provision"},
         units="L",
         export_date=date.today(),
         compliance_period="2024",
+    )
+
+    # Changing energy_density from MagicMock to be a real number
+    class MockFuelData:
+        def __init__(self):
+            self.energy_density = 10.0
+            self.effective_carbon_intensity = 90.0
+            self.target_ci = 90.0
+            self.eer = 1.0
+            self.uci = 0.0
+
+    mock_fuel_data = MockFuelData()
+
+    fuel_export_action_service.fuel_repo.get_standardized_fuel_data = AsyncMock(
+        return_value=mock_fuel_data
     )
 
     mock_existing_export = FuelExport(
@@ -206,9 +230,9 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         action_type=ActionTypeEnum.CREATE,
         fuel_type_id=1,
         fuel_category_id=1,
+        end_use_id=1,
         provision_of_the_act_id=1,
-        provision_of_the_act={
-            "provision_of_the_act_id": 1, "name": "Act Provision"},
+        provision_of_the_act={"provision_of_the_act_id": 1, "name": "Act Provision"},
         quantity=100,
         units="L",
         export_date=date.today(),
@@ -239,11 +263,9 @@ async def test_action_delete_fuel_export_success(fuel_export_action_service, moc
         group_uuid="test-uuid",
         version=0,
         fuel_type_id=1,
-        fuel_type=mock_fuel_type.dict(),
         fuel_category_id=1,
-        provisionOfTheActId=1,
-        provisionOfTheAct={"provisionOfTheActId": 1, "name": "Act Provision"},
-        fuel_category=mock_fuel_category.dict(),
+        provision_of_the_act_id=1,
+        end_use_id=1,
         quantity=100,
         units="L",
         export_date=date.today(),
@@ -259,6 +281,7 @@ async def test_action_delete_fuel_export_success(fuel_export_action_service, moc
         action_type=ActionTypeEnum.CREATE,
         fuel_type_id=1,
         fuel_category_id=1,
+        end_use_id=1,
         provision_of_the_act_id=1,
         quantity=100,
         units="L",
@@ -279,3 +302,58 @@ async def test_action_delete_fuel_export_success(fuel_export_action_service, moc
     assert result.message == "Fuel export record marked as deleted."
     mock_repo.get_latest_fuel_export_by_group_uuid.assert_called_once()
     mock_repo.create_fuel_export.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_action_create_fuel_export_energy_too_high(
+    fuel_export_action_service, mock_repo
+):
+    """Test that creating a fuel export with energy exceeding the maximum raises ValidationErrorException."""
+    # Create input data with extremely high quantity
+    input_data = FuelExportCreateUpdateSchema(
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_type=mock_fuel_type.dict(),
+        end_use_id=1,
+        fuel_category_id=1,
+        fuel_category=mock_fuel_category.dict(),
+        provisionOfTheActId=1,
+        provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Act Provision"},
+        quantity=1000000000,
+        units="L",
+        export_date=date.today(),
+        compliance_period="2024",
+    )
+
+    # Mock fuel data with high energy density
+    class MockFuelData:
+        def __init__(self):
+            self.energy_density = 141.76  # Hydrogen energy density
+            self.effective_carbon_intensity = 90.0
+            self.target_ci = 90.0
+            self.eer = 1.0
+            self.uci = 0.0
+
+    mock_fuel_data = MockFuelData()
+
+    # Set up the mock
+    fuel_export_action_service.fuel_repo.get_standardized_fuel_data = AsyncMock(
+        return_value=mock_fuel_data
+    )
+
+    # Attempt to create the fuel export and expect a ValidationErrorException
+    with pytest.raises(ValidationErrorException) as exc_info:
+        await fuel_export_action_service.create_fuel_export(
+            input_data, UserTypeEnum.SUPPLIER
+        )
+
+    # Verify exception contains the expected structure and message
+    error_data = exc_info.value.errors
+    assert "errors" in error_data
+    assert isinstance(error_data["errors"], list)
+    assert len(error_data["errors"]) == 1
+    assert "fields" in error_data["errors"][0]
+    assert "message" in error_data["errors"][0]
+    assert error_data["errors"][0]["fields"] == ["quantity"]
+    assert "Reduce quantity" in error_data["errors"][0]["message"]
+    assert "141.76" in error_data["errors"][0]["message"]  # Energy density s

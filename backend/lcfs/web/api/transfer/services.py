@@ -99,8 +99,16 @@ class TransferServices:
             in [
                 TransferStatusEnum.Draft,
                 TransferStatusEnum.Sent,
-                TransferStatusEnum.Rescinded,
             ]
+            or
+            (
+                transfer.current_status.status == TransferStatusEnum.Rescinded and
+                not any(
+                    history.transfer_status.status == TransferStatusEnum.Submitted
+                    and history.create_date < transfer.update_date
+                    for history in transfer.transfer_history
+                )
+            )
         ):
             raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
 
