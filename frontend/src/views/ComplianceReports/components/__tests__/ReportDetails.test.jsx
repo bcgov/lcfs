@@ -50,7 +50,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 vi.mock('@/hooks/useComplianceReports', () => ({
   useGetComplianceReport: () => ({
-    data: { report: { version: 1 } }
+    data: { report: { version: 1 }, chain: [] }
   }),
   useComplianceReportDocuments: () => ({
     data: [],
@@ -166,11 +166,22 @@ describe('ReportDetails', () => {
     expect(editButtons.length).toBe(0) // No edit icons visible
   })
 
-  it('conditionally shows changelog button based on role and status', () => {
+  it('conditionally shows changelog toggles based on role and status', () => {
     vi.mock('@/hooks/useCurrentUser', () => ({
       useCurrentUser: () => ({
         data: { organization: { organizationId: '1' }, isGovernmentUser: true },
         hasRoles: (role) => role === 'Government'
+      })
+    }))
+
+    vi.mock('@/hooks/useComplianceReports', () => ({
+      useGetComplianceReport: () => ({
+        data: { report: { version: 1 }, chain: [{}, {}] }
+      }),
+      useComplianceReportDocuments: () => ({
+        data: [],
+        isLoading: false,
+        error: null
       })
     }))
 
@@ -179,6 +190,6 @@ describe('ReportDetails', () => {
       { wrapper }
     )
 
-    expect(screen.getAllByText('report:changelog').length).toBeGreaterThan(0) // Changelog links visible
+    expect(screen.getAllByText('Change log off').length).toBeGreaterThan(0) // Changelog links visible
   })
 })

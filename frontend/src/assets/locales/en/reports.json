@@ -20,8 +20,8 @@
   "orgDetails": "Organization details",
   "supportingDocs": "Supporting documents",
   "assessment": "Assessment",
-  "assessmentLn1": "{{name}} <strong>{{hasMet}}</strong> renewable fuel targets set under section 9 of the <i>Low Carbon Fuels Act.</i>",
-  "assessmentLn2": "{{name}} <strong>{{hasMet}}</strong> the low carbon fuel targets set under section 12 of the <i>Low Carbon Fuels Act.</i>",
+  "assessmentLn1": "{{name}} {{hasMet}} renewable fuel targets set under section 9 of the Low Carbon Fuels Act.",
+  "assessmentLn2": "{{name}} {{hasMet}} the low carbon fuel targets set under section 12 of the Low Carbon Fuels Act.",
   "supplementalWarning": "If you become aware that this report is incomplete or inaccurate, you must submit a supplemental report within 30 days.",
   "supplementalReport": "Supplemental Report",
   "createSupplementalRptBtn": "Create supplemental report",
@@ -134,6 +134,7 @@
   "reportDetails": "Report details",
   "summaryAndDeclaration": "Summary & declaration",
   "summary": "Summary",
+  "compareMode": "Compare Mode",
   "addRenewableFuelRetention": "Add a renewable fuel retention or obligation deferral",
   "errorRetrieving": "Error retrieving the record",
   "renewableFuelTarget": "Renewable fuel target",
@@ -167,7 +168,9 @@
     "Rejected": "Rejected {{createDate}} by {{displayName}}.",
     "Assessed": "Assessed {{createDate}} by {{displayName}}.",
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
-    "Reassessed": "Re-assessed"
+    "Reassessed": "Re-assessed",
+    "renewableTarget": "Renewable fuel target",
+    "lowCarbonTarget": "Low carbon fuel target"
   },
   "internalComments": "Internal comments",
   "fuelLabels": {
