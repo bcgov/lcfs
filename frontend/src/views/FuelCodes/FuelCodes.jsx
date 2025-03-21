@@ -20,13 +20,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { fuelCodeColDefs } from './_schema'
-
-const initialPaginationOptions = {
-  page: 1,
-  size: 10,
-  sortOrders: [],
-  filters: []
-}
+import { defaultInitialPagination } from '@/constants/schedules.js'
 
 const FuelCodesBase = () => {
   const ref = useRef(null)
@@ -38,7 +32,7 @@ const FuelCodesBase = () => {
   const downloadButtonRef = useRef(null)
 
   const [paginationOptions, setPaginationOptions] = useState(
-    initialPaginationOptions
+    defaultInitialPagination
   )
 
   const apiService = useApiService()
@@ -88,7 +82,7 @@ const FuelCodesBase = () => {
 
   const handleClearFilters = () => {
     ref.current?.resetGrid()
-    setPaginationOptions(initialPaginationOptions)
+    setPaginationOptions(defaultInitialPagination)
   }
 
   return (
@@ -145,15 +139,15 @@ const FuelCodesBase = () => {
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer2
-          ref={ref}
-          gridKey={'fuel-codes-grid'}
+          gridRef={ref}
+          gridKey="fuel-codes-grid"
           columnDefs={fuelCodeColDefs(t)}
           getRowId={getRowId}
           overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
           defaultColDef={defaultColDef}
           queryData={queryData}
           dataKey="fuelCodes"
-          initialPaginationOptions={initialPaginationOptions}
+          initialPaginationOptions={defaultInitialPagination}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

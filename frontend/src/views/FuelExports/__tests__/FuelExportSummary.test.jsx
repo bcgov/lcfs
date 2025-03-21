@@ -23,8 +23,8 @@ vi.mock('react-router-dom', async () => {
 })
 
 // Mock the BCGridViewer component
-vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: vi.fn(() => (
+vi.mock('@/components/BCDataGrid/BCGridViewer2', () => ({
+  BCGridViewer2: vi.fn(() => (
     <div data-test="mocked-bc-grid-viewer">Mocked BCGridViewer</div>
   ))
 }))

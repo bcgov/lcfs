@@ -54,8 +54,8 @@ vi.mock('../components/NewComplianceReportButton', () => ({
   )
 }))
 
-vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: () => <div data-test="bc-data-grid">BCGridViewer</div>
+vi.mock('@/components/BCDataGrid/BCGridViewer2', () => ({
+  BCGridViewer2: () => <div data-test="bc-data-grid">BCGridViewer</div>
 }))
 
 describe('ComplianceReports', () => {

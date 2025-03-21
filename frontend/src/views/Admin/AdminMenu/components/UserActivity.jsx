@@ -1,23 +1,31 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
-import { useCallback, useMemo, useState, useRef } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { userActivityColDefs } from '@/views/Admin/AdminMenu/components/_schema'
-import { ROUTES, buildPath } from '@/routes/routes'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { ROUTES } from '@/constants/routes'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useGetUserActivities } from '@/hooks/useUser'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2.jsx'
+import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const UserActivity = () => {
   const { t } = useTranslation(['common', 'admin'])
   const [resetGridFn, setResetGridFn] = useState(null)
   const gridRef = useRef(null)
 
+  const [paginationOptions, setPaginationOptions] = useState(
+    defaultInitialPagination
+  )
+
+  const queryData = useGetUserActivities(paginationOptions, {
+    cacheTime: 0,
+    staleTime: 0
+  })
+
   const getRowId = useCallback((params) => {
-    return `${
-      params.data.actionTaken
-    }-${params.data.transactionType}-${params.data.transactionId}`
+    return `${params.data.actionTaken}-${params.data.transactionType}-${params.data.transactionId}`
   }, [])
 
   const defaultColDef = useMemo(
@@ -66,13 +74,12 @@ export const UserActivity = () => {
         <ClearFiltersButton onClick={handleClearFilters} />
       </BCBox>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer
+        <BCGridViewer2
           gridRef={gridRef}
-          gridKey={'all-user-activities-grid'}
+          gridKey="all-user-activities-grid"
           columnDefs={userActivityColDefs}
-          query={useGetUserActivities}
-          queryParams={{ cacheTime: 0, staleTime: 0 }}
-          dataKey={'activities'}
+          queryData={queryData}
+          dataKey="activities"
           getRowId={getRowId}
           overlayNoRowsTemplate={t('admin:activitiesNotFound')}
           autoSizeStrategy={{
@@ -82,6 +89,13 @@ export const UserActivity = () => {
           }}
           defaultColDef={defaultColDef}
           onSetResetGrid={handleSetResetGrid}
+          initialPaginationOptions={defaultInitialPagination}
+          onPaginationChange={(newPagination) =>
+            setPaginationOptions((prev) => ({
+              ...prev,
+              ...newPagination
+            }))
+          }
         />
       </BCBox>
     </BCBox>
