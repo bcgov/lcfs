@@ -1,9 +1,9 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Accordion,
-  AccordionSummary,
   AccordionDetails,
+  AccordionSummary,
   Stack
 } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -11,9 +11,9 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
 import SummaryTable from './SummaryTable'
 import {
-  renewableFuelColumns,
   lowCarbonColumns,
-  nonComplianceColumns
+  nonComplianceColumns,
+  renewableFuelColumns
 } from './_schema'
 import {
   useGetComplianceReportSummary,
@@ -26,6 +26,8 @@ import Loading from '@/components/Loading'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
+import { CompareReports } from '@/views/CompareReports/CompareReports.jsx'
+import { TogglePanel } from '@/components/TogglePanel.jsx'
 
 const ComplianceReportSummary = ({
   reportID,
@@ -36,6 +38,8 @@ const ComplianceReportSummary = ({
   methods,
   setHasMetRenewables,
   setHasMetLowCarbon,
+  enableCompareMode,
+  canEdit,
   alertRef
 }) => {
   const [summaryData, setSummaryData] = useState(null)
@@ -145,36 +149,45 @@ const ComplianceReportSummary = ({
           </BCTypography>
         </AccordionSummary>
         <AccordionDetails>
-          <SummaryTable
-            data-test="renewable-summary"
-            title={t('report:renewableFuelTargetSummary')}
-            columns={
-              summaryData
-                ? renewableFuelColumns(
-                    t,
-                    summaryData?.renewableFuelTargetSummary,
-                    currentStatus === 'Draft',
-                    compliancePeriodYear
-                  )
-                : []
+          <TogglePanel
+            label="Compare mode"
+            disabled={!enableCompareMode}
+            onComponent={<CompareReports />}
+            offComponent={
+              <>
+                <SummaryTable
+                  data-test="renewable-summary"
+                  title={t('report:renewableFuelTargetSummary')}
+                  columns={
+                    summaryData
+                      ? renewableFuelColumns(
+                          t,
+                          summaryData?.renewableFuelTargetSummary,
+                          canEdit,
+                          compliancePeriodYear
+                        )
+                      : []
+                  }
+                  data={summaryData?.renewableFuelTargetSummary}
+                  onCellEditStopped={handleCellEdit}
+                  useParenthesis={true}
+                />
+                <SummaryTable
+                  data-test="low-carbon-summary"
+                  title={t('report:lowCarbonFuelTargetSummary')}
+                  columns={lowCarbonColumns(t)}
+                  data={summaryData?.lowCarbonFuelTargetSummary}
+                  width={'80.65%'}
+                />
+                <SummaryTable
+                  data-test="non-compliance-summary"
+                  title={t('report:nonCompliancePenaltySummary')}
+                  columns={nonComplianceColumns(t)}
+                  data={summaryData?.nonCompliancePenaltySummary}
+                  width={'80.65%'}
+                />
+              </>
             }
-            data={summaryData?.renewableFuelTargetSummary}
-            onCellEditStopped={handleCellEdit}
-            useParenthesis={true}
-          />
-          <SummaryTable
-            data-test="low-carbon-summary"
-            title={t('report:lowCarbonFuelTargetSummary')}
-            columns={lowCarbonColumns(t)}
-            data={summaryData?.lowCarbonFuelTargetSummary}
-            width={'80.65%'}
-          />
-          <SummaryTable
-            data-test="non-compliance-summary"
-            title={t('report:nonCompliancePenaltySummary')}
-            columns={nonComplianceColumns(t)}
-            data={summaryData?.nonCompliancePenaltySummary}
-            width={'80.65%'}
           />
           {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
             <>
