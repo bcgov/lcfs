@@ -72,7 +72,11 @@ export const FuelSupplySummary = ({ data, status }) => {
           </BCAlert>
         )}
       </div>
-      <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
+      <BCBox
+        component="div"
+        sx={{ height: '100%', width: '100%' }}
+        data-test="fuel-supply-summary"
+      >
         <BCDataGridServer
           className={'ag-theme-material'}
           gridRef={gridRef}
