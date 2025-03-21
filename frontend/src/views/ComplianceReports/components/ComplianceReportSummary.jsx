@@ -36,8 +36,6 @@ const ComplianceReportSummary = ({
   setIsSigningAuthorityDeclared,
   buttonClusterConfig,
   methods,
-  setHasMetRenewables,
-  setHasMetLowCarbon,
   enableCompareMode,
   canEdit,
   alertRef
@@ -57,17 +55,6 @@ const ComplianceReportSummary = ({
     useUpdateComplianceReportSummary(data?.complianceReportId, {
       onSuccess: (response) => {
         setSummaryData(response.data)
-        const renewablePenaltyAmount =
-          response.data?.nonCompliancePenaltySummary.find(
-            (line) => line.line === 11
-          )
-        const lowCarbonPenaltyAmount =
-          response.data?.nonCompliancePenaltySummary.find(
-            (line) => line.line === 21
-          )
-
-        setHasMetRenewables(renewablePenaltyAmount.totalValue <= 0)
-        setHasMetLowCarbon(lowCarbonPenaltyAmount.totalValue <= 0)
       },
       onError: (error) => {
         alertRef.current?.triggerAlert({
@@ -79,15 +66,6 @@ const ComplianceReportSummary = ({
   useEffect(() => {
     if (data) {
       setSummaryData(data)
-      const renewablePenaltyAmount = data?.nonCompliancePenaltySummary.find(
-        (line) => line.line === 11
-      )
-      const lowCarbonPenaltyAmount = data?.nonCompliancePenaltySummary.find(
-        (line) => line.line === 21
-      )
-
-      setHasMetRenewables(renewablePenaltyAmount.totalValue <= 0)
-      setHasMetLowCarbon(lowCarbonPenaltyAmount.totalValue <= 0)
       setHasRecords(data && data.canSign)
     }
     if (isError) {
@@ -96,7 +74,7 @@ const ComplianceReportSummary = ({
         severity: 'error'
       })
     }
-  }, [alertRef, data, error, isError, setHasMetRenewables, setHasMetLowCarbon])
+  }, [alertRef, data, error, isError])
 
   useEffect(() => {
     if (snapshotData) {

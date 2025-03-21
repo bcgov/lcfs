@@ -953,7 +953,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid
+            report.compliance_report_group_uuid, False, report.compliance_report_id
         )
 
         # Initialize compliance units sum

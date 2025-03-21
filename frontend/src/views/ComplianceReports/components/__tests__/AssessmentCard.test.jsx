@@ -5,7 +5,7 @@ import { wrapper } from '@/tests/utils/wrapper'
 import { render, screen, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 import { AssessmentCard } from '../AssessmentCard'
-import { AssessmentStatement } from '../AssessmentStatement'
+import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 
 // Mock BCWidgetCard component
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
@@ -63,6 +63,7 @@ vi.mock('@/contexts/AuthContext', () => ({
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useComplianceReports')
 vi.mock('@/hooks/useCreateSupplementalReport')
+vi.mock('@/hooks/useOrganizationSnapshot')
 
 describe('AssessmentCard', () => {
   const mockHistory = [
@@ -94,6 +95,10 @@ describe('AssessmentCard', () => {
       isLoading: true,
       data: {}
     })
+    vi.mocked(useOrganizationSnapshot).mockReturnValue({
+      isLoading: true,
+      data: {}
+    })
     vi.mocked(
       useComplianceReportHook.useCreateSupplementalReport
     ).mockReturnValue({
@@ -117,8 +122,6 @@ describe('AssessmentCard', () => {
     render(
       <AssessmentCard
         orgData={mockOrgData}
-        hasMetRenewables={false}
-        hasMetLowCarbon={false}
         hasSupplemental={false}
         isGovernmentUser={false}
         currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
@@ -133,48 +136,6 @@ describe('AssessmentCard', () => {
     })
   })
 
-  it('renders assessment lines with correct organization name and status', async () => {
-    render(
-      <AssessmentCard
-        orgData={mockOrgData}
-        hasMetRenewables={true}
-        hasMetLowCarbon={true}
-        hasSupplemental={true}
-        isGovernmentUser={true}
-        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
-        complianceReportId="123"
-        alertRef={{ current: { triggerAlert: vi.fn() } }}
-        chain={[]}
-      />,
-      { wrapper }
-    )
-    await waitFor(() => {
-      const assessmentLines = screen.getAllByText('Test Org has met')
-      expect(assessmentLines).toHaveLength(2) // Ensure that both lines are present
-    })
-  })
-
-  it('renders not met assessment lines with correct organization name and status', async () => {
-    render(
-      <AssessmentCard
-        orgData={mockOrgData}
-        hasMetRenewables={false}
-        hasMetLowCarbon={false}
-        hasSupplemental={true}
-        isGovernmentUser={true}
-        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
-        complianceReportId="123"
-        alertRef={{ current: { triggerAlert: vi.fn() } }}
-        chain={[]}
-      />,
-      { wrapper }
-    )
-    await waitFor(() => {
-      const assessmentLines = screen.getAllByText('Test Org has not met')
-      expect(assessmentLines).toHaveLength(2) // Ensure that both lines are present
-    })
-  })
-
   it('renders report history when history is available', async () => {
     const mockChain = [
       {
@@ -183,6 +144,9 @@ describe('AssessmentCard', () => {
         compliancePeriod: {
           description: '2024'
         },
+        organization: {
+          name: 'Test Org'
+        },
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
       }
     ]
@@ -190,8 +154,6 @@ describe('AssessmentCard', () => {
     render(
       <AssessmentCard
         orgData={mockOrgData}
-        hasMetRenewables={false}
-        hasMetLowCarbon={false}
         hasSupplemental={false}
         isGovernmentUser={false}
         currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
@@ -231,6 +193,9 @@ describe('AssessmentCard', () => {
         compliancePeriod: {
           description: '2024'
         },
+        organization: {
+          name: 'Test Org'
+        },
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
       }
     ]
@@ -238,8 +203,6 @@ describe('AssessmentCard', () => {
     render(
       <AssessmentCard
         orgData={mockOrgData}
-        hasMetRenewables={false}
-        hasMetLowCarbon={false}
         hasSupplemental={false}
         isGovernmentUser={false}
         currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
@@ -270,14 +233,15 @@ describe('AssessmentCard', () => {
         compliancePeriod: {
           description: '2024'
         },
+        organization: {
+          name: 'Test Org'
+        },
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
       }
     ]
     render(
       <AssessmentCard
         orgData={mockOrgData}
-        hasMetRenewables={false}
-        hasMetLowCarbon={false}
         hasSupplemental={false}
         isGovernmentUser={false}
         currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
@@ -310,8 +274,6 @@ describe('AssessmentCard', () => {
     render(
       <AssessmentCard
         orgData={mockOrgData}
-        hasMetRenewables={false}
-        hasMetLowCarbon={false}
         hasSupplemental={false}
         isGovernmentUser={true}
         currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
