@@ -134,6 +134,7 @@
   "reportDetails": "Report details",
   "summaryAndDeclaration": "Summary & declaration",
   "summary": "Summary",
+  "compareMode": "Compare Mode",
   "addRenewableFuelRetention": "Add a renewable fuel retention or obligation deferral",
   "errorRetrieving": "Error retrieving the record",
   "renewableFuelTarget": "Renewable fuel target",

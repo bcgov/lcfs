@@ -216,7 +216,7 @@ export const buttonClusterConfigFn = ({
     return currentDate <= deadlineDate
   }
 
-  const buttons = {
+  return {
     [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
       reportButtons.submitReport,
       ...(supplementalInitiator ===
@@ -248,6 +248,4 @@ export const buttonClusterConfigFn = ({
         : [])
     ]
   }
-
-  return buttons
 }
