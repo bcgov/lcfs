@@ -63,7 +63,6 @@ class FuelExportRepository:
             joinedload(FuelExport.end_use_type),
         )
 
-
     @repo_handler
     async def get_fuel_export_table_options(self, compliance_period: str):
         """
@@ -135,6 +134,7 @@ class FuelExportRepository:
                     "fuel_code"
                 ),
                 FuelCode.carbon_intensity.label("fuel_code_carbon_intensity"),
+                FuelCode.effective_date.label("fuel_code_effective_date"),
             )
             .join(FuelInstance, FuelInstance.fuel_type_id == FuelType.fuel_type_id)
             .join(

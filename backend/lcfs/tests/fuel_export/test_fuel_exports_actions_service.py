@@ -460,8 +460,7 @@ async def test_compliance_units_calculation(
         group_uuid=str(uuid4()),
         version=0,
         provisionOfTheActId=123,
-        provisionOfTheAct={"provision_of_the_act_id": 123,
-                           "name": "Test Provision"},
+        provisionOfTheAct="Test Provision",
         exportDate=datetime.now().date(),
     )
 

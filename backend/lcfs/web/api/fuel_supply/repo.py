@@ -63,7 +63,6 @@ class FuelSupplyRepository:
             joinedload(FuelSupply.end_use_type),
         )
 
-
     @repo_handler
     async def get_fuel_supply_table_options(self, compliance_period: str):
         """
@@ -146,26 +145,32 @@ class FuelSupplyRepository:
                 DefaultCarbonIntensity,
                 and_(
                     DefaultCarbonIntensity.fuel_type_id == FuelType.fuel_type_id,
-                    DefaultCarbonIntensity.compliance_period_id == subquery_compliance_period_id
+                    DefaultCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
                 ),
             )
             .outerjoin(
                 CategoryCarbonIntensity,
                 and_(
-                    CategoryCarbonIntensity.fuel_category_id == FuelCategory.fuel_category_id,
-                    CategoryCarbonIntensity.compliance_period_id == subquery_compliance_period_id
+                    CategoryCarbonIntensity.fuel_category_id
+                    == FuelCategory.fuel_category_id,
+                    CategoryCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
                 ),
             )
             .outerjoin(
                 ProvisionOfTheAct,
-                or_(
-                    and_(
-                        FuelType.fossil_derived == True,
-                        ProvisionOfTheAct.provision_of_the_act_id == 1,
-                    ),
-                    and_(
-                        FuelType.fossil_derived == False,
-                        ProvisionOfTheAct.provision_of_the_act_id != 1,
+                and_(
+                    ProvisionOfTheAct.name != "Unknown",
+                    or_(
+                        and_(
+                            FuelType.fossil_derived == True,
+                            ProvisionOfTheAct.provision_of_the_act_id == 1,
+                        ),
+                        and_(
+                            FuelType.fossil_derived == False,
+                            ProvisionOfTheAct.provision_of_the_act_id != 1,
+                        ),
                     ),
                 ),
             )
