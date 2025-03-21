@@ -1,7 +1,7 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { DownloadButton } from '@/components/DownloadButton'
@@ -138,7 +138,7 @@ const FuelCodesBase = () => {
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer2
+        <BCGridViewer
           gridRef={ref}
           gridKey="fuel-codes-grid"
           columnDefs={fuelCodeColDefs(t)}

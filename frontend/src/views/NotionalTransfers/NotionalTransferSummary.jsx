@@ -7,7 +7,7 @@ import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schem
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const NotionalTransferSummary = ({ data, status }) => {
@@ -59,7 +59,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
         )}
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer2
+        <BCGridViewer
           gridKey="notional-transfers"
           getRowId={getRowId}
           columnDefs={notionalTransferSummaryColDefs}

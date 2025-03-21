@@ -8,7 +8,7 @@ import { useLocation, useParams } from 'react-router-dom'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { scheduleASummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const ScheduleASummary = ({ data, status }) => {
@@ -69,7 +69,7 @@ export const ScheduleASummary = ({ data, status }) => {
         )}
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer2
+        <BCGridViewer
           ref={ref}
           gridKey="notional-transfers"
           columnDefs={columns}

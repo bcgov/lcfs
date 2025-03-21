@@ -8,7 +8,7 @@ import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const FuelExportSummary = ({ data, status }) => {
@@ -80,7 +80,7 @@ export const FuelExportSummary = ({ data, status }) => {
         )}
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer2
+        <BCGridViewer
           gridKey="fuel-exports"
           gridRef={gridRef}
           queryData={queryData}

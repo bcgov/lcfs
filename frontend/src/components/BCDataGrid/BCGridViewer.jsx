@@ -15,7 +15,7 @@ import {
   useRef
 } from 'react'
 
-export const BCGridViewer2 = forwardRef(
+export const BCGridViewer = forwardRef(
   (
     {
       gridRef,
@@ -247,4 +247,4 @@ export const BCGridViewer2 = forwardRef(
   }
 )
 
-BCGridViewer2.displayName = 'BCGridViewer2'
+BCGridViewer.displayName = 'BCGridViewer2'

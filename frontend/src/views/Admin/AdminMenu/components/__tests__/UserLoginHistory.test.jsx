@@ -26,8 +26,8 @@ vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
 }))
 
 // Mock BCGridViewer component
-vi.mock('@/components/BCDataGrid/BCGridViewer2', () => ({
-  BCGridViewer2: (props) => {
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: () => {
     return <div data-test="bc-grid-viewer">BCGridViewer</div>
   }
 }))

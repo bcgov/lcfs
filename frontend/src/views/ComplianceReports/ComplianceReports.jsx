@@ -18,7 +18,7 @@ import { NewComplianceReportButton } from './components/NewComplianceReportButto
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const ComplianceReports = () => {
@@ -158,7 +158,7 @@ export const ComplianceReports = () => {
           }}
         />
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-          <BCGridViewer2
+          <BCGridViewer
             gridRef={gridRef}
             gridKey="compliance-reports-grid"
             columnDefs={reportsColDefs(t, hasRoles(roles.supplier))}

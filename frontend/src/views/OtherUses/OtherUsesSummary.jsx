@@ -7,7 +7,7 @@ import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema.jsx'
 import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const OtherUsesSummary = ({ data, status }) => {
@@ -61,7 +61,7 @@ export const OtherUsesSummary = ({ data, status }) => {
         )}
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer2
+        <BCGridViewer
           gridKey="other-uses"
           getRowId={getRowId}
           columnDefs={otherUsesSummaryColDefs}

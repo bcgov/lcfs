@@ -5,7 +5,7 @@ import { useCallback, useState } from 'react'
 import { userLoginHistoryColDefs } from '@/views/Admin/AdminMenu/components/_schema'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useGetUserLoginHistory } from '@/hooks/useUser'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const UserLoginHistory = () => {
@@ -43,7 +43,7 @@ export const UserLoginHistory = () => {
         <ClearFiltersButton onClick={handleClearFilters} />
       </BCBox>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer2
+        <BCGridViewer
           gridKey="user-login-history-grid"
           columnDefs={userLoginHistoryColDefs(t)}
           queryData={queryData}

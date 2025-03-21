@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { UserActivity } from '../UserActivity'
 import { wrapper } from '@/tests/utils/wrapper'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -28,8 +28,8 @@ vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
 }))
 
 // -- Mock BCGridViewer so we can inspect its props --
-vi.mock('@/components/BCDataGrid/BCGridViewer2', () => ({
-  BCGridViewer2: vi.fn(() => <div data-test="bc-grid-viewer">BCGridViewer</div>)
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: vi.fn(() => <div data-test="bc-grid-viewer">BCGridViewer</div>)
 }))
 
 vi.mock('@/hooks/useUser', () => ({
@@ -63,8 +63,8 @@ describe('UserActivity', () => {
     render(<UserActivity />, { wrapper })
 
     // BCGridViewer has been mocked, so we can inspect its calls
-    expect(BCGridViewer2).toHaveBeenCalledTimes(1)
-    const gridProps = BCGridViewer2.mock.calls[0][0]
+    expect(BCGridViewer).toHaveBeenCalledTimes(1)
+    const gridProps = BCGridViewer.mock.calls[0][0]
 
     // 1) gridKey
     expect(gridProps.gridKey).toBe('all-user-activities-grid')
@@ -102,7 +102,7 @@ describe('UserActivity', () => {
     render(<UserActivity />, { wrapper })
 
     // Extract the defaultColDef from BCGridViewer props
-    const gridProps = BCGridViewer2.mock.calls[0][0]
+    const gridProps = BCGridViewer.mock.calls[0][0]
     const { url } = gridProps.defaultColDef.cellRendererParams
 
     // Test different transaction types
@@ -129,7 +129,7 @@ describe('UserActivity', () => {
     render(<UserActivity />, { wrapper })
 
     // BCGridViewer props
-    const gridProps = BCGridViewer2.mock.calls[0][0]
+    const gridProps = BCGridViewer.mock.calls[0][0]
     // Because data is mocked to []
     expect(gridProps.overlayNoRowsTemplate).toBe('admin:activitiesNotFound')
   })

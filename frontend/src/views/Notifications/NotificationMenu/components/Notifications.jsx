@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
 
 import BCButton from '@/components/BCButton'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { columnDefs, routesMapping } from './_schema'
 import {
@@ -237,7 +237,7 @@ export const Notifications = () => {
         </BCButton>
         <ClearFiltersButton onClick={handleClearFilters} />
       </Stack>
-      <BCGridViewer2
+      <BCGridViewer
         gridKey="notifications-grid"
         gridRef={gridRef}
         alertRef={alertRef}

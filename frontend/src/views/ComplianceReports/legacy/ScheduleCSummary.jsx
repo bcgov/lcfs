@@ -7,7 +7,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import Grid2 from '@mui/material/Unstable_Grid2'
 import { scheduleCSummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 import { useGetOtherUses } from '@/hooks/useOtherUses.js'
 
@@ -68,7 +68,7 @@ export const ScheduleCSummary = ({ data, status }) => {
         )}
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer2
+        <BCGridViewer
           gridKey="other-uses"
           getRowId={getRowId}
           columnDefs={columns}
