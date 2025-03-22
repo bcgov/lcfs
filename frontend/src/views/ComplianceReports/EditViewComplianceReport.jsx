@@ -43,8 +43,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
 
-  const [hasMetRenewables, setHasMetRenewables] = useState(false)
-  const [hasMetLowCarbon, setHasMetLowCarbon] = useState(false)
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
   const alertRef = useRef()
@@ -274,8 +272,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               orgData={orgData}
               history={reportData?.report.history}
               isGovernmentUser={isGovernmentUser}
-              hasMetRenewables={hasMetRenewables}
-              hasMetLowCarbon={hasMetLowCarbon}
               currentStatus={currentStatus}
               complianceReportId={complianceReportId}
               alertRef={alertRef}
@@ -299,8 +295,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                 setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
                 buttonClusterConfig={buttonClusterConfig}
                 methods={methods}
-                setHasMetRenewables={setHasMetRenewables}
-                setHasMetLowCarbon={setHasMetLowCarbon}
                 alertRef={alertRef}
               />
             </>

@@ -27,8 +27,6 @@ import { useNavigate } from 'react-router-dom'
 
 export const AssessmentCard = ({
   orgData,
-  hasMetRenewables,
-  hasMetLowCarbon,
   hasSupplemental,
   isGovernmentUser,
   currentStatus,
@@ -144,54 +142,6 @@ export const AssessmentCard = ({
                 setIsEditing={setIsEditing}
               />
             )}
-            {(isGovernmentUser ||
-              hasSupplemental ||
-              currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED) && (
-              <>
-                <BCTypography
-                  sx={{ paddingTop: '16px' }}
-                  variant="h6"
-                  color="primary"
-                >
-                  {t('report:renewableFuelTarget')}
-                </BCTypography>
-                <List sx={{ padding: 0 }}>
-                  <StyledListItem>
-                    <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
-                      <span
-                        dangerouslySetInnerHTML={{
-                          __html: t('report:assessmentLn1', {
-                            name: orgData.name,
-                            hasMet: hasMetRenewables ? 'has met' : 'has not met'
-                          })
-                        }}
-                      />
-                    </ListItemText>
-                  </StyledListItem>
-                </List>
-                <BCTypography
-                  sx={{ paddingTop: '16px' }}
-                  variant="h6"
-                  color="primary"
-                >
-                  {t('report:lowCarbonFuelTargetSummary')}
-                </BCTypography>
-                <List sx={{ padding: 0 }}>
-                  <StyledListItem>
-                    <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
-                      <span
-                        dangerouslySetInnerHTML={{
-                          __html: t('report:assessmentLn2', {
-                            name: orgData.name,
-                            hasMet: hasMetLowCarbon ? 'has met' : 'has not met'
-                          })
-                        }}
-                      />
-                    </ListItemText>
-                  </StyledListItem>
-                </List>
-              </>
-            )}{' '}
             {((!isGovernmentUser &&
               ['Assessed', 'Reassessed', 'Rejected'].includes(
                 reportData.report.currentStatus?.status
