@@ -34,7 +34,7 @@ export const UserActivity = () => {
               })
             case 'AdminAdjustment':
               return buildPath(ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW, {
-                adminAdjustmentId: transactionId
+                transactionId: transactionId
               })
             case 'InitiativeAgreement':
               return buildPath(ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW, {
