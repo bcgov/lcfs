@@ -15,7 +15,7 @@ import {
   statusOptions
 } from './_schema'
 import { useApiService } from '@/services/useApiService'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { BCFormRadio, BCFormText } from '@/components/BCForm'
 import colors from '@/themes/base/colors'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -195,16 +195,16 @@ export const AddEditUser = ({ userType }) => {
     onSuccess: () => {
       // on success navigate somewhere
       if (hasRoles(roles.supplier)) {
-        navigate(ROUTES.ORGANIZATION)
+        navigate(ROUTES.ORGANIZATION.ORG)
       } else if (orgID) {
-        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
+        navigate(buildPath(ROUTES.ORGANIZATIONS.VIEW, { orgID }), {
           state: {
             message: 'User has been successfully saved.',
             severity: 'success'
           }
         })
       } else {
-        navigate(ROUTES.ADMIN_USERS, {
+        navigate(ROUTES.ADMIN.USERS.LIST, {
           state: {
             message: 'User has been successfully saved.',
             severity: 'success'
@@ -303,11 +303,11 @@ export const AddEditUser = ({ userType }) => {
                   }
                   onClick={() =>
                     hasRoles(roles.supplier)
-                      ? navigate(ROUTES.ORGANIZATION)
+                      ? navigate(ROUTES.ORGANIZATION.ORG)
                       : navigate(
                           userType === 'idir'
-                            ? ROUTES.ADMIN_USERS
-                            : ROUTES.ORGANIZATIONS
+                            ? ROUTES.ADMIN.USERS.LIST
+                            : ROUTES.ORGANIZATIONS.LIST
                         )
                   }
                 >

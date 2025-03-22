@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { Outlet, useMatches, useNavigate } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { Container } from '@mui/material'
 import Grid from '@mui/material/Unstable_Grid2'
 import BCTypography from '@/components/BCTypography'
@@ -29,13 +29,13 @@ export const MainLayout = () => {
 
   useEffect(() => {
     // If "forbidden" is set, go to unauthorized page (unless we're already there)
-    if (forbidden && window.location.pathname !== ROUTES.UNAUTHORIZED) {
-      navigate(ROUTES.UNAUTHORIZED)
+    if (forbidden && window.location.pathname !== ROUTES.AUTH.UNAUTHORIZED) {
+      navigate(ROUTES.AUTH.UNAUTHORIZED)
     }
   }, [forbidden, navigate])
 
   return (
-    <RequireAuth redirectTo={ROUTES.LOGIN}>
+    <RequireAuth redirectTo={ROUTES.AUTH.LOGIN}>
       <BCBox display="flex" flexDirection="column" minHeight="100vh">
         <BCTypography variant="h1" className="visually-hidden">
           {pageTitle}

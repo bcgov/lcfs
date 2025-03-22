@@ -27,7 +27,7 @@ import { schemaValidation } from './_schema'
 import BCAlert from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { AddressAutocomplete } from '@/components/BCForm/index.js'
@@ -200,7 +200,7 @@ export const AddEditOrgForm = () => {
       await apiService.post('/organizations/create', userData),
     onSuccess: () => {
       // Redirect to Organization route on success
-      navigate(ROUTES.ORGANIZATIONS, {
+      navigate(ROUTES.ORGANIZATIONS.LIST, {
         state: {
           message: 'Organization has been successfully added.',
           severity: 'success'
@@ -221,7 +221,7 @@ export const AddEditOrgForm = () => {
     mutationFn: async (payload) =>
       await apiService.put(`/organizations/${orgID}`, payload),
     onSuccess: () => {
-      navigate(ROUTES.ORGANIZATIONS, {
+      navigate(ROUTES.ORGANIZATIONS.LIST, {
         state: {
           message: 'Organization has been successfully updated.',
           severity: 'success'
@@ -884,7 +884,7 @@ export const AddEditOrgForm = () => {
                       className="small-icon"
                     />
                   }
-                  onClick={() => navigate(ROUTES.ORGANIZATIONS)}
+                  onClick={() => navigate(ROUTES.ORGANIZATIONS.LIST)}
                 >
                   <BCTypography variant="subtitle2" textTransform="none">
                     {t('backBtn')}
