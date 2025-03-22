@@ -1,6 +1,6 @@
 import { dateFormatter } from '@/utils/formatters'
 import { actions } from '@/components/BCDataGrid/columns'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { BCDateFloatingFilter } from '@/components/BCDataGrid/components'
 
 export const columnDefs = (t, currentUser) => [
@@ -61,12 +61,12 @@ export const defaultColDef = {
 }
 
 export const routesMapping = (currentUser) => ({
-  Transfer: ROUTES.TRANSFERS_VIEW,
+  Transfer: ROUTES.TRANSFERS.VIEW,
   AdminAdjustment: currentUser.isGovernmentUser
-    ? ROUTES.ADMIN_ADJUSTMENT_VIEW
-    : ROUTES.ORG_ADMIN_ADJUSTMENT_VIEW,
+    ? ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW
+    : ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.ORG_VIEW,
   InitiativeAgreement: currentUser.isGovernmentUser
-    ? ROUTES.INITIATIVE_AGREEMENT_VIEW
-    : ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
-  ComplianceReport: ROUTES.REPORTS_VIEW
+    ? ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW
+    : ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.ORG_VIEW,
+  ComplianceReport: ROUTES.REPORTS.VIEW
 })

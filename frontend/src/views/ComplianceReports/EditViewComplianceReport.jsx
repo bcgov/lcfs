@@ -7,7 +7,7 @@ import InternalComments from '@/components/InternalComments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { govRoles, roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useDeleteComplianceReport,
@@ -118,7 +118,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       onSuccess: (response) => {
         setModalData(null)
         const updatedStatus = JSON.parse(response.config.data)?.status
-        navigate(ROUTES.REPORTS, {
+        navigate(ROUTES.REPORTS.LIST, {
           state: {
             message: t('report:savedSuccessText', {
               status: updatedStatus.toLowerCase().replace('return', 'returned')
@@ -143,7 +143,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     {
       onSuccess: () => {
         setModalData(null)
-        navigate(ROUTES.REPORTS, {
+        navigate(ROUTES.REPORTS.LIST, {
           state: {
             message: t('report:supplementalReportDeleted'),
             severity: 'success'

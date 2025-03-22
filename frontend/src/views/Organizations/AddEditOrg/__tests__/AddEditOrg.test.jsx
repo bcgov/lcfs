@@ -5,7 +5,7 @@ import { useForm, FormProvider } from 'react-hook-form'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useNavigate, useParams } from 'react-router-dom'
 import { wrapper } from '@/tests/utils/wrapper'
 import { yupResolver } from '@hookform/resolvers/yup'
@@ -208,7 +208,7 @@ describe('AddEditOrg', () => {
       )
     })
 
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS, {
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST, {
       state: {
         message: 'Organization has been successfully added.',
         severity: 'success'

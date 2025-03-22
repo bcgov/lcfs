@@ -7,7 +7,7 @@ import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import withRole from '@/utils/withRole'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgComplianceReportCounts } from '@/hooks/useDashboard'
 import { FILTER_KEYS } from '@/constants/common'
@@ -98,12 +98,12 @@ const OrgComplianceReportsCard = () => {
                   {renderLinkWithCount(
                     t('dashboard:orgComplianceReports.inProgress'),
                     inProgressCount,
-                    () => handleNavigation(ROUTES.REPORTS, COMPLIANCE_REPORT_STATUSES.DRAFT)
+                    () => handleNavigation(ROUTES.REPORTS.LIST, COMPLIANCE_REPORT_STATUSES.DRAFT)
                   )}
                   {renderLinkWithCount(
                     t('dashboard:orgComplianceReports.awaitingGovReview'),
                     awaitingGovReviewCount,
-                    () => handleNavigation(ROUTES.REPORTS, COMPLIANCE_REPORT_STATUSES.SUBMITTED)
+                    () => handleNavigation(ROUTES.REPORTS.LIST, COMPLIANCE_REPORT_STATUSES.SUBMITTED)
                   )}
                 </List>
               </>

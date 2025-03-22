@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -57,10 +57,10 @@ export const ComplianceReports = () => {
         setIsButtonLoading(false)
         setAlertSeverity('success')
         navigate(
-          ROUTES.REPORTS_VIEW.replace(
-            ':compliancePeriod',
-            response.data.compliancePeriod.description
-          ).replace(':complianceReportId', response.data.complianceReportId),
+          buildPath(ROUTES.REPORTS.VIEW, {
+            compliancePeriod: response.data.compliancePeriod.description,
+            complianceReportId: response.data.complianceReportId
+          }),
           { state: { data: response.data, newReport: true } }
         )
         alertRef.current.triggerAlert()

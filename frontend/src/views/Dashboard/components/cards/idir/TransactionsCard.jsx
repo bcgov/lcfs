@@ -7,7 +7,7 @@ import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import withRole from '@/utils/withRole'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useTransactionCounts } from '@/hooks/useDashboard'
 import { TRANSACTION_STATUSES, TRANSFER_STATUSES } from '@/constants/statuses'
 
@@ -89,7 +89,7 @@ const TransactionsCard = () => {
         sessionStorage.removeItem(itemKey)
       }
 
-      navigate(ROUTES.TRANSACTIONS)
+      navigate(ROUTES.TRANSACTIONS.LIST)
     },
     [navigate, createFilter]
   )

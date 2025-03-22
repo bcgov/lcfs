@@ -1,8 +1,5 @@
 import BCBox from '@/components/BCBox'
-import {
-  NOTIFICATIONS,
-  NOTIFICATIONS_SETTINGS
-} from '@/constants/routes/routes'
+import { ROUTES } from '@/routes/routes'
 import breakpoints from '@/themes/base/breakpoints'
 import { NotificationTabPanel } from './components/NotificationTabPanel'
 import { AppBar, Tab, Tabs } from '@mui/material'
@@ -23,7 +20,7 @@ export function NotificationMenu({ tabIndex }) {
   const { t } = useTranslation(['notifications'])
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
   const navigate = useNavigate()
-  const paths = useMemo(() => [NOTIFICATIONS, NOTIFICATIONS_SETTINGS], [])
+  const paths = useMemo(() => [ROUTES.NOTIFICATIONS.LIST, ROUTES.NOTIFICATIONS.SETTINGS], [])
 
   useEffect(() => {
     // A function that sets the orientation state of the tabs.

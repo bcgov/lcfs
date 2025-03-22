@@ -4,7 +4,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import BCTypography from '@/components/BCTypography'
 import SupplierBalance from './SupplierBalance' // Adjust the import path as necessary
 import { NavLink } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 
 export const HeaderComponent = () => {
   const { t } = useTranslation()
@@ -15,7 +15,7 @@ export const HeaderComponent = () => {
       <>
         <BCTypography
           component={NavLink}
-          to={!data?.isGovernmentUser && ROUTES.ORGANIZATION}
+          to={!data?.isGovernmentUser && ROUTES.ORGANIZATION.ORG}
           className="organization_name"
           variant="body1"
           align="right"

@@ -2,7 +2,7 @@ import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
 import { FILTER_KEYS } from '@/constants/common'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 import { useFuelCodeCounts } from '@/hooks/useDashboard'
 import { List, ListItemButton, Stack } from '@mui/material'
@@ -38,7 +38,7 @@ export const FuelCodeCard = () => {
         }
       })
     )
-    navigate(ROUTES.FUELCODES)
+    navigate(ROUTES.FUEL_CODES.LIST)
   }
 
   const renderLinkWithCount = (text, count, onClick) => {

@@ -17,7 +17,7 @@ import {
 } from '@mui/material'
 import NotificationsIcon from '@mui/icons-material/Notifications'
 import { NavLink, useLocation } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import LogoutIcon from '@mui/icons-material/Logout'
 
 export const UserProfileActions = () => {
@@ -74,13 +74,15 @@ export const UserProfileActions = () => {
           <>
             <BCTypography
               component={NavLink}
-              to={(currentUser?.isGovernmentUser
-                ? ROUTES.ADMIN_USERS_VIEW
-                : ROUTES.ORGANIZATION_VIEWUSER.replace(
-                    ':orgID',
-                    currentUser?.organization?.organizationId
-                  )
-              ).replace(':userID', currentUser?.userProfileId)}
+              to={buildPath(
+                currentUser?.isGovernmentUser
+                  ? ROUTES.ADMIN.USERS.VIEW
+                  : ROUTES.ORGANIZATION.VIEW_USER,
+                {
+                  orgID: currentUser?.organization?.organizationId,
+                  userID: currentUser?.userProfileId
+                }
+              )}
               style={{
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -116,7 +118,7 @@ export const UserProfileActions = () => {
               <DefaultNavbarLink
                 icon={iconBtn}
                 name={''}
-                route={ROUTES.NOTIFICATIONS}
+                route={ROUTES.NOTIFICATIONS.LIST}
                 light={false}
                 isMobileView={false}
                 sx={{

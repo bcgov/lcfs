@@ -13,7 +13,7 @@ import BCTypography from '@/components/BCTypography'
 
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
 import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary'
@@ -109,10 +109,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         name: t('report:activityLists.supplyOfFuel'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetFuelSupplies,
         component: (data) =>
@@ -131,10 +131,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         name: t('finalSupplyEquipment:fseTitle'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetFinalSupplyEquipments,
         component: (data) =>
@@ -146,10 +146,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         name: t('report:activityLists.allocationAgreements'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetAllocationAgreements,
         component: (data) =>
@@ -171,10 +171,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         name: t('report:activityLists.notionalTransfers'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetAllNotionalTransfers,
         component: (data) =>
@@ -193,10 +193,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         name: t('otherUses:summaryTitle'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.OTHER_USE_FUELS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetAllOtherUses,
         component: (data) =>
@@ -215,10 +215,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         name: t('fuelExport:fuelExportTitle'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.FUEL_EXPORTS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetFuelExports,
         component: (data) =>

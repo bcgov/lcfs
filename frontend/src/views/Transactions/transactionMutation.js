@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { TRANSACTION_STATUSES } from '@/constants/statuses'
-import { TRANSACTIONS } from '@/constants/routes/routes'
 import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
@@ -21,12 +20,12 @@ export const useTransactionMutation = (
   const getTransactionRoutes = (transactionType, id) => {
     const typeRoutes = {
       [ADMIN_ADJUSTMENT]: {
-        editRoute: ROUTES.ADMIN_ADJUSTMENT_EDIT,
-        viewRoute: ROUTES.ADMIN_ADJUSTMENT_VIEW
+        editRoute: ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.EDIT,
+        viewRoute: ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW
       },
       [INITIATIVE_AGREEMENT]: {
-        editRoute: ROUTES.INITIATIVE_AGREEMENT_EDIT,
-        viewRoute: ROUTES.INITIATIVE_AGREEMENT_VIEW
+        editRoute: ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.EDIT,
+        viewRoute: ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW
       }
     }
 
@@ -78,28 +77,38 @@ export const useTransactionMutation = (
     if (status === TRANSACTION_STATUSES.DRAFT && !isReturned) {
       navigate(editRoute, navigateState)
     } else if (status === TRANSACTION_STATUSES.DRAFT && isReturned) {
-      navigate(TRANSACTIONS + `/?hid=${idPrefix}${txnId}`, {
-        state: {
-          message: t(`${transactionType}:actionMsgs.successText`, {
-            status: 'returned'
-          }),
-          severity: 'success'
+      navigate(
+        buildPath(ROUTES.TRANSACTIONS.LIST_HIGHLIGHTED, {
+          hid: `${idPrefix}${txnId}`
+        }),
+        {
+          state: {
+            message: t(`${transactionType}:actionMsgs.successText`, {
+              status: 'returned'
+            }),
+            severity: 'success'
+          }
         }
-      })
+      )
     } else if (
       status === TRANSACTION_STATUSES.RECOMMENDED ||
       status === TRANSACTION_STATUSES.APPROVED
     ) {
-      navigate(TRANSACTIONS + `/?hid=${idPrefix}${txnId}`, {
-        state: {
-          message: t(`${transactionType}:actionMsgs.successText`, {
-            status: response.data.currentStatus.status.toLowerCase()
-          }),
-          severity: 'success'
+      navigate(
+        buildPath(ROUTES.TRANSACTIONS.LIST_HIGHLIGHTED, {
+          hid: `${idPrefix}${txnId}`
+        }),
+        {
+          state: {
+            message: t(`${transactionType}:actionMsgs.successText`, {
+              status: response.data.currentStatus.status.toLowerCase()
+            }),
+            severity: 'success'
+          }
         }
-      })
+      )
     } else if (status === TRANSACTION_STATUSES.DELETED) {
-      navigate(TRANSACTIONS, {})
+      navigate(ROUTES.TRANSACTIONS.LIST, {})
     } else {
       setAlertMessage(
         t(`${transactionType}:actionMsgs.successText`, { status: 'saved' })

@@ -1,4 +1,4 @@
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useNavigate } from 'react-router-dom'
 import withRole from '@/utils/withRole'
@@ -58,7 +58,7 @@ const OrgDetailsCard = () => {
               >
                 <ListItemButton
                   component="a"
-                  onClick={() => navigate(ROUTES.ORGANIZATION)}
+                  onClick={() => navigate(ROUTES.ORGANIZATION.ORG)}
                   sx={{ padding: '4px 0' }}
                 >
                   <BCTypography
