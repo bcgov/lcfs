@@ -4,7 +4,8 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { DownloadButton } from '@/components/DownloadButton'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import { apiRoutes, ROUTES } from '@/constants/routes'
+import { apiRoutes } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useApiService } from '@/services/useApiService'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -106,24 +107,24 @@ export const Transactions = () => {
           // Define routes mapping for transaction types
           const routesMapping = {
             Transfer: {
-              view: ROUTES.TRANSFERS_VIEW,
-              edit: ROUTES.TRANSFERS_EDIT
+              view: ROUTES.TRANSFERS.VIEW,
+              edit: ROUTES.TRANSFERS.EDIT
             },
             AdminAdjustment: {
               view: currentUser.isGovernmentUser
-                ? ROUTES.ADMIN_ADJUSTMENT_VIEW
-                : ROUTES.ORG_ADMIN_ADJUSTMENT_VIEW,
-              edit: ROUTES.ADMIN_ADJUSTMENT_EDIT
+                ? ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW
+                : ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.ORG_VIEW,
+              edit: ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.EDIT
             },
             InitiativeAgreement: {
               view: currentUser.isGovernmentUser
-                ? ROUTES.INITIATIVE_AGREEMENT_VIEW
-                : ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
-              edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
+                ? ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW
+                : ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.ORG_VIEW,
+              edit: ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.EDIT
             },
             ComplianceReport: {
-              view: ROUTES.REPORTS_VIEW,
-              edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
+              view: ROUTES.REPORTS.VIEW,
+              edit: ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.EDIT
             }
           }
 
@@ -229,7 +230,7 @@ export const Transactions = () => {
                       size="2x"
                     />
                   }
-                  onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
+                  onClick={() => navigate(ROUTES.TRANSFERS.ADD)}
                 >
                   <BCTypography variant="subtitle2">
                     {t('txn:newTransferBtn')}
@@ -250,7 +251,7 @@ export const Transactions = () => {
                     size="2x"
                   />
                 }
-                onClick={() => navigate(ROUTES.TRANSACTIONS_ADD)}
+                onClick={() => navigate(ROUTES.TRANSACTIONS.ADD)}
               >
                 <BCTypography variant="subtitle2">
                   {t('txn:newTransactionBtn')}

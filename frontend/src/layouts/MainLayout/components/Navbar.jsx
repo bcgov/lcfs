@@ -1,6 +1,6 @@
 import BCNavbar from '@/components/BCNavbar'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -24,28 +24,28 @@ export const Navbar = () => {
     )
     const idirRoutes = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
-      { name: t('Organizations'), route: ROUTES.ORGANIZATIONS },
-      { name: t('Transactions'), route: ROUTES.TRANSACTIONS },
-      { name: t('ComplianceReporting'), route: ROUTES.REPORTS },
+      { name: t('Organizations'), route: ROUTES.ORGANIZATIONS.LIST },
+      { name: t('Transactions'), route: ROUTES.TRANSACTIONS.LIST },
+      { name: t('ComplianceReporting'), route: ROUTES.REPORTS.LIST },
       {
         name: t('FuelCodes'),
-        route: ROUTES.FUELCODES
+        route: ROUTES.FUEL_CODES.LIST
       },
-      { name: t('Administration'), route: ROUTES.ADMIN, hide: !isAdmin }
+      { name: t('Administration'), route: ROUTES.ADMIN.MAIN, hide: !isAdmin }
     ]
     const bceidRoutes = [
       { name: t('Dashboard'), route: ROUTES.DASHBOARD },
-      { name: t('Transactions'), route: ROUTES.TRANSACTIONS },
+      { name: t('Transactions'), route: ROUTES.TRANSACTIONS.LIST },
       {
         name: t('ComplianceReporting'),
-        route: ROUTES.REPORTS,
+        route: ROUTES.REPORTS.LIST,
         hide: !canSeeComplianceReports
       },
-      { name: t('Organization'), route: ROUTES.ORGANIZATION }
+      { name: t('Organization'), route: ROUTES.ORGANIZATION.ORG }
     ]
     const mobileRoutes = [
-      { name: t('Notifications'), route: ROUTES.NOTIFICATIONS },
-      { name: t('logout'), route: ROUTES.LOG_OUT }
+      { name: t('Notifications'), route: ROUTES.NOTIFICATIONS.LIST },
+      { name: t('logout'), route: ROUTES.AUTH.LOG_OUT }
     ]
 
     const activeRoutes = currentUser?.isGovernmentUser

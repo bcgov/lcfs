@@ -285,12 +285,15 @@ class TransactionRepository:
                             else_=0,
                         )
                     )
-                    - func.sum(
+                    + func.sum(
                         case(
                             (
-                                Transaction.transaction_action
-                                == TransactionActionEnum.Reserved,
-                                func.abs(Transaction.compliance_units),
+                                and_(
+                                    Transaction.transaction_action
+                                    == TransactionActionEnum.Reserved,
+                                    Transaction.compliance_units < 0,
+                                ),
+                                Transaction.compliance_units,
                             ),
                             else_=0,
                         )
@@ -298,6 +301,7 @@ class TransactionRepository:
                 ).label("available_balance")
             ).where(Transaction.organization_id == organization_id)
         )
+        print("BALANCE: ", available_balance)
         return available_balance or 0
 
     @repo_handler

@@ -19,9 +19,19 @@ const SELECTORS = {
   saveButton: '[data-test="save-btn"]',
   renewableSummaryTable:
     '[data-test="renewable-summary"] > .MuiTable-root > .MuiTableBody-root',
-  submitReportButton: 'button:contains("Submit report")',
+  submitReportButton: 'button[data-test="submit-report-btn"]',
+  recommendToCompianceManagerButton:
+    'button[data-test="recommend-report-analyst-btn"]',
+  recommendToDirectorButton: 'button[data-test="recommend-report-manager-btn"]',
+  issueAssessmentButton: 'button[data-test="assess-report-btn"]',
+  createSupplementalReport: 'button[data-test="create-supplemental"]',
   submitModalButton: '#modal-btn-submit-report',
+  submitModalComplianceManagerButton:
+    'button#modal-btn-recommend-to-compliance-manager',
+  submitModalDirectorButton: '#modal-btn-recommend-to-director',
+  submitModalIssueAssessmentButton: '#modal-btn-issue-assessment',
   declarationCheckbox: '#signing-authority-declaration',
+  checkbox: 'span[data-test="signing-authority-checkbox"]',
   addRowButton: '[data-test="add-row-btn"]'
 }
 
@@ -111,6 +121,15 @@ Given('the user is on the login page', () => {
   cy.getByDataTest('login-container').should('exist')
 })
 
+Given('the user is on the login page, while retaining previous data', () => {
+  cy.clearAllCookies()
+  cy.clearAllLocalStorage()
+  cy.clearAllSessionStorage()
+
+  cy.visit('/')
+  cy.getByDataTest('login-container').should('exist')
+})
+
 When('the supplier logs in with valid credentials', () => {
   cy.loginWith(
     'becid',
@@ -123,6 +142,7 @@ When('the supplier logs in with valid credentials', () => {
 
 When('they navigate to the compliance reports page', () => {
   cy.waitAndClick('a[href="/compliance-reporting"]')
+  cy.wait(5000)
 })
 
 When('the supplier creates a new compliance report', () => {
@@ -265,7 +285,7 @@ function enterFuelSupplyData(data) {
     if (row.endUseType && row.endUseType !== 'Any') {
       cy.get('div.ag-cell[col-id="endUseType"]').eq(index).click()
       cy.get(`[data-testid="select-${row.endUseType}"]`).click()
-      cy.wait(300)
+      cy.wait(1000)
     }
 
     // Set provision of the act using the retry command
@@ -727,11 +747,11 @@ Then('it should round the amount to 25', () => {
 })
 
 When('the supplier accepts the agreement', () => {
-  cy.waitAndClick(SELECTORS.declarationCheckbox)
+  cy.waitAndClick(SELECTORS.checkbox)
 })
 
 When('the supplier submits the report', () => {
-  cy.contains(SELECTORS.submitReportButton).click()
+  cy.waitAndClick(SELECTORS.submitReportButton)
   cy.waitAndClick(SELECTORS.submitModalButton)
   cy.wait(1000)
 })
@@ -747,3 +767,117 @@ Then('they see the previously submitted report', () => {
     .should('be.visible')
     .and('have.text', currentComplianceYear)
 })
+
+Then('they click the report to view it', () => {
+  cy.get('.ag-column-first > a > .MuiBox-root').click()
+  cy.wait(2000)
+})
+
+Then('the report is shown with the fuel supply data entered', () => {
+  cy.get('[data-test="compliance-report-header"]').should('be.visible')
+
+  cy.contains('Supply of fuel').should('be.visible')
+
+  cy.get(
+    `[data-test="fuel-supply-summary"] .ag-center-cols-container .ag-row:first-child() .ag-cell[col-id="quantity"] span`
+  )
+    .should('be.visible')
+    .and('have.text', '100,000')
+  cy.get(
+    `[data-test="fuel-supply-summary"] .ag-center-cols-container .ag-row:nth-child(2) .ag-cell[col-id="quantity"] span`
+  )
+    .should('be.visible')
+    .and('have.text', '200,000')
+})
+
+When('the analyst recommends to the compliance manager', () => {
+  cy.waitAndClick(SELECTORS.recommendToCompianceManagerButton)
+  cy.waitAndClick(SELECTORS.submitModalComplianceManagerButton)
+  cy.wait(1000)
+})
+
+When('the compliance manager logs in with valid credentials', () => {
+  cy.loginWith(
+    'idir',
+    Cypress.env('ADMIN_IDIR_USERNAME'),
+    Cypress.env('ADMIN_IDIR_PASSWORD')
+  )
+  cy.wait(5000)
+  cy.setIDIRRoles('compliance manager')
+  cy.visit('/')
+  cy.get(SELECTORS.dashboard).should('exist')
+})
+
+When('the compliance manager recommends to the director', () => {
+  cy.waitAndClick(SELECTORS.recommendToDirectorButton)
+  cy.waitAndClick(SELECTORS.submitModalDirectorButton)
+  cy.wait(1000)
+})
+
+Then('the recommended by analyst banner shows success', () => {
+  cy.contains(
+    'div',
+    'Compliance report successfully recommended by analyst'
+  ).should('be.visible')
+})
+Then('the recommended by compliance manager banner shows success', () => {
+  cy.contains(
+    'div',
+    'Compliance report successfully recommended by manager'
+  ).should('be.visible')
+})
+Then('the assessed by director banner shows success', () => {
+  cy.contains('div', 'Compliance report successfully assessed').should(
+    'be.visible'
+  )
+})
+
+When('the director approves the report', () => {
+  cy.waitAndClick(SELECTORS.issueAssessmentButton)
+  cy.waitAndClick(SELECTORS.submitModalIssueAssessmentButton)
+  cy.wait(1000)
+})
+
+When('they create a supplemental report', () => {
+  cy.waitAndClick(SELECTORS.createSupplementalReport)
+  cy.wait(3000)
+})
+
+When('the supplier edits the fuel supply data', () => {
+  cy.waitAndClick(SELECTORS.supplyOfFuelButton)
+  cy.wait(2000)
+
+  cy.get(SELECTORS.agGridRoot).should('be.visible')
+  cy.wait(500)
+
+  cy.get('div.ag-cell[col-id="quantity"]').first().click()
+  cy.wait(500)
+  cy.get('div.ag-cell[col-id="quantity"]')
+    .first()
+    .find('input')
+    .clear()
+    .type('20000{enter}')
+
+  cy.contains('Row updated successfully.').should('be.visible')
+
+  cy.waitAndClick(SELECTORS.saveButton)
+  cy.wait(1000)
+})
+
+Then(
+  'the report is shown with the supplemental fuel supply data entered',
+  () => {
+    cy.get('[data-test="compliance-report-header"]').should('be.visible')
+
+    cy.get(
+      `[data-test="fuel-supply-summary"] .ag-center-cols-container .ag-row:first-child() .ag-cell[col-id="quantity"] span`
+    )
+      .should('be.visible')
+      .and('have.text', '20,000')
+    cy.get(
+      `[data-test="fuel-supply-summary"] .ag-center-cols-container .ag-row:nth-child(2) .ag-cell[col-id="quantity"] span`
+    )
+      .should('be.visible')
+      .and('have.text', '200,000')
+  }
+)

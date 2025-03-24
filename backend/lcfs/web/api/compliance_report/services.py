@@ -159,9 +159,11 @@ class ComplianceReportServices:
         # Add the new supplemental report
         new_report = await self.repo.create_compliance_report(new_report)
 
-        # Snapshot the Organization Details
+        # Snapshot the organization details from the previous report
         await self.snapshot_services.create_organization_snapshot(
-            new_report.compliance_report_id, current_report.organization_id
+            new_report.compliance_report_id,
+            current_report.organization_id,
+            current_report.compliance_report_id,
         )
 
         # Create the history record for the new supplemental report

@@ -6,8 +6,8 @@ import BCTypography from '@/components/BCTypography'
 import InternalComments from '@/components/InternalComments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import { govRoles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { govRoles, roles } from '@/constants/roles'
+import { ROUTES } from '@/routes/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useDeleteComplianceReport,
@@ -42,10 +42,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
-  const [internalComment, setInternalComment] = useState('')
 
-  const [hasMetRenewables, setHasMetRenewables] = useState(false)
-  const [hasMetLowCarbon, setHasMetLowCarbon] = useState(false)
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
   const alertRef = useRef()
@@ -68,9 +65,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       })
     }
   }
-  const handleCommentChange = useCallback((newComment) => {
-    setInternalComment(newComment)
-  }, [])
   const handleScroll = useCallback(() => {
     const scrollTop = window.scrollY || document.documentElement.scrollTop
     const scrollPosition = window.scrollY + window.innerHeight
@@ -90,7 +84,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
-  // hooks
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
@@ -103,13 +96,29 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report.organizationId
   )
+
+  const editAnalyst = useMemo(() => {
+    return (
+      hasRoles(roles.analyst) &&
+      currentStatus === COMPLIANCE_REPORT_STATUSES.REASSESSED
+    )
+  }, [hasRoles, currentStatus])
+
+  const editSupplier = useMemo(() => {
+    return (
+      hasRoles(roles.supplier) &&
+      currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
+    )
+  }, [hasRoles, currentStatus])
+  const canEdit = editAnalyst || editSupplier
+
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
     {
       onSuccess: (response) => {
         setModalData(null)
         const updatedStatus = JSON.parse(response.config.data)?.status
-        navigate(ROUTES.REPORTS, {
+        navigate(ROUTES.REPORTS.LIST, {
           state: {
             message: t('report:savedSuccessText', {
               status: updatedStatus.toLowerCase().replace('return', 'returned')
@@ -134,7 +143,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     {
       onSuccess: () => {
         setModalData(null)
-        navigate(ROUTES.REPORTS, {
+        navigate(ROUTES.REPORTS.LIST, {
           state: {
             message: t('report:supplementalReportDeleted'),
             severity: 'success'
@@ -263,8 +272,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               orgData={orgData}
               history={reportData?.report.history}
               isGovernmentUser={isGovernmentUser}
-              hasMetRenewables={hasMetRenewables}
-              hasMetLowCarbon={hasMetLowCarbon}
               currentStatus={currentStatus}
               complianceReportId={complianceReportId}
               alertRef={alertRef}
@@ -275,18 +282,19 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
           {!location.state?.newReport && (
             <>
               <ReportDetails
+                canEdit={canEdit}
                 currentStatus={currentStatus}
                 userRoles={userRoles}
               />
               <ComplianceReportSummary
+                enableCompareMode={reportData.chain.length > 0}
+                canEdit={canEdit}
                 reportID={complianceReportId}
                 currentStatus={currentStatus}
                 compliancePeriodYear={compliancePeriod}
                 setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
                 buttonClusterConfig={buttonClusterConfig}
                 methods={methods}
-                setHasMetRenewables={setHasMetRenewables}
-                setHasMetLowCarbon={setHasMetLowCarbon}
                 alertRef={alertRef}
               />
             </>
@@ -309,7 +317,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                   <InternalComments
                     entityType={'complianceReport'}
                     entityId={parseInt(complianceReportId)}
-                    onCommentChange={handleCommentChange}
                   />
                 </Role>
               </BCBox>

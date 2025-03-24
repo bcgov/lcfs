@@ -10,7 +10,7 @@ import {
   ADMIN_ADJUSTMENT,
   INITIATIVE_AGREEMENT
 } from '@/views/Transactions/constants'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 
 let navigate
 
@@ -93,9 +93,11 @@ describe('useTransactionMutation', () => {
 
     fireEvent.click(screen.getByText('Test'))
 
-    const expectedPath = ROUTES.INITIATIVE_AGREEMENT_EDIT.replace(
-      ':transactionId',
-      '123'
+    const expectedPath = buildPath(
+      ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.EDIT,
+      {
+        transactionId: '123'
+      }
     )
     expect(navigate).toHaveBeenCalledWith(expectedPath, {
       state: {

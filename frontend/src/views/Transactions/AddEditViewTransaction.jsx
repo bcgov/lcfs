@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { govRoles, roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useAdminAdjustment,
@@ -447,7 +447,7 @@ export const AddEditViewTransaction = () => {
             variant="outlined"
             color="primary"
             style={{ gap: 8 }}
-            onClick={() => navigate(ROUTES.TRANSACTIONS)}
+            onClick={() => navigate(ROUTES.TRANSACTIONS.LIST)}
           >
             <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
             <BCTypography variant="body4" sx={{ textTransform: 'capitalize' }}>
