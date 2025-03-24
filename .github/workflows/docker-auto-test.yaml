@@ -224,7 +224,7 @@ jobs:
               }
             ]
           }
-  EOF
+          EOF
 
           curl -H "Content-Type: application/json" -d @teams_card.json "${{ secrets.TEAMS_WEBHOOK_URL }}"
 
