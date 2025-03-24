@@ -3,7 +3,7 @@ import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useCallback, useMemo, useState, useRef } from 'react'
 import { userActivityColDefs } from '@/views/Admin/AdminMenu/components/_schema'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useGetUserActivities } from '@/hooks/useUser'
@@ -29,17 +29,17 @@ export const UserActivity = () => {
           const { transactionType, transactionId } = data.data
           switch (transactionType) {
             case 'Transfer':
-              return ROUTES.TRANSFERS_VIEW.replace(':transferId', transactionId)
+              return buildPath(ROUTES.TRANSFERS.VIEW, {
+                transferId: transactionId
+              })
             case 'AdminAdjustment':
-              return ROUTES.ADMIN_ADJUSTMENT_VIEW.replace(
-                ':transactionId',
-                transactionId
-              )
+              return buildPath(ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW, {
+                transactionId: transactionId
+              })
             case 'InitiativeAgreement':
-              return ROUTES.INITIATIVE_AGREEMENT_VIEW.replace(
-                ':transactionId',
+              return buildPath(ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW, {
                 transactionId
-              )
+              })
           }
         }
       }
@@ -63,9 +63,7 @@ export const UserActivity = () => {
         {t('admin:UserActivity')}
       </BCTypography>
       <BCBox mb={2}>
-        <ClearFiltersButton 
-          onClick={handleClearFilters}
-        />
+        <ClearFiltersButton onClick={handleClearFilters} />
       </BCBox>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer

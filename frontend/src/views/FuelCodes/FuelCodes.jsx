@@ -7,7 +7,7 @@ import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { DownloadButton } from '@/components/DownloadButton'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useGetFuelCodes } from '@/hooks/useFuelCode'
 import { useApiService } from '@/services/useApiService'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
@@ -76,7 +76,7 @@ const FuelCodesBase = () => {
     setIsDownloadingFuelCodes(true)
     setAlertMessage('')
     try {
-      await apiService.download(ROUTES.FUELCODES + '/export')
+      await apiService.download(ROUTES.FUEL_CODES.EXPORT)
       setIsDownloadingFuelCodes(false)
     } catch (error) {
       console.error('Error downloading fuel code information:', error)
@@ -120,7 +120,7 @@ const FuelCodesBase = () => {
               <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
             }
             data-test="new-fuel-code-btn"
-            onClick={() => navigate(ROUTES.FUELCODES_ADD)}
+            onClick={() => navigate(ROUTES.FUEL_CODES.ADD)}
           >
             <BCTypography variant="subtitle2">
               {t('fuelCode:newFuelCodeBtn')}
