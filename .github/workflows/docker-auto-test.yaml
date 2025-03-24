@@ -154,13 +154,8 @@ jobs:
       - name: Determine Test Status
         id: test_status
         run: |
-          # if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.frontend-tests.result, 'failure') }}" == "true" ]]; then
-            echo "status=failure" >> $GITHUB_OUTPUT
-            echo "theme_color=FF0000" >> $GITHUB_OUTPUT
-          # else
-          #   echo "status=success" >> $GITHUB_OUTPUT
-          #   echo "theme_color=00FF00" >> $GITHUB_OUTPUT
-          # fi
+          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "theme_color=FF0000" >> $GITHUB_OUTPUT
 
       - name: Send custom Teams notification
         run: |
@@ -174,8 +169,7 @@ jobs:
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          # MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
-          MESSAGE="**Test Results**\n"
+          MESSAGE="**Test Results**\n- echo '❌ Failed'"
 
           COLOR="${{ steps.test_status.outputs.theme_color }}"
 
