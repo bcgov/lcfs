@@ -76,7 +76,10 @@ class AllocationAgreementRepository:
 
     @repo_handler
     async def get_allocation_agreements(
-        self, compliance_report_id: int, exclude_draft_reports: bool = False
+        self,
+        compliance_report_id: int,
+        exclude_draft_reports: bool = False,
+        changelog: bool = False
     ) -> List[AllocationAgreementSchema]:
         """
         Queries allocation agreements from the database for a specific compliance report.
@@ -92,11 +95,15 @@ class AllocationAgreementRepository:
             return []
 
         return await self.get_effective_allocation_agreements(
-            group_uuid, exclude_draft_reports
+            group_uuid, exclude_draft_reports, changelog, compliance_report_id
         )
 
     async def get_effective_allocation_agreements(
-        self, compliance_report_group_uuid: str, exclude_draft_reports: bool = False
+        self,
+        compliance_report_group_uuid: str,
+        exclude_draft_reports: bool = False,
+        changelog: bool = False,
+        compliance_report_id: Optional[int] = None
     ) -> List[AllocationAgreementSchema]:
         """
         Queries allocation agreements from the database for a specific compliance report.
@@ -106,6 +113,12 @@ class AllocationAgreementRepository:
             ComplianceReport.compliance_report_group_uuid
             == compliance_report_group_uuid
         )
+
+        if compliance_report_id is not None:
+            compliance_reports_select = compliance_reports_select.where(
+                ComplianceReport.compliance_report_id <= compliance_report_id
+            )
+
         if exclude_draft_reports:
             compliance_reports_select = compliance_reports_select.where(
                 ComplianceReport.current_status.has(
@@ -131,17 +144,25 @@ class AllocationAgreementRepository:
             else_=0,
         )
 
+        # Base conditions that always apply
+        conditions = [
+            AllocationAgreement.compliance_report_id.in_(compliance_reports_select)
+        ]
+
+        # Only apply DELETE filters when changelog is False
+        if not changelog:
+            conditions.extend([
+                AllocationAgreement.action_type != ActionTypeEnum.DELETE,
+                ~AllocationAgreement.group_uuid.in_(delete_group_select),
+            ])
+
         valid_agreements_select = (
             select(
                 AllocationAgreement.group_uuid,
                 func.max(AllocationAgreement.version).label("max_version"),
                 func.max(user_type_priority).label("max_role_priority"),
             )
-            .where(
-                AllocationAgreement.compliance_report_id.in_(compliance_reports_select),
-                AllocationAgreement.action_type != ActionTypeEnum.DELETE,
-                ~AllocationAgreement.group_uuid.in_(delete_group_select),
-            )
+            .where(*conditions)
             .group_by(AllocationAgreement.group_uuid)
         )
         valid_agreements_subq = valid_agreements_select.subquery()
@@ -167,7 +188,6 @@ class AllocationAgreementRepository:
             )
             .order_by(AllocationAgreement.allocation_agreement_id)
         )
-
         result = await self.db.execute(allocation_agreements_select)
         allocation_agreements = result.unique().scalars().all()
 

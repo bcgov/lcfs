@@ -124,14 +124,17 @@ class AllocationAgreementServices:
 
     @service_handler
     async def get_allocation_agreements(
-        self, compliance_report_id: int, user: UserProfile
+        self,
+        compliance_report_id: int,
+        user: UserProfile,
+        changelog: bool = False
     ) -> AllocationAgreementListSchema:
         """
         Gets the list of allocation agreements for a specific compliance report.
         """
         is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         allocation_agreements = await self.repo.get_allocation_agreements(
-            compliance_report_id, exclude_draft_reports=is_gov_user
+            compliance_report_id, exclude_draft_reports=is_gov_user, changelog=changelog
         )
 
         return AllocationAgreementAllSchema(
@@ -314,7 +317,7 @@ class AllocationAgreementServices:
     @service_handler
     async def create_allocation_agreement(
         self,
-        allocation_agreement_data: AllocationAgreementCreateSchema, 
+        allocation_agreement_data: AllocationAgreementCreateSchema,
         user_type: UserTypeEnum,
         existing_record: Optional[AllocationAgreement] = None,
     ) -> AllocationAgreementSchema:

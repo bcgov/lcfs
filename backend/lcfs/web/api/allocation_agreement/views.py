@@ -90,7 +90,8 @@ async def get_allocation_agreements(
         )
         return await service.get_allocation_agreements(
             request_data.compliance_report_id,
-            request.user
+            request.user,
+            request_data.changelog
         )
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message

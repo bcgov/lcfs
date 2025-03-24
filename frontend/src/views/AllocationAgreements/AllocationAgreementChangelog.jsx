@@ -86,7 +86,7 @@ export const AllocationAgreementChangelog = () => {
       <Box mb={4}>
         <BCDataGridServer
           className={'ag-theme-material'}
-          apiEndpoint={apiRoutes.getAllocationAgreements}
+          apiEndpoint={apiRoutes.getAllAllocationAgreements}
           apiData={'allocationAgreements'}
           apiParams={{ complianceReportId }}
           columnDefs={changelogCommonColDefs}
@@ -116,7 +116,7 @@ export const AllocationAgreementChangelog = () => {
       <Box>
         <BCDataGridServer
           className={'ag-theme-material'}
-          apiEndpoint={apiRoutes.getAllocationAgreements}
+          apiEndpoint={apiRoutes.getAllAllocationAgreements}
           apiData={'allocationAgreements'}
           apiParams={{ complianceReportId: latestAssessedReportId }}
           columnDefs={changelogCommonColDefs}
