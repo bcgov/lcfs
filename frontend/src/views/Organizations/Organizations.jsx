@@ -7,7 +7,8 @@ import { Stack } from '@mui/material'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { organizationsColDefs } from './ViewOrganization/_schema'
-import { apiRoutes, ROUTES } from '@/constants/routes'
+import { apiRoutes } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -141,7 +142,7 @@ export const Organizations = () => {
             startIcon={
               <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
             }
-            onClick={() => navigate(ROUTES.ORGANIZATIONS_ADD)}
+            onClick={() => navigate(ROUTES.ORGANIZATIONS.ADD)}
           >
             <BCTypography variant="subtitle2">
               {t('org:newOrgBtn')}

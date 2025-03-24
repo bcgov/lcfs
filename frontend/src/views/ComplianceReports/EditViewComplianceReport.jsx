@@ -7,7 +7,7 @@ import InternalComments from '@/components/InternalComments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { govRoles, roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useDeleteComplianceReport,
@@ -43,8 +43,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
 
-  const [hasMetRenewables, setHasMetRenewables] = useState(false)
-  const [hasMetLowCarbon, setHasMetLowCarbon] = useState(false)
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
   const alertRef = useRef()
@@ -120,7 +118,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       onSuccess: (response) => {
         setModalData(null)
         const updatedStatus = JSON.parse(response.config.data)?.status
-        navigate(ROUTES.REPORTS, {
+        navigate(ROUTES.REPORTS.LIST, {
           state: {
             message: t('report:savedSuccessText', {
               status: updatedStatus.toLowerCase().replace('return', 'returned')
@@ -145,7 +143,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     {
       onSuccess: () => {
         setModalData(null)
-        navigate(ROUTES.REPORTS, {
+        navigate(ROUTES.REPORTS.LIST, {
           state: {
             message: t('report:supplementalReportDeleted'),
             severity: 'success'
@@ -274,8 +272,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               orgData={orgData}
               history={reportData?.report.history}
               isGovernmentUser={isGovernmentUser}
-              hasMetRenewables={hasMetRenewables}
-              hasMetLowCarbon={hasMetLowCarbon}
               currentStatus={currentStatus}
               complianceReportId={complianceReportId}
               alertRef={alertRef}
@@ -299,8 +295,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                 setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
                 buttonClusterConfig={buttonClusterConfig}
                 methods={methods}
-                setHasMetRenewables={setHasMetRenewables}
-                setHasMetLowCarbon={setHasMetLowCarbon}
                 alertRef={alertRef}
               />
             </>
