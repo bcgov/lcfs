@@ -169,7 +169,7 @@ jobs:
           REPO="${{ github.repository }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
           PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-          COMMIT_SHA="${{ github.event.head_commit.message }}"
+          COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
           AVATAR_URL="${{ github.event.pull_request.user.avatar_url }}"
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
