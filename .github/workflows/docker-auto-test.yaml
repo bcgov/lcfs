@@ -168,7 +168,8 @@ jobs:
           PR_URL="${{ github.event.pull_request.html_url }}"
           REPO="${{ github.repository }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
-          COMMIT_SHA="${{ github.sha }}"
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          COMMIT_SHA="${{ github.event.head_commit.message }}"
           AVATAR_URL="${{ github.event.pull_request.user.avatar_url }}"
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
@@ -185,16 +186,16 @@ jobs:
             "summary": "GitHub Notification for PR #$PR_NUMBER",
             "sections": [
               {
-                "activityTitle": "GitHub Notification for PR #$PR_NUMBER",
-                "activitySubtitle": "Repository: $REPO",
+                "activityTitle": "#PR_TITLE #$PR_NUMBER",
+                "activitySubtitle": "Repository: $REPO, Author: $PR_AUTHOR",
                 "activityImage": "$AVATAR_URL",
                 "facts": [
                   { "name": "Repository", "value": "$REPO" },
                   { "name": "PR Title", "value": "$PR_TITLE" },
                   { "name": "Branch", "value": "${{ github.head_ref }}" },
                   { "name": "Commit", "value": "$COMMIT_SHA" },
-                  { "name": "Backend Tests", "value": "${{ needs.backend-tests.result }}" },
-                  { "name": "Frontend Tests", "value": "${{ needs.frontend-tests.result }}" }
+                  { "name": "User", "value": "prashanth.venkateshappa@gov.bc.ca" }
+                  { "name": "User Email", "value": "**@prv-proton (prashanth.venkateshappa@gov.bc.ca)**" }
                 ],
                 "text": "$MESSAGE",
                 "markdown": true
@@ -227,5 +228,3 @@ jobs:
           EOF
 
           curl -H "Content-Type: application/json" -d @teams_card.json "${{ secrets.TEAMS_WEBHOOK_URL }}"
-
-          
