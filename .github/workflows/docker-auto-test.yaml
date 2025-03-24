@@ -48,8 +48,8 @@ jobs:
                   { "name": "PR Title", "value": "$PR_TITLE" },
                   { "name": "Branch", "value": "${{ github.head_ref }}" },
                   { "name": "Commit", "value": "$COMMIT_SHA" },
-                  { "name": "User", "value": "prashanth.venkateshappa@gov.bc.ca" }
-                  { "name": "User Email", "value": "**@prv-proton (prashanth.venkateshappa@gov.bc.ca)**" }
+                  { "name": "User", "value": "prashanth.venkateshappa@gov.bc.ca" },
+                  { "name": "User Email", "value": "**@prv-proton (prashanth.venkateshappa@gov.bc.ca)**" },
                 ],
                 "text": "$MESSAGE",
                 "markdown": true
