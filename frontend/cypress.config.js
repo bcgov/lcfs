@@ -4,6 +4,10 @@ import { addCucumberPreprocessorPlugin } from '@badeball/cypress-cucumber-prepro
 import { createEsbuildPlugin } from '@badeball/cypress-cucumber-preprocessor/esbuild'
 import pg from 'pg'
 const { Client } = pg
+const pool = {
+  u: 'lcfs',
+  p: 'development_only'
+}
 
 export default defineConfig({
   e2e: {
@@ -58,10 +62,10 @@ export default defineConfig({
         clearComplianceReports() {
           return new Promise((resolve, reject) => {
             const client = new Client({
-              user: process.env.DB_CYPRESS_USER,
+              user: process.env.DB_CYPRESS_USER || pool.u,
               host: process.env.DB_CYPRESS_HOST || 'localhost',
               database: process.env.DB_CYPRESS_NAME || 'lcfs',
-              password: process.env.DB_CYPRESS_PASSWORD,
+              password: process.env.DB_CYPRESS_PASSWORD || pool.p,
               port: parseInt(process.env.DB_PORT || '5432')
             })
 
