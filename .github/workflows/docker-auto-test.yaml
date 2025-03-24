@@ -40,7 +40,7 @@ jobs:
             "summary": "GitHub Notification for PR #$PR_NUMBER",
             "sections": [
               {
-                "activityTitle": "#PR_TITLE #$PR_NUMBER",
+                "activityTitle": "$PR_TITLE - #$PR_NUMBER",
                 "activitySubtitle": "Repository: $REPO, Author: $PR_AUTHOR",
                 "activityImage": "$AVATAR_URL",
                 "facts": [
