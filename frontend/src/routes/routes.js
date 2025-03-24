@@ -73,18 +73,6 @@ export const ROUTES = {
         '/compliance-reporting/:compliancePeriod/:complianceReportId/fuels-other-use',
       FUEL_EXPORTS:
         '/compliance-reporting/:compliancePeriod/:complianceReportId/fuel-exports'
-    },
-    CHANGELOG: {
-      SUPPLY_OF_FUEL:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/supply-of-fuel/changelog',
-      NOTIONAL_TRANSFERS:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/notional-transfers/changelog',
-      OTHER_USE_FUELS:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/fuels-other-use/changelog',
-      FUEL_EXPORTS:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/fuel-exports/changelog',
-      ALLOCATION_AGREEMENTS:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/allocation-agreements/changelog'
     }
   },
 

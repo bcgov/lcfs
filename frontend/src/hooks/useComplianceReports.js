@@ -124,18 +124,28 @@ export const useUpdateComplianceReport = (reportID, options) => {
 export const useDeleteComplianceReport = (orgID, reportID, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
-  const path = apiRoutes.deleteSupplementalReport.replace(':orgID', orgID).replace(':reportID', reportID)
+  const path = apiRoutes.deleteSupplementalReport
+    .replace(':orgID', orgID)
+    .replace(':reportID', reportID)
+  const queriesToInvalidate = [
+    ['compliance-reports'],
+    ['allocation-agreements', reportID],
+    ['final-supply-equipments', reportID],
+    ['fuel-exports', reportID],
+    ['fuel-supplies', reportID],
+    ['other-uses', reportID]
+  ]
   return useMutation({
-    ...options,
     mutationFn: async () => {
       return await client.delete(path)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['compliance-reports'])
-      if (options && options.onSuccess) {
-        options.onSuccess()
-      }
-    }
+      queriesToInvalidate.forEach((query) =>
+        queryClient.invalidateQueries(query)
+      )
+      options.onSuccess?.()
+    },
+    ...options
   })
 }
 
