@@ -279,6 +279,7 @@ class FuelExportRepository:
         # Retrieve effective fuel exports using the group UUID
         effective_fuel_exports = await self.get_effective_fuel_exports(
             compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
             exclude_draft_reports=exclude_draft_reports,
         )
 
@@ -389,6 +390,7 @@ class FuelExportRepository:
         self,
         compliance_report_group_uuid: str,
         changelog: Optional[bool] = False,
+        compliance_report_id: Optional[int] = None,
         exclude_draft_reports: bool = False,
     ) -> List[FuelExport]:
         """
@@ -400,6 +402,12 @@ class FuelExportRepository:
             ComplianceReport.compliance_report_group_uuid
             == compliance_report_group_uuid
         )
+
+        if compliance_report_id is not None:
+            compliance_reports_select = compliance_reports_select.where(
+                ComplianceReport.compliance_report_id <= compliance_report_id
+            )
+
         if exclude_draft_reports:
             compliance_reports_select = compliance_reports_select.where(
                 ComplianceReport.current_status.has(

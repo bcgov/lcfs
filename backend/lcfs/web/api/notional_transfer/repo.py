@@ -73,6 +73,7 @@ class NotionalTransferRepository:
         compliance_report_group_uuid: str,
         exclude_draft_reports: bool = False,
         changelog: bool = False,
+        compliance_report_id: Optional[int] = None,
     ) -> List[NotionalTransferSchema]:
         """
         Retrieves effective notional transfers for a compliance report group UUID.
@@ -82,6 +83,12 @@ class NotionalTransferRepository:
             ComplianceReport.compliance_report_group_uuid
             == compliance_report_group_uuid
         )
+
+        if compliance_report_id is not None:
+            compliance_reports_select = compliance_reports_select.where(
+                ComplianceReport.compliance_report_id <= compliance_report_id
+            )
+
         if exclude_draft_reports:
             compliance_reports_select = compliance_reports_select.where(
                 ComplianceReport.current_status.has(
@@ -185,6 +192,8 @@ class NotionalTransferRepository:
         notional_transfers = await self.get_effective_notional_transfers(
             compliance_report_group_uuid=group_uuid,
             exclude_draft_reports=exclude_draft_reports,
+            changelog=False,
+            compliance_report_id=compliance_report_id,
         )
 
         # Manually apply pagination

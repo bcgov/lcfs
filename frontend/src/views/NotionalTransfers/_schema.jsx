@@ -287,7 +287,7 @@ export const changelogDefaultColDefs = {
 }
 
 export const changelogCommonGridOptions = {
-  overlayNoRowsTemplate: i18n.t('notionalTransfer:noOtherUsesFound'),
+  overlayNoRowsTemplate: i18n.t('notionalTransfer:noNotionalTransfersFound'),
   autoSizeStrategy: {
     type: 'fitCellContents',
     defaultMinWidth: 50,

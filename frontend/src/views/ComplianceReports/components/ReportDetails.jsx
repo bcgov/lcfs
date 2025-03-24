@@ -89,7 +89,7 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
     }
     return (
       (isGovernmentRole || isSupplierRole) &&
-      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED &&
+      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED || complianceReportData?.report?.version > 0 &&
       [
         t('report:activityLists.supplyOfFuel'),
         t('report:activityLists.notionalTransfers'),
@@ -301,9 +301,12 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
       </BCTypography>
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(complianceReportId)
+        const isSupplemental = complianceReportData?.report?.version > 0;
+        const hasChangelogOption = activity.changelogRoute && shouldShowChangelogButton(activity.name);
+        const shouldShowWhenEmpty = isSupplemental && hasChangelogOption;
         return (
-          data &&
-          !isArrayEmpty(data) && (
+          (data &&
+          !isArrayEmpty(data) || shouldShowWhenEmpty) && (
             <Accordion
               key={index}
               expanded={expanded.includes(`panel${index}`)}

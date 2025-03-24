@@ -144,6 +144,7 @@ class OtherUsesRepository:
         compliance_report_group_uuid: str,
         return_model: bool = False,
         exclude_draft_reports: bool = False,
+        compliance_report_id: Optional[int] = None,
         changelog: bool = False,
     ) -> List[OtherUsesSchema]:
         """
@@ -155,6 +156,12 @@ class OtherUsesRepository:
             ComplianceReport.compliance_report_group_uuid
             == compliance_report_group_uuid
         )
+
+        if compliance_report_id is not None:
+            compliance_reports_select = compliance_reports_select.where(
+                ComplianceReport.compliance_report_id <= compliance_report_id
+            )
+
         if exclude_draft_reports:
             compliance_reports_select = compliance_reports_select.where(
                 ComplianceReport.current_status.has(
@@ -269,6 +276,7 @@ class OtherUsesRepository:
         # Retrieve effective fuel supplies using the group UUID
         other_uses = await self.get_effective_other_uses(
             compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
             exclude_draft_reports=exclude_draft_reports,
         )
 

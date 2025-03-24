@@ -114,11 +114,11 @@ export const AddEditAllocationAgreements = () => {
       ) {
         const updatedRowData = data.allocationAgreements.map((item) => ({
           ...item,
-          complianceReportId, // This takes current reportId, important for versioning
+          complianceReportId,
           compliancePeriod,
           isNewSupplementalEntry:
               isSupplemental && item.complianceReportId === +complianceReportId,
-          id: item.id || uuid() // Ensure every item has a unique ID
+          id: item.id || uuid()
         }))
         setRowData([...updatedRowData, { id: uuid() }])
       } else {
@@ -152,21 +152,20 @@ export const AddEditAllocationAgreements = () => {
 
   useEffect(() => {
     if (!allocationAgreementsLoading && data?.allocationAgreements?.length > 0) {
-      const ensureRowIds = (rows) =>
-        rows.map((row) => ({
-          ...row,
-          id: uuid(),
-          isValid: true,
-          isNewSupplementalEntry: isSupplemental && row.complianceReportId === +complianceReportId,
-        actionType: isSupplemental ?
-          (row.complianceReportId === +complianceReportId ? 'CREATE' : 'EXISTING') :
-          undefined
-      }))
-      setRowData(ensureRowIds(data.allocationAgreements))
+      const updatedRowData = data.allocationAgreements.map((item) => ({
+        ...item,
+        complianceReportId,
+        compliancePeriod,
+        isNewSupplementalEntry: isSupplemental &&
+          item.complianceReportId === +complianceReportId,
+        id: uuid()
+      }));
+
+      setRowData(updatedRowData);
     } else {
-      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
+      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }]);
     }
-  }, [data, allocationAgreementsLoading, isSupplemental, complianceReportId, compliancePeriod])
+  }, [data, allocationAgreementsLoading, isSupplemental, complianceReportId, compliancePeriod]);
 
   const onCellValueChanged = useCallback(
     async (params) => {
@@ -343,12 +342,15 @@ export const AddEditAllocationAgreements = () => {
         params,
         'allocationAgreementId',
         saveRow,
-        alertRef,
-        setRowData,
-        { id: uuid() }
-      )
-    }
+      alertRef,
+      setRowData,
+      {
+        complianceReportId,
+        compliancePeriod
+      }
+    );
   }
+};
 
   const handleNavigateBack = useCallback(() => {
     navigate(
