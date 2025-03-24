@@ -78,6 +78,8 @@ jobs:
           CYPRESS_ORG1_BCEID_PASSWORD: ${{ secrets.ORG1_BCEID_PASSWORD }}
           CYPRESS_ORG2_BCEID_USERNAME: ${{ secrets.ORG2_BCEID_USERNAME }}
           CYPRESS_ORG2_BCEID_PASSWORD: ${{ secrets.ORG2_BCEID_PASSWORD }}
+          DB_CYPRESS_USER: ${{ secrets.DB_CYPRESS_USER }}
+          DB_CYPRESS_PASSWORD: ${{ secrets.DB_CYPRESS_PASSWORD }}
 
       # Print backend logs if something goes wrong
       - name: Print backend logs
@@ -102,23 +104,35 @@ jobs:
       - name: Determine Cypress Test Status
         id: test_status
         run: |
-          if [[ "${{ needs.cypress.result }}" == "failure" ]]; then
+          if [[ "${{ needs.cypress.result }}" == "cancelled" ]]; then
+            echo "status=cancelled" >> $GITHUB_OUTPUT
+            echo "theme_color=808080" >> $GITHUB_OUTPUT  # Gray
+          elif [[ "${{ needs.cypress.result }}" == "failure" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
-            echo "theme_color=FF0000" >> $GITHUB_OUTPUT
+            echo "theme_color=FF0000" >> $GITHUB_OUTPUT  # Red
           else
             echo "status=success" >> $GITHUB_OUTPUT
-            echo "theme_color=00FF00" >> $GITHUB_OUTPUT
+            echo "theme_color=00FF00" >> $GITHUB_OUTPUT  # Green
           fi
 
       - name: Send Teams notification
         run: |
           REPO="${{ github.repository }}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          STATUS="${{ steps.test_status.outputs.status }}"
           COLOR="${{ steps.test_status.outputs.theme_color }}"
           TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
 
-          MESSAGE="**Cypress Daily Test Run**\n- **Status:** $([[ '$STATUS' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')\n- **Time:** $TIMESTAMP"
+          STATUS="${{ steps.test_status.outputs.status }}"
+          if [[ "$STATUS" == "failure" ]]; then
+            STATUS_EMOJI="❌ Failed"
+          elif [[ "$STATUS" == "cancelled" ]]; then
+            STATUS_EMOJI="⚠️ Cancelled"
+          else
+            STATUS_EMOJI="✅ Passed"
+          fi
+
+          MESSAGE="**Cypress Daily Test Run**\n- **Status:** $STATUS_EMOJI\n- **Time:** $TIMESTAMP"
+
 
           cat <<EOF > teams_card.json
           {
