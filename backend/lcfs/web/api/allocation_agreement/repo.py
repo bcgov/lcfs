@@ -69,7 +69,7 @@ class AllocationAgreementRepository:
 
     @repo_handler
     async def get_allocation_agreements(
-        self, compliance_report_id: int
+        self, compliance_report_id: int, changelog: bool = False
     ) -> List[AllocationAgreementSchema]:
         """
         Queries allocation agreements from the database for a specific compliance report.
@@ -85,13 +85,16 @@ class AllocationAgreementRepository:
             return []
 
         return await self.get_effective_allocation_agreements(
-            group_uuid, compliance_report_id
+            compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
+            changelog=changelog
         )
 
     async def get_effective_allocation_agreements(
         self,
         compliance_report_group_uuid: str,
         compliance_report_id: int,
+        changelog: bool = False,
     ) -> List[AllocationAgreementSchema]:
         """
         Queries allocation agreements from the database for a specific compliance report.
@@ -105,27 +108,40 @@ class AllocationAgreementRepository:
             )
         )
 
-        delete_group_select = (
-            select(AllocationAgreement.group_uuid)
-            .where(
-                AllocationAgreement.compliance_report_id.in_(compliance_reports_select),
-                AllocationAgreement.action_type == ActionTypeEnum.DELETE,
+        if compliance_report_id is not None:
+            compliance_reports_select = compliance_reports_select.where(
+                ComplianceReport.compliance_report_id <= compliance_report_id
             )
-            .distinct()
-        )
 
-        valid_agreements_select = (
-            select(
-                AllocationAgreement.group_uuid,
-                func.max(AllocationAgreement.version).label("max_version"),
+        conditions = [
+            AllocationAgreement.compliance_report_id.in_(compliance_reports_select)
+        ]
+
+        # Different query paths based on changelog parameter
+        if not changelog:
+            # Regular behavior - exclude deleted records
+            delete_group_select = (
+                select(AllocationAgreement.group_uuid)
+                .where(
+                    AllocationAgreement.compliance_report_id.in_(compliance_reports_select),
+                    AllocationAgreement.action_type == ActionTypeEnum.DELETE,
+                )
+                .distinct()
             )
-            .where(
-                AllocationAgreement.compliance_report_id.in_(compliance_reports_select),
+
+            conditions.extend([
                 AllocationAgreement.action_type != ActionTypeEnum.DELETE,
                 ~AllocationAgreement.group_uuid.in_(delete_group_select),
+            ])
+        valid_agreements_select = (
+                select(
+                    AllocationAgreement.group_uuid,
+                    func.max(AllocationAgreement.version).label("max_version"),
+                )
+                .where(*conditions)
+                .group_by(AllocationAgreement.group_uuid)
             )
-            .group_by(AllocationAgreement.group_uuid)
-        )
+
         valid_agreements_subq = valid_agreements_select.subquery()
 
         # Step 4: Get the effective records
@@ -148,7 +164,6 @@ class AllocationAgreementRepository:
             )
             .order_by(AllocationAgreement.allocation_agreement_id)
         )
-
         result = await self.db.execute(allocation_agreements_select)
         allocation_agreements = result.unique().scalars().all()
 

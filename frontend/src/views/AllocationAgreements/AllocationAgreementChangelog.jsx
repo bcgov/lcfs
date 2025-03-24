@@ -57,23 +57,6 @@ export const AllocationAgreementChangelog = ({ canEdit }) => {
       </BCTypography>
       <Box mb={4}>
         <BCDataGridServer
-          className='ag-theme-material'
-          apiEndpoint={apiRoutes.getAllocationAgreements}
-          apiData='allocationAgreements'
-          apiParams={{ complianceReportId }}
-          columnDefs={changelogCommonColDefs}
-          gridOptions={changelogCommonGridOptions}
-          enableCopyButton={false}
-          defaultColDef={changelogDefaultColDefs}
-        />
-      </Box>
-      <BCTypography variant="h6" color="primary" component="div" mb={2}>
-        {latestAssessedReport
-          ? latestAssessedReport.nickname
-          : 'Default Report'}
-      </BCTypography>
-      <Box mb={4}>
-        <BCDataGridServer
           className={'ag-theme-material'}
           apiEndpoint={apiEndpoint}
           apiData="changelog"

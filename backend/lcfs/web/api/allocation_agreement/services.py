@@ -123,13 +123,13 @@ class AllocationAgreementServices:
 
     @service_handler
     async def get_allocation_agreements(
-        self, compliance_report_id: int
+        self, compliance_report_id: int, changelog: bool = False
     ) -> AllocationAgreementListSchema:
         """
         Gets the list of allocation agreements for a specific compliance report.
         """
         allocation_agreements = await self.repo.get_allocation_agreements(
-            compliance_report_id
+            compliance_report_id, changelog=changelog
         )
 
         return AllocationAgreementAllSchema(
