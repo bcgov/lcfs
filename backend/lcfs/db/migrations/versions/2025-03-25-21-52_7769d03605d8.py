@@ -1,8 +1,8 @@
 """Make export_date in the fuel_export table nullable and add 'Unknown' record to the provision_of_the_act table.
 
 Revision ID: 7769d03605d8
-Revises: e77de76bb555
-Create Date: 2025-03-17 21:52:53.119756
+Revises: ac0ac5d0c81b
+Create Date: 2025-03-25 21:52:53.119756
 """
 
 import sqlalchemy as sa
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic
 revision = "7769d03605d8"
-down_revision = "e77de76bb555"
+down_revision = "ac0ac5d0c81b"
 branch_labels = None
 depends_on = None
 

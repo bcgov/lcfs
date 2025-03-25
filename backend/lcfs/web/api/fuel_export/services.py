@@ -252,9 +252,8 @@ class FuelExportServices:
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ):
         """Get paginated fuel export list for a compliance report"""
-        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         fuel_exports, total_count = await self.repo.get_fuel_exports_paginated(
-            pagination, compliance_report_id, exclude_draft_reports=is_gov_user
+            pagination, compliance_report_id
         )
         return FuelExportsSchema(
             pagination=PaginationResponseSchema(

@@ -154,7 +154,6 @@ class FuelExportSchema(BaseSchema):
     export_date: Optional[date] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     compliance_period: Optional[str] = None
     fuel_type_id: int
@@ -193,7 +192,6 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     export_date: Optional[date] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     compliance_period: Optional[str] = None
     fuel_type_other: Optional[str] = None

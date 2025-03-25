@@ -59,8 +59,7 @@ class ComplianceDataService:
 
     def is_legacy_year(self) -> bool:
         return (
-            self.compliance_period < int(
-                LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
+            self.compliance_period < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
             if self.compliance_period is not None
             else False
         )
@@ -131,20 +130,16 @@ class ComplianceReportSummaryService:
 
             # Decide which section of the summary we're dealing with:
             if line in range(1, 12):
-                self._handle_renewable_line(
-                    summary, summary_obj, column.key, line)
+                self._handle_renewable_line(summary, summary_obj, column.key, line)
             elif line in range(12, 23):
-                self._handle_low_carbon_line(
-                    summary, summary_obj, column.key, line)
+                self._handle_low_carbon_line(summary, summary_obj, column.key, line)
 
             # Let's just use special logic to calculate these
             if line in [11, 21]:
-                self._handle_summary_lines(
-                    summary, summary_obj, column.key, line)
+                self._handle_summary_lines(summary, summary_obj, column.key, line)
 
             if column.key == "total_non_compliance_penalty_payable":
-                self._handle_summary_lines(
-                    summary, summary_obj, column.key, line)
+                self._handle_summary_lines(summary, summary_obj, column.key, line)
 
         # DB Columns are not in the same order as display, so sort them
         summary.low_carbon_fuel_target_summary.sort(
@@ -309,8 +304,7 @@ class ComplianceReportSummaryService:
 
         # Create and append the new row
         new_element = ComplianceReportSummaryRowSchema(
-            line=self._get_line_value(
-                line, compliance_data_service.is_legacy_year()),
+            line=self._get_line_value(line, compliance_data_service.is_legacy_year()),
             format=default_format,
             description=description,
             field=default_descriptions[line]["field"],
@@ -370,8 +364,7 @@ class ComplianceReportSummaryService:
             descriptions_dict[line].get("description"),
         )
         return base_desc.format(
-            "{:,}".format(
-                int(summary_obj.line_21_non_compliance_penalty_payable / 600))
+            "{:,}".format(int(summary_obj.line_21_non_compliance_penalty_payable / 600))
         )
 
     def _part3_special_description(self, line, descriptions_dict):
@@ -403,8 +396,6 @@ class ComplianceReportSummaryService:
         self, report_id: int
     ) -> ComplianceReportSummarySchema:
         """Several fields on Report Summary are Transient until locked, this function will re-calculate fields as necessary"""
-        # TODO this method will have to be updated to handle supplemental reports
-
         # Fetch the compliance report details
         compliance_report = await self.repo.get_compliance_report_by_id(
             report_id, is_model=True
@@ -462,17 +453,14 @@ class ComplianceReportSummaryService:
             }
 
         notional_transfers = (
-            await self.notional_transfer_service.get_notional_transfers(
-                report_id, False
-            )
+            await self.notional_transfer_service.get_notional_transfers(report_id)
         )
 
         notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
 
         for transfer in notional_transfers.notional_transfers:
             # Normalize the fuel category key
-            normalized_category = transfer.fuel_category.replace(
-                " ", "_").lower()
+            normalized_category = transfer.fuel_category.replace(" ", "_").lower()
 
             # Update the corresponding category sum
             if transfer.received_or_transferred.lower() == "received":
@@ -481,13 +469,17 @@ class ComplianceReportSummaryService:
                 notional_transfers_sums[normalized_category] -= transfer.quantity
 
         # Get effective fuel supplies using the updated logic
-        effective_fuel_supplies = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid
+        effective_fuel_supplies = (
+            await self.fuel_supply_repo.get_effective_fuel_supplies(
+                compliance_report.compliance_report_group_uuid,
+                compliance_report.compliance_report_id,
+            )
         )
 
         # Get effective other uses
         effective_other_uses = await self.other_uses_repo.get_effective_other_uses(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_id,
             return_model=True,
         )
 
@@ -542,12 +534,13 @@ class ComplianceReportSummaryService:
         existing_summary = self.convert_summary_to_dict(summary_model)
 
         fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
-            compliance_report.compliance_report_group_uuid
+            compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_id,
         )
 
         allocation_agreements = (
             await self.allocation_agreement_repo.get_allocation_agreements(
-                compliance_report_id=compliance_report.compliance_report_id
+                compliance_report.compliance_report_id
             )
         )
 
@@ -637,8 +630,7 @@ class ComplianceReportSummaryService:
         deferred_renewables = {"gasoline": 0.0, "diesel": 0.0, "jet_fuel": 0.0}
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
-            required_renewable_quantity = eligible_renewable_fuel_required.get(
-                category)
+            required_renewable_quantity = eligible_renewable_fuel_required.get(category)
             previous_required_renewable_quantity = getattr(
                 prev_summary,
                 f"""line_4_eligible_renewable_fuel_required_{
@@ -751,12 +743,9 @@ class ComplianceReportSummaryService:
                 ),
                 description=(
                     RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                        "{:,}".format(
-                            round(summary_lines[4]["gasoline"] * 0.05)),
-                        "{:,}".format(
-                            round(summary_lines[4]["diesel"] * 0.05)),
-                        "{:,}".format(
-                            round(summary_lines[4]["jet_fuel"] * 0.05)),
+                        "{:,}".format(round(summary_lines[4]["gasoline"] * 0.05)),
+                        "{:,}".format(round(summary_lines[4]["diesel"] * 0.05)),
+                        "{:,}".format(round(summary_lines[4]["jet_fuel"] * 0.05)),
                     )
                     if (line in [6, 8])
                     else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
@@ -768,8 +757,7 @@ class ComplianceReportSummaryService:
                 total_value=values.get("gasoline", 0)
                 + values.get("diesel", 0)
                 + values.get("jet_fuel", 0),
-                format=(FORMATS.CURRENCY if (
-                    str(line) == "11") else FORMATS.NUMBER),
+                format=(FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER),
             )
             for line, values in summary_lines.items()
         ]
@@ -868,8 +856,7 @@ class ComplianceReportSummaryService:
                 ),
                 description=(
                     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
-                        "{:,}".format(
-                            non_compliance_penalty_payable_units * -1)
+                        "{:,}".format(non_compliance_penalty_payable_units * -1)
                     )
                     if (line == 21)
                     else LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["description"]
@@ -891,8 +878,7 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_payable = int(
             (non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)
         )
-        line_11 = next(
-            row for row in renewable_fuel_target_summary if row.line == 11)
+        line_11 = next(row for row in renewable_fuel_target_summary if row.line == 11)
 
         non_compliance_summary_lines = {
             11: {"total_value": line_11.total_value},
@@ -932,8 +918,7 @@ class ComplianceReportSummaryService:
         """
         Calculate the total quantities of fuels, separated by fuel category and fossil_derived flag.
         """
-        fuel_quantities = self.repo.aggregate_quantities(
-            records, fossil_derived)
+        fuel_quantities = self.repo.aggregate_quantities(records, fossil_derived)
 
         other_uses = await self.repo.aggregate_other_uses_quantity(
             compliance_report_id, fossil_derived
@@ -953,7 +938,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid
+            report.compliance_report_group_uuid, report.compliance_report_id
         )
 
         # Initialize compliance units sum
@@ -969,8 +954,7 @@ class ComplianceReportSummaryService:
             ED = fuel_supply.energy_density or 0  # Energy Density
 
             # Apply the compliance units formula
-            compliance_units = calculate_compliance_units(
-                TCI, EER, RCI, UCI, Q, ED)
+            compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
             compliance_units_sum += compliance_units
 
         return round(compliance_units_sum)
@@ -984,7 +968,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel export records
         fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
-            report.compliance_report_group_uuid
+            report.compliance_report_group_uuid, report.compliance_report_id
         )
 
         # Initialize compliance units sum
@@ -999,8 +983,7 @@ class ComplianceReportSummaryService:
             ED = fuel_export.energy_density or 0  # Energy Density
 
             # Apply the compliance units formula
-            compliance_units = calculate_compliance_units(
-                TCI, EER, RCI, UCI, Q, ED)
+            compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
             compliance_units = -compliance_units
             compliance_units = compliance_units if compliance_units < 0 else 0
 

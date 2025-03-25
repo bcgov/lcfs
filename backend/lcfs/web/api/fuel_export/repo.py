@@ -1,11 +1,18 @@
 from datetime import datetime
 import structlog
+from fastapi import Depends
+from sqlalchemy import and_, or_, select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
 from typing import List, Optional, Tuple
+
+from lcfs.db.base import ActionTypeEnum
+from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import (
     CompliancePeriod,
     FuelExport,
-    ComplianceReportStatus,
 )
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.fuel import (
     CategoryCarbonIntensity,
     DefaultCarbonIntensity,
@@ -22,19 +29,9 @@ from lcfs.db.models.fuel import (
     UnitOfMeasure,
     EndUseType,
 )
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
-from sqlalchemy import and_, or_, select, func, delete
-from sqlalchemy.orm import joinedload, selectinload
-from sqlalchemy.sql import case
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import Depends
-
 from lcfs.web.core.decorators import repo_handler
-from lcfs.db.dependencies import get_async_db_session
 
 logger = structlog.get_logger(__name__)
 
@@ -249,9 +246,9 @@ class FuelExportRepository:
 
         # Retrieve effective fuel exports using the group UUID
         effective_fuel_exports = await self.get_effective_fuel_exports(
-            compliance_report_group_uuid=group_uuid,
+            group_uuid,
+            compliance_report_id,
             changelog=changelog,
-            exclude_draft_reports=exclude_draft_reports,
         )
 
         return effective_fuel_exports
@@ -261,7 +258,6 @@ class FuelExportRepository:
         self,
         pagination: PaginationRequestSchema,
         compliance_report_id: int,
-        exclude_draft_reports: bool = False,
     ) -> Tuple[List[FuelExport], int]:
         """
         Retrieve a paginated list of effective fuel exports for a given compliance report.
@@ -278,8 +274,8 @@ class FuelExportRepository:
 
         # Retrieve effective fuel exports using the group UUID
         effective_fuel_exports = await self.get_effective_fuel_exports(
-            compliance_report_group_uuid=group_uuid,
-            exclude_draft_reports=exclude_draft_reports,
+            group_uuid,
+            compliance_report_id,
         )
 
         # Manually apply pagination
@@ -337,32 +333,6 @@ class FuelExportRepository:
         return fuel_export
 
     @repo_handler
-    async def get_fuel_export_version_by_user(
-        self, group_uuid: str, version: int, user_type: UserTypeEnum
-    ) -> Optional[FuelExport]:
-        """
-        Retrieve a specific FuelExport record by group UUID, version, and user_type.
-        """
-        query = (
-            select(FuelExport)
-            .where(
-                FuelExport.group_uuid == group_uuid,
-                FuelExport.version == version,
-                FuelExport.user_type == user_type,
-            )
-            .options(
-                joinedload(FuelExport.fuel_code),
-                joinedload(FuelExport.fuel_category),
-                joinedload(FuelExport.fuel_type),
-                joinedload(FuelExport.provision_of_the_act),
-                joinedload(FuelExport.end_use_type),
-            )
-        )
-
-        result = await self.db.execute(query)
-        return result.scalars().first()
-
-    @repo_handler
     async def get_latest_fuel_export_by_group_uuid(
         self, group_uuid: str
     ) -> Optional[FuelExport]:
@@ -374,9 +344,6 @@ class FuelExportRepository:
             select(FuelExport)
             .where(FuelExport.group_uuid == group_uuid)
             .order_by(
-                # FuelExport.user_type == UserTypeEnum.SUPPLIER evaluates to False for GOVERNMENT,
-                # thus bringing GOVERNMENT records to the top in the ordered results.
-                FuelExport.user_type == UserTypeEnum.SUPPLIER,
                 FuelExport.version.desc(),
             )
         )
@@ -388,8 +355,8 @@ class FuelExportRepository:
     async def get_effective_fuel_exports(
         self,
         compliance_report_group_uuid: str,
+        compliance_report_id: int,
         changelog: Optional[bool] = False,
-        exclude_draft_reports: bool = False,
     ) -> List[FuelExport]:
         """
         Retrieve effective FuelExport records associated with the given compliance_report_group_uuid.
@@ -397,23 +364,13 @@ class FuelExportRepository:
         """
         # Step 1: Select to get all compliance_report_ids in the specified group
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
-            ComplianceReport.compliance_report_group_uuid
-            == compliance_report_group_uuid
-        )
-        if exclude_draft_reports:
-            compliance_reports_select = compliance_reports_select.where(
-                ComplianceReport.current_status.has(
-                    ComplianceReportStatus.status
-                    != ComplianceReportStatusEnum.Draft.value
-                )
+            and_(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                ComplianceReport.compliance_report_id <= compliance_report_id,
             )
-
-        # Step 3: Select to find the max version and priority per group_uuid, excluding DELETE groups
-        user_type_priority = case(
-            (FuelExport.user_type == UserTypeEnum.GOVERNMENT, 1),
-            (FuelExport.user_type == UserTypeEnum.SUPPLIER, 0),
-            else_=0,
         )
+
         conditions = [FuelExport.compliance_report_id.in_(compliance_reports_select)]
         if not changelog:
             delete_group_select = (
@@ -435,7 +392,6 @@ class FuelExportRepository:
             select(
                 FuelExport.group_uuid,
                 func.max(FuelExport.version).label("max_version"),
-                func.max(user_type_priority).label("max_role_priority"),
             )
             .where(*conditions)
             .group_by(FuelExport.group_uuid)
@@ -460,7 +416,6 @@ class FuelExportRepository:
                 and_(
                     FuelExport.group_uuid == valid_fuel_exports_subq.c.group_uuid,
                     FuelExport.version == valid_fuel_exports_subq.c.max_version,
-                    user_type_priority == valid_fuel_exports_subq.c.max_role_priority,
                 ),
             )
             .order_by(FuelExport.create_date.asc())

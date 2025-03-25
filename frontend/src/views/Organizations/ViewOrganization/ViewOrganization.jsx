@@ -10,7 +10,8 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { apiRoutes, ROUTES } from '@/constants/routes'
+import { apiRoutes } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useOrganization,
@@ -50,10 +51,9 @@ export const ViewOrganization = () => {
 
   const canEdit = hasRoles(roles.administrator)
   const editButtonRoute = canEdit
-    ? ROUTES.ORGANIZATIONS_EDIT.replace(
-        ':orgID',
-        orgID || currentUser?.organization?.organizationId
-      )
+    ? buildPath(ROUTES.ORGANIZATIONS.EDIT, {
+        orgID: orgID || currentUser?.organization?.organizationId
+      })
     : null
 
   const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
@@ -75,14 +75,13 @@ export const ViewOrganization = () => {
           data // Based on the user Type (BCeID or IDIR) navigate to specific view
         ) =>
           hasRoles(roles.supplier)
-            ? ROUTES.ORGANIZATION_VIEWUSER.replace(
-                ':userID',
-                data.data.userProfileId
-              )
-            : ROUTES.ORGANIZATIONS_VIEWUSER.replace(':orgID', orgID).replace(
-                ':userID',
-                data.data.userProfileId
-              )
+            ? buildPath(ROUTES.ORGANIZATION.VIEW_USER, {
+                userID: data.data.userProfileId
+              })
+            : buildPath(ROUTES.ORGANIZATIONS.VIEW_USER, {
+                orgID,
+                userID: data.data.userProfileId
+              })
       }
     }),
     [hasRoles, orgID]
@@ -116,7 +115,7 @@ export const ViewOrganization = () => {
   return (
     <>
       {alertMessage && (
-        <BCAlert data-test="alert-box" severity={alertSeverity}>
+        <BCAlert data-test="alert-box" severity={alertSeverity} sx={{ mb: 4 }}>
           {alertMessage}
         </BCAlert>
       )}
@@ -257,9 +256,9 @@ export const ViewOrganization = () => {
               onClick={() =>
                 !isCurrentUserLoading && hasRoles(roles.government)
                   ? navigate(
-                      ROUTES.ORGANIZATIONS_ADDUSER.replace(':orgID', orgID)
+                      buildPath(ROUTES.ORGANIZATIONS.ADD_USER, { orgID })
                     )
-                  : navigate(ROUTES.ORGANIZATION_ADDUSER)
+                  : navigate(buildPath(ROUTES.ORGANIZATION.ADD_USER))
               }
             >
               <BCTypography variant="button">{t('org:newUsrBtn')}</BCTypography>
@@ -288,10 +287,9 @@ export const ViewOrganization = () => {
       <BCBox sx={{ height: '100%', width: '100%' }}>
         <BCDataGridServer
           gridRef={gridRef}
-          apiEndpoint={apiRoutes.orgUsers.replace(
-            ':orgID',
-            orgID || currentUser?.organization?.organizationId
-          )}
+          apiEndpoint={buildPath(apiRoutes.orgUsers, {
+            orgID: orgID || currentUser?.organization?.organizationId
+          })}
           apiData="users"
           columnDefs={getUserColumnDefs(t)}
           gridKey={gridKey}

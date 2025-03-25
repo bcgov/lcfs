@@ -301,8 +301,8 @@ export const fuelExportColDefs = (
           )?.provisionOfTheActId
 
         if (params.newValue !== PROVISION_APPROVED_FUEL_CODE) {
-          params.data.fuelCode = null;
-          params.data.fuelCodeId = null;
+          params.data.fuelCode = null
+          params.data.fuelCodeId = null
         }
       }
       return true
@@ -480,7 +480,6 @@ export const fuelExportColDefs = (
     minWidth: 100,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-
     valueGetter: (params) => {
       if (params.data.provisionOfTheAct === 'Unknown') {
         const exportDateValue = params.data.exportDate
@@ -642,7 +641,7 @@ export const fuelExportSummaryColDefs = [
     valueGetter: (params) => params.data.fuelType?.fuelType
   },
   {
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory',
     valueGetter: (params) => params.data.fuelCategory?.category
   },
@@ -724,7 +723,7 @@ export const changelogCommonColDefs = [
     cellStyle: (params) => changelogCellStyle(params, 'fuelTypeId')
   },
   {
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory',
     valueGetter: (params) => params.data.fuelCategory?.category,
     cellStyle: (params) => changelogCellStyle(params, 'fuelCategoryId')

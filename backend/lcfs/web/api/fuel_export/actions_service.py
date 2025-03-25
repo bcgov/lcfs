@@ -1,9 +1,10 @@
 import uuid
 import structlog
 
-from fastapi import Depends, HTTPException, status
+import uuid
+from fastapi import Depends, HTTPException
 
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
 from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
@@ -113,7 +114,7 @@ class FuelExportActionService:
 
     @service_handler
     async def create_fuel_export(
-        self, fe_data: FuelExportCreateUpdateSchema, user_type: UserTypeEnum
+        self, fe_data: FuelExportCreateUpdateSchema
     ) -> FuelExportSchema:
         """
         Create a new fuel export record.
@@ -130,7 +131,6 @@ class FuelExportActionService:
             **fe_data.model_dump(exclude=FUEL_EXPORT_EXCLUDE_FIELDS),
             group_uuid=new_group_uuid,
             version=0,
-            user_type=user_type,
             action_type=ActionTypeEnum.CREATE,
         )
 
@@ -143,21 +143,19 @@ class FuelExportActionService:
 
     @service_handler
     async def update_fuel_export(
-        self, fe_data: FuelExportCreateUpdateSchema, user_type: UserTypeEnum
+        self, fe_data: FuelExportCreateUpdateSchema
     ) -> FuelExportSchema:
         """
         Update an existing fuel export record or create a new version if necessary.
 
-        - Checks if a record exists for the given `group_uuid` and `version`.
+        - Checks if a record exists for the given `fuel_export_id`.
         - If `compliance_report_id` matches, updates the existing record.
         - If `compliance_report_id` differs, creates a new version.
         - If no existing record is found, raises an HTTPException.
 
         Returns the updated or new version of the fuel export record.
         """
-        existing_export = await self.repo.get_fuel_export_version_by_user(
-            fe_data.group_uuid, fe_data.version, user_type
-        )
+        existing_export = await self.repo.get_fuel_export_by_id(fe_data.fuel_export_id)
 
         if (
             existing_export
@@ -184,7 +182,6 @@ class FuelExportActionService:
                 group_uuid=fe_data.group_uuid,
                 version=existing_export.version + 1,
                 action_type=ActionTypeEnum.UPDATE,
-                user_type=user_type,
             )
 
             # Copy existing fields, then apply new data
@@ -210,7 +207,7 @@ class FuelExportActionService:
 
     @service_handler
     async def delete_fuel_export(
-        self, fe_data: FuelExportCreateUpdateSchema, user_type: UserTypeEnum
+        self, fe_data: FuelExportCreateUpdateSchema
     ) -> DeleteFuelExportResponseSchema:
         """
         Delete a fuel export record by creating a new version marked as deleted.
@@ -232,7 +229,6 @@ class FuelExportActionService:
                 group_uuid=fe_data.group_uuid,
                 version=(existing_export.version + 1) if existing_export else 0,
                 action_type=ActionTypeEnum.DELETE,
-                user_type=user_type,
             )
 
             for field in existing_export.__table__.columns.keys():

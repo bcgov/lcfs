@@ -4,7 +4,7 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import UserSettingsCard from '../UserSettingsCard'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNavigate } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { wrapper } from '@/tests/utils/wrapper'
 
 vi.mock('@/hooks/useCurrentUser')
@@ -111,7 +111,7 @@ describe('UserSettingsCard', () => {
     )
     fireEvent.click(notificationsLink)
 
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.NOTIFICATIONS)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.NOTIFICATIONS.LIST)
   })
 
   it('navigates to Notifications Settings page when "mock__dashboard:userSettings.configureNotifications" is clicked', () => {
@@ -132,6 +132,6 @@ describe('UserSettingsCard', () => {
     )
     fireEvent.click(configureLink)
 
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.NOTIFICATIONS_SETTINGS)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.NOTIFICATIONS.SETTINGS)
   })
 })

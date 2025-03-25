@@ -1,20 +1,17 @@
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-from uuid import uuid4
 from datetime import datetime
-from lcfs.db.models.compliance.FuelExport import FuelExport
+from unittest.mock import AsyncMock
+from uuid import uuid4
+
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
+from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.web.api.fuel_code.repo import CarbonIntensityResult
-from lcfs.web.api.fuel_export.actions_service import FuelExportActionService
 from lcfs.web.api.fuel_export.schema import (
     FuelExportCreateUpdateSchema,
     FuelExportSchema,
     DeleteFuelExportResponseSchema,
 )
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
-from lcfs.web.exception.exceptions import DatabaseException
-
-from fastapi import HTTPException
 
 FUEL_EXPORT_EXCLUDE_FIELDS = {
     "id",
@@ -22,11 +19,10 @@ FUEL_EXPORT_EXCLUDE_FIELDS = {
     "compliance_period",
     "deleted",
     "group_uuid",
-    "user_type",
     "version",
     "action_type",
     "units",
-    'is_new_supplemental_entry',
+    "is_new_supplemental_entry",
 }
 
 # Example test cases from the dataset
@@ -119,7 +115,6 @@ async def test_create_fuel_export_success(
     fuel_export_action_service, mock_repo, mock_fuel_code_repo
 ):
     fe_data = create_sample_fe_data()
-    user_type = UserTypeEnum.SUPPLIER
 
     mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
 
@@ -159,9 +154,7 @@ async def test_create_fuel_export_success(
     mock_repo.get_fuel_export_by_id = AsyncMock(return_value=created_export)
 
     # Call the method under test with compliance_period
-    result = await fuel_export_action_service.create_fuel_export(
-        fe_data, user_type
-    )
+    result = await fuel_export_action_service.create_fuel_export(fe_data)
     # Assertions
     assert result == FuelExportSchema.model_validate(created_export)
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
@@ -181,7 +174,6 @@ async def test_update_fuel_export_success_existing_report(
     fuel_export_action_service, mock_repo, mock_fuel_code_repo
 ):
     fe_data = create_sample_fe_data()
-    user_type = UserTypeEnum.SUPPLIER
 
     mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
 
@@ -205,7 +197,7 @@ async def test_update_fuel_export_success_existing_report(
         "provision_of_the_act_id": 123,
         "name": "Test Provision",
     }
-    mock_repo.get_fuel_export_version_by_user.return_value = existing_export
+    mock_repo.get_fuel_export_by_id.return_value = existing_export
 
     # Mock the response from get_standardized_fuel_data
     mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
@@ -235,18 +227,13 @@ async def test_update_fuel_export_success_existing_report(
         "name": "Test Provision",
     }
     mock_repo.update_fuel_export.return_value = updated_export
-    mock_repo.get_fuel_export_by_id = AsyncMock(return_value=updated_export)
 
     # Call the method under test with compliance_period
-    result = await fuel_export_action_service.update_fuel_export(
-        fe_data, user_type
-    )
+    result = await fuel_export_action_service.update_fuel_export(fe_data)
 
     # Assertions
     assert result == FuelExportSchema.model_validate(updated_export)
-    mock_repo.get_fuel_export_version_by_user.assert_awaited_once_with(
-        fe_data.group_uuid, fe_data.version, user_type
-    )
+    mock_repo.get_fuel_export_by_id.assert_awaited_once_with(fe_data.fuel_export_id)
     mock_repo.update_fuel_export.assert_awaited_once()
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once()
     # Ensure compliance units were updated correctly
@@ -259,7 +246,7 @@ async def test_update_fuel_export_create_new_version(
 ):
     fe_data = create_sample_fe_data()
     fe_data.compliance_report_id = 2  # Different compliance report ID
-    user_type = UserTypeEnum.SUPPLIER
+    fe_data.fuel_export_id = 3
 
     # Exclude invalid fields
     fe_data_dict = fe_data.model_dump(exclude=FUEL_EXPORT_EXCLUDE_FIELDS)
@@ -283,7 +270,7 @@ async def test_update_fuel_export_create_new_version(
         "provision_of_the_act_id": 123,
         "name": "Test Provision",
     }
-    mock_repo.get_fuel_export_version_by_user.return_value = existing_export
+    mock_repo.get_fuel_export_by_id.return_value = existing_export
 
     # Mock the response from get_standardized_fuel_data
     mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
@@ -315,18 +302,13 @@ async def test_update_fuel_export_create_new_version(
         "name": "Test Provision",
     }
     mock_repo.create_fuel_export.return_value = new_export
-    mock_repo.get_fuel_export_by_id = AsyncMock(return_value=new_export)
 
     # Call the method under test with compliance_period
-    result = await fuel_export_action_service.update_fuel_export(
-        fe_data, user_type
-    )
+    result = await fuel_export_action_service.update_fuel_export(fe_data)
 
     # Assertions
     assert result == FuelExportSchema.model_validate(new_export)
-    mock_repo.get_fuel_export_version_by_user.assert_awaited_once_with(
-        fe_data.group_uuid, fe_data.version, user_type
-    )
+    mock_repo.get_fuel_export_by_id.assert_awaited_once_with(fe_data.fuel_export_id)
     mock_repo.create_fuel_export.assert_awaited_once()
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once()
     # Ensure compliance units were calculated correctly
@@ -338,7 +320,6 @@ async def test_delete_fuel_export_success(
     fuel_export_action_service, mock_repo, mock_fuel_code_repo
 ):
     fe_data = create_sample_fe_data()
-    user_type = UserTypeEnum.SUPPLIER
 
     # Exclude invalid fields
     fe_data_dict = fe_data.model_dump(exclude=FUEL_EXPORT_EXCLUDE_FIELDS)
@@ -378,7 +359,7 @@ async def test_delete_fuel_export_success(
     mock_repo.create_fuel_export.return_value = deleted_export
 
     # Call the method under test
-    result = await fuel_export_action_service.delete_fuel_export(fe_data, user_type)
+    result = await fuel_export_action_service.delete_fuel_export(fe_data)
 
     # Assertions
     assert isinstance(result, DeleteFuelExportResponseSchema)
@@ -423,8 +404,7 @@ async def test_populate_fuel_export_fields(
     assert populated_export.eer == 1  # Default EER
     assert populated_export.energy_density == fe_data.energy_density
     # Energy calculation
-    assert populated_export.energy == round(
-        fe_data.energy_density * fe_data.quantity)
+    assert populated_export.energy == round(fe_data.energy_density * fe_data.quantity)
     # Compliance units calculation (should be negative)
     assert populated_export.compliance_units < 0
 
@@ -519,9 +499,7 @@ async def test_compliance_units_calculation(
     mock_repo.create_fuel_export.return_value = mock_created_export
 
     # Call service method
-    result = await fuel_export_action_service.create_fuel_export(
-        fe_data, UserTypeEnum.SUPPLIER
-    )
+    result = await fuel_export_action_service.create_fuel_export(fe_data)
 
     # Assertions
     assert result.compliance_units == case["expected_compliance_units"]
