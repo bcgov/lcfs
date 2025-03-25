@@ -90,6 +90,11 @@ class NotificationRequestSchema(BaseSchema):
     notification_data: Optional[NotificationMessageSchema] = None
 
 
+class NotificationBatchOperationSchema(BaseSchema):
+    applyToAll: bool = False
+    notification_ids: Optional[List[int]] = []
+
+
 COMPLIANCE_REPORT_STATUS_NOTIFICATION_MAPPER = {
     ComplianceReportStatusEnum.Submitted: [
         NotificationTypeEnum.IDIR_ANALYST__COMPLIANCE_REPORT__SUBMITTED_FOR_REVIEW,
