@@ -379,35 +379,47 @@ class AllocationAgreementServices:
     async def delete_allocation_agreement(
         self,
         allocation_agreement_data: AllocationAgreementCreateSchema,
-        user_type: UserTypeEnum) -> str:
+        user_type: UserTypeEnum,
+    ) -> DeleteAllocationAgreementResponseSchema:
         """Delete an allocation agreement"""
-        existing_allocation_agreement = await self.repo.get_latest_allocation_agreement_by_group_uuid(
-            allocation_agreement_data.group_uuid
+        existing_allocation_agreement = (
+            await self.repo.get_latest_allocation_agreement_by_group_uuid(
+                allocation_agreement_data.group_uuid
+            )
         )
 
-        if existing_allocation_agreement.action_type == ActionTypeEnum.DELETE:
-            return DeleteAllocationAgreementResponseSchema(message="Already deleted.")
+        if (
+            existing_allocation_agreement.compliance_report_id
+            == allocation_agreement_data.compliance_report_id
+        ):
+            await self.repo.delete_allocation_agreement(
+                allocation_agreement_data.allocation_agreement_id
+            )
+        else:
+            # Create a deletion record
+            deleted_entity = AllocationAgreement(
+                compliance_report_id=allocation_agreement_data.compliance_report_id,
+                group_uuid=allocation_agreement_data.group_uuid,
+                version=existing_allocation_agreement.version + 1,
+                action_type=ActionTypeEnum.DELETE,
+                user_type=user_type,
+            )
 
-        # Create a deletion record
-        deleted_entity = AllocationAgreement(
-            compliance_report_id=allocation_agreement_data.compliance_report_id,
-            group_uuid=allocation_agreement_data.group_uuid,
-            version=existing_allocation_agreement.version + 1,
-            action_type=ActionTypeEnum.DELETE,
-            user_type=user_type,
-        )
+            # Copy fields from the latest version for the deletion record
+            for field in existing_allocation_agreement.__table__.columns.keys():
+                if field not in ALLOCATION_AGREEMENT_EXCLUDE_FIELDS:
+                    setattr(
+                        deleted_entity,
+                        field,
+                        getattr(existing_allocation_agreement, field),
+                    )
 
-        # Copy fields from the latest version for the deletion record
-        for field in existing_allocation_agreement.__table__.columns.keys():
-            if field not in ALLOCATION_AGREEMENT_EXCLUDE_FIELDS:
-                setattr(deleted_entity, field, getattr(existing_allocation_agreement, field))
+            deleted_entity.compliance_report_id = (
+                allocation_agreement_data.compliance_report_id
+            )
 
-        deleted_entity.compliance_report_id = allocation_agreement_data.compliance_report_id
-
-        await self.repo.create_allocation_agreement(deleted_entity)
+            await self.repo.create_allocation_agreement(deleted_entity)
         return DeleteAllocationAgreementResponseSchema(message="Marked as deleted.")
-
-
 
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):

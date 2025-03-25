@@ -302,3 +302,10 @@ class NotionalTransferRepository:
 
         result = await self.db.execute(query)
         return result.scalars().first()
+
+    async def delete_notional_transfer(self, notional_transfer_id):
+        await self.db.execute(
+            delete(NotionalTransfer).where(
+                NotionalTransfer.notional_transfer_id == notional_transfer_id
+            )
+        )
