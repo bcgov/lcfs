@@ -2,7 +2,8 @@
   "finalSupplyEquipments": [
     {
       "organization": "Organization 1",
-      "supplyDateRange": "2024-01-01 2024-03-31",
+      "supplyDateRange": "2024-01-01",
+      "supplyToDate": "2024-01-01",
       "kWhUsage": 1000,
       "serialNbr": "SN123456",
       "manufacturer": "Manufacturer A",
@@ -19,7 +20,8 @@
     },
     {
       "organization": "Organization 1",
-      "supplyDateRange": "2024-01-01 2024-03-31",
+      "supplyFromDate": "2024-01-01",
+      "supplyToDate": "2024-01-01",
       "kWhUsage": 1000,
       "serialNbr": "SN78910",
       "manufacturer": "Manufacturer B",
