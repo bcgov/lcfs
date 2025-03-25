@@ -1,21 +1,17 @@
 import io
-from datetime import date
-from unittest.mock import patch
-
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 from starlette.responses import StreamingResponse
+from unittest.mock import patch
 
-from lcfs.db.models import ComplianceReport
+from lcfs.db.models import ComplianceReport, Organization
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentsSchema,
     FSEOptionsSchema,
     PortsEnum,
-    LevelOfEquipmentSchema,
-    FinalSupplyEquipmentSchema,
 )
 
 
@@ -56,37 +52,34 @@ async def test_get_final_supply_equipments_paginated_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     with patch(
-        "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.get_compliance_report_by_id"
-    ) as mock_get_compliance_report_by_id:
-        mock_get_compliance_report_by_id.return_value = ComplianceReport()
-
-        with patch(
-            "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
-        ) as mock_validate_report:
-            mock_validate_report.return_value = None
-
-            with patch(
-                "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
-            ) as mock_validate_report_2:
-                mock_validate_report_2.return_value = None
-
-                with patch(
-                    "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.get_fse_options"
-                ) as mock_get_fse_options:
-                    mock_get_fse_options.return_value = FinalSupplyEquipmentsSchema()
-
-                    set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
-                    url = fastapi_app.url_path_for("get_final_supply_equipments")
-                    payload = {
-                        "complianceReportId": 1,
-                        "page": 1,
-                        "size": 10,
-                        "sortOrders": [],
-                        "filters": [],
-                    }
-                    response = await client.post(url, json=payload)
-                    assert response.status_code == 200
-                    assert "finalSupplyEquipments" in response.json()
+        "lcfs.web.api.final_supply_equipment.services."
+        "FinalSupplyEquipmentServices.get_compliance_report_by_id",
+        return_value=ComplianceReport(),
+    ) as mock_get_compliance_report_by_id, patch(
+        "lcfs.web.api.compliance_report.validation."
+        "ComplianceReportValidation.validate_compliance_report_access",
+        return_value=None,
+    ) as mock_validate_report, patch(
+        "lcfs.web.api.compliance_report.validation."
+        "ComplianceReportValidation.validate_organization_access",
+        return_value=ComplianceReport(),
+    ) as mock_validate_report_2, patch(
+        "lcfs.web.api.final_supply_equipment.services."
+        "FinalSupplyEquipmentServices.get_fse_options",
+        return_value=FinalSupplyEquipmentsSchema(),
+    ) as mock_get_fse_options:
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("get_final_supply_equipments")
+        payload = {
+            "complianceReportId": 1,
+            "page": 1,
+            "size": 10,
+            "sortOrders": [],
+            "filters": [],
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 200
+        assert "finalSupplyEquipments" in response.json()
 
 
 @pytest.mark.anyio
@@ -113,46 +106,51 @@ async def test_save_final_supply_equipment_create_success(
     valid_final_supply_equipment_schema,
 ):
     with patch(
-        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_report:
-        mock_validate_report.return_value = None
-
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_report_access:
         with patch(
-            "lcfs.web.api.final_supply_equipment.validation.FinalSupplyEquipmentValidation.check_equipment_uniqueness_and_overlap"
-        ) as mock_validate_fse:
-            mock_validate_fse.return_value = None
+            "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+        ) as mock_validate_report:
+            mock_validate_report.return_value = ComplianceReport(
+                organization=Organization()
+            )
 
             with patch(
-                "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.create_final_supply_equipment"
-            ) as mock_create_fse:
+                "lcfs.web.api.final_supply_equipment.validation.FinalSupplyEquipmentValidation.check_equipment_uniqueness_and_overlap"
+            ) as mock_validate_fse:
+                mock_validate_fse.return_value = None
 
-                mock_create_fse.return_value = valid_final_supply_equipment_schema
+                with patch(
+                    "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.create_final_supply_equipment"
+                ) as mock_create_fse:
 
-                set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
-                url = fastapi_app.url_path_for("save_final_supply_equipment_row")
-                payload = {
-                    "complianceReportId": 456,
-                    "organizationName": "Example Organization",
-                    "supplyFromDate": "2025-01-01",
-                    "supplyToDate": "2025-12-31",
-                    "kwhUsage": 250.5,
-                    "serialNbr": "ABC123XYZ",
-                    "manufacturer": "Generic Manufacturer",
-                    "model": "Model X",
-                    "levelOfEquipment": "Level 2",
-                    "ports": "Single port",
-                    "intendedUses": ["public charging", "fleet management"],
-                    "intendedUsers": ["general public", "employees"],
-                    "streetAddress": "123 Main St",
-                    "city": "Anytown",
-                    "postalCode": "A1A 1A1",
-                    "latitude": 49.2827,
-                    "longitude": -123.1207,
-                    "notes": "Additional notes about the equipment",
-                }
-                response = await client.post(url, json=payload)
-                assert response.status_code == 201
-                assert "finalSupplyEquipmentId" in response.json()
+                    mock_create_fse.return_value = valid_final_supply_equipment_schema
+
+                    set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+                    url = fastapi_app.url_path_for("save_final_supply_equipment_row")
+                    payload = {
+                        "complianceReportId": 456,
+                        "organizationName": "Example Organization",
+                        "supplyFromDate": "2025-01-01",
+                        "supplyToDate": "2025-12-31",
+                        "kwhUsage": 250.5,
+                        "serialNbr": "ABC123XYZ",
+                        "manufacturer": "Generic Manufacturer",
+                        "model": "Model X",
+                        "levelOfEquipment": "Level 2",
+                        "ports": "Single port",
+                        "intendedUses": ["public charging", "fleet management"],
+                        "intendedUsers": ["general public", "employees"],
+                        "streetAddress": "123 Main St",
+                        "city": "Anytown",
+                        "postalCode": "A1A 1A1",
+                        "latitude": 49.2827,
+                        "longitude": -123.1207,
+                        "notes": "Additional notes about the equipment",
+                    }
+                    response = await client.post(url, json=payload)
+                    assert response.status_code == 201
+                    assert "finalSupplyEquipmentId" in response.json()
 
 
 @pytest.mark.anyio
@@ -160,39 +158,44 @@ async def test_save_final_supply_equipment_delete_success(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     with patch(
-        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_report:
-        mock_validate_report.return_value = None
-        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
-        url = fastapi_app.url_path_for("save_final_supply_equipment_row")
-        payload = {
-            "final_supply_equipment_id": 123,
-            "compliance_report_id": 456,
-            "organization_name": "Example Organization",
-            "supply_from_date": "2025-01-01",
-            "supply_to_date": "2025-12-31",
-            "kwh_usage": 250.5,
-            "serial_nbr": "ABC123XYZ",
-            "manufacturer": "Generic Manufacturer",
-            "model": "Model X",
-            "level_of_equipment": "Level 2",
-            "ports": PortsEnum.SINGLE,
-            "intended_uses": ["public charging", "fleet management"],
-            "intended_users": ["general public", "employees"],
-            "street_address": "123 Main St",
-            "city": "Anytown",
-            "postal_code": "A1A 1A1",
-            "latitude": 49.2827,
-            "longitude": -123.1207,
-            "notes": "Additional notes about the equipment",
-            "deleted": True,
-        }
-        response = await client.post(url, json=payload)
-        assert response.status_code == 201
-        assert (
-            response.json()["message"]
-            == "Final supply equipment row deleted successfully"
-        )
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_report_access:
+        with patch(
+            "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+        ) as mock_validate_report:
+            mock_validate_report.return_value = ComplianceReport(
+                organization=Organization()
+            )
+            set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+            url = fastapi_app.url_path_for("save_final_supply_equipment_row")
+            payload = {
+                "final_supply_equipment_id": 123,
+                "compliance_report_id": 456,
+                "organization_name": "Example Organization",
+                "supply_from_date": "2025-01-01",
+                "supply_to_date": "2025-12-31",
+                "kwh_usage": 250.5,
+                "serial_nbr": "ABC123XYZ",
+                "manufacturer": "Generic Manufacturer",
+                "model": "Model X",
+                "level_of_equipment": "Level 2",
+                "ports": PortsEnum.SINGLE,
+                "intended_uses": ["public charging", "fleet management"],
+                "intended_users": ["general public", "employees"],
+                "street_address": "123 Main St",
+                "city": "Anytown",
+                "postal_code": "A1A 1A1",
+                "latitude": 49.2827,
+                "longitude": -123.1207,
+                "notes": "Additional notes about the equipment",
+                "deleted": True,
+            }
+            response = await client.post(url, json=payload)
+            assert response.status_code == 201
+            assert (
+                response.json()["message"]
+                == "Final supply equipment row deleted successfully"
+            )
 
 
 @pytest.mark.anyio
@@ -223,7 +226,7 @@ async def test_export_success(client: AsyncClient, fastapi_app: FastAPI, set_moc
     with patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_report:
-        mock_validate_report.return_value = None
+        mock_validate_report.return_value = ComplianceReport()
         with patch(
             "lcfs.web.api.final_supply_equipment.export.FinalSupplyEquipmentExporter.export"
         ) as mock_export:

@@ -1,17 +1,14 @@
+import pytest
 from unittest.mock import MagicMock, AsyncMock
 
-import pytest
-
 from lcfs.db.base import ActionTypeEnum
-from lcfs.db.base import UserTypeEnum
+from lcfs.tests.other_uses.conftest import create_mock_schema, create_mock_entity
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.api.other_uses.schema import (
     OtherUsesTableOptionsSchema,
 )
 from lcfs.web.api.other_uses.services import OtherUsesServices
-from lcfs.web.exception.exceptions import ServiceException
-from lcfs.tests.other_uses.conftest import create_mock_schema, create_mock_entity
 
 
 @pytest.fixture
@@ -91,12 +88,11 @@ async def test_create_other_use(other_uses_service):
     mock_created_use.rationale = "Test rationale"
     mock_created_use.group_uuid = "test-group-uuid"
     mock_created_use.version = 1
-    mock_created_use.user_type = "Supplier"
     mock_created_use.action_type = "Create"
 
     mock_repo.create_other_use = AsyncMock(return_value=mock_created_use)
 
-    response = await service.create_other_use(other_use_data, UserTypeEnum.SUPPLIER)
+    response = await service.create_other_use(other_use_data)
 
     # Assertions
     assert isinstance(response, OtherUsesSchema)
@@ -119,7 +115,7 @@ async def test_update_other_use(other_uses_service):
     mock_existing_use = create_mock_entity({})
 
     # Configure repository methods to return these mocked objects
-    mock_repo.get_other_use_version_by_user = AsyncMock(return_value=mock_existing_use)
+    mock_repo.get_other_use = AsyncMock(return_value=mock_existing_use)
 
     # Mock related entities with proper string attributes
     mock_fuel_type = MagicMock()
@@ -163,14 +159,13 @@ async def test_update_other_use(other_uses_service):
     mock_updated_use.ci_of_fuel = 15.5
     mock_updated_use.group_uuid = "test-group-uuid"
     mock_updated_use.version = 2
-    mock_updated_use.user_type = "Supplier"
     mock_updated_use.action_type = ActionTypeEnum.UPDATE
 
     # Set the return value for update_other_use
     mock_repo.update_other_use = AsyncMock(return_value=mock_updated_use)
 
     # Execute the update function and capture the response
-    response = await service.update_other_use(other_use_data, UserTypeEnum.SUPPLIER)
+    response = await service.update_other_use(other_use_data)
 
     # Assertions
     assert isinstance(response, OtherUsesSchema)
@@ -192,10 +187,10 @@ async def test_update_other_use_not_found(other_uses_service):
     service, mock_repo, _ = other_uses_service
     other_use_data = create_mock_schema({})
 
-    mock_repo.get_other_use_version_by_user = AsyncMock(return_value=None)
+    mock_repo.get_other_use = AsyncMock(return_value=None)
 
     with pytest.raises(ValueError, match="Other use not found"):
-        await service.update_other_use(other_use_data, UserTypeEnum.SUPPLIER)
+        await service.update_other_use(other_use_data)
 
 
 @pytest.mark.anyio
@@ -234,7 +229,7 @@ async def test_delete_other_use(other_uses_service):
     mock_repo.create_other_use = AsyncMock(return_value=mock_existing_use)
 
     # Call the delete service
-    response = await service.delete_other_use(other_use_data, UserTypeEnum.SUPPLIER)
+    response = await service.delete_other_use(other_use_data)
 
     # Assertions
     assert response.message == "Marked as deleted."
