@@ -6,16 +6,6 @@ import { createEsbuildPlugin } from '@badeball/cypress-cucumber-preprocessor/esb
 import pg from 'pg'
 const { Client } = pg
 
-const dbUser = process.env.DB_CYPRESS_USER
-const dbPassword = process.env.DB_CYPRESS_PASSWORD
-
-if (!dbUser || typeof dbUser !== 'string') {
-  throw new Error('Missing or invalid DB_CYPRESS_USER')
-}
-
-if (!dbPassword || typeof dbPassword !== 'string') {
-  throw new Error('Missing or invalid DB_CYPRESS_PASSWORD')
-}
 export default defineConfig({
   e2e: {
     specPattern: ['**/*.feature', '**/*.cy.js'],
@@ -76,10 +66,10 @@ export default defineConfig({
               throw new Error('Missing or invalid DB_CYPRESS_PASSWORD');
             }
             const client = new Client({
-              user: dbUser,
+              user: process.env.DB_CYPRESS_USER,
               host: process.env.DB_CYPRESS_HOST || 'localhost',
               database: process.env.DB_CYPRESS_NAME || 'lcfs',
-              password: dbPassword,
+              password: process.env.DB_CYPRESS_PASSWORD,
               port: parseInt(process.env.DB_PORT || '5432')
             })
 
