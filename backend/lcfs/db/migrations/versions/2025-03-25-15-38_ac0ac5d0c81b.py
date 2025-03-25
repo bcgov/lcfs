@@ -1,8 +1,8 @@
 """Create Location table
 
 Revision ID: ac0ac5d0c81b
-Revises: 67e5de628cef
-Create Date: 2025-03-17 10:38:31.943374
+Revises: 278193278eff
+Create Date: 2025-03-25 15:38:31.943374
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "ac0ac5d0c81b"
-down_revision = "ffe9e3da563b"
+down_revision = "278193278eff"
 branch_labels = None
 depends_on = None
 
