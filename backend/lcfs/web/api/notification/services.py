@@ -358,3 +358,10 @@ class NotificationService:
         Adds subscriptions for a user based on their role.
         """
         await self.repo.add_subscriptions_for_user_role(user_profile_id, role_id)
+
+    @service_handler
+    async def remove_subscriptions_for_user(self, user_profile_id: int) -> None:
+        """
+        Removes all notification channel subscriptions for this user.
+        """
+        await self.repo.delete_subscriptions_for_user(user_profile_id)

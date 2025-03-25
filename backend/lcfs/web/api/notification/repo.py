@@ -603,3 +603,15 @@ class NotificationRepository:
                     self.db.add(new_sub)
 
         await self.db.flush()
+
+    @repo_handler
+    async def delete_subscriptions_for_user(self, user_profile_id: int):
+        """
+        Delete all NotificationChannelSubscription rows referencing the user.
+        """
+        await self.db.execute(
+            delete(NotificationChannelSubscription).where(
+                NotificationChannelSubscription.user_profile_id == user_profile_id
+            )
+        )
+        await self.db.flush()
