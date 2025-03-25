@@ -104,6 +104,7 @@ def mock_repo():
     repo = AsyncMock()
     repo.create_fuel_supply = AsyncMock()
     repo.update_fuel_supply = AsyncMock()
+    repo.delete_fuel_supply = AsyncMock()
     repo.get_fuel_supply_version_by_user = AsyncMock()
     repo.get_latest_fuel_supply_by_group_uuid = AsyncMock()
     return repo
@@ -385,7 +386,7 @@ async def test_update_fuel_supply_create_new_version(
 
 
 @pytest.mark.anyio
-async def test_delete_fuel_supply_success(
+async def test_delete_fuel_supply(
     fuel_supply_action_service, mock_repo, mock_fuel_code_repo
 ):
     fe_data = create_sample_fs_data()
@@ -393,6 +394,47 @@ async def test_delete_fuel_supply_success(
 
     # Exclude invalid fields
     fe_data_dict = fe_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS)
+
+    # Mock existing supply
+    existing_supply = FuelSupply(
+        **fe_data_dict,
+        fuel_supply_id=1,
+        version=0,
+        action_type=ActionTypeEnum.CREATE,
+    )
+
+    existing_supply.compliance_units = -100
+    existing_supply.fuel_type = {
+        "fuel_type_id": 3,
+        "fuel_type": "Electricity",
+        "units": "kWh",
+    }
+    existing_supply.fuel_category = {"category": "Diesel"}
+    existing_supply.units = "Litres"
+    mock_repo.get_latest_fuel_supply_by_group_uuid.return_value = existing_supply
+
+    # Call the method under test
+    result = await fuel_supply_action_service.delete_fuel_supply(fe_data, user_type)
+
+    # Assertions
+    assert isinstance(result, DeleteFuelSupplyResponseSchema)
+    assert result.success is True
+    assert result.message == "Marked as deleted."
+    mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with(
+        fe_data.group_uuid
+    )
+    mock_repo.delete_fuel_supply.assert_awaited_once()
+
+@pytest.mark.anyio
+async def test_delete_fuel_supply_changelog(
+    fuel_supply_action_service, mock_repo, mock_fuel_code_repo
+):
+    fe_data = create_sample_fs_data()
+    user_type = UserTypeEnum.SUPPLIER
+
+    # Exclude invalid fields
+    fe_data_dict = fe_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS)
+    fe_data.compliance_report_id = 2
 
     # Mock existing supply
     existing_supply = FuelSupply(
