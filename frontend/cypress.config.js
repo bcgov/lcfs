@@ -4,10 +4,6 @@ import { addCucumberPreprocessorPlugin } from '@badeball/cypress-cucumber-prepro
 import { createEsbuildPlugin } from '@badeball/cypress-cucumber-preprocessor/esbuild'
 import pg from 'pg'
 const { Client } = pg
-const pool = {
-  u: 'lcfs',
-  p: 'development_only'
-}
 
 export default defineConfig({
   e2e: {
@@ -61,11 +57,18 @@ export default defineConfig({
         },
         clearComplianceReports() {
           return new Promise((resolve, reject) => {
+            console.log(
+              'DB_CYPRESS_PASSWORD is',
+              typeof process.env.DB_CYPRESS_PASSWORD
+            )
+            if (!process.env.DB_CYPRESS_PASSWORD || typeof process.env.DB_CYPRESS_PASSWORD !== 'string') {
+              throw new Error('Missing or invalid DB_CYPRESS_PASSWORD');
+            }
             const client = new Client({
-              user: process.env.DB_CYPRESS_USER || pool.u,
+              user: process.env.DB_CYPRESS_USER,
               host: process.env.DB_CYPRESS_HOST || 'localhost',
               database: process.env.DB_CYPRESS_NAME || 'lcfs',
-              password: process.env.DB_CYPRESS_PASSWORD || pool.p,
+              password: process.env.DB_CYPRESS_PASSWORD,
               port: parseInt(process.env.DB_PORT || '5432')
             })
 
