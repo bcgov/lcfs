@@ -80,25 +80,38 @@ class NotificationService:
 
     @service_handler
     async def update_notification_messages(
-        self, user_id: int, notification_ids: List[int]
-    ):
+        self, user_id: int, payload: dict
+    ) -> list[int]:
         """
-        Update multiple notifications (mark as read).
-        """
-        await self.repo.mark_notifications_as_read(user_id, notification_ids)
+        Marks notifications as read.
 
-        return notification_ids
+        If 'applyToAll' is True, do them all;
+        otherwise, do just the ones passed in 'notification_ids'.
+        """
+
+        if payload.get("applyToAll"):
+            return await self.repo.mark_all_notifications_as_read_for_user(user_id)
+        else:
+            notification_ids = payload.get("notification_ids", [])
+            return await self.repo.mark_notifications_as_read(user_id, notification_ids)
 
     @service_handler
     async def delete_notification_messages(
-        self, user_id: int, notification_ids: List[int]
-    ):
+        self, user_id: int, payload: dict
+    ) -> list[int]:
         """
-        Delete multiple notifications.
-        """
-        await self.repo.delete_notification_messages(user_id, notification_ids)
+        Deletes notifications.
 
-        return notification_ids
+        If 'applyToAll' is True, do them all;
+        otherwise, do just the ones passed in 'notification_ids'.
+        """
+        if payload.get("applyToAll"):
+            return await self.repo.delete_all_notifications_for_user(user_id)
+        else:
+            notification_ids = payload.get("notification_ids", [])
+            return await self.repo.delete_notification_messages(
+                user_id, notification_ids
+            )
 
     @service_handler
     async def get_notification_message_by_id(self, notification_id: int):

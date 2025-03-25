@@ -491,7 +491,6 @@ async def test_send_notification_skip_analyst(notification_service):
     assert len(created_notifications) == 2
     assert created_notifications[0].related_user_profile_id == 2
 
-
 @pytest.mark.anyio
 async def test_remove_subscriptions_for_user():
     # Create a fake repo with the delete_subscriptions_for_user method
