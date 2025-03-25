@@ -9,7 +9,7 @@ import { govRoles } from '@/constants/roles'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faShareFromSquare } from '@fortawesome/free-solid-svg-icons'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { HELP_GUIDE_URL } from '@/constants/common.js'
 
 const linkStyle = {
@@ -51,12 +51,12 @@ const UserSettingsCard = () => {
           </BCTypography>
 
           <List component="nav" sx={{ maxWidth: '100%', mt: 1 }}>
-            <UserSettingsLink onClick={() => navigate(ROUTES.NOTIFICATIONS)}>
+            <UserSettingsLink onClick={() => navigate(ROUTES.NOTIFICATIONS.LIST)}>
               {t('dashboard:userSettings.notifications')}
             </UserSettingsLink>
 
             <UserSettingsLink
-              onClick={() => navigate(ROUTES.NOTIFICATIONS_SETTINGS)}
+              onClick={() => navigate(ROUTES.NOTIFICATIONS.SETTINGS)}
             >
               {t('dashboard:userSettings.configureNotifications')}
             </UserSettingsLink>

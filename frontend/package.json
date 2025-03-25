@@ -55,6 +55,7 @@
     "chroma-js": "^2.4.2",
     "date-fns": "^3.6.0",
     "dayjs": "^1.11.10",
+    "dotenv": "^16.4.7",
     "esbuild": "^0.25.0",
     "i18next": "^23.8.2",
     "keycloak-js": "^26.1.2",

@@ -7,7 +7,8 @@ from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
-    ComplianceReportSummaryService, ComplianceDataService
+    ComplianceReportSummaryService,
+    ComplianceDataService,
 )
 from lcfs.web.api.compliance_report.update_service import (
     ComplianceReportUpdateService,
@@ -59,7 +60,12 @@ def compliance_report_status_schema():
 
 @pytest.fixture
 def summary_schema():
-    return SummarySchema(summary_id=1, is_locked=False)
+    return SummarySchema(
+        summary_id=1,
+        is_locked=False,
+        line_21_non_compliance_penalty_payable=0.0,
+        line_11_fossil_derived_base_fuel_total=0.0,
+    )
 
 
 @pytest.fixture
@@ -113,9 +119,7 @@ def compliance_report_schema(
             organization_id or compliance_report_organization_schema.organization_id
         )
         organization = organization or compliance_report_organization_schema
-        organization_name = (
-            organization.name if organization else "Default Org"
-        )
+        organization_name = organization.name if organization else "Default Org"
         compliance_report_group_uuid = compliance_report_group_uuid or str(uuid.uuid4())
         report_status_id = (
             report_status_id
@@ -326,6 +330,7 @@ def mock_other_uses_repo():
     mock_repo.get_effective_other_uses = AsyncMock(return_value=MagicMock())
     return mock_repo
 
+
 @pytest.fixture
 def mock_compliance_data_service():
     """Mock the ComplianceDataService."""
@@ -334,6 +339,7 @@ def mock_compliance_data_service():
     mock_service.get_nickname.return_value = "Test Report"
     mock_service.is_legacy_year.return_value = False
     return mock_service
+
 
 @pytest.fixture
 def compliance_report_summary_service(

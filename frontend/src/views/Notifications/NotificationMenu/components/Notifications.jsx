@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
 
 import BCButton from '@/components/BCButton'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { columnDefs, routesMapping } from './_schema'
 import {
@@ -15,6 +15,8 @@ import {
   useDeleteNotificationMessages
 } from '@/hooks/useNotifications'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { defaultInitialPagination } from '@/constants/schedules.js'
+import { useGetFuelCodes } from '@/hooks/useFuelCode.js'
 
 export const Notifications = () => {
   const gridRef = useRef(null)
@@ -23,6 +25,10 @@ export const Notifications = () => {
   const [selectedRowCount, setSelectedRowCount] = useState(0)
   const [resetGridFn, setResetGridFn] = useState(null)
 
+  const [paginationOptions, setPaginationOptions] = useState(
+    defaultInitialPagination
+  )
+
   const { t } = useTranslation(['notifications'])
   const navigate = useNavigate()
   const { data: currentUser } = useCurrentUser()
@@ -30,6 +36,11 @@ export const Notifications = () => {
   const { refetch } = useGetNotificationMessages()
   const markAsReadMutation = useMarkNotificationAsRead()
   const deleteMutation = useDeleteNotificationMessages()
+
+  const queryData = useGetNotificationMessages(paginationOptions, {
+    cacheTime: 0,
+    staleTime: 0
+  })
 
   // row class rules for unread messages
   const rowClassRules = useMemo(
@@ -235,7 +246,7 @@ export const Notifications = () => {
         gridRef={gridRef}
         alertRef={alertRef}
         columnDefs={columnDefs(t, currentUser)}
-        query={useGetNotificationMessages}
+        queryData={queryData}
         dataKey="notifications"
         overlayNoRowsTemplate={t('notifications:noNotificationsFound')}
         autoSizeStrategy={{
@@ -250,6 +261,13 @@ export const Notifications = () => {
         onSelectionChanged={onSelectionChanged}
         onRowClicked={handleRowClicked}
         onSetResetGrid={handleSetResetGrid}
+        initialPaginationOptions={defaultInitialPagination}
+        onPaginationChange={(newPagination) =>
+          setPaginationOptions((prev) => ({
+            ...prev,
+            ...newPagination
+          }))
+        }
       />
     </Grid>
   )
