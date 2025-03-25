@@ -64,7 +64,7 @@ jobs:
           wait-on: "http://localhost:3000"
           wait-on-timeout: 60
           record: false
-          config-file: frontend/cypress.config.js
+          config-file: cypress.config.js
           working-directory: frontend
         env:
           CYPRESS_IDIR_TEST_USER: ${{ secrets.ADMIN_IDIR_USERNAME }}
