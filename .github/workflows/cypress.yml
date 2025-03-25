@@ -60,7 +60,7 @@ jobs:
         uses: cypress-io/github-action@v6
         with:
           headed: false
-          browser: chrome
+          browser: electron
           wait-on: "http://localhost:3000"
           wait-on-timeout: 60
           record: false
@@ -80,7 +80,17 @@ jobs:
           CYPRESS_ORG2_BCEID_PASSWORD: ${{ secrets.ORG2_BCEID_PASSWORD }}
           DB_CYPRESS_USER: ${{ secrets.DB_CYPRESS_USER }}
           DB_CYPRESS_PASSWORD: ${{ secrets.DB_CYPRESS_PASSWORD }}
-
+          CYPRESS_BROWSER_ARGS: --no-sandbox
+      - name: Upload Cypress Artifacts
+        if: failure() # Always upload even if tests fail
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-artifacts
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+            frontend/cypress/reports
+        
       # Print backend logs if something goes wrong
       - name: Print backend logs
         if: failure()

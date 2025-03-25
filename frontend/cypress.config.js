@@ -9,6 +9,8 @@ const { Client } = pg
 export default defineConfig({
   e2e: {
     specPattern: ['**/*.feature', '**/*.cy.js'],
+    screenshotsFolder: 'cypress/screenshots',
+    videosFolder: 'cypress/videos',
     // Global configurations
     reporter: 'mochawesome',
     reporterOptions: {
@@ -26,7 +28,7 @@ export default defineConfig({
     screenshotOnRunFailure: true,
 
     // Video recording
-    video: false,
+    video: true,
 
     // Viewport dimensions
     viewportWidth: 1280,
@@ -58,13 +60,6 @@ export default defineConfig({
         },
         clearComplianceReports() {
           return new Promise((resolve, reject) => {
-            console.log(
-              'DB_CYPRESS_PASSWORD is',
-              typeof process.env.DB_CYPRESS_PASSWORD
-            )
-            if (!process.env.DB_CYPRESS_PASSWORD || typeof process.env.DB_CYPRESS_PASSWORD !== 'string') {
-              throw new Error('Missing or invalid DB_CYPRESS_PASSWORD');
-            }
             const client = new Client({
               user: process.env.DB_CYPRESS_USER,
               host: process.env.DB_CYPRESS_HOST || 'localhost',
