@@ -321,8 +321,8 @@ export const fuelExportColDefs = (
           )?.provisionOfTheActId
 
         if (params.newValue !== PROVISION_APPROVED_FUEL_CODE) {
-          params.data.fuelCode = null;
-          params.data.fuelCodeId = null;
+          params.data.fuelCode = null
+          params.data.fuelCodeId = null
         }
       }
       return true
@@ -474,34 +474,8 @@ export const fuelExportColDefs = (
     minWidth: 100,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-
     valueGetter: (params) => {
-      if (/Fuel code/i.test(params.data.determiningCarbonIntensity)) {
-        return optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
-          ?.fuelCodeCarbonIntensity
-      } else {
-        if (optionsData) {
-          if (isFuelTypeOther(params) && params.data.fuelCategory) {
-            const categories = optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            ).fuelCategories
-            const defaultCI = categories.find(
-              (cat) => cat.fuelCategory === params.data.fuelCategory
-            ).defaultAndPrescribedCi
-
-            return defaultCI
-          }
-        }
-        return (
-          (optionsData &&
-            optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            )?.defaultCarbonIntensity) ||
-          0
-        )
-      }
+      return params.data.ciOfFuel
     }
   },
   {
@@ -606,7 +580,7 @@ export const fuelExportSummaryColDefs = [
     valueGetter: (params) => params.data.fuelType?.fuelType
   },
   {
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory',
     valueGetter: (params) => params.data.fuelCategory?.category
   },
@@ -688,7 +662,7 @@ export const changelogCommonColDefs = [
     cellStyle: (params) => changelogCellStyle(params, 'fuelTypeId')
   },
   {
-    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategoryId'),
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory',
     valueGetter: (params) => params.data.fuelCategory?.category,
     cellStyle: (params) => changelogCellStyle(params, 'fuelCategoryId')

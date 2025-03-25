@@ -1,10 +1,5 @@
-// complianceReportButtonConfigs.js
-
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
-import {
-  COMPLIANCE_REPORT_STATUSES,
-  SUPPLEMENTAL_INITIATOR_TYPE
-} from '@/constants/statuses'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 
 const outlineBase = {
@@ -173,23 +168,6 @@ export const buttonClusterConfigFn = ({
         })
       }
     },
-    reAssessReport: {
-      ...containedButton(t('report:actionBtns.reAssessReportBtn')),
-      id: 're-assess-report-btn',
-      handler: (formData) => {
-        setModalData({
-          primaryButtonAction: () =>
-            updateComplianceReport({
-              ...formData,
-              status: COMPLIANCE_REPORT_STATUSES.REASSESSED
-            }),
-          primaryButtonText: t('report:actionBtns.reAssessReportBtn'),
-          secondaryButtonText: t('cancelBtn'),
-          title: t('confirmation'),
-          content: t('report:reAssessConfirmText')
-        })
-      }
-    },
     deleteSupplementalReport: {
       ...redOutlinedButton(
         t('report:actionBtns.deleteSupplementalReportBtn'),
@@ -216,13 +194,10 @@ export const buttonClusterConfigFn = ({
     return currentDate <= deadlineDate
   }
 
-  const buttons = {
+  return {
     [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
       reportButtons.submitReport,
-      ...(supplementalInitiator ===
-      SUPPLEMENTAL_INITIATOR_TYPE.SUPPLIER_SUPPLEMENTAL
-        ? [reportButtons.deleteSupplementalReport]
-        : [])
+      ...(supplementalInitiator ? [reportButtons.deleteSupplementalReport] : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
       ...(isGovernmentUser && hasRoles('Analyst')
@@ -230,6 +205,11 @@ export const buttonClusterConfigFn = ({
             reportButtons.recommendByAnalyst,
             ...(canReturnToSupplier() ? [reportButtons.returnToSupplier] : [])
           ]
+        : [])
+    ],
+    [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: [
+      ...(isGovernmentUser && hasRoles('Analyst')
+        ? [reportButtons.recommendByAnalyst]
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: [
@@ -241,13 +221,6 @@ export const buttonClusterConfigFn = ({
       ...(isGovernmentUser && hasRoles('Director')
         ? [reportButtons.assessReport, reportButtons.returnToManager]
         : [])
-    ],
-    [COMPLIANCE_REPORT_STATUSES.ASSESSED]: [
-      ...(isGovernmentUser && hasRoles('Analyst')
-        ? [reportButtons.reAssessReport]
-        : [])
     ]
   }
-
-  return buttons
 }

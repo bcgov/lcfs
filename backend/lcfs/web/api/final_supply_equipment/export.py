@@ -5,7 +5,7 @@ from fastapi import Depends
 from openpyxl.worksheet.datavalidation import DataValidation
 from starlette.responses import StreamingResponse
 
-from lcfs.db.models import Organization
+from lcfs.db.models import Organization, UserProfile
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import PaginationRequestSchema

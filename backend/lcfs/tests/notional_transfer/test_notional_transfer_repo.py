@@ -1,12 +1,11 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock
 from sqlalchemy.ext.asyncio import AsyncSession
+from unittest.mock import MagicMock, AsyncMock
 
-from lcfs.db.base import UserTypeEnum
 from lcfs.db.models.compliance import NotionalTransfer
+from lcfs.tests.notional_transfer.conftest import create_mock_entity
 from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
 from lcfs.web.api.notional_transfer.schema import NotionalTransferSchema
-from lcfs.tests.notional_transfer.conftest import create_mock_entity
 
 
 @pytest.fixture
@@ -75,11 +74,9 @@ async def test_get_latest_notional_transfer_by_group_uuid(
 ):
     group_uuid = "test-group-uuid"
     mock_notional_transfer_gov = MagicMock(spec=NotionalTransfer)
-    mock_notional_transfer_gov.user_type = UserTypeEnum.GOVERNMENT
     mock_notional_transfer_gov.version = 2
 
     mock_notional_transfer_supplier = MagicMock(spec=NotionalTransfer)
-    mock_notional_transfer_supplier.user_type = UserTypeEnum.SUPPLIER
     mock_notional_transfer_supplier.version = 3
 
     # Mock response with both government and supplier versions
@@ -92,34 +89,7 @@ async def test_get_latest_notional_transfer_by_group_uuid(
         group_uuid
     )
 
-    assert result.user_type == UserTypeEnum.GOVERNMENT
     assert result.version == 2
-
-
-@pytest.mark.anyio
-async def test_get_notional_transfer_version_by_user(
-    notional_transfer_repo, mock_db_session
-):
-    group_uuid = "test-group-uuid"
-    version = 2
-    user_type = UserTypeEnum.SUPPLIER
-
-    mock_notional_transfer = MagicMock(spec=NotionalTransfer)
-    mock_notional_transfer.group_uuid = group_uuid
-    mock_notional_transfer.version = version
-    mock_notional_transfer.user_type = user_type
-
-    mock_db_session.execute.return_value.scalars.return_value.first.return_value = (
-        mock_notional_transfer
-    )
-
-    result = await notional_transfer_repo.get_notional_transfer_version_by_user(
-        group_uuid, version, user_type
-    )
-
-    assert result.group_uuid == group_uuid
-    assert result.version == version
-    assert result.user_type == user_type
 
 
 @pytest.mark.anyio
