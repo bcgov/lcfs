@@ -92,5 +92,5 @@
     "orgLine": "{{org}}, {{date}} - {{comment}}"
   },
   "noAvailableBalance": "No available balance for this organization",
-  "quantityAdjusted": "Quantity adjusted to maximum available balance"
+  "quantityAdjusted": "Maximum available balance"
 }
