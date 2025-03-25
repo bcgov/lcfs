@@ -397,15 +397,25 @@ function enterFSEData(data) {
     cy.wait(300)
 
     // Supply date range
-    cy.get('div.ag-cell[col-id="supplyFrom"]')
+    cy.get('div.ag-cell[col-id="supplyFromDate"]')
       .should('be.visible')
       .eq(index)
       .click({ force: true })
       .then(() => {
-        cy.get('.ag-grid-date-range-selector')
+        cy.get('.date-picker-container')
           .find('input')
           .clear()
-          .type(`${row.supplyDateRange}{enter}`)
+          .type(`${row.supplyFromDate}{enter}`)
+      })
+    cy.get('div.ag-cell[col-id="supplyToDate"]')
+      .should('be.visible')
+      .eq(index)
+      .click({ force: true })
+      .then(() => {
+        cy.get('.date-picker-container')
+          .find('input')
+          .clear()
+          .type(`${row.supplyToDate}{enter}`)
       })
 
     // kWh usage

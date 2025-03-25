@@ -1,3 +1,4 @@
+import 'dotenv/config'
 import { defineConfig } from 'cypress'
 import createBundler from '@bahmutov/cypress-esbuild-preprocessor'
 import { addCucumberPreprocessorPlugin } from '@badeball/cypress-cucumber-preprocessor'
@@ -8,6 +9,8 @@ const { Client } = pg
 export default defineConfig({
   e2e: {
     specPattern: ['**/*.feature', '**/*.cy.js'],
+    screenshotsFolder: 'cypress/screenshots',
+    videosFolder: 'cypress/videos',
     // Global configurations
     reporter: 'mochawesome',
     reporterOptions: {
@@ -25,7 +28,7 @@ export default defineConfig({
     screenshotOnRunFailure: true,
 
     // Video recording
-    video: false,
+    video: true,
 
     // Viewport dimensions
     viewportWidth: 1280,

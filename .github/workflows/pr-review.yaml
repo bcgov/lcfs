@@ -1,0 +1,121 @@
+name: Pull request review updates
+
+on:
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send PR Review Notification to Teams
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const review = context.payload.review;
+            const pr = context.payload.pull_request;
+
+            const prNumber = pr.number;
+            const prTitle = pr.title;
+            const prUrl = pr.html_url;
+            const reviewer = review.user.login;
+            const author = pr.user.login;
+            const reviewState = review.state;
+            const reviewComment = review.body || '(No comment provided)';
+
+            let color = "0076D7"; // default blue
+            let message = "";
+            let facts = [];
+
+            if (reviewState === 'approved') {
+              message = `✅ PR #${prNumber} approved by **${reviewer}** (Author: **${author}**)\n[View PR](${prUrl})`;
+              color = "2CBE4E";
+              facts = [
+                { "name": "Review Status", "value": "Approved" },
+                { "name": "Approved by", "value": reviewer },
+                { "name": "Author", "value": author }
+              ];
+            } else if (reviewState === 'changes_requested') {
+              message = `🔁 Changes requested on PR #${prNumber} by **${reviewer}** (Author: **${author}**)\n[View PR](${prUrl})`;
+              color = "FBAB19";
+              facts = [
+                { "name": "Review Status", "value": "Changes Requested" },
+                { "name": "Requested by", "value": reviewer },
+                { "name": "Author", "value": author },
+                { "name": "Review Comment", "value": reviewComment }
+              ];
+            } else if (reviewState === 'commented') {
+              message = `💬 Comment added on PR #${prNumber} by **${reviewer}** (Author: **${author}**)\n[View PR](${prUrl})`;
+              facts = [
+                { "name": "Review Status", "value": "Commented" },
+                { "name": "Commented by", "value": reviewer },
+                { "name": "Author", "value": author },
+                { "name": "Review Comment", "value": reviewComment }
+              ];
+            } else {
+              console.log('No actionable review state, skipping Teams notification.');
+              return;
+            }
+
+            const webhookUrl = process.env.TEAMS_WEBHOOK_URL;
+            const card = {
+              "@type": "MessageCard",
+              "@context": "http://schema.org/extensions",
+              "themeColor": color,
+              "summary": `PR Review Notification for #${prNumber}`,
+              "sections": [
+                {
+                  "activityTitle": `PR Review Update for #${prNumber}`,
+                  "activitySubtitle": `Repository: ${context.repo.owner}/${context.repo.repo}`,
+                  "facts": facts,
+                  "text": message,
+                  "markdown": true
+                }
+              ],
+              "potentialAction": [
+                {
+                  "@type": "OpenUri",
+                  "name": "View Pull Request",
+                  "targets": [
+                    {
+                      "os": "default",
+                      "uri": prUrl
+                    }
+                  ]
+                }
+              ]
+            };
+
+            const https = require('https');
+            const url = new URL(webhookUrl);
+
+            const options = {
+              hostname: url.hostname,
+              path: url.pathname + url.search,
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            };
+
+            const req = https.request(options, (res) => {
+              console.log(`Teams notification status: ${res.statusCode}`);
+              res.on('data', (chunk) => {
+                console.log(`Response: ${chunk}`);
+              });
+            });
+
+            req.on('error', (error) => {
+              console.error(`Error sending Teams notification: ${error}`);
+            });
+
+            req.write(JSON.stringify(card));
+            req.end();
+        env:
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
