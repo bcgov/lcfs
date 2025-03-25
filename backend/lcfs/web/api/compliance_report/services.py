@@ -225,8 +225,7 @@ class ComplianceReportServices:
         summary_data = {
             column: getattr(assessed_report.summary, column)
             for column in assessed_report.summary.__table__.columns.keys()
-            if column.startswith("line_")
-}
+            if any(column.startswith(f"line_{i}") for i in range(6, 10))}
         new_summary = ComplianceReportSummary(**summary_data)
 
         # Create the new supplemental compliance report
