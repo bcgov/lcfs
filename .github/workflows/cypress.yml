@@ -124,29 +124,7 @@ jobs:
             echo "status=success" >> $GITHUB_OUTPUT
             echo "theme_color=00FF00" >> $GITHUB_OUTPUT  # Green
           fi
-      - name: Extract Cypress Test Summary
-        id: summary
-        run: |
-          REPORT_PATH="frontend/cypress/reports/results.json"
-          
-          if [ -f "$REPORT_PATH" ]; then
-            TOTAL=$(jq '.stats.tests' $REPORT_PATH)
-            PASSED=$(jq '.stats.passes' $REPORT_PATH)
-            FAILED=$(jq '.stats.failures' $REPORT_PATH)
-            PENDING=$(jq '.stats.pending' $REPORT_PATH)
-            
-            echo "total=$TOTAL" >> $GITHUB_OUTPUT
-            echo "passed=$PASSED" >> $GITHUB_OUTPUT
-            echo "failed=$FAILED" >> $GITHUB_OUTPUT
-            echo "pending=$PENDING" >> $GITHUB_OUTPUT
-          else
-            echo "No report found, setting defaults"
-            echo "total=0" >> $GITHUB_OUTPUT
-            echo "passed=0" >> $GITHUB_OUTPUT
-            echo "failed=0" >> $GITHUB_OUTPUT
-            echo "pending=0" >> $GITHUB_OUTPUT
-          fi
-  
+
       - name: Send Teams notification
         run: |
           REPO="${{ github.repository }}"
@@ -163,7 +141,7 @@ jobs:
             STATUS_EMOJI="✅ Passed"
           fi
 
-          MESSAGE="**Cypress Daily Test Run**\n- **Status:** $STATUS_EMOJI\n- **Time:** $TIMESTAMP\n- **Total:** ${{ steps.summary.outputs.total }} | ✅ Passed: ${{ steps.summary.outputs.passed }} | ❌ Failed: ${{ steps.summary.outputs.failed }}"
+          MESSAGE="**Cypress Daily Test Run**\n- **Status:** $STATUS_EMOJI\n- **Time:** $TIMESTAMP"
 
 
           cat <<EOF > teams_card.json
@@ -179,11 +157,7 @@ jobs:
                 "facts": [
                   { "name": "Workflow", "value": "Cypress Daily" },
                   { "name": "Status", "value": "$STATUS" },
-                  { "name": "Run Time", "value": "$TIMESTAMP" },
-                  { "name": "Total Tests", "value": "${{ steps.summary.outputs.total }}" },
-                  { "name": "Passed", "value": "${{ steps.summary.outputs.passed }}" },
-                  { "name": "Failed", "value": "${{ steps.summary.outputs.failed }}" },
-                  { "name": "Pending", "value": "${{ steps.summary.outputs.pending }}" }
+                  { "name": "Run Time", "value": "$TIMESTAMP" }
                 ],
                 "text": "$MESSAGE",
                 "markdown": true
