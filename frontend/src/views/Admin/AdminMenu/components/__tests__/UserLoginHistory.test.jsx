@@ -27,7 +27,7 @@ vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
 
 // Mock BCGridViewer component
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
-  BCGridViewer: (props) => {
+  BCGridViewer: () => {
     return <div data-test="bc-grid-viewer">BCGridViewer</div>
   }
 }))
@@ -51,10 +51,10 @@ describe('UserLoginHistory', () => {
 
   it('renders the UserLoginHistory component with title and grid viewer', () => {
     customRender(<UserLoginHistory />)
-    
+
     // Verify that the title renders
     expect(screen.getByText('admin:UserLoginHistory')).toBeInTheDocument()
     // Verify that the BCGridViewer component renders
-    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument();
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 })
