@@ -295,6 +295,7 @@ async def test_delete_compliance_report_idir_no_permission(
     compliance_report_service, mock_repo
 ):
     """Test deletion fails when IDIR user tries to delete Draft compliance report instead of Analyst_Adjustment/ in government re-assessement"""
+    mock_user = MagicMock(organization_id=None)
     mock_report = MagicMock(
         organization_id=998, current_status=MagicMock(status="Draft")
     )

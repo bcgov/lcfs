@@ -1008,7 +1008,7 @@ async def test_delete_compliance_report_success(compliance_report_repo, dbsessio
     dbsession.flush = AsyncMock(return_value=None)
 
     # Call the delete function
-    result = await compliance_report_repo.delete_supplemental_report(
+    result = await compliance_report_repo.delete_compliance_report(
         compliance_report_id
     )
 
