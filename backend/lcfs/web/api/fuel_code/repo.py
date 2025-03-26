@@ -725,17 +725,17 @@ class FuelCodeRepository:
                 WHERE fcp.prefix = :prefix
             ),
             range_params AS (
-                SELECT 
-                    CASE 
-                        WHEN :prefix = 'PROXY' THEN 1 
-                        ELSE 101 
+                SELECT
+                    CASE
+                        WHEN :prefix = 'PROXY' THEN 1
+                        ELSE 101
                     END AS min_code
             ),
             all_possible_codes AS (
                 SELECT generate_series(
                     (SELECT min_code FROM range_params),
                     GREATEST(
-                        (SELECT min_code FROM range_params), 
+                        (SELECT min_code FROM range_params),
                         COALESCE((SELECT MAX(base_code) FROM parsed_codes), 0) + 1
                     )
                 ) AS base_code
