@@ -998,10 +998,10 @@ async def test_aggregate_allocation_agreements(compliance_report_repo, dbsession
 
 
 @pytest.mark.anyio
-async def test_delete_supplemental_report_success(compliance_report_repo, dbsession):
-    """Test successful deletion of a supplemental compliance report"""
+async def test_delete_compliance_report_success(compliance_report_repo, dbsession):
+    """Test successful deletion of a compliance report"""
 
-    compliance_report_id = 996  # Use an existing ID from supplemental_reports fixture
+    compliance_report_id = 996  # Use an existing ID from compliance reports fixture
 
     # Mock `execute` and `flush` calls
     dbsession.execute = AsyncMock(return_value=None)

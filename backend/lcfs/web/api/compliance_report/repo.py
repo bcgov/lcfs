@@ -968,7 +968,7 @@ class ComplianceReportRepository:
         return result.scalars().first().summary
 
     @repo_handler
-    async def delete_supplemental_report(self, compliance_report_id: int) -> bool:
+    async def delete_compliance_report(self, compliance_report_id: int) -> bool:
         """
         Deletes a compliance report and all its related data by ID using concurrent operations.
 
