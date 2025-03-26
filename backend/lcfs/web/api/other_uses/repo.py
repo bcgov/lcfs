@@ -199,7 +199,7 @@ class OtherUsesRepository:
             .group_by(OtherUses.group_uuid)
         )
         # Now create a subquery for use in the JOIN
-        valid_fuel_supplies_subq = valid_other_uses_select.subquery()
+        valid_other_uses_subq = valid_other_uses_select.subquery()
 
         other_uses_select = (
             select(OtherUses)
@@ -211,11 +211,11 @@ class OtherUsesRepository:
                 joinedload(OtherUses.fuel_code),
             )
             .join(
-                valid_fuel_supplies_subq,
+                valid_other_uses_subq,
                 and_(
-                    OtherUses.group_uuid == valid_fuel_supplies_subq.c.group_uuid,
-                    OtherUses.version == valid_fuel_supplies_subq.c.max_version,
-                    user_type_priority == valid_fuel_supplies_subq.c.max_role_priority,
+                    OtherUses.group_uuid == valid_other_uses_subq.c.group_uuid,
+                    OtherUses.version == valid_other_uses_subq.c.max_version,
+                    user_type_priority == valid_other_uses_subq.c.max_role_priority,
                 ),
             )
             .order_by(OtherUses.other_uses_id)
@@ -377,8 +377,9 @@ class OtherUsesRepository:
         compliance_period_id = None
         if compliance_period:
             cp_result = await self.db.execute(
-                select(CompliancePeriod.compliance_period_id)
-                .where(CompliancePeriod.description == str(compliance_period))
+                select(CompliancePeriod.compliance_period_id).where(
+                    CompliancePeriod.description == str(compliance_period)
+                )
             )
             compliance_period_id = cp_result.scalar_one_or_none()
 
@@ -432,10 +433,12 @@ class OtherUsesRepository:
             default_ci = None
             if compliance_period_id:
                 default_ci = next(
-                    (dci.default_carbon_intensity
-                    for dci in fuel_type.default_carbon_intensities
-                    if dci.compliance_period_id == compliance_period_id),
-                    None
+                    (
+                        dci.default_carbon_intensity
+                        for dci in fuel_type.default_carbon_intensities
+                        if dci.compliance_period_id == compliance_period_id
+                    ),
+                    None,
                 )
 
             formatted_fuel_type = {
@@ -485,3 +488,8 @@ class OtherUsesRepository:
             formatted_fuel_types.append(formatted_fuel_type)
 
         return formatted_fuel_types
+
+    async def delete_other_use(self, other_uses_id):
+        await self.db.execute(
+            delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id)
+        )

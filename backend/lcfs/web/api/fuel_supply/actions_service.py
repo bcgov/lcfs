@@ -252,7 +252,7 @@ class FuelSupplyActionService:
             fs_data.group_uuid
         )
 
-        if fs_data.is_new_supplemental_entry:
+        if existing_fuel_supply.compliance_report_id == fs_data.compliance_report_id:
             await self.repo.delete_fuel_supply(fuel_supply_id=fs_data.fuel_supply_id)
             return DeleteFuelSupplyResponseSchema(
                 success=True, message="Marked as deleted."
@@ -270,8 +270,7 @@ class FuelSupplyActionService:
             # Copy fields from the latest version for the deletion record
             for field in existing_fuel_supply.__table__.columns.keys():
                 if field not in FUEL_SUPPLY_EXCLUDE_FIELDS:
-                    setattr(delete_supply, field, getattr(
-                        existing_fuel_supply, field))
+                    setattr(delete_supply, field, getattr(existing_fuel_supply, field))
 
             delete_supply.compliance_report_id = fs_data.compliance_report_id
 

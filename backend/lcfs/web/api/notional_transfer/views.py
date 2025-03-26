@@ -183,13 +183,10 @@ async def save_notional_transfer_row(
     await validate.validate_compliance_report_id(compliance_report_id, [request_data])
     if request_data.deleted:
         # Delete existing notional transfer
-
         return await service.delete_notional_transfer(request_data, current_user_type)
     elif notional_transfer_id:
         # Update existing notional transfer
-
         return await service.update_notional_transfer(request_data, current_user_type)
     else:
         # Create new notional transfer
-
         return await service.create_notional_transfer(request_data, current_user_type)
