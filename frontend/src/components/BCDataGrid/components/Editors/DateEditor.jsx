@@ -9,7 +9,8 @@ export const DateEditor = ({
   maxDate,
   rowIndex,
   api,
-  autoOpenLastRow
+  autoOpenLastRow,
+  onBlur
 }) => {
   const [selectedDate, setSelectedDate] = useState(
     value ? parseISO(value) : null
@@ -43,6 +44,9 @@ export const DateEditor = ({
     }
     setSelectedDate(val)
     onValueChange(val === null ? null : format(val, 'yyyy-MM-dd'))
+    if (isOpen) {
+      onBlur()
+    }
   }
 
   const handleDatePickerOpen = () => {
@@ -100,9 +104,13 @@ export const DateEditor = ({
               }
             }
           },
-          popper: { placement: 'bottom-start' },
+          popper: {
+            placement: 'bottom-start'
+          },
           // Handle icon click specifically to open the calendar
-          openPickerButton: { onClick: handleIconClick }
+          openPickerButton: {
+            onClick: handleIconClick
+          }
         }}
         value={selectedDate}
         onChange={updateValue}

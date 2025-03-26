@@ -102,9 +102,10 @@ export const fuelExportColDefs = (
 
     suppressKeyboardEvent,
     cellEditor: DateEditor,
-    cellEditorParams: {
-      autoOpenLastRow: !gridReady
-    }
+    cellEditorParams: (params) => ({
+      autoOpenLastRow: !gridReady,
+      onBlur: () => params.stopEditing()
+    })
   },
   {
     field: 'fuelTypeId',
