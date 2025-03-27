@@ -64,6 +64,8 @@ class FuelExportActionService:
             end_use_id=fuel_export.end_use_id,
             fuel_code_id=fuel_export.fuel_code_id,
             compliance_period=fe_data.compliance_period,
+            provision_of_the_act=fe_data.provision_of_the_act,
+            export_date=fe_data.export_date,
         )
 
         fuel_export.units = QuantityUnitsEnum(fe_data.units)
