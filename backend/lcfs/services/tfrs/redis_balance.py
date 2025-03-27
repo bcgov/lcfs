@@ -37,8 +37,7 @@ async def init_org_balance_cache(app: FastAPI):
 
             # Get the current year
             current_year = datetime.now().year
-            logger.info(
-                f"Starting balance cache population for {current_year}")
+            logger.info(f"Starting balance cache population for {current_year}")
 
             # Fetch all organizations
             all_orgs = await organization_repo.get_organizations()

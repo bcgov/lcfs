@@ -1,6 +1,6 @@
 import pytest
 from datetime import datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, ANY
 from uuid import uuid4
 
 from lcfs.db.base import ActionTypeEnum
@@ -12,6 +12,7 @@ from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
     DeleteFuelExportResponseSchema,
 )
+
 
 FUEL_EXPORT_EXCLUDE_FIELDS = {
     "id",
@@ -163,6 +164,8 @@ async def test_create_fuel_export_success(
         end_use_id=fe_data.end_use_id,
         fuel_code_id=fe_data.fuel_code_id,
         compliance_period=fe_data.compliance_period,
+        provision_of_the_act=ANY,
+        export_date=ANY,
     )
     mock_repo.create_fuel_export.assert_awaited_once()
     # Ensure compliance units were calculated correctly
@@ -414,6 +417,8 @@ async def test_populate_fuel_export_fields(
         end_use_id=fuel_export.end_use_id,
         fuel_code_id=fuel_export.fuel_code_id,
         compliance_period=fe_data.compliance_period,
+        provision_of_the_act=ANY,
+        export_date=ANY,
     )
 
 
@@ -440,7 +445,7 @@ async def test_compliance_units_calculation(
         group_uuid=str(uuid4()),
         version=0,
         provisionOfTheActId=123,
-        provisionOfTheAct={"provision_of_the_act_id": 123, "name": "Test Provision"},
+        provisionOfTheAct="Test Provision",
         exportDate=datetime.now().date(),
     )
 
@@ -518,5 +523,124 @@ async def test_compliance_units_calculation(
         end_use_id=fe_data.end_use_id,
         fuel_code_id=fe_data.fuel_code_id,
         compliance_period=fe_data.compliance_period,
+        provision_of_the_act=ANY,
+        export_date=ANY,
     )
+    mock_repo.create_fuel_export.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_create_fuel_export_unknown_provision_no_ci_found(
+    fuel_export_action_service, mock_fuel_code_repo
+):
+    export_date = datetime.now().date()
+    fe_data = FuelExportCreateUpdateSchema(
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_category_id=1,
+        end_use_id=1,
+        compliance_period="2024",
+        quantity=5000,
+        units="L",
+        energy_density=35.0,
+        group_uuid=str(uuid4()),
+        version=0,
+        provisionOfTheActId=999,
+        provisionOfTheAct="unknown",  # triggers unknown branch
+        exportDate=export_date,
+    )
+
+    # Simulate that the repository cannot find any active fuel codes in the last 12 months.
+    mock_fuel_code_repo.get_standardized_fuel_data.side_effect = ValueError(
+        "No active fuel codes found within the last 12 months for 'unknown' provision_of_the_act."
+    )
+
+    with pytest.raises(
+        ValueError, match="No active fuel codes found within the last 12 months"
+    ):
+        await fuel_export_action_service.create_fuel_export(fe_data)
+
+
+@pytest.mark.anyio
+async def test_create_fuel_export_unknown_provision_happy_path(
+    fuel_export_action_service, mock_fuel_code_repo, mock_repo
+):
+    export_date = datetime.now().date()
+    fe_data = FuelExportCreateUpdateSchema(
+        compliance_report_id=1,
+        fuel_type_id=1,
+        fuel_category_id=1,
+        end_use_id=1,
+        fuel_code_id=None,
+        compliance_period="2024",
+        quantity=2000,
+        units="L",
+        energy_density=30.0,
+        group_uuid=str(uuid4()),
+        version=0,
+        provision_of_the_act_id=123,
+        provision_of_the_act="unknown",
+        export_date=export_date,
+    )
+
+    mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
+        effective_carbon_intensity=42.0,
+        target_ci=80.0,
+        eer=1.0,
+        energy_density=30.0,
+        uci=None,
+    )
+
+    created_export = FuelExport(
+        fuel_export_id=1,
+        compliance_report_id=fe_data.compliance_report_id,
+        fuel_type_id=fe_data.fuel_type_id,
+        fuel_category_id=fe_data.fuel_category_id,
+        end_use_id=fe_data.end_use_id,
+        fuel_code_id=fe_data.fuel_code_id,
+        quantity=fe_data.quantity,
+        units=fe_data.units,
+        energy_density=fe_data.energy_density,
+        group_uuid=fe_data.group_uuid,
+        version=0,
+        provision_of_the_act_id=fe_data.provision_of_the_act_id,
+        export_date=fe_data.export_date,
+        ci_of_fuel=42.0,
+        target_ci=80.0,
+        eer=1.0,
+        energy=round(fe_data.energy_density * fe_data.quantity),
+        compliance_units=-42,
+    )
+
+    created_export.fuel_type = {
+        "fuel_type_id": fe_data.fuel_type_id,
+        "fuel_type": "Electricity",
+        "units": "kWh",
+    }
+    created_export.fuel_category = {
+        "fuel_category_id": fe_data.fuel_category_id,
+        "category": "Diesel",
+    }
+    created_export.provision_of_the_act = {
+        "provision_of_the_act_id": fe_data.provision_of_the_act_id,
+        "name": "unknown",
+    }
+    mock_repo.create_fuel_export.return_value = created_export
+
+    result = await fuel_export_action_service.create_fuel_export(fe_data)
+
+    assert isinstance(result, FuelExportSchema)
+    assert result.ci_of_fuel == 42.0
+    assert result.quantity == 2000
+
+    mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
+        fuel_type_id=fe_data.fuel_type_id,
+        fuel_category_id=fe_data.fuel_category_id,
+        end_use_id=fe_data.end_use_id,
+        fuel_code_id=None,
+        compliance_period=fe_data.compliance_period,
+        provision_of_the_act="unknown",
+        export_date=export_date,
+    )
+
     mock_repo.create_fuel_export.assert_awaited_once()
