@@ -206,6 +206,9 @@ When(
           // Save before refreshing
           cy.waitAndClick(SELECTORS.saveButton)
           cy.wait(1000)
+
+          // Added page refresh and extended wait time after completing each schedule
+          cy.refreshPageAndWait(5000)
         })
       }
     })
