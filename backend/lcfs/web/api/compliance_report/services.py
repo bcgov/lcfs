@@ -243,13 +243,13 @@ class ComplianceReportServices:
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
-    async def delete_supplemental_report(
-        self, report_id: int, user: UserProfile = None
-    ):
+    async def delete_compliance_report(self, report_id: int, user: UserProfile = None):
         """
-        Deletes a supplemental compliance report.
-        The report_id can be any report in the series (original or supplemental).
-        Supplemental reports are only allowed if the status of the current report is 'Draft'.
+        Deletes a compliance report.
+        - The report_id can be any report in the series (original or supplemental).
+        - Supplemental reports are only allowed if the status of the current report is 'Draft'.
+        - Compliance/Supplemental report that is in 'Analyst_adjustment / In Re-assessment
+          status then allow Gov users to delete the report.
         """
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(
@@ -259,19 +259,28 @@ class ComplianceReportServices:
             raise DataNotFoundException("Compliance report not found.")
 
         # Validate that the user has permission to delete a supplemental report
-        if user.organization_id != current_report.organization_id:
+        if (
+            user.organization_id is not None
+            and user.organization_id != current_report.organization_id
+        ) or (
+            user.organization_id is None
+            and not user_has_roles(user, [RoleEnum.GOVERNMENT])
+        ):
             raise ServiceException(
-                "You do not have permission to delete a supplemental report for this organization."
+                "You do not have permission to delete a this report."
             )
 
         # Validate that the status of the current report is 'Draft'
-        if current_report.current_status.status != ComplianceReportStatusEnum.Draft:
+        if current_report.current_status.status not in [
+            ComplianceReportStatusEnum.Draft,
+            ComplianceReportStatusEnum.Analyst_adjustment,
+        ]:
             raise ServiceException(
-                "A supplemental report can only be deleted if the status is 'Draft'."
+                "A supplemental report can only be deleted if the status is 'Draft/Analyst_adjustment'."
             )
 
-        # Delete the supplemental report
-        await self.repo.delete_supplemental_report(report_id)
+        # Delete the compliance report
+        await self.repo.delete_compliance_report(report_id)
         return True
 
     @service_handler

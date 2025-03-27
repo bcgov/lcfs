@@ -326,4 +326,4 @@ async def delete_supplemental_report(
     """
     # validate current user permissions
     await report_validate.validate_organization_access(report_id)
-    await report_service.delete_supplemental_report(report_id, request.user)
+    await report_service.delete_compliance_report(report_id, request.user)
