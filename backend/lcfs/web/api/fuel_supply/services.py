@@ -1,10 +1,12 @@
-import structlog
 import math
+import structlog
 from fastapi import Depends, Request, HTTPException, status
 
+from lcfs.db.models import FuelSupply
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.fuel_supply.schema import (
     EndUseTypeSchema,
     EnergyDensitySchema,
@@ -18,13 +20,8 @@ from lcfs.web.api.fuel_supply.schema import (
     ProvisionOfTheActSchema,
     TargetCarbonIntensitySchema,
     UnitOfMeasureSchema,
-    FuelSupplyCreateUpdateSchema,
 )
-from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.core.decorators import service_handler
-from lcfs.web.utils.calculations import calculate_compliance_units
-from lcfs.web.api.role.schema import user_has_roles
-from lcfs.db.models.user.Role import RoleEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -240,11 +237,42 @@ class FuelSupplyServices:
         fuel_supply_models = await self.repo.get_fuel_supply_list(
             compliance_report_id, changelog
         )
-        fs_list = [
-            FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supply_models
-        ]
+        fs_list = [self.map_entity_to_schema(fs) for fs in fuel_supply_models]
 
         return FuelSuppliesSchema(fuel_supplies=fs_list if fs_list else [])
+
+    def map_entity_to_schema(self, fuel_supply: FuelSupply):
+        return FuelSupplyResponseSchema(
+            compliance_report_id=fuel_supply.compliance_report_id,
+            fuel_code=(
+                fuel_supply.fuel_code.fuel_code if fuel_supply.fuel_code else None
+            ),
+            fuel_type_id=fuel_supply.fuel_type_id,
+            fuel_type_other=fuel_supply.fuel_type_other,
+            ci_of_fuel=fuel_supply.ci_of_fuel,
+            end_use_id=fuel_supply.end_use_id,
+            provision_of_the_act=fuel_supply.provision_of_the_act.name,
+            provision_of_the_act_id=fuel_supply.provision_of_the_act_id,
+            fuel_type=fuel_supply.fuel_type.fuel_type,
+            fuel_category=fuel_supply.fuel_category.category,
+            fuel_code_id=fuel_supply.fuel_code_id,
+            fuel_category_id=fuel_supply.fuel_category_id,
+            fuel_supply_id=fuel_supply.fuel_supply_id,
+            action_type=fuel_supply.action_type,
+            compliance_units=round(fuel_supply.compliance_units),
+            end_use_type=fuel_supply.end_use_type.type,
+            target_ci=fuel_supply.target_ci,
+            version=fuel_supply.version,
+            quantity=fuel_supply.quantity,
+            group_uuid=fuel_supply.group_uuid,
+            energy_density=fuel_supply.energy_density,
+            eer=fuel_supply.eer,
+            uci=fuel_supply.uci,
+            units=fuel_supply.units,
+            energy=fuel_supply.energy,
+            deleted=False,
+            is_new_supplemental_entry=False,
+        )
 
     @service_handler
     async def get_fuel_supplies_paginated(
@@ -266,9 +294,7 @@ class FuelSupplyServices:
                     math.ceil(total_count / pagination.size) if total_count > 0 else 0
                 ),
             ),
-            fuel_supplies=[
-                FuelSupplyResponseSchema.model_validate(fs) for fs in fuel_supplies
-            ],
+            fuel_supplies=[self.map_entity_to_schema(fs) for fs in fuel_supplies],
         )
 
     @service_handler
