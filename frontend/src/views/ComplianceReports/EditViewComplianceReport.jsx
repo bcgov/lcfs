@@ -128,7 +128,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     }
   )
 
-  const { mutate: deleteSupplementalReport } = useDeleteComplianceReport(
+  const { mutate: deleteComplianceReport } = useDeleteComplianceReport(
     reportData?.report.organizationId,
     complianceReportId,
     {
@@ -136,7 +136,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         setModalData(null)
         navigate(ROUTES.REPORTS.LIST, {
           state: {
-            message: t('report:supplementalReportDeleted'),
+            message: t('report:reportDeleteSuccessText'),
             severity: 'success'
           }
         })
@@ -160,7 +160,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         t,
         setModalData,
         updateComplianceReport,
-        deleteSupplementalReport,
+        deleteComplianceReport,
         compliancePeriod,
         isGovernmentUser,
         isSigningAuthorityDeclared,
@@ -172,7 +172,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       t,
       setModalData,
       updateComplianceReport,
-      deleteSupplementalReport,
+      deleteComplianceReport,
       compliancePeriod,
       isGovernmentUser,
       isSigningAuthorityDeclared,

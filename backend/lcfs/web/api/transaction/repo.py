@@ -301,7 +301,6 @@ class TransactionRepository:
                 ).label("available_balance")
             ).where(Transaction.organization_id == organization_id)
         )
-        print("BALANCE: ", available_balance)
         return available_balance or 0
 
     @repo_handler

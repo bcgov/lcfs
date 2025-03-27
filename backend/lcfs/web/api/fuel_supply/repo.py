@@ -157,14 +157,17 @@ class FuelSupplyRepository:
             )
             .outerjoin(
                 ProvisionOfTheAct,
-                or_(
-                    and_(
-                        FuelType.fossil_derived == True,
-                        ProvisionOfTheAct.provision_of_the_act_id == 1,
-                    ),
-                    and_(
-                        FuelType.fossil_derived == False,
-                        ProvisionOfTheAct.provision_of_the_act_id != 1,
+                and_(
+                    ProvisionOfTheAct.name != "Unknown",
+                    or_(
+                        and_(
+                            FuelType.fossil_derived == True,
+                            ProvisionOfTheAct.provision_of_the_act_id == 1,
+                        ),
+                        and_(
+                            FuelType.fossil_derived == False,
+                            ProvisionOfTheAct.provision_of_the_act_id != 1,
+                        ),
                     ),
                 ),
             )
