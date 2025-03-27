@@ -1,7 +1,7 @@
 """Compliance report counts correction
 
 Revision ID: 2e2f6f7ff390
-Revises: ac0ac5d0c81b
+Revises: 7769d03605d8
 Create Date: 2025-03-26 07:08:37.304453
 
 """
@@ -12,7 +12,7 @@ import logging
 
 # revision identifiers, used by Alembic.
 revision = "2e2f6f7ff390"
-down_revision = "ac0ac5d0c81b"
+down_revision = "7769d03605d8"
 branch_labels = None
 depends_on = None
 
@@ -42,7 +42,10 @@ def upgrade() -> None:
             CREATE MATERIALIZED VIEW mv_org_compliance_report_count AS
             SELECT
                 cr.organization_id,
-                COUNT(*) FILTER (WHERE cr.current_status_id = 1) AS count_in_progress,
+                COUNT(*) FILTER (WHERE cr.current_status_id = (SELECT compliance_report_status_id
+                                                                 FROM compliance_report_status
+                                                                WHERE status = 'Draft' LIMIT 1) 
+                ) AS count_in_progress,
                 COUNT(*) FILTER (WHERE cr.current_status_id in (
                     SELECT compliance_report_status_id 
                     FROM compliance_report_status where status in (
