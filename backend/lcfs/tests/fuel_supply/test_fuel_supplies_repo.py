@@ -12,6 +12,7 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyResponseSchema,
 )
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.exception.exceptions import DatabaseException
 
 
 @pytest.fixture
@@ -180,3 +181,71 @@ async def test_get_fuel_supplies_paginated_exclude_draft_reports(fuel_supply_rep
         FuelSupplyResponseSchema.model_validate(fs) for fs in expected_fuel_supplies
     ]
     assert result.fuel_supplies == expected_processed
+
+
+@pytest.mark.anyio
+async def test_get_fuel_supply_table_options_ghgenius_provision(
+    fuel_supply_repo, mock_db_session
+):
+    # Set up mock results for different scenarios
+    mock_result_chain = MagicMock()
+    mock_result_chain.all = MagicMock()
+
+    async def mock_execute(query, *args, **kwargs):
+        return mock_result_chain
+
+    mock_db_session.execute = mock_execute
+
+    # Test pre-2024 non-fossil fuel (should show GHGenius)
+    mock_result_chain.all.return_value = [
+        {
+            "fuel_type_id": 1,
+            "fuel_type": "Biodiesel",
+            "fossil_derived": False,
+            "provision_of_the_act_id": 8,
+            "provision_of_the_act": "GHGenius",
+        }
+    ]
+    result_pre_2024 = await fuel_supply_repo.get_fuel_supply_table_options("2023")
+    assert len(result_pre_2024["fuel_types"]) == 1
+    assert result_pre_2024["fuel_types"][0]["provision_of_the_act_id"] == 8
+    assert result_pre_2024["fuel_types"][0]["provision_of_the_act"] == "GHGenius"
+
+    # Test post-2024 non-fossil fuel (should not show GHGenius)
+    mock_result_chain.all.return_value = [
+        {
+            "fuel_type_id": 1,
+            "fuel_type": "Biodiesel",
+            "fossil_derived": False,
+            "provision_of_the_act_id": 1,
+            "provision_of_the_act": "Original Provision",
+        }
+    ]
+    result_post_2024 = await fuel_supply_repo.get_fuel_supply_table_options("2024")
+    assert len(result_post_2024["fuel_types"]) == 1
+    assert result_post_2024["fuel_types"][0]["provision_of_the_act_id"] == 1
+    assert (
+        result_post_2024["fuel_types"][0]["provision_of_the_act"]
+        == "Original Provision"
+    )
+
+    # Test fossil fuel (should only show original provision regardless of year)
+    mock_result_chain.all.return_value = [
+        {
+            "fuel_type_id": 2,
+            "fuel_type": "Diesel",
+            "fossil_derived": True,
+            "provision_of_the_act_id": 1,
+            "provision_of_the_act": "Original Provision",
+        }
+    ]
+    result_fossil = await fuel_supply_repo.get_fuel_supply_table_options("2023")
+    assert len(result_fossil["fuel_types"]) == 1
+    assert result_fossil["fuel_types"][0]["provision_of_the_act_id"] == 1
+    assert (
+        result_fossil["fuel_types"][0]["provision_of_the_act"] == "Original Provision"
+    )
+
+    # Test invalid compliance period
+    with pytest.raises(DatabaseException):
+        await fuel_supply_repo.get_fuel_supply_table_options("invalid")
