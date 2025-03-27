@@ -169,13 +169,15 @@ class FuelSupplyRepository:
                         FuelType.fossil_derived == False,
                         or_(
                             and_(
-                                ProvisionOfTheAct.provision_of_the_act_id != 1,
+                                ProvisionOfTheAct.provision_of_the_act_id.notin_(
+                                    [1, 8]
+                                ),  # Exclude both original and GHGenius for post-2024
                                 current_year
                                 >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
                             ),
                             and_(
                                 ProvisionOfTheAct.provision_of_the_act_id
-                                == 8,  # GHGenius provision
+                                != 1,  # Show everything except original for pre-2024
                                 current_year
                                 < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
                             ),

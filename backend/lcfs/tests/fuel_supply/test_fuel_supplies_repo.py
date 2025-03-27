@@ -196,20 +196,31 @@ async def test_get_fuel_supply_table_options_ghgenius_provision(
 
     mock_db_session.execute = mock_execute
 
-    # Test pre-2024 non-fossil fuel (should show GHGenius)
+    # Test pre-2024 non-fossil fuel (should show both original and GHGenius)
     mock_result_chain.all.return_value = [
+        {
+            "fuel_type_id": 1,
+            "fuel_type": "Biodiesel",
+            "fossil_derived": False,
+            "provision_of_the_act_id": 1,
+            "provision_of_the_act": "Original Provision",
+        },
         {
             "fuel_type_id": 1,
             "fuel_type": "Biodiesel",
             "fossil_derived": False,
             "provision_of_the_act_id": 8,
             "provision_of_the_act": "GHGenius",
-        }
+        },
     ]
     result_pre_2024 = await fuel_supply_repo.get_fuel_supply_table_options("2023")
-    assert len(result_pre_2024["fuel_types"]) == 1
-    assert result_pre_2024["fuel_types"][0]["provision_of_the_act_id"] == 8
-    assert result_pre_2024["fuel_types"][0]["provision_of_the_act"] == "GHGenius"
+    assert len(result_pre_2024["fuel_types"]) == 2
+    assert result_pre_2024["fuel_types"][0]["provision_of_the_act_id"] == 1
+    assert (
+        result_pre_2024["fuel_types"][0]["provision_of_the_act"] == "Original Provision"
+    )
+    assert result_pre_2024["fuel_types"][1]["provision_of_the_act_id"] == 8
+    assert result_pre_2024["fuel_types"][1]["provision_of_the_act"] == "GHGenius"
 
     # Test post-2024 non-fossil fuel (should not show GHGenius)
     mock_result_chain.all.return_value = [
