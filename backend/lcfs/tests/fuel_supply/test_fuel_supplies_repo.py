@@ -108,7 +108,6 @@ async def test_get_fuel_supplies_paginated_exclude_draft_reports(fuel_supply_rep
 
     # Build a valid fuel supply record that passes validation.
     valid_fuel_supply = {
-        "fuel_supply_id": 1,
         "complianceReportId": 1,
         "version": 0,
         "fuelTypeId": 1,
@@ -116,18 +115,17 @@ async def test_get_fuel_supplies_paginated_exclude_draft_reports(fuel_supply_rep
         "groupUuid": "some-uuid",
         "userType": "SUPPLIER",
         "actionType": "CREATE",
-        "fuelType": {"fuel_type_id": 1, "fuelType": "Diesel", "units": "L"},
-        "fuelCategory": {"fuel_category_id": 1, "category": "Diesel"},
-        "endUseType": {"endUseTypeId": 1, "type": "Transport", "subType": "Personal"},
-        "provisionOfTheAct": {"provisionOfTheActId": 1, "name": "Act Provision"},
+        "fuelType": "Diesel",
+        "fuelCategory": "Diesel",
+        "endUseType": "Transport",
+        "provisionOfTheAct": "Act Provision",
         "compliancePeriod": "2024",
         "units": "L",
-        "fuelCode": {
-            "fuelStatus": {"status": "Approved"},
-            "fuelCode": "FUEL123",
-            "carbonIntensity": 15.0,
-        },
+        "fuelCode": "FUEL123",
         "fuelTypeOther": "Optional",
+        "fuelCategoryId": 1,
+        "endUseId": 1,
+        "provisionOfTheActId": 1,
     }
     expected_fuel_supplies = [valid_fuel_supply]
 

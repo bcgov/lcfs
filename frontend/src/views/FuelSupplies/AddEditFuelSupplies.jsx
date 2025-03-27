@@ -110,14 +110,6 @@ export const AddEditFuelSupplies = () => {
             ...item,
             complianceReportId, // This takes current reportId, important for versioning
             compliancePeriod,
-            fuelCategory: item.fuelCategory?.category,
-            fuelType: item.fuelType?.fuelType,
-            fuelTypeOther:
-              item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
-            provisionOfTheAct: item.provisionOfTheAct?.name,
-            provisionOfTheActId: item.provisionOfTheActId,
-            fuelCode: item.fuelCode?.fuelCode,
-            endUse: item.endUse?.type,
             isNewSupplementalEntry:
               isSupplemental && item.complianceReportId === +complianceReportId,
             id: uuid()

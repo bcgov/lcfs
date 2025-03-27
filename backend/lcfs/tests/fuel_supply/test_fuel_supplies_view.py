@@ -58,14 +58,18 @@ async def test_save_fuel_supply_row_create(
         "fuelSupplyId": 1,
         "complianceReportId": 1,
         "fuelTypeId": 1,
-        "fuelType": {"fuelType": "Gasoline", "fuelTypeId": 1, "units": "L"},
+        "fuelType": "Gasoline",
         "units": "liters",
-        "fuelCategory": {"category": "category"},
+        "fuelCategory": "category",
+        "fuelCategoryId": 1,
+        "endUseType": "endUseType",
+        "endUseId": 1,
         "quantity": 1000,
         "groupUuid": "some-uuid",
         "version": 1,
         "userType": "SUPPLIER",
         "actionType": "CREATE",
+        "provisionOfTheActId": 1,
     }
 
     # Override dependencies
@@ -84,7 +88,7 @@ async def test_save_fuel_supply_row_create(
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert "fuelSupplyId" in data
-    assert data["fuelType"]["fuelType"] == "Gasoline"
+    assert data["fuelType"] == "Gasoline"
     assert data["quantity"] == 1000
 
 
@@ -116,14 +120,18 @@ async def test_save_fuel_supply_row_update(
         "fuelSupplyId": 1,
         "complianceReportId": 1,
         "fuelTypeId": 1,
-        "fuelType": {"fuelType": "Diesel", "fuelTypeId": 1, "units": "L"},
+        "fuelType": "Diesel",
         "units": "liters",
-        "fuelCategory": {"category": "category"},
+        "fuelCategory": "category",
+        "fuelCategoryId": 1,
+        "endUseType": "endUseType",
+        "endUseId": 1,
         "quantity": 2000,
         "groupUuid": "some-uuid",
         "version": 1,
         "userType": "SUPPLIER",
         "actionType": "UPDATE",
+        "provisionOfTheActId": 1,
     }
 
     # Override dependencies
@@ -142,7 +150,7 @@ async def test_save_fuel_supply_row_update(
     assert response.status_code == status.HTTP_201_CREATED
     data = response.json()
     assert "fuelSupplyId" in data
-    assert data["fuelType"]["fuelType"] == "Diesel"
+    assert data["fuelType"] == "Diesel"
     assert data["quantity"] == 2000
 
 

@@ -51,8 +51,6 @@ export const useGetFuelSuppliesList = (
 
 export const useSaveFuelSupply = (params, options) => {
   const client = useApiService()
-  const queryClient = useQueryClient()
-
   return useMutation({
     ...options,
     mutationFn: async (data) => {
@@ -62,16 +60,6 @@ export const useSaveFuelSupply = (params, options) => {
       }
 
       return await client.post(apiRoutes.saveFuelSupplies, modifedData)
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries([
-        'fuel-supplies',
-        params.complianceReportId
-      ])
-      queryClient.invalidateQueries([
-        'compliance-report-summary',
-        params.complianceReportId
-      ])
     }
   })
 }

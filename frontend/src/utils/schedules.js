@@ -15,16 +15,19 @@ export const handleScheduleSave = async ({
     setErrors({})
     setWarnings({})
 
-    await saveRow(updatedData)
-    updatedData = {
+    const { data } = await saveRow(updatedData)
+    const finalData = {
       ...updatedData,
+      ...data,
       validationStatus: 'success',
       modified: false
     }
+    console.log(JSON.stringify(finalData))
     alertRef.current?.triggerAlert({
       message: 'Row updated successfully.',
       severity: 'success'
     })
+    return finalData
   } catch (error) {
     const newWarnings = error.response.data.warnings
     if (newWarnings && newWarnings.length > 0) {

@@ -14,6 +14,7 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyCreateUpdateSchema,
     FuelSupplyResponseSchema,
 )
+from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
 
@@ -44,7 +45,9 @@ class FuelSupplyActionService:
         self,
         repo: FuelSupplyRepository = Depends(),
         fuel_repo: FuelCodeRepository = Depends(),
+        fuel_supply_service: FuelSupplyServices = Depends(),
     ) -> None:
+        self.fuel_supply_service = fuel_supply_service
         self.repo = repo
         self.fuel_repo = fuel_repo
 
@@ -142,7 +145,7 @@ class FuelSupplyActionService:
 
         # Save the populated fuel supply record
         created_supply = await self.repo.create_fuel_supply(fuel_supply)
-        return FuelSupplyResponseSchema.model_validate(created_supply)
+        return self.fuel_supply_service.map_entity_to_schema(created_supply)
 
     @service_handler
     async def update_fuel_supply(
@@ -189,7 +192,7 @@ class FuelSupplyActionService:
             )
 
             updated_supply = await self.repo.update_fuel_supply(existing_fuel_supply)
-            return FuelSupplyResponseSchema.model_validate(updated_supply)
+            return self.fuel_supply_service.map_entity_to_schema(updated_supply)
 
         elif existing_fuel_supply:
             # Create a new version if compliance report ID differs
@@ -217,7 +220,7 @@ class FuelSupplyActionService:
 
             # Save the new version
             new_supply = await self.repo.create_fuel_supply(fuel_supply)
-            return FuelSupplyResponseSchema.model_validate(new_supply)
+            return self.fuel_supply_service.map_entity_to_schema(new_supply)
 
         # Raise an exception if no existing record is found
         raise HTTPException(status_code=404, detail="Fuel supply record not found.")
