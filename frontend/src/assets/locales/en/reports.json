@@ -28,6 +28,7 @@
   "createReassessmentBtn": "Create reassessment",
   "downloadExcel": "Download Excel",
   "supplementalCreated": "Supplemental report created successfully.",
+  "analystAdjustmentCreated": "Analyst adjustment created successfully.",
   "clickDrag": "Drag and drop your (PDF, JPG, PNG, MSG, DOC, XLS) file(s) here or click to select the file(s) from your machine to upload.",
   "activityLinksList": "Click links to report activities",
   "activitySecondList": "Verification details",
@@ -161,6 +162,7 @@
   "complianceReportHistory": {
     "Draft": "Draft {{createDate}} by {{displayName}}.",
     "Submitted": "Signed and submitted {{createDate}} by {{displayName}}.",
+    "Analyst adjustment": "Created {{createDate}} by {{displayName}}.",
     "Recommended by analyst": "Recommended {{createDate}} by {{displayName}}.",
     "Recommended by manager": "Recommended {{createDate}} by {{displayName}}.",
     "Not recommended by analyst": "Not recommended {{createDate}} by {{displayName}}.",

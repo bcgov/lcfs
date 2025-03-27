@@ -40,12 +40,12 @@ export const AddEditOtherUses = () => {
     isFetched
   } = useOtherUsesOptions({ compliancePeriod })
 
-  const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
+  const { mutateAsync: saveRow } = useSaveOtherUses(complianceReportId)
   const navigate = useNavigate()
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
   const isSupplemental = complianceReport?.report?.version !== 0

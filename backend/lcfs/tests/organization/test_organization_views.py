@@ -1,9 +1,14 @@
+from unittest import mock
+
 from unittest.mock import AsyncMock
 
 import pytest
 from datetime import date
 
-from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
+from lcfs.db.models.compliance.ComplianceReport import (
+    SupplementalInitiatorType,
+    ComplianceReport,
+)
 from lcfs.db.models.user.Role import RoleEnum
 from httpx import AsyncClient
 from fastapi import FastAPI
@@ -410,7 +415,12 @@ async def test_get_compliance_report_by_id_success(
 
     # Create a mock for the validation service
     mock_compliance_report_validation = AsyncMock()
-    mock_compliance_report_validation.validate_organization_access.return_value = None
+    mock_compliance_report_validation.validate_organization_access.return_value = (
+        ComplianceReport()
+    )
+    mock_compliance_report_validation.validate_compliance_report_access.return_value = (
+        None
+    )
 
     # Override dependencies in the FastAPI app
     fastapi_app.dependency_overrides[ComplianceReportServices] = (
@@ -426,8 +436,11 @@ async def test_get_compliance_report_by_id_success(
     # Assertions
     assert response.status_code == 200
     mock_compliance_report_services.get_compliance_report_by_id.assert_awaited_once_with(
-        1, apply_masking=True, get_chain=True
+        1, mock.ANY, True
     )
     mock_compliance_report_validation.validate_organization_access.assert_awaited_once_with(
         1
+    )
+    mock_compliance_report_validation.validate_compliance_report_access.assert_awaited_once_with(
+        mock.ANY
     )

@@ -99,10 +99,6 @@ class FinalSupplyEquipmentServices:
         """
         Get the list of FSEs for a given report.
         """
-        logger.info(
-            "Getting FSE list for report",
-            compliance_report_id=compliance_report_id,
-        )
         fse_models = await self.repo.get_fse_list(compliance_report_id)
         fse_list = [
             FinalSupplyEquipmentSchema.model_validate(fse) for fse in fse_models
@@ -218,12 +214,12 @@ class FinalSupplyEquipmentServices:
 
     @service_handler
     async def create_final_supply_equipment(
-        self, fse_data: FinalSupplyEquipmentCreateSchema, user: UserProfile
+        self, fse_data: FinalSupplyEquipmentCreateSchema, org_code: str
     ) -> FinalSupplyEquipmentSchema:
         """Create a new final supply equipment"""
         # Generate the registration number
         registration_nbr = await self.generate_registration_number(
-            user, fse_data.postal_code
+            org_code, fse_data.postal_code
         )
 
         final_supply_equipment = await self.convert_to_fse_model(fse_data)
@@ -234,7 +230,6 @@ class FinalSupplyEquipmentServices:
 
         # Increment the sequence number for the postal code if creation was successful
         if created_equipment:
-            org_code = user.organization.organization_code
             await self.repo.increment_seq_by_org_and_postal_code(
                 org_code, fse_data.postal_code
             )
@@ -250,16 +245,16 @@ class FinalSupplyEquipmentServices:
 
     @service_handler
     async def generate_registration_number(
-        self, user: UserProfile, postal_code: str
+        self, org_code: str, postal_code: str
     ) -> str:
         """
         Generate a unique registration number for a Final Supply Equipment (FSE).
 
-        The registration number is composed of the organization ID, the last three characters of the postal code,
+        The registration number is composed of the organization code, the last three characters of the postal code,
         and a sequential number. The sequential number resets for each new postal code.
 
         Args:
-            user (UserProfile): The current user
+            org_code (str): The organizations code
             postal_code (str): The postal code of the FSE.
 
         Returns:
@@ -273,11 +268,6 @@ class FinalSupplyEquipmentServices:
         postal_code_pattern = re.compile(POSTAL_REGEX)
         if not postal_code_pattern.match(postal_code):
             raise ValueError("Invalid Canadian postal code format")
-
-        # Retrieve the organization ID from the user's request
-        org_code = user.organization.organization_code
-        if not org_code:
-            raise ValueError("Organization ID is not available")
 
         # Retrieve the current sequence number for a given postal code
         current_number = await self.repo.get_current_seq_by_org_and_postal_code(

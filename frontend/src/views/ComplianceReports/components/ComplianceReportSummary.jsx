@@ -32,12 +32,12 @@ import { TogglePanel } from '@/components/TogglePanel.jsx'
 const ComplianceReportSummary = ({
   reportID,
   currentStatus,
+  canEdit,
   compliancePeriodYear,
   setIsSigningAuthorityDeclared,
   buttonClusterConfig,
   methods,
   enableCompareMode,
-  canEdit,
   alertRef
 }) => {
   const [summaryData, setSummaryData] = useState(null)

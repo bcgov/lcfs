@@ -1,17 +1,15 @@
+from pydantic import Field, model_validator
 from typing import Optional, List
 
-from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
-from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
-from pydantic import Field, field_validator, model_validator, validator
-
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
     SortOrder,
     PaginationResponseSchema,
 )
+from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_supply.schema import FuelTypeOptionsResponse
+from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.utils.schema_validators import fuel_code_required_label
 
 
@@ -25,9 +23,11 @@ class FuelCategorySchema(BaseSchema):
     category: str
     default_and_prescribed_ci: Optional[float] = None
 
+
 class FuelCategoryResponseSchema(BaseSchema):
     fuel_category_id: Optional[int] = None
     category: str
+
 
 class FuelCodeSchema(BaseSchema):
     fuel_code_id: int
@@ -48,7 +48,9 @@ class FuelTypeSchema(BaseSchema):
     unrecognized: bool
     fuel_categories: Optional[List[FuelCategorySchema]] = Field(default_factory=list)
     fuel_codes: Optional[List[FuelCodeSchema]] = Field(default_factory=list)
-    provision_of_the_act: Optional[List[ProvisionOfTheActSchema]] = Field(default_factory=list)
+    provision_of_the_act: Optional[List[ProvisionOfTheActSchema]] = Field(
+        default_factory=list
+    )
 
 
 class FuelTypeChangelogSchema(BaseSchema):
@@ -71,6 +73,7 @@ class AllocationAgreementTableOptionsSchema(BaseSchema):
     fuel_codes: List[FuelCodeSchema]
     units_of_measure: List[str]
 
+
 class AllocationAgreementChangelogFuelTypeSchema(BaseSchema):
     fuel_type_id: int
     fuel_type: str
@@ -79,6 +82,7 @@ class AllocationAgreementChangelogFuelTypeSchema(BaseSchema):
     provision_2_id: Optional[int] = None
     default_carbon_intensity: Optional[float] = None
     units: FuelTypeQuantityUnitsEnumSchema
+
 
 class AllocationAgreementDiffSchema(BaseSchema):
     allocation_transaction_type: Optional[bool] = None
@@ -94,6 +98,7 @@ class AllocationAgreementDiffSchema(BaseSchema):
     quantity: Optional[bool] = None
     units: Optional[bool] = None
     ci_of_fuel: Optional[bool] = None
+
 
 class AllocationAgreementResponseSchema(BaseSchema):
     compliance_report_id: int
@@ -115,10 +120,10 @@ class AllocationAgreementResponseSchema(BaseSchema):
     fuel_code: Optional[FuelCodeResponseSchema] = None
     group_uuid: str
     version: int
-    user_type: str
     action_type: str
     diff: Optional[AllocationAgreementDiffSchema] = None
     updated: Optional[bool] = None
+
 
 class AllocationAgreementChangelogSchema(BaseSchema):
     compliance_report_id: int
@@ -139,14 +144,15 @@ class AllocationAgreementChangelogSchema(BaseSchema):
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     diff: Optional[AllocationAgreementDiffSchema] = None
     updated: Optional[bool] = None
 
+
 class FuelCategoryResponseSchema(BaseSchema):
     fuel_category_id: Optional[int] = None
     category: str
+
 
 class AllocationAgreementCreateSchema(BaseSchema):
     compliance_report_id: int
@@ -167,7 +173,6 @@ class AllocationAgreementCreateSchema(BaseSchema):
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
 
     @model_validator(mode="before")

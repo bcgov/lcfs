@@ -490,3 +490,18 @@ async def test_send_notification_skip_analyst(notification_service):
     # Ensure that the analyst was skipped
     assert len(created_notifications) == 2
     assert created_notifications[0].related_user_profile_id == 2
+
+@pytest.mark.anyio
+async def test_remove_subscriptions_for_user():
+    # Create a fake repo with the delete_subscriptions_for_user method
+    fake_repo = MagicMock()
+    fake_repo.delete_subscriptions_for_user = AsyncMock()
+
+    # Create the service with the fake repo and a dummy email service
+    fake_email_service = MagicMock()
+    service = NotificationService(repo=fake_repo, email_service=fake_email_service)
+
+    user_profile_id = 100
+    await service.remove_subscriptions_for_user(user_profile_id)
+
+    fake_repo.delete_subscriptions_for_user.assert_awaited_once_with(user_profile_id)

@@ -187,6 +187,27 @@ export const useCreateSupplementalReport = (reportID, options) => {
   })
 }
 
+export const useCreateAnalystAdjustment = (reportID, options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const path = apiRoutes.createAnalystAdjustment.replace(':reportID', reportID)
+
+  return useMutation({
+    mutationFn: () => client.post(path),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(['compliance-reports'])
+      if (options && options.onSuccess) {
+        options.onSuccess(data)
+      }
+    },
+    onError: (error) => {
+      if (options && options.onError) {
+        options.onError(error)
+      }
+    }
+  })
+}
+
 export const useGetComplianceReportList = (
   { page = 1, size = 10, sortOrders = [], filters = [] } = {},
   options

@@ -12,6 +12,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportOrganizationSchema,
     ComplianceReportStatusSchema,
     ComplianceReportUserSchema,
+    SummarySchema,
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_export.actions_service import FuelExportActionService
@@ -43,7 +44,6 @@ def mock_repo(mock_db):
     repo.update_fuel_export = AsyncMock()
     repo.delete_fuel_export = AsyncMock()
     repo.get_effective_fuel_exports = AsyncMock()
-    repo.get_fuel_export_version_by_user = AsyncMock()
     repo.get_latest_fuel_export_by_group_uuid = AsyncMock()
     return repo
 
@@ -70,6 +70,16 @@ def compliance_period_schema():
 def compliance_report_organization_schema():
     return ComplianceReportOrganizationSchema(
         organization_id=1, name="Acme Corporation"
+    )
+
+
+@pytest.fixture
+def summary_schema():
+    return SummarySchema(
+        summary_id=1,
+        is_locked=False,
+        line_11_fossil_derived_base_fuel_total=0,
+        line_21_non_compliance_penalty_payable=0,
     )
 
 

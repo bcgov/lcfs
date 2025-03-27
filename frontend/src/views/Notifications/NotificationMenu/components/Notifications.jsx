@@ -109,33 +109,37 @@ export const Notifications = () => {
   // event handlers for delete, markAsRead, and row-level deletes
   const handleMarkAsRead = useCallback(() => {
     const gridApi = gridRef.current?.api
-    if (gridApi) {
-      const selectedNotifications = gridApi
-        .getSelectedNodes()
-        .map((node) => node.data.notificationMessageId)
-      handleMutation(
-        markAsReadMutation,
-        selectedNotifications,
-        'notifications:markAsReadSuccessText',
-        'notifications:markAsReadErrorText'
-      )
-    }
-  }, [handleMutation, markAsReadMutation])
+    const payload = isAllSelected
+      ? { applyToAll: true }
+      : {
+          notification_ids: gridApi
+            .getSelectedNodes()
+            .map((n) => n.data.notificationMessageId)
+        }
+    handleMutation(
+      markAsReadMutation,
+      payload,
+      'notifications:markAsReadSuccessText',
+      'notifications:markAsReadErrorText'
+    )
+  }, [isAllSelected, markAsReadMutation])
 
   const handleDelete = useCallback(() => {
     const gridApi = gridRef.current?.api
-    if (gridApi) {
-      const selectedNotifications = gridApi
-        .getSelectedNodes()
-        .map((node) => node.data.notificationMessageId)
-      handleMutation(
-        deleteMutation,
-        selectedNotifications,
-        'notifications:deleteSuccessText',
-        'notifications:deleteErrorText'
-      )
-    }
-  }, [handleMutation, deleteMutation])
+    const payload = isAllSelected
+      ? { applyToAll: true }
+      : {
+          notification_ids: gridApi
+            .getSelectedNodes()
+            .map((n) => n.data.notificationMessageId)
+        }
+    handleMutation(
+      deleteMutation,
+      payload,
+      'notifications:deleteSuccessText',
+      'notifications:deleteErrorText'
+    )
+  }, [isAllSelected, deleteMutation])
 
   const handleRowClicked = useCallback(
     (params) => {
