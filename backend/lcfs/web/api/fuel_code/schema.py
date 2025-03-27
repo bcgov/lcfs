@@ -13,6 +13,7 @@ from enum import Enum
 
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
+from lcfs.web.utils.schema_validators import fuel_suffix_format_validator
 
 
 class FuelCodeStatusEnumSchema(str, Enum):
@@ -299,6 +300,12 @@ class FuelCodeCreateUpdateSchema(BaseSchema):
     is_valid: Optional[bool] = False
     validation_msg: Optional[str] = None
     deleted: Optional[bool] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def model_validations(cls, values):
+        values = fuel_suffix_format_validator(values)
+        return values
 
     @model_validator(mode="after")
     def check_capacity_and_unit(self):

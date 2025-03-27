@@ -355,3 +355,15 @@ async def get_allocation_agreement_changelog(
     }
 
     return response
+
+@router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
+@view_handler([RoleEnum.GOVERNMENT])
+async def delete_compliance_report(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+) -> None:
+    """
+    Delete a compliance report either in Analyst Adjustment or re-assessed state.
+    """
+    await service.delete_compliance_report(report_id, request.user)
