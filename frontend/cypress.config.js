@@ -4,6 +4,7 @@ import createBundler from '@bahmutov/cypress-esbuild-preprocessor'
 import { addCucumberPreprocessorPlugin } from '@badeball/cypress-cucumber-preprocessor'
 import { createEsbuildPlugin } from '@badeball/cypress-cucumber-preprocessor/esbuild'
 import pg from 'pg'
+
 const { Client } = pg
 
 export default defineConfig({
@@ -26,7 +27,7 @@ export default defineConfig({
 
     // Screenshots for failed tests
     screenshotOnRunFailure: true,
-
+    watchForFileChanges: false,
     // Video recording
     video: true,
 
@@ -61,10 +62,10 @@ export default defineConfig({
         clearComplianceReports() {
           return new Promise((resolve, reject) => {
             const client = new Client({
-              user: process.env.DB_CYPRESS_USER,
+              user: process.env.DB_CYPRESS_USER || 'lcfs',
               host: process.env.DB_CYPRESS_HOST || 'localhost',
               database: process.env.DB_CYPRESS_NAME || 'lcfs',
-              password: process.env.DB_CYPRESS_PASSWORD,
+              password: process.env.DB_CYPRESS_PASSWORD || 'development_only',
               port: parseInt(process.env.DB_PORT || '5432')
             })
 
