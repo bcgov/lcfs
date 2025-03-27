@@ -253,7 +253,10 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       </BCTypography>
     )),
     suppressKeyboardEvent,
-    cellEditor: DateEditor
+    cellEditor: DateEditor,
+    cellEditorParams: (params) => ({
+      onBlur: () => params.stopEditing()
+    })
   },
   {
     field: 'approvalDate',
@@ -269,7 +272,10 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     )),
 
     suppressKeyboardEvent,
-    cellEditor: DateEditor
+    cellEditor: DateEditor,
+    cellEditorParams: (params) => ({
+      onBlur: () => params.stopEditing()
+    })
   },
   {
     field: 'effectiveDate',
@@ -284,7 +290,10 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       </BCTypography>
     )),
     suppressKeyboardEvent,
-    cellEditor: DateEditor
+    cellEditor: DateEditor,
+    cellEditorParams: (params) => ({
+      onBlur: () => params.stopEditing()
+    })
   },
   {
     field: 'expirationDate',
@@ -299,7 +308,10 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
       </BCTypography>
     )),
     suppressKeyboardEvent,
-    cellEditor: DateEditor
+    cellEditor: DateEditor,
+    cellEditorParams: (params) => ({
+      onBlur: () => params.stopEditing()
+    })
   },
   {
     field: 'fuelType',
