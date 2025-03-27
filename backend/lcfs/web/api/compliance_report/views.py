@@ -17,6 +17,7 @@ from lcfs.web.api.compliance_report.export import ComplianceReportExporter
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
+    ComplianceReportStatusSchema,
     ComplianceReportSummarySchema,
     ChainedComplianceReportSchema,
     ComplianceReportUpdateSchema,
@@ -68,6 +69,22 @@ async def get_compliance_reports(
     service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportListSchema:
     return await service.get_compliance_reports_paginated(pagination, request.user)
+
+
+@router.get(
+    "/statuses",
+    response_model=List[ComplianceReportStatusSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def get_compliance_report_statuses(
+    request: Request,
+    service: ComplianceReportServices = Depends(),
+) -> List[ComplianceReportStatusSchema]:
+    """
+    Retrieve the comprehensive compliance report summary for a specific report by ID.
+    """
+    return await service.get_compliance_report_statuses(request.user)
 
 
 @router.get(
@@ -355,6 +372,7 @@ async def get_allocation_agreement_changelog(
     }
 
     return response
+
 
 @router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
 @view_handler([RoleEnum.GOVERNMENT])

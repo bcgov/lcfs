@@ -250,3 +250,12 @@ export const useGetComplianceReportList = (
     ...options
   })
 }
+
+export const useGetComplianceReportStatuses = (options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['compliance-report-statuses'],
+    queryFn: async () => (await client.get(apiRoutes.getComplianceReportStatuses)).data,
+    ...options
+  })
+}
