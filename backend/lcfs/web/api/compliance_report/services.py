@@ -27,6 +27,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
+    ComplianceReportStatusSchema,
     ComplianceReportViewSchema,
 )
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
@@ -549,3 +550,32 @@ class ComplianceReportServices:
                 continue
             filtered.append(r)
         return filtered
+
+    @service_handler
+    async def get_compliance_report_statuses(
+        self, user: UserProfile
+    ) -> List[ComplianceReportStatusSchema]:
+        """
+        Fetches all compliance report statuses.
+        """
+        statuses = await self.repo.get_compliance_report_statuses()
+        if user_has_roles(user, [RoleEnum.GOVERNMENT]):
+            statuses = [
+                s
+                for s in statuses
+                if s.status not in [ComplianceReportStatusEnum.Draft]
+            ]
+        else:
+            statuses = [
+                s
+                for s in statuses
+                if s.status
+                not in [
+                    ComplianceReportStatusEnum.Recommended_by_analyst,
+                    ComplianceReportStatusEnum.Recommended_by_manager,
+                    ComplianceReportStatusEnum.Not_recommended_by_analyst,
+                    ComplianceReportStatusEnum.Not_recommended_by_manager,
+                    ComplianceReportStatusEnum.Analyst_adjustment,
+                ]
+            ]
+        return statuses

@@ -1116,3 +1116,11 @@ class ComplianceReportRepository:
             )
 
         return query
+
+    @repo_handler
+    async def get_compliance_report_statuses(self):
+        """
+        Retrieve all compliance report statuses from the database
+        """
+        result = await self.db.execute(select(ComplianceReportStatus))
+        return result.scalars().all()
