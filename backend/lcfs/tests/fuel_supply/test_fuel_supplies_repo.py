@@ -196,15 +196,8 @@ async def test_get_fuel_supply_table_options_ghgenius_provision(
 
     mock_db_session.execute = mock_execute
 
-    # Test pre-2024 non-fossil fuel (should show both original and GHGenius)
+    # Test pre-2024 non-fossil fuel (should show everything except provision 1)
     mock_result_chain.all.return_value = [
-        {
-            "fuel_type_id": 1,
-            "fuel_type": "Biodiesel",
-            "fossil_derived": False,
-            "provision_of_the_act_id": 1,
-            "provision_of_the_act": "Original Provision",
-        },
         {
             "fuel_type_id": 1,
             "fuel_type": "Biodiesel",
@@ -212,33 +205,48 @@ async def test_get_fuel_supply_table_options_ghgenius_provision(
             "provision_of_the_act_id": 8,
             "provision_of_the_act": "GHGenius",
         },
+        {
+            "fuel_type_id": 1,
+            "fuel_type": "Biodiesel",
+            "fossil_derived": False,
+            "provision_of_the_act_id": 2,
+            "provision_of_the_act": "Other Provision",
+        },
     ]
     result_pre_2024 = await fuel_supply_repo.get_fuel_supply_table_options("2023")
     assert len(result_pre_2024["fuel_types"]) == 2
-    assert result_pre_2024["fuel_types"][0]["provision_of_the_act_id"] == 1
-    assert (
-        result_pre_2024["fuel_types"][0]["provision_of_the_act"] == "Original Provision"
-    )
-    assert result_pre_2024["fuel_types"][1]["provision_of_the_act_id"] == 8
-    assert result_pre_2024["fuel_types"][1]["provision_of_the_act"] == "GHGenius"
+    provisions_pre_2024 = [
+        ft["provision_of_the_act_id"] for ft in result_pre_2024["fuel_types"]
+    ]
+    assert 1 not in provisions_pre_2024  # Original provision should not be present
+    assert 8 in provisions_pre_2024  # GHGenius should be present
+    assert 2 in provisions_pre_2024  # Other provisions should be present
 
-    # Test post-2024 non-fossil fuel (should not show GHGenius)
+    # Test post-2024 non-fossil fuel (should show everything except provisions 1 and 8)
     mock_result_chain.all.return_value = [
         {
             "fuel_type_id": 1,
             "fuel_type": "Biodiesel",
             "fossil_derived": False,
-            "provision_of_the_act_id": 1,
-            "provision_of_the_act": "Original Provision",
-        }
+            "provision_of_the_act_id": 2,
+            "provision_of_the_act": "Other Provision",
+        },
+        {
+            "fuel_type_id": 1,
+            "fuel_type": "Biodiesel",
+            "fossil_derived": False,
+            "provision_of_the_act_id": 3,
+            "provision_of_the_act": "Another Provision",
+        },
     ]
     result_post_2024 = await fuel_supply_repo.get_fuel_supply_table_options("2024")
-    assert len(result_post_2024["fuel_types"]) == 1
-    assert result_post_2024["fuel_types"][0]["provision_of_the_act_id"] == 1
-    assert (
-        result_post_2024["fuel_types"][0]["provision_of_the_act"]
-        == "Original Provision"
-    )
+    provisions_post_2024 = [
+        ft["provision_of_the_act_id"] for ft in result_post_2024["fuel_types"]
+    ]
+    assert 1 not in provisions_post_2024  # Original provision should not be present
+    assert 8 not in provisions_post_2024  # GHGenius should not be present
+    assert 2 in provisions_post_2024  # Other provisions should be present
+    assert 3 in provisions_post_2024  # Other provisions should be present
 
     # Test fossil fuel (should only show original provision regardless of year)
     mock_result_chain.all.return_value = [
