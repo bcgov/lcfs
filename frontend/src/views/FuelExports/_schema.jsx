@@ -409,9 +409,10 @@ export const fuelExportColDefs = (
       return !!params.data.provisionOfTheAct
     },
 
-    cellEditorParams: {
-      autoOpenLastRow: !gridReady
-    }
+    cellEditorParams: (params) => ({
+      autoOpenLastRow: !gridReady,
+      onBlur: () => params.stopEditing()
+    })
   },
   {
     field: 'quantity',
@@ -510,7 +511,7 @@ export const fuelExportColDefs = (
         )
         return minCI
       }
-      
+
       if (/Fuel code/i.test(params.data.provisionOfTheAct)) {
         return optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
