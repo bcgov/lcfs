@@ -1,10 +1,10 @@
 from sqlalchemy import Column, Integer, String, ForeignKey, Numeric
 from sqlalchemy.orm import relationship
 
-from lcfs.db.base import BaseModel, Auditable, DisplayOrder
+from lcfs.db.base import BaseModel, Auditable, DisplayOrder, Versioning
 
 
-class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
+class AllocationAgreement(BaseModel, Auditable, Versioning, DisplayOrder):
     __tablename__ = "allocation_agreement"
     __table_args__ = {
         "comment": "Records allocation agreements where the reporting obligation is passed from one party to another. Each party must report their end of the transaction."
@@ -23,16 +23,22 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
         String, nullable=False, comment="Postal address of the transaction partner"
     )
     transaction_partner_email = Column(
-        String, nullable=False, comment="Transaction Partner email"
+        String, nullable=True, comment="Transaction Partner email"
     )
     transaction_partner_phone = Column(
-        String, nullable=False, comment="Transaction Partner phone number"
+        String, nullable=True, comment="Transaction Partner phone number"
     )
     ci_of_fuel = Column(
-        Numeric(10, 2), nullable=False, comment="The Carbon intesity of fuel"
+        Numeric(10, 2), nullable=True, comment="The Carbon intensity of fuel"
     )
     quantity = Column(
         Integer, nullable=False, comment="Quantity of fuel involved in the transaction"
+    )
+    quantity_not_sold = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity not sold or supplied within the compliance period",
+        default=0,
     )
     units = Column(
         String,
@@ -58,13 +64,13 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
     fuel_category_id = Column(
         Integer,
         ForeignKey("fuel_category.fuel_category_id"),
-        nullable=False,
+        nullable=True,
         comment="Foreign key to the fuel category",
     )
     provision_of_the_act_id = Column(
         Integer,
         ForeignKey("provision_of_the_act.provision_of_the_act_id"),
-        nullable=False,
+        nullable=True,
         comment="Foreign key to the provision of the act",
     )
     fuel_code_id = Column(
@@ -80,11 +86,13 @@ class AllocationAgreement(BaseModel, Auditable, DisplayOrder):
         comment="Foreign key to the compliance report",
     )
 
-    allocation_transaction_type = relationship("AllocationTransactionType")
-    fuel_type = relationship("FuelType")
-    fuel_category = relationship("FuelCategory")
-    provision_of_the_act = relationship("ProvisionOfTheAct")
-    fuel_code = relationship("FuelCode")
+    allocation_transaction_type = relationship(
+        "AllocationTransactionType", lazy="joined"
+    )
+    fuel_type = relationship("FuelType", lazy="joined")
+    fuel_category = relationship("FuelCategory", lazy="joined")
+    provision_of_the_act = relationship("ProvisionOfTheAct", lazy="joined")
+    fuel_code = relationship("FuelCode", lazy="joined")
     compliance_report = relationship(
         "ComplianceReport", back_populates="allocation_agreements"
     )

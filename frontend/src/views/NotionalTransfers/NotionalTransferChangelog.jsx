@@ -4,10 +4,9 @@ import Loading from '@/components/Loading'
 import { apiRoutes } from '@/constants/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import ROUTES from '@/routes/routes'
 import { Box } from '@mui/material'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import {
   changelogColDefs,
   changelogCommonColDefs,
@@ -15,10 +14,10 @@ import {
   changelogDefaultColDefs,
   changelogGridOptions
 } from './_schema'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
-export const NotionalTransferChangelog = () => {
+export const NotionalTransferChangelog = ({ canEdit }) => {
   const { complianceReportId, compliancePeriod } = useParams()
-  const navigate = useNavigate()
   const { data: currentUser } = useCurrentUser()
   const { t } = useTranslation(['common', 'notionalTransfer', 'report'])
   const { data: currentReportData, isLoading } = useGetComplianceReport(
@@ -31,10 +30,7 @@ export const NotionalTransferChangelog = () => {
 
   const latestAssessedReport = currentReportData?.chain?.reduce(
     (latest, report) => {
-      if (
-        report.currentStatus.status === 'Assessed' ||
-        report.currentStatus.status === 'Reassessed'
-      ) {
+      if (report.currentStatus.status === COMPLIANCE_REPORT_STATUSES.ASSESSED) {
         return !latest || report.version > latest.version ? report : latest
       }
       return latest
@@ -54,54 +50,15 @@ export const NotionalTransferChangelog = () => {
   }
   return (
     <div>
-      <Box display="flex" alignItems={'center'} gap={1} mb={4}>
-        <BCTypography variant="h5" color="primary" component="div">
-          {t('notionalTransfer:newNotionalTransferTitle')}
-        </BCTypography>{' '}
-        |{' '}
-        <BCTypography
-          variant="body2"
-          color="primary"
-          component="div"
-          sx={{
-            textDecoration: 'underline',
-            cursor: 'pointer'
-          }}
-          onClick={() =>
-            navigate(
-              ROUTES.REPORTS.VIEW.replace(
-                ':compliancePeriod',
-                compliancePeriod
-              ).replace(':complianceReportId', complianceReportId)
-            )
-          }
-        >
-          {t('common:exitChangeLog')}
-        </BCTypography>
-      </Box>
       <BCTypography variant="h6" color="primary" component="div" mb={2}>
-        {t('common:changelogCurrentState')}
+        {!canEdit && currentReportData.report.nickname}
+        {canEdit && t('common:changelogCurrentState')}
       </BCTypography>
       <Box mb={4}>
         <BCDataGridServer
-          className={'ag-theme-material'}
-          apiEndpoint={apiRoutes.getNotionalTransfers}
-          apiData={'notionalTransfers'}
-          apiParams={{ complianceReportId }}
-          columnDefs={changelogCommonColDefs}
-          gridOptions={changelogCommonGridOptions}
-          enableCopyButton={false}
-          defaultColDef={changelogDefaultColDefs}
-        />
-      </Box>
-      <BCTypography variant="h6" color="primary" component="div" mb={2}>
-        {latestAssessedReport.nickname}
-      </BCTypography>
-      <Box mb={4}>
-        <BCDataGridServer
-          className={'ag-theme-material'}
+          className="ag-theme-material"
           apiEndpoint={apiEndpoint}
-          apiData={'changelog'}
+          apiData="changelog"
           apiParams={{ complianceReportId }}
           columnDefs={changelogColDefs}
           gridOptions={changelogGridOptions}
@@ -114,9 +71,9 @@ export const NotionalTransferChangelog = () => {
       </BCTypography>
       <Box>
         <BCDataGridServer
-          className={'ag-theme-material'}
+          className="ag-theme-material"
           apiEndpoint={apiRoutes.getNotionalTransfers}
-          apiData={'notionalTransfers'}
+          apiData="notionalTransfers"
           apiParams={{ complianceReportId: latestAssessedReportId }}
           columnDefs={changelogCommonColDefs}
           gridOptions={changelogCommonGridOptions}

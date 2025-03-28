@@ -1,9 +1,10 @@
 import uuid
-from logging import getLogger
+import structlog
 
+import uuid
 from fastapi import Depends, HTTPException
 
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.ComplianceReport import QuantityUnitsEnum
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
@@ -16,7 +17,7 @@ from lcfs.web.api.fuel_supply.schema import (
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.utils.calculations import calculate_compliance_units
 
-logger = getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 # Constants defining which fields to exclude during model operations
 FUEL_SUPPLY_EXCLUDE_FIELDS = {
@@ -25,11 +26,10 @@ FUEL_SUPPLY_EXCLUDE_FIELDS = {
     "compliance_period",
     "deleted",
     "group_uuid",
-    "user_type",
     "version",
     "action_type",
     "units",
-    "is_new_supplemental_entry"
+    "is_new_supplemental_entry",
 }
 
 
@@ -110,7 +110,6 @@ class FuelSupplyActionService:
     async def create_fuel_supply(
         self,
         fs_data: FuelSupplyCreateUpdateSchema,
-        user_type: UserTypeEnum,
         compliance_period: str,
     ) -> FuelSupplyResponseSchema:
         """
@@ -122,7 +121,6 @@ class FuelSupplyActionService:
 
         Args:
             fs_data (FuelSupplyCreateUpdateSchema): The data for the new fuel supply.
-            user_type (UserTypeEnum): The type of user creating the record.
             compliance_period (int): The compliance period for the new record.
 
         Returns:
@@ -134,7 +132,6 @@ class FuelSupplyActionService:
             **fs_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS),
             group_uuid=new_group_uuid,
             version=0,
-            user_type=user_type,
             action_type=ActionTypeEnum.CREATE,
         )
 
@@ -151,7 +148,6 @@ class FuelSupplyActionService:
     async def update_fuel_supply(
         self,
         fs_data: FuelSupplyCreateUpdateSchema,
-        user_type: UserTypeEnum,
         compliance_period: str,
     ) -> FuelSupplyResponseSchema:
         """
@@ -164,7 +160,6 @@ class FuelSupplyActionService:
 
         Args:
             fs_data (FuelSupplyCreateUpdateSchema): The data for the fuel supply update.
-            user_type (UserTypeEnum): The type of user performing the update.
             compliance_period (str): The compliance period for the new record.
 
         Returns:
@@ -173,8 +168,8 @@ class FuelSupplyActionService:
         Raises:
             HTTPException: If the fuel supply record is not found.
         """
-        existing_fuel_supply = await self.repo.get_fuel_supply_version_by_user(
-            fs_data.group_uuid, fs_data.version, user_type
+        existing_fuel_supply = await self.repo.get_fuel_supply_by_group_version(
+            fs_data.group_uuid, fs_data.version
         )
 
         if (
@@ -203,14 +198,12 @@ class FuelSupplyActionService:
                 group_uuid=fs_data.group_uuid,
                 version=existing_fuel_supply.version + 1,
                 action_type=ActionTypeEnum.UPDATE,
-                user_type=user_type,
             )
 
             # Copy existing fields, then apply new data
             for field in existing_fuel_supply.__table__.columns.keys():
                 if field not in FUEL_SUPPLY_EXCLUDE_FIELDS:
-                    setattr(fuel_supply, field, getattr(
-                        existing_fuel_supply, field))
+                    setattr(fuel_supply, field, getattr(existing_fuel_supply, field))
 
             for field, value in fs_data.model_dump(
                 exclude=FUEL_SUPPLY_EXCLUDE_FIELDS
@@ -227,12 +220,11 @@ class FuelSupplyActionService:
             return FuelSupplyResponseSchema.model_validate(new_supply)
 
         # Raise an exception if no existing record is found
-        raise HTTPException(
-            status_code=404, detail="Fuel supply record not found.")
+        raise HTTPException(status_code=404, detail="Fuel supply record not found.")
 
     @service_handler
     async def delete_fuel_supply(
-        self, fs_data: FuelSupplyCreateUpdateSchema, user_type: UserTypeEnum
+        self, fs_data: FuelSupplyCreateUpdateSchema
     ) -> DeleteFuelSupplyResponseSchema:
         """
         Delete a fuel supply record by creating a new version marked as deleted.
@@ -243,7 +235,6 @@ class FuelSupplyActionService:
 
         Args:
             fs_data (FuelSupplyCreateUpdateSchema): The data for the fuel supply deletion.
-            user_type (UserTypeEnum): The type of user performing the deletion.
 
         Returns:
             DeleteFuelSupplyResponseSchema: A response schema confirming deletion.
@@ -264,14 +255,12 @@ class FuelSupplyActionService:
                 group_uuid=fs_data.group_uuid,
                 version=existing_fuel_supply.version + 1,
                 action_type=ActionTypeEnum.DELETE,
-                user_type=user_type,
             )
 
             # Copy fields from the latest version for the deletion record
             for field in existing_fuel_supply.__table__.columns.keys():
                 if field not in FUEL_SUPPLY_EXCLUDE_FIELDS:
-                    setattr(delete_supply, field, getattr(
-                        existing_fuel_supply, field))
+                    setattr(delete_supply, field, getattr(existing_fuel_supply, field))
 
             delete_supply.compliance_report_id = fs_data.compliance_report_id
 

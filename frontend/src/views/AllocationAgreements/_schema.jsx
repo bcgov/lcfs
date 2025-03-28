@@ -7,6 +7,7 @@ import {
   NumberEditor
 } from '@/components/BCDataGrid/components'
 import i18n from '@/i18n'
+import colors from '@/themes/base/colors'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { actions, validation } from '@/components/BCDataGrid/columns'
 import { apiRoutes } from '@/constants/routes'
@@ -19,6 +20,8 @@ import {
   fuelTypeOtherConditionalStyle
 } from '@/utils/fuelTypeOther'
 import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
+import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -26,12 +29,20 @@ export const allocationAgreementColDefs = (
   optionsData,
   currentUser,
   errors,
-  warnings
+  warnings,
+  isSupplemental
 ) => [
   validation,
-  actions({
-    enableDuplicate: false,
-    enableDelete: true
+  actions((params) => {
+    return {
+      enableDuplicate: false,
+      enableDelete: !params.data.isNewSupplementalEntry,
+      enableUndo: isSupplemental && params.data.isNewSupplementalEntry,
+      enableStatus:
+        isSupplemental &&
+        params.data.isNewSupplementalEntry &&
+        ACTION_STATUS_MAP[params.data.actionType]
+    }
   }),
   {
     field: 'id',
@@ -73,7 +84,7 @@ export const allocationAgreementColDefs = (
     },
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
     minWidth: 120,
     editable: true,
@@ -110,7 +121,7 @@ export const allocationAgreementColDefs = (
         <BCTypography variant="body4">Enter or search a name</BCTypography>
       )),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
     minWidth: 310,
     editable: true,
@@ -143,7 +154,7 @@ export const allocationAgreementColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: true,
     minWidth: 350
   },
@@ -155,7 +166,7 @@ export const allocationAgreementColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: true,
     minWidth: 200
   },
@@ -167,7 +178,7 @@ export const allocationAgreementColDefs = (
     ),
     cellEditor: 'agTextCellEditor',
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: true,
     minWidth: 200
   },
@@ -187,7 +198,7 @@ export const allocationAgreementColDefs = (
     },
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
     minWidth: 200,
     editable: true,
@@ -266,7 +277,7 @@ export const allocationAgreementColDefs = (
     }),
     suppressKeyboardEvent,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     minWidth: 150,
     valueSetter: (params) => {
       if (params.newValue) {
@@ -308,7 +319,7 @@ export const allocationAgreementColDefs = (
       params.value ||
       (!params.value && <BCTypography variant="body4">Select</BCTypography>),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
     minWidth: 300,
     valueSetter: (params) => {
@@ -347,7 +358,7 @@ export const allocationAgreementColDefs = (
       }
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
     minWidth: 150,
     editable: (params) =>
@@ -410,7 +421,7 @@ export const allocationAgreementColDefs = (
       return params.value != null ? parseFloat(params.value).toFixed(2) : ''
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: false,
     minWidth: 100
   },
@@ -429,7 +440,7 @@ export const allocationAgreementColDefs = (
       showStepperButtons: false
     },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     minWidth: 100,
     editable: true
   },
@@ -439,9 +450,93 @@ export const allocationAgreementColDefs = (
       'allocationAgreement:allocationAgreementColLabels.units'
     ),
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: false,
     minWidth: 80
+  }
+]
+
+export const allocationAgreementSummaryColDefs = [
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    field: 'allocationTransactionType',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.transactionPartner'),
+    field: 'transactionPartner',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.postalAddress'
+    ),
+    field: 'postalAddress',
+    flex: 1,
+    minWidth: 200
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+    ),
+    field: 'transactionPartnerEmail',
+    flex: 1
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+    ),
+    field: 'transactionPartnerPhone',
+    flex: 1
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelType'
+    ),
+    field: 'fuelType'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
+    ),
+    field: 'fuelTypeOther'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+    ),
+    field: 'fuelCategory'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
+    ),
+    field: 'provisionOfTheAct'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCode'
+    ),
+    field: 'fuelCode'
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
+    ),
+    field: 'ciOfFuel'
+  },
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.units'
+    ),
+    field: 'units'
   }
 ]
 
@@ -451,5 +546,196 @@ export const defaultColDef = {
   filter: false,
   floatingFilter: false,
   sortable: false,
-  singleClickEdit: true
+  singleClickEdit: true,
+  flex: 1
+}
+
+export const changelogNestedOverrides = {
+  'allocationTransactionType': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    field: 'allocationTransactionType',
+    valueGetter: (params) => params.data?.allocationTransactionType?.type || '',
+    cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
+  },
+  'fuelType': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelType'),
+    field: 'fuelType',
+    valueGetter: (params) => params.data?.fuelType?.fuelType || '',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+  },
+  'fuelCategory': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelCategory'),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data?.fuelCategory?.category || '',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+  },
+  'provisionOfTheAct': {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'),
+    field: 'provisionOfTheAct',
+    valueGetter: (params) => params.data?.provisionOfTheAct?.name || '',
+    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+  }
+}
+
+export const changelogCommonColDefs = [
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    field: 'allocationTransactionType',
+    valueGetter: (params) => params.data?.allocationTransactionType || '',
+    cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartner'
+    ),
+    field: 'transactionPartner',
+    cellStyle: (params) => changelogCellStyle(params, 'transactionPartner')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.postalAddress'
+    ),
+    field: 'postalAddress',
+    cellStyle: (params) => changelogCellStyle(params, 'postalAddress')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+    ),
+    field: 'transactionPartnerEmail',
+    cellStyle: (params) =>
+      changelogCellStyle(params, 'transactionPartnerEmail')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+    ),
+    field: 'transactionPartnerPhone',
+    cellStyle: (params) =>
+      changelogCellStyle(params, 'transactionPartnerPhone')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelType'
+    ),
+    field: 'fuelType',
+    valueGetter: (params) => params.data?.fuelType || '',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
+    ),
+    field: 'fuelTypeOther',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelTypeOther')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+    ),
+    field: 'fuelCategory',
+    valueGetter: (params) => params.data?.fuelCategory || '',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
+    ),
+    field: 'provisionOfTheAct',
+    valueGetter: (params) => params.data?.provisionOfTheAct || '',
+    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCode'
+    ),
+    field: 'fuelCode',
+    cellStyle: (params) => changelogCellStyle(params, 'fuelCode')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
+    ),
+    field: 'ciOfFuel',
+    cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
+  },
+  {
+    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    field: 'quantity',
+    cellStyle: (params) => changelogCellStyle(params, 'quantity')
+  },
+  {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.units'
+    ),
+    field: 'units',
+    cellStyle: (params) => changelogCellStyle(params, 'units')
+  }
+]
+
+export const changelogColDefs = [
+  {
+    field: 'groupUuid',
+    hide: true,
+    sort: 'desc',
+    sortIndex: 1
+  },
+  { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
+  {
+    field: 'actionType',
+    valueGetter: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        if (params.data.updated) {
+          return 'Edited old'
+        } else {
+          return 'Edited new'
+        }
+      }
+      if (params.data.actionType === 'DELETE') {
+        return 'Deleted'
+      }
+      if (params.data.actionType === 'CREATE') {
+        return 'Added'
+      }
+    },
+    cellStyle: (params) => {
+      if (params.data.actionType === 'UPDATE') {
+        return { backgroundColor: colors.alerts.warning.background }
+      }
+    }
+  },
+  // Map through the common columns and replace specific ones with their nested versions
+  ...changelogCommonColDefs.map(col => changelogNestedOverrides[col.field] || col)
+]
+
+export const changelogDefaultColDefs = {
+  floatingFilter: false,
+  filter: false
+}
+
+export const changelogCommonGridOptions = {
+  overlayNoRowsTemplate: i18n.t('allocationAgreement:noAllocationAgreementsFound'),
+  autoSizeStrategy: {
+    type: 'fitCellContents',
+    defaultMinWidth: 50,
+    defaultMaxWidth: 600
+  },
+  enableCellTextSelection: true,
+  ensureDomOrder: true
+}
+
+export const changelogGridOptions = {
+  ...changelogCommonGridOptions,
+  getRowStyle: (params) => {
+    if (params.data.actionType === 'DELETE') {
+      return {
+        backgroundColor: colors.alerts.error.background
+      }
+    }
+    if (params.data.actionType === 'CREATE') {
+      return {
+        backgroundColor: colors.alerts.success.background
+      }
+    }
+  }
 }

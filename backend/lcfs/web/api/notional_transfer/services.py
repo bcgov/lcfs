@@ -1,14 +1,11 @@
 import math
+import structlog
 import uuid
+from fastapi import Depends, HTTPException, status, Request
 from typing import Optional
 
-import structlog
-from fastapi import Depends, HTTPException, status, Request
-
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
-from lcfs.db.models import UserProfile
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
-from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
@@ -22,7 +19,6 @@ from lcfs.web.api.notional_transfer.schema import (
     NotionalTransfersAllSchema,
     DeleteNotionalTransferResponseSchema,
 )
-from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
@@ -43,12 +39,10 @@ NOTIONAL_TRANSFER_EXCLUDE_FIELDS = {
 class NotionalTransferServices:
     def __init__(
         self,
-        request: Request = None,
         repo: NotionalTransferRepository = Depends(NotionalTransferRepository),
         fuel_repo: FuelCodeRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
-        self.request = request
         self.repo = repo
         self.fuel_repo = fuel_repo
         self.compliance_report_repo = compliance_report_repo
@@ -64,8 +58,7 @@ class NotionalTransferServices:
         )
         return NotionalTransfer(
             **notional_transfer_data.model_dump(
-                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union(
-                    {"fuel_category"})
+                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union({"fuel_category"})
             ),
             fuel_category_id=fuel_category.fuel_category_id,
         )
@@ -84,7 +77,6 @@ class NotionalTransferServices:
             received_or_transferred=model.received_or_transferred,
             group_uuid=model.group_uuid,
             version=model.version,
-            user_type=model.user_type,
             action_type=model.action_type,
         )
 
@@ -111,16 +103,15 @@ class NotionalTransferServices:
 
     @service_handler
     async def get_notional_transfers(
-        self, compliance_report_id: int,
-        user: UserProfile,
-        changelog: bool = False
+        self,
+        compliance_report_id: int,
+        changelog: bool = False,
     ) -> NotionalTransfersAllSchema:
         """
         Gets the list of notional transfers for a specific compliance report.
         """
-        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         notional_transfers = await self.repo.get_notional_transfers(
-            compliance_report_id, changelog, exclude_draft_reports=is_gov_user
+            compliance_report_id, changelog
         )
         return NotionalTransfersAllSchema(
             notional_transfers=[
@@ -133,12 +124,10 @@ class NotionalTransferServices:
         self,
         pagination: PaginationRequestSchema,
         compliance_report_id: int,
-        user: UserProfile,
     ) -> NotionalTransfersSchema:
-        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         notional_transfers, total_count = (
             await self.repo.get_notional_transfers_paginated(
-                pagination, compliance_report_id, exclude_draft_reports=is_gov_user
+                pagination, compliance_report_id
             )
         )
         return NotionalTransfersSchema(
@@ -157,7 +146,6 @@ class NotionalTransferServices:
     async def update_notional_transfer(
         self,
         notional_transfer_data: NotionalTransferCreateSchema,
-        user_type: UserTypeEnum,
     ) -> NotionalTransferSchema:
         """Update an existing notional transfer"""
         existing_transfer = await self.repo.get_latest_notional_transfer_by_group_uuid(
@@ -172,8 +160,7 @@ class NotionalTransferServices:
         ):
             # Update existing record if compliance report ID matches
             for field, value in notional_transfer_data.model_dump(
-                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union(
-                    {"fuel_category"})
+                exclude=NOTIONAL_TRANSFER_EXCLUDE_FIELDS.union({"fuel_category"})
             ).items():
                 setattr(existing_transfer, field, value)
 
@@ -194,14 +181,13 @@ class NotionalTransferServices:
         else:
             # Create a new version of the record
             return await self.create_notional_transfer(
-                notional_transfer_data, user_type, existing_record=existing_transfer
+                notional_transfer_data, existing_record=existing_transfer
             )
 
     @service_handler
     async def create_notional_transfer(
         self,
         notional_transfer_data: NotionalTransferCreateSchema,
-        user_type: UserTypeEnum,
         existing_record: Optional[NotionalTransfer] = None,
     ) -> NotionalTransferSchema:
         """Create a new notional transfer"""
@@ -216,7 +202,6 @@ class NotionalTransferServices:
         notional_transfer.version = (
             0 if not existing_record else existing_record.version + 1
         )
-        notional_transfer.user_type = user_type
         created_transfer = await self.repo.create_notional_transfer(notional_transfer)
 
         return self.model_to_schema(created_transfer)
@@ -225,7 +210,6 @@ class NotionalTransferServices:
     async def delete_notional_transfer(
         self,
         notional_transfer_data: NotionalTransferCreateSchema,
-        user_type: UserTypeEnum,
     ) -> DeleteNotionalTransferResponseSchema:
         """Delete a notional transfer"""
         existing_transfer = await self.repo.get_latest_notional_transfer_by_group_uuid(
@@ -233,7 +217,9 @@ class NotionalTransferServices:
         )
 
         if notional_transfer_data.is_new_supplemental_entry:
-            await self.repo.delete_notional_transfer(notional_transfer_id=notional_transfer_data.notional_transfer_id)
+            await self.repo.delete_notional_transfer(
+                notional_transfer_id=notional_transfer_data.notional_transfer_id
+            )
             return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")
         else:
 
@@ -242,16 +228,16 @@ class NotionalTransferServices:
                 group_uuid=notional_transfer_data.group_uuid,
                 version=existing_transfer.version + 1,
                 action_type=ActionTypeEnum.DELETE,
-                user_type=user_type,
             )
 
             # Copy fields from the latest version for the deletion record
             for field in existing_transfer.__table__.columns.keys():
                 if field not in NOTIONAL_TRANSFER_EXCLUDE_FIELDS:
-                    setattr(deleted_entity, field, getattr(
-                        existing_transfer, field))
+                    setattr(deleted_entity, field, getattr(existing_transfer, field))
 
-        deleted_entity.compliance_report_id = notional_transfer_data.compliance_report_id
+        deleted_entity.compliance_report_id = (
+            notional_transfer_data.compliance_report_id
+        )
 
         await self.repo.create_notional_transfer(deleted_entity)
         return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")

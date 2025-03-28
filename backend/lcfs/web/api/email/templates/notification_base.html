@@ -41,7 +41,7 @@
         >
             <tbody>
                 <tr style="background: #003366; font-size: 20px; color: white">
-                    <td class="text-align: center;">
+                    <td style="text-align: center;">
                         <img
                             src="{{ base_url }}/images/email-header.png"
                             alt="Government of British Columbia"
@@ -61,24 +61,17 @@
                             <p>
                                 <span style="font-weight: bold">
                                     The following has occurred within the Low Carbon
-                                    Fuel Standard Portal: {{ notification_type }} {{
-                                    message.status }} </span
-                                ><br />
-
-                                For more details, please go to: {% if url_slug ==
-                                'compliance-reporting' %}
-                                <a
-                                    href="{{ base_url }}/{{ url_slug }}/{{ message.compliancePeriod }}/{{ message.id }}"
-                                >
-                                    {{ base_url }}/{{ url_slug }}/{{
-                                    message.compliancePeriod }}/{{ message.id }}
-                                </a>
+                                    Fuel Standard Portal: {{ notification_type }} {{ message.status }}
+                                </span><br />
+                                For more details, please go to: 
+                                {% if url_slug == 'compliance-reporting' %}
+                                    <a href="{{ base_url }}/{{ url_slug }}/{{ message.compliancePeriod }}/{{ message.id }}">
+                                        {{ base_url }}/{{ url_slug }}/{{ message.compliancePeriod }}/{{ message.id }}
+                                    </a>
                                 {% else %}
-                                <a
-                                    href="{{ base_url }}/{{ url_slug }}/{{ message.id }}"
-                                >
-                                    {{ base_url }}/{{ url_slug }}/{{ message.id }}
-                                </a>
+                                    <a href="{{ base_url }}/{{ url_slug }}/{{ message.id }}">
+                                        {{ base_url }}/{{ url_slug }}/{{ message.id }}
+                                    </a>
                                 {% endif %}
                             </p>
 

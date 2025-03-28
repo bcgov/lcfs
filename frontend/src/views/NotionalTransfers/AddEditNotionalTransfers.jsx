@@ -2,7 +2,7 @@ import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import * as ROUTES from '@/constants/routes/routes.js'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -41,7 +41,7 @@ export const AddEditNotionalTransfers = () => {
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
 
@@ -141,10 +141,11 @@ export const AddEditNotionalTransfers = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'legalName') {
+        const orgName = currentUser.organization?.name
         if (
           (typeof params.newValue === 'object' &&
-            params.newValue?.name === currentUser.organization.name) ||
-          params.newValue === currentUser.organization.name
+            params.newValue?.name === orgName) ||
+          params.newValue === orgName
         ) {
           alertRef.current?.triggerAlert({
             message:
@@ -251,12 +252,13 @@ export const AddEditNotionalTransfers = () => {
 
   useEffect(() => {
     if (!transfersLoading && !isArrayEmpty(notionalTransfers)) {
-      const updatedRowData = notionalTransfers.map((item) => ({
-        ...item,
-        complianceReportId,
-        isNewSupplementalEntry:
-          isSupplemental && item.complianceReportId === +complianceReportId
-      }))
+      const updatedRowData =
+        notionalTransfers?.map((item) => ({
+          ...item,
+          complianceReportId,
+          isNewSupplementalEntry:
+            isSupplemental && item.complianceReportId === +complianceReportId
+        })) ?? []
       setRowData(updatedRowData)
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
@@ -271,10 +273,10 @@ export const AddEditNotionalTransfers = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
+      buildPath(ROUTES.REPORTS.VIEW, {
+        compliancePeriod,
+        complianceReportId
+      })
     )
   }, [navigate, compliancePeriod, complianceReportId])
 

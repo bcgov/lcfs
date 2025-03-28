@@ -12,7 +12,7 @@ import {
   useSaveFinalSupplyEquipment
 } from '@/hooks/useFinalSupplyEquipment'
 import { v4 as uuid } from 'uuid'
-import * as ROUTES from '@/constants/routes/routes.js'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import { isArrayEmpty } from '@/utils/array.js'
 import { useApiService } from '@/services/useApiService.js'
@@ -65,6 +65,7 @@ export const AddEditFinalSupplyEquipments = () => {
       overlayNoRowsTemplate: t(
         'finalSupplyEquipment:noFinalSupplyEquipmentsFound'
       ),
+      stopEditingWhenCellsLoseFocus: false,
       autoSizeStrategy: {
         type: 'fitCellContents',
         defaultMinWidth: 50,
@@ -133,11 +134,12 @@ export const AddEditFinalSupplyEquipments = () => {
         optionsData,
         compliancePeriod,
         errors,
-        warnings
+        warnings,
+        isGridReady
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [compliancePeriod, errors, warnings, optionsData])
+  }, [compliancePeriod, errors, warnings, optionsData, isGridReady])
 
   const onCellEditingStopped = useCallback(
     async (params) => {
@@ -256,10 +258,10 @@ export const AddEditFinalSupplyEquipments = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
+      buildPath(ROUTES.REPORTS.VIEW, {
+        compliancePeriod,
+        complianceReportId
+      })
     )
   }, [navigate, compliancePeriod, complianceReportId])
 
@@ -428,7 +430,6 @@ export const AddEditFinalSupplyEquipments = () => {
             gridOptions={gridOptions}
             loading={optionsLoading || equipmentsLoading}
             onCellEditingStopped={onCellEditingStopped}
-            stopEditingWhenCellsLoseFocus
             onAction={onAction}
             showAddRowsButton={true}
             saveButtonProps={{

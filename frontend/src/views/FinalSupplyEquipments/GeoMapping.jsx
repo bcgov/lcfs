@@ -156,7 +156,7 @@ const GeoMapping = ({ complianceReportId }) => {
     locGroup.forEach((loc) => {
       if (!uniqueSupplyUnits[loc.id]) {
         uniqueSupplyUnits[loc.id] = {
-          regNum: loc.registrationNbr,
+          fseId: loc.finalSupplyEquipmentId,
           serialNum: loc.serialNbr,
           hasOverlap: false,
           records: []
@@ -255,7 +255,7 @@ const GeoMapping = ({ complianceReportId }) => {
         Refresh Map Data
       </BCButton>
 
-      <GeofencingStatus />
+      <GeofencingStatus status={geofencingStatus} />
       {/* {geofencingStatus === 'completed' && (
         <OverlapSummary overlapStats={overlapStats} />
       )} */}

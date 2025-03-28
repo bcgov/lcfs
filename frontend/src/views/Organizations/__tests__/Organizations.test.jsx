@@ -1,158 +1,168 @@
-describe.todo()
-// import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
-// import {
-//   render,
-//   screen,
-//   cleanup,
-//   fireEvent,
-//   waitFor
-// } from '@testing-library/react'
-// import { BrowserRouter as Router } from 'react-router-dom'
-// import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-// import { Organizations } from './Organizations'
-// // Import utilities directly, if getByDataTest is a custom utility, ensure it's correctly imported
-// import { getByDataTest } from '@/tests/utils/testHelpers'
-// import { ThemeProvider } from '@mui/material'
-// import theme from '@/themes'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { Organizations } from '../Organizations'
+import { ROUTES } from '@/routes/routes'
+import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { act } from 'react'
 
-// // Mock the specific import of BCDataGridServer
-// vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-//   // Replace BCDataGridServer with a dummy component
-//   __esModule: true, // This is important for mocking ES modules
-//   default: () => <div data-test="mockedBCDataGridServer"></div>
-// }))
+const navigateMock = vi.fn()
+const mockDownload = vi.fn()
 
-// // You need to mock the entire module where useApiService is exported
-// vi.mock('@/services/useApiService', () => ({
-//   useApiService: () => ({
-//     download: vi.fn(() => new Promise((resolve) => setTimeout(resolve, 100)))
-//   })
-// }))
+const mockLocationValue = {
+    pathname: '/organizations',
+    search: '',
+    hash: '',
+    state: null
+  }
 
-// const renderComponent = () => {
-//   const queryClient = new QueryClient()
-//   render(
-//     <QueryClientProvider client={queryClient}>
-//       <ThemeProvider theme={theme}>
-//         <Router>
-//           <Organizations />
-//         </Router>
-//       </ThemeProvider>
-//     </QueryClientProvider>
-//   )
-// }
+vi.mock('react-router-dom', async () => {
+    const actual = await vi.importActual('react-router-dom')
+    return {
+      ...actual,
+      useNavigate: () => navigateMock,
+      useLocation: () => mockLocationValue
+    }
+  })
 
-// describe('Organizations Component Tests', () => {
-//   beforeEach(() => {
-//     renderComponent()
-//   })
+vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
+    __esModule: true,
+    default: () => <div data-test="mocked-data-grid"></div>
+  }))
 
-//   afterEach(() => {
-//     cleanup()
-//     vi.resetAllMocks() // Reset mocks to their initial state after each test
-//   })
+vi.mock('@/components/Role', () => ({
+  Role: ({ children }) => <div data-test="role-component">{children}</div>
+}))
 
-//   describe('Download organization information', () => {
-//     it('initially shows the download organization button with correct text and enabled', () => {
-//       const downloadButton = getByDataTest('download-org-button')
-//       expect(downloadButton).toBeInTheDocument()
-//       expect(downloadButton).toBeEnabled()
-//     })
+vi.mock('@/services/useApiService', () => ({
+    useApiService: () => ({
+      download: mockDownload
+    })
+  }))
 
-//     it('shows downloading text and disables the download organization button during download', async () => {
-//       const downloadButton = getByDataTest('download-org-button')
-//       fireEvent.click(downloadButton)
+vi.mock('@/components/BCAlert', () => ({
+  default: (props) => {
+    return <div data-test="alert-box">{props.children || props.message}</div>;
+  }
+}))
 
-//       // First, ensure the button text changes to the downloading state
-//       await waitFor(() => {
-//         expect(downloadButton).toHaveTextContent(
-//           /Downloading organization information.../i
-//         )
-//       })
-//       // Then, check if the button gets disabled
-//       expect(downloadButton).toBeDisabled()
-//     })
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key) => {
+      const translations = {
+        'org:title': 'Organizations',
+        'org:newOrgBtn': 'Add Organization',
+        'org:orgDownloadBtn': 'Download Organizations',
+        'org:userDownloadBtn': 'Download Users',
+        'org:orgDownloadFailMsg': 'Failed to download organization information.',
+        'org:userDownloadFailMsg': 'Failed to download user information.',
+        'common:clearFiltersButton': 'Clear Filters',
+        'common:ClearFilters': 'Clear Filters' // Add this line
+      }
+      return translations[key] || key
+    }
+  })
+}))
 
-//     it('shows an error message if the download organization fails', async () => {
-//       vi.mock('@/services/useApiService', () => ({
-//         useApiService: () => ({
-//           download: vi.fn(() => Promise.reject(new Error('Download failed')))
-//         })
-//       }))
+describe('Organizations Component', () => {
+  beforeEach(() => {
+    mockLocationValue.state = null
+    mockDownload.mockReset().mockResolvedValue({})
+  })
 
-//       cleanup()
-//       renderComponent()
+  afterEach(() => {
+    vi.resetAllMocks()
+  })
 
-//       const downloadButton = getByDataTest('download-org-button')
-//       fireEvent.click(downloadButton)
+  it('renders the component with correct title', () => {
+    render(<Organizations />, { wrapper })
+    expect(screen.getByText('Organizations')).toBeInTheDocument()
+    expect(screen.getByTestId('mocked-data-grid')).toBeInTheDocument()
+  })
 
-//       await waitFor(() => {
-//         const errorMessage = screen.getByText(
-//           /Failed to download organization information./i
-//         )
-//         expect(errorMessage).toBeInTheDocument()
-//       })
-//     })
-//   })
+  it('navigates to add organization page when add button is clicked', async () => {
+    render(<Organizations />, { wrapper })
 
-//   describe('Download user information', () => {
-//     beforeEach(() => {
-//       // Mock the download function to always resolve successfully for user info
-//       vi.mock('@/services/useApiService', () => ({
-//         useApiService: () => ({
-//           downloadUser: vi.fn(() => Promise.resolve())
-//         })
-//       }))
-//     })
+    await waitFor(() => screen.getByText('Add Organization'))
+    const addButton = screen.getByText('Add Organization')
 
-//     afterEach(() => {
-//       cleanup()
-//       vi.restoreAllMocks() // Ensure mocks are cleared and restored after each test
-//     })
+    await act(async () => {
+      fireEvent.click(addButton)
+    })
 
-//     it('initially shows the download user button with correct text and enabled', () => {
-//       const downloadButton = getByDataTest('download-user-button')
-//       expect(downloadButton).toBeInTheDocument()
-//       expect(downloadButton).toBeEnabled()
-//     })
+    expect(navigateMock).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.ADD)
+  })
 
-//     it('shows downloading text and disables the download user button during download', async () => {
-//       const downloadButton = getByDataTest('download-user-button')
-//       fireEvent.click(downloadButton)
+  it('handles organization download correctly', async () => {
+    render(<Organizations />, { wrapper })
 
-//       expect(
-//         screen.queryByText(/Downloading User Information.../i)
-//       ).toBeInTheDocument()
+    await waitFor(() => screen.getByText('Download Organizations'))
+    const downloadOrgButton = screen.getByText('Download Organizations')
 
-//       await waitFor(() => {
-//         expect(downloadButton).toHaveTextContent(
-//           /Downloading user information.../i
-//         )
-//       })
-//       expect(downloadButton).toBeDisabled()
-//     })
+    await act(async () => {
+      fireEvent.click(downloadOrgButton)
+    })
 
-//     it('shows an error message if the download user fails', async () => {
-//       vi.mock('@/services/useApiService', () => ({
-//         useApiService: () => ({
-//           downloadUser: vi.fn(() =>
-//             Promise.reject(new Error('Download failed'))
-//           ) // Mock failure for download
-//         })
-//       }))
+    expect(mockDownload).toHaveBeenCalled()
+  })
 
-//       cleanup()
-//       renderComponent()
+  it('handles user download correctly', async () => {
+    render(<Organizations />, { wrapper })
 
-//       const downloadButton = getByDataTest('download-user-button')
-//       fireEvent.click(downloadButton)
+    await waitFor(() => screen.getByText('Download Users'))
+    const downloadUserButton = screen.getByText('Download Users')
 
-//       await waitFor(() => {
-//         const errorMessage = screen.getByText(
-//           /Failed to download user information./i
-//         )
-//         expect(errorMessage).toBeInTheDocument()
-//       })
-//     })
-//   })
-// })
+    await act(async () => {
+      fireEvent.click(downloadUserButton)
+    })
+
+    expect(mockDownload).toHaveBeenCalled()
+  })
+
+  it('shows error alert when organization download fails', async () => {
+    mockDownload.mockRejectedValueOnce(new Error('Download failed'))
+
+    render(<Organizations />, { wrapper })
+
+    await waitFor(() => screen.getByText('Download Organizations'))
+    const downloadOrgButton = screen.getByText('Download Organizations')
+
+    await act(async () => {
+      fireEvent.click(downloadOrgButton)
+    })
+
+    await waitFor(() => {
+      const alertBox = screen.getByTestId('alert-box')
+      expect(alertBox).toBeInTheDocument()
+      expect(alertBox.textContent).toContain('Failed to download organization information.')
+    })
+  })
+
+  it('includes clear filters button', () => {
+    render(<Organizations />, { wrapper })
+
+    const clearFiltersButton = screen.getByText('Clear Filters')
+    expect(clearFiltersButton).toBeInTheDocument()
+  })
+
+  it('shows add organization button for admin users', async () => {
+    // Mock the Role component to simulate admin access
+    vi.mock('@/components/Role', () => ({
+      Role: ({ children, roles }) => {
+        // Simulate admin role check passing
+        return <div data-test="role-component" data-roles={roles.join(',')}>
+          {children}
+        </div>
+      }
+    }))
+
+    render(<Organizations />, { wrapper })
+
+    const roleComponent = screen.getByTestId('role-component')
+    expect(roleComponent).toBeInTheDocument()
+    expect(roleComponent.getAttribute('data-roles')).toContain('Administrator')
+
+    const addButton = screen.getByText('Add Organization')
+    expect(addButton).toBeInTheDocument()
+  })
+
+})

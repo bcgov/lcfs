@@ -131,6 +131,8 @@ describe('ComplianceReportSummary', () => {
     render(
       <ComplianceReportSummary
         reportID={mockReportID}
+        enableCompareMode={false}
+        canEdit={true}
         currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
         setHasMetRenewables={mockSetHasMet}
         setHasMetLowCarbon={mockSetHasMet}

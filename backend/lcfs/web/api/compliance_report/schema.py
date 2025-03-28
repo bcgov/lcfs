@@ -51,6 +51,8 @@ class PortsEnum(str, Enum):
 class SummarySchema(BaseSchema):
     summary_id: int
     is_locked: bool
+    line_11_fossil_derived_base_fuel_total: float
+    line_21_non_compliance_penalty_payable: float
 
     class Config:
         extra = "allow"
@@ -131,6 +133,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     history: Optional[List[ComplianceReportHistorySchema]] = None
     has_supplemental: bool
     legacy_id: Optional[int] = None
+    assessment_statement: Optional[str] = None
 
 
 class ComplianceReportViewSchema(BaseSchema):
@@ -212,9 +215,10 @@ class CommonPaginatedReportRequestSchema(BaseSchema):
 class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
+    assessment_statement: Optional[str] = None
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class ComplianceReportChangelogSchema(BaseSchema, Generic[T]):

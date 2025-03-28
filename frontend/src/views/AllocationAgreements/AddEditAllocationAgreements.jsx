@@ -16,8 +16,10 @@ import {
   useSaveAllocationAgreement
 } from '@/hooks/useAllocationAgreement'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { v4 as uuid } from 'uuid'
-import * as ROUTES from '@/constants/routes/routes.js'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { DEFAULT_CI_FUEL } from '@/constants/common'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 
@@ -31,13 +33,23 @@ export const AddEditAllocationAgreements = () => {
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'allocationAgreement', 'reports'])
-  const guides = useMemo(() =>
-    t('allocationAgreement:allocationAgreementGuides', { returnObjects: true })
+  const guides = useMemo(
+    () =>
+      t('allocationAgreement:allocationAgreementGuides', {
+        returnObjects: true
+      }),
+    []
   )
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+  const { data: complianceReport, isLoading: complianceReportLoading } =
+    useGetComplianceReport(
+      currentUser?.organization?.organizationId,
+      complianceReportId
+    )
+  const isSupplemental = complianceReport?.report?.version !== 0
 
   const {
     data: optionsData,
@@ -60,9 +72,10 @@ export const AddEditAllocationAgreements = () => {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
-      }
+      },
+      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
     }),
-    [t]
+    [t, isSupplemental]
   )
 
   useEffect(() => {
@@ -105,12 +118,15 @@ export const AddEditAllocationAgreements = () => {
       ) {
         const updatedRowData = data.allocationAgreements.map((item) => ({
           ...item,
+          complianceReportId, // This takes current reportId, important for versioning
+          compliancePeriod,
+          isNewSupplementalEntry:
+            isSupplemental && item.complianceReportId === +complianceReportId,
           id: item.id || uuid() // Ensure every item has a unique ID
         }))
         setRowData([...updatedRowData, { id: uuid() }])
       } else {
-        // If allocationAgreements is not available or empty, initialize with a single row
-        setRowData([{ id: uuid() }])
+        setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
 
       params.api.sizeColumnsToFit()
@@ -132,26 +148,41 @@ export const AddEditAllocationAgreements = () => {
       optionsData,
       currentUser,
       errors,
-      warnings
+      warnings,
+      isSupplemental
     )
     setColumnDefs(updatedColumnDefs)
-  }, [optionsData, currentUser, errors, warnings])
+  }, [optionsData, currentUser, errors, warnings, isSupplemental])
 
   useEffect(() => {
     if (
       !allocationAgreementsLoading &&
       data?.allocationAgreements?.length > 0
     ) {
-      const updatedRowData = data.allocationAgreements.map((item) => ({
-        ...item,
-        agreementType: item.agreementType?.type,
-        id: uuid()
-      }))
-      setRowData(updatedRowData)
+      const ensureRowIds = (rows) =>
+        rows.map((row) => ({
+          ...row,
+          id: uuid(),
+          isValid: true,
+          isNewSupplementalEntry:
+            isSupplemental && row.complianceReportId === +complianceReportId,
+          actionType: isSupplemental
+            ? row.complianceReportId === +complianceReportId
+              ? 'CREATE'
+              : 'EXISTING'
+            : undefined
+        }))
+      setRowData(ensureRowIds(data.allocationAgreements))
     } else {
-      setRowData([{ id: uuid() }])
+      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
-  }, [data, allocationAgreementsLoading])
+  }, [
+    data,
+    allocationAgreementsLoading,
+    isSupplemental,
+    complianceReportId,
+    compliancePeriod
+  ])
 
   const onCellValueChanged = useCallback(
     async (params) => {
@@ -248,10 +279,11 @@ export const AddEditAllocationAgreements = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'transactionPartner') {
+        const orgName = currentUser.organization?.name
         if (
-          params.newValue === currentUser.organization.name ||
+          params.newValue === orgName ||
           (typeof params.newValue === 'object' &&
-            params.newValue.name === currentUser.organization.name)
+            params.newValue.name === orgName)
         ) {
           alertRef.current?.triggerAlert({
             message:
@@ -323,7 +355,7 @@ export const AddEditAllocationAgreements = () => {
   )
 
   const onAction = async (action, params) => {
-    if (action === 'delete') {
+    if (action === 'delete' || action === 'undo') {
       await handleScheduleDelete(
         params,
         'allocationAgreementId',
@@ -337,16 +369,15 @@ export const AddEditAllocationAgreements = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
+      buildPath(ROUTES.REPORTS.VIEW, { compliancePeriod, complianceReportId })
     )
   }, [navigate, compliancePeriod, complianceReportId])
 
   return (
     isFetched &&
-    !allocationAgreementsLoading && (
+    !allocationAgreementsLoading &&
+    !currentUserLoading &&
+    !complianceReportLoading && (
       <Grid2 className="add-edit-allocation-agreement-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">

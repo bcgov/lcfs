@@ -51,7 +51,8 @@ class TransferServices:
         repo: TransferRepository = Depends(TransferRepository),
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
         org_service: OrganizationsService = Depends(OrganizationsService),
-        transaction_repo: TransactionRepository = Depends(TransactionRepository),
+        transaction_repo: TransactionRepository = Depends(
+            TransactionRepository),
         notfn_service: NotificationService = Depends(NotificationService),
     ) -> None:
         self.validate = validate
@@ -92,17 +93,27 @@ class TransferServices:
         """Fetches a single transfer by its ID and converts it to a Pydantic model."""
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         # Check if the current viewer is a gov user
-        is_government_viewer = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        is_government_viewer = user_has_roles(
+            self.request.user, [RoleEnum.GOVERNMENT])
         if not transfer or (
             is_government_viewer
             and transfer.current_status.status
             in [
                 TransferStatusEnum.Draft,
                 TransferStatusEnum.Sent,
-                TransferStatusEnum.Rescinded,
             ]
+            or
+            (
+                transfer.current_status.status == TransferStatusEnum.Rescinded and
+                not any(
+                    history.transfer_status.status == TransferStatusEnum.Submitted
+                    and history.create_date < transfer.update_date
+                    for history in transfer.transfer_history
+                )
+            )
         ):
-            raise DataNotFoundException(f"Transfer with ID {transfer_id} not found")
+            raise DataNotFoundException(
+                f"Transfer with ID {transfer_id} not found")
 
         transfer_view = TransferSchema.model_validate(transfer)
 
@@ -311,7 +322,7 @@ class TransferServices:
             )
         # Update transfer history and handle status-specific actions if the status has changed
         if status_has_changed:
-            logger.debug(
+            logger.info(
                 f"Status change: \
                   {transfer.current_status.status} -> {new_status.status}"
             )

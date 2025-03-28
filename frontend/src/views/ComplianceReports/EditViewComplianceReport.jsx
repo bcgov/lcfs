@@ -1,32 +1,38 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { useForm } from 'react-hook-form'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import BCModal from '@/components/BCModal'
 import BCButton from '@/components/BCButton'
+import BCModal from '@/components/BCModal'
+import BCTypography from '@/components/BCTypography'
+import InternalComments from '@/components/InternalComments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import { govRoles } from '@/constants/roles'
+import { govRoles, roles } from '@/constants/roles'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import {
+  useDeleteComplianceReport,
+  useUpdateComplianceReport
+} from '@/hooks/useComplianceReports'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import ComplianceReportSummary from './components/ComplianceReportSummary'
+import ReportDetails from './components/ReportDetails'
+
+import { buttonClusterConfigFn } from './buttonConfigs'
+import { ActivityListCard } from './components/ActivityListCard'
+import { AssessmentCard } from './components/AssessmentCard'
+import { AssessmentRecommendation } from '@/views/ComplianceReports/components/AssessmentRecommendation.jsx'
+import { AssessmentStatement } from '@/views/ComplianceReports/components/AssessmentStatement.jsx'
+import { useOrganization } from '@/hooks/useOrganization.js'
+import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import { Fab, Stack, Tooltip } from '@mui/material'
-import BCTypography from '@/components/BCTypography'
+import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import colors from '@/themes/base/colors.js'
-import { useTranslation } from 'react-i18next'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useOrganization } from '@/hooks/useOrganization'
-import { Introduction } from './components/Introduction'
-import { useUpdateComplianceReport } from '@/hooks/useComplianceReports'
-import ComplianceReportSummary from './components/ComplianceReportSummary'
-import ReportDetails from './components/ReportDetails'
-import { buttonClusterConfigFn } from './buttonConfigs'
-import { ActivityListCard } from './components/ActivityListCard'
-import { AssessmentCard } from './components/AssessmentCard'
-import InternalComments from '@/components/InternalComments'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { ROUTES } from '@/constants/routes'
+import ROUTES from '@/routes/routes.js'
 
 const iconStyle = {
   width: '2rem',
@@ -37,10 +43,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
-  const [internalComment, setInternalComment] = useState('')
 
-  const [hasMetRenewables, setHasMetRenewables] = useState(false)
-  const [hasMetLowCarbon, setHasMetLowCarbon] = useState(false)
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
   const alertRef = useRef()
@@ -63,9 +66,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       })
     }
   }
-  const handleCommentChange = useCallback((newComment) => {
-    setInternalComment(newComment)
-  }, [])
   const handleScroll = useCallback(() => {
     const scrollTop = window.scrollY || document.documentElement.scrollTop
     const scrollPosition = window.scrollY + window.innerHeight
@@ -85,26 +85,31 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
-  // hooks
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
-    hasRoles
+    hasRoles,
+    hasAnyRole
   } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
-  const userRoles = currentUser?.roles
-
   const currentStatus = reportData?.report.currentStatus?.status
+  const canEdit =
+    (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT &&
+      hasAnyRole(roles.compliance_reporting, roles.signing_authority)) ||
+    (currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT &&
+      hasRoles(roles.analyst))
+
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report.organizationId
   )
+
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
     {
       onSuccess: (response) => {
         setModalData(null)
         const updatedStatus = JSON.parse(response.config.data)?.status
-        navigate(ROUTES.REPORTS, {
+        navigate(ROUTES.REPORTS.LIST, {
           state: {
             message: t('report:savedSuccessText', {
               status: updatedStatus.toLowerCase().replace('return', 'returned')
@@ -123,6 +128,28 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     }
   )
 
+  const { mutate: deleteComplianceReport } = useDeleteComplianceReport(
+    reportData?.report.organizationId,
+    complianceReportId,
+    {
+      onSuccess: () => {
+        setModalData(null)
+        navigate(ROUTES.REPORTS.LIST, {
+          state: {
+            message: t('report:reportDeleteSuccessText'),
+            severity: 'success'
+          }
+        })
+      },
+      onError: (error) => {
+        setModalData(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    }
+  )
   const methods = useForm() // TODO we will need this for summary line inputs
 
   const buttonClusterConfig = useMemo(
@@ -133,9 +160,11 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         t,
         setModalData,
         updateComplianceReport,
+        deleteComplianceReport,
         compliancePeriod,
         isGovernmentUser,
-        isSigningAuthorityDeclared
+        isSigningAuthorityDeclared,
+        supplementalInitiator: reportData?.report?.supplementalInitiator
       }),
     [
       hasRoles,
@@ -143,9 +172,11 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       t,
       setModalData,
       updateComplianceReport,
+      deleteComplianceReport,
       compliancePeriod,
       isGovernmentUser,
-      isSigningAuthorityDeclared
+      isSigningAuthorityDeclared,
+      reportData?.report
     ]
   )
 
@@ -206,7 +237,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         </BCBox>
         <Stack direction="column" mt={2}>
           <Stack direction={{ md: 'column', lg: 'row' }} spacing={2} pb={2}>
-            {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
+            {canEdit && (
               <ActivityListCard
                 name={orgData?.name}
                 period={compliancePeriod}
@@ -216,10 +247,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             )}
             <AssessmentCard
               orgData={orgData}
-              history={reportData?.report.history}
               isGovernmentUser={isGovernmentUser}
-              hasMetRenewables={hasMetRenewables}
-              hasMetLowCarbon={hasMetLowCarbon}
               currentStatus={currentStatus}
               complianceReportId={complianceReportId}
               alertRef={alertRef}
@@ -230,18 +258,19 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
           {!location.state?.newReport && (
             <>
               <ReportDetails
+                canEdit={canEdit}
                 currentStatus={currentStatus}
-                userRoles={userRoles}
+                userRoles={currentUser?.userRoles}
               />
               <ComplianceReportSummary
+                enableCompareMode={reportData.chain.length > 0}
+                canEdit={canEdit}
                 reportID={complianceReportId}
                 currentStatus={currentStatus}
                 compliancePeriodYear={compliancePeriod}
                 setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
                 buttonClusterConfig={buttonClusterConfig}
                 methods={methods}
-                setHasMetRenewables={setHasMetRenewables}
-                setHasMetLowCarbon={setHasMetLowCarbon}
                 alertRef={alertRef}
               />
             </>
@@ -250,6 +279,13 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             <Introduction
               expanded={location.state?.newReport}
               compliancePeriod={compliancePeriod}
+            />
+          )}
+          {isGovernmentUser && <AssessmentStatement />}
+          {hasRoles(roles.analyst) && (
+            <AssessmentRecommendation
+              complianceReportId={complianceReportId}
+              currentStatus={currentStatus}
             />
           )}
           {/* Internal Comments */}
@@ -261,9 +297,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <BCBox>
                 <Role roles={govRoles}>
                   <InternalComments
-                    entityType={'complianceReport'}
+                    entityType="complianceReport"
                     entityId={parseInt(complianceReportId)}
-                    onCommentChange={handleCommentChange}
                   />
                 </Role>
               </BCBox>
@@ -278,7 +313,12 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                         size="small"
                         variant={config.variant}
                         color={config.color}
-                        onClick={methods.handleSubmit(config.handler)}
+                        onClick={methods.handleSubmit(() =>
+                          config.handler({
+                            assessmentStatement:
+                              reportData?.report.assessmentStatement
+                          })
+                        )}
                         startIcon={
                           config.startIcon && (
                             <FontAwesomeIcon

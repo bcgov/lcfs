@@ -1,9 +1,9 @@
-import logging
 import re
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Tuple, Dict, Optional, Union
 
+import structlog
 from fastapi import Depends
 from lcfs.utils.constants import LCFS_Constants
 from sqlalchemy import inspect
@@ -36,7 +36,8 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.utils.calculations import calculate_compliance_units
 
-logger = logging.getLogger(__name__)
+
+logger = structlog.get_logger(__name__)
 
 
 class ComplianceDataService:
@@ -381,23 +382,20 @@ class ComplianceReportSummaryService:
         self,
         report_id: int,
         summary_data: ComplianceReportSummaryUpdateSchema,
-        user: UserProfile,
     ) -> ComplianceReportSummarySchema:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
         await self.repo.save_compliance_report_summary(summary_data)
-        summary_data = await self.calculate_compliance_report_summary(report_id, user)
+        summary_data = await self.calculate_compliance_report_summary(report_id)
 
         return summary_data
 
     @service_handler
     async def calculate_compliance_report_summary(
-        self, report_id: int, user: UserProfile
+        self, report_id: int
     ) -> ComplianceReportSummarySchema:
         """Several fields on Report Summary are Transient until locked, this function will re-calculate fields as necessary"""
-        # TODO this method will have to be updated to handle supplemental reports
-
         # Fetch the compliance report details
         compliance_report = await self.repo.get_compliance_report_by_id(
             report_id, is_model=True
@@ -455,7 +453,7 @@ class ComplianceReportSummaryService:
             }
 
         notional_transfers = (
-            await self.notional_transfer_service.get_notional_transfers(report_id, user)
+            await self.notional_transfer_service.get_notional_transfers(report_id)
         )
 
         notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
@@ -471,13 +469,17 @@ class ComplianceReportSummaryService:
                 notional_transfers_sums[normalized_category] -= transfer.quantity
 
         # Get effective fuel supplies using the updated logic
-        effective_fuel_supplies = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid
+        effective_fuel_supplies = (
+            await self.fuel_supply_repo.get_effective_fuel_supplies(
+                compliance_report.compliance_report_group_uuid,
+                compliance_report.compliance_report_id,
+            )
         )
 
         # Get effective other uses
         effective_other_uses = await self.other_uses_repo.get_effective_other_uses(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_id,
             return_model=True,
         )
 
@@ -532,12 +534,13 @@ class ComplianceReportSummaryService:
         existing_summary = self.convert_summary_to_dict(summary_model)
 
         fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
-            compliance_report.compliance_report_group_uuid
+            compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_id,
         )
 
         allocation_agreements = (
             await self.allocation_agreement_repo.get_allocation_agreements(
-                compliance_report_id=compliance_report.compliance_report_id
+                compliance_report.compliance_report_id
             )
         )
 
@@ -559,7 +562,9 @@ class ComplianceReportSummaryService:
 
         # Only save if summary has changed
         if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):
-            logger.debug("Report has changed, updating summary")
+            logger.info(
+                f"Report has changed, updating summary for report {compliance_report.compliance_report_id}"
+            )
             await self.repo.save_compliance_report_summary(summary)
             return summary
 
@@ -933,7 +938,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid
+            report.compliance_report_group_uuid, report.compliance_report_id
         )
 
         # Initialize compliance units sum
@@ -963,7 +968,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel export records
         fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
-            report.compliance_report_group_uuid
+            report.compliance_report_group_uuid, report.compliance_report_id
         )
 
         # Initialize compliance units sum

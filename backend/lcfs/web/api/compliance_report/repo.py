@@ -1,25 +1,38 @@
 from collections import defaultdict
+
+import asyncio
+import structlog
 from datetime import datetime
+from fastapi import Depends
+from sqlalchemy import func, select, and_, asc, desc, update, String, cast, or_, delete
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.inspection import inspect
+from sqlalchemy.orm import joinedload, aliased
 from typing import List, Optional, Dict, Union
 
-import structlog
-from fastapi import Depends
-from sqlalchemy import func, select, and_, asc, desc, update, String, cast
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, aliased
-from sqlalchemy.inspection import inspect
-
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models.compliance import CompliancePeriod, ComplianceReportListView
+from lcfs.db.models.comment import ComplianceReportInternalComment
+from lcfs.db.models.compliance import (
+    CompliancePeriod,
+    ComplianceReportListView,
+    ComplianceReportOrganizationSnapshot,
+    FinalSupplyEquipment,
+)
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    SupplementalInitiatorType,
+    compliance_report_document_association,
+)
 from lcfs.db.models.compliance.ComplianceReportHistory import ComplianceReportHistory
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
 )
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.compliance.FuelExport import FuelExport
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.fuel.ExpectedUseType import ExpectedUseType
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
@@ -27,6 +40,7 @@ from lcfs.db.models.fuel.FuelType import FuelType
 from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.web.api.base import (
     PaginationRequestSchema,
@@ -39,6 +53,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryUpdateSchema,
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
+from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -354,44 +369,28 @@ class ComplianceReportRepository:
 
     @repo_handler
     async def get_reports_paginated(
-        self, pagination: PaginationRequestSchema, organization_id: int = None
+        self,
+        pagination: PaginationRequestSchema,
+        user: UserProfile,
     ):
         """
         Retrieve a paginated list of the latest compliance reports from each compliance_report_group_uuid.
         Supports pagination, filtering, and sorting.
         """
-        # Base query conditions
         conditions = []
-        if organization_id:
-            cr_alias = aliased(ComplianceReport)
+        excluded_statuses = []
 
-            # Subquery: Get latest version for each compliance_report_group_uuid (only for the given organization)
-            latest_versions = (
-                select(
-                    cr_alias.compliance_report_group_uuid,
-                    func.max(cr_alias.version).label("max_version"),
-                )
-                .where(
-                    cr_alias.organization_id == organization_id
-                )  # Filter by organization
-                .group_by(cr_alias.compliance_report_group_uuid)
-                .subquery()
-            )
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+        if not is_analyst:
+            excluded_statuses.append(ComplianceReportStatusEnum.Analyst_adjustment)
 
-            # Main query: Join compliance report view with the latest versions subquery
-            query = select(ComplianceReportListView).join(
-                latest_versions,
-                (
-                    ComplianceReportListView.compliance_report_group_uuid
-                    == latest_versions.c.compliance_report_group_uuid
-                )
-                & (ComplianceReportListView.version == latest_versions.c.max_version),
-            )
-        else:
-            query = select(ComplianceReportListView).where(
-                cast(ComplianceReportListView.report_status, String)
-                != ComplianceReportStatusEnum.Draft.value
-            )
+        is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
+        if not is_supplier:
+            excluded_statuses.append(ComplianceReportStatusEnum.Draft)
+
+        query = await self.get_latest_visible_reports_query(
+            excluded_statuses, user.organization_id
+        )
 
         if pagination.filters and len(pagination.filters) > 0:
             self.apply_filters(pagination, conditions)
@@ -407,6 +406,7 @@ class ComplianceReportRepository:
         if len(pagination.sort_orders) < 1:
             field = get_field_for_filter(ComplianceReportListView, "update_date")
             query = query.order_by(desc(field))
+
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
             if order.field == "status":
@@ -459,9 +459,9 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.history).joinedload(
                     ComplianceReportHistory.status
                 ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ).joinedload(UserProfile.organization),
+                joinedload(ComplianceReport.history)
+                .joinedload(ComplianceReportHistory.user_profile)
+                .joinedload(UserProfile.organization),
                 joinedload(ComplianceReport.transaction),
             )
             .where(ComplianceReport.compliance_report_id == report_id)
@@ -478,7 +478,7 @@ class ComplianceReportRepository:
         return ComplianceReportBaseSchema.model_validate(compliance_report)
 
     @repo_handler
-    async def get_compliance_report_chain(self, group_uuid: str):
+    async def get_compliance_report_chain(self, group_uuid: str, version: int):
         result = await self.db.execute(
             select(ComplianceReport)
             .options(
@@ -495,6 +495,7 @@ class ComplianceReportRepository:
                 joinedload(ComplianceReport.transaction),
             )
             .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
+            .where(ComplianceReport.version <= version)
             # Ensure ordering by version
             .order_by(ComplianceReport.version.desc())
         )
@@ -965,3 +966,161 @@ class ComplianceReportRepository:
             .limit(1)
         )
         return result.scalars().first().summary
+
+    @repo_handler
+    async def delete_compliance_report(self, compliance_report_id: int) -> bool:
+        """
+        Deletes a compliance report and all its related data by ID using concurrent operations.
+
+        This performs a cascading delete of all related entities including:
+        - ComplianceReportSummary
+        - ComplianceReportHistory
+        - ComplianceReportInternalComment
+        - NotionalTransfer
+        - FuelSupply
+        - FuelExport
+        - AllocationAgreement
+        - OtherUses
+        - FinalSupplyEquipment
+        - ComplianceReportOrganizationSnapshot
+        - Document associations
+        """
+        # Create a list of delete operations
+        delete_operations = [
+            # Child tables with no interdependencies
+            self.db.execute(
+                delete(compliance_report_document_association).where(
+                    compliance_report_document_association.c.compliance_report_id
+                    == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(ComplianceReportOrganizationSnapshot).where(
+                    ComplianceReportOrganizationSnapshot.compliance_report_id
+                    == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(ComplianceReportSummary).where(
+                    ComplianceReportSummary.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(ComplianceReportHistory).where(
+                    ComplianceReportHistory.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(ComplianceReportInternalComment).where(
+                    ComplianceReportInternalComment.compliance_report_id
+                    == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(NotionalTransfer).where(
+                    NotionalTransfer.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(FuelSupply).where(
+                    FuelSupply.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(FuelExport).where(
+                    FuelExport.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(AllocationAgreement).where(
+                    AllocationAgreement.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(OtherUses).where(
+                    OtherUses.compliance_report_id == compliance_report_id
+                )
+            ),
+            self.db.execute(
+                delete(FinalSupplyEquipment).where(
+                    FinalSupplyEquipment.compliance_report_id == compliance_report_id
+                )
+            ),
+        ]
+
+        # Execute all child table deletes concurrently
+        await asyncio.gather(*delete_operations)
+
+        # After all child records are deleted, delete the parent report
+        await self.db.execute(
+            delete(ComplianceReport).where(
+                ComplianceReport.compliance_report_id == compliance_report_id
+            )
+        )
+
+        await self.db.flush()
+        logger.info(f"Successfully deleted compliance report {compliance_report_id}")
+        return True
+
+    async def get_latest_visible_reports_query(
+        self,
+        excluded_statuses: List[ComplianceReportStatusEnum],
+        user_organization_id=None,
+    ):
+        # Build a correlated subquery to determine the maximum version for each group,
+        # filtering only reports with a status not in the excluded list.
+
+        status_ids = []
+        for status in excluded_statuses:
+            status = await self.get_compliance_report_status_by_desc(status.value)
+            status_ids.append(status.compliance_report_status_id)
+
+        max_version_subq = (
+            select(func.max(ComplianceReport.version))
+            .where(
+                ComplianceReportListView.compliance_report_group_uuid
+                == ComplianceReport.compliance_report_group_uuid,
+                ComplianceReport.current_status_id.notin_(status_ids),
+            )
+            .scalar_subquery()
+        )
+
+        # Hide government reports unless they are assessed
+        if user_organization_id is not None:
+            assessed = await self.get_compliance_report_status_by_desc(
+                ComplianceReportStatusEnum.Assessed.value
+            )
+            max_version_subq = max_version_subq.where(
+                or_(
+                    ComplianceReport.current_status_id
+                    == assessed.compliance_report_status_id,
+                    or_(
+                        ComplianceReport.supplemental_initiator
+                        != SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
+                        ComplianceReport.supplemental_initiator.is_(None),
+                    ),
+                )
+            )
+
+        # Build the main query filtering out excluded statuses and ensuring that
+        # the report version equals the maximum visible version for that group.
+        query = select(ComplianceReportListView).where(
+            ComplianceReportListView.report_status_id.notin_(status_ids),
+            ComplianceReportListView.version == max_version_subq,
+        )
+
+        # Optionally filter by organization_id if it is provided.
+        if user_organization_id is not None:
+            query = query.where(
+                ComplianceReportListView.organization_id == user_organization_id
+            )
+
+        return query
+
+    @repo_handler
+    async def get_compliance_report_statuses(self):
+        """
+        Retrieve all compliance report statuses from the database
+        """
+        result = await self.db.execute(select(ComplianceReportStatus))
+        return result.scalars().all()

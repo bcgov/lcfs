@@ -4,7 +4,8 @@ import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { DownloadButton } from '@/components/DownloadButton'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import { apiRoutes, ROUTES } from '@/constants/routes'
+import { apiRoutes } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useApiService } from '@/services/useApiService'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -24,8 +25,15 @@ import { govRoles, roles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
 import Loading from '@/components/Loading'
 import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { useGetTransactionList } from '@/hooks/useTransactions'
+
+const initialPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: defaultSortModel,
+  filters: []
+}
 
 export const Transactions = () => {
   const { t } = useTranslation(['common', 'transaction'])
@@ -44,8 +52,21 @@ export const Transactions = () => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
 
-  const [gridKey, setGridKey] = useState('transactions-grid')
-  const [resetGridFn, setResetGridFn] = useState(null)
+  const [paginationOptions, setPaginationOptions] = useState(
+    initialPaginationOptions
+  )
+  const [selectedOrgId, setSelectedOrgId] = useState(null)
+
+  const queryData = useGetTransactionList(
+    {
+      ...paginationOptions,
+      selectedOrgId
+    },
+    {
+      cacheTime: 0,
+      staleTime: 0
+    }
+  )
 
   const getRowId = useCallback((params) => {
     return (
@@ -54,8 +75,6 @@ export const Transactions = () => {
       params.data.transactionId
     )
   }, [])
-
-  const [selectedOrgId, setSelectedOrgId] = useState(null)
 
   const shouldRenderLink = (props) => {
     return (
@@ -88,24 +107,24 @@ export const Transactions = () => {
           // Define routes mapping for transaction types
           const routesMapping = {
             Transfer: {
-              view: ROUTES.TRANSFERS_VIEW,
-              edit: ROUTES.TRANSFERS_EDIT
+              view: ROUTES.TRANSFERS.VIEW,
+              edit: ROUTES.TRANSFERS.EDIT
             },
             AdminAdjustment: {
               view: currentUser.isGovernmentUser
-                ? ROUTES.ADMIN_ADJUSTMENT_VIEW
-                : ROUTES.ORG_ADMIN_ADJUSTMENT_VIEW,
-              edit: ROUTES.ADMIN_ADJUSTMENT_EDIT
+                ? ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW
+                : ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.ORG_VIEW,
+              edit: ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.EDIT
             },
             InitiativeAgreement: {
               view: currentUser.isGovernmentUser
-                ? ROUTES.INITIATIVE_AGREEMENT_VIEW
-                : ROUTES.ORG_INITIATIVE_AGREEMENT_VIEW,
-              edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
+                ? ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW
+                : ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.ORG_VIEW,
+              edit: ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.EDIT
             },
             ComplianceReport: {
-              view: ROUTES.REPORTS_VIEW,
-              edit: ROUTES.INITIATIVE_AGREEMENT_EDIT
+              view: ROUTES.REPORTS.VIEW,
+              edit: ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.EDIT
             }
           }
 
@@ -172,15 +191,10 @@ export const Transactions = () => {
     }
   }, [location.state])
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
-    }
-  }, [resetGridFn])
+  const handleClearFilters = () => {
+    gridRef.current?.resetGrid()
+    setPaginationOptions(initialPaginationOptions)
+  }
 
   if (!currentUser) {
     return <Loading />
@@ -216,7 +230,7 @@ export const Transactions = () => {
                       size="2x"
                     />
                   }
-                  onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
+                  onClick={() => navigate(ROUTES.TRANSFERS.ADD)}
                 >
                   <BCTypography variant="subtitle2">
                     {t('txn:newTransferBtn')}
@@ -237,7 +251,7 @@ export const Transactions = () => {
                     size="2x"
                   />
                 }
-                onClick={() => navigate(ROUTES.TRANSACTIONS_ADD)}
+                onClick={() => navigate(ROUTES.TRANSACTIONS.ADD)}
               >
                 <BCTypography variant="subtitle2">
                   {t('txn:newTransactionBtn')}
@@ -273,28 +287,30 @@ export const Transactions = () => {
           }}
         >
           <Role roles={govRoles}>
-            <OrganizationList onOrgChange={setSelectedOrgId} />
+            <OrganizationList
+              onOrgChange={setSelectedOrgId}
+              onlyRegistered={false}
+            />
           </Role>
         </Grid>
       </Grid>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          gridRef={gridRef}
-          gridKey={gridKey}
+          ref={gridRef}
+          gridKey="transactions-grid"
           columnDefs={transactionsColDefs(t)}
-          query={useGetTransactionList}
-          queryParams={{ selectedOrgId }}
-          dataKey={'transactions'}
           getRowId={getRowId}
           overlayNoRowsTemplate={t('txn:noTxnsFound')}
-          autoSizeStrategy={{
-            type: 'fitGridWidth',
-            defaultMinWidth: 50,
-            defaultMaxWidth: 600
-          }}
           defaultColDef={defaultColDef}
-          defaultSortModel={defaultSortModel}
-          onSetResetGrid={handleSetResetGrid}
+          queryData={queryData}
+          dataKey="transactions"
+          initialPaginationOptions={initialPaginationOptions}
+          onPaginationChange={(newPagination) =>
+            setPaginationOptions((prev) => ({
+              ...prev,
+              ...newPagination
+            }))
+          }
           highlightedRowId={highlightedId}
         />
       </BCBox>

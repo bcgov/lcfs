@@ -180,7 +180,7 @@ async def get_transactions_paginated_for_org(
 @view_handler([RoleEnum.SUPPLIER])
 async def export_transactions_for_org(
     request: Request,
-    format: str = Query(default="xls", description="File export format"),
+    format: str = Query(default="xlsx", description="File export format"),
     txn_service: TransactionsService = Depends(),
 ):
     """
@@ -261,13 +261,11 @@ async def create_compliance_report(
 @view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def get_compliance_reports(
     request: Request,
-    organization_id: int,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     report_service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportListSchema:
-    organization_id = request.user.organization.organization_id
     return await report_service.get_compliance_reports_paginated(
-        pagination, organization_id, bceid_user=True
+        pagination, request.user
     )
 
 
@@ -297,8 +295,6 @@ async def get_all_org_reported_years(
 @view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
 async def get_compliance_report_by_id(
     request: Request,
-    organization_id: int,
-    response: Response = None,
     report_id: int = None,
     report_service: ComplianceReportServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
@@ -307,7 +303,27 @@ async def get_compliance_report_by_id(
     Endpoint to get information of a user by ID
     This endpoint returns the information of a user by ID, including their roles and organization.
     """
-    await report_validate.validate_organization_access(report_id)
+    compliance_report = await report_validate.validate_organization_access(report_id)
+    await report_validate.validate_compliance_report_access(compliance_report)
     return await report_service.get_compliance_report_by_id(
-        report_id, apply_masking=True, get_chain=True
+        report_id, request.user, True
     )
+
+
+@router.delete(
+    "/{organization_id}/{report_id}/supplemental",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def delete_supplemental_report(
+    request: Request,
+    report_id: int,
+    report_service: ComplianceReportServices = Depends(),
+    report_validate: ComplianceReportValidation = Depends(),
+) -> None:
+    """
+    Delete a supplemental compliance report.
+    """
+    # validate current user permissions
+    await report_validate.validate_organization_access(report_id)
+    await report_service.delete_compliance_report(report_id, request.user)

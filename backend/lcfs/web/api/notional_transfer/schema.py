@@ -6,7 +6,7 @@ from lcfs.web.api.base import (
     SortOrder,
     PaginationRequestSchema,
     PaginationResponseSchema,
-    ComplianceReportRequestSchema
+    ComplianceReportRequestSchema,
 )
 
 from enum import Enum
@@ -46,7 +46,6 @@ class NotionalTransferChangelogSchema(BaseSchema):
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     diff: Optional[NotionalTransferDiffSchema] = None
     updated: Optional[bool] = None
@@ -63,7 +62,6 @@ class NotionalTransferCreateSchema(BaseSchema):
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     is_new_supplemental_entry: Optional[bool] = None
 

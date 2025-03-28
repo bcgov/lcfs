@@ -67,7 +67,6 @@ export const HistoryCard = ({ report }) => {
         }
         return item
       })
-      .filter((item) => item.status.status !== COMPLIANCE_REPORT_STATUSES.DRAFT)
   }, [isGovernmentUser, report.history])
 
   return (
@@ -108,6 +107,45 @@ export const HistoryCard = ({ report }) => {
                     }}
                   />
                 </ListItemText>
+                {item.status.status === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
+                  <List sx={{ p: 0, m: 0 }}>
+                    <StyledListItem key={index} disablePadding>
+                      <ListItemText
+                        primaryTypographyProps={{ variant: 'body4' }}
+                      >
+                        <strong>
+                          {t('report:complianceReportHistory.renewableTarget')}
+                          :&nbsp;
+                        </strong>
+                        {t('report:assessmentLn1', {
+                          name: report.organization.name,
+                          hasMet:
+                            report.summary.line11FossilDerivedBaseFuelTotal <= 0
+                              ? 'has met'
+                              : 'has not met'
+                        })}
+                      </ListItemText>
+                    </StyledListItem>
+                    <StyledListItem key={index} disablePadding>
+                      <ListItemText
+                        primaryTypographyProps={{ variant: 'body4' }}
+                      >
+                        <strong>
+                          {t('report:complianceReportHistory.lowCarbonTarget')}
+                          :&nbsp;
+                        </strong>
+                        {t('report:assessmentLn2', {
+                          name: report.organization.name,
+                          hasMet:
+                            report.summary.line21NonCompliancePenaltyPayable <=
+                            0
+                              ? 'has met'
+                              : 'has not met'
+                        })}
+                      </ListItemText>
+                    </StyledListItem>
+                  </List>
+                )}
               </StyledListItem>
             ))}
           </List>

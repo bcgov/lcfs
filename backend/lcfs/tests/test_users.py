@@ -19,10 +19,13 @@ async def test_export_success(
     response = await client.get(url)
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.headers["Content-Type"] == "application/vnd.ms-excel"
+    assert (
+        response.headers["Content-Type"]
+        == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
     # Read the Excel content into a DataFrame
-    excel_data = pd.read_excel(BytesIO(response.content), engine="xlrd")
+    excel_data = pd.read_excel(BytesIO(response.content), engine="openpyxl")
 
     # Define expected column names
     expected_column_names = [

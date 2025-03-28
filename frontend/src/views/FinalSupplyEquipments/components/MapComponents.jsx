@@ -47,7 +47,7 @@ export const MapLegend = ({ geofencingStatus }) => {
     {
       src: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
       alt: 'Orange marker',
-      text: 'Period overlap (same Reg# & Serial#)'
+      text: 'Period overlap (same Serial#)'
     },
     {
       src: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',

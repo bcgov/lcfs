@@ -1,6 +1,4 @@
-// complianceReportButtonConfigs.js
-
-import { faPencil } from '@fortawesome/free-solid-svg-icons'
+import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 
@@ -42,9 +40,11 @@ export const buttonClusterConfigFn = ({
   t,
   setModalData,
   updateComplianceReport,
+  deleteComplianceReport = () => {},
   compliancePeriod,
   isGovernmentUser,
-  isSigningAuthorityDeclared
+  isSigningAuthorityDeclared,
+  supplementalInitiator
 }) => {
   const reportButtons = {
     submitReport: {
@@ -168,20 +168,51 @@ export const buttonClusterConfigFn = ({
         })
       }
     },
-    reAssessReport: {
-      ...containedButton(t('report:actionBtns.reAssessReportBtn')),
-      id: 're-assess-report-btn',
+    deleteSupplementalReport: {
+      ...redOutlinedButton(
+        t('report:actionBtns.deleteSupplementalReportBtn'),
+        faTrash
+      ),
+      id: 'delete-supplemental-report-btn',
       handler: (formData) => {
         setModalData({
-          primaryButtonAction: () =>
-            updateComplianceReport({
-              ...formData,
-              status: COMPLIANCE_REPORT_STATUSES.REASSESSED
-            }),
-          primaryButtonText: t('report:actionBtns.reAssessReportBtn'),
+          primaryButtonAction: () => deleteComplianceReport(formData),
+          primaryButtonText: t('report:actionBtns.deleteSupplementalReportBtn'),
+          primaryButtonColor: 'error',
           secondaryButtonText: t('cancelBtn'),
           title: t('confirmation'),
-          content: t('report:reAssessConfirmText')
+          content: t('report:deleteConfirmText')
+        })
+      }
+    },
+    deleteAnalystAdjustment: {
+      ...redOutlinedButton(
+        t('report:actionBtns.deleteAnalystAdjustmentBtn'),
+        faTrash
+      ),
+      id: 'delete-compliance-report-btn',
+      handler: (formData) => {
+        setModalData({
+          primaryButtonAction: () => deleteComplianceReport(formData),
+          primaryButtonText: t('report:actionBtns.deleteAnalystAdjustmentBtn'),
+          primaryButtonColor: 'error',
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:deleteConfirmText')
+        })
+      }
+    },
+    deleteReassessedReport: {
+      ...redOutlinedButton(t('report:actionBtns.deleteReassessBtn'), faTrash),
+      id: 'delete-compliance-report-btn',
+      handler: (formData) => {
+        setModalData({
+          primaryButtonAction: () => deleteComplianceReport(formData),
+          primaryButtonText: t('report:actionBtns.deleteReassessBtn'),
+          primaryButtonColor: 'error',
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:deleteConfirmText')
         })
       }
     }
@@ -194,8 +225,11 @@ export const buttonClusterConfigFn = ({
     return currentDate <= deadlineDate
   }
 
-  const buttons = {
-    [COMPLIANCE_REPORT_STATUSES.DRAFT]: [reportButtons.submitReport],
+  return {
+    [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
+      reportButtons.submitReport,
+      ...(supplementalInitiator ? [reportButtons.deleteSupplementalReport] : [])
+    ],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
       ...(isGovernmentUser && hasRoles('Analyst')
         ? [
@@ -203,6 +237,11 @@ export const buttonClusterConfigFn = ({
             ...(canReturnToSupplier() ? [reportButtons.returnToSupplier] : [])
           ]
         : [])
+    ],
+    [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: [
+      ...(isGovernmentUser && hasRoles('Analyst')
+        ? [reportButtons.recommendByAnalyst, reportButtons.deleteAnalystAdjustment]
+        : []),
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: [
       ...(isGovernmentUser && hasRoles('Compliance Manager')
@@ -213,13 +252,6 @@ export const buttonClusterConfigFn = ({
       ...(isGovernmentUser && hasRoles('Director')
         ? [reportButtons.assessReport, reportButtons.returnToManager]
         : [])
-    ],
-    [COMPLIANCE_REPORT_STATUSES.ASSESSED]: [
-      ...(isGovernmentUser && hasRoles('Analyst')
-        ? [reportButtons.reAssessReport]
-        : [])
     ]
   }
-
-  return buttons
 }

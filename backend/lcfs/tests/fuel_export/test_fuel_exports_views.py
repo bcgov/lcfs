@@ -1,20 +1,21 @@
-import pytest
+import datetime
 import json
-from unittest.mock import patch
-from lcfs.db.models.user.Role import RoleEnum
-from httpx import AsyncClient
+import pytest
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
+from httpx import AsyncClient
+from unittest.mock import patch
 
-from lcfs.tests.compliance_report.conftest import compliance_report_base_schema
-from lcfs.web.api.compliance_report.schema import ChainedComplianceReportSchema
+from lcfs.db.models import ComplianceReport
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.tests.compliance_report.conftest import (
+    compliance_report_base_schema,
+)
 from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
     FuelExportCreateUpdateSchema,
-    FuelTypeOptionsResponse,
     CommonPaginatedReportRequestSchema,
     FuelCategoryResponseSchema,
-    FuelTypeSchema,
     ProvisionOfTheActSchema,
     FuelTypeSchema,
     FuelExportsSchema,
@@ -158,6 +159,7 @@ async def test_save_fuel_export_row_forbidden(
         "fuel_type_id": 1,
         "fuel_category": "",
         "fuel_category_id": 1,
+        "end_use_id": 1,
         "provision_of_the_act": "",
         "provision_of_the_act_id": 1,
         "quantity": 1,
@@ -195,13 +197,14 @@ async def test_save_fuel_export_row_delete_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.actions_service.FuelExportActionService.delete_fuel_export"
     ) as mock_delete_fuel_export, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
-
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
+        mock_validate_organization_access.return_value = ComplianceReport()
         mock_delete_response = DeleteFuelExportResponseSchema(
             success=True, message="fuel export row deleted successfully"
         )
 
-        mock_validate_organization_access.return_value = None
         mock_delete_fuel_export.return_value = mock_delete_response
 
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
@@ -211,16 +214,14 @@ async def test_save_fuel_export_row_delete_success(client, fastapi_app, set_mock
         payload = FuelExportCreateUpdateSchema(
             fuel_export_id=1,
             compliance_report_id=1,
-            fuel_type="Diesel",
             fuel_type_id=1,
-            fuel_category="Diesel",
             fuel_category_id=1,
-            provision_of_the_act="Section 6",
+            end_use_id=1,
             provision_of_the_act_id=1,
             quantity=100,
             units="L",
-            export_date="2024-01-01",
             deleted=True,
+            export_date=datetime.date(2024, 1, 1),
         ).dict(exclude_none=True)
 
         response = await client.post(url, json=jsonable_encoder(payload))
@@ -236,7 +237,10 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.actions_service.FuelExportActionService.update_fuel_export"
     ) as mock_update_fuel_export, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
+        mock_validate_organization_access.return_value = ComplianceReport()
 
         # Create mock classes if not already defined at module level
         class MockCompliancePeriod:
@@ -264,27 +268,29 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
             ),
             quantity=1,
             units="L",
-            export_date="2024-01-01",
+            export_date=datetime.date(2024, 1, 1),
             fuel_category_id=1,
+            end_use_id=1,
             fuel_category=FuelCategoryResponseSchema(category="Diesel"),
-            provisionOfTheActId=1,
-            provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Test Provision"},
             compliance_period="2024",
+            provision_of_the_act_id=1,
+            provision_of_the_act=ProvisionOfTheActSchema(
+                provision_of_the_act_id=1,
+                name="Test Provision",
+            ),
         )
 
         # Create update payload with all required fields
         update_payload = FuelExportCreateUpdateSchema(
             fuel_export_id=1,
             compliance_report_id=1,
-            fuel_type="Diesel",
             fuel_type_id=1,
-            fuel_category="Diesel",
             fuel_category_id=1,
-            provision_of_the_act="Section 6",
+            end_use_id=1,
             provision_of_the_act_id=1,
             quantity=1,
             units="L",
-            export_date="2024-01-01",
+            export_date=datetime.date(2024, 1, 1),
         )
 
         mock_validate_organization_access.return_value = mock_compliance_report
@@ -308,7 +314,10 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.actions_service.FuelExportActionService.create_fuel_export"
     ) as mock_create_fuel_export, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
+        mock_validate_organization_access.return_value = ComplianceReport()
 
         # Create mock classes
         class MockCompliancePeriod:
@@ -327,15 +336,13 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
         # Create payload with all required fields
         create_payload = FuelExportCreateUpdateSchema(
             compliance_report_id=1,
-            fuel_type="Diesel",
             fuel_type_id=1,
-            fuel_category="Diesel",
             fuel_category_id=1,
-            provision_of_the_act="Section 6",
+            end_use_id=1,
             provision_of_the_act_id=1,
             quantity=1,
             units="L",
-            export_date="2024-01-01",
+            export_date=datetime.date(2024, 1, 1),
             compliance_period="2024",
         )
 
@@ -350,12 +357,16 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
             ),
             quantity=1,
             units="L",
-            export_date="2024-01-01",
+            export_date=datetime.date(2024, 1, 1),
             fuel_category_id=1,
+            end_use_id=1,
             fuel_category=FuelCategoryResponseSchema(category="Diesel"),
-            provisionOfTheActId=1,
-            provisionOfTheAct={"provision_of_the_act_id": 1, "name": "Section 6"},
             compliance_period="2024",
+            provision_of_the_act_id=1,
+            provision_of_the_act=ProvisionOfTheActSchema(
+                provision_of_the_act_id=1,
+                name="Test Provision",
+            ),
         )
 
         mock_validate_organization_access.return_value = mock_compliance_report

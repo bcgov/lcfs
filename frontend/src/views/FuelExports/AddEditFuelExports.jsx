@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import {
   useFuelExportOptions,
   useGetFuelExportsList,
@@ -37,7 +37,7 @@ export const AddEditFuelExports = () => {
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
 
@@ -89,7 +89,7 @@ export const AddEditFuelExports = () => {
           fuelType: item.fuelType?.fuelType,
           provisionOfTheAct: item.provisionOfTheAct?.name,
           fuelCode: item.fuelCode?.fuelCode,
-          endUse: item.endUse?.type || 'Any',
+          endUse: item.endUse?.type,
           isNewSupplementalEntry:
             isSupplemental && item.complianceReportId === +complianceReportId,
           id: uuid()
@@ -104,7 +104,7 @@ export const AddEditFuelExports = () => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
         params.api.startEditingCell({
           rowIndex: lastRowIndex,
-          colKey: 'exportDate'
+          colKey: 'fuelTypeId'
         })
         setGridReady(true)
       }, 500)
@@ -135,7 +135,7 @@ export const AddEditFuelExports = () => {
         fuelType: item.fuelType?.fuelType,
         provisionOfTheAct: item.provisionOfTheAct?.name,
         fuelCode: item.fuelCode?.fuelCode,
-        endUse: item.endUse?.type || 'Any',
+        endUse: item.endUse?.type,
         isNewSupplementalEntry:
           isSupplemental && item.complianceReportId === +complianceReportId,
         id: uuid()
@@ -162,7 +162,6 @@ export const AddEditFuelExports = () => {
           const fuelCategoryOptions = selectedFuelType.fuelCategories.map(
             (item) => item.fuelCategory
           )
-
           const endUseTypes = selectedFuelType.eerRatios.map(
             (item) => item.endUseType
           )
@@ -171,7 +170,7 @@ export const AddEditFuelExports = () => {
           const category =
             fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
           const endUseValue =
-            endUseTypes.length === 1 ? endUseTypes[0].type : 'Any'
+            endUseTypes.length === 1 ? endUseTypes[0].type : null
           const provisionValue =
             selectedFuelType.provisions.length === 1
               ? selectedFuelType.provisions[0].name
@@ -183,7 +182,7 @@ export const AddEditFuelExports = () => {
         }
       }
 
-      if (params.column.colId === 'fuelCategoryId') {
+      if (params.column.colId === 'fuelCategory') {
         const selectedFuelType = optionsData?.fuelTypes?.find(
           (obj) => params.node.data.fuelType === obj.fuelType
         )
@@ -198,7 +197,7 @@ export const AddEditFuelExports = () => {
 
           // Set to null if multiple options, otherwise use first item
           const endUseValue =
-            endUseTypes.length === 1 ? endUseTypes[0].type : 'Any'
+            endUseTypes.length === 1 ? endUseTypes[0].type : null
           const provisionValue =
             selectedFuelType.provisions.length === 1
               ? selectedFuelType.provisions[0].name
@@ -271,10 +270,10 @@ export const AddEditFuelExports = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
+      buildPath(ROUTES.REPORTS.VIEW, {
+        compliancePeriod,
+        complianceReportId
+      })
     )
   }, [navigate, compliancePeriod, complianceReportId])
 
@@ -307,7 +306,6 @@ export const AddEditFuelExports = () => {
             showAddRowsButton={true}
             context={{ errors }}
             onAction={onAction}
-            stopEditingWhenCellsLoseFocus
             saveButtonProps={{
               enabled: true,
               text: t('report:saveReturn'),

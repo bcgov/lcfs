@@ -19,7 +19,7 @@ import {
   useDeleteDocument,
   useDocuments,
   useUploadDocument,
-  useViewDocument
+  useDownloadDocument
 } from '@/hooks/useDocuments'
 import { MAX_FILE_SIZE_BYTES } from '@/constants/common.js'
 
@@ -65,7 +65,7 @@ function DocumentTable({ parentType, parentID }) {
 
   const { mutate: uploadFile } = useUploadDocument(parentType, parentID)
   const { mutate: deleteFile } = useDeleteDocument(parentType, parentID)
-  const viewDocument = useViewDocument(parentType, parentID)
+  const viewDocument = useDownloadDocument(parentType, parentID)
 
   const handleDrag = (e) => {
     e.preventDefault()

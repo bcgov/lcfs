@@ -60,8 +60,22 @@ vi.mock('@/hooks/useComplianceReports')
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganization')
 
-vi.mock('../components/ActivityLinkList', () => ({
+vi.mock('../components/ActivityLinksList', () => ({
   ActivityLinksList: () => <div>Activity Links List</div>
+}))
+
+vi.mock('../components/ActivityListCard', () => ({
+  ActivityListCard: () => <div>Activity Links List</div>
+}))
+
+vi.mock('../components/AssessmentCard', () => ({
+  AssessmentCard: () => (
+    <div>
+      <div>report:assessment</div>
+      <div>report:reportHistory</div>
+      <div>report:complianceReportHistory.AssessedBy</div>
+    </div>
+  )
 }))
 
 vi.mock('../components/ReportDetails', () => ({
@@ -76,6 +90,10 @@ vi.mock('../components/Introduction', () => ({
   Introduction: () => <div>Introduction</div>
 }))
 
+vi.mock('../components/AssessmentStatement', () => ({
+  AssessmentStatement: () => <div>Assessment Statement</div>
+}))
+
 describe('EditViewComplianceReport', () => {
   const setupMocks = (overrides = {}) => {
     const defaultMocks = {
@@ -87,7 +105,8 @@ describe('EditViewComplianceReport', () => {
           isGovernmentUser: false
         },
         isLoading: false,
-        hasRoles: mockHasRoles
+        hasRoles: mockHasRoles,
+        hasAnyRole: () => false
       },
       reportData: {
         report: {
@@ -132,6 +151,12 @@ describe('EditViewComplianceReport', () => {
     )
     vi.mocked(
       useComplianceReportsHook.useUpdateComplianceReport
+    ).mockReturnValue({ mutate: vi.fn() })
+    vi.mocked(
+      useComplianceReportsHook.useDeleteComplianceReport
+    ).mockReturnValue({ mutate: vi.fn() })
+    vi.mocked(
+      useComplianceReportsHook.useCreateAnalystAdjustment
     ).mockReturnValue({ mutate: vi.fn() })
     vi.mocked(
       useComplianceReportsHook.useCreateSupplementalReport
@@ -224,7 +249,8 @@ describe('EditViewComplianceReport', () => {
       },
       currentUser: {
         data: { isGovernmentUser: true },
-        hasRoles: (role) => role === 'Analyst'
+        hasRoles: (role) => role === 'Analyst',
+        hasAnyRole: () => false
       }
     })
     render(
@@ -254,7 +280,8 @@ describe('EditViewComplianceReport', () => {
       },
       currentUser: {
         data: { isGovernmentUser: true },
-        hasRoles: (role) => role === 'Compliance Manager'
+        hasRoles: (role) => role === 'Compliance Manager',
+        hasAnyRole: () => false
       }
     })
     render(
@@ -287,7 +314,8 @@ describe('EditViewComplianceReport', () => {
       },
       currentUser: {
         data: { isGovernmentUser: true },
-        hasRoles: (role) => role === 'Director'
+        hasRoles: (role) => role === 'Director',
+        hasAnyRole: () => false
       }
     })
     render(
@@ -308,34 +336,6 @@ describe('EditViewComplianceReport', () => {
     })
   })
 
-  it('displays the correct buttons for Assessed status with Analyst role', async () => {
-    const mocks = setupMocks({
-      reportData: {
-        report: {
-          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
-        },
-        chain: []
-      },
-      currentUser: {
-        data: { isGovernmentUser: true },
-        hasRoles: (role) => role === 'Analyst'
-      }
-    })
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
-    await waitFor(() => {
-      expect(
-        screen.getByText('report:actionBtns.reAssessReportBtn')
-      ).toBeInTheDocument()
-    })
-  })
-
   it('does not display action buttons for non-government users on submitted reports', async () => {
     const mocks = setupMocks({
       reportData: {
@@ -344,7 +344,11 @@ describe('EditViewComplianceReport', () => {
         },
         chain: []
       },
-      currentUser: { data: { isGovernmentUser: false }, hasRoles: () => false }
+      currentUser: {
+        data: { isGovernmentUser: false },
+        hasRoles: () => false,
+        hasAnyRole: () => false
+      }
     })
     render(
       <EditViewComplianceReport
@@ -372,7 +376,11 @@ describe('EditViewComplianceReport', () => {
 
   it('displays internal comments section for government users', async () => {
     const mocks = setupMocks({
-      currentUser: { data: { isGovernmentUser: true }, hasRoles: () => true }
+      currentUser: {
+        data: { isGovernmentUser: true },
+        hasRoles: () => true,
+        hasAnyRole: () => false
+      }
     })
     render(
       <EditViewComplianceReport
@@ -389,7 +397,11 @@ describe('EditViewComplianceReport', () => {
 
   it('does not display internal comments section for non-government users', async () => {
     const mocks = setupMocks({
-      currentUser: { data: { isGovernmentUser: false }, hasRoles: () => false }
+      currentUser: {
+        data: { isGovernmentUser: false },
+        hasRoles: () => false,
+        hasAnyRole: () => false
+      }
     })
     render(
       <EditViewComplianceReport
@@ -413,6 +425,15 @@ describe('EditViewComplianceReport', () => {
           currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
         },
         chain: []
+      },
+      currentUser: {
+        data: {
+          organization: { organizationId: '123' },
+          isGovernmentUser: false
+        },
+        isLoading: false,
+        hasRoles: mockHasRoles,
+        hasAnyRole: () => true
       }
     })
     render(

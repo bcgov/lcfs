@@ -80,25 +80,38 @@ class NotificationService:
 
     @service_handler
     async def update_notification_messages(
-        self, user_id: int, notification_ids: List[int]
-    ):
+        self, user_id: int, payload: dict
+    ) -> list[int]:
         """
-        Update multiple notifications (mark as read).
-        """
-        await self.repo.mark_notifications_as_read(user_id, notification_ids)
+        Marks notifications as read.
 
-        return notification_ids
+        If 'applyToAll' is True, do them all;
+        otherwise, do just the ones passed in 'notification_ids'.
+        """
+
+        if payload.get("applyToAll"):
+            return await self.repo.mark_all_notifications_as_read_for_user(user_id)
+        else:
+            notification_ids = payload.get("notification_ids", [])
+            return await self.repo.mark_notifications_as_read(user_id, notification_ids)
 
     @service_handler
     async def delete_notification_messages(
-        self, user_id: int, notification_ids: List[int]
-    ):
+        self, user_id: int, payload: dict
+    ) -> list[int]:
         """
-        Delete multiple notifications.
-        """
-        await self.repo.delete_notification_messages(user_id, notification_ids)
+        Deletes notifications.
 
-        return notification_ids
+        If 'applyToAll' is True, do them all;
+        otherwise, do just the ones passed in 'notification_ids'.
+        """
+        if payload.get("applyToAll"):
+            return await self.repo.delete_all_notifications_for_user(user_id)
+        else:
+            notification_ids = payload.get("notification_ids", [])
+            return await self.repo.delete_notification_messages(
+                user_id, notification_ids
+            )
 
     @service_handler
     async def get_notification_message_by_id(self, notification_id: int):
@@ -277,9 +290,10 @@ class NotificationService:
                 pass
 
         # Decide if this is a Transfer that is Recorded/Refused
-        is_recorded_or_refused = (
-            service_val == "transfer" and status_val in ["recorded", "refused"]
-        )
+        is_recorded_or_refused = service_val == "transfer" and status_val in [
+            "recorded",
+            "refused",
+        ]
 
         for notification_type in notification.notification_types:
             in_app_subscribed_users = await self.repo.get_subscribed_users_by_channel(
@@ -297,7 +311,9 @@ class NotificationService:
                     # Check if user is Analyst
                     roles = [ur.role.name for ur in sub.user_profile.user_roles]
                     if RoleEnum.ANALYST in roles:
-                        org_we_are_notifying = notification.notification_data.related_organization_id
+                        org_we_are_notifying = (
+                            notification.notification_data.related_organization_id
+                        )
                         if to_org_id and org_we_are_notifying != to_org_id:
                             skip = True
 
@@ -342,3 +358,10 @@ class NotificationService:
         Adds subscriptions for a user based on their role.
         """
         await self.repo.add_subscriptions_for_user_role(user_profile_id, role_id)
+
+    @service_handler
+    async def remove_subscriptions_for_user(self, user_profile_id: int) -> None:
+        """
+        Removes all notification channel subscriptions for this user.
+        """
+        await self.repo.delete_subscriptions_for_user(user_profile_id)

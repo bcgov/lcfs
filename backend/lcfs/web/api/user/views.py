@@ -28,7 +28,7 @@ get_async_db = dependencies.get_async_db_session
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_users(
     request: Request,
-    format: str = Query(default="xls", description="File export format"),
+    format: str = Query(default="xlsx", description="File export format"),
     service: UserServices = Depends(),
 ):
     """
@@ -77,12 +77,12 @@ async def get_users(
         - filter: the actual filter value
         - field: Database Field that needs filtering.
     """
-    pagination.filters = [*pagination.filters, FilterModel(
-        filter_type="text",
-        type="blank",
-        field="organizationId",
-        filter=""
-    )]
+    pagination.filters = [
+        *pagination.filters,
+        FilterModel(
+            filter_type="text", type="blank", field="organizationId", filter=""
+        ),
+    ]
 
     return await service.get_all_users(pagination)
 
@@ -171,9 +171,9 @@ async def delete_user(
 ) -> None:
     """
     Endpoint to delete a user
-    This endpoint deletes a user, if the user had never logged in before.
+    This endpoint deletes a user, if the user is safe to remove.
     """
-    return await service.delete_user(user_id)
+    return await service.remove_user(user_id)
 
 
 @router.get(

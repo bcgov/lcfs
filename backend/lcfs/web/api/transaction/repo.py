@@ -5,10 +5,23 @@ from enum import Enum
 from typing import List, Optional
 
 from fastapi import Depends
-from sqlalchemy import exists, select, update, func, desc, asc, and_, case, or_, extract
+from sqlalchemy import (
+    exists,
+    select,
+    update,
+    func,
+    desc,
+    asc,
+    and_,
+    case,
+    or_,
+    extract,
+    delete,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models import ComplianceReport
 from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
 from lcfs.db.models.transaction.TransactionStatusView import TransactionStatusView
 from lcfs.db.models.transaction.TransactionView import TransactionView
@@ -84,9 +97,7 @@ class TransactionRepository:
             non_transfer_condition = and_(
                 TransactionView.transaction_type != "Transfer",
                 TransactionView.to_organization_id == organization_id,
-                TransactionView.status.in_(
-                    ["Approved", "Assessed"]
-                ),
+                TransactionView.status.in_(["Approved", "Assessed"]),
             )
 
             # Combine conditions since an organization can be both transferor and transferee, or neither for non-"Transfer" transactions
@@ -108,19 +119,24 @@ class TransactionRepository:
                 ),
                 # Add condition for rescinded transfers
                 or_(
-                    TransactionView.status != 'Rescinded',
+                    TransactionView.status != "Rescinded",
                     and_(
-                        TransactionView.status == 'Rescinded',
-                        exists().select_from(TransferHistory).where(
+                        TransactionView.status == "Rescinded",
+                        exists()
+                        .select_from(TransferHistory)
+                        .where(
                             and_(
-                                TransferHistory.transfer_id == TransactionView.transaction_id,
-                                TransferHistory.transfer_status_id == TransferStatus.transfer_status_id,
-                                TransferStatus.status == 'Submitted',
-                                TransferHistory.create_date < TransactionView.update_date
+                                TransferHistory.transfer_id
+                                == TransactionView.transaction_id,
+                                TransferHistory.transfer_status_id
+                                == TransferStatus.transfer_status_id,
+                                TransferStatus.status == "Submitted",
+                                TransferHistory.create_date
+                                < TransactionView.update_date,
                             )
-                        )
-                    )
-                )
+                        ),
+                    ),
+                ),
             )
             gov_non_transfer_condition = TransactionView.transaction_type != "Transfer"
 
@@ -226,14 +242,19 @@ class TransactionRepository:
         """
         reserved_balance = await self.db.scalar(
             select(
-                func.sum(
-                    case(
-                        (
-                            Transaction.transaction_action
-                            == TransactionActionEnum.Reserved,
-                            Transaction.compliance_units,
-                        ),
-                        else_=0,
+                func.abs(
+                    func.sum(
+                        case(
+                            (
+                                and_(
+                                    Transaction.transaction_action
+                                    == TransactionActionEnum.Reserved,
+                                    Transaction.compliance_units < 0,
+                                ),
+                                Transaction.compliance_units,
+                            ),
+                            else_=0,
+                        )
                     )
                 ).label("reserved_balance")
             ).where(Transaction.organization_id == organization_id)
@@ -264,12 +285,15 @@ class TransactionRepository:
                             else_=0,
                         )
                     )
-                    - func.sum(
+                    + func.sum(
                         case(
                             (
-                                Transaction.transaction_action
-                                == TransactionActionEnum.Reserved,
-                                func.abs(Transaction.compliance_units),
+                                and_(
+                                    Transaction.transaction_action
+                                    == TransactionActionEnum.Reserved,
+                                    Transaction.compliance_units < 0,
+                                ),
+                                Transaction.compliance_units,
                             ),
                             else_=0,
                         )
@@ -288,7 +312,7 @@ class TransactionRepository:
 
         Args:
             organization_id (int): The ID of the organization for which to calculate the available balance.
-            compliance_period_end (datetime): The end date of the compliance period for which to calculate the available balance.
+            compliance_period (int): The compliance period year in integer
 
         Returns:
             int: The available balance of compliance units for the specified organization and period. Returns 0 if no balance is calculated.
@@ -481,3 +505,15 @@ class TransactionRepository:
         )
 
         return oldest_year
+
+    @repo_handler
+    async def delete_transaction(self, transaction_id, attached_report_id):
+        """Deletes a transaction with the given ID"""
+        await self.db.execute(
+            update(ComplianceReport)
+            .where(ComplianceReport.compliance_report_id == attached_report_id)
+            .values(transaction_id=None)
+        )
+        await self.db.execute(
+            delete(Transaction).where(Transaction.transaction_id == transaction_id)
+        )

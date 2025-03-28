@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Box, List } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
-import { apiRoutes, ROUTES } from '@/constants/routes'
+import { apiRoutes } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import Chip from '@mui/material/Chip'
 import { styled } from '@mui/material/styles'
 import colors from '@/themes/base/colors.js'
@@ -63,25 +64,25 @@ export const ActivityLinksList = ({ currentStatus }) => {
       createActivity(
         'report:activityLists.supplyOfFuel',
         'report:activityLabels.supplyOfFuel',
-        ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL
+        ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL
       ),
       createActivity(
         'report:activityLists.notionalTransfers',
         'report:activityLabels.notionalTransfers',
-        ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS
+        ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS
       ),
       createActivity(
         'report:activityLists.fuelsOtherUse',
         'report:activityLabels.fuelsOtherUse',
-        ROUTES.REPORTS_ADD_OTHER_USE_FUELS
+        ROUTES.REPORTS.ADD.OTHER_USE_FUELS
       ),
       createActivity(
         'report:activityLists.exportFuels',
         'report:activityLabels.exportFuels',
-        ROUTES.REPORTS_ADD_FUEL_EXPORTS
+        ROUTES.REPORTS.ADD.FUEL_EXPORTS
       )
     ],
-    [t, navigate, compliancePeriod, complianceReportId]
+    [t, navigate, compliancePeriod, complianceReportId, createActivity]
   )
 
   const secondaryList = useMemo(
@@ -89,12 +90,12 @@ export const ActivityLinksList = ({ currentStatus }) => {
       createActivity(
         'report:activityLists.finalSupplyEquipment',
         'report:activityLabels.finalSupplyEquipment',
-        ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS
+        ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS
       ),
       createActivity(
         'report:activityLists.allocationAgreements',
         'report:activityLabels.allocationAgreements',
-        ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS
+        ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS
       ),
       {
         name: t('report:activityLists.uploadDocuments'),
@@ -104,7 +105,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
         }
       }
     ],
-    [t, navigate, compliancePeriod, complianceReportId]
+    [t, navigate, compliancePeriod, complianceReportId, createActivity]
   )
 
   return (
@@ -129,6 +130,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
             key={activity.name}
             alignItems="flex-start"
             onClick={activity.action}
+            data-test={activity.label}
           >
             <BCTypography
               variant="subtitle2"
@@ -164,6 +166,7 @@ export const ActivityLinksList = ({ currentStatus }) => {
             key={activity.name}
             alignItems="flex-start"
             onClick={activity.action}
+            data-test={activity.label}
           >
             <BCTypography
               variant="subtitle2"

@@ -3,7 +3,7 @@ import BCTypography from '@/components/BCTypography'
 import {
   AsyncSuggestionEditor,
   AutocompleteCellEditor,
-  DateRangeCellEditor,
+  DateEditor,
   NumberEditor,
   RequiredHeader,
   TextCellEditor
@@ -20,12 +20,14 @@ import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
 import { ADDRESS_SEARCH_URL } from '@/constants/common'
+import { sortMixedStrings } from './components/utils'
 
 export const finalSupplyEquipmentColDefs = (
   optionsData,
   compliancePeriod,
   errors,
-  warnings
+  warnings,
+  gridReady
 ) => [
   validation,
   actions({
@@ -56,7 +58,7 @@ export const finalSupplyEquipmentColDefs = (
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
     cellEditorParams: {
-      options: optionsData?.organizationNames?.sort() || [],
+      options: sortMixedStrings(optionsData?.organizationNames ?? []),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: true,
@@ -86,37 +88,60 @@ export const finalSupplyEquipmentColDefs = (
     tooltipValueGetter: (params) => 'Select the organization name from the list'
   },
   {
-    field: 'supplyFrom',
+    field: 'supplyFromDate',
     headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFrom'
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
     ),
     headerComponent: RequiredHeader,
-    minWidth: 330,
+    minWidth: 200,
     cellRenderer: (params) => (
       <BCTypography variant="body4">
-        {params.value[0]
-          ? `${params.value[0]} to ${params.value[1]}`
-          : 'YYYY-MM-DD to YYYY-MM-DD'}
+        {params.value ? params.value : 'YYYY-MM-DD'}
       </BCTypography>
     ),
     suppressKeyboardEvent,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    cellEditor: DateRangeCellEditor,
+    cellEditor: DateEditor,
     cellEditorParams: {
       minDate: dayjs(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
-      maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate()
+      maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate(),
+      autoOpenLastRow: !gridReady
     },
-    cellEditorPopup: true,
     valueGetter: (params) => {
-      return [
-        params.data.supplyFromDate || `${compliancePeriod}-01-01`,
-        params.data.supplyToDate || `${compliancePeriod}-12-31`
-      ]
+      return params.data.supplyFromDate || `${compliancePeriod}-01-01`
     },
     valueSetter: (params) => {
-      params.data.supplyFromDate = params.newValue[0]
-      params.data.supplyToDate = params.newValue[1]
+      params.data.supplyFromDate = params.newValue
+      return true
+    }
+  },
+  {
+    field: 'supplyToDate',
+    headerName: i18n.t(
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
+    ),
+    headerComponent: RequiredHeader,
+    minWidth: 200,
+    cellRenderer: (params) => (
+      <BCTypography variant="body4">
+        {params.value ? params.value : 'YYYY-MM-DD'}
+      </BCTypography>
+    ),
+    suppressKeyboardEvent,
+    cellStyle: (params) =>
+      StandardCellWarningAndErrors(params, errors, warnings),
+    cellEditor: DateEditor,
+    cellEditorParams: {
+      minDate: dayjs(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
+      maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate(),
+      autoOpenLastRow: !gridReady
+    },
+    valueGetter: (params) => {
+      return params.data.supplyToDate || `${compliancePeriod}-12-31`
+    },
+    valueSetter: (params) => {
+      params.data.supplyToDate = params.newValue
       return true
     }
   },
@@ -435,7 +460,8 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.registrationNbr'
     ),
-    field: 'registrationNbr'
+    field: 'registrationNbr',
+    hide: true
   },
   {
     headerName: t(

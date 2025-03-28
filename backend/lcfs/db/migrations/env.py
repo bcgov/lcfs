@@ -64,6 +64,7 @@ async def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         include_object=include_object,
+        transaction_per_migration=True,
     )
 
     with context.begin_transaction():
@@ -80,6 +81,7 @@ def do_run_migrations(connection: Connection) -> None:
         connection=connection,
         target_metadata=target_metadata,
         include_object=include_object,
+        transaction_per_migration=True,
     )
 
     with context.begin_transaction():
@@ -97,6 +99,7 @@ async def run_migrations_online() -> None:
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)
+
 
 loop = asyncio.get_event_loop()
 if context.is_offline_mode():

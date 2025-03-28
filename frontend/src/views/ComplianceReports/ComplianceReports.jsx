@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -18,7 +18,8 @@ import { NewComplianceReportButton } from './components/NewComplianceReportButto
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
@@ -27,12 +28,21 @@ export const ComplianceReports = () => {
   const [resetGridFn, setResetGridFn] = useState(null)
   const [alertSeverity, setAlertSeverity] = useState('info')
 
+  const [paginationOptions, setPaginationOptions] = useState(
+    defaultInitialPagination
+  )
+
   const gridRef = useRef()
   const alertRef = useRef()
   const navigate = useNavigate()
   const location = useLocation()
   const newButtonRef = useRef(null)
   const { hasRoles, data: currentUser } = useCurrentUser()
+
+  const queryData = useGetComplianceReportList(paginationOptions, {
+    cacheTime: 0,
+    staleTime: 0
+  })
 
   const getRowId = useCallback(
     (params) => params.data.complianceReportGroupUuid,
@@ -57,10 +67,10 @@ export const ComplianceReports = () => {
         setIsButtonLoading(false)
         setAlertSeverity('success')
         navigate(
-          ROUTES.REPORTS_VIEW.replace(
-            ':compliancePeriod',
-            response.data.compliancePeriod.description
-          ).replace(':complianceReportId', response.data.complianceReportId),
+          buildPath(ROUTES.REPORTS.VIEW, {
+            compliancePeriod: response.data.compliancePeriod.description,
+            complianceReportId: response.data.complianceReportId
+          }),
           { state: { data: response.data, newReport: true } }
         )
         alertRef.current.triggerAlert()
@@ -150,11 +160,10 @@ export const ComplianceReports = () => {
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
           <BCGridViewer
             gridRef={gridRef}
-            gridKey={'compliance-reports-grid'}
+            gridKey="compliance-reports-grid"
             columnDefs={reportsColDefs(t, hasRoles(roles.supplier))}
-            query={useGetComplianceReportList}
-            queryParams={{ cacheTime: 0, staleTime: 0 }}
-            dataKey={'reports'}
+            queryData={queryData}
+            dataKey="reports"
             getRowId={getRowId}
             overlayNoRowsTemplate={t('report:noReportsFound')}
             autoSizeStrategy={{
@@ -164,6 +173,13 @@ export const ComplianceReports = () => {
             }}
             defaultColDef={defaultColDef}
             onSetResetGrid={handleSetResetGrid}
+            initialPaginationOptions={defaultInitialPagination}
+            onPaginationChange={(newPagination) =>
+              setPaginationOptions((prev) => ({
+                ...prev,
+                ...newPagination
+              }))
+            }
           />
         </BCBox>
       </Stack>
