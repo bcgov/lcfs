@@ -33,7 +33,7 @@ jobs:
             let facts = [];
 
             if (reviewState === 'approved') {
-              message = `✅ PR #${prNumber} approved by **${reviewer}** (Author: **${author}**)\n[View PR](${prUrl})`;
+              message = `✅ PR #${prNumber} approved by **${reviewer}** (Author: **<at>${author}</at>**)\n[View PR](${prUrl})`;
               color = "2CBE4E";
               facts = [
                 { "name": "Review Status", "value": "Approved" },
@@ -41,7 +41,7 @@ jobs:
                 { "name": "Author", "value": author }
               ];
             } else if (reviewState === 'changes_requested') {
-              message = `🔁 Changes requested on PR #${prNumber} by **${reviewer}** (Author: **${author}**)\n[View PR](${prUrl})`;
+              message = `🔁 Changes requested on PR #${prNumber} by **${reviewer}** (Author: **<at>${author}</at>**)\n[View PR](${prUrl})`;
               color = "FBAB19";
               facts = [
                 { "name": "Review Status", "value": "Changes Requested" },
@@ -50,7 +50,7 @@ jobs:
                 { "name": "Review Comment", "value": reviewComment }
               ];
             } else if (reviewState === 'commented') {
-              message = `💬 Comment added on PR #${prNumber} by **${reviewer}** (Author: **${author}**)\n[View PR](${prUrl})`;
+              message = `💬 Comment added on PR #${prNumber} by **${reviewer}** (Author: **<at>${author}</at>**)\n[View PR](${prUrl})`;
               facts = [
                 { "name": "Review Status", "value": "Commented" },
                 { "name": "Commented by", "value": reviewer },
@@ -68,6 +68,18 @@ jobs:
               "@context": "http://schema.org/extensions",
               "themeColor": color,
               "summary": `PR Review Notification for #${prNumber}`,
+              "msteams": {
+              "entities": [
+                  {
+                    "type": "mention",
+                    "text": "<at>prv-proton</at>",
+                    "mentioned": {
+                        "id": "prashanth.venkateshappa@gov.bc.ca",
+                        "name": "Prashanth V"
+                    }
+                  }
+                ]
+              },
               "sections": [
                 {
                   "activityTitle": `PR Review Update for #${prNumber}`,
