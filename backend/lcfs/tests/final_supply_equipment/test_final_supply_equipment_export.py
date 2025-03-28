@@ -1,11 +1,9 @@
+import pytest
 from datetime import datetime
+from starlette.responses import StreamingResponse
 from unittest.mock import AsyncMock, patch
 
-import pytest
-from docutils.nodes import description
-from starlette.responses import StreamingResponse
-
-from lcfs.db.models import Organization
+from lcfs.db.models import Organization, UserProfile
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.web.api.final_supply_equipment.export import FinalSupplyEquipmentExporter
@@ -64,6 +62,7 @@ async def test_export_success(
     response = await exporter.export(
         compliance_report_id=1,
         organization=Organization(name="TestOrg"),
+        user=UserProfile(),
         include_data=True,
     )
     assert isinstance(response, StreamingResponse)
@@ -83,6 +82,7 @@ async def test_export_no_data(
     set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     response = await exporter.export(
         compliance_report_id=1,
+        user=UserProfile(),
         organization=Organization(name="TestOrg"),
         include_data=False,
     )
@@ -106,6 +106,7 @@ async def test_export_invalid_compliance_report_id(
     with pytest.raises(DataNotFoundException) as exc_info:
         await exporter.export(
             compliance_report_id=999,
+            user=UserProfile(),
             organization=Organization(name="TestOrg"),
             include_data=True,
         )

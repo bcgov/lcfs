@@ -35,6 +35,7 @@ class SheetData(TypedDict):
     rows: List[Any]
     styles: Dict[str, Any]
     validators: List[DataValidation]
+    is_template: bool
 
 
 class SpreadsheetBuilder:
@@ -59,6 +60,7 @@ class SpreadsheetBuilder:
         styles: Optional[Dict] = None,
         validators: Optional[List[DataValidation]] = None,
         position: int = 0,
+        is_template=False,
     ):
         # Avoid mutable default arguments by setting validators to an empty list if None.
         validators = validators or []
@@ -70,6 +72,7 @@ class SpreadsheetBuilder:
                 "rows": rows,
                 "styles": styles or {},
                 "validators": validators,
+                "is_template": is_template,
             },
         )
         return self
@@ -149,8 +152,9 @@ class SpreadsheetBuilder:
 
         # Apply number formatting based on column type.
         for col_idx, column in enumerate(sheet["columns"]):
+            max_row = 2000 if sheet["is_template"] else None
             for row in worksheet.iter_rows(
-                min_row=2, max_row=2000, min_col=col_idx + 1, max_col=col_idx + 1
+                min_row=2, max_row=max_row, min_col=col_idx + 1, max_col=col_idx + 1
             ):
                 for cell in row:
                     self._set_cell_format(cell, column.column_type)
