@@ -182,9 +182,7 @@ try {
             // Non-compliance Penalty Fields
             // ------------------------------
             def line28NonCompliance = new BigDecimal(summaryJson.summary.lines."28")  // Part 3 penalty
-            
-            // Total penalty is sum of all three penalties
-            def totalPenalty = line11Gas.add(line11Diesel).add(line28NonCompliance)
+            def totalPayable = new BigDecimal(summaryJson.summary.total_payable)      // Total payable from snapshot
 
             // Set parameters using a running index
             int idx = 1
@@ -243,7 +241,7 @@ try {
             updateStmt.setBigDecimal(idx++, fossilTotal)      // line_11_fossil_derived_base_fuel_total (repeat)
             // Non-compliance Penalty Fields
             updateStmt.setBigDecimal(idx++, line28NonCompliance) // line_21_non_compliance_penalty_payable
-            updateStmt.setBigDecimal(idx++, totalPenalty) // total_non_compliance_penalty_payable (Line 11 + Line 22 + Line 28)
+            updateStmt.setBigDecimal(idx++, totalPayable) // total_non_compliance_penalty_payable (from snapshot total_payable)
             // WHERE clause: compliance_report_id
             updateStmt.setInt(idx++, lcfsComplianceReportId)
 
