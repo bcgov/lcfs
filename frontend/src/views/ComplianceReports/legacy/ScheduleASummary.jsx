@@ -1,7 +1,7 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { useGetNotionalTransfers } from '@/hooks/useNotionalTransfer'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'

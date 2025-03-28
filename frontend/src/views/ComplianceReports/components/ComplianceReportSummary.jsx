@@ -7,7 +7,6 @@ import {
   Stack
 } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
 import SummaryTable from './SummaryTable'
 import {
@@ -28,6 +27,7 @@ import { roles } from '@/constants/roles'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { CompareReports } from '@/views/CompareReports/CompareReports.jsx'
 import { TogglePanel } from '@/components/TogglePanel.jsx'
+import { ExpandMore } from '@mui/icons-material'
 
 const ComplianceReportSummary = ({
   reportID,
@@ -119,7 +119,7 @@ const ComplianceReportSummary = ({
       </BCTypography>
       <Accordion defaultExpanded>
         <AccordionSummary
-          expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
+          expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
           aria-controls="panel1-content"
         >
           <BCTypography color="primary" variant="h6" component="div">
