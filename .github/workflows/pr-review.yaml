@@ -68,17 +68,29 @@ jobs:
               "@context": "http://schema.org/extensions",
               "themeColor": color,
               "summary": `PR Review Notification for #${prNumber}`,
+              "body": [
+                {
+                  "type": "TextBlock",
+                  "size": "Medium",
+                  "weight": "Bolder",
+                  "text": "Sample Adaptive Card with User Mention"
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "Hi <at>Adele UPN</at>, <at>Adele AAD</at>"
+                }
+              ],
               "msteams": {
-              "entities": [
-                  {
-                    "type": "mention",
-                    "text": "<at>prv-proton</at>",
-                    "mentioned": {
-                        "id": "prashanth.venkateshappa@gov.bc.ca",
-                        "name": "Prashanth V"
+                "entities": [
+                    {
+                      "type": "mention",
+                      "text": "<at>prv-proton</at>",
+                      "mentioned": {
+                          "id": "prashanth.venkateshappa@gov.bc.ca",
+                          "name": "Prashanth V"
+                      }
                     }
-                  }
-                ]
+                  ]
               },
               "sections": [
                 {
