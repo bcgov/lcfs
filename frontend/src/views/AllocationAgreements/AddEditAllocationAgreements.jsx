@@ -12,7 +12,7 @@ import {
 } from './_schema'
 import {
   useAllocationAgreementOptions,
-  useGetAllocationAgreements,
+  useGetAllAllocationAgreements,
   useSaveAllocationAgreement
 } from '@/hooks/useAllocationAgreement'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -61,7 +61,7 @@ export const AddEditAllocationAgreements = () => {
   })
 
   const { data, isLoading: allocationAgreementsLoading } =
-    useGetAllocationAgreements(complianceReportId)
+    useGetAllAllocationAgreements(complianceReportId)
 
   const gridOptions = useMemo(
     () => ({

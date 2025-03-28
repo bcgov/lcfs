@@ -103,7 +103,7 @@ describe('AddEditAllocationAgreements', () => {
 
     // Mock useGetAllocationAgreements hook to return empty data initially
     vi.mocked(
-      useAllocationAgreementHook.useGetAllocationAgreements
+      useAllocationAgreementHook.useGetAllAllocationAgreements
     ).mockReturnValue({
       data: { allocationAgreements: [] },
       isLoading: false
@@ -152,7 +152,7 @@ describe('AddEditAllocationAgreements', () => {
   it('loads data when allocationAgreements are available', async () => {
     // Update the mock to return allocation agreements
     vi.mocked(
-      useAllocationAgreementHook.useGetAllocationAgreements
+      useAllocationAgreementHook.useGetAllAllocationAgreements
     ).mockReturnValue({
       data: {
         allocationAgreements: [
