@@ -6,7 +6,6 @@ from typing import List
 
 from lcfs.db.models import ComplianceReportSummary
 from lcfs.db.models.compliance import ComplianceReport
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.utils.spreadsheet_builder import (
     SpreadsheetBuilder,
@@ -16,7 +15,6 @@ from lcfs.utils.spreadsheet_builder import (
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
@@ -102,6 +100,7 @@ AA_EXPORT_COLUMNS = [
     SpreadsheetColumn("Phone", "text"),
     SpreadsheetColumn("Fuel type", "text"),
     SpreadsheetColumn("Fuel type other", "text"),
+    SpreadsheetColumn("Fuel category", "text"),
     SpreadsheetColumn("Determining carbon intensity", "text"),
     SpreadsheetColumn("Fuel code", "text"),
     SpreadsheetColumn("RCI", "float"),
@@ -414,6 +413,7 @@ class ComplianceReportExporter:
                 aa.transaction_partner_phone,
                 aa.fuel_type,
                 aa.fuel_type_other,
+                aa.fuel_category,
                 aa.provision_of_the_act,
                 aa.fuel_code,
                 aa.ci_of_fuel,
