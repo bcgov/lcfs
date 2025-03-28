@@ -1,8 +1,8 @@
 import PropTypes from 'prop-types'
 import BCBox from '@/components/BCBox'
-import AttachFileIcon from '@mui/icons-material/AttachFile'
 import { List, ListItemButton, ListItemText } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
+import { AttachFile } from '@mui/icons-material'
 
 export const AttachmentList = ({ attachments = [] }) => {
   return (
@@ -17,10 +17,7 @@ export const AttachmentList = ({ attachments = [] }) => {
             key={attachment.attachmentID}
             alignItems="flex-start"
           >
-            <AttachFileIcon
-              data-test="AttachFileIcon"
-              sx={{ marginTop: '8px' }}
-            />
+            <AttachFile data-test="AttachFileIcon" sx={{ marginTop: '8px' }} />
             <ListItemText
               secondary={attachment.fileName}
               sx={({ palette: { info } }) => ({

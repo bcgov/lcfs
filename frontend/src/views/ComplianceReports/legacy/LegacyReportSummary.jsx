@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Accordion, AccordionSummary, AccordionDetails } from '@mui/material'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import {
   renewableFuelColumns,
   lowCarbonColumns,
@@ -11,13 +10,9 @@ import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import SummaryTable from '../components/SummaryTable'
+import { ExpandMore } from '@mui/icons-material'
 
-const LegacyReportSummary = ({
-  reportID,
-  currentStatus,
-  compliancePeriodYear,
-  alertRef
-}) => {
+const LegacyReportSummary = ({ reportID, alertRef }) => {
   const [summaryData, setSummaryData] = useState(null)
   const { t } = useTranslation(['report'])
 
@@ -53,7 +48,7 @@ const LegacyReportSummary = ({
       </BCTypography>
       <Accordion defaultExpanded>
         <AccordionSummary
-          expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
+          expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
           aria-controls="panel1-content"
         >
           <BCTypography color="primary" variant="h6" component="div">

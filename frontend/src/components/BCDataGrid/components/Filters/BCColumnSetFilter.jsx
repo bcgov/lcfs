@@ -1,11 +1,10 @@
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react'
 import PropTypes from 'prop-types'
 import { Autocomplete, TextField, Box, Checkbox } from '@mui/material'
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
-import CheckBoxIcon from '@mui/icons-material/CheckBox'
+import { CheckBox, CheckBoxOutlineBlank } from '@mui/icons-material'
 
-const icon = <CheckBoxOutlineBlankIcon fontSize="small" />
-const checkedIcon = <CheckBoxIcon fontSize="small" />
+const icon = <CheckBoxOutlineBlank fontSize="small" />
+const checkedIcon = <CheckBox fontSize="small" />
 /**
  * @deprecated
  */

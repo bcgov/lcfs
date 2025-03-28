@@ -43,13 +43,13 @@ const container = {
   [XL]: {
     '.MuiContainer-root': {
       ...sharedClasses,
-      maxWidth: '1340 !important'
+      maxWidth: '1340px !important'
     }
   },
   [XXL]: {
     '.MuiContainer-root': {
       ...sharedClasses,
-      maxWidth: '1620 !important'
+      maxWidth: '1620px !important'
     }
   }
 }

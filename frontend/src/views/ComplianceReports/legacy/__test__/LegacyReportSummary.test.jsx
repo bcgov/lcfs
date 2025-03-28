@@ -49,14 +49,7 @@ describe('LegacyReportSummary', () => {
       error: null
     })
 
-    render(
-      <LegacyReportSummary
-        reportID={reportID}
-        currentStatus={currentStatus}
-        compliancePeriodYear={compliancePeriodYear}
-        alertRef={alertRef}
-      />
-    )
+    render(<LegacyReportSummary reportID={reportID} alertRef={alertRef} />)
 
     // The Loading component uses t('report:summaryLoadingMsg') which returns that key.
     expect(screen.getByText('report:summaryLoadingMsg')).toBeInTheDocument()
@@ -74,14 +67,7 @@ describe('LegacyReportSummary', () => {
       error: errorObj
     })
 
-    render(
-      <LegacyReportSummary
-        reportID={reportID}
-        currentStatus={currentStatus}
-        compliancePeriodYear={compliancePeriodYear}
-        alertRef={alertRef}
-      />
-    )
+    render(<LegacyReportSummary reportID={reportID} alertRef={alertRef} />)
 
     // Wait for the useEffect to trigger the alert.
     await waitFor(() => {
@@ -109,12 +95,7 @@ describe('LegacyReportSummary', () => {
     })
 
     const { container } = render(
-      <LegacyReportSummary
-        reportID={reportID}
-        currentStatus={currentStatus}
-        compliancePeriodYear={compliancePeriodYear}
-        alertRef={alertRef}
-      />
+      <LegacyReportSummary reportID={reportID} alertRef={alertRef} />
     )
 
     // Wait for the component to update based on the fetched data.

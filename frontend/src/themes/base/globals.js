@@ -101,7 +101,8 @@ const globals = {
   },
   '.bc-grid-container .ag-grid-pagination-container': {
     border: 'none',
-    borderBottom: `1px solid ${grey[700]}`
+    borderBottom: `1px solid ${grey[700]}`,
+    maxHeight: 'unset'
   },
   '.ag-theme-material .ag-floating-filter-input': {
     backgroundColor: white.main
@@ -222,6 +223,13 @@ const globals = {
       backgroundColor: primary.light,
       color: white.main
     }
+  },
+  '.MuiTablePagination-toolbar': {
+    display: 'flex',
+    padding: '18px 2px 18px 24px'
+  },
+  '.ag-grid-pagination': {
+    fontSize: '0.875rem'
   },
   '.ag-grid-pagination .MuiInputBase-root': {
     border: `1.2px solid ${grey[500]}`,

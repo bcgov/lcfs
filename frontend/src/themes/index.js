@@ -43,6 +43,7 @@ import autocomplete from './components/form/autocomplete'
 import container from './components/container'
 import popover from './components/popover'
 import buttonBase from './components/buttonBase'
+import grid2 from './components/grid2'
 // import icon from './components/icon";
 import svgIcon from './components/svgIcon'
 import link from './components/link'
@@ -111,6 +112,7 @@ export default createTheme({
     MuiDialogTitle: { ...dialogTitle },
     MuiDialogContent: { ...dialogContent },
     MuiDialogContentText: { ...dialogContentText },
-    MuiDialogActions: { ...dialogActions }
+    MuiDialogActions: { ...dialogActions },
+    MuiGrid2: { ...grid2 }
   }
 })

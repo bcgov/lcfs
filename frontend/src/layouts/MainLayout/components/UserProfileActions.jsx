@@ -15,10 +15,9 @@ import {
   CircularProgress,
   Tooltip
 } from '@mui/material'
-import NotificationsIcon from '@mui/icons-material/Notifications'
+import { Notifications, Logout } from '@mui/icons-material'
 import { NavLink, useLocation } from 'react-router-dom'
 import { ROUTES, buildPath } from '@/routes/routes'
-import LogoutIcon from '@mui/icons-material/Logout'
 
 export const UserProfileActions = () => {
   const { t } = useTranslation()
@@ -57,7 +56,7 @@ export const UserProfileActions = () => {
         badgeContent={notificationsCount > 0 ? notificationsCount : null}
         color="error"
       >
-        <NotificationsIcon />
+        <Notifications />
       </Badge>
     </IconButton>
   )
@@ -160,7 +159,7 @@ export const UserProfileActions = () => {
           size="small"
           variant="outlined"
           data-test="logout-button"
-          startIcon={<LogoutIcon sx={{ width: '18px', height: '18px' }} />}
+          startIcon={<Logout sx={{ width: '18px', height: '18px' }} />}
           sx={{
             maxHeight: '32px',
             '&:hover': {
