@@ -117,5 +117,5 @@ jobs:
             req.write(JSON.stringify(card));
             req.end();
         env:
-          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL }}
+          TEAMS_WEBHOOK_URL: ${{ secrets.TEAMS_WEBHOOK_URL_2 }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
