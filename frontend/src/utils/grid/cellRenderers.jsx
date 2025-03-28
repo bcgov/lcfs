@@ -11,7 +11,7 @@ import {
 import { Link, useLocation } from 'react-router-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import colors from '@/themes/base/colors'
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
+import { ArrowDropDown } from '@mui/icons-material'
 
 export const TextRenderer = (props) => {
   return (
@@ -64,7 +64,7 @@ export const SelectRenderer = (params) => {
     >
       {displayValue}
       {hasOptions && isEditable && (
-        <ArrowDropDownIcon sx={{ height: 22, width: 22, color: '#44474e' }} />
+        <ArrowDropDown sx={{ height: 22, width: 22, color: '#44474e' }} />
       )}
     </div>
   )
@@ -101,7 +101,7 @@ export const MultiSelectRenderer = (params) => {
     >
       {displayValue}
       {hasOptions && isEditable && (
-        <ArrowDropDownIcon sx={{ height: 22, width: 22, color: '#44474e' }} />
+        <ArrowDropDown sx={{ height: 22, width: 22, color: '#44474e' }} />
       )}
     </div>
   )
@@ -446,7 +446,7 @@ const GenericChipRenderer = ({
     // Column resize listener for ag-Grid
     const resizeListener = (event) => {
       const resizedColumn = event.column
-      if (resizedColumn.getColId() === colDef.field) {
+      if (resizedColumn && resizedColumn.getColId() === colDef.field) {
         const { visibleChips, hiddenChipsCount } = calculateChipWidths()
         setVisibleChips(visibleChips)
         setHiddenChipsCount(hiddenChipsCount)

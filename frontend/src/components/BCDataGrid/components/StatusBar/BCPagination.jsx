@@ -1,7 +1,7 @@
 import PropTypes from 'prop-types'
 // @mui components
 import { TablePagination } from '@mui/material'
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
+import { ArrowDropDown } from '@mui/icons-material'
 import { BCPaginationActions } from './BCPaginationActions'
 
 export const BCPagination = ({
@@ -53,7 +53,7 @@ export const BCPagination = ({
       slotProps={{
         select: {
           IconComponent: (props) => (
-            <ArrowDropDownIcon
+            <ArrowDropDown
               fontSize="medium"
               sx={{ marginRight: '-8px', left: '34px' }}
               {...props}

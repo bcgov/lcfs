@@ -4,12 +4,12 @@ import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { StyledListItem } from '@/components/StyledListItem'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { constructAddress } from '@/utils/constructAddress'
-import AssignmentIcon from '@mui/icons-material/Assignment'
 import { List, ListItemText, Stack } from '@mui/material'
 import Box from '@mui/material/Box'
 import { useTranslation } from 'react-i18next'
 import { CONFIG } from '@/constants/config'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
+import { Assignment } from '@mui/icons-material'
 
 export const LegacyAssessmentCard = ({
   orgData,
@@ -97,7 +97,7 @@ export const LegacyAssessmentCard = ({
                 className="svg-icon-button"
                 variant="contained"
                 color="primary"
-                startIcon={<AssignmentIcon />}
+                startIcon={<Assignment />}
                 sx={{ mt: 2 }}
                 onClick={viewLegacyReport}
               >
