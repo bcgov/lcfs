@@ -28,114 +28,155 @@ jobs:
             const reviewState = review.state;
             const reviewComment = review.body || '(No comment provided)';
 
+            // Team member mapping
+            const teamMemberMap = {
+                "prv-proton": {
+                    "id": "prashanth.venkateshappa@gov.bc.ca",
+                    "name": "Prashanth V"
+                },
+                "dhaselhan": {
+                    "id": "Daniel.Haselhan@gov.bc.ca", 
+                    "name": "Daniel Haselhan"
+                },
+                "AlexZorkin": {
+                    "id": "Alex.Zorkin@gov.bc.ca",
+                    "name": "Alex Zorkin"
+                },
+                "kevin-hashimoto": {
+                    "id": "Kevin.Hashimoto@gov.bc.ca",
+                    "name": "Kevin Hashimoto"
+                },
+                "hamed-valiollahi": {
+                    "id": "Hamed.ValiollahiBayeki@gov.bc.ca",
+                    "name": "Hamed ValiollahiBayeki"
+                }
+            };
+
             let color = "0076D7"; // default blue
             let message = "";
             let facts = [];
+            let mentionEntities = [];
+
+            // Determine mention entity for author
+            const authorMention = teamMemberMap[author] || {
+                id: `${author}@unknown.com`,
+                name: author
+            };
 
             if (reviewState === 'approved') {
-              message = `✅ PR #${prNumber} approved by **${reviewer}** (Author: **<at>${author}</at>**)\n[View PR](${prUrl})`;
-              color = "2CBE4E";
-              facts = [
-                { "name": "Review Status", "value": "Approved" },
-                { "name": "Approved by", "value": reviewer },
-                { "name": "Author", "value": author }
-              ];
+                message = `PR #${prNumber} has been approved`;
+                color = "2CBE4E";
+                facts = [
+                    { "title": "Review Status", "value": "Approved" },
+                    { "title": "Approved by", "value": reviewer },
+                    { "title": "Author", "value": author }
+                ];
             } else if (reviewState === 'changes_requested') {
-              message = `🔁 Changes requested on PR #${prNumber} by **${reviewer}** (Author: **<at>${author}</at>**)\n[View PR](${prUrl})`;
-              color = "FBAB19";
-              facts = [
-                { "name": "Review Status", "value": "Changes Requested" },
-                { "name": "Requested by", "value": reviewer },
-                { "name": "Author", "value": author },
-                { "name": "Review Comment", "value": reviewComment }
-              ];
+                message = `Changes requested on PR #${prNumber}`;
+                color = "FBAB19";
+                facts = [
+                    { "title": "Review Status", "value": "Changes Requested" },
+                    { "title": "Requested by", "value": reviewer },
+                    { "title": "Author", "value": author },
+                    { "title": "Review Comment", "value": reviewComment }
+                ];
             } else if (reviewState === 'commented') {
-              message = `💬 Comment added on PR #${prNumber} by **${reviewer}** (Author: **<at>${author}</at>**)\n[View PR](${prUrl})`;
-              facts = [
-                { "name": "Review Status", "value": "Commented" },
-                { "name": "Commented by", "value": reviewer },
-                { "name": "Author", "value": author },
-                { "name": "Review Comment", "value": reviewComment }
-              ];
+                message = `Comment added on PR #${prNumber}`;
+                facts = [
+                    { "title": "Review Status", "value": "Commented" },
+                    { "title": "Commented by", "value": reviewer },
+                    { "title": "Author", "value": author },
+                    { "title": "Review Comment", "value": reviewComment }
+                ];
             } else {
-              console.log('No actionable review state, skipping Teams notification.');
-              return;
+                console.log('No actionable review state, skipping Teams notification.');
+                return;
             }
 
-            const webhookUrl = process.env.TEAMS_WEBHOOK_URL;
+            // Create mention entity for author and reviewer
+            const authorEntity = {
+                "type": "mention",
+                "text": `<at>${author}</at>`,
+                "mentioned": {
+                    "id": authorMention.id,
+                    "name": authorMention.name
+                }
+            };
+
+            const reviewerEntity = teamMemberMap[reviewer] ? {
+                "type": "mention",
+                "text": `<at>${reviewer}</at>`,
+                "mentioned": {
+                    "id": teamMemberMap[reviewer].id,
+                    "name": teamMemberMap[reviewer].name
+                }
+            } : null;
+
             const card = {
-              "@type": "MessageCard",
-              "@context": "http://schema.org/extensions",
-              "themeColor": color,
-              "summary": `PR Review Notification for #${prNumber}`,
-              "body": [
-                {
-                  "type": "TextBlock",
-                  "size": "Medium",
-                  "weight": "Bolder",
-                  "text": "Sample Adaptive Card with User Mention"
-                },
-                {
-                  "type": "TextBlock",
-                  "text": "Hi <at>Adele UPN</at>, <at>Adele AAD</at>"
-                }
-              ],
-              "msteams": {
-                "entities": [
+                "type": "message",
+                "attachments": [
                     {
-                      "type": "mention",
-                      "text": "<at>prv-proton</at>",
-                      "mentioned": {
-                          "id": "prashanth.venkateshappa@gov.bc.ca",
-                          "name": "Prashanth V"
-                      }
+                        "contentType": "application/vnd.microsoft.card.adaptive",
+                        "content": {
+                            "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+                            "type": "AdaptiveCard",
+                            "version": "1.0",
+                            "themeColor": color,
+                            "body": [
+                                {
+                                    "type": "TextBlock",
+                                    "size": "Medium",
+                                    "weight": "Bolder",
+                                    "text": `PR #${prNumber} Review Update`
+                                },
+                                {
+                                    "type": "TextBlock",
+                                    "text": `Repository: ${context.repo.owner}/${context.repo.repo}`
+                                },
+                                {
+                                    "type": "TextBlock",
+                                    "text": message
+                                }
+                            ],
+                            "msteams": {
+                                "entities": [
+                                    ...(reviewerEntity ? [reviewerEntity] : []),
+                                    authorEntity
+                                ]
+                            },
+                            "actions": [
+                                {
+                                    "type": "Action.OpenUrl",
+                                    "title": "View Pull Request",
+                                    "url": prUrl
+                                }
+                            ]
+                        }
                     }
-                  ]
-              },
-              "sections": [
-                {
-                  "activityTitle": `PR Review Update for #${prNumber}`,
-                  "activitySubtitle": `Repository: ${context.repo.owner}/${context.repo.repo}`,
-                  "facts": facts,
-                  "text": message,
-                  "markdown": true
-                }
-              ],
-              "potentialAction": [
-                {
-                  "@type": "OpenUri",
-                  "name": "View Pull Request",
-                  "targets": [
-                    {
-                      "os": "default",
-                      "uri": prUrl
-                    }
-                  ]
-                }
-              ]
+                ]
             };
 
             const https = require('https');
-            const url = new URL(webhookUrl);
+            const url = new URL(process.env.TEAMS_WEBHOOK_URL);
 
             const options = {
-              hostname: url.hostname,
-              path: url.pathname + url.search,
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              }
+                hostname: url.hostname,
+                path: url.pathname + url.search,
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
             };
 
             const req = https.request(options, (res) => {
-              console.log(`Teams notification status: ${res.statusCode}`);
-              res.on('data', (chunk) => {
-                console.log(`Response: ${chunk}`);
-              });
+                console.log(`Teams notification status: ${res.statusCode}`);
+                res.on('data', (chunk) => {
+                    console.log(`Response: ${chunk}`);
+                });
             });
 
             req.on('error', (error) => {
-              console.error(`Error sending Teams notification: ${error}`);
+                console.error(`Error sending Teams notification: ${error}`);
             });
 
             req.write(JSON.stringify(card));
