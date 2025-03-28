@@ -17,8 +17,7 @@ import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { useApiService } from '@/services/useApiService.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
 import { OrganizationAddress } from '@/views/ComplianceReports/components/OrganizationAddress.jsx'
-import { FileDownload } from '@mui/icons-material'
-import AssignmentIcon from '@mui/icons-material/Assignment'
+import { Assignment, FileDownload } from '@mui/icons-material'
 import { List, ListItemText, Stack } from '@mui/material'
 import Box from '@mui/material/Box'
 import { useMemo, useState } from 'react'
@@ -209,7 +208,7 @@ export const AssessmentCard = ({
                         onClick={() => {
                           createSupplementalReport()
                         }}
-                        startIcon={<AssignmentIcon />}
+                        startIcon={<Assignment />}
                         sx={{ mt: 2 }}
                         disabled={isLoading}
                       >

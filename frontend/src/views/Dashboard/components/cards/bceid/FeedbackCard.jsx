@@ -2,7 +2,7 @@ import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Box, Icon } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
-import MailIcon from '@mui/icons-material/Mail'
+import { Mail } from '@mui/icons-material'
 
 const FeedbackCard = () => {
   const { t } = useTranslation(['dashboard'])
@@ -19,7 +19,7 @@ const FeedbackCard = () => {
       justifyContent="center"
     >
       <Icon sx={{ color: '#547D59', fontSize: 60 }}>
-        <MailIcon />
+        <Mail />
       </Icon>
       <BCTypography
         style={{

@@ -1,12 +1,8 @@
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-} from '@mui/material'
+import { Accordion, AccordionDetails, AccordionSummary } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { GlobalStyles } from '@mui/system'
 import { useTranslation } from 'react-i18next'
+import { ExpandMore } from '@mui/icons-material'
 
 // Reusable Section Component
 const Section = ({ header, content }) => (
@@ -38,7 +34,11 @@ const Section = ({ header, content }) => (
 export const Introduction = ({ expanded, compliancePeriod }) => {
   const { t } = useTranslation(['report'])
   // Get sections from the translation file
-  const sections = t('report:sections', { returnObjects: true, complianceYear: compliancePeriod, nextYear: parseInt(compliancePeriod) + 1 })
+  const sections = t('report:sections', {
+    returnObjects: true,
+    complianceYear: compliancePeriod,
+    nextYear: parseInt(compliancePeriod) + 1
+  })
 
   return (
     <>
@@ -53,7 +53,7 @@ export const Introduction = ({ expanded, compliancePeriod }) => {
       />
       <Accordion expanded={expanded}>
         <AccordionSummary
-          expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
+          expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
           aria-controls="panel1-content"
           id="compliance-report-intro"
           data-test="compliance-report-intro"
@@ -62,10 +62,14 @@ export const Introduction = ({ expanded, compliancePeriod }) => {
             {t('report:introduction')}
           </BCTypography>
         </AccordionSummary>
-        <AccordionDetails data-test='intro-details'>
+        <AccordionDetails data-test="intro-details">
           {/* Render each section using map */}
           {sections.map((section, index) => (
-            <Section key={index} header={section.header} content={section.content} />
+            <Section
+              key={index}
+              header={section.header}
+              content={section.content}
+            />
           ))}
         </AccordionDetails>
       </Accordion>

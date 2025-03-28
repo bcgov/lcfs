@@ -57,7 +57,7 @@ const colors = {
     default: '#ffffff', // Used for backgrounds
     grey: '#f2f2f2',
     nav: '#38598a', // Used for Nav bar
-    opaque: 'transparent',
+    opaque: 'rgba(0, 0, 0, 0)',
     paper: '#fff',
     secondary: '#fade81',
     primary: '#002663'
@@ -71,7 +71,7 @@ const colors = {
     disabled: 'rgba(0,0,0,0.38)'
   },
   transparent: {
-    main: 'transparent'
+    main: 'rgba(0, 0, 0, 0)'
   },
 
   white: {
@@ -183,7 +183,7 @@ const colors = {
     },
     info: {
       color: '#313132',
-      border: 'transparent',
+      border: 'rgba(0, 0, 0, 0)',
       background: '#d9eaf7'
     },
     error: {
