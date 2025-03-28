@@ -1,8 +1,8 @@
-from unittest.mock import MagicMock, AsyncMock
-
 import pytest
-from datetime import datetime
 import uuid
+from datetime import datetime
+from unittest.mock import MagicMock, AsyncMock, Mock
+
 from lcfs.db.models.compliance import (
     CompliancePeriod,
     ComplianceReport,
@@ -11,26 +11,25 @@ from lcfs.db.models.compliance import (
     ComplianceReportSummary,
     FuelSupply,
 )
-from lcfs.web.api.compliance_report.schema import (
-    ComplianceReportViewSchema,
-    ComplianceReportSummarySchema,
-)
-from lcfs.web.api.base import (
-    PaginationRequestSchema,
-)
-from lcfs.db.base import UserTypeEnum
-from lcfs.db.models.organization import Organization
-from lcfs.web.exception.exceptions import DatabaseException
-from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
-from lcfs.db.models.user import UserProfile
+from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.fuel import (
     FuelType,
     FuelCategory,
     ExpectedUseType,
 )
-from lcfs.db.models.transfer import Transfer
 from lcfs.db.models.initiative_agreement import InitiativeAgreement
-from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
+from lcfs.db.models.organization import Organization
+from lcfs.db.models.transfer import Transfer
+from lcfs.db.models.user import UserProfile
+from lcfs.web.api.base import (
+    PaginationRequestSchema,
+)
+from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
+from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportViewSchema,
+    ComplianceReportSummarySchema,
+)
+from lcfs.web.exception.exceptions import DatabaseException
 
 
 # Fixtures
@@ -426,7 +425,6 @@ async def fuel_supplies(dbsession, compliance_reports, fuel_categories, fuel_typ
             fuel_category_id=fuel_categories[0].fuel_category_id,
             fuel_type_id=fuel_types[0].fuel_type_id,
             provision_of_the_act_id=1,
-            user_type=UserTypeEnum.SUPPLIER,
         ),
         FuelSupply(
             fuel_supply_id=997,
@@ -436,7 +434,6 @@ async def fuel_supplies(dbsession, compliance_reports, fuel_categories, fuel_typ
             fuel_category_id=fuel_categories[1].fuel_category_id,
             fuel_type_id=fuel_types[1].fuel_type_id,
             provision_of_the_act_id=1,
-            user_type=UserTypeEnum.SUPPLIER,
         ),
         FuelSupply(
             fuel_supply_id=998,
@@ -446,7 +443,6 @@ async def fuel_supplies(dbsession, compliance_reports, fuel_categories, fuel_typ
             fuel_category_id=fuel_categories[0].fuel_category_id,
             fuel_type_id=fuel_types[2].fuel_type_id,
             provision_of_the_act_id=1,
-            user_type=UserTypeEnum.SUPPLIER,
         ),
         FuelSupply(
             fuel_supply_id=999,
@@ -456,7 +452,6 @@ async def fuel_supplies(dbsession, compliance_reports, fuel_categories, fuel_typ
             fuel_category_id=fuel_categories[1].fuel_category_id,
             fuel_type_id=fuel_types[3].fuel_type_id,
             provision_of_the_act_id=1,
-            user_type=UserTypeEnum.SUPPLIER,
         ),
     ]
 
@@ -621,7 +616,6 @@ async def test_get_reports_paginated_success(
     compliance_report_repo,
     compliance_reports,
 ):
-
     pagination = PaginationRequestSchema(
         page=1,
         size=10,
@@ -630,7 +624,7 @@ async def test_get_reports_paginated_success(
     )
 
     reports, total_count = await compliance_report_repo.get_reports_paginated(
-        pagination=pagination
+        pagination, UserProfile()
     )
 
     assert isinstance(reports, list)
@@ -658,7 +652,6 @@ async def test_get_compliance_report_by_id_success_is_model(
     compliance_report_repo,
     compliance_reports,
 ):
-
     report = await compliance_report_repo.get_compliance_report_by_id(
         report_id=compliance_reports[0].compliance_report_id, is_model=True
     )
@@ -1005,17 +998,17 @@ async def test_aggregate_allocation_agreements(compliance_report_repo, dbsession
 
 
 @pytest.mark.anyio
-async def test_delete_supplemental_report_success(compliance_report_repo, dbsession):
-    """Test successful deletion of a supplemental compliance report"""
+async def test_delete_compliance_report_success(compliance_report_repo, dbsession):
+    """Test successful deletion of a compliance report"""
 
-    compliance_report_id = 996  # Use an existing ID from supplemental_reports fixture
+    compliance_report_id = 996  # Use an existing ID from compliance reports fixture
 
     # Mock `execute` and `flush` calls
     dbsession.execute = AsyncMock(return_value=None)
     dbsession.flush = AsyncMock(return_value=None)
 
     # Call the delete function
-    result = await compliance_report_repo.delete_supplemental_report(
+    result = await compliance_report_repo.delete_compliance_report(
         compliance_report_id
     )
 

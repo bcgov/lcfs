@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import {
   useFuelExportOptions,
   useGetFuelExportsList,
@@ -37,7 +37,7 @@ export const AddEditFuelExports = () => {
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
 
@@ -104,7 +104,7 @@ export const AddEditFuelExports = () => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
         params.api.startEditingCell({
           rowIndex: lastRowIndex,
-          colKey: 'exportDate'
+          colKey: 'fuelTypeId'
         })
         setGridReady(true)
       }, 500)
@@ -270,10 +270,10 @@ export const AddEditFuelExports = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
+      buildPath(ROUTES.REPORTS.VIEW, {
+        compliancePeriod,
+        complianceReportId
+      })
     )
   }, [navigate, compliancePeriod, complianceReportId])
 

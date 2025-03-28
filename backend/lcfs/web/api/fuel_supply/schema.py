@@ -177,7 +177,6 @@ class FuelSupplyResponseSchema(BaseSchema):
     compliance_report_id: int
     group_uuid: str
     version: int
-    user_type: str
     action_type: str
     fuel_type_id: int
     fuel_type: FuelTypeSchema

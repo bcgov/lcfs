@@ -171,9 +171,9 @@ async def delete_user(
 ) -> None:
     """
     Endpoint to delete a user
-    This endpoint deletes a user, if the user had never logged in before.
+    This endpoint deletes a user, if the user is safe to remove.
     """
-    return await service.delete_user(user_id)
+    return await service.remove_user(user_id)
 
 
 @router.get(

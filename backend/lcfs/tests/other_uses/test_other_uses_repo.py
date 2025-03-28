@@ -1,15 +1,19 @@
 import pytest
 from datetime import date, timedelta
-from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock
 from sqlalchemy.ext.asyncio import AsyncSession
+from unittest.mock import AsyncMock, MagicMock, PropertyMock
 
-from lcfs.db.base import UserTypeEnum
 from lcfs.db.models.compliance import OtherUses
-from lcfs.db.models.fuel import DefaultCarbonIntensity, ExpectedUseType, FuelType, ProvisionOfTheAct, FuelCode
+from lcfs.db.models.fuel import (
+    DefaultCarbonIntensity,
+    ExpectedUseType,
+    FuelType,
+    ProvisionOfTheAct,
+    FuelCode,
+)
 from lcfs.db.models.fuel.FuelCategory import FuelCategory
-from lcfs.web.api.other_uses.repo import OtherUsesRepository
-from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.tests.other_uses.conftest import create_mock_entity
+from lcfs.web.api.other_uses.repo import OtherUsesRepository
 
 
 @pytest.fixture
@@ -42,7 +46,7 @@ def other_uses_repo(mock_db_session):
 @pytest.mark.anyio
 async def test_get_table_options(other_uses_repo, mock_db_session):
     """Test get_table_options with properly spec'd mocks"""
-    
+
     # Create mock models with proper specs
     mock_fuel_category = MagicMock(spec=FuelCategory)
     mock_fuel_category.fuel_category_id = 1
@@ -81,7 +85,7 @@ async def test_get_table_options(other_uses_repo, mock_db_session):
     def mock_execute_side_effect(*args, **kwargs):
         query = args[0]
         query_str = str(query)
-        
+
         # Default mock result setup
         mock_result = MagicMock()
         mock_result.unique.return_value = mock_result
@@ -103,27 +107,37 @@ async def test_get_table_options(other_uses_repo, mock_db_session):
 
     # Setup fuel code repo with direct mock responses
     mock_fuel_code_repo = MagicMock()
-    mock_fuel_code_repo.get_fuel_categories = AsyncMock(return_value=[mock_fuel_category])
-    mock_fuel_code_repo.get_expected_use_types = AsyncMock(return_value=[mock_expected_use])
-    
+    mock_fuel_code_repo.get_fuel_categories = AsyncMock(
+        return_value=[mock_fuel_category]
+    )
+    mock_fuel_code_repo.get_expected_use_types = AsyncMock(
+        return_value=[mock_expected_use]
+    )
+
     formatted_fuel_type = {
         "fuel_type_id": 1,
         "fuel_type": "Gasoline",
         "default_carbon_intensity": 12.34,
         "units": "L",
         "unrecognized": False,
-        "fuel_categories": [{
-            "fuel_category_id": mock_fuel_category.fuel_category_id,
-            "category": mock_fuel_category.category
-        }],
-        "fuel_codes": [{
-            "fuel_code_id": mock_fuel_code.fuel_code_id,
-            "fuel_code": mock_fuel_code.fuel_code,
-            "carbon_intensity": mock_fuel_code.carbon_intensity
-        }]
+        "fuel_categories": [
+            {
+                "fuel_category_id": mock_fuel_category.fuel_category_id,
+                "category": mock_fuel_category.category,
+            }
+        ],
+        "fuel_codes": [
+            {
+                "fuel_code_id": mock_fuel_code.fuel_code_id,
+                "fuel_code": mock_fuel_code.fuel_code,
+                "carbon_intensity": mock_fuel_code.carbon_intensity,
+            }
+        ],
     }
-    
-    mock_fuel_code_repo.get_formatted_fuel_types = AsyncMock(return_value=[formatted_fuel_type])
+
+    mock_fuel_code_repo.get_formatted_fuel_types = AsyncMock(
+        return_value=[formatted_fuel_type]
+    )
     other_uses_repo.fuel_code_repo = mock_fuel_code_repo
 
     # Execute test
@@ -182,7 +196,6 @@ async def test_get_other_uses(other_uses_repo, mock_db_session):
     mock_other_use.rationale = "Test rationale"
     mock_other_use.group_uuid = mock_compliance_report_uuid
     mock_other_use.version = 1
-    mock_other_use.user_type = "Supplier"
     mock_other_use.action_type = "Create"
 
     mock_result_other_uses = [mock_other_use]
@@ -218,7 +231,6 @@ async def test_get_other_uses(other_uses_repo, mock_db_session):
 async def test_get_latest_other_uses_by_group_uuid(other_uses_repo, mock_db_session):
     group_uuid = "test-group-uuid"
     mock_other_use_gov = MagicMock(spec=OtherUses)
-    mock_other_use_gov.user_type = UserTypeEnum.GOVERNMENT
     mock_other_use_gov.version = 2
 
     # Setup mock result chain
@@ -233,37 +245,7 @@ async def test_get_latest_other_uses_by_group_uuid(other_uses_repo, mock_db_sess
 
     result = await other_uses_repo.get_latest_other_uses_by_group_uuid(group_uuid)
 
-    assert result.user_type == UserTypeEnum.GOVERNMENT
     assert result.version == 2
-
-
-@pytest.mark.anyio
-async def test_get_other_use_version_by_user(other_uses_repo, mock_db_session):
-    group_uuid = "test-group-uuid"
-    version = 2
-    user_type = UserTypeEnum.SUPPLIER
-
-    mock_other_use = MagicMock(spec=OtherUses)
-    mock_other_use.group_uuid = group_uuid
-    mock_other_use.version = version
-    mock_other_use.user_type = user_type
-
-    # Set up mock result chain
-    mock_result = AsyncMock()
-    mock_result.scalars = MagicMock(return_value=mock_result)
-    mock_result.first = MagicMock(return_value=mock_other_use)
-
-    # Configure mock db session
-    mock_db_session.execute = AsyncMock(return_value=mock_result)
-    other_uses_repo.db = mock_db_session
-
-    result = await other_uses_repo.get_other_use_version_by_user(
-        group_uuid, version, user_type
-    )
-
-    assert result.group_uuid == group_uuid
-    assert result.version == version
-    assert result.user_type == user_type
 
 
 @pytest.mark.anyio
@@ -282,6 +264,7 @@ async def test_update_other_use(other_uses_repo, mock_db_session):
     # Assertions
     assert isinstance(result, OtherUses)
     assert mock_db_session.flush.call_count == 1
+
 
 @pytest.mark.anyio
 async def test_get_formatted_fuel_types_all_fuel_codes_invalid(
