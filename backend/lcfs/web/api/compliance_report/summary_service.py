@@ -403,12 +403,12 @@ class ComplianceReportSummaryService:
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
 
-        prev_compliance_report = (
-            await self.repo.get_assessed_compliance_report_by_period(
+        prev_compliance_report = None
+        if not compliance_report.supplemental_initiator:
+            prev_compliance_report = await self.repo.get_assessed_compliance_report_by_period(
                 compliance_report.organization_id,
                 int(compliance_report.compliance_period.description) - 1,
             )
-        )
 
         summary_model = compliance_report.summary
         compliance_data_service.set_nickname(compliance_report.nickname)

@@ -49,7 +49,7 @@ const ComplianceReportSummary = ({
 
   const { hasRoles } = useCurrentUser()
 
-  const { data, isLoading, isError, error } =
+  const { data, isLoading, isError, error, isFetching } =
     useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
     useUpdateComplianceReportSummary(data?.complianceReportId, {
@@ -102,7 +102,7 @@ const ComplianceReportSummary = ({
     [summaryData, updateComplianceReportSummary]
   )
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return <Loading message={t('report:summaryLoadingMsg')} />
   }
 
