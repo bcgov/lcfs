@@ -58,6 +58,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
   const hasAnalystRole = hasRoles('Analyst')
   const hasSupplierRole = hasRoles('Supplier')
+  const isSupplemental = complianceReportData.report.version > 0
   const hasVersions = complianceReportData.chain.length > 1
 
   const editSupportingDocs = useMemo(() => {
@@ -119,7 +120,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           data.fuelSupplies.length > 0 && (
             <TogglePanel
               label="Change log"
-              disabled={!hasVersions}
+              disabled={!(hasVersions || isSupplemental)}
               onComponent={<FuelSupplyChangelog canEdit={canEdit} />}
               offComponent={
                 <FuelSupplySummary status={currentStatus} data={data} />
@@ -156,7 +157,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           data.allocationAgreements.length > 0 && (
             <TogglePanel
               label="Change log"
-              disabled={!hasVersions}
+              disabled={!(hasVersions || isSupplemental)}
               onComponent={<AllocationAgreementChangelog canEdit={canEdit} />}
               offComponent={
                 <AllocationAgreementSummary
@@ -181,7 +182,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           data.length > 0 && (
             <TogglePanel
               label="Change log"
-              disabled={!hasVersions}
+              disabled={!(hasVersions || isSupplemental)}
               onComponent={<NotionalTransferChangelog canEdit={canEdit} />}
               offComponent={
                 <NotionalTransferSummary status={currentStatus} data={data} />
@@ -203,7 +204,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           data.length > 0 && (
             <TogglePanel
               label="Change log"
-              disabled={!hasVersions}
+              disabled={!(hasVersions || isSupplemental)}
               onComponent={<OtherUsesChangelog canEdit={canEdit} />}
               offComponent={
                 <OtherUsesSummary status={currentStatus} data={data} />
@@ -225,7 +226,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           !isArrayEmpty(data) && (
             <TogglePanel
               label="Change log"
-              disabled={!hasVersions}
+              disabled={!(hasVersions || isSupplemental)}
               onComponent={<FuelExportChangelog canEdit={canEdit} />}
               offComponent={
                 <FuelExportSummary status={currentStatus} data={data} />
@@ -295,10 +296,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         </Link>
       </BCTypography>
       {activityList.map((activity, index) => {
-        const { data, error, isLoading } = activity.useFetch(complianceReportId)
+        const { data, error, isLoading } = activity.useFetch(complianceReportId, {
+                  changelog: isSupplemental})
         return (
-          data &&
-          !isArrayEmpty(data) && (
+          (data &&
+            !isArrayEmpty(data) || hasVersions) && (
             <Accordion
               key={index}
               expanded={expanded.includes(`panel${index}`)}

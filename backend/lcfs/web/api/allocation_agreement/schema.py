@@ -3,6 +3,7 @@ from typing import Optional, List
 
 from lcfs.web.api.base import (
     BaseSchema,
+    ComplianceReportRequestSchema,
     FilterModel,
     SortOrder,
     PaginationResponseSchema,
@@ -202,6 +203,8 @@ class PaginatedAllocationAgreementRequestSchema(BaseSchema):
     size: int
     sort_orders: List[SortOrder]
 
+class AllocationAgreementRequestSchema(ComplianceReportRequestSchema):
+    changelog: Optional[bool] = None
 
 class DeleteAllocationAgreementsSchema(BaseSchema):
     allocation_agreement_id: int
