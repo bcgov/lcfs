@@ -21,6 +21,7 @@ import { useGetFuelCodes } from '@/hooks/useFuelCode.js'
 export const Notifications = () => {
   const gridRef = useRef(null)
   const alertRef = useRef(null)
+  const [gridApi, setGridApi] = useState(null)
   const [isAllSelected, setIsAllSelected] = useState(false)
   const [selectedRowCount, setSelectedRowCount] = useState(0)
   const [resetGridFn, setResetGridFn] = useState(null)
@@ -95,20 +96,22 @@ export const Notifications = () => {
     [t, refetch]
   )
 
+  const onGridReady = useCallback((params) => {
+    setGridApi(params.api)
+  }, [])
+
   // Toggle selection for visible rows
   const toggleSelectVisibleRows = useCallback(() => {
-    const gridApi = gridRef.current?.api
-    if (gridApi) {
-      gridApi.forEachNodeAfterFilterAndSort((node) => {
-        node.setSelected(!isAllSelected)
-      })
-      setIsAllSelected(!isAllSelected)
-    }
-  }, [isAllSelected])
+    if (!gridApi) return
+    gridApi.forEachNodeAfterFilterAndSort((node) => {
+      node.setSelected(!isAllSelected)
+    })
+    setIsAllSelected(!isAllSelected)
+  }, [gridApi, isAllSelected])
 
   // event handlers for delete, markAsRead, and row-level deletes
   const handleMarkAsRead = useCallback(() => {
-    const gridApi = gridRef.current?.api
+    if (!gridApi) return
     const payload = isAllSelected
       ? { applyToAll: true }
       : {
@@ -122,10 +125,10 @@ export const Notifications = () => {
       'notifications:markAsReadSuccessText',
       'notifications:markAsReadErrorText'
     )
-  }, [isAllSelected, markAsReadMutation])
+  }, [gridApi, isAllSelected, handleMutation, markAsReadMutation])
 
   const handleDelete = useCallback(() => {
-    const gridApi = gridRef.current?.api
+    if (!gridApi) return
     const payload = isAllSelected
       ? { applyToAll: true }
       : {
@@ -139,7 +142,7 @@ export const Notifications = () => {
       'notifications:deleteSuccessText',
       'notifications:deleteErrorText'
     )
-  }, [isAllSelected, deleteMutation])
+  }, [gridApi, isAllSelected, handleMutation, deleteMutation])
 
   const handleRowClicked = useCallback(
     (params) => {
@@ -159,7 +162,7 @@ export const Notifications = () => {
         handleMutation(markAsReadMutation, [params.data.notificationMessageId])
       }
     },
-    [currentUser, navigate]
+    [currentUser, navigate, markAsReadMutation, handleMutation]
   )
 
   const onCellClicked = useCallback(
@@ -170,7 +173,7 @@ export const Notifications = () => {
       ) {
         handleMutation(
           deleteMutation,
-          [params.data.notificationMessageId],
+          { notification_ids: [params.data.notificationMessageId] },
           'notifications:deleteSuccessText',
           'notifications:deleteErrorText'
         )
@@ -179,10 +182,10 @@ export const Notifications = () => {
     [handleMutation, deleteMutation]
   )
 
-  const onSelectionChanged = useCallback(() => {
-    const gridApi = gridRef.current?.api
+  const onSelectionChanged = useCallback((params) => {
+    const { api } = params
     const visibleRows = []
-    gridApi.forEachNodeAfterFilterAndSort((node) => {
+    api.forEachNodeAfterFilterAndSort((node) => {
       visibleRows.push(node)
     })
     const selectedRows = visibleRows.filter((node) => node.isSelected())
@@ -243,6 +246,7 @@ export const Notifications = () => {
       </Stack>
       <BCGridViewer
         gridKey="notifications-grid"
+        onGridReady={onGridReady}
         gridRef={gridRef}
         alertRef={alertRef}
         columnDefs={columnDefs(t, currentUser)}
