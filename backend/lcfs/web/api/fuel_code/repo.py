@@ -4,6 +4,7 @@ from typing import List, Dict, Any, Union, Optional, Sequence
 
 import structlog
 from fastapi import Depends
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy import and_, or_, select, func, text, update, distinct, desc, asc
 from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1041,8 +1042,14 @@ class FuelCodeRepository:
             lowest_ci = (await self.db.execute(stmt)).scalar_one_or_none()
 
             if lowest_ci is None:
-                raise ValueError(
-                    "No active fuel codes found within the last 12 months for 'unknown' provision_of_the_act."
+                raise RequestValidationError(
+                    [
+                        {
+                            "loc": ("exportDate",),
+                            "msg": "needs to be updated. No active fuel codes found in the past 12 months.",
+                            "type": "value_error",
+                        }
+                    ]
                 )
 
             effective_carbon_intensity = lowest_ci

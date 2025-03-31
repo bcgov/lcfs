@@ -394,11 +394,19 @@ export const fuelExportColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
     maxWidth: 220,
     minWidth: 200,
-    cellRenderer: (params) => (
-      <BCTypography variant="body4">
-        {params.value ? params.value : 'YYYY-MM-DD'}
-      </BCTypography>
-    ),
+    cellRenderer: (params) => {
+      const isEditable =
+        params.colDef.editable &&
+        (typeof params.colDef.editable === 'function'
+          ? params.colDef.editable(params)
+          : true)
+
+      return (
+        <BCTypography variant="body4">
+          {params.value ? params.value : isEditable ? 'YYYY-MM-DD' : ''}
+        </BCTypography>
+      )
+    },
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
 
@@ -406,7 +414,7 @@ export const fuelExportColDefs = (
     cellEditor: DateEditor,
 
     editable: (params) => {
-      return !!params.data.provisionOfTheAct
+      return params.data.provisionOfTheAct === 'Unknown'
     },
 
     cellEditorParams: {
@@ -510,7 +518,7 @@ export const fuelExportColDefs = (
         )
         return minCI
       }
-      
+
       if (/Fuel code/i.test(params.data.provisionOfTheAct)) {
         return optionsData?.fuelTypes
           ?.find((obj) => params.data.fuelType === obj.fuelType)
