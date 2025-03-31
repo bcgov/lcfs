@@ -466,6 +466,11 @@ class ComplianceReportServices:
                 if h.status.status
                 != ComplianceReportStatusEnum.Analyst_adjustment.value
             ]
+        report.history = [
+            h
+            for h in report.history
+            if h.status.status != ComplianceReportStatusEnum.Draft.value
+        ]
 
         return report
 
