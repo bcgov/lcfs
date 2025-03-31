@@ -123,10 +123,13 @@ export const useUpdateComplianceReport = (reportID, options) => {
 
 export const useDeleteComplianceReport = (orgID, reportID, options) => {
   const client = useApiService()
+  const { hasRoles } = useCurrentUser()
   const queryClient = useQueryClient()
-  const path = apiRoutes.deleteSupplementalReport
-    .replace(':orgID', orgID)
-    .replace(':reportID', reportID)
+  const path = (
+    hasRoles(roles.government)
+      ? apiRoutes.deleteComplianceReport
+      : apiRoutes.deleteSupplementalReport.replace(':orgID', orgID)
+  ).replace(':reportID', reportID)
   const queriesToInvalidate = [
     ['compliance-reports'],
     ['allocation-agreements', reportID],
@@ -244,6 +247,15 @@ export const useGetComplianceReportList = (
         ).data
       }
     },
+    ...options
+  })
+}
+
+export const useGetComplianceReportStatuses = (options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['compliance-report-statuses'],
+    queryFn: async () => (await client.get(apiRoutes.getComplianceReportStatuses)).data,
     ...options
   })
 }

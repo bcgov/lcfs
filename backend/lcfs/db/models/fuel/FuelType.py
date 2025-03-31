@@ -70,7 +70,7 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
     # Relationships
     fuel_codes = relationship("FuelCode", back_populates="fuel_type")
     energy_density = relationship(
-        "EnergyDensity", back_populates="fuel_type", uselist=False
+        "EnergyDensity", back_populates="fuel_type", uselist=True
     )  # One energy density per fuel type
     energy_effectiveness_ratio = relationship(
         "EnergyEffectivenessRatio", back_populates="fuel_type"
@@ -90,11 +90,11 @@ class FuelType(BaseModel, Auditable, DisplayOrder):
     additional_carbon_intensities = relationship(
         "AdditionalCarbonIntensity",
         back_populates="fuel_type",
-        overlaps="additional_carbon_intensity"
+        overlaps="additional_carbon_intensity",
     )
     default_carbon_intensities = relationship(
         "DefaultCarbonIntensity",
         back_populates="fuel_type",
         lazy="selectin",
-        order_by="DefaultCarbonIntensity.compliance_period_id"
+        order_by="DefaultCarbonIntensity.compliance_period_id",
     )
