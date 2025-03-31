@@ -7,31 +7,31 @@ import InternalComments from '@/components/InternalComments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
 import { govRoles, roles } from '@/constants/roles'
-import { ROUTES } from '@/routes/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useDeleteComplianceReport,
   useUpdateComplianceReport
 } from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useOrganization } from '@/hooks/useOrganization'
-import colors from '@/themes/base/colors.js'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
-import { Fab, Stack, Tooltip } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import ComplianceReportSummary from './components/ComplianceReportSummary'
-import { Introduction } from './components/Introduction'
 import ReportDetails from './components/ReportDetails'
 
 import { buttonClusterConfigFn } from './buttonConfigs'
 import { ActivityListCard } from './components/ActivityListCard'
 import { AssessmentCard } from './components/AssessmentCard'
-import { AssessmentStatement } from './components/AssessmentStatement'
+import { AssessmentRecommendation } from '@/views/ComplianceReports/components/AssessmentRecommendation.jsx'
+import { AssessmentStatement } from '@/views/ComplianceReports/components/AssessmentStatement.jsx'
+import { useOrganization } from '@/hooks/useOrganization.js'
+import { useTranslation } from 'react-i18next'
+import { useCurrentUser } from '@/hooks/useCurrentUser.js'
+import { Fab, Stack, Tooltip } from '@mui/material'
+import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import colors from '@/themes/base/colors.js'
+import ROUTES from '@/routes/routes.js'
+import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 
 const iconStyle = {
   width: '2rem',
@@ -87,30 +87,20 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
-    hasRoles
+    hasRoles,
+    hasAnyRole
   } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
-  const userRoles = currentUser?.roles
-
   const currentStatus = reportData?.report.currentStatus?.status
+  const canEdit =
+    (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT &&
+      hasAnyRole(roles.compliance_reporting, roles.signing_authority)) ||
+    (currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT &&
+      hasRoles(roles.analyst))
+
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report.organizationId
   )
-
-  const editAnalyst = useMemo(() => {
-    return (
-      hasRoles(roles.analyst) &&
-      currentStatus === COMPLIANCE_REPORT_STATUSES.REASSESSED
-    )
-  }, [hasRoles, currentStatus])
-
-  const editSupplier = useMemo(() => {
-    return (
-      hasRoles(roles.supplier) &&
-      currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
-    )
-  }, [hasRoles, currentStatus])
-  const canEdit = editAnalyst || editSupplier
 
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
@@ -137,7 +127,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     }
   )
 
-  const { mutate: deleteSupplementalReport } = useDeleteComplianceReport(
+  const { mutate: deleteComplianceReport } = useDeleteComplianceReport(
     reportData?.report.organizationId,
     complianceReportId,
     {
@@ -145,7 +135,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         setModalData(null)
         navigate(ROUTES.REPORTS.LIST, {
           state: {
-            message: t('report:supplementalReportDeleted'),
+            message: t('report:reportDeleteSuccessText'),
             severity: 'success'
           }
         })
@@ -169,7 +159,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         t,
         setModalData,
         updateComplianceReport,
-        deleteSupplementalReport,
+        deleteComplianceReport,
         compliancePeriod,
         isGovernmentUser,
         isSigningAuthorityDeclared,
@@ -181,27 +171,13 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       t,
       setModalData,
       updateComplianceReport,
-      deleteSupplementalReport,
+      deleteComplianceReport,
       compliancePeriod,
       isGovernmentUser,
       isSigningAuthorityDeclared,
       reportData?.report
     ]
   )
-
-  const shouldDisplayAssessment = () => {
-    if (!isGovernmentUser) return false
-
-    const roleStatusMap = {
-      Analyst: 'Submitted',
-      'Compliance Manager': 'Recommended by analyst',
-      Director: 'Recommended by manager'
-    }
-
-    return Object.entries(roleStatusMap).some(
-      ([role, status]) => hasRoles(role) && currentStatus === status
-    )
-  }
 
   useEffect(() => {
     if (location.state?.message) {
@@ -260,7 +236,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         </BCBox>
         <Stack direction="column" mt={2}>
           <Stack direction={{ md: 'column', lg: 'row' }} spacing={2} pb={2}>
-            {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
+            {canEdit && (
               <ActivityListCard
                 name={orgData?.name}
                 period={compliancePeriod}
@@ -270,7 +246,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             )}
             <AssessmentCard
               orgData={orgData}
-              history={reportData?.report.history}
               isGovernmentUser={isGovernmentUser}
               currentStatus={currentStatus}
               complianceReportId={complianceReportId}
@@ -284,10 +259,10 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <ReportDetails
                 canEdit={canEdit}
                 currentStatus={currentStatus}
-                userRoles={userRoles}
+                userRoles={currentUser?.userRoles}
               />
               <ComplianceReportSummary
-                enableCompareMode={reportData.chain.length > 0}
+                enableCompareMode={reportData.chain.length > 1}
                 canEdit={canEdit}
                 reportID={complianceReportId}
                 currentStatus={currentStatus}
@@ -305,7 +280,13 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
-          {shouldDisplayAssessment() && <AssessmentStatement />}
+          {isGovernmentUser && <AssessmentStatement />}
+          {hasRoles(roles.analyst) && (
+            <AssessmentRecommendation
+              complianceReportId={complianceReportId}
+              currentStatus={currentStatus}
+            />
+          )}
           {/* Internal Comments */}
           {isGovernmentUser && (
             <BCBox mt={4}>
@@ -315,7 +296,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <BCBox>
                 <Role roles={govRoles}>
                   <InternalComments
-                    entityType={'complianceReport'}
+                    entityType="complianceReport"
                     entityId={parseInt(complianceReportId)}
                   />
                 </Role>
@@ -374,9 +355,9 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             }}
           >
             {isScrollingUp ? (
-              <KeyboardArrowUpIcon sx={iconStyle} />
+              <KeyboardArrowUp sx={iconStyle} />
             ) : (
-              <KeyboardArrowDownIcon sx={iconStyle} />
+              <KeyboardArrowDown sx={iconStyle} />
             )}
           </Fab>
         </Tooltip>

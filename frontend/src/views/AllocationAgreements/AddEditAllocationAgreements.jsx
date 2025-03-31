@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import BCTypography from '@/components/BCTypography'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
@@ -12,7 +12,7 @@ import {
 } from './_schema'
 import {
   useAllocationAgreementOptions,
-  useGetAllocationAgreements,
+  useGetAllAllocationAgreements,
   useSaveAllocationAgreement
 } from '@/hooks/useAllocationAgreement'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -33,8 +33,12 @@ export const AddEditAllocationAgreements = () => {
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'allocationAgreement', 'reports'])
-  const guides = useMemo(() =>
-    t('allocationAgreement:allocationAgreementGuides', { returnObjects: true })
+  const guides = useMemo(
+    () =>
+      t('allocationAgreement:allocationAgreementGuides', {
+        returnObjects: true
+      }),
+    []
   )
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
@@ -42,7 +46,7 @@ export const AddEditAllocationAgreements = () => {
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
   const isSupplemental = complianceReport?.report?.version !== 0
@@ -57,7 +61,7 @@ export const AddEditAllocationAgreements = () => {
   })
 
   const { data, isLoading: allocationAgreementsLoading } =
-    useGetAllocationAgreements(complianceReportId)
+    useGetAllAllocationAgreements(complianceReportId)
 
   const gridOptions = useMemo(
     () => ({
@@ -275,10 +279,11 @@ export const AddEditAllocationAgreements = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'transactionPartner') {
+        const orgName = currentUser.organization?.name
         if (
-          params.newValue === currentUser.organization.name ||
+          params.newValue === orgName ||
           (typeof params.newValue === 'object' &&
-            params.newValue.name === currentUser.organization.name)
+            params.newValue.name === orgName)
         ) {
           alertRef.current?.triggerAlert({
             message:

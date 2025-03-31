@@ -25,7 +25,7 @@ import { govRoles, roles } from '@/constants/roles'
 import OrganizationList from './components/OrganizationList'
 import Loading from '@/components/Loading'
 import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { useGetTransactionList } from '@/hooks/useTransactions'
 
 const initialPaginationOptions = {
@@ -295,7 +295,7 @@ export const Transactions = () => {
         </Grid>
       </Grid>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer2
+        <BCGridViewer
           ref={gridRef}
           gridKey="transactions-grid"
           columnDefs={transactionsColDefs(t)}

@@ -17,6 +17,7 @@ from lcfs.web.api.compliance_report.export import ComplianceReportExporter
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportListSchema,
+    ComplianceReportStatusSchema,
     ComplianceReportSummarySchema,
     ChainedComplianceReportSchema,
     ComplianceReportUpdateSchema,
@@ -67,7 +68,23 @@ async def get_compliance_reports(
     pagination: PaginationRequestSchema = Body(..., embed=False),
     service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportListSchema:
-    return await service.get_compliance_reports_paginated(pagination)
+    return await service.get_compliance_reports_paginated(pagination, request.user)
+
+
+@router.get(
+    "/statuses",
+    response_model=List[ComplianceReportStatusSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def get_compliance_report_statuses(
+    request: Request,
+    service: ComplianceReportServices = Depends(),
+) -> List[ComplianceReportStatusSchema]:
+    """
+    Retrieve the comprehensive compliance report summary for a specific report by ID.
+    """
+    return await service.get_compliance_report_statuses(request.user)
 
 
 @router.get(
@@ -85,16 +102,7 @@ async def get_compliance_report_by_id(
     compliance_report = await validate.validate_organization_access(report_id)
     await validate.validate_compliance_report_access(compliance_report)
 
-    is_gov = user_has_roles(request.user, [RoleEnum.GOVERNMENT])
-    mask_statuses = not user_has_roles(request.user, [RoleEnum.GOVERNMENT])
-
-    result = await service.get_compliance_report_by_id(
-        report_id,
-        mask_statuses,
-        is_gov,
-        get_chain=True,
-    )
-
+    result = await service.get_compliance_report_by_id(report_id, request.user, True)
     return result
 
 
@@ -124,7 +132,9 @@ async def get_compliance_report_summary(
     response_model=ComplianceReportSummarySchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST]
+)
 async def update_compliance_report_summary(
     request: Request,
     report_id: int,
@@ -135,21 +145,25 @@ async def update_compliance_report_summary(
     """
     Autosave compliance report summary details for a specific summary by ID.
     """
-    await validate.validate_organization_access(report_id)
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
     return await summary_service.update_compliance_report_summary(
         report_id, summary_data
     )
 
 
-@view_handler(
-    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
-)
 @router.put(
     "/{report_id}",
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.GOVERNMENT, RoleEnum.SUPPLIER])
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.COMPLIANCE_REPORTING,
+        RoleEnum.SIGNING_AUTHORITY,
+    ]
+)
 async def update_compliance_report(
     request: Request,
     report_id: int,
@@ -179,6 +193,23 @@ async def create_supplemental_report(
     Create a supplemental compliance report.
     """
     return await service.create_supplemental_report(report_id, request.user)
+
+
+@router.post(
+    "/{report_id}/adjustment",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def create_government_adjustment(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+) -> ComplianceReportBaseSchema:
+    """
+    Create a government adjustment.
+    """
+    return await service.create_analyst_adjustment_report(report_id, request.user)
 
 
 @router.post(
@@ -325,7 +356,9 @@ async def get_allocation_agreement_changelog(
     )
 
     # Fetch the associated compliance report data
-    report = await service.get_compliance_report_by_id(compliance_report_id)
+    report = await service.get_compliance_report_by_id(
+        compliance_report_id, request.user
+    )
 
     # Convert each allocation agreement to a serializable dict before returning
     serializable_changelog = [
@@ -339,3 +372,16 @@ async def get_allocation_agreement_changelog(
     }
 
     return response
+
+
+@router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
+@view_handler([RoleEnum.GOVERNMENT])
+async def delete_compliance_report(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+) -> None:
+    """
+    Delete a compliance report either in Analyst Adjustment or re-assessed state.
+    """
+    await service.delete_compliance_report(report_id, request.user)

@@ -14,6 +14,7 @@ import {
   changelogDefaultColDefs,
   changelogGridOptions
 } from './_schema'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
 export const AllocationAgreementChangelog = ({ canEdit }) => {
   const { complianceReportId, compliancePeriod } = useParams()
@@ -29,10 +30,7 @@ export const AllocationAgreementChangelog = ({ canEdit }) => {
 
   const latestAssessedReport = currentReportData?.chain?.reduce(
     (latest, report) => {
-      if (
-        report.currentStatus.status === 'Assessed' ||
-        report.currentStatus.status === 'Reassessed'
-      ) {
+      if (report.currentStatus.status === COMPLIANCE_REPORT_STATUSES.ASSESSED) {
         return !latest || report.version > latest.version ? report : latest
       }
       return latest
@@ -59,7 +57,24 @@ export const AllocationAgreementChangelog = ({ canEdit }) => {
       </BCTypography>
       <Box mb={4}>
         <BCDataGridServer
-          className="ag-theme-material"
+          className='ag-theme-material'
+          apiEndpoint={apiRoutes.getAllocationAgreements}
+          apiData='allocationAgreements'
+          apiParams={{ complianceReportId }}
+          columnDefs={changelogCommonColDefs}
+          gridOptions={changelogCommonGridOptions}
+          enableCopyButton={false}
+          defaultColDef={changelogDefaultColDefs}
+        />
+      </Box>
+      <BCTypography variant="h6" color="primary" component="div" mb={2}>
+        {latestAssessedReport
+          ? latestAssessedReport.nickname
+          : 'Default Report'}
+      </BCTypography>
+      <Box mb={4}>
+        <BCDataGridServer
+          className={'ag-theme-material'}
           apiEndpoint={apiEndpoint}
           apiData="changelog"
           apiParams={{ complianceReportId }}

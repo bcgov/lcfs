@@ -17,8 +17,7 @@ import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { useApiService } from '@/services/useApiService.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
 import { OrganizationAddress } from '@/views/ComplianceReports/components/OrganizationAddress.jsx'
-import { FileDownload } from '@mui/icons-material'
-import AssignmentIcon from '@mui/icons-material/Assignment'
+import { Assignment, FileDownload } from '@mui/icons-material'
 import { List, ListItemText, Stack } from '@mui/material'
 import Box from '@mui/material/Box'
 import { useMemo, useState } from 'react'
@@ -98,9 +97,7 @@ export const AssessmentCard = ({
     })
 
   const filteredChain = useMemo(() => {
-    return chain.filter((report) => {
-      return report.history && report.history.length > 0
-    })
+    return chain.filter((report) => report.history && report.history.length > 0)
   }, [chain])
 
   if (isCurrentUserLoading || isReportLoading) {
@@ -211,7 +208,7 @@ export const AssessmentCard = ({
                         onClick={() => {
                           createSupplementalReport()
                         }}
-                        startIcon={<AssignmentIcon />}
+                        startIcon={<Assignment />}
                         sx={{ mt: 2 }}
                         disabled={isLoading}
                       >
@@ -239,25 +236,6 @@ export const AssessmentCard = ({
                 </BCButton>
               </Box>
             )}
-            <Role roles={[roles.analyst]}>
-              <Box>
-                <BCButton
-                  data-test="create-supplemental"
-                  size="small"
-                  className="svg-icon-button"
-                  variant="contained"
-                  color="primary"
-                  onClick={() => {
-                    alert('TODO')
-                  }}
-                  startIcon={<AssignmentIcon />}
-                  sx={{ mt: 2 }}
-                  disabled={isLoading}
-                >
-                  {t('report:createReassessmentBtn')}
-                </BCButton>
-              </Box>
-            </Role>
           </Stack>
         </>
       }

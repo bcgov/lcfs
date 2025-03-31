@@ -64,12 +64,15 @@ export const apiRoutes = {
   // reports
   getCompliancePeriods: '/reports/compliance-periods',
   getComplianceReports: '/reports/list',
+  getComplianceReportStatuses: '/reports/statuses',
   getComplianceReport: '/reports/:reportID',
   updateComplianceReport: '/reports/:reportID',
+  deleteComplianceReport: '/reports/:reportID',
   getComplianceReportSummary: '/reports/:reportID/summary',
   updateComplianceReportSummary: '/reports/:reportID/summary',
   exportComplianceReport: '/reports/:reportID/export',
   createSupplementalReport: '/reports/:reportID/supplemental',
+  createAnalystAdjustment: '/reports/:reportID/adjustment',
   getChangelog: '/reports/:selection/changelog',
 
   // notional-transfers

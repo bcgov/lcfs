@@ -2,15 +2,22 @@
   "finalSupplyEquipments": [
     {
       "organization": "Organization 1",
-      "supplyDateRange": "2024-01-01 2024-03-31",
+      "supplyFromDate": "2024-01-01",
+      "supplyToDate": "2024-03-31",
       "kWhUsage": 1000,
       "serialNbr": "SN123456",
       "manufacturer": "Manufacturer A",
       "model": "Model X",
       "levelOfEquipment": "Level 2 - High voltage, operating above level 1",
       "ports": "Dual port",
-      "intendedUses": ["Light duty motor vehicles", "Battery bus"],
-      "intendedUsers": ["Public", "Employee"],
+      "intendedUses": [
+        "Light duty motor vehicles",
+        "Battery bus"
+      ],
+      "intendedUsers": [
+        "Public",
+        "Employee"
+      ],
       "streetAddress": "1150 Douglas St",
       "city": "Victoria",
       "postalCode": "V8W 3E6",
@@ -19,7 +26,8 @@
     },
     {
       "organization": "Organization 1",
-      "supplyDateRange": "2024-01-01 2024-03-31",
+      "supplyFromDate": "2024-01-01",
+      "supplyToDate": "2024-01-01",
       "kWhUsage": 1000,
       "serialNbr": "SN78910",
       "manufacturer": "Manufacturer B",

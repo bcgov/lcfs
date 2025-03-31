@@ -1,12 +1,12 @@
+import pytest
 from unittest.mock import MagicMock, AsyncMock
 
-import pytest
-
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.NotionalTransfer import (
     NotionalTransfer,
     ReceivedOrTransferredEnum,
 )
+from lcfs.tests.notional_transfer.conftest import create_mock_schema, create_mock_entity
 from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
 from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
@@ -14,15 +14,13 @@ from lcfs.web.api.notional_transfer.schema import (
 )
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.exception.exceptions import ServiceException
-from lcfs.tests.notional_transfer.conftest import create_mock_schema, create_mock_entity
 
 
 @pytest.fixture
 def notional_transfer_service():
     mock_repo = MagicMock(spec=NotionalTransferRepository)
     mock_fuel_repo = MagicMock()
-    service = NotionalTransferServices(
-        repo=mock_repo, fuel_repo=mock_fuel_repo)
+    service = NotionalTransferServices(repo=mock_repo, fuel_repo=mock_fuel_repo)
     return service, mock_repo, mock_fuel_repo
 
 
@@ -53,12 +51,9 @@ async def test_create_notional_transfer(notional_transfer_service):
     )
 
     mock_created_transfer = create_mock_entity({})
-    mock_repo.create_notional_transfer = AsyncMock(
-        return_value=mock_created_transfer)
+    mock_repo.create_notional_transfer = AsyncMock(return_value=mock_created_transfer)
 
-    response = await service.create_notional_transfer(
-        notional_transfer_data, UserTypeEnum.SUPPLIER
-    )
+    response = await service.create_notional_transfer(notional_transfer_data)
 
     assert isinstance(response, NotionalTransferSchema)
     assert response.fuel_category == "Gasoline"
@@ -87,7 +82,6 @@ async def test_update_notional_transfer(notional_transfer_service):
         received_or_transferred=ReceivedOrTransferredEnum.Received,
         group_uuid="test-group-uuid",
         version=1,
-        user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.UPDATE,
     )
 
@@ -110,17 +104,13 @@ async def test_update_notional_transfer(notional_transfer_service):
         received_or_transferred=ReceivedOrTransferredEnum.Received,
         group_uuid="test-group-uuid",
         version=2,
-        user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.UPDATE,
     )
     # Set the return value for update_notional_transfer
-    mock_repo.update_notional_transfer = AsyncMock(
-        return_value=mock_updated_transfer)
+    mock_repo.update_notional_transfer = AsyncMock(return_value=mock_updated_transfer)
 
     # Execute the update function and capture the response
-    response = await service.update_notional_transfer(
-        notional_transfer_data, UserTypeEnum.SUPPLIER
-    )
+    response = await service.update_notional_transfer(notional_transfer_data)
 
     # Assert that the response is a NotionalTransferSchema instance
     assert response.notional_transfer_id == 1
@@ -134,13 +124,10 @@ async def test_update_notional_transfer_not_found(notional_transfer_service):
     service, mock_repo, _ = notional_transfer_service
     notional_transfer_data = create_mock_schema({})
 
-    mock_repo.get_notional_transfer_version_by_user = AsyncMock(
-        return_value=None)
+    mock_repo.get_notional_transfer_version_by_user = AsyncMock(return_value=None)
 
     with pytest.raises(ServiceException):
-        await service.update_notional_transfer(
-            notional_transfer_data, UserTypeEnum.SUPPLIER
-        )
+        await service.update_notional_transfer(notional_transfer_data)
 
 
 @pytest.mark.anyio
@@ -175,13 +162,10 @@ async def test_delete_notional_transfer(notional_transfer_service):
     mock_repo.get_latest_notional_transfer_by_group_uuid = AsyncMock(
         return_value=mock_existing_transfer
     )
-    mock_repo.create_notional_transfer = AsyncMock(
-        return_value=mock_existing_transfer)
+    mock_repo.create_notional_transfer = AsyncMock(return_value=mock_existing_transfer)
 
     # Call the delete service
-    response = await service.delete_notional_transfer(
-        notional_transfer_data, UserTypeEnum.SUPPLIER
-    )
+    response = await service.delete_notional_transfer(notional_transfer_data)
 
     # Assertions
     assert response.message == "Marked as deleted."

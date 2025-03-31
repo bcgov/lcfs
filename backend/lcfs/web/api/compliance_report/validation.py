@@ -1,4 +1,6 @@
 from fastapi import Depends, HTTPException, Request
+
+from lcfs.db.models import ComplianceReport
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -43,16 +45,28 @@ class ComplianceReportValidation:
 
         return compliance_report
 
-    async def validate_compliance_report_access(self, compliance_report):
+    async def validate_compliance_report_access(
+        self, compliance_report: ComplianceReport
+    ):
         """Validates government user access to draft reports"""
-        is_government = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        is_supplier = user_has_roles(self.request.user, [RoleEnum.SUPPLIER])
+        if (
+            not is_supplier
+            and compliance_report.current_status.status
+            == ComplianceReportStatusEnum.Draft
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have access to this compliance report.",
+            )
 
-        if compliance_report:
-            status_enum = ComplianceReportStatusEnum(compliance_report.current_status.status)
-            is_draft = status_enum == ComplianceReportStatusEnum.Draft
-
-            if is_government and is_draft:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Government users cannot access draft compliance reports"
-                )
+        is_analyst = user_has_roles(self.request.user, [RoleEnum.ANALYST])
+        if (
+            not is_analyst
+            and compliance_report.current_status.status
+            == ComplianceReportStatusEnum.Analyst_adjustment
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User does not have access to this compliance report.",
+            )
