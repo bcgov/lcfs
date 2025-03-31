@@ -7,7 +7,7 @@ import { wrapper } from '@/tests/utils/wrapper'
 import { useMatches, useNavigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { useLoadingStore } from '@/stores/useLoadingStore'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 
 // Mock all required hooks and components
 vi.mock('react-router-dom', async () => {
@@ -120,14 +120,14 @@ describe('MainLayout', () => {
 
     Object.defineProperty(window, 'location', {
       value: {
-        pathname: '/some/route'
+        pathname: '/dashboard' // Set to a different page to trigger redirect
       }
     })
 
     render(<MainLayout />, { wrapper })
 
     await waitFor(() => {
-      expect(navigate).toHaveBeenCalledWith(ROUTES.UNAUTHORIZED)
+      expect(navigate).toHaveBeenCalledWith(ROUTES.AUTH.UNAUTHORIZED)
     })
   })
 
@@ -138,7 +138,7 @@ describe('MainLayout', () => {
 
     Object.defineProperty(window, 'location', {
       value: {
-        pathname: ROUTES.UNAUTHORIZED
+        pathname: ROUTES.AUTH.UNAUTHORIZED
       }
     })
 

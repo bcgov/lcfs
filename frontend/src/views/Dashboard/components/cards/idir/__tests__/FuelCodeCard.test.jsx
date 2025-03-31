@@ -5,7 +5,7 @@ import { FuelCodeCard } from '../FuelCodeCard'
 import { useFuelCodeCounts } from '@/hooks/useDashboard'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useNavigate } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 
@@ -34,11 +34,11 @@ vi.mock('@/components/Loading', () => ({
 
 describe('FuelCodeCard Component', () => {
   const mockNavigate = vi.fn()
-  
+
   beforeEach(() => {
     vi.resetAllMocks()
     useNavigate.mockReturnValue(mockNavigate)
-    
+
     // Mock sessionStorage
     Object.defineProperty(window, 'sessionStorage', {
       value: {
@@ -58,7 +58,7 @@ describe('FuelCodeCard Component', () => {
     })
 
     render(<FuelCodeCard />, { wrapper })
-    
+
     const loadingElement = screen.getByText(/Loading.*card/, { exact: false })
     expect(loadingElement).toBeInTheDocument()
   })
@@ -70,7 +70,7 @@ describe('FuelCodeCard Component', () => {
     })
 
     render(<FuelCodeCard />, { wrapper })
-    
+
     expect(screen.getByText('Fuel Codes')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
     expect(screen.getByText(/There are/)).toBeInTheDocument()
@@ -84,11 +84,11 @@ describe('FuelCodeCard Component', () => {
     })
 
     render(<FuelCodeCard />, { wrapper })
-    
+
     // Find and click the link
     const link = screen.getByText(/Fuel Code\(s\) in progress/)
     fireEvent.click(link)
-    
+
     // Check that sessionStorage was updated with the correct filter
     const expectedFilter = {
       status: {
@@ -97,12 +97,12 @@ describe('FuelCodeCard Component', () => {
         filter: FUEL_CODE_STATUSES.DRAFT
       }
     }
-    
+
     expect(window.sessionStorage.setItem).toHaveBeenCalledWith(
       FILTER_KEYS.FUEL_CODES_GRID,
       JSON.stringify(expectedFilter)
     )
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUELCODES)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.LIST)
   })
 
   it('handles zero counts correctly', () => {
@@ -112,7 +112,7 @@ describe('FuelCodeCard Component', () => {
     })
 
     render(<FuelCodeCard />, { wrapper })
-    
+
     expect(screen.getByText('0')).toBeInTheDocument()
   })
 })

@@ -5,7 +5,7 @@ import DirectorReviewCard from '../DirectorReviewCard'
 import { useDirectorReviewCounts } from '@/hooks/useDashboard'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useNavigate } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
 import {
   COMPLIANCE_REPORT_STATUSES,
@@ -147,7 +147,7 @@ describe('DirectorReviewCard Component', () => {
       FILTER_KEYS.TRANSACTIONS_GRID,
       expectedFilter
     )
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.TRANSACTIONS)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.TRANSACTIONS.LIST)
   })
 
   it('navigates to compliance reports page on link click with correct filter', () => {
@@ -178,7 +178,7 @@ describe('DirectorReviewCard Component', () => {
       FILTER_KEYS.COMPLIANCE_REPORT_GRID,
       expectedFilter
     )
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.LIST)
   })
 
   it('handles zero counts correctly', () => {

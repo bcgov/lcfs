@@ -6,7 +6,7 @@ import { useOrgComplianceReportCounts } from '@/hooks/useDashboard'
 import { useOrganization } from '@/hooks/useOrganization'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useNavigate } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import withRole from '@/utils/withRole'
@@ -41,11 +41,11 @@ vi.mock('@/components/Loading', () => ({
 
 describe('OrgComplianceReportsCard Component', () => {
   const mockNavigate = vi.fn()
-  
+
   beforeEach(() => {
     vi.resetAllMocks()
     useNavigate.mockReturnValue(mockNavigate)
-    
+
     // Mock sessionStorage
     Object.defineProperty(window, 'sessionStorage', {
       value: {
@@ -56,7 +56,7 @@ describe('OrgComplianceReportsCard Component', () => {
       },
       writable: true
     })
-    
+
     // Default organization mock
     useOrganization.mockReturnValue({
       data: { name: 'Test Organization' },
@@ -71,7 +71,7 @@ describe('OrgComplianceReportsCard Component', () => {
     })
 
     render(<OrgComplianceReportsCard />, { wrapper })
-    
+
     const loadingElement = screen.getByText(/Loading compliance reports card/)
     expect(loadingElement).toBeInTheDocument()
   })
@@ -86,17 +86,21 @@ describe('OrgComplianceReportsCard Component', () => {
     })
 
     render(<OrgComplianceReportsCard />, { wrapper })
-    
+
     // Check for title and intro text
     expect(screen.getByText('Compliance reports')).toBeInTheDocument()
     expect(screen.getByText(/Test Organization has:/)).toBeInTheDocument()
-    
+
     // Check that all categories are displayed with correct counts
     expect(screen.getByText('2')).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
-    
-    expect(screen.getByText(/Compliance report\(s\) in progress/)).toBeInTheDocument()
-    expect(screen.getByText(/Compliance report\(s\) awaiting government review/)).toBeInTheDocument()
+
+    expect(
+      screen.getByText(/Compliance report\(s\) in progress/)
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Compliance report\(s\) awaiting government review/)
+    ).toBeInTheDocument()
   })
 
   it('navigates to reports page with DRAFT filter when in-progress link is clicked', () => {
@@ -106,11 +110,13 @@ describe('OrgComplianceReportsCard Component', () => {
     })
 
     render(<OrgComplianceReportsCard />, { wrapper })
-    
-    // Find and click the in-progress link 
-    const link = screen.getByText(/Compliance report\(s\) in progress/, { exact: false })
+
+    // Find and click the in-progress link
+    const link = screen.getByText(/Compliance report\(s\) in progress/, {
+      exact: false
+    })
     fireEvent.click(link)
-    
+
     // Check that sessionStorage was updated with the correct filter
     const expectedFilter = JSON.stringify({
       status: {
@@ -119,12 +125,12 @@ describe('OrgComplianceReportsCard Component', () => {
         filter: COMPLIANCE_REPORT_STATUSES.DRAFT
       }
     })
-    
+
     expect(window.sessionStorage.setItem).toHaveBeenCalledWith(
       FILTER_KEYS.COMPLIANCE_REPORT_GRID,
       expectedFilter
     )
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.LIST)
   })
 
   it('navigates to reports page with SUBMITTED filter when awaiting-review link is clicked', () => {
@@ -134,11 +140,14 @@ describe('OrgComplianceReportsCard Component', () => {
     })
 
     render(<OrgComplianceReportsCard />, { wrapper })
-    
+
     // Find and click the awaiting-review link
-    const link = screen.getByText(/Compliance report\(s\) awaiting government review/, { exact: false })
+    const link = screen.getByText(
+      /Compliance report\(s\) awaiting government review/,
+      { exact: false }
+    )
     fireEvent.click(link)
-    
+
     // Check that sessionStorage was updated with the correct filter
     const expectedFilter = JSON.stringify({
       status: {
@@ -147,12 +156,12 @@ describe('OrgComplianceReportsCard Component', () => {
         filter: COMPLIANCE_REPORT_STATUSES.SUBMITTED
       }
     })
-    
+
     expect(window.sessionStorage.setItem).toHaveBeenCalledWith(
       FILTER_KEYS.COMPLIANCE_REPORT_GRID,
       expectedFilter
     )
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.LIST)
   })
 
   it('displays a message when there are no reports requiring action', () => {
@@ -165,9 +174,15 @@ describe('OrgComplianceReportsCard Component', () => {
     })
 
     render(<OrgComplianceReportsCard />, { wrapper })
-    
-    expect(screen.getByText(/There are no reports that require any action./)).toBeInTheDocument()
-    expect(screen.queryByText(/Compliance report\(s\) in progress/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/Compliance report\(s\) awaiting government review/)).not.toBeInTheDocument()
+
+    expect(
+      screen.getByText(/There are no reports that require any action./)
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/Compliance report\(s\) in progress/)
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/Compliance report\(s\) awaiting government review/)
+    ).not.toBeInTheDocument()
   })
 })

@@ -6,7 +6,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNotificationsCount } from '@/hooks/useNotifications'
 import { useLocation } from 'react-router-dom'
 import { wrapper } from '@/tests/utils/wrapper'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { logout } from '@/utils/keycloak'
 
 // Mock hooks and components
@@ -130,7 +130,7 @@ describe('UserProfileActions', () => {
     const profileLink = screen.getByText('John Doe')
     expect(profileLink).toHaveAttribute(
       'href',
-      ROUTES.ADMIN_USERS_VIEW.replace(':userID', '123')
+      ROUTES.ADMIN.USERS.VIEW.replace(':userID', '123')
     )
 
     // Test for non-government user
@@ -152,7 +152,7 @@ describe('UserProfileActions', () => {
     const nonGovProfileLink = screen.getByText('Jane Smith')
     expect(nonGovProfileLink).toHaveAttribute(
       'href',
-      ROUTES.ORGANIZATION_VIEWUSER.replace(':orgID', '789').replace(
+      ROUTES.ORGANIZATION.VIEW_USER.replace(':orgID', '789').replace(
         ':userID',
         '456'
       )

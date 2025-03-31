@@ -5,7 +5,7 @@ import { ComplianceReportCard } from '../ComplianceReportCard'
 import { useComplianceReportCounts } from '@/hooks/useDashboard'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useNavigate } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
@@ -34,11 +34,11 @@ vi.mock('@/components/Loading', () => ({
 
 describe('ComplianceReportCard Component', () => {
   const mockNavigate = vi.fn()
-  
+
   beforeEach(() => {
     vi.resetAllMocks()
     useNavigate.mockReturnValue(mockNavigate)
-    
+
     // Mock sessionStorage
     Object.defineProperty(window, 'sessionStorage', {
       value: {
@@ -58,7 +58,7 @@ describe('ComplianceReportCard Component', () => {
     })
 
     render(<ComplianceReportCard />, { wrapper })
-    
+
     const loadingElement = screen.getByText(/Loading.*card/, { exact: false })
     expect(loadingElement).toBeInTheDocument()
   })
@@ -70,11 +70,13 @@ describe('ComplianceReportCard Component', () => {
     })
 
     render(<ComplianceReportCard />, { wrapper })
-    
+
     expect(screen.getByText('Compliance reports')).toBeInTheDocument()
     expect(screen.getByText('5')).toBeInTheDocument()
     expect(screen.getByText(/There are/)).toBeInTheDocument()
-    expect(screen.getByText(/Compliance Report\(s\) in progress/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Compliance Report\(s\) in progress/)
+    ).toBeInTheDocument()
   })
 
   it('navigates to reports page on link click with correct filter', () => {
@@ -84,11 +86,13 @@ describe('ComplianceReportCard Component', () => {
     })
 
     render(<ComplianceReportCard />, { wrapper })
-    
+
     // Find and click the link
-    const link = screen.getByText(/Compliance Report\(s\) in progress/, { exact: false })
+    const link = screen.getByText(/Compliance Report\(s\) in progress/, {
+      exact: false
+    })
     fireEvent.click(link)
-    
+
     // Check that sessionStorage was updated with the correct filter
     const expectedFilter = {
       status: {
@@ -101,12 +105,12 @@ describe('ComplianceReportCard Component', () => {
         ]
       }
     }
-    
+
     expect(window.sessionStorage.setItem).toHaveBeenCalledWith(
       FILTER_KEYS.COMPLIANCE_REPORT_GRID,
       JSON.stringify(expectedFilter)
     )
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.LIST)
   })
 
   it('handles zero counts correctly', () => {
@@ -116,7 +120,7 @@ describe('ComplianceReportCard Component', () => {
     })
 
     render(<ComplianceReportCard />, { wrapper })
-    
+
     expect(screen.getByText('0')).toBeInTheDocument()
   })
 })

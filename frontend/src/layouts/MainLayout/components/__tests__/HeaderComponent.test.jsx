@@ -4,7 +4,7 @@ import { HeaderComponent } from '../HeaderComponent'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 
 // Mock all required hooks and components
 vi.mock('@/hooks/useCurrentUser')
@@ -39,7 +39,7 @@ describe('HeaderComponent', () => {
     const orgNameLink = screen.getByText('Test Organization')
     expect(orgNameLink).toBeInTheDocument()
     expect(orgNameLink.tagName).toBe('A')
-    expect(orgNameLink).toHaveAttribute('href', ROUTES.ORGANIZATION)
+    expect(orgNameLink).toHaveAttribute('href', ROUTES.ORGANIZATION.ORG)
 
     const supplierBalance = screen.getByText('Supplier Balance')
     expect(supplierBalance).toBeInTheDocument()
