@@ -22,7 +22,7 @@ import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
-import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
+import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
@@ -150,7 +150,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
               complianceReportId
             })
           ),
-        useFetch: useGetAllocationAgreements,
+        useFetch: useGetAllAllocationAgreements,
         component: (data) =>
           data.allocationAgreements.length > 0 && (
             <TogglePanel
