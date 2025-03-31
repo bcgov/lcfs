@@ -6,6 +6,7 @@ import {
   SUPPLEMENTAL_INITIATOR_TYPE
 } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
+import { DateTime } from 'luxon'
 
 const outlineBase = {
   variant: 'outlined',
@@ -211,8 +212,21 @@ export const buttonClusterConfigFn = ({
 
   const canReturnToSupplier = () => {
     const compliancePeriodYear = parseInt(compliancePeriod)
-    const deadlineDate = new Date(compliancePeriodYear + 1, 2, 31) // Month is 0-based, so 2 = March
-    const currentDate = new Date()
+    // Deadline: March 31 of the next year, 11:59:59 PM in PDT (America/Vancouver)
+    const deadlineDate = DateTime.fromObject(
+      {
+        year: compliancePeriodYear + 1,
+        month: 3,
+        day: 31,
+        hour: 23,
+        minute: 59,
+        second: 59
+      },
+      { zone: 'America/Vancouver' }
+    )
+
+    // Current time in PDT
+    const currentDate = DateTime.now().setZone('America/Vancouver')
     return currentDate <= deadlineDate
   }
 
