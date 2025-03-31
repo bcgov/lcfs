@@ -11,9 +11,8 @@ import colors from '@/themes/base/colors.js'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import BCButton from '@/components/BCButton/index.jsx'
-import AssignmentIcon from '@mui/icons-material/Assignment.js'
 import { useApiService } from '@/services/useApiService.js'
-import { Download, FileDownload } from '@mui/icons-material'
+import { FileDownload } from '@mui/icons-material'
 
 export const StyledChip = styled(Chip)({
   fontWeight: 'bold',

@@ -1,11 +1,11 @@
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { Box, Tooltip, Fade } from '@mui/material'
-import InfoIcon from '@mui/icons-material/Info'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
+import { Info } from '@mui/icons-material'
 
 const OrgBalanceCard = () => {
   const { t } = useTranslation(['dashboard'])
@@ -73,7 +73,7 @@ const OrgBalanceCard = () => {
               TransitionComponent={Fade}
               arrow
             >
-              <InfoIcon style={{ marginLeft: '4px', color: '#547D59' }} />
+              <Info style={{ marginLeft: '4px', color: '#547D59' }} />
             </Tooltip>
           </Box>
         </>

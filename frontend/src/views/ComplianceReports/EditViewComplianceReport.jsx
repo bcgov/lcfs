@@ -29,10 +29,9 @@ import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import { Fab, Stack, Tooltip } from '@mui/material'
 import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import colors from '@/themes/base/colors.js'
 import ROUTES from '@/routes/routes.js'
+import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 
 const iconStyle = {
   width: '2rem',
@@ -356,9 +355,9 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             }}
           >
             {isScrollingUp ? (
-              <KeyboardArrowUpIcon sx={iconStyle} />
+              <KeyboardArrowUp sx={iconStyle} />
             ) : (
-              <KeyboardArrowDownIcon sx={iconStyle} />
+              <KeyboardArrowDown sx={iconStyle} />
             )}
           </Fab>
         </Tooltip>
