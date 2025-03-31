@@ -60,6 +60,7 @@
     "keycloak-js": "^26.1.2",
     "leaflet": "^1.9.4",
     "lodash": "^4.17.21",
+    "luxon": "^3.6.1",
     "material-ui-popup-state": "^5.0.10",
     "mui-daterange-picker-plus": "^1.0.4",
     "notistack": "^3.0.1",
