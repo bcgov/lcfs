@@ -8,7 +8,11 @@ import {
 import { apiRoutes } from '@/constants/routes'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import { formatNumberWithCommas } from '@/utils/formatters'
+import {
+  decimalFormatter,
+  formatNumberWithCommas,
+  numberFormatter
+} from '@/utils/formatters'
 import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
@@ -271,6 +275,9 @@ export const fuelSupplyColDefs = (
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.provisionOfTheActId'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
+    valueGetter: (params) => {
+      return params.data.provisionOfTheAct
+    },
     cellEditorParams: (params) => ({
       options: optionsData?.fuelTypes
         ?.find((obj) => params.data.fuelType === obj.fuelType)
@@ -283,7 +290,6 @@ export const fuelSupplyColDefs = (
     }),
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-
     suppressKeyboardEvent,
     minWidth: 370,
     valueSetter: (params) => {
@@ -471,10 +477,9 @@ export const fuelSupplyColDefs = (
           ? params.data?.energyDensity + ' MJ/' + params.data?.units
           : 0
       } else {
-        const ed = optionsData?.fuelTypes?.find(
-          (obj) => params.data.fuelType === obj.fuelType
-        )?.energyDensity
-        return (ed && ed.energyDensity + ' MJ/' + params.data.units) || 0
+        return params.data?.energyDensity
+          ? params.data?.energyDensity + ' MJ/' + params.data?.units
+          : ''
       }
     },
     editable: (params) => isFuelTypeOther(params)
@@ -484,34 +489,12 @@ export const fuelSupplyColDefs = (
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
     editable: false,
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-
-    valueGetter: (params) => {
-      const eerOptions = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )
-      let eer =
-        eerOptions &&
-        eerOptions?.eerRatios.find(
-          (item) =>
-            item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType?.type === params.data.endUseType?.type
-        )
-      if (!eer) {
-        eer = eerOptions?.eerRatios?.find(
-          (item) =>
-            item.fuelCategory.fuelCategory === params.data.fuelCategory &&
-            item.endUseType === null
-        )
-      }
-      return eer?.energyEffectivenessRatio || 0
-    }
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
   },
   {
     field: 'energy',
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
     valueFormatter: formatNumberWithCommas,
     minWidth: 100,
@@ -545,7 +528,7 @@ export const fuelSupplySummaryColDef = [
       'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
     ),
     field: 'determiningCarbonIntensity',
-    valueGetter: (params) => params.data.provisionOfTheAct?.name
+    valueGetter: (params) => params.data.provisionOfTheAct
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
@@ -624,7 +607,7 @@ export const changelogCommonColDefs = [
       'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
     ),
     field: 'determiningCarbonIntensity',
-    valueGetter: (params) => params.data.provisionOfTheAct?.name,
+    valueGetter: (params) => params.data.provisionOfTheAct,
     cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheActId')
   },
   {

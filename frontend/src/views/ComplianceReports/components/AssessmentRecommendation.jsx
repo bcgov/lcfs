@@ -7,7 +7,7 @@ import BCTypography from '@/components/BCTypography/index.jsx'
 import BCBox from '@/components/BCBox/index.jsx'
 import BCModal from '@/components/BCModal.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import AssignmentIcon from '@mui/icons-material/Assignment'
+import { Assignment } from '@mui/icons-material'
 
 export const AssessmentRecommendation = ({
   currentStatus,
@@ -78,7 +78,7 @@ export const AssessmentRecommendation = ({
           onClick={() => {
             alert('TODO')
           }}
-          startIcon={<AssignmentIcon />}
+          startIcon={<Assignment />}
           sx={{ mt: 2 }}
           disabled={isLoading}
         >
