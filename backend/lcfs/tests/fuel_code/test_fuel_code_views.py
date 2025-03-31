@@ -51,7 +51,7 @@ def updated_fuel_code_data():
     return FuelCodeCreateUpdateSchema(
         fuel_code_id=1,
         prefix_id=1001,
-        fuel_suffix="001",
+        fuel_suffix="001.1",
         carbon_intensity=20.5,
         edrms="EDRMS-123",
         company="XYZ Energy Corp",
@@ -83,7 +83,7 @@ def request_fuel_code_data():
         "status": "Draft",
         "prefix": "ABC",
         "prefixId": 1001,
-        "fuelSuffix": "001",
+        "fuelSuffix": "001.0",
         "carbonIntensity": 20.5,
         "edrms": "EDRMS-123",
         "company": "XYZ Energy Corp",
@@ -116,7 +116,7 @@ def valid_fuel_code_data():
     return {
         "fuel_code_id": 1,
         "prefix_id": 1,
-        "fuel_suffix": "A",
+        "fuel_suffix": "101.1",
         "carbon_intensity": 1.23,
         "edrms": "12345",
         "company": "Test Company",

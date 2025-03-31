@@ -27,6 +27,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
+    ComplianceReportStatusSchema,
     ComplianceReportViewSchema,
 )
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
@@ -213,6 +214,21 @@ class ComplianceReportServices:
         if not draft_status:
             raise DataNotFoundException("Draft status not found.")
 
+        # Retrieve the assessed report for the current compliance period
+        assessed_report = await self.repo.get_assessed_compliance_report_by_period(
+            current_report.organization_id,
+            int(current_report.compliance_period.description)
+        )
+        if not assessed_report or not assessed_report.summary:
+            raise DataNotFoundException("Assessed report summary not found for the same period")
+
+        # Copy over the summary lines from the assessed report.
+        summary_data = {
+            column: getattr(assessed_report.summary, column)
+            for column in assessed_report.summary.__table__.columns.keys()
+            if any(column.startswith(f"line_{i}") for i in range(6, 10))}
+        new_summary = ComplianceReportSummary(**summary_data)
+
         # Create the new supplemental compliance report
         new_report = ComplianceReport(
             compliance_period_id=current_report.compliance_period_id,
@@ -224,7 +240,7 @@ class ComplianceReportServices:
             version=new_version,  # Increment the version
             supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
             nickname=f"Supplemental report {new_version}",
-            summary=ComplianceReportSummary(),  # Create an empty summary object
+            summary=new_summary,
         )
 
         # Add the new supplemental report
@@ -549,3 +565,32 @@ class ComplianceReportServices:
                 continue
             filtered.append(r)
         return filtered
+
+    @service_handler
+    async def get_compliance_report_statuses(
+        self, user: UserProfile
+    ) -> List[ComplianceReportStatusSchema]:
+        """
+        Fetches all compliance report statuses.
+        """
+        statuses = await self.repo.get_compliance_report_statuses()
+        if user_has_roles(user, [RoleEnum.GOVERNMENT]):
+            statuses = [
+                s
+                for s in statuses
+                if s.status not in [ComplianceReportStatusEnum.Draft]
+            ]
+        else:
+            statuses = [
+                s
+                for s in statuses
+                if s.status
+                not in [
+                    ComplianceReportStatusEnum.Recommended_by_analyst,
+                    ComplianceReportStatusEnum.Recommended_by_manager,
+                    ComplianceReportStatusEnum.Not_recommended_by_analyst,
+                    ComplianceReportStatusEnum.Not_recommended_by_manager,
+                    ComplianceReportStatusEnum.Analyst_adjustment,
+                ]
+            ]
+        return statuses
