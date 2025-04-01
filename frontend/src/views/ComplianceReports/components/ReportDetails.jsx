@@ -11,7 +11,6 @@ import {
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { roles } from '@/constants/roles'
@@ -23,7 +22,7 @@ import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
-import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
+import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
@@ -42,7 +41,7 @@ import { AllocationAgreementChangelog } from '@/views/AllocationAgreements/Alloc
 import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog.jsx'
 import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog.jsx'
 import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog.jsx'
-import EditIcon from '@mui/icons-material/Edit'
+import { Edit, ExpandMore } from '@mui/icons-material'
 
 const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
@@ -151,7 +150,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
               complianceReportId
             })
           ),
-        useFetch: useGetAllocationAgreements,
+        useFetch: useGetAllAllocationAgreements,
         component: (data) =>
           data.allocationAgreements.length > 0 && (
             <TogglePanel
@@ -306,7 +305,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
             >
               <AccordionSummary
                 expandIcon={
-                  <ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />
+                  <ExpandMore sx={{ width: '2rem', height: '2rem' }} />
                 }
                 aria-controls={`panel${index}-content`}
                 id={`panel${index}-header`}
@@ -332,7 +331,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                         aria-label="edit"
                         onClick={activity.action}
                       >
-                        <EditIcon />
+                        <Edit />
                       </IconButton>
                     </Role>
                   )}

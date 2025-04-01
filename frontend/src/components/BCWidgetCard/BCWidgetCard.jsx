@@ -3,7 +3,7 @@ import { Card, CardContent, Divider } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useNavigate } from 'react-router-dom'
-import EditIcon from '@mui/icons-material/Edit'
+import { Edit } from '@mui/icons-material'
 import BCButton from '@/components/BCButton'
 
 function BCWidgetCard({
@@ -64,7 +64,7 @@ function BCWidgetCard({
               style={{ maxHeight: '25px', minHeight: '25px' }}
               color="light"
               onClick={handleButtonClick}
-              startIcon={<EditIcon sx={{ width: '16px', height: '16px' }} />}
+              startIcon={<Edit sx={{ width: '16px', height: '16px' }} />}
               sx={{
                 '&:hover': {
                   backgroundColor: 'rgba(255, 255, 255, 0.8)',
