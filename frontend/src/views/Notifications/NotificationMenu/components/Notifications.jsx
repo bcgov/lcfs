@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { Stack, Grid } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
-
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
