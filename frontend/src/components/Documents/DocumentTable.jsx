@@ -8,11 +8,10 @@ import {
   IconButton,
   Tooltip
 } from '@mui/material'
-import CloudUploadIcon from '@mui/icons-material/CloudUpload'
+import { CloudUpload, Delete } from '@mui/icons-material'
 import { useTranslation } from 'react-i18next'
 import { styled } from '@mui/system'
 import BCTypography from '@/components/BCTypography'
-import { Delete } from '@mui/icons-material'
 import prettyBytes from 'pretty-bytes'
 import colors from '@/themes/base/colors'
 import {
@@ -193,7 +192,7 @@ function DocumentTable({ parentType, parentID }) {
       >
         <CardContent>
           <IconButton aria-label="upload" size="medium">
-            <CloudUploadIcon style={{ fontSize: '40px', color: '#999' }} />
+            <CloudUpload style={{ fontSize: '40px', color: '#999' }} />
           </IconButton>
           <BCTypography variant="body2">{t('report:clickDrag')}</BCTypography>
         </CardContent>

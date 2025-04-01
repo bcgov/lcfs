@@ -93,7 +93,7 @@ vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
   })
 }))
 vi.mock('@/hooks/useAllocationAgreement', () => ({
-  useGetAllocationAgreements: () => ({
+  useGetAllAllocationAgreements: () => ({
     data: { allocationAgreements: [] },
     isLoading: false,
     error: null

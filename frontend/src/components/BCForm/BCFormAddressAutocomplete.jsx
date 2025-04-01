@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Controller } from 'react-hook-form'
-import { InputLabel, Box } from '@mui/material'
-import InfoIcon from '@mui/icons-material/Info'
+import { Box, InputLabel } from '@mui/material'
+import { Info } from '@mui/icons-material'
 import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
 import FormControlLabel from '@mui/material/FormControlLabel'
@@ -26,11 +26,7 @@ export const BCFormAddressAutocomplete = ({
     <Controller
       name={name}
       control={control}
-      render={({
-        field: { onChange, value },
-        fieldState: { error },
-        formState
-      }) => (
+      render={({ field: { onChange, value }, fieldState: { error } }) => (
         <>
           <InputLabel htmlFor={name} component="label" className="form-label">
             <Box display="flex" gap={2} flexWrap="wrap">
@@ -103,7 +99,7 @@ export const BCFormAddressAutocomplete = ({
                 boxShadow="0 2px 5px rgba(0,0,0,0.2)"
                 zIndex={10}
               >
-                <InfoIcon color="primary" sx={{ mr: 1 }} fontSize="small" />
+                <Info color="primary" sx={{ mr: 1 }} fontSize="small" />
                 <BCTypography variant="body4" component="span">
                   Please add postal code to the address
                 </BCTypography>

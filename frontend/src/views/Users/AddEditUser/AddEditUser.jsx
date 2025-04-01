@@ -36,7 +36,7 @@ import {
   Tooltip
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
-import Grid2 from '@mui/material/Unstable_Grid2'
+import Grid2 from '@mui/material/Grid2'
 import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
 import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
@@ -292,7 +292,12 @@ export const AddEditUser = ({ userType }) => {
         <FormProvider {...{ control, setValue }}>
           <Grid2 container columnSpacing={2.5} rowSpacing={0.5}>
             {/* Form fields */}
-            <Grid2 item xs={12} md={5} lg={4}>
+            <Grid2
+              size={{
+                xs: 12,
+                md: 5,
+                lg: 4
+              }}>
               <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
                 {textFields.map((field) => (
                   <BCFormText
@@ -306,7 +311,12 @@ export const AddEditUser = ({ userType }) => {
                 ))}
               </Stack>
             </Grid2>
-            <Grid2 item xs={12} md={7} lg={6}>
+            <Grid2
+              size={{
+                xs: 12,
+                md: 7,
+                lg: 6
+              }}>
               <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
                 <BCFormRadio
                   control={control}
@@ -331,7 +341,12 @@ export const AddEditUser = ({ userType }) => {
                 )}
               </Stack>
             </Grid2>
-            <Grid2 item xs={12} md={5} lg={4}>
+            <Grid2
+              size={{
+                xs: 12,
+                md: 5,
+                lg: 4
+              }}>
               <Box
                 bgcolor={colors.background.grey}
                 p={3}
