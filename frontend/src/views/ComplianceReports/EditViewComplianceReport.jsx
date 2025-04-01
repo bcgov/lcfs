@@ -262,7 +262,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                 userRoles={currentUser?.userRoles}
               />
               <ComplianceReportSummary
-                enableCompareMode={reportData.chain.length > 0}
+                enableCompareMode={reportData.chain.length > 1}
                 canEdit={canEdit}
                 reportID={complianceReportId}
                 currentStatus={currentStatus}

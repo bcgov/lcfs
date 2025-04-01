@@ -25,6 +25,25 @@ export const useGetAllocationAgreements = (
   return useQuery({
     queryKey: ['allocation-agreements', complianceReportId, pagination],
     queryFn: async () => {
+      const response = await client.post(apiRoutes.getAllocationAgreements, {
+        complianceReportId,
+        ...pagination
+      })
+      return response.data
+    },
+    ...options
+  })
+}
+
+export const useGetAllAllocationAgreements = (
+  complianceReportId,
+  pagination,
+  options
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['allocation-agreements', complianceReportId, pagination],
+    queryFn: async () => {
       const response = await client.post(apiRoutes.getAllAllocationAgreements, {
         complianceReportId,
         ...pagination
