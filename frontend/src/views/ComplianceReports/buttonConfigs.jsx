@@ -210,26 +210,6 @@ export const buttonClusterConfigFn = ({
     }
   }
 
-  const canReturnToSupplier = () => {
-    const compliancePeriodYear = parseInt(compliancePeriod)
-    // Deadline: March 31 of the next year, 11:59:59 PM in PDT (America/Vancouver)
-    const deadlineDate = DateTime.fromObject(
-      {
-        year: compliancePeriodYear + 1,
-        month: 3,
-        day: 31,
-        hour: 23,
-        minute: 59,
-        second: 59
-      },
-      { zone: 'America/Vancouver' }
-    )
-
-    // Current time in PDT
-    const currentDate = DateTime.now().setZone('America/Vancouver')
-    return currentDate <= deadlineDate
-  }
-
   const buttons = {
     [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
       reportButtons.submitReport,
@@ -240,10 +220,7 @@ export const buttonClusterConfigFn = ({
     ],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
       ...(isGovernmentUser && hasRoles('Analyst')
-        ? [
-            reportButtons.recommendByAnalyst,
-            ...(canReturnToSupplier() ? [reportButtons.returnToSupplier] : [])
-          ]
+        ? [reportButtons.recommendByAnalyst, reportButtons.returnToSupplier]
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: [
