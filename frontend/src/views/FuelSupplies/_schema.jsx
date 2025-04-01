@@ -27,6 +27,8 @@ import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+export const PROVISION_GHGENIUS =
+  'GHGenius modelled - Section 6 (5) (d) (ii) (A)'
 
 export const fuelSupplyColDefs = (
   optionsData,
@@ -300,8 +302,16 @@ export const fuelSupplyColDefs = (
           ?.provisions.find(
             (item) => item.name === params.newValue
           )?.provisionOfTheActId
-        params.data.fuelCode = null
-        params.data.fuelCodeId = null
+
+        // Handle GHGenius case
+        if (params.newValue === PROVISION_GHGENIUS) {
+          params.data.fuelCode = null
+          params.data.fuelCodeId = null
+          params.data.uci = null // Clear UCI field
+        } else if (params.newValue === PROVISION_APPROVED_FUEL_CODE) {
+          params.data.fuelCode = null
+          params.data.fuelCodeId = null
+        }
       }
       return true
     },
@@ -437,9 +447,23 @@ export const fuelSupplyColDefs = (
   {
     field: 'ciOfFuel',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
-    editable: false,
+    cellEditor: NumberEditor,
+    cellEditorParams: {
+      precision: 2,
+      min: 0,
+      showStepperButtons: false
+    },
     cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
+      StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+    editable: (params) => params.data.provisionOfTheAct === PROVISION_GHGENIUS,
+    valueGetter: (params) => params.data.ciOfFuel,
+    valueSetter: (params) => {
+      if (params.newValue !== undefined) {
+        params.data.ciOfFuel = params.newValue
+        return true
+      }
+      return false
+    }
   },
   {
     field: 'uci',
@@ -638,8 +662,8 @@ export const changelogCommonColDefs = [
     cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
   },
   {
-    field: 'uci',
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
+    field: 'uci',
     cellStyle: (params) => changelogCellStyle(params, 'uci')
   },
   {
