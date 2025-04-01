@@ -67,14 +67,16 @@ export const Notifications = () => {
   // Consolidated mutation handler
   const handleMutation = useCallback(
     (mutation, selectedNotifications, successMessage, errorMessage) => {
-      if (selectedNotifications.length === 0) {
+      const ids = Array.isArray(selectedNotifications)
+        ? selectedNotifications
+        : selectedNotifications.notification_ids || []
+      if (ids.length === 0) {
         alertRef.current?.triggerAlert({
           message: t('notifications:noNotificationsSelectedText'),
           severity: 'warning'
         })
         return
       }
-
       mutation.mutate(selectedNotifications, {
         onSuccess: () => {
           // eslint-disable-next-line chai-friendly/no-unused-expressions
