@@ -159,7 +159,9 @@ export const Notifications = () => {
             .replace(':compliancePeriod', compliancePeriod)
             .replace(':complianceReportId', id)
         )
-        handleMutation(markAsReadMutation, [params.data.notificationMessageId])
+        handleMutation(markAsReadMutation, {
+          notification_ids: [params.data.notificationMessageId]
+        })
       }
     },
     [currentUser, navigate, markAsReadMutation, handleMutation]
