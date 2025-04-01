@@ -4,7 +4,6 @@ from typing import List, Dict, Any, Union, Optional, Sequence
 
 import structlog
 from fastapi import Depends
-from fastapi.exceptions import RequestValidationError
 from sqlalchemy import and_, or_, select, func, text, update, distinct, desc, asc
 from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1042,17 +1041,12 @@ class FuelCodeRepository:
             lowest_ci = (await self.db.execute(stmt)).scalar_one_or_none()
 
             if lowest_ci is None:
-                raise RequestValidationError(
-                    [
-                        {
-                            "loc": ("exportDate",),
-                            "msg": "needs to be updated. No active fuel codes found in the past 12 months.",
-                            "type": "value_error",
-                        }
-                    ]
+                # If we can't find any active fuel codes, just revert to the default carbon intensity
+                effective_carbon_intensity = await self.get_default_carbon_intensity(
+                    fuel_type_id, compliance_period
                 )
-
-            effective_carbon_intensity = lowest_ci
+            else:
+                effective_carbon_intensity = lowest_ci
 
         else:
             if fuel_code_id:
