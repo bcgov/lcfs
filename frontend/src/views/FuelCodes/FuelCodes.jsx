@@ -23,7 +23,7 @@ import { fuelCodeColDefs } from './_schema'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 const FuelCodesBase = () => {
-  const ref = useRef(null)
+  const gridRef = useRef(null)
 
   const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
 
@@ -81,8 +81,13 @@ const FuelCodesBase = () => {
   }
 
   const handleClearFilters = () => {
-    ref.current?.resetGrid()
-    setPaginationOptions(defaultInitialPagination)
+    setPaginationOptions({
+      ...paginationOptions,
+      filters: []
+    })
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
+    }
   }
 
   return (
@@ -139,7 +144,7 @@ const FuelCodesBase = () => {
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          gridRef={ref}
+          gridRef={gridRef}
           gridKey="fuel-codes-grid"
           columnDefs={fuelCodeColDefs(t)}
           getRowId={getRowId}
@@ -147,7 +152,7 @@ const FuelCodesBase = () => {
           defaultColDef={defaultColDef}
           queryData={queryData}
           dataKey="fuelCodes"
-          initialPaginationOptions={defaultInitialPagination}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,
