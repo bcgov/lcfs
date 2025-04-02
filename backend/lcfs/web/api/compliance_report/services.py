@@ -159,7 +159,9 @@ class ComplianceReportServices:
 
         # Snapshot the Organization Details
         await self.snapshot_services.create_organization_snapshot(
-            new_report.compliance_report_id, current_report.organization_id
+            new_report.compliance_report_id,
+            current_report.organization_id,
+            current_report.compliance_report_id,
         )
 
         # Create the history record for the new supplemental report
@@ -218,7 +220,7 @@ class ComplianceReportServices:
         # Retrieve the assessed report for the current compliance period
         assessed_report = await self.repo.get_assessed_compliance_report_by_period(
             current_report.organization_id,
-            int(current_report.compliance_period.description)
+            int(current_report.compliance_period.description),
         )
         if not assessed_report or not assessed_report.summary:
             raise DataNotFoundException(
@@ -228,7 +230,8 @@ class ComplianceReportServices:
         summary_data = {
             column: getattr(assessed_report.summary, column)
             for column in assessed_report.summary.__table__.columns.keys()
-            if any(column.startswith(f"line_{i}") for i in range(6, 10))}
+            if any(column.startswith(f"line_{i}") for i in range(6, 10))
+        }
         new_summary = ComplianceReportSummary(**summary_data)
 
         # Create the new supplemental compliance report
