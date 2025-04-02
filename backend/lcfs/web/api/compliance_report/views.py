@@ -212,27 +212,30 @@ async def create_government_adjustment(
     return await service.create_analyst_adjustment_report(report_id, request.user)
 
 
-@router.post(
-    "/fuel-supply/changelog",
+@router.get(
+    "/{report_id}/changelog/fuel-supply",
     response_model=ComplianceReportChangelogSchema[FuelSupplyResponseSchema],
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def get_fuel_supply_changelog(
     request: Request,
-    request_data: CommonPaginatedReportRequestSchema = Body(...),
+    report_id: int,
+    # request_data: CommonPaginatedReportRequestSchema = Body(...),
     service: ComplianceReportServices = Depends(),
 ) -> ComplianceReportChangelogSchema[FuelSupplyResponseSchema]:
-    compliance_report_id = request_data.compliance_report_id
+    # compliance_report_id = request_data.compliance_report_id
 
-    pagination = PaginationRequestSchema(
-        page=request_data.page,
-        size=request_data.size,
-        sort_orders=request_data.sort_orders,
-        filters=request_data.filters,
-    )
+    # pagination = PaginationRequestSchema(
+    #     page=request_data.page,
+    #     size=request_data.size,
+    #     sort_orders=request_data.sort_orders,
+    #     filters=request_data.filters,
+    # )
+
     return await service.get_changelog_data(
-        pagination, compliance_report_id, FuelSupply
+        report_id,
+        FuelSupply
     )
 
 

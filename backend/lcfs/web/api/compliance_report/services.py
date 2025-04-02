@@ -69,7 +69,8 @@ class ComplianceReportServices:
             report_data.status
         )
         if not draft_status:
-            raise DataNotFoundException(f"Status '{report_data.status}' not found.")
+            raise DataNotFoundException(
+                f"Status '{report_data.status}' not found.")
 
         # Generate a new group_uuid for the new report series
         group_uuid = str(uuid.uuid4())
@@ -220,7 +221,8 @@ class ComplianceReportServices:
             int(current_report.compliance_period.description)
         )
         if not assessed_report or not assessed_report.summary:
-            raise DataNotFoundException("Assessed report summary not found for the same period")
+            raise DataNotFoundException(
+                "Assessed report summary not found for the same period")
 
         # Copy over the summary lines from the assessed report.
         summary_data = {
@@ -422,7 +424,8 @@ class ComplianceReportServices:
             )
 
             # Apply masking to each report in the chain
-            masked_chain = self._mask_report_status(compliance_report_chain, user)
+            masked_chain = self._mask_report_status(
+                compliance_report_chain, user)
             # Apply history masking to each report in the chain
             masked_chain = [
                 self._mask_report_status_for_history(report, user)
@@ -495,7 +498,6 @@ class ComplianceReportServices:
     @service_handler
     async def get_changelog_data(
         self,
-        pagination: PaginationResponseSchema,
         compliance_report_id: int,
         selection: Type[
             Union[
@@ -503,44 +505,81 @@ class ComplianceReportServices:
             ]
         ],
     ):
-        changelog, total_count = await self.repo.get_changelog_data(
-            pagination, compliance_report_id, selection
-        )
+        """
+        Retrieve changelog data for a specific compliance report and model type.
+        Returns a list of objects with labels and associated data.
+        """
+        # Get the current report
+        report = await self.repo.get_compliance_report_by_id(compliance_report_id)
+        if report is None:
+            raise DataNotFoundException("Compliance report not found.")
 
-        groups = {}
-        for record in changelog:
-            groups.setdefault(record.group_uuid, []).append(record)
-        for group in groups.values():
-            if len(group) == 2:
-                first, second = group
-                diff = {}
-                first_dict = self._model_to_dict(first)
-                second_dict = self._model_to_dict(second)
-                keys = set(first_dict.keys()).union(second_dict.keys())
-                for key in keys:
-                    if first_dict.get(key) != second_dict.get(key):
-                        diff[key] = True
-                setattr(first, "diff", diff)
-                setattr(second, "diff", diff)
-                # Identify older record by version and mark it as updated
-                if getattr(first, "version", 0) < getattr(second, "version", 0):
-                    setattr(first, "updated", True)
-                else:
-                    setattr(second, "updated", True)
+        # Get all reports in the chain with joined data
+        data = await self.repo.get_compliance_report_with_joined_data(compliance_report_id, selection)
 
-        changelog = [record for group in groups.values() for record in group]
-
-        return {
-            "pagination": PaginationResponseSchema(
-                total=total_count,
-                page=pagination.page,
-                size=pagination.size,
-                total_pages=(
-                    math.ceil(total_count / pagination.size) if pagination.size else 0
-                ),
-            ),
-            "changelog": changelog,
+        # Map model classes to their attribute names in the ComplianceReport model
+        model_to_attr = {
+            FuelSupply: "fuel_supplies",
+            OtherUses: "other_uses",
+            NotionalTransfer: "notional_transfers",
+            FuelExport: "fuel_exports",
+            AllocationAgreement: "allocation_agreements"
         }
+
+        # Get the correct attribute name for this model
+        attr_name = model_to_attr.get(selection)
+        if not attr_name:
+            logger.error(
+                f"No attribute mapping found for model: {selection.__name__}")
+            return []
+
+        # Transform the data into the required format
+        result = []
+        for report_data in data:
+            # Check if we're dealing with a tuple (most likely from a join operation)
+            if isinstance(report_data, tuple):
+                # Extract the report object and its related data
+                # Assuming the first element is the report and second contains the data
+                report_obj = report_data[0]
+                selection_data = getattr(report_data, attr_name, []) if hasattr(
+                    report_data, attr_name) else []
+
+                # If selection_data is empty, try to get it from the second element of the tuple
+                if not selection_data and len(report_data) > 1:
+                    selection_data = report_data[1] if isinstance(
+                        report_data[1], list) else [report_data[1]]
+            else:
+                # If it's a direct object
+                report_obj = report_data
+                selection_data = getattr(report_data, attr_name, [])
+
+            # Format each item in the selection data - convert to dictionary to avoid DetachedInstanceError
+            formatted_data = []
+            for item in selection_data:
+                if item:  # Check if item is not None
+                    try:
+                        # First try the simplest approach
+                        item_dict = {
+                            k: v for k, v in item.__dict__.items()
+                            if k != '_sa_instance_state'
+                        }
+                        formatted_data.append(item_dict)
+                    except Exception as e:
+                        # If that fails, use our safer method
+                        logger.warn(f"Error converting model to dict: {e}")
+                        formatted_data.append(self._model_to_dict(item))
+
+            # Get the nickname safely
+            nickname = getattr(
+                report_obj, 'nickname', f"Report {getattr(report_obj, 'version', 'unknown')}")
+
+            # Create the result object
+            result.append({
+                "label": nickname,
+                "data": formatted_data
+            })
+
+        return {'changelog': result}
 
     def _remove_draft_entries(
         self, report: ComplianceReportBaseSchema

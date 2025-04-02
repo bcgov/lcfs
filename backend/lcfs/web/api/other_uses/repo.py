@@ -1,7 +1,7 @@
 import structlog
 from datetime import date, datetime
 from fastapi import Depends
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager
 from typing import List, Optional, Dict, Any
@@ -40,7 +40,8 @@ class OtherUsesRepository:
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
         fuel_types = await self.get_formatted_fuel_types(
-            include_legacy=include_legacy, compliance_period=int(compliance_period)
+            include_legacy=include_legacy, compliance_period=int(
+                compliance_period)
         )
         expected_uses = await self.fuel_code_repo.get_expected_use_types()
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
@@ -152,12 +153,14 @@ class OtherUsesRepository:
             )
         )
 
-        conditions = [OtherUses.compliance_report_id.in_(compliance_reports_select)]
+        conditions = [OtherUses.compliance_report_id.in_(
+            compliance_reports_select)]
         if not changelog:
             delete_group_select = (
                 select(OtherUses.group_uuid)
                 .where(
-                    OtherUses.compliance_report_id.in_(compliance_reports_select),
+                    OtherUses.compliance_report_id.in_(
+                        compliance_reports_select),
                     OtherUses.action_type == ActionTypeEnum.DELETE,
                 )
                 .distinct()
@@ -249,9 +252,10 @@ class OtherUsesRepository:
 
         # Manually apply pagination
         total_count = len(other_uses)
-        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_other_uses = other_uses[offset : offset + limit]
+        paginated_other_uses = other_uses[offset: offset + limit]
 
         return paginated_other_uses, total_count
 
@@ -436,3 +440,11 @@ class OtherUsesRepository:
             formatted_fuel_types.append(formatted_fuel_type)
 
         return formatted_fuel_types
+
+    @repo_handler
+    async def delete_other_use(self, other_uses_id: int):
+        """Delete an other use from the database"""
+        await self.db.execute(
+            delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id)
+        )
+        await self.db.flush()

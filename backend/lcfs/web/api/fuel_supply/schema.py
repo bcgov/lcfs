@@ -183,7 +183,7 @@ class FuelSupplyResponseSchema(FuelSupplyCreateUpdateSchema):
     fuel_code: Optional[str]
     uci: Optional[float] = None
     fuel_code: Optional[str] = None
-    diff: Optional[FuelSupplyDiffSchema] = None
+    # diff: Optional[FuelSupplyDiffSchema] = None
 
     @field_validator("compliance_units", mode="before")
     def round_compliance_units(cls, value):

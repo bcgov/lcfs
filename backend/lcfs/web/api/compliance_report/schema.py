@@ -1,5 +1,6 @@
 from enum import Enum
-from typing import ClassVar, Optional, List, TypeVar, Generic, Union
+from typing import ClassVar, Optional, List, TypeVar, Generic, Union, Dict
+from typing_extensions import TypedDict
 from datetime import datetime
 from typing import List, NamedTuple
 
@@ -223,9 +224,13 @@ class ComplianceReportUpdateSchema(BaseSchema):
 T = TypeVar("T")
 
 
+class ChangelogItem(BaseSchema, Generic[T]):
+    label: str
+    data: List[T]
+
+
 class ComplianceReportChangelogSchema(BaseSchema, Generic[T]):
-    changelog: Optional[List[T]] = []
-    pagination: Optional[PaginationResponseSchema] = {}
+    changelog: List[ChangelogItem[T]] = []
 
 
 class ExportColumn(NamedTuple):

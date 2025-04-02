@@ -1,6 +1,6 @@
 import structlog
 from fastapi import Depends
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from typing import List, Optional, Tuple
@@ -83,7 +83,8 @@ class NotionalTransferRepository:
 
         # Step 2: Find the maximum version and priority per group_uuid, excluding deleted groups
         conditions = [
-            NotionalTransfer.compliance_report_id.in_(compliance_reports_select)
+            NotionalTransfer.compliance_report_id.in_(
+                compliance_reports_select)
         ]
         if not changelog:
             delete_group_select = (
@@ -169,9 +170,10 @@ class NotionalTransferRepository:
 
         # Manually apply pagination
         total_count = len(notional_transfers)
-        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (
+            pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_notional_transfers = notional_transfers[offset : offset + limit]
+        paginated_notional_transfers = notional_transfers[offset: offset + limit]
 
         return paginated_notional_transfers, total_count
 
@@ -261,3 +263,13 @@ class NotionalTransferRepository:
 
         result = await self.db.execute(query)
         return result.scalars().first()
+
+    @repo_handler
+    async def delete_notional_transfer(self, notional_transfer_id: int):
+        """Delete a notional transfer from the database"""
+        await self.db.execute(
+            delete(NotionalTransfer).where(
+                NotionalTransfer.notional_transfer_id == notional_transfer_id
+            )
+        )
+        await self.db.flush()

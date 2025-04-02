@@ -3,8 +3,14 @@ from fastapi.exceptions import RequestValidationError
 
 
 def fuel_code_required(values: dict) -> dict:
-    provision = values.get("provisionOfTheActId")
-    fuel_code = values.get("fuelCodeId")
+    # Make this function work with both dictionaries and objects
+    if hasattr(values, "get"):
+        provision = values.get("provisionOfTheActId")
+        fuel_code = values.get("fuelCodeId")
+    else:
+        # Handle the case when values is not a dictionary
+        provision = getattr(values, "provisionOfTheActId", None)
+        fuel_code = getattr(values, "fuelCodeId", None)
 
     if provision == 2 and fuel_code is None:
         errors = [

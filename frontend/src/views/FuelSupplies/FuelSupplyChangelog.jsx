@@ -16,6 +16,9 @@ import {
   changelogGridOptions
 } from './_schema'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { useGetFuelSupplyChangeLog } from '@/hooks/useFuelSupply'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { useMemo } from 'react'
 
 export const FuelSupplyChangelog = ({ canEdit }) => {
   const { complianceReportId, compliancePeriod } = useParams()
@@ -28,6 +31,9 @@ export const FuelSupplyChangelog = ({ canEdit }) => {
       enabled: !!complianceReportId
     }
   )
+  const { data: changelogData } = useGetFuelSupplyChangeLog({
+    complianceReportId
+  })
 
   // Replace the current version lookup with a reducer using 'version' for the most recent assessed/reassessed report
   const latestAssessedReport = currentReportData?.chain?.reduce(
@@ -47,6 +53,27 @@ export const FuelSupplyChangelog = ({ canEdit }) => {
     'fuel-supply'
   )
 
+  const getRowId = (params) => {
+    console.log('getRowId', params)
+    return params.data.fuel_supply_id.toString()
+  }
+
+  const gridOptions = useMemo(
+    () => ({
+      overlayNoRowsTemplate: t(
+        'allocationAgreement:noAllocationAgreementsFound'
+      ),
+      autoSizeStrategy: {
+        type: 'fitCellContents',
+        defaultMinWidth: 50,
+        defaultMaxWidth: 600
+      },
+      enableCellTextSelection: true, // enables text selection on the grid
+      ensureDomOrder: true
+    }),
+    [t]
+  )
+
   if (isLoading) {
     return <Loading />
   }
@@ -58,7 +85,7 @@ export const FuelSupplyChangelog = ({ canEdit }) => {
         {canEdit && t('common:changelogCurrentState')}
       </BCTypography>
       <Box mb={4}>
-        <BCDataGridServer
+        {/* <BCDataGridServer
           className="ag-theme-material"
           apiEndpoint={apiEndpoint}
           apiData="changelog"
@@ -67,9 +94,29 @@ export const FuelSupplyChangelog = ({ canEdit }) => {
           gridOptions={changelogGridOptions}
           enableCopyButton={false}
           defaultColDef={changelogDefaultColDefs}
-        />
+        /> */}
+        {changelogData?.changelog.map((item, i) => {
+          return (
+            <>
+              <BCTypography variant="h6" color="primary" component="div" mb={2}>
+                {item.label}
+              </BCTypography>
+              <Box>
+                <BCGridViewer
+                  key={i}
+                  gridKey={`fuel-supply-changelog-${i}`}
+                  columnDefs={changelogColDefs}
+                  queryData={{ data: { items: item.data } }}
+                  getRowId={getRowId}
+                  suppressPagination
+                  gridOptions={gridOptions}
+                />
+              </Box>
+            </>
+          )
+        })}
       </Box>
-      <BCTypography variant="h6" color="primary" component="div" mb={2}>
+      {/* <BCTypography variant="h6" color="primary" component="div" mb={2}>
         {compliancePeriod} {t('report:reportAssessed')}
       </BCTypography>
       <Box>
@@ -83,7 +130,7 @@ export const FuelSupplyChangelog = ({ canEdit }) => {
           enableCopyButton={false}
           defaultColDef={changelogDefaultColDefs}
         />
-      </Box>
+      </Box> */}
     </div>
   )
 }

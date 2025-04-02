@@ -57,7 +57,10 @@ export const useGetComplianceReport = (orgID, reportID, options) => {
   return useQuery({
     queryKey: ['compliance-report', reportID],
     queryFn: async () => {
-      return (await client.get(path)).data
+      const { data } = await client.get(path)
+
+      console.log('Compliance Report Data:', data)
+      return data
     },
     ...options
   })
@@ -255,7 +258,8 @@ export const useGetComplianceReportStatuses = (options) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['compliance-report-statuses'],
-    queryFn: async () => (await client.get(apiRoutes.getComplianceReportStatuses)).data,
+    queryFn: async () =>
+      (await client.get(apiRoutes.getComplianceReportStatuses)).data,
     ...options
   })
 }
