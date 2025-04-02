@@ -75,7 +75,7 @@ export const OtherUsesSummary = ({ data, status }) => {
             defaultMaxWidth: 600
           }}
           enableCellTextSelection
-          initialPaginationOptions={defaultInitialPagination}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,
