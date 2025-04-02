@@ -34,7 +34,9 @@ vi.mock('@/hooks/useNotifications', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({
+    t: (key) => key
+  })
 }))
 
 vi.mock('@/components/BCButton', () => ({
@@ -83,10 +85,25 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
               ]
             }
           }
-          if (props.onSelectionChanged) props.onSelectionChanged()
-          if (props.onSetResetGrid) props.onSetResetGrid(() => {})
+          if (props.onSelectionChanged) {
+            props.onSelectionChanged({
+              api: props.gridRef.current.api
+            })
+          }
+          if (props.onGridReady) {
+            props.onGridReady({ api: props.gridRef.current.api })
+          }
+          if (props.onSetResetGrid) {
+            props.onSetResetGrid(() => {})
+          }
         }
-      }, [props.gridRef])
+      }, [
+        props.gridRef,
+        props.onSelectionChanged,
+        props.onSetResetGrid,
+        props.onGridReady
+      ])
+
       return (
         <div data-test="bc-grid-viewer" data-testid="bc-grid-viewer">
           BCGridViewer
@@ -169,7 +186,9 @@ describe('Notifications Component', () => {
         return {
           BCGridViewer: (props) => {
             React.useEffect(() => {
-              if (props.onSetResetGrid) props.onSetResetGrid(resetGridMock)
+              if (props.onSetResetGrid) {
+                props.onSetResetGrid(resetGridMock)
+              }
             }, [props.onSetResetGrid])
             return (
               <div data-test="bc-grid-viewer" data-testid="bc-grid-viewer">
@@ -183,8 +202,9 @@ describe('Notifications Component', () => {
         '../Notifications'
       )
       render(<NotificationsOverride />, { wrapper: createWrapper() })
-      const clearFiltersButton = screen.getByText('Clear Filters')
-      fireEvent.click(clearFiltersButton)
+
+      fireEvent.click(screen.getByText('Clear Filters'))
+
       await waitFor(() => {
         expect(resetGridMock).toHaveBeenCalled()
       })
@@ -225,12 +245,13 @@ describe('Notifications Component', () => {
         '../Notifications'
       )
       render(<NotificationsOverride />, { wrapper: createWrapper() })
-      const rowElement = screen.getByTestId('grid-row')
-      fireEvent.click(rowElement)
+
+      fireEvent.click(screen.getByTestId('grid-row'))
+
       await waitFor(() => {
         expect(navigateMock).toHaveBeenCalledWith('/test-route/txn1')
         expect(markAsReadMutateMock).toHaveBeenCalledWith(
-          ['n1'],
+          { notification_ids: ['n1'] },
           expect.any(Object)
         )
       })
@@ -265,11 +286,12 @@ describe('Notifications Component', () => {
         '../Notifications'
       )
       render(<NotificationsOverride />, { wrapper: createWrapper() })
-      const cellElement = screen.getByTestId('grid-cell-delete')
-      fireEvent.click(cellElement)
+
+      fireEvent.click(screen.getByTestId('grid-cell-delete'))
+
       await waitFor(() => {
         expect(deleteMutateMock).toHaveBeenCalledWith(
-          ['n1'],
+          { notification_ids: ['n1'] },
           expect.any(Object)
         )
       })

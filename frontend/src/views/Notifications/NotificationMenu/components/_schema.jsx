@@ -20,6 +20,10 @@ export const columnDefs = (t, currentUser) => [
     floatingFilterComponent: BCDateFloatingFilter,
     suppressFloatingFilterButton: true,
     headerName: t('notifications:notificationColLabels.date'),
+    filter: 'agDateColumnFilter',
+    filterParams: {
+      filterOptions: ['equals'],
+    },
     valueGetter: (params) => params.data.createDate,
     valueFormatter: dateFormatter
   },
