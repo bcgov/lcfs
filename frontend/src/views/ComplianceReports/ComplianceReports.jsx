@@ -25,7 +25,6 @@ export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [alertMessage, setAlertMessage] = useState('')
   const [isButtonLoading, setIsButtonLoading] = useState(false)
-  const [resetGridFn, setResetGridFn] = useState(null)
   const [alertSeverity, setAlertSeverity] = useState('info')
 
   const [paginationOptions, setPaginationOptions] = useState(
@@ -101,15 +100,12 @@ export const ComplianceReports = () => {
     []
   )
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
+  const handleClearFilters = () => {
+    setPaginationOptions(defaultInitialPagination)
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
     }
-  }, [resetGridFn])
+  }
 
   return (
     <>
@@ -172,14 +168,10 @@ export const ComplianceReports = () => {
               defaultMaxWidth: 600
             }}
             defaultColDef={defaultColDef}
-            onSetResetGrid={handleSetResetGrid}
-            initialPaginationOptions={defaultInitialPagination}
-            onPaginationChange={(newPagination) =>
-              setPaginationOptions((prev) => ({
-                ...prev,
-                ...newPagination
-              }))
-            }
+            paginationOptions={paginationOptions}
+            onPaginationChange={(newPagination) => {
+              setPaginationOptions(newPagination)
+            }}
           />
         </BCBox>
       </Stack>

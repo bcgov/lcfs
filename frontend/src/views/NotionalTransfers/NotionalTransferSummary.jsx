@@ -73,7 +73,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
             defaultMaxWidth: 600
           }}
           enableCellTextSelection
-          initialPaginationOptions={defaultInitialPagination}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,
