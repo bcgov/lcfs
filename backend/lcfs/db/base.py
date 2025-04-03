@@ -105,11 +105,6 @@ class EffectiveDates(Base):
     )
 
 
-class UserTypeEnum(enum.Enum):
-    SUPPLIER = "SUPPLIER"
-    GOVERNMENT = "GOVERNMENT"
-
-
 class ActionTypeEnum(enum.Enum):
     CREATE = "CREATE"
     UPDATE = "UPDATE"

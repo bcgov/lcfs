@@ -274,27 +274,28 @@ class OtherUsesServices:
         self, other_use_data: OtherUsesCreateSchema
     ) -> DeleteOtherUsesResponseSchema:
         """Delete an other use"""
-        existing_fuel_supply = await self.repo.get_latest_other_uses_by_group_uuid(
+        existing_other_use = await self.repo.get_latest_other_uses_by_group_uuid(
             other_use_data.group_uuid
         )
 
-        if other_use_data.is_new_supplemental_entry:
+        if (
+            existing_other_use.compliance_report_id
+            == other_use_data.compliance_report_id
+        ):
             await self.repo.delete_other_use(other_uses_id=other_use_data.other_uses_id)
-            return DeleteOtherUsesResponseSchema(
-                success=True, message="Marked as deleted."
-            )
+            return DeleteOtherUsesResponseSchema(message="Marked as deleted.")
         else:
             deleted_entity = OtherUses(
                 compliance_report_id=other_use_data.compliance_report_id,
                 group_uuid=other_use_data.group_uuid,
-                version=existing_fuel_supply.version + 1,
+                version=existing_other_use.version + 1,
                 action_type=ActionTypeEnum.DELETE,
             )
 
             # Copy fields from the latest version for the deletion record
-            for field in existing_fuel_supply.__table__.columns.keys():
+            for field in existing_other_use.__table__.columns.keys():
                 if field not in OTHER_USE_EXCLUDE_FIELDS:
-                    setattr(deleted_entity, field, getattr(existing_fuel_supply, field))
+                    setattr(deleted_entity, field, getattr(existing_other_use, field))
 
         deleted_entity.compliance_report_id = other_use_data.compliance_report_id
 

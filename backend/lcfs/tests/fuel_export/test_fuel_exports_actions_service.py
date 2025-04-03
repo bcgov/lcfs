@@ -319,13 +319,40 @@ async def test_update_fuel_export_create_new_version(
 
 
 @pytest.mark.anyio
-async def test_delete_fuel_export_success(
-    fuel_export_action_service, mock_repo, mock_fuel_code_repo
-):
+async def test_delete_fuel_export_success(fuel_export_action_service, mock_repo):
     fe_data = create_sample_fe_data()
 
     # Exclude invalid fields
     fe_data_dict = fe_data.model_dump(exclude=FUEL_EXPORT_EXCLUDE_FIELDS)
+
+    # Mock existing export
+    existing_export = FuelExport(
+        **fe_data_dict,
+        fuel_export_id=1,
+        version=0,
+        action_type=ActionTypeEnum.CREATE,
+    )
+    mock_repo.get_latest_fuel_export_by_group_uuid.return_value = existing_export
+
+    # Call the method under test
+    result = await fuel_export_action_service.delete_fuel_export(fe_data)
+
+    # Assertions
+    assert isinstance(result, DeleteFuelExportResponseSchema)
+    assert result.message == "Marked as deleted."
+    mock_repo.get_latest_fuel_export_by_group_uuid.assert_awaited_once_with(
+        fe_data.group_uuid
+    )
+    mock_repo.delete_fuel_export.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_delete_fuel_export_changelog(fuel_export_action_service, mock_repo):
+    fe_data = create_sample_fe_data()
+
+    # Exclude invalid fields
+    fe_data_dict = fe_data.model_dump(exclude=FUEL_EXPORT_EXCLUDE_FIELDS)
+    fe_data.compliance_report_id = 2
 
     # Mock existing export
     existing_export = FuelExport(
@@ -366,8 +393,7 @@ async def test_delete_fuel_export_success(
 
     # Assertions
     assert isinstance(result, DeleteFuelExportResponseSchema)
-    assert result.success is True
-    assert result.message == "Fuel export record marked as deleted."
+    assert result.message == "Marked as deleted."
     mock_repo.get_latest_fuel_export_by_group_uuid.assert_awaited_once_with(
         fe_data.group_uuid
     )

@@ -16,6 +16,7 @@ from lcfs.web.api.fuel_export.schema import (
     DeleteFuelExportResponseSchema,
 )
 from lcfs.web.exception.exceptions import ValidationErrorException
+from lcfs.web.api.fuel_export.actions_service import FuelExportActionService
 
 # Mock common data for reuse
 mock_fuel_type = FuelTypeSchema(
@@ -246,10 +247,55 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
 
 
 @pytest.mark.anyio
-async def test_action_delete_fuel_export_success(fuel_export_action_service, mock_repo):
+async def test_action_delete_fuel_export(fuel_export_action_service, mock_repo):
     input_data = FuelExportCreateUpdateSchema(
         fuel_export_id=1,
         compliance_report_id=1,
+        group_uuid="test-uuid",
+        version=0,
+        fuel_type_id=1,
+        fuel_category_id=1,
+        provision_of_the_act_id=1,
+        end_use_id=1,
+        quantity=100,
+        units="L",
+        export_date=date.today(),
+        compliance_period="2024",
+    )
+
+    mock_latest_export = FuelExport(
+        fuel_export_id=1,
+        compliance_report_id=1,
+        group_uuid="test-uuid",
+        version=0,
+        action_type=ActionTypeEnum.CREATE,
+        fuel_type_id=1,
+        fuel_category_id=1,
+        end_use_id=1,
+        provision_of_the_act_id=1,
+        quantity=100,
+        units="L",
+        export_date=date.today(),
+        fuel_type=mock_fuel_type.dict(),
+        fuel_category=mock_fuel_category.dict(),
+    )
+
+    mock_repo.get_latest_fuel_export_by_group_uuid.return_value = mock_latest_export
+    result = await fuel_export_action_service.delete_fuel_export(input_data)
+
+    assert isinstance(result, DeleteFuelExportResponseSchema)
+    assert result.message == "Marked as deleted."
+    mock_repo.get_latest_fuel_export_by_group_uuid.assert_called_once()
+    mock_repo.delete_fuel_export.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_action_delete_fuel_export_changelog(
+    fuel_export_action_service, mock_repo
+):
+    input_data = FuelExportCreateUpdateSchema(
+        fuel_export_id=1,
+        compliance_report_id=2,
         group_uuid="test-uuid",
         version=0,
         fuel_type_id=1,
@@ -285,8 +331,7 @@ async def test_action_delete_fuel_export_success(fuel_export_action_service, moc
     result = await fuel_export_action_service.delete_fuel_export(input_data)
 
     assert isinstance(result, DeleteFuelExportResponseSchema)
-    assert result.success is True
-    assert result.message == "Fuel export record marked as deleted."
+    assert result.message == "Marked as deleted."
     mock_repo.get_latest_fuel_export_by_group_uuid.assert_called_once()
     mock_repo.create_fuel_export.assert_called_once()
 

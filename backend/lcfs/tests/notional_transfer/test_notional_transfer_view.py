@@ -262,7 +262,6 @@ async def test_save_notional_transfer_row_delete(
         data = response.json()
         assert data == {"message": "Notional transfer deleted successfully"}
 
-        # Adjusted to use UserTypeEnum.COMPLIANCE_REPORTING
         mock_notional_transfer_service.delete_notional_transfer.assert_called_once_with(
             mock_schema
         )

@@ -1,6 +1,6 @@
 from typing import Optional
 from lcfs.web.api.organizations.schema import OrganizationSummaryResponseSchema
-from lcfs.db.base import Auditable, BaseModel, UserTypeEnum
+from lcfs.db.base import Auditable, BaseModel
 
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
@@ -79,11 +79,3 @@ class UserProfile(BaseModel, Auditable):
     def is_government(self) -> bool:
         """Returns True if the user has the 'GOVERNMENT' role."""
         return any(role == RoleEnum.GOVERNMENT for role in self.role_names)
-
-    @property
-    def user_type(self) -> Optional[UserTypeEnum]:
-        if any(role == RoleEnum.GOVERNMENT for role in self.role_names):
-            return UserTypeEnum.GOVERNMENT
-        elif any(role == RoleEnum.SUPPLIER for role in self.role_names):
-            return UserTypeEnum.SUPPLIER
-        return None
