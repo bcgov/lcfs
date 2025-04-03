@@ -194,7 +194,6 @@ export const fuelSupplyColDefs = (
     }),
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-
     valueSetter: (params) => {
       if (params.newValue) {
         params.data.fuelCategory = params.newValue
@@ -234,7 +233,7 @@ export const fuelSupplyColDefs = (
               (item) =>
                 item.fuelCategory.fuelCategory === params.data.fuelCategory
             )
-            ?.map((item) => item.endUseType?.type)
+            ?.map((item) => item.endUseType.type)
             .sort()
         )
       ].filter((item) => item != null),
@@ -247,9 +246,8 @@ export const fuelSupplyColDefs = (
     cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-
     suppressKeyboardEvent,
-    valueGetter: (params) => params.data.endUseType?.type,
+    valueGetter: (params) => params.data.endUseType,
     editable: (params) => {
       const cellParams = params.colDef?.cellEditorParams(params)
       return cellParams.options.length > 1
@@ -264,7 +262,7 @@ export const fuelSupplyColDefs = (
           )
           .find((eerRatio) => eerRatio.endUseType.type === params.newValue)
 
-        params.data.endUseType = eerRatio.endUseType
+        params.data.endUseType = eerRatio.endUseType.type
         params.data.endUseId = eerRatio.endUseType.endUseTypeId
       }
       return true
@@ -535,17 +533,17 @@ export const fuelSupplySummaryColDef = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
     field: 'fuelType',
-    valueGetter: (params) => params.data.fuelType?.fuelType
+    valueGetter: (params) => params.data.fuelType
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
     field: 'fuelCategory',
-    valueGetter: (params) => params.data.fuelCategory?.category
+    valueGetter: (params) => params.data.fuelCategory
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
     field: 'endUseType',
-    valueGetter: (params) => params.data.endUseType?.type
+    valueGetter: (params) => params.data.endUseType
   },
   {
     headerName: i18n.t(
@@ -557,7 +555,7 @@ export const fuelSupplySummaryColDef = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
     field: 'fuelCode',
-    valueGetter: (params) => params.data.fuelCode?.fuelCode
+    valueGetter: (params) => params.data.fuelCode
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
@@ -611,19 +609,19 @@ export const changelogCommonColDefs = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
     field: 'fuelType',
-    valueGetter: (params) => params.data.fuelType?.fuelType,
+    valueGetter: (params) => params.data.fuelType,
     cellStyle: (params) => changelogCellStyle(params, 'fuelTypeId')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
     field: 'fuelCategory',
-    valueGetter: (params) => params.data.fuelCategory?.category,
+    valueGetter: (params) => params.data.fuelCategory,
     cellStyle: (params) => changelogCellStyle(params, 'fuelCategoryId')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
     field: 'endUseType',
-    valueGetter: (params) => params.data.endUseType?.type,
+    valueGetter: (params) => params.data.endUseType,
     cellStyle: (params) => changelogCellStyle(params, 'endUseId')
   },
   {
@@ -637,7 +635,7 @@ export const changelogCommonColDefs = [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
     field: 'fuelCode',
-    valueGetter: (params) => params.data.fuelCode?.fuelCode,
+    valueGetter: (params) => params.data.fuelCode,
     cellStyle: (params) => changelogCellStyle(params, 'fuelCodeId')
   },
   {
