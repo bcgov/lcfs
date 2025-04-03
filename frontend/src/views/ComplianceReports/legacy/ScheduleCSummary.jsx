@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import Grid2 from '@mui/material/Unstable_Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { scheduleCSummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
@@ -76,7 +76,7 @@ export const ScheduleCSummary = ({ data, status }) => {
           queryData={queryData}
           dataKey="otherUses"
           suppressPagination={data?.length <= 10}
-          initialPaginationOptions={defaultInitialPagination}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

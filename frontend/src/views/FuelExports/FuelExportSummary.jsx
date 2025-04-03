@@ -4,7 +4,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema.jsx'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
@@ -91,7 +91,7 @@ export const FuelExportSummary = ({ data, status }) => {
           enableCopyButton={false}
           defaultColDef={defaultColDef}
           suppressPagination={data.fuelExports.length <= 10}
-          initialPaginationOptions={defaultInitialPagination}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

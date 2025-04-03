@@ -10,7 +10,6 @@ import {
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { ScheduleASummary } from '@/views/ComplianceReports/legacy/ScheduleASummary.jsx'
@@ -19,6 +18,7 @@ import { ScheduleCSummary } from '@/views/ComplianceReports/legacy/ScheduleCSumm
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply.js'
 import { ScheduleBSummary } from '@/views/ComplianceReports/legacy/ScheduleBSummary.jsx'
 import { isArrayEmpty } from '@/utils/array.js'
+import { ExpandMore } from '@mui/icons-material'
 
 const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
   const { t } = useTranslation(['legacy'])
@@ -141,7 +141,7 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
             >
               <AccordionSummary
                 expandIcon={
-                  <ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />
+                  <ExpandMore sx={{ width: '2rem', height: '2rem' }} />
                 }
                 aria-controls={`panel${index}-content`}
                 id={`panel${index}-header`}

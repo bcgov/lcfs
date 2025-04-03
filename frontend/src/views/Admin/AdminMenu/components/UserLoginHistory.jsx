@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { userLoginHistoryColDefs } from '@/views/Admin/AdminMenu/components/_schema'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useGetUserLoginHistory } from '@/hooks/useUser'
@@ -10,7 +10,7 @@ import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const UserLoginHistory = () => {
   const { t } = useTranslation(['common', 'admin'])
-  const [resetGridFn, setResetGridFn] = useState(null)
+  const gridRef = useRef(null)
 
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
@@ -24,15 +24,12 @@ export const UserLoginHistory = () => {
     return params.data.userLoginHistoryId.toString()
   }, [])
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
+  const handleClearFilters = () => {
+    setPaginationOptions(defaultInitialPagination)
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
     }
-  }, [resetGridFn])
+  }
 
   return (
     <BCBox>
@@ -44,6 +41,7 @@ export const UserLoginHistory = () => {
       </BCBox>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
+          gridRef={gridRef}
           gridKey="user-login-history-grid"
           columnDefs={userLoginHistoryColDefs(t)}
           queryData={queryData}
@@ -55,8 +53,7 @@ export const UserLoginHistory = () => {
             defaultMaxWidth: 600,
             type: 'fitGridWidth'
           }}
-          onSetResetGrid={handleSetResetGrid}
-          initialPaginationOptions={defaultInitialPagination}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

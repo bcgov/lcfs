@@ -27,6 +27,7 @@ import Loading from '@/components/Loading'
 import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { useGetTransactionList } from '@/hooks/useTransactions'
+import { defaultInitialPagination } from '@/constants/schedules.js'
 
 const initialPaginationOptions = {
   page: 1,
@@ -192,8 +193,10 @@ export const Transactions = () => {
   }, [location.state])
 
   const handleClearFilters = () => {
-    gridRef.current?.resetGrid()
-    setPaginationOptions(initialPaginationOptions)
+    setPaginationOptions(defaultInitialPagination)
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
+    }
   }
 
   if (!currentUser) {
@@ -296,7 +299,7 @@ export const Transactions = () => {
       </Grid>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          ref={gridRef}
+          gridRef={gridRef}
           gridKey="transactions-grid"
           columnDefs={transactionsColDefs(t)}
           getRowId={getRowId}
@@ -304,7 +307,7 @@ export const Transactions = () => {
           defaultColDef={defaultColDef}
           queryData={queryData}
           dataKey="transactions"
-          initialPaginationOptions={initialPaginationOptions}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

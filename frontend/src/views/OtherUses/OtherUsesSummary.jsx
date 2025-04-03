@@ -4,7 +4,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { useGetOtherUses } from '@/hooks/useOtherUses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema.jsx'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
@@ -75,7 +75,7 @@ export const OtherUsesSummary = ({ data, status }) => {
             defaultMaxWidth: 600
           }}
           enableCellTextSelection
-          initialPaginationOptions={defaultInitialPagination}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

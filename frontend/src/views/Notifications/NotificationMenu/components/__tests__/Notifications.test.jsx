@@ -34,7 +34,9 @@ vi.mock('@/hooks/useNotifications', () => ({
 }))
 
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key) => key })
+  useTranslation: () => ({
+    t: (key) => key
+  })
 }))
 
 vi.mock('@/components/BCButton', () => ({
@@ -55,6 +57,7 @@ vi.mock('@/components/ClearFiltersButton', () => ({
   )
 }))
 
+const clearFiltersMock = vi.fn()
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
   const React = require('react')
   return {
@@ -81,12 +84,25 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
               getSelectedNodes: () => [
                 { data: { notificationMessageId: 'n1' } }
               ]
-            }
+            },
+            clearFilters: clearFiltersMock
           }
-          if (props.onSelectionChanged) props.onSelectionChanged()
-          if (props.onSetResetGrid) props.onSetResetGrid(() => {})
+          if (props.onSelectionChanged) {
+            props.onSelectionChanged({
+              api: props.gridRef.current.api
+            })
+          }
+          if (props.onGridReady) {
+            props.onGridReady({ api: props.gridRef.current.api })
+          }
         }
-      }, [props.gridRef])
+      }, [
+        props.gridRef,
+        props.onSelectionChanged,
+        props.onSetResetGrid,
+        props.onGridReady
+      ])
+
       return (
         <div data-test="bc-grid-viewer" data-testid="bc-grid-viewer">
           BCGridViewer
@@ -163,30 +179,15 @@ describe('Notifications Component', () => {
     })
 
     it('calls the resetGrid function when "Clear Filters" is clicked', async () => {
-      const resetGridMock = vi.fn()
-      vi.doMock('@/components/BCDataGrid/BCGridViewer', () => {
-        const React = require('react')
-        return {
-          BCGridViewer: (props) => {
-            React.useEffect(() => {
-              if (props.onSetResetGrid) props.onSetResetGrid(resetGridMock)
-            }, [props.onSetResetGrid])
-            return (
-              <div data-test="bc-grid-viewer" data-testid="bc-grid-viewer">
-                CustomGridViewer
-              </div>
-            )
-          }
-        }
-      })
       const { Notifications: NotificationsOverride } = await import(
         '../Notifications'
       )
       render(<NotificationsOverride />, { wrapper: createWrapper() })
-      const clearFiltersButton = screen.getByText('Clear Filters')
-      fireEvent.click(clearFiltersButton)
+
+      fireEvent.click(screen.getByText('Clear Filters'))
+
       await waitFor(() => {
-        expect(resetGridMock).toHaveBeenCalled()
+        expect(clearFiltersMock).toHaveBeenCalled()
       })
     })
 
@@ -225,12 +226,13 @@ describe('Notifications Component', () => {
         '../Notifications'
       )
       render(<NotificationsOverride />, { wrapper: createWrapper() })
-      const rowElement = screen.getByTestId('grid-row')
-      fireEvent.click(rowElement)
+
+      fireEvent.click(screen.getByTestId('grid-row'))
+
       await waitFor(() => {
         expect(navigateMock).toHaveBeenCalledWith('/test-route/txn1')
         expect(markAsReadMutateMock).toHaveBeenCalledWith(
-          ['n1'],
+          { notification_ids: ['n1'] },
           expect.any(Object)
         )
       })
@@ -265,11 +267,12 @@ describe('Notifications Component', () => {
         '../Notifications'
       )
       render(<NotificationsOverride />, { wrapper: createWrapper() })
-      const cellElement = screen.getByTestId('grid-cell-delete')
-      fireEvent.click(cellElement)
+
+      fireEvent.click(screen.getByTestId('grid-cell-delete'))
+
       await waitFor(() => {
         expect(deleteMutateMock).toHaveBeenCalledWith(
-          ['n1'],
+          { notification_ids: ['n1'] },
           expect.any(Object)
         )
       })
