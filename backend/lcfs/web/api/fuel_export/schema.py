@@ -83,6 +83,7 @@ class FuelCodeSchema(BaseSchema):
     fuel_code: str
     fuel_code_carbon_intensity: float
     fuel_code_effective_date: Optional[date] = None
+    fuel_code_expiration_date: Optional[date] = None
 
 
 class FuelTypeOptionsSchema(BaseSchema):

@@ -247,6 +247,17 @@ export const AddEditFuelExports = () => {
         updatedData
       })
 
+      updatedData = {
+        ...updatedData,
+        fuelType: updatedData.fuelType?.fuelType ?? updatedData.fuelType,
+        fuelCategory:
+          updatedData.fuelCategory?.category ?? updatedData.fuelCategory,
+        provisionOfTheAct:
+          updatedData.provisionOfTheAct?.name ?? updatedData.provisionOfTheAct,
+        fuelCode: updatedData.fuelCode?.fuelCode ?? updatedData.fuelCode,
+        endUseType: updatedData.endUse?.type ?? updatedData.endUseType
+      }
+
       params.node.updateData(updatedData)
     },
     [saveRow, t, compliancePeriod]
