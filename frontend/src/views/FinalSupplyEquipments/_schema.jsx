@@ -103,11 +103,12 @@ export const finalSupplyEquipmentColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     cellEditor: DateEditor,
-    cellEditorParams: {
+    cellEditorParams: (params) => ({
       minDate: dayjs(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
       maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate(),
-      autoOpenLastRow: !gridReady
-    },
+      autoOpenLastRow: !gridReady,
+      onBlur: () => params.stopEditing()
+    }),
     valueGetter: (params) => {
       return params.data.supplyFromDate || `${compliancePeriod}-01-01`
     },
@@ -132,11 +133,12 @@ export const finalSupplyEquipmentColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
     cellEditor: DateEditor,
-    cellEditorParams: {
+    cellEditorParams: (params) => ({
       minDate: dayjs(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
       maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate(),
-      autoOpenLastRow: !gridReady
-    },
+      autoOpenLastRow: !gridReady,
+      onBlur: () => params.stopEditing()
+    }),
     valueGetter: (params) => {
       return params.data.supplyToDate || `${compliancePeriod}-12-31`
     },
