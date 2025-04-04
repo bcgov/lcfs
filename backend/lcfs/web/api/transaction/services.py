@@ -233,7 +233,9 @@ class TransactionsService:
                         if result.approved_date
                         else None
                     ),
-                    result.comment,
+                    result.from_org_comment,
+                    result.to_org_comment,
+                    result.government_comment,
                 ]
             )
 

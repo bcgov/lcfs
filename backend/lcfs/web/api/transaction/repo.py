@@ -434,7 +434,9 @@ class TransactionRepository:
         result = await self.db.execute(
             update(Transaction)
             .where(Transaction.transaction_id == transaction_id)
-            .values(transaction_action=TransactionActionEnum.Adjustment)
+            .values(
+                transaction_action=TransactionActionEnum.Adjustment,
+            )
         )
         # Commit the update to make it permanent
         # await self.db.commit()

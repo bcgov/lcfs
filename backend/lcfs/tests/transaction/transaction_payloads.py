@@ -17,7 +17,7 @@ from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnu
 
 # Utility function to format datetime for consistency
 def formatted_date():
-    return datetime.strptime("2023-01-01", "%Y-%m-%d").date()
+    return datetime.strptime("2023-01-01", "%Y-%m-%d")
 
 
 test_org_id = 111
