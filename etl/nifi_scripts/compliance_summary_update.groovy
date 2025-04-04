@@ -107,7 +107,10 @@ try {
             line_11_fossil_derived_base_fuel_jet_fuel = ?,
             line_11_fossil_derived_base_fuel_total = ?,
             line_21_non_compliance_penalty_payable = ?,
-            total_non_compliance_penalty_payable = ?
+            total_non_compliance_penalty_payable = ?,
+            credits_offset_a = ?,
+            credits_offset_b = ?,
+            credits_offset_c = ?
         WHERE compliance_report_id = ?
     """
     PreparedStatement updateStmt = destinationConn.prepareStatement(UPDATE_SQL)
@@ -166,10 +169,8 @@ try {
             // ------------------------------
             // Low Carbon Fuel Requirement Summary
             // ------------------------------
-            def lowCarbonSurplus      = new BigDecimal(summaryJson.summary.lines."25")
+            def complianceUnitsIssued = new BigDecimal(summaryJson.summary.lines."25")
             def bankedUsed            = new BigDecimal(summaryJson.summary.lines."26")
-            def surplusDeficitUnits   = new BigDecimal(summaryJson.summary.lines."27")
-            def complianceUnitsIssued = new BigDecimal(summaryJson.summary.lines."24")
             // ------------------------------
             // Fossil Derived Base Fuel (Aggregate)
             // ------------------------------
@@ -183,6 +184,13 @@ try {
             // ------------------------------
             def line28NonCompliance = new BigDecimal(summaryJson.summary.lines."28")  // Part 3 penalty
             def totalPayable = new BigDecimal(summaryJson.summary.total_payable)      // Total payable from snapshot
+
+            // ------------------------------
+            // Credits Offset Fields
+            // ------------------------------
+            def creditsOffsetA = summaryJson.summary.lines."26A" as Integer ?: null
+            def creditsOffsetB = summaryJson.summary.lines."26B" as Integer ?: null
+            def creditsOffsetC = summaryJson.summary.lines."26C" as Integer ?: null
 
             // Set parameters using a running index
             int idx = 1
@@ -225,13 +233,13 @@ try {
             // Low Carbon Fuel Requirement Summary
             updateStmt.setDouble(idx++, 0.0)                  // line_12_low_carbon_fuel_required
             updateStmt.setDouble(idx++, 0.0)                  // line_13_low_carbon_fuel_supplied
-            updateStmt.setBigDecimal(idx++, lowCarbonSurplus) // line_14_low_carbon_fuel_surplus
+            updateStmt.setBigDecimal(idx++, 0.0)              // line_14_low_carbon_fuel_surplus
             updateStmt.setBigDecimal(idx++, bankedUsed)       // line_15_banked_units_used
             updateStmt.setDouble(idx++, 0.0)                  // line_16_banked_units_remaining
             updateStmt.setDouble(idx++, 0.0)                  // line_17_non_banked_units_used
             updateStmt.setDouble(idx++, 0.0)                  // line_18_units_to_be_banked
             updateStmt.setDouble(idx++, 0.0)                  // line_19_units_to_be_exported
-            updateStmt.setBigDecimal(idx++, surplusDeficitUnits)  // line_20_surplus_deficit_units
+            updateStmt.setBigDecimal(idx++, 0.0)              // line_20_surplus_deficit_units
             updateStmt.setDouble(idx++, 0.0)                  // line_21_surplus_deficit_ratio
             updateStmt.setBigDecimal(idx++, complianceUnitsIssued) // line_22_compliance_units_issued
             // Fossil Derived Base Fuel (Aggregate – Second Set)
@@ -242,6 +250,10 @@ try {
             // Non-compliance Penalty Fields
             updateStmt.setBigDecimal(idx++, line28NonCompliance) // line_21_non_compliance_penalty_payable
             updateStmt.setBigDecimal(idx++, totalPayable) // total_non_compliance_penalty_payable (from snapshot total_payable)
+            // Credits Offset Fields
+            updateStmt.setObject(idx++, creditsOffsetA)    // credits_offset_a
+            updateStmt.setObject(idx++, creditsOffsetB)    // credits_offset_b
+            updateStmt.setObject(idx++, creditsOffsetC)    // credits_offset_c
             // WHERE clause: compliance_report_id
             updateStmt.setInt(idx++, lcfsComplianceReportId)
 
