@@ -10,7 +10,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
-from lcfs.web.utils.schema_validators import fuel_code_required
+from lcfs.web.utils.schema_validators import fuel_code_required, fuel_quantity_required
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -133,7 +133,11 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     fuel_category_id: int
     end_use_id: int
     provision_of_the_act_id: int
-    quantity: int
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     units: str
     fuel_type_other: Optional[str] = None
     fuel_code_id: Optional[int] = None
@@ -152,6 +156,11 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     @classmethod
     def check_fuel_code_required(cls, values):
         return fuel_code_required(values)
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_quantity_required(cls, values):
+        return fuel_quantity_required(values)
 
 
 class FuelSupplyDiffSchema(BaseSchema):

@@ -26,7 +26,7 @@ class OrganizationSnapshotService:
         return snapshot
 
     async def create_organization_snapshot(
-        self, compliance_report_id, organization_id, prev_report_id=None
+        self, compliance_report_id: int, organization_id: int, prev_report_id=None
     ):
         """
         Create a snapshot for a compliance report.

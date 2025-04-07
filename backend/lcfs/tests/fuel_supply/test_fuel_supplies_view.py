@@ -182,6 +182,7 @@ async def test_save_fuel_supply_row_delete(
         "success": True,
         "message": "Fuel supply row deleted successfully",
         "groupUuid": "some-uuid",
+        "quantity": 1000,
         "version": 1,
         "userType": "SUPPLIER",
         "actionType": "DELETE",
