@@ -4,7 +4,19 @@ import asyncio
 import structlog
 from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import func, select, and_, asc, desc, update, String, cast, or_, delete
+from sqlalchemy import (
+    func,
+    select,
+    and_,
+    asc,
+    desc,
+    update,
+    String,
+    cast,
+    or_,
+    delete,
+    exists,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import joinedload
@@ -1148,11 +1160,21 @@ class ComplianceReportRepository:
     ) -> List[ChangelogFuelSuppliesItemDTO]:
         try:
 
+            subquery = (
+                select(FuelSupply.compliance_report_id)
+                .where(
+                    FuelSupply.compliance_report_id
+                    == ComplianceReport.compliance_report_id
+                )
+                .limit(1)
+            )
+
             reports_query = (
                 select(ComplianceReport)
                 .where(
                     ComplianceReport.compliance_report_group_uuid
                     == compliance_report_group_uuid,
+                    exists(subquery),
                 )
                 .options(
                     joinedload(ComplianceReport.fuel_supplies).joinedload(
