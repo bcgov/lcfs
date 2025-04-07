@@ -92,3 +92,20 @@ export const useGetNotionalTransfers = (
     ...options
   })
 }
+
+export const useGetNotionalTransfersChangeLog = ({
+  complianceReportGroupUuid
+}) => {
+  const client = useApiService()
+  const path = apiRoutes.getNotionalTransfersChangelog.replace(
+    ':complianceReportGroupUuid',
+    complianceReportGroupUuid
+  )
+  return useQuery({
+    queryKey: ['notional-transfers-changelog', complianceReportGroupUuid],
+    queryFn: async () => {
+      const response = await client.get(path)
+      return response.data
+    }
+  })
+}

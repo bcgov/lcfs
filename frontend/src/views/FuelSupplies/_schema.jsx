@@ -708,7 +708,7 @@ export const changelogColDefs = (highlight = true) => [
       }
     }
   },
-  ...changelogCommonColDefs({ highlight })
+  ...changelogCommonColDefs(highlight)
 ]
 
 export const changelogDefaultColDefs = {

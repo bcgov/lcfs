@@ -74,14 +74,16 @@ export const apiRoutes = {
   createSupplementalReport: '/reports/:reportID/supplemental',
   createAnalystAdjustment: '/reports/:reportID/adjustment',
   getChangelog: '/reports/:selection/changelog',
-  getFuelSupplyChangelog:
+  getFuelSuppiesChangelog:
     '/reports/:complianceReportGroupUuid/changelog/fuel-supplies',
-  getFuelExportChangelog:
+  getFuelExportsChangelog:
     '/reports/:complianceReportGroupUuid/changelog/fuel-exports',
-  getNotionalTransferChangelog:
+  getNotionalTransfersChangelog:
     '/reports/:complianceReportGroupUuid/changelog/notional-transfers',
   getOtherUsesChangelog:
     '/reports/:complianceReportGroupUuid/changelog/other-uses',
+  getAllocationAgreementsChangelog:
+    '/reports/:complianceReportGroupUuid/changelog/allocation-agreements',
 
   // notional-transfers
   notionalTransferOptions: '/notional-transfers/table-options',

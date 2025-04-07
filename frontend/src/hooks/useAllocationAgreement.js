@@ -79,3 +79,20 @@ export const useSaveAllocationAgreement = (params, options) => {
     }
   })
 }
+
+export const useGetAllocationAgreementsChangeLog = ({
+  complianceReportGroupUuid
+}) => {
+  const client = useApiService()
+  const path = apiRoutes.getAllocationAgreementsChangelog.replace(
+    ':complianceReportGroupUuid',
+    complianceReportGroupUuid
+  )
+  return useQuery({
+    queryKey: ['allocation-agreements-changelog', complianceReportGroupUuid],
+    queryFn: async () => {
+      const response = await client.get(path)
+      return response.data
+    }
+  })
+}
