@@ -4,7 +4,6 @@ from starlette.responses import StreamingResponse
 from typing import List
 from lcfs.db.models.compliance import AllocationAgreement
 from lcfs.db.models.compliance.FuelExport import FuelExport
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
 from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.user.Role import RoleEnum
@@ -22,10 +21,8 @@ from lcfs.web.api.compliance_report.schema import (
     ChainedComplianceReportSchema,
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
-    CommonPaginatedReportRequestSchema,
-    ComplianceReportChangelogSchema,
+    ComplianceReportFuelSuppliesRead,
 )
-from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
 from lcfs.web.api.notional_transfer.schema import NotionalTransferChangelogSchema
 from lcfs.web.api.other_uses.schema import OtherUsesChangelogSchema
 from lcfs.web.api.fuel_export.schema import FuelExportSchema
@@ -35,7 +32,6 @@ from lcfs.web.api.compliance_report.summary_service import (
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
@@ -212,105 +208,78 @@ async def create_government_adjustment(
     return await service.create_analyst_adjustment_report(report_id, request.user)
 
 
-@router.get(
-    "/{report_id}/changelog/fuel-supply",
-    response_model=ComplianceReportChangelogSchema[FuelSupplyResponseSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_fuel_supply_changelog(
-    request: Request,
-    report_id: int,
-    # request_data: CommonPaginatedReportRequestSchema = Body(...),
-    service: ComplianceReportServices = Depends(),
-) -> ComplianceReportChangelogSchema[FuelSupplyResponseSchema]:
-    # compliance_report_id = request_data.compliance_report_id
+# @router.post(
+#     "/other-uses/changelog",
+#     response_model=ComplianceReportChangelogSchema[OtherUsesChangelogSchema],
+#     status_code=status.HTTP_200_OK,
+# )
+# @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+# async def get_other_uses_changelog(
+#     request: Request,
+#     request_data: CommonPaginatedReportRequestSchema = Body(...),
+#     service: ComplianceReportServices = Depends(),
+# ) -> ComplianceReportChangelogSchema[OtherUsesChangelogSchema]:
+#     compliance_report_id = request_data.compliance_report_id
 
-    # pagination = PaginationRequestSchema(
-    #     page=request_data.page,
-    #     size=request_data.size,
-    #     sort_orders=request_data.sort_orders,
-    #     filters=request_data.filters,
-    # )
+#     pagination = PaginationRequestSchema(
+#         page=request_data.page,
+#         size=request_data.size,
+#         sort_orders=request_data.sort_orders,
+#         filters=request_data.filters,
+#     )
+#     changelog = await service.get_changelog_data(
+#         pagination, compliance_report_id, OtherUses
+#     )
 
-    return await service.get_changelog_data(
-        report_id,
-        FuelSupply
-    )
-
-
-@router.post(
-    "/other-uses/changelog",
-    response_model=ComplianceReportChangelogSchema[OtherUsesChangelogSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_other_uses_changelog(
-    request: Request,
-    request_data: CommonPaginatedReportRequestSchema = Body(...),
-    service: ComplianceReportServices = Depends(),
-) -> ComplianceReportChangelogSchema[OtherUsesChangelogSchema]:
-    compliance_report_id = request_data.compliance_report_id
-
-    pagination = PaginationRequestSchema(
-        page=request_data.page,
-        size=request_data.size,
-        sort_orders=request_data.sort_orders,
-        filters=request_data.filters,
-    )
-    changelog = await service.get_changelog_data(
-        pagination, compliance_report_id, OtherUses
-    )
-
-    return changelog
+#     return changelog
 
 
-@router.post(
-    "/notional-transfers/changelog",
-    response_model=ComplianceReportChangelogSchema[NotionalTransferChangelogSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_notional_transfers_changelog(
-    request: Request,
-    request_data: CommonPaginatedReportRequestSchema = Body(...),
-    service: ComplianceReportServices = Depends(),
-) -> ComplianceReportChangelogSchema[NotionalTransferChangelogSchema]:
-    compliance_report_id = request_data.compliance_report_id
+# @router.post(
+#     "/notional-transfers/changelog",
+#     response_model=ComplianceReportChangelogSchema[NotionalTransferChangelogSchema],
+#     status_code=status.HTTP_200_OK,
+# )
+# @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+# async def get_notional_transfers_changelog(
+#     request: Request,
+#     request_data: CommonPaginatedReportRequestSchema = Body(...),
+#     service: ComplianceReportServices = Depends(),
+# ) -> ComplianceReportChangelogSchema[NotionalTransferChangelogSchema]:
+#     compliance_report_id = request_data.compliance_report_id
 
-    pagination = PaginationRequestSchema(
-        page=request_data.page,
-        size=request_data.size,
-        sort_orders=request_data.sort_orders,
-        filters=request_data.filters,
-    )
-    return await service.get_changelog_data(
-        pagination, compliance_report_id, NotionalTransfer
-    )
+#     pagination = PaginationRequestSchema(
+#         page=request_data.page,
+#         size=request_data.size,
+#         sort_orders=request_data.sort_orders,
+#         filters=request_data.filters,
+#     )
+#     return await service.get_changelog_data(
+#         pagination, compliance_report_id, NotionalTransfer
+#     )
 
 
-@router.post(
-    "/fuel-exports/changelog",
-    response_model=ComplianceReportChangelogSchema[FuelExportSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_fuel_exports_changelog(
-    request: Request,
-    request_data: CommonPaginatedReportRequestSchema = Body(...),
-    service: ComplianceReportServices = Depends(),
-) -> ComplianceReportChangelogSchema[FuelExportSchema]:
-    compliance_report_id = request_data.compliance_report_id
+# @router.post(
+#     "/fuel-exports/changelog",
+#     response_model=ComplianceReportChangelogSchema[FuelExportSchema],
+#     status_code=status.HTTP_200_OK,
+# )
+# @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+# async def get_fuel_exports_changelog(
+#     request: Request,
+#     request_data: CommonPaginatedReportRequestSchema = Body(...),
+#     service: ComplianceReportServices = Depends(),
+# ) -> ComplianceReportChangelogSchema[FuelExportSchema]:
+#     compliance_report_id = request_data.compliance_report_id
 
-    pagination = PaginationRequestSchema(
-        page=request_data.page,
-        size=request_data.size,
-        sort_orders=request_data.sort_orders,
-        filters=request_data.filters,
-    )
-    return await service.get_changelog_data(
-        pagination, compliance_report_id, FuelExport
-    )
+#     pagination = PaginationRequestSchema(
+#         page=request_data.page,
+#         size=request_data.size,
+#         sort_orders=request_data.sort_orders,
+#         filters=request_data.filters,
+#     )
+#     return await service.get_changelog_data(
+#         pagination, compliance_report_id, FuelExport
+#     )
 
 
 @router.get(
@@ -334,47 +303,47 @@ async def export_compliance_report(
     return await export_service.export(report_id)
 
 
-@router.post(
-    "/allocation-agreements/changelog",
-    response_model=ComplianceReportChangelogSchema[AllocationAgreementResponseSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_allocation_agreement_changelog(
-    request: Request,
-    request_data: CommonPaginatedReportRequestSchema = Body(...),
-    service: ComplianceReportServices = Depends(),
-) -> ComplianceReportChangelogSchema[AllocationAgreementResponseSchema]:
-    compliance_report_id = request_data.compliance_report_id
+# @router.post(
+#     "/allocation-agreements/changelog",
+#     response_model=ComplianceReportChangelogSchema[AllocationAgreementResponseSchema],
+#     status_code=status.HTTP_200_OK,
+# )
+# @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+# async def get_allocation_agreement_changelog(
+#     request: Request,
+#     request_data: CommonPaginatedReportRequestSchema = Body(...),
+#     service: ComplianceReportServices = Depends(),
+# ) -> ComplianceReportChangelogSchema[AllocationAgreementResponseSchema]:
+#     compliance_report_id = request_data.compliance_report_id
 
-    pagination = PaginationRequestSchema(
-        page=request_data.page,
-        size=request_data.size,
-        sort_orders=request_data.sort_orders,
-        filters=request_data.filters,
-    )
-    # Get the changelog from the service for AllocationAgreement
-    changelog_response = await service.get_changelog_data(
-        pagination, compliance_report_id, AllocationAgreement
-    )
+#     pagination = PaginationRequestSchema(
+#         page=request_data.page,
+#         size=request_data.size,
+#         sort_orders=request_data.sort_orders,
+#         filters=request_data.filters,
+#     )
+#     # Get the changelog from the service for AllocationAgreement
+#     changelog_response = await service.get_changelog_data(
+#         pagination, compliance_report_id, AllocationAgreement
+#     )
 
-    # Fetch the associated compliance report data
-    report = await service.get_compliance_report_by_id(
-        compliance_report_id, request.user
-    )
+#     # Fetch the associated compliance report data
+#     report = await service.get_compliance_report_by_id(
+#         compliance_report_id, request.user
+#     )
 
-    # Convert each allocation agreement to a serializable dict before returning
-    serializable_changelog = [
-        AllocationAgreementResponseSchema.model_validate(record)
-        for record in changelog_response["changelog"]
-    ]
-    response = {
-        **changelog_response,
-        "changelog": serializable_changelog,
-        "report": report,
-    }
+#     # Convert each allocation agreement to a serializable dict before returning
+#     serializable_changelog = [
+#         AllocationAgreementResponseSchema.model_validate(record)
+#         for record in changelog_response["changelog"]
+#     ]
+#     response = {
+#         **changelog_response,
+#         "changelog": serializable_changelog,
+#         "report": report,
+#     }
 
-    return response
+#     return response
 
 
 @router.delete("/{report_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -388,3 +357,78 @@ async def delete_compliance_report(
     Delete a compliance report either in Analyst Adjustment or re-assessed state.
     """
     await service.delete_compliance_report(report_id, request.user)
+
+
+@router.get(
+    "/{compliance_report_group_uuid}/changelog/fuel-supplies",
+    response_model=List[ComplianceReportFuelSuppliesRead],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_fuel_supply_changelog(
+    request: Request,
+    compliance_report_group_uuid: str,
+    service: ComplianceReportServices = Depends(),
+) -> List[ComplianceReportFuelSuppliesRead]:
+
+    return await service.get_fuel_supply_changelog_data(compliance_report_group_uuid)
+
+
+# @router.get(
+#     "/{report_id}/changelog/fuel-exports",
+#     response_model=List[ComplianceReportFuelSuppliesRead2],
+#     status_code=status.HTTP_200_OK,
+# )
+# @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+# async def get_fuel_supply_changelog(
+#     request: Request,
+#     report_id: int,
+#     service: ComplianceReportServices = Depends(),
+# ) -> List[ComplianceReportFuelSuppliesRead2]:
+
+#     return await service.get_fuel_supply_changelog_data(report_id)
+
+
+# @router.get(
+#     "/{report_id}/changelog/notional-transfers",
+#     response_model=List[ComplianceReportFuelSuppliesRead2],
+#     status_code=status.HTTP_200_OK,
+# )
+# @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+# async def get_fuel_supply_changelog(
+#     request: Request,
+#     report_id: int,
+#     service: ComplianceReportServices = Depends(),
+# ) -> List[ComplianceReportFuelSuppliesRead2]:
+
+#     return await service.get_fuel_supply_changelog_data(report_id)
+
+
+# @router.get(
+#     "/{report_id}/changelog/other-uses",
+#     response_model=List[ComplianceReportFuelSuppliesRead2],
+#     status_code=status.HTTP_200_OK,
+# )
+# @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+# async def get_fuel_supply_changelog(
+#     request: Request,
+#     report_id: int,
+#     service: ComplianceReportServices = Depends(),
+# ) -> List[ComplianceReportFuelSuppliesRead2]:
+
+#     return await service.get_fuel_supply_changelog_data(report_id)
+
+
+# @router.get(
+#     "/{report_id}/changelog/alocation-agreements",
+#     response_model=List[ComplianceReportFuelSuppliesRead2],
+#     status_code=status.HTTP_200_OK,
+# )
+# @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+# async def get_fuel_supply_changelog(
+#     request: Request,
+#     report_id: int,
+#     service: ComplianceReportServices = Depends(),
+# ) -> List[ComplianceReportFuelSuppliesRead2]:
+
+#     return await service.get_fuel_supply_changelog_data(report_id)

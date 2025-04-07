@@ -1,24 +1,19 @@
 import math
 import uuid
-from typing import List, Union, Type
+from typing import List, Union
 
 import structlog
 from fastapi import Depends
 
-from lcfs.db.models import UserRole
+
 from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,
     SupplementalInitiatorType,
     ReportingFrequency,
 )
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
-from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
-from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.compliance.FuelExport import FuelExport
-from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-from lcfs.db.models.user import UserProfile, Role
+from lcfs.db.models.user import UserProfile
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -32,8 +27,12 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.fuel_supply.schema import FuelSupplyChangelogRead
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
+from lcfs.web.api.compliance_report.schema import ComplianceReportFuelSuppliesRead
+from collections import defaultdict
+from typing import List
 
 logger = structlog.get_logger(__name__)
 
@@ -69,8 +68,7 @@ class ComplianceReportServices:
             report_data.status
         )
         if not draft_status:
-            raise DataNotFoundException(
-                f"Status '{report_data.status}' not found.")
+            raise DataNotFoundException(f"Status '{report_data.status}' not found.")
 
         # Generate a new group_uuid for the new report series
         group_uuid = str(uuid.uuid4())
@@ -224,7 +222,8 @@ class ComplianceReportServices:
         )
         if not assessed_report or not assessed_report.summary:
             raise DataNotFoundException(
-                "Assessed report summary not found for the same period")
+                "Assessed report summary not found for the same period"
+            )
 
         # Copy over the summary lines from the assessed report.
         summary_data = {
@@ -427,8 +426,7 @@ class ComplianceReportServices:
             )
 
             # Apply masking to each report in the chain
-            masked_chain = self._mask_report_status(
-                compliance_report_chain, user)
+            masked_chain = self._mask_report_status(compliance_report_chain, user)
             # Apply history masking to each report in the chain
             masked_chain = [
                 self._mask_report_status_for_history(report, user)
@@ -498,92 +496,6 @@ class ComplianceReportServices:
                 result[key] = None
         return result
 
-    @service_handler
-    async def get_changelog_data(
-        self,
-        compliance_report_id: int,
-        selection: Type[
-            Union[
-                FuelSupply, OtherUses, NotionalTransfer, FuelExport, AllocationAgreement
-            ]
-        ],
-    ):
-        """
-        Retrieve changelog data for a specific compliance report and model type.
-        Returns a list of objects with labels and associated data.
-        """
-        # Get the current report
-        report = await self.repo.get_compliance_report_by_id(compliance_report_id)
-        if report is None:
-            raise DataNotFoundException("Compliance report not found.")
-
-        # Get all reports in the chain with joined data
-        data = await self.repo.get_compliance_report_with_joined_data(compliance_report_id, selection)
-
-        # Map model classes to their attribute names in the ComplianceReport model
-        model_to_attr = {
-            FuelSupply: "fuel_supplies",
-            OtherUses: "other_uses",
-            NotionalTransfer: "notional_transfers",
-            FuelExport: "fuel_exports",
-            AllocationAgreement: "allocation_agreements"
-        }
-
-        # Get the correct attribute name for this model
-        attr_name = model_to_attr.get(selection)
-        if not attr_name:
-            logger.error(
-                f"No attribute mapping found for model: {selection.__name__}")
-            return []
-
-        # Transform the data into the required format
-        result = []
-        for report_data in data:
-            # Check if we're dealing with a tuple (most likely from a join operation)
-            if isinstance(report_data, tuple):
-                # Extract the report object and its related data
-                # Assuming the first element is the report and second contains the data
-                report_obj = report_data[0]
-                selection_data = getattr(report_data, attr_name, []) if hasattr(
-                    report_data, attr_name) else []
-
-                # If selection_data is empty, try to get it from the second element of the tuple
-                if not selection_data and len(report_data) > 1:
-                    selection_data = report_data[1] if isinstance(
-                        report_data[1], list) else [report_data[1]]
-            else:
-                # If it's a direct object
-                report_obj = report_data
-                selection_data = getattr(report_data, attr_name, [])
-
-            # Format each item in the selection data - convert to dictionary to avoid DetachedInstanceError
-            formatted_data = []
-            for item in selection_data:
-                if item:  # Check if item is not None
-                    try:
-                        # First try the simplest approach
-                        item_dict = {
-                            k: v for k, v in item.__dict__.items()
-                            if k != '_sa_instance_state'
-                        }
-                        formatted_data.append(item_dict)
-                    except Exception as e:
-                        # If that fails, use our safer method
-                        logger.warn(f"Error converting model to dict: {e}")
-                        formatted_data.append(self._model_to_dict(item))
-
-            # Get the nickname safely
-            nickname = getattr(
-                report_obj, 'nickname', f"Report {getattr(report_obj, 'version', 'unknown')}")
-
-            # Create the result object
-            result.append({
-                "label": nickname,
-                "data": formatted_data
-            })
-
-        return {'changelog': result}
-
     def _remove_draft_entries(
         self, report: ComplianceReportBaseSchema
     ) -> Union[ComplianceReportBaseSchema, None]:
@@ -641,3 +553,63 @@ class ComplianceReportServices:
                 ]
             ]
         return statuses
+
+    @service_handler
+    async def get_fuel_supply_changelog_data(
+        self, compliance_report_group_uuid: str
+    ) -> List[ComplianceReportFuelSuppliesRead]:
+        reports = await self.repo.get_compliance_report_fuel_supply_data(
+            compliance_report_group_uuid
+        )
+
+        group_map = defaultdict(dict)
+
+        for report in reports:
+            for fs in report.fuel_supplies or []:
+                group_map[fs.group_uuid][fs.version] = fs
+
+        grouped_fs_reports = []
+
+        for report in reports:
+            seen_ids = set()
+            fuel_supplies = []
+
+            for fs in report.fuel_supplies or []:
+                fs = FuelSupplyChangelogRead.model_validate(fs)
+                fuel_supplies.append(fs)
+                seen_ids.add(fs.fuel_supply_id)
+
+                if fs.action_type == "UPDATE":
+                    prev = group_map[fs.group_uuid].get(fs.version - 1)
+                    if prev and prev.fuel_supply_id not in seen_ids:
+
+                        prev = FuelSupplyChangelogRead.model_validate(prev)
+                        diff = []
+
+                        for key, value in fs.__dict__.items():
+
+                            prev_value = getattr(prev, key, None)
+                            if prev_value != value:
+                                camel_case_key = key.split("_")[0] + "".join(
+                                    x.capitalize() for x in key.split("_")[1:]
+                                )
+                                diff.append(camel_case_key)
+
+                        prev.diff = diff
+                        prev.updated = True
+                        prev.action_type = "UPDATE"
+                        prev.updated = True
+
+                        fs.diff = diff
+
+                        fuel_supplies.append(prev)
+                        seen_ids.add(prev.fuel_supply_id)
+
+            grouped_fs_reports.append(
+                ComplianceReportFuelSuppliesRead(
+                    label=report.nickname,
+                    fuel_supplies=fuel_supplies,
+                )
+            )
+
+        return grouped_fs_reports

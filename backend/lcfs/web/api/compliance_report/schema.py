@@ -1,6 +1,5 @@
 from enum import Enum
-from typing import ClassVar, Optional, List, TypeVar, Generic, Union, Dict
-from typing_extensions import TypedDict
+from typing import ClassVar, Optional, List, TypeVar, Generic, Union
 from datetime import datetime
 from typing import List, NamedTuple
 
@@ -13,6 +12,8 @@ from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
 from pydantic import Field
+from lcfs.web.api.fuel_supply.schema import FuelSupplyChangelogRead
+
 
 """
 Base - all shared attributes of a resource
@@ -221,21 +222,14 @@ class ComplianceReportUpdateSchema(BaseSchema):
     assessment_statement: Optional[str] = None
 
 
-T = TypeVar("T")
-
-
-class ChangelogItem(BaseSchema, Generic[T]):
-    label: str
-    data: List[T]
-
-
-class ComplianceReportChangelogSchema(BaseSchema, Generic[T]):
-    changelog: List[ChangelogItem[T]] = []
-
-
 class ExportColumn(NamedTuple):
     label: str
     key: str = None
+
+
+class ComplianceReportFuelSuppliesRead(BaseSchema):
+    label: str
+    fuel_supplies: List[FuelSupplyChangelogRead]
 
 
 # Summary section constants

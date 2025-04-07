@@ -7,7 +7,7 @@ from fastapi import Depends
 from sqlalchemy import func, select, and_, asc, desc, update, String, cast, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.inspection import inspect
-from sqlalchemy.orm import joinedload, aliased
+from sqlalchemy.orm import joinedload
 from typing import List, Optional, Dict, Union
 
 from lcfs.db.dependencies import get_async_db_session
@@ -55,6 +55,7 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.api.compliance_report.dtos import ChangelogFuelSuppliesItemDTO
 
 logger = structlog.get_logger(__name__)
 
@@ -88,8 +89,7 @@ class ComplianceReportRepository:
             filter_type = filter.filter_type
             if filter.field == "status":
                 field = cast(
-                    get_field_for_filter(
-                        ComplianceReportListView, "report_status"),
+                    get_field_for_filter(ComplianceReportListView, "report_status"),
                     String,
                 )
                 # Check if filter_value is a comma-separated string
@@ -107,8 +107,7 @@ class ComplianceReportRepository:
                             val = val.value  # convert enum to string
                         return val.replace(" ", "_")
 
-                    filter_value = [underscore_string(
-                        val) for val in filter_value]
+                    filter_value = [underscore_string(val) for val in filter_value]
                     filter_type = "set"
                 else:
                     if isinstance(filter_value, ComplianceReportStatusEnum):
@@ -116,8 +115,7 @@ class ComplianceReportRepository:
                     filter_value = filter_value.replace(" ", "_")
 
             elif filter.field == "type":
-                field = get_field_for_filter(
-                    ComplianceReportListView, "report_type")
+                field = get_field_for_filter(ComplianceReportListView, "report_type")
             elif filter.field == "organization":
                 field = get_field_for_filter(
                     ComplianceReportListView, "organization_name"
@@ -127,12 +125,10 @@ class ComplianceReportRepository:
                     ComplianceReportListView, "compliance_period"
                 )
             else:
-                field = get_field_for_filter(
-                    ComplianceReportListView, filter.field)
+                field = get_field_for_filter(ComplianceReportListView, filter.field)
 
             conditions.append(
-                apply_filter_conditions(
-                    field, filter_value, filter_option, filter_type)
+                apply_filter_conditions(field, filter_value, filter_option, filter_type)
             )
 
     @repo_handler
@@ -187,8 +183,7 @@ class ComplianceReportRepository:
         Retrieve a compliance period from the database
         """
         result = await self.db.scalar(
-            select(CompliancePeriod).where(
-                CompliancePeriod.description == period)
+            select(CompliancePeriod).where(CompliancePeriod.description == period)
         )
         return result
 
@@ -227,8 +222,7 @@ class ComplianceReportRepository:
         Retrieve the compliance report status ID from the database based on the description.
         Replaces spaces with underscores in the status description.
         """
-        status_enum = status.replace(
-            " ", "_")  # frontend sends status with spaces
+        status_enum = status.replace(" ", "_")  # frontend sends status with spaces
         result = await self.db.execute(
             select(ComplianceReportStatus).where(
                 ComplianceReportStatus.status
@@ -389,8 +383,7 @@ class ComplianceReportRepository:
 
         is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
         if not is_analyst:
-            excluded_statuses.append(
-                ComplianceReportStatusEnum.Analyst_adjustment)
+            excluded_statuses.append(ComplianceReportStatusEnum.Analyst_adjustment)
 
         is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
         if not is_supplier:
@@ -404,8 +397,7 @@ class ComplianceReportRepository:
             self.apply_filters(pagination, conditions)
 
         # Pagination and offset setup
-        offset = 0 if (pagination.page < 1) else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
 
         # Build the main query
@@ -413,8 +405,7 @@ class ComplianceReportRepository:
 
         # Apply sorting from pagination
         if len(pagination.sort_orders) < 1:
-            field = get_field_for_filter(
-                ComplianceReportListView, "update_date")
+            field = get_field_for_filter(ComplianceReportListView, "update_date")
             query = query.order_by(desc(field))
 
         for order in pagination.sort_orders:
@@ -488,21 +479,27 @@ class ComplianceReportRepository:
         return ComplianceReportBaseSchema.model_validate(compliance_report)
 
     @repo_handler
-    async def get_compliance_report_chain(self, group_uuid: str, version: Optional[int] = None):
+    async def get_compliance_report_chain(
+        self, group_uuid: str, version: Optional[int] = None
+    ):
         # Build base query with all necessary joins
-        query = select(ComplianceReport).options(
-            joinedload(ComplianceReport.organization),
-            joinedload(ComplianceReport.compliance_period),
-            joinedload(ComplianceReport.current_status),
-            joinedload(ComplianceReport.summary),
-            joinedload(ComplianceReport.history).joinedload(
-                ComplianceReportHistory.status
-            ),
-            joinedload(ComplianceReport.history).joinedload(
-                ComplianceReportHistory.user_profile
-            ),
-            joinedload(ComplianceReport.transaction),
-        ).where(ComplianceReport.compliance_report_group_uuid == group_uuid)
+        query = (
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.user_profile
+                ),
+                joinedload(ComplianceReport.transaction),
+            )
+            .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
+        )
 
         # Apply version filter only if version is provided
         if version is not None:
@@ -754,15 +751,13 @@ class ComplianceReportRepository:
                 isinstance(record, FuelSupply)
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
-                fuel_category = self._format_category(
-                    record.fuel_category.category)
+                fuel_category = self._format_category(record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity
             elif (
                 isinstance(record, OtherUses)
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
-                fuel_category = self._format_category(
-                    record.fuel_category.category)
+                fuel_category = self._format_category(record.fuel_category.category)
                 fuel_quantities[fuel_category] += record.quantity_supplied
 
         return dict(fuel_quantities)
@@ -913,11 +908,7 @@ class ComplianceReportRepository:
         return result
 
     @repo_handler
-    async def get_changelog_data(
-        self,
-        compliance_report_ids: List[int],
-        selection
-    ):
+    async def get_changelog_data(self, compliance_report_ids: List[int], selection):
         """
         Fetch changelog data for multiple compliance reports.
 
@@ -1085,8 +1076,7 @@ class ComplianceReportRepository:
         )
 
         await self.db.flush()
-        logger.info(
-            f"Successfully deleted compliance report {compliance_report_id}")
+        logger.info(f"Successfully deleted compliance report {compliance_report_id}")
         return True
 
     async def get_latest_visible_reports_query(
@@ -1153,94 +1143,44 @@ class ComplianceReportRepository:
         return result.scalars().all()
 
     @repo_handler
-    async def get_select_compliance_report_data(
-        self,
-        compliance_report_ids: Union[int, List[int]],
-        selection
-    ):
-        """
-        Fetch data for a specific model from one or multiple compliance reports.
-
-        Args:
-            compliance_report_ids: Either a single compliance report ID or a list of IDs
-            selection: The model to select (e.g. FuelSupply, OtherUses, etc.)
-
-        Returns:
-            List of model instances from the specified compliance report(s)
-        """
+    async def get_compliance_report_fuel_supply_data(
+        self, compliance_report_group_uuid: str
+    ) -> List[ChangelogFuelSuppliesItemDTO]:
         try:
-            # Convert single ID to list if necessary
-            if isinstance(compliance_report_ids, int):
-                compliance_report_ids = [compliance_report_ids]
 
-            # Simple query to get all records for the provided compliance report IDs
-            query = (
-                select(selection)
-                .where(selection.compliance_report_id.in_(compliance_report_ids))
-                .order_by(selection.create_date.asc())
-            )
-
-            # Execute the query
-            result = await self.db.execute(query)
-            return result.scalars().all()
-
-        except Exception as e:
-            logger.error(
-                f"Error in get_select_compliance_report_data: {e}", exc_info=True)
-            raise
-
-    @repo_handler
-    async def get_compliance_report_with_joined_data(
-        self,
-        compliance_report_id: int,
-        model_to_join
-    ):
-        """
-        Fetch a compliance report by ID, then get all reports with the same group UUID,
-        and join a specific table to each of these reports based on the provided model.
-
-        Args:
-            compliance_report_id: The ID of the initial compliance report
-            model_to_join: The model class to join with the compliance reports
-
-        Returns:
-            A list of tuples containing (ComplianceReport, JoinedModelInstances)
-        """
-        try:
-            # First, fetch the initial compliance report to get the group UUID
-            initial_report = await self.db.scalar(
+            reports_query = (
                 select(ComplianceReport)
-                .where(ComplianceReport.compliance_report_id == compliance_report_id)
-            )
-
-            if not initial_report:
-                return None
-
-            group_uuid = initial_report.compliance_report_group_uuid
-
-            # Get all reports with the same group UUID
-            query = (
-                select(ComplianceReport)
-                .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
-                .order_by(ComplianceReport.version)
-            )
-
-            compliance_reports = (await self.db.execute(query)).scalars().all()
-
-            # For each report, fetch all associated model instances
-            result = []
-            for report in compliance_reports:
-                model_instances = await self.db.execute(
-                    select(model_to_join)
-                    .where(model_to_join.compliance_report_id == report.compliance_report_id)
+                .where(
+                    ComplianceReport.compliance_report_group_uuid
+                    == compliance_report_group_uuid,
                 )
-                # Add all instances of this model to the tuple
-                result.append((report, model_instances.scalars().all()))
+                .options(
+                    joinedload(ComplianceReport.fuel_supplies).joinedload(
+                        FuelSupply.fuel_type
+                    ),
+                    joinedload(ComplianceReport.fuel_supplies).joinedload(
+                        FuelSupply.fuel_category
+                    ),
+                    joinedload(ComplianceReport.fuel_supplies).joinedload(
+                        FuelSupply.fuel_code
+                    ),
+                    joinedload(ComplianceReport.fuel_supplies).joinedload(
+                        FuelSupply.end_use_type
+                    ),
+                    joinedload(ComplianceReport.fuel_supplies).joinedload(
+                        FuelSupply.provision_of_the_act
+                    ),
+                )
+                .order_by(ComplianceReport.version.desc())
+            )
+            reports = (await self.db.execute(reports_query)).scalars().unique().all()
 
-            return result
-
+            return [
+                ChangelogFuelSuppliesItemDTO.model_validate(report)
+                for report in reports
+            ]
         except Exception as e:
             logger.error(
-                f"Error in get_compliance_report_with_joined_data: {e}", exc_info=True
+                f"Error in get_compliance_report_fuel_supply_data: {e}", exc_info=True
             )
             raise

@@ -1,7 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCurrentUser } from './useCurrentUser'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 export const useFuelSupplyOptions = (params, options) => {
   const client = useApiService()
@@ -64,14 +63,14 @@ export const useSaveFuelSupply = (params, options) => {
   })
 }
 
-export const useGetFuelSupplyChangeLog = ({ complianceReportId }) => {
+export const useGetFuelSupplyChangeLog = ({ complianceReportGroupUuid }) => {
   const client = useApiService()
   const path = apiRoutes.getFuelSupplyChangelog.replace(
-    ':reportID',
-    complianceReportId
+    ':complianceReportGroupUuid',
+    complianceReportGroupUuid
   )
   return useQuery({
-    queryKey: ['fuel-supply-changelog', complianceReportId],
+    queryKey: ['fuel-supply-changelog', complianceReportGroupUuid],
     queryFn: async () => {
       const response = await client.get(path)
       return response.data

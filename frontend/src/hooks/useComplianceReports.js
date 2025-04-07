@@ -59,7 +59,6 @@ export const useGetComplianceReport = (orgID, reportID, options) => {
     queryFn: async () => {
       const { data } = await client.get(path)
 
-      console.log('Compliance Report Data:', data)
       return data
     },
     ...options
