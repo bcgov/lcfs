@@ -17,7 +17,6 @@ import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelExportColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import colors from '@/themes/base/colors'
 import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 
 export const AddEditFuelExports = () => {
