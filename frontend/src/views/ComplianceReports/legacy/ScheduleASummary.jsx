@@ -78,7 +78,7 @@ export const ScheduleASummary = ({ data, status }) => {
           queryData={queryData}
           dataKey="notionalTransfers"
           suppressPagination={data?.length <= 10}
-          initialPaginationOptions={defaultInitialPagination}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

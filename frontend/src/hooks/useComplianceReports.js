@@ -117,8 +117,8 @@ export const useUpdateComplianceReport = (reportID, options) => {
     mutationFn: async (data) => {
       return await client.put(path, data)
     },
-    onSettled: () => {
-      queryClient.invalidateQueries(['compliance-report', reportID])
+    onSettled: (data) => {
+      queryClient.setQueryData(['compliance-report', reportID], data.data)
     }
   })
 }
