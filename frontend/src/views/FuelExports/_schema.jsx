@@ -394,11 +394,19 @@ export const fuelExportColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
     maxWidth: 220,
     minWidth: 200,
-    cellRenderer: (params) => (
-      <BCTypography variant="body4">
-        {params.value ? params.value : 'YYYY-MM-DD'}
-      </BCTypography>
-    ),
+    cellRenderer: (params) => {
+      const isEditable =
+        params.colDef.editable &&
+        (typeof params.colDef.editable === 'function'
+          ? params.colDef.editable(params)
+          : true)
+
+      return (
+        <BCTypography variant="body4">
+          {params.value ? params.value : isEditable ? 'YYYY-MM-DD' : ''}
+        </BCTypography>
+      )
+    },
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
 
@@ -406,7 +414,7 @@ export const fuelExportColDefs = (
     cellEditor: DateEditor,
 
     editable: (params) => {
-      return !!params.data.provisionOfTheAct
+      return params.data.provisionOfTheAct === 'Unknown'
     },
 
     cellEditorParams: {
@@ -480,63 +488,72 @@ export const fuelExportColDefs = (
     minWidth: 100,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
+
     valueGetter: (params) => {
-      if (params.data.provisionOfTheAct === 'Unknown') {
+      const provision = params.data.provisionOfTheAct
+
+      // 1) If provision is “Unknown”
+      if (provision === 'Unknown') {
         const exportDateValue = params.data.exportDate
+        // If no export date or invalid date, bail to default CI
         if (!exportDateValue) {
-          return 0
+          return getDefaultCI(params, optionsData)
         }
         const exportDateObj = new Date(exportDateValue)
         if (Number.isNaN(exportDateObj.getTime())) {
-          return 0
+          return getDefaultCI(params, optionsData)
         }
+
+        // Grab the current FuelType definition from optionsData
         const fuelTypeObj = optionsData?.fuelTypes?.find(
           (obj) => obj.fuelType === params.data.fuelType
         )
         if (!fuelTypeObj) return 0
 
+        // We only consider codes effective in last 12 months
         const twelveMonthsAgo = new Date(exportDateObj)
         twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
 
+        // Filter codes by effective/expiration range
         const validCodes = (fuelTypeObj.fuelCodes || []).filter((fc) => {
-          const fcDate = new Date(fc.fuelCodeEffectiveDate)
-          return fcDate >= twelveMonthsAgo && fcDate <= exportDateObj
+          const fcEffective = new Date(fc.fuelCodeEffectiveDate)
+          const fcExpiration = fc.fuelCodeExpirationDate
+            ? new Date(fc.fuelCodeExpirationDate)
+            : null
+
+          const withinEffectiveWindow =
+            fcEffective >= twelveMonthsAgo && fcEffective <= exportDateObj
+          const notExpired = !fcExpiration || fcExpiration > exportDateObj
+
+          return withinEffectiveWindow && notExpired
         })
+
+        // If no valid code found, default to the fallback
         if (!validCodes.length) {
-          return 0
+          return getDefaultCI(params, optionsData)
         }
+        // Otherwise pick the minimum carbon intensity
         const minCI = Math.min(
           ...validCodes.map((fc) => fc.fuelCodeCarbonIntensity)
         )
         return minCI
       }
-      
-      if (/Fuel code/i.test(params.data.provisionOfTheAct)) {
-        return optionsData?.fuelTypes
-          ?.find((obj) => params.data.fuelType === obj.fuelType)
-          ?.fuelCodes.find((item) => item.fuelCode === params.data.fuelCode)
-          ?.fuelCodeCarbonIntensity
-      } else {
-        if (optionsData) {
-          if (isFuelTypeOther(params) && params.data.fuelCategory) {
-            const categories = optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            ).fuelCategories
-            const defaultCI = categories.find(
-              (cat) => cat.fuelCategory === params.data.fuelCategory
-            ).defaultAndPrescribedCi
 
-            return defaultCI
-          }
-        }
-        return (
-          (optionsData &&
-            optionsData?.fuelTypes?.find(
-              (obj) => params.data.fuelType === obj.fuelType
-            )?.defaultCarbonIntensity) ||
-          0
+      // 2) If the user picked "Fuel code - section 19 (b) (i)"
+      //    we look up the chosen code’s intensity
+      if (/Fuel code/i.test(provision)) {
+        const fuelTypeObj = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
         )
+        const codeObj = fuelTypeObj?.fuelCodes?.find(
+          (fc) => fc.fuelCode === params.data.fuelCode
+        )
+        return codeObj?.fuelCodeCarbonIntensity || 0
       }
+
+      // 3) Otherwise (includes “Default CI” or “Unknown” with no codes, or “Other”),
+      //    just do the default fallback logic
+      return getDefaultCI(params, optionsData)
     }
   },
   {
@@ -857,4 +874,27 @@ export const changelogGridOptions = {
       }
     }
   }
+}
+
+/**
+ * Helper that picks either the category-level CI (if the fuel type is “Other”)
+ * or else uses the fuel type’s defaultCarbonIntensity.
+ */
+function getDefaultCI(params, optionsData) {
+  // If it's “Other,” use the category's default
+  if (isFuelTypeOther(params) && params.data.fuelCategory) {
+    const fuelTypeObj = optionsData?.fuelTypes?.find(
+      (obj) => obj.fuelType === params.data.fuelType
+    )
+    const cat = fuelTypeObj?.fuelCategories?.find(
+      (c) => c.fuelCategory === params.data.fuelCategory
+    )
+    return cat?.defaultAndPrescribedCi || 0
+  }
+
+  // Otherwise just use the fuel type’s defaultCarbonIntensity
+  const fuelTypeObj = optionsData?.fuelTypes?.find(
+    (obj) => obj.fuelType === params.data.fuelType
+  )
+  return fuelTypeObj?.defaultCarbonIntensity || 0
 }

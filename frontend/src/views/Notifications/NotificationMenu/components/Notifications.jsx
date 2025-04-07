@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Stack, Grid } from '@mui/material'
+import { Grid, Stack } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
@@ -9,13 +9,12 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { columnDefs, routesMapping } from './_schema'
 import {
+  useDeleteNotificationMessages,
   useGetNotificationMessages,
-  useMarkNotificationAsRead,
-  useDeleteNotificationMessages
+  useMarkNotificationAsRead
 } from '@/hooks/useNotifications'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { defaultInitialPagination } from '@/constants/schedules.js'
-import { useGetFuelCodes } from '@/hooks/useFuelCode.js'
 
 export const Notifications = () => {
   const gridRef = useRef(null)
@@ -23,7 +22,6 @@ export const Notifications = () => {
   const [gridApi, setGridApi] = useState(null)
   const [isAllSelected, setIsAllSelected] = useState(false)
   const [selectedRowCount, setSelectedRowCount] = useState(0)
-  const [resetGridFn, setResetGridFn] = useState(null)
 
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
@@ -32,7 +30,6 @@ export const Notifications = () => {
   const { t } = useTranslation(['notifications'])
   const navigate = useNavigate()
   const { data: currentUser } = useCurrentUser()
-  // react query hooks
   const { refetch } = useGetNotificationMessages()
   const markAsReadMutation = useMarkNotificationAsRead()
   const deleteMutation = useDeleteNotificationMessages()
@@ -198,15 +195,12 @@ export const Notifications = () => {
     )
   }, [])
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
+  const handleClearFilters = () => {
+    setPaginationOptions(defaultInitialPagination)
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
     }
-  }, [resetGridFn])
+  }
 
   return (
     <Grid>
@@ -267,8 +261,7 @@ export const Notifications = () => {
         selectionColumnDef={selectionColumnDef}
         onSelectionChanged={onSelectionChanged}
         onRowClicked={handleRowClicked}
-        onSetResetGrid={handleSetResetGrid}
-        initialPaginationOptions={defaultInitialPagination}
+        paginationOptions={paginationOptions}
         onPaginationChange={(newPagination) =>
           setPaginationOptions((prev) => ({
             ...prev,
