@@ -53,5 +53,44 @@
   },
   "ClearFilters": "Clear filters",
   "changelogCurrentState": "Current changes",
-  "exitChangeLog": "Exit change log"
+  "exitChangeLog": "Exit change log",
+  "importExport": {
+    "export": {
+      "btn": "Download Excel template",
+      "withDataBtn": "Include data",
+      "withoutDataBtn": "Do not include data"
+    },
+    "import": {
+      "btn": "Upload Excel spreadsheet",
+      "dialog": {
+        "title": "Upload Excel File - {{mode}}",
+        "header": "Select the Excel template (maximum size 50MB)",
+        "selectorText": "Drag and drop your XLSX file here or click to select from your machine to upload.",
+        "uploadStatusStarting": "Starting Import...",
+        "uploadStatus": {
+          "imported": "Imported:",
+          "rejected": "Rejected:"
+        },
+        "fileError": {
+          "tooLarge": "File larger than 50MB",
+          "virusDetected": "Virus detected, please choose another file",
+          "uploadFailed": "Failed to upload file."
+        },
+        "completed": {
+          "success": "Completed Importing {{fileName}}",
+          "failure": "Failed to import"
+        },
+        "buttons": {
+          "close": "Close",
+          "cancel": "Cancel",
+          "overwrite": "Overwrite existing rows",
+          "append": "Append to existing rows"
+        },
+        "uploadMode": {
+          "append": "Append",
+          "overwrite": "Overwrite"
+        }
+      }
+    }
+  }
 }

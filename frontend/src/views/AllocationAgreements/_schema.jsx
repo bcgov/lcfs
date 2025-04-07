@@ -86,7 +86,7 @@ export const allocationAgreementColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
-    minWidth: 120,
+    minWidth: 175,
     editable: true,
     tooltipValueGetter: (p) =>
       'Select whether the fuel was purchased or sold under the allocation agreement'
@@ -458,13 +458,17 @@ export const allocationAgreementColDefs = (
 
 export const allocationAgreementSummaryColDefs = [
   {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
+    ),
     field: 'allocationTransactionType',
     flex: 1,
     minWidth: 200
   },
   {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.transactionPartner'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartner'
+    ),
     field: 'transactionPartner',
     flex: 1,
     minWidth: 200
@@ -528,7 +532,9 @@ export const allocationAgreementSummaryColDefs = [
     field: 'ciOfFuel'
   },
   {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.quantity'
+    ),
     field: 'quantity',
     valueFormatter
   },
@@ -551,26 +557,35 @@ export const defaultColDef = {
 }
 
 export const changelogNestedOverrides = {
-  'allocationTransactionType': {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+  allocationTransactionType: {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
+    ),
     field: 'allocationTransactionType',
     valueGetter: (params) => params.data?.allocationTransactionType?.type || '',
-    cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
+    cellStyle: (params) =>
+      changelogCellStyle(params, 'allocationTransactionType')
   },
-  'fuelType': {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelType'),
+  fuelType: {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelType'
+    ),
     field: 'fuelType',
     valueGetter: (params) => params.data?.fuelType?.fuelType || '',
     cellStyle: (params) => changelogCellStyle(params, 'fuelType')
   },
-  'fuelCategory': {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelCategory'),
+  fuelCategory: {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+    ),
     field: 'fuelCategory',
     valueGetter: (params) => params.data?.fuelCategory?.category || '',
     cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
   },
-  'provisionOfTheAct': {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'),
+  provisionOfTheAct: {
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
+    ),
     field: 'provisionOfTheAct',
     valueGetter: (params) => params.data?.provisionOfTheAct?.name || '',
     cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
@@ -579,10 +594,13 @@ export const changelogNestedOverrides = {
 
 export const changelogCommonColDefs = [
   {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
+    ),
     field: 'allocationTransactionType',
     valueGetter: (params) => params.data?.allocationTransactionType || '',
-    cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
+    cellStyle: (params) =>
+      changelogCellStyle(params, 'allocationTransactionType')
   },
   {
     headerName: i18n.t(
@@ -603,16 +621,14 @@ export const changelogCommonColDefs = [
       'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
     ),
     field: 'transactionPartnerEmail',
-    cellStyle: (params) =>
-      changelogCellStyle(params, 'transactionPartnerEmail')
+    cellStyle: (params) => changelogCellStyle(params, 'transactionPartnerEmail')
   },
   {
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
     ),
     field: 'transactionPartnerPhone',
-    cellStyle: (params) =>
-      changelogCellStyle(params, 'transactionPartnerPhone')
+    cellStyle: (params) => changelogCellStyle(params, 'transactionPartnerPhone')
   },
   {
     headerName: i18n.t(
@@ -660,7 +676,9 @@ export const changelogCommonColDefs = [
     cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
   },
   {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.quantity'
+    ),
     field: 'quantity',
     cellStyle: (params) => changelogCellStyle(params, 'quantity')
   },
@@ -705,7 +723,9 @@ export const changelogColDefs = [
     }
   },
   // Map through the common columns and replace specific ones with their nested versions
-  ...changelogCommonColDefs.map(col => changelogNestedOverrides[col.field] || col)
+  ...changelogCommonColDefs.map(
+    (col) => changelogNestedOverrides[col.field] || col
+  )
 ]
 
 export const changelogDefaultColDefs = {
@@ -714,7 +734,9 @@ export const changelogDefaultColDefs = {
 }
 
 export const changelogCommonGridOptions = {
-  overlayNoRowsTemplate: i18n.t('allocationAgreement:noAllocationAgreementsFound'),
+  overlayNoRowsTemplate: i18n.t(
+    'allocationAgreement:noAllocationAgreementsFound'
+  ),
   autoSizeStrategy: {
     type: 'fitCellContents',
     defaultMinWidth: 50,

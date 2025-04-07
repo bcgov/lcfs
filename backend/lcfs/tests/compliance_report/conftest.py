@@ -1,7 +1,7 @@
 import uuid
 import pytest
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -10,9 +10,7 @@ from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
     ComplianceDataService,
 )
-from lcfs.web.api.compliance_report.update_service import (
-    ComplianceReportUpdateService,
-)
+from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
@@ -49,7 +47,7 @@ def compliance_period_schema():
 @pytest.fixture
 def compliance_report_organization_schema():
     return ComplianceReportOrganizationSchema(
-        organization_id=1, name="Acme Corporation"
+        organization_id=1, organization_code="ACME123", name="Acme Corporation"
     )
 
 

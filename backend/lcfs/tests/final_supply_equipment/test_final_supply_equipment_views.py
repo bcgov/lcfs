@@ -3,9 +3,9 @@ import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
 from starlette.responses import StreamingResponse
-from unittest.mock import patch
-
-from lcfs.db.models import ComplianceReport, Organization
+from unittest.mock import patch, MagicMock
+from datetime import datetime
+from lcfs.db.models import ComplianceReport, Organization, CompliancePeriod
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.web.api.final_supply_equipment.schema import (
@@ -223,10 +223,22 @@ async def test_search_table_options_without_manufacturer(
 
 @pytest.mark.anyio
 async def test_export_success(client: AsyncClient, fastapi_app: FastAPI, set_mock_user):
+    compliance_period_mock = MagicMock(spec=CompliancePeriod)
+    compliance_period_mock.description = "2023"
+    compliance_period_mock.effective_date = datetime(2023, 1, 1)
+    compliance_period_mock.expiration_date = datetime(2023, 12, 31)
+
+    compliance_report_mock = MagicMock(spec=ComplianceReport)
+    compliance_report_mock.compliance_period = compliance_period_mock
+
     with patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_by_id"
+    ) as mock_cr, patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_report:
-        mock_validate_report.return_value = ComplianceReport()
+        mock_cr.return_value = compliance_report_mock
+        mock_validate_report.return_value = compliance_report_mock
+
         with patch(
             "lcfs.web.api.final_supply_equipment.export.FinalSupplyEquipmentExporter.export"
         ) as mock_export:

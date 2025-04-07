@@ -234,7 +234,22 @@ export const finalSupplyEquipmentColDefs = (
     },
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: SelectRenderer
+    cellRenderer: SelectRenderer,
+    valueGetter: (params) => {
+      if (params.data?.levelOfEquipment) {
+        return typeof params.data.levelOfEquipment === 'object'
+          ? params.data.levelOfEquipment.name
+          : params.data.levelOfEquipment
+      }
+      return ''
+    },
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.levelOfEquipment = params.newValue
+        return true
+      }
+      return false
+    }
   },
   {
     field: 'ports',

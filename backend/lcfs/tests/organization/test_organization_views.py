@@ -288,7 +288,11 @@ async def test_create_compliance_report_success(
         "compliance_period_id": 1,
         "compliance_period": {"compliance_period_id": 1, "description": "2024"},
         "organization_id": 1,
-        "organization": {"organization_id": 1, "name": "org1"},
+        "organization": {
+            "organization_id": 1,
+            "organization_code": "ABC123",
+            "name": "org1",
+        },
         "current_status_id": 1,
         "current_status": {"compliance_report_status_id": 1, "status": "status"},
         "summary": {
@@ -396,7 +400,11 @@ async def test_get_compliance_report_by_id_success(
             "compliance_period_id": 1,
             "compliance_period": {"compliance_period_id": 1, "description": "2024"},
             "organization_id": 1,
-            "organization": {"organization_id": 1, "name": "org1"},
+            "organization": {
+                "organization_id": 1,
+                "organization_code": "ABC123",
+                "name": "org1",
+            },
             "current_status_id": 1,
             "current_status": {"compliance_report_status_id": 1, "status": "status"},
             "summary": {
