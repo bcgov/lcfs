@@ -5,6 +5,7 @@
 export const ROUTES = {
   DASHBOARD: '/',
   API_DOCS: '/docs',
+  CREDIT_CALCULATOR: '/credit-calculator',
   FILE_SUBMISSION: '/file-submissions',
 
   AUTH: {
@@ -59,6 +60,7 @@ export const ROUTES = {
     LIST: '/compliance-reporting',
     VIEW: '/compliance-reporting/:compliancePeriod/:complianceReportId',
     COMPARE: '/compare-reporting',
+    CALCULATOR: '/compliance-reporting/credit-calculator',
     ADD: {
       SUPPLY_OF_FUEL:
         '/compliance-reporting/:compliancePeriod/:complianceReportId/supply-of-fuel',
