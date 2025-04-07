@@ -32,6 +32,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import colors from '@/themes/base/colors.js'
 import ROUTES from '@/routes/routes.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
+import { FILTER_KEYS } from '@/constants/common.js'
 
 const iconStyle = {
   width: '2rem',
@@ -108,6 +109,10 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       onSuccess: (response) => {
         setModalData(null)
         const updatedStatus = JSON.parse(response.config.data)?.status
+
+        // Clear Filters before navigating to ensure they can see the report
+        sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
+
         navigate(ROUTES.REPORTS.LIST, {
           state: {
             message: t('report:savedSuccessText', {

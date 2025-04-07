@@ -57,6 +57,7 @@ vi.mock('@/components/ClearFiltersButton', () => ({
   )
 }))
 
+const clearFiltersMock = vi.fn()
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
   const React = require('react')
   return {
@@ -83,7 +84,8 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
               getSelectedNodes: () => [
                 { data: { notificationMessageId: 'n1' } }
               ]
-            }
+            },
+            clearFilters: clearFiltersMock
           }
           if (props.onSelectionChanged) {
             props.onSelectionChanged({
@@ -92,9 +94,6 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
           }
           if (props.onGridReady) {
             props.onGridReady({ api: props.gridRef.current.api })
-          }
-          if (props.onSetResetGrid) {
-            props.onSetResetGrid(() => {})
           }
         }
       }, [
@@ -180,24 +179,6 @@ describe('Notifications Component', () => {
     })
 
     it('calls the resetGrid function when "Clear Filters" is clicked', async () => {
-      const resetGridMock = vi.fn()
-      vi.doMock('@/components/BCDataGrid/BCGridViewer', () => {
-        const React = require('react')
-        return {
-          BCGridViewer: (props) => {
-            React.useEffect(() => {
-              if (props.onSetResetGrid) {
-                props.onSetResetGrid(resetGridMock)
-              }
-            }, [props.onSetResetGrid])
-            return (
-              <div data-test="bc-grid-viewer" data-testid="bc-grid-viewer">
-                CustomGridViewer
-              </div>
-            )
-          }
-        }
-      })
       const { Notifications: NotificationsOverride } = await import(
         '../Notifications'
       )
@@ -206,7 +187,7 @@ describe('Notifications Component', () => {
       fireEvent.click(screen.getByText('Clear Filters'))
 
       await waitFor(() => {
-        expect(resetGridMock).toHaveBeenCalled()
+        expect(clearFiltersMock).toHaveBeenCalled()
       })
     })
 
