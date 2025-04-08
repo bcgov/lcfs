@@ -26,6 +26,7 @@ async def seed_organizations(session):
             "organization_type_id": 1,
             "organization_address_id": 1,
             "organization_attorney_address_id": 1,
+            "has_early_issuance": False,
         },
         {
             "organization_id": 2,
@@ -39,6 +40,7 @@ async def seed_organizations(session):
             "organization_type_id": 1,
             "organization_address_id": 2,
             "organization_attorney_address_id": 2,
+            "has_early_issuance": False,
         },
         {
             "organization_id": 3,
@@ -52,6 +54,7 @@ async def seed_organizations(session):
             "organization_type_id": 1,
             "organization_address_id": 3,
             "organization_attorney_address_id": 3,
+            "has_early_issuance": False,
         },
         {
             "organization_id": 4,
@@ -65,6 +68,7 @@ async def seed_organizations(session):
             "organization_type_id": 1,
             "organization_address_id": 4,
             "organization_attorney_address_id": 4,
+            "has_early_issuance": True,
         },
         {
             "organization_id": 5,
@@ -78,6 +82,7 @@ async def seed_organizations(session):
             "organization_type_id": 2,
             "organization_address_id": 5,
             "organization_attorney_address_id": 5,
+            "has_early_issuance": False,
         },
         {
             "organization_id": 6,
@@ -91,6 +96,7 @@ async def seed_organizations(session):
             "organization_type_id": 2,
             "organization_address_id": 6,
             "organization_attorney_address_id": 6,
+            "has_early_issuance": False,
         },
         {
             "organization_id": 7,
@@ -104,6 +110,7 @@ async def seed_organizations(session):
             "organization_type_id": 2,
             "organization_address_id": 7,
             "organization_attorney_address_id": 7,
+            "has_early_issuance": False,
         },
         {
             "organization_id": 8,
@@ -117,6 +124,7 @@ async def seed_organizations(session):
             "organization_type_id": 2,
             "organization_address_id": 8,
             "organization_attorney_address_id": 8,
+            "has_early_issuance": False,
         },
         {
             "organization_id": 9,
@@ -130,6 +138,7 @@ async def seed_organizations(session):
             "organization_type_id": 3,
             "organization_address_id": 9,
             "organization_attorney_address_id": 9,
+            "has_early_issuance": False,
         },
         {
             "organization_id": 10,
@@ -143,6 +152,7 @@ async def seed_organizations(session):
             "organization_type_id": 4,
             "organization_address_id": 10,
             "organization_attorney_address_id": 10,
+            "has_early_issuance": False,
         },
     ]
 
