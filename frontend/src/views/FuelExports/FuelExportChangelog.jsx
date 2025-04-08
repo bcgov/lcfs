@@ -27,7 +27,7 @@ export const FuelExportChangelog = () => {
   const { data: changelogData, isLoading: changelogDataLoading } =
     useGetChangeLog({
       complianceReportGroupUuid:
-        currentReportData.report.complianceReportGroupUuid,
+        currentReportData?.report.complianceReportGroupUuid,
       dataType: 'fuel-exports'
     })
 
