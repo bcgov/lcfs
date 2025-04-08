@@ -63,39 +63,19 @@ export const NotionalTransferChangelog = () => {
     return <Loading />
   }
   return (
-    <Box mb={4}>
-      <BCTypography variant="h6" color="primary" component="div" mb={2}>
-        Current state
-      </BCTypography>
-      <Box>
-        <BCGridViewer
-          gridKey={`notional-transfer-current`}
-          columnDefs={changelogCommonColDefs(false)}
-          queryData={{
-            data: { items: changelogData[0].notionalTransfers }
-          }}
-          getRowId={getRowId}
-          suppressPagination
-          gridOptions={gridOptions(false)}
-          defaultColDef={{
-            floatingFilter: false,
-            filter: false,
-            sortable: false
-          }}
-        />
-      </Box>
+    <Box>
       {changelogData?.map((item, i) => {
         return (
-          <>
+          <Box mb={4} key={i}>
             <BCTypography variant="h6" color="primary" component="div" mb={2}>
-              {item.label}
+              {item.nickname}
             </BCTypography>
             <Box>
               <BCGridViewer
                 key={i}
                 gridKey={`notional-transfers-changelog-${i}`}
                 columnDefs={
-                  i + 1 === changelogData.length
+                  i === 0 || i + 1 === changelogData.length
                     ? changelogCommonColDefs(false)
                     : changelogColDefs()
                 }
@@ -103,7 +83,7 @@ export const NotionalTransferChangelog = () => {
                 getRowId={getRowId}
                 suppressPagination
                 gridOptions={
-                  i + 1 === changelogData.length
+                  i === 0 || i + 1 === changelogData.length
                     ? gridOptions(false)
                     : gridOptions()
                 }
@@ -114,7 +94,7 @@ export const NotionalTransferChangelog = () => {
                 }}
               />
             </Box>
-          </>
+          </Box>
         )
       })}
     </Box>

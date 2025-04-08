@@ -649,6 +649,7 @@ class ComplianceReportServices:
         )
 
         group_map = defaultdict(dict)
+
         for report in reports:
             for fs in getattr(report, data_type) or []:
                 group_map[fs.group_uuid][fs.version] = fs
@@ -691,5 +692,28 @@ class ComplianceReportServices:
                     **{data_type: items},
                 )
             )
+
+        latest_entries = {}
+
+        for group_uuid, versions in group_map.items():
+            latest_version = max(versions.keys())
+            latest_item = versions[latest_version]
+
+            if latest_item.action_type == "DELETE":
+                continue
+
+            latest_entries[group_uuid] = latest_item
+
+        latest_entries_list = list(latest_entries.values())
+
+        grouped_fs_reports.insert(
+            0,
+            dto(
+                nickname="Current State",
+                version=reports[0].version,
+                compliance_report_id=reports[0].compliance_report_id,
+                **{data_type: latest_entries_list},
+            ),
+        )
 
         return grouped_fs_reports

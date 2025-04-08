@@ -754,7 +754,7 @@ export const changelogCommonColDefs = (highlight = true) => [
     headerName: i18n.t(
       'fuelExport:fuelExportColLabels.determiningCarbonIntensity'
     ),
-    field: 'determiningCarbonIntensity.name',
+    field: 'provisionOfTheAct.name',
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'provisionOfTheActId')
   },
