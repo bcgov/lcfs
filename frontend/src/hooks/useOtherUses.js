@@ -91,17 +91,3 @@ export const useGetOtherUses = (
     }
   })
 }
-
-export const useGetOtherUsesChangeLog = ({ complianceReportGroupUuid }) => {
-  const client = useApiService()
-  const path = apiRoutes.getChangelog
-    .replace(':complianceReportGroupUuid', complianceReportGroupUuid)
-    .replace(':dataType', 'other-uses')
-  return useQuery({
-    queryKey: ['other-uses-log', complianceReportGroupUuid],
-    queryFn: async () => {
-      const response = await client.get(path)
-      return response.data
-    }
-  })
-}

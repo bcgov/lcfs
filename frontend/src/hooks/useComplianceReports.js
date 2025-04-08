@@ -262,3 +262,17 @@ export const useGetComplianceReportStatuses = (options) => {
     ...options
   })
 }
+
+export const useGetChangeLog = ({ complianceReportGroupUuid, dataType }) => {
+  const client = useApiService()
+  const path = apiRoutes.getChangelog
+    .replace(':complianceReportGroupUuid', complianceReportGroupUuid)
+    .replace(':dataType', dataType)
+  return useQuery({
+    queryKey: ['changelog', complianceReportGroupUuid, dataType],
+    queryFn: async () => {
+      const response = await client.get(path)
+      return response.data
+    }
+  })
+}

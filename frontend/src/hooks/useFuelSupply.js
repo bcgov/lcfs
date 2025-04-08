@@ -62,17 +62,3 @@ export const useSaveFuelSupply = (params, options) => {
     }
   })
 }
-
-export const useGetFuelSupplyChangeLog = ({ complianceReportGroupUuid }) => {
-  const client = useApiService()
-  const path = apiRoutes.getChangelog
-    .replace(':complianceReportGroupUuid', complianceReportGroupUuid)
-    .replace(':dataType', 'fuel-supplies')
-  return useQuery({
-    queryKey: ['fuel-supplies-changelog', complianceReportGroupUuid],
-    queryFn: async () => {
-      const response = await client.get(path)
-      return response.data
-    }
-  })
-}

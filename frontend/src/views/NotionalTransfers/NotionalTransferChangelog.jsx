@@ -1,9 +1,11 @@
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import {
+  useGetChangeLog,
+  useGetComplianceReport
+} from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useGetNotionalTransfersChangeLog } from '@/hooks/useNotionalTransfer'
 import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'
 import { useTranslation } from 'react-i18next'
@@ -23,9 +25,10 @@ export const NotionalTransferChangelog = () => {
   )
 
   const { data: changelogData, isLoading: changelogDataLoading } =
-    useGetNotionalTransfersChangeLog({
+    useGetChangeLog({
       complianceReportGroupUuid:
-        currentReportData.report.complianceReportGroupUuid
+        currentReportData.report.complianceReportGroupUuid,
+      dataType: 'notional-transfers'
     })
 
   const getRowId = (params) => {

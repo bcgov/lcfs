@@ -1,15 +1,17 @@
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import { useGetAllocationAgreementsChangeLog } from '@/hooks/useAllocationAgreement'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import {
+  useGetChangeLog,
+  useGetComplianceReport
+} from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'
+import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
-import React from 'react'
 
 export const AllocationAgreementChangelog = () => {
   const { complianceReportId } = useParams()
@@ -24,9 +26,10 @@ export const AllocationAgreementChangelog = () => {
   )
 
   const { data: changelogData, isLoading: changelogDataLoading } =
-    useGetAllocationAgreementsChangeLog({
+    useGetChangeLog({
       complianceReportGroupUuid:
-        currentReportData.report.complianceReportGroupUuid
+        currentReportData.report.complianceReportGroupUuid,
+      dataType: 'allocation-agreements'
     })
 
   const getRowId = (params) => {
