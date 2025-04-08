@@ -788,3 +788,42 @@ async def test_get_additional_carbon_intensity(fuel_code_repo, mock_db):
     # Added the compliance_period as required
     result = await fuel_code_repo.get_additional_carbon_intensity(1, 2, "2025")
     assert result == aci
+
+
+@pytest.mark.anyio
+async def test_get_standardized_fuel_data_unknown_no_codes_found_falls_back_to_default(
+    fuel_code_repo, mock_db
+):
+    """
+    If provision_of_the_act='unknown', but there are NO active fuel codes
+    in the last 12 months, we should revert to the default CI.
+    """
+    fuel_code_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_fuel_type = FuelType(
+        fuel_type_id=1,
+        fuel_type="Diesel",
+        unrecognized=False,
+        default_carbon_intensity=90.0,
+    )
+    mock_db.get_one.return_value = mock_fuel_type
+
+    mock_execute_result = MagicMock()
+    mock_execute_result.scalar_one_or_none.return_value = None
+    mock_db.execute.return_value = mock_execute_result
+
+    fuel_code_repo.get_default_carbon_intensity = AsyncMock(return_value=123.45)
+
+    result = await fuel_code_repo.get_standardized_fuel_data(
+        fuel_type_id=1,
+        fuel_category_id=2,
+        end_use_id=3,
+        compliance_period="2024",
+        provision_of_the_act="unknown",
+        export_date=date.today(),
+    )
+
+    assert result.effective_carbon_intensity == 123.45
+
+    fuel_code_repo.get_default_carbon_intensity.assert_awaited_once_with(
+        1, "2024"
+    )
