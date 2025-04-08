@@ -1,7 +1,7 @@
 import structlog
 from fastapi import APIRouter, Body, status, Request, Depends
 from starlette.responses import StreamingResponse
-from typing import List
+from typing import List, Literal
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
@@ -240,75 +240,34 @@ async def delete_compliance_report(
 
 
 @router.get(
-    "/{compliance_report_group_uuid}/changelog/fuel-supplies",
-    response_model=List[ChangelogFuelSuppliesDTO],
+    "/{compliance_report_group_uuid}/changelog/{data_type}",
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_fuel_supplies_changelog(
+async def get_changelog(
     request: Request,
     compliance_report_group_uuid: str,
+    data_type: Literal[
+        "fuel-supplies",
+        "fuel-exports",
+        "notional-transfers",
+        "other-uses",
+        "allocation-agreements",
+    ],
     service: ComplianceReportServices = Depends(),
-) -> List[ChangelogFuelSuppliesDTO]:
+) -> List:
+    response_model_map = {
+        "fuel_supplies": ChangelogFuelSuppliesDTO,
+        "fuel_exports": ChangelogFuelExportsDTO,
+        "notional_transfers": ChangelogNotionalTransfersDTO,
+        "other_uses": ChangelogOtherUsesDTO,
+        "allocation_agreements": ChangelogAllocationAgreementsDTO,
+    }
 
-    return await service.get_fuel_supplies_changelog_data(compliance_report_group_uuid)
+    # Convert kebab-case to snake_case for database mapping
+    data_type_snake = data_type.replace("-", "_")
+    router.routes[-1].response_model = List[response_model_map[data_type_snake]]
 
-
-@router.get(
-    "/{report_id}/changelog/fuel-exports",
-    response_model=List[ChangelogFuelExportsDTO],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_fuel_exports_changelog(
-    request: Request,
-    report_id: int,
-    service: ComplianceReportServices = Depends(),
-) -> List[ChangelogFuelExportsDTO]:
-
-    return await service.get_fuel_exports_changelog_data(report_id)
-
-
-@router.get(
-    "/{report_id}/changelog/notional-transfers",
-    response_model=List[ChangelogNotionalTransfersDTO],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_notional_transfers_changelog(
-    request: Request,
-    report_id: int,
-    service: ComplianceReportServices = Depends(),
-) -> List[ChangelogNotionalTransfersDTO]:
-
-    return await service.get_notional_transfers_changelog_data(report_id)
-
-
-@router.get(
-    "/{report_id}/changelog/other-uses",
-    response_model=List[ChangelogOtherUsesDTO],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_other_uses_changelog(
-    request: Request,
-    report_id: int,
-    service: ComplianceReportServices = Depends(),
-) -> List[ChangelogOtherUsesDTO]:
-
-    return await service.get_other_uses_changelog_data(report_id)
-
-
-@router.get(
-    "/{report_id}/changelog/alocation-agreements",
-    response_model=List[ChangelogAllocationAgreementsDTO],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
-async def get_allocation_agreements_changelog(
-    request: Request,
-    report_id: int,
-    service: ComplianceReportServices = Depends(),
-) -> List[ChangelogAllocationAgreementsDTO]:
-
-    return await service.get_allocation_agreements_changelog_data(report_id)
+    return await service.get_changelog_data(
+        compliance_report_group_uuid, data_type_snake
+    )

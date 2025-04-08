@@ -84,10 +84,9 @@ export const useGetAllocationAgreementsChangeLog = ({
   complianceReportGroupUuid
 }) => {
   const client = useApiService()
-  const path = apiRoutes.getAllocationAgreementsChangelog.replace(
-    ':complianceReportGroupUuid',
-    complianceReportGroupUuid
-  )
+  const path = apiRoutes.getChangelog
+    .replace(':complianceReportGroupUuid', complianceReportGroupUuid)
+    .replace(':dataType', 'allocation-agreements')
   return useQuery({
     queryKey: ['allocation-agreements-changelog', complianceReportGroupUuid],
     queryFn: async () => {

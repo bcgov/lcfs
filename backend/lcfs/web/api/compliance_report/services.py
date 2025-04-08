@@ -1,6 +1,6 @@
 import math
 import uuid
-from typing import List, Union
+from typing import List, Union, Literal
 
 import structlog
 from fastapi import Depends
@@ -39,6 +39,11 @@ from lcfs.web.api.compliance_report.dtos import (
     ChangelogNotionalTransfersDTO,
     ChangelogOtherUsesDTO,
 )
+from lcfs.db.models.compliance.FuelExport import FuelExport
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 
 logger = structlog.get_logger(__name__)
 
@@ -561,38 +566,108 @@ class ComplianceReportServices:
         return statuses
 
     @service_handler
-    async def get_fuel_supplies_changelog_data(
-        self, compliance_report_group_uuid: str
-    ) -> List[ChangelogFuelSuppliesDTO]:
-        reports = await self.repo.get_compliance_report_fuel_supplies_data(
-            compliance_report_group_uuid
+    async def get_changelog_data(
+        self,
+        compliance_report_group_uuid: str,
+        data_type: Literal[
+            "fuel_supplies",
+            "fuel_exports",
+            "notional_transfers",
+            "other_uses",
+            "allocation_agreements",
+        ],
+    ) -> List:
+
+        data_map = {
+            "fuel_supplies": {
+                "model": FuelSupply,
+                "dto": ChangelogFuelSuppliesDTO,
+                "id_field": "fuel_supply_id",
+                "relationships": [
+                    ("fuel_supplies", "fuel_type"),
+                    ("fuel_supplies", "fuel_category"),
+                    ("fuel_supplies", "fuel_code"),
+                    ("fuel_supplies", "end_use_type"),
+                    ("fuel_supplies", "provision_of_the_act"),
+                ],
+            },
+            "fuel_exports": {
+                "model": FuelExport,
+                "dto": ChangelogFuelExportsDTO,
+                "id_field": "fuel_export_id",
+                "relationships": [
+                    ("fuel_exports", "fuel_type"),
+                    ("fuel_exports", "fuel_category"),
+                    ("fuel_exports", "fuel_code"),
+                    ("fuel_exports", "end_use_type"),
+                    ("fuel_exports", "provision_of_the_act"),
+                ],
+            },
+            "notional_transfers": {
+                "model": NotionalTransfer,
+                "dto": ChangelogNotionalTransfersDTO,
+                "id_field": "notional_transfer_id",
+                "relationships": [
+                    ("notional_transfers", "fuel_category"),
+                ],
+            },
+            "other_uses": {
+                "model": OtherUses,
+                "dto": ChangelogOtherUsesDTO,
+                "id_field": "other_uses_id",
+                "relationships": [
+                    ("other_uses", "fuel_type"),
+                    ("other_uses", "fuel_category"),
+                    ("other_uses", "fuel_code"),
+                    ("other_uses", "expected_use"),
+                    ("other_uses", "provision_of_the_act"),
+                ],
+            },
+            "allocation_agreements": {
+                "model": AllocationAgreement,
+                "dto": ChangelogAllocationAgreementsDTO,
+                "id_field": "allocation_agreement_id",
+                "relationships": [
+                    ("allocation_agreements", "allocation_transaction_type"),
+                    ("allocation_agreements", "fuel_type"),
+                    ("allocation_agreements", "fuel_category"),
+                    ("allocation_agreements", "fuel_code"),
+                    ("allocation_agreements", "provision_of_the_act"),
+                ],
+            },
+        }
+
+        if data_type not in data_map:
+            raise ValueError(f"Invalid data_type: {data_type}")
+
+        config = data_map[data_type]
+        dto = config["dto"]
+        id_field = config["id_field"]
+
+        reports = await self.repo.get_changelog_data(
+            compliance_report_group_uuid, config
         )
 
         group_map = defaultdict(dict)
-
         for report in reports:
-            for fs in report.fuel_supplies or []:
+            for fs in getattr(report, data_type) or []:
                 group_map[fs.group_uuid][fs.version] = fs
 
         grouped_fs_reports = []
 
         for report in reports:
             seen_ids = set()
-            fuel_supplies = []
+            items = []
 
-            for fs in report.fuel_supplies or []:
-
-                fuel_supplies.append(fs)
-                seen_ids.add(fs.fuel_supply_id)
+            for fs in getattr(report, data_type) or []:
+                items.append(fs)
+                seen_ids.add(getattr(fs, id_field))
 
                 if fs.action_type == "UPDATE":
                     prev = group_map[fs.group_uuid].get(fs.version - 1)
-                    if prev and prev.fuel_supply_id not in seen_ids:
-
+                    if prev and getattr(prev, id_field) not in seen_ids:
                         diff = []
-
                         for key, value in fs.__dict__.items():
-
                             prev_value = getattr(prev, key, None)
                             if prev_value != value:
                                 camel_case_key = key.split("_")[0] + "".join(
@@ -603,259 +678,17 @@ class ComplianceReportServices:
                         prev.diff = diff
                         prev.updated = True
                         prev.action_type = "UPDATE"
-                        prev.updated = True
-
                         fs.diff = diff
 
-                        fuel_supplies.append(prev)
-                        seen_ids.add(prev.fuel_supply_id)
+                        items.append(prev)
+                        seen_ids.add(getattr(prev, id_field))
 
             grouped_fs_reports.append(
-                ChangelogFuelSuppliesDTO(
+                dto(
                     nickname=report.nickname,
                     version=report.version,
                     compliance_report_id=report.compliance_report_id,
-                    fuel_supplies=fuel_supplies,
-                )
-            )
-
-        return grouped_fs_reports
-
-    @service_handler
-    async def get_fuel_exports_changelog_data(
-        self, compliance_report_group_uuid: str
-    ) -> List[ChangelogFuelExportsDTO]:
-        reports = await self.repo.get_compliance_report_fuel_exports_data(
-            compliance_report_group_uuid
-        )
-
-        group_map = defaultdict(dict)
-
-        for report in reports:
-            for fs in report.fuel_exports or []:
-                group_map[fs.group_uuid][fs.version] = fs
-
-        grouped_fs_reports = []
-
-        for report in reports:
-            seen_ids = set()
-            fuel_exports = []
-
-            for fs in report.fuel_exports or []:
-                fuel_exports.append(fs)
-                seen_ids.add(fs.fuel_export_id)
-
-                if fs.action_type == "UPDATE":
-                    prev = group_map[fs.group_uuid].get(fs.version - 1)
-                    if prev and prev.fuel_export_id not in seen_ids:
-
-                        diff = []
-
-                        for key, value in fs.__dict__.items():
-
-                            prev_value = getattr(prev, key, None)
-                            if prev_value != value:
-                                camel_case_key = key.split("_")[0] + "".join(
-                                    x.capitalize() for x in key.split("_")[1:]
-                                )
-                                diff.append(camel_case_key)
-
-                        prev.diff = diff
-                        prev.updated = True
-                        prev.action_type = "UPDATE"
-                        prev.updated = True
-
-                        fs.diff = diff
-
-                        fuel_exports.append(prev)
-                        seen_ids.add(prev.fuel_export_id)
-
-            grouped_fs_reports.append(
-                ChangelogFuelExportsDTO(
-                    nickname=report.nickname,
-                    version=report.version,
-                    compliance_report_id=report.compliance_report_id,
-                    fuel_exports=fuel_exports,
-                )
-            )
-
-        return grouped_fs_reports
-
-    @service_handler
-    async def get_notional_transfers_changelog_data(
-        self, compliance_report_group_uuid: str
-    ) -> List[ChangelogNotionalTransfersDTO]:
-        reports = await self.repo.get_compliance_report_notional_transfers_data(
-            compliance_report_group_uuid
-        )
-
-        group_map = defaultdict(dict)
-
-        for report in reports:
-            for fs in report.notional_transfers or []:
-                group_map[fs.group_uuid][fs.version] = fs
-
-        grouped_fs_reports = []
-
-        for report in reports:
-            seen_ids = set()
-            notional_transfers = []
-
-            for fs in report.notional_transfers or []:
-                notional_transfers.append(fs)
-                seen_ids.add(fs.notional_transfer_id)
-
-                if fs.action_type == "UPDATE":
-                    prev = group_map[fs.group_uuid].get(fs.version - 1)
-                    if prev and prev.notional_transfer_id not in seen_ids:
-
-                        diff = []
-
-                        for key, value in fs.__dict__.items():
-
-                            prev_value = getattr(prev, key, None)
-                            if prev_value != value:
-                                camel_case_key = key.split("_")[0] + "".join(
-                                    x.capitalize() for x in key.split("_")[1:]
-                                )
-                                diff.append(camel_case_key)
-
-                        prev.diff = diff
-                        prev.updated = True
-                        prev.action_type = "UPDATE"
-                        prev.updated = True
-
-                        fs.diff = diff
-
-                        notional_transfers.append(prev)
-                        seen_ids.add(prev.notional_transfer_id)
-
-            grouped_fs_reports.append(
-                ChangelogNotionalTransfersDTO(
-                    nickname=report.nickname,
-                    version=report.version,
-                    compliance_report_id=report.compliance_report_id,
-                    notional_transfers=notional_transfers,
-                )
-            )
-
-        return grouped_fs_reports
-
-    @service_handler
-    async def get_other_uses_changelog_data(
-        self, compliance_report_group_uuid: str
-    ) -> List[ChangelogOtherUsesDTO]:
-        reports = await self.repo.get_compliance_report_other_uses_data(
-            compliance_report_group_uuid
-        )
-
-        group_map = defaultdict(dict)
-
-        for report in reports:
-            for fs in report.other_uses or []:
-                group_map[fs.group_uuid][fs.version] = fs
-
-        grouped_fs_reports = []
-
-        for report in reports:
-            seen_ids = set()
-            other_uses = []
-
-            for fs in report.other_uses or []:
-                other_uses.append(fs)
-                seen_ids.add(fs.other_uses_id)
-
-                if fs.action_type == "UPDATE":
-                    prev = group_map[fs.group_uuid].get(fs.version - 1)
-                    if prev and prev.other_uses_id not in seen_ids:
-
-                        diff = []
-
-                        for key, value in fs.__dict__.items():
-
-                            prev_value = getattr(prev, key, None)
-                            if prev_value != value:
-                                camel_case_key = key.split("_")[0] + "".join(
-                                    x.capitalize() for x in key.split("_")[1:]
-                                )
-                                diff.append(camel_case_key)
-
-                        prev.diff = diff
-                        prev.updated = True
-                        prev.action_type = "UPDATE"
-                        prev.updated = True
-
-                        fs.diff = diff
-
-                        other_uses.append(prev)
-                        seen_ids.add(prev.other_uses_id)
-
-            grouped_fs_reports.append(
-                ChangelogOtherUsesDTO(
-                    nickname=report.nickname,
-                    version=report.version,
-                    compliance_report_id=report.compliance_report_id,
-                    other_uses=other_uses,
-                )
-            )
-
-        return grouped_fs_reports
-
-    @service_handler
-    async def get_allocation_agreements_changelog_data(
-        self, compliance_report_group_uuid: str
-    ) -> List[ChangelogAllocationAgreementsDTO]:
-        reports = await self.repo.get_compliance_report_allocation_agreements_data(
-            compliance_report_group_uuid
-        )
-
-        group_map = defaultdict(dict)
-
-        for report in reports:
-            for fs in report.allocation_agreements or []:
-                group_map[fs.group_uuid][fs.version] = fs
-
-        grouped_fs_reports = []
-
-        for report in reports:
-            seen_ids = set()
-            allocation_agreements = []
-
-            for fs in report.allocation_agreements or []:
-                allocation_agreements.append(fs)
-                seen_ids.add(fs.allocation_agreement_id)
-
-                if fs.action_type == "UPDATE":
-                    prev = group_map[fs.group_uuid].get(fs.version - 1)
-                    if prev and prev.allocation_agreement_id not in seen_ids:
-
-                        diff = []
-
-                        for key, value in fs.__dict__.items():
-
-                            prev_value = getattr(prev, key, None)
-                            if prev_value != value:
-                                camel_case_key = key.split("_")[0] + "".join(
-                                    x.capitalize() for x in key.split("_")[1:]
-                                )
-                                diff.append(camel_case_key)
-
-                        prev.diff = diff
-                        prev.updated = True
-                        prev.action_type = "UPDATE"
-                        prev.updated = True
-
-                        fs.diff = diff
-
-                        allocation_agreements.append(prev)
-                        seen_ids.add(prev.allocation_agreement_id)
-
-            grouped_fs_reports.append(
-                ChangelogAllocationAgreementsDTO(
-                    nickname=report.nickname,
-                    version=report.version,
-                    compliance_report_id=report.compliance_report_id,
-                    allocation_agreements=allocation_agreements,
+                    **{data_type: items},
                 )
             )
 

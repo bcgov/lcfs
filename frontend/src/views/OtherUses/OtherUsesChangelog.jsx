@@ -69,7 +69,7 @@ export const OtherUsesChangelog = () => {
           gridKey={`other-use-current`}
           columnDefs={changelogCommonColDefs(false)}
           queryData={{
-            data: { items: changelogData[0].alloacationAgreements }
+            data: { items: changelogData[0].otherUses }
           }}
           getRowId={getRowId}
           suppressPagination
@@ -96,7 +96,7 @@ export const OtherUsesChangelog = () => {
                     ? changelogCommonColDefs(false)
                     : changelogColDefs()
                 }
-                queryData={{ data: { items: item.alloacationAgreements } }}
+                queryData={{ data: { items: item.otherUses } }}
                 getRowId={getRowId}
                 suppressPagination
                 gridOptions={

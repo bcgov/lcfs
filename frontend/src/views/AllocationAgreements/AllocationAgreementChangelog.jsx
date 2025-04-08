@@ -9,6 +9,7 @@ import { Box } from '@mui/material'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
+import React from 'react'
 
 export const AllocationAgreementChangelog = () => {
   const { complianceReportId } = useParams()
@@ -70,7 +71,7 @@ export const AllocationAgreementChangelog = () => {
           gridKey={`allocation-agreement-current`}
           columnDefs={changelogCommonColDefs(false)}
           queryData={{
-            data: { items: changelogData[0].alloacationAgreements }
+            data: { items: changelogData[0].allocationAgreements }
           }}
           getRowId={getRowId}
           suppressPagination
@@ -84,7 +85,7 @@ export const AllocationAgreementChangelog = () => {
       </Box>
       {changelogData?.map((item, i) => {
         return (
-          <>
+          <React.Fragment key={i}>
             <BCTypography variant="h6" color="primary" component="div" mb={2}>
               {item.label}
             </BCTypography>
@@ -97,7 +98,7 @@ export const AllocationAgreementChangelog = () => {
                     ? changelogCommonColDefs(false)
                     : changelogColDefs()
                 }
-                queryData={{ data: { items: item.alloacationAgreements } }}
+                queryData={{ data: { items: item.allocationAgreements } }}
                 getRowId={getRowId}
                 suppressPagination
                 gridOptions={
@@ -112,7 +113,7 @@ export const AllocationAgreementChangelog = () => {
                 }}
               />
             </Box>
-          </>
+          </React.Fragment>
         )
       })}
     </Box>

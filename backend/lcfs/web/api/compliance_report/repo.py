@@ -20,7 +20,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import joinedload
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict, Union, TypedDict, Type
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.comment import ComplianceReportInternalComment
@@ -1161,21 +1161,35 @@ class ComplianceReportRepository:
         result = await self.db.execute(select(ComplianceReportStatus))
         return result.scalars().all()
 
+    class ConfigType(TypedDict):
+        field: str
+        model: Type
+        dto_class: Type
+        id_field: str
+        relationships: List[tuple[str, str]]
+
     @repo_handler
-    async def get_compliance_report_fuel_supplies_data(
-        self, compliance_report_group_uuid: str
-    ) -> List[ChangelogFuelSuppliesDTO]:
+    async def get_changelog_data(
+        self,
+        compliance_report_group_uuid: str,
+        config: ConfigType,
+    ) -> List:
         try:
 
+            model = config["model"]
+            dto = config["dto"]
+            relationships = config["relationships"]
+
+            # Build the subquery
             subquery = (
-                select(FuelSupply.compliance_report_id)
+                select(model.compliance_report_id)
                 .where(
-                    FuelSupply.compliance_report_id
-                    == ComplianceReport.compliance_report_id
+                    model.compliance_report_id == ComplianceReport.compliance_report_id
                 )
                 .limit(1)
             )
 
+            # Build the main query
             reports_query = (
                 select(ComplianceReport)
                 .where(
@@ -1184,229 +1198,21 @@ class ComplianceReportRepository:
                     exists(subquery),
                 )
                 .options(
-                    joinedload(ComplianceReport.fuel_supplies).joinedload(
-                        FuelSupply.fuel_type
-                    ),
-                    joinedload(ComplianceReport.fuel_supplies).joinedload(
-                        FuelSupply.fuel_category
-                    ),
-                    joinedload(ComplianceReport.fuel_supplies).joinedload(
-                        FuelSupply.fuel_code
-                    ),
-                    joinedload(ComplianceReport.fuel_supplies).joinedload(
-                        FuelSupply.end_use_type
-                    ),
-                    joinedload(ComplianceReport.fuel_supplies).joinedload(
-                        FuelSupply.provision_of_the_act
-                    ),
+                    *[
+                        joinedload(getattr(ComplianceReport, rel)).joinedload(
+                            getattr(model, sub_rel)
+                        )
+                        for rel, sub_rel in relationships
+                    ]
                 )
                 .order_by(ComplianceReport.version.desc())
             )
+
+            # Execute the query and fetch results
             reports = (await self.db.execute(reports_query)).scalars().unique().all()
 
-            return [
-                ChangelogFuelSuppliesDTO.model_validate(report) for report in reports
-            ]
+            # Return the results as DTO objects
+            return [dto.model_validate(report) for report in reports]
         except Exception as e:
-            logger.error(
-                f"Error in get_compliance_report_fuel_supplies_data: {e}", exc_info=True
-            )
-            raise
-
-    @repo_handler
-    async def get_compliance_report_fuel_exports_data(
-        self, compliance_report_group_uuid: str
-    ) -> List[ChangelogFuelExportsDTO]:
-        try:
-
-            subquery = (
-                select(FuelExport.compliance_report_id)
-                .where(
-                    FuelExport.compliance_report_id
-                    == ComplianceReport.compliance_report_id
-                )
-                .limit(1)
-            )
-
-            reports_query = (
-                select(ComplianceReport)
-                .where(
-                    ComplianceReport.compliance_report_group_uuid
-                    == compliance_report_group_uuid,
-                    exists(subquery),
-                )
-                .options(
-                    joinedload(ComplianceReport.fuel_exports).joinedload(
-                        FuelExport.fuel_type
-                    ),
-                    joinedload(ComplianceReport.fuel_exports).joinedload(
-                        FuelExport.fuel_category
-                    ),
-                    joinedload(ComplianceReport.fuel_exports).joinedload(
-                        FuelExport.fuel_code
-                    ),
-                    joinedload(ComplianceReport.fuel_exports).joinedload(
-                        FuelExport.end_use_type
-                    ),
-                    joinedload(ComplianceReport.fuel_exports).joinedload(
-                        FuelExport.provision_of_the_act
-                    ),
-                )
-                .order_by(ComplianceReport.version.desc())
-            )
-            reports = (await self.db.execute(reports_query)).scalars().unique().all()
-
-            return [
-                ChangelogFuelExportsDTO.model_validate(report) for report in reports
-            ]
-        except Exception as e:
-            logger.error(
-                f"Error in get_compliance_report_fuel_exports_data: {e}", exc_info=True
-            )
-            raise
-
-    @repo_handler
-    async def get_compliance_report_notional_transfers_data(
-        self, compliance_report_group_uuid: str
-    ) -> List[ChangelogNotionalTransfersDTO]:
-        try:
-
-            subquery = (
-                select(NotionalTransfer.compliance_report_id)
-                .where(
-                    NotionalTransfer.compliance_report_id
-                    == ComplianceReport.compliance_report_id
-                )
-                .limit(1)
-            )
-
-            reports_query = (
-                select(ComplianceReport)
-                .where(
-                    ComplianceReport.compliance_report_group_uuid
-                    == compliance_report_group_uuid,
-                    exists(subquery),
-                )
-                .options(
-                    joinedload(ComplianceReport.notional_transfers).joinedload(
-                        NotionalTransfer.fuel_category
-                    ),
-                )
-                .order_by(ComplianceReport.version.desc())
-            )
-            reports = (await self.db.execute(reports_query)).scalars().unique().all()
-
-            return [
-                ChangelogNotionalTransfersDTO.model_validate(report)
-                for report in reports
-            ]
-        except Exception as e:
-            logger.error(
-                f"Error in get_compliance_report_notional_transfers_data: {e}",
-                exc_info=True,
-            )
-            raise
-
-    @repo_handler
-    async def get_compliance_report_other_uses_data(
-        self, compliance_report_group_uuid: str
-    ) -> List[ChangelogOtherUsesDTO]:
-        try:
-
-            subquery = (
-                select(OtherUses.compliance_report_id)
-                .where(
-                    OtherUses.compliance_report_id
-                    == ComplianceReport.compliance_report_id
-                )
-                .limit(1)
-            )
-
-            reports_query = (
-                select(ComplianceReport)
-                .where(
-                    ComplianceReport.compliance_report_group_uuid
-                    == compliance_report_group_uuid,
-                    exists(subquery),
-                )
-                .options(
-                    joinedload(ComplianceReport.other_uses).joinedload(
-                        OtherUses.fuel_type
-                    ),
-                    joinedload(ComplianceReport.other_uses).joinedload(
-                        OtherUses.fuel_category
-                    ),
-                    joinedload(ComplianceReport.other_uses).joinedload(
-                        OtherUses.fuel_code
-                    ),
-                    joinedload(ComplianceReport.other_uses).joinedload(
-                        OtherUses.expected_use
-                    ),
-                    joinedload(ComplianceReport.other_uses).joinedload(
-                        OtherUses.provision_of_the_act
-                    ),
-                )
-                .order_by(ComplianceReport.version.desc())
-            )
-            reports = (await self.db.execute(reports_query)).scalars().unique().all()
-
-            return [ChangelogOtherUsesDTO.model_validate(report) for report in reports]
-        except Exception as e:
-            logger.error(
-                f"Error in get_compliance_report_other_uses_data: {e}", exc_info=True
-            )
-            raise
-
-    @repo_handler
-    async def get_compliance_report_allocation_agreements_data(
-        self, compliance_report_group_uuid: str
-    ) -> List[ChangelogAllocationAgreementsDTO]:
-        try:
-
-            subquery = (
-                select(AllocationAgreement.compliance_report_id)
-                .where(
-                    AllocationAgreement.compliance_report_id
-                    == ComplianceReport.compliance_report_id
-                )
-                .limit(1)
-            )
-
-            reports_query = (
-                select(ComplianceReport)
-                .where(
-                    ComplianceReport.compliance_report_group_uuid
-                    == compliance_report_group_uuid,
-                    exists(subquery),
-                )
-                .options(
-                    joinedload(ComplianceReport.allocation_agreements).joinedload(
-                        AllocationAgreement.allocation_transaction_type
-                    ),
-                    joinedload(ComplianceReport.allocation_agreements).joinedload(
-                        AllocationAgreement.fuel_type
-                    ),
-                    joinedload(ComplianceReport.allocation_agreements).joinedload(
-                        AllocationAgreement.fuel_category
-                    ),
-                    joinedload(ComplianceReport.allocation_agreements).joinedload(
-                        AllocationAgreement.fuel_code
-                    ),
-                    joinedload(ComplianceReport.allocation_agreements).joinedload(
-                        AllocationAgreement.provision_of_the_act
-                    ),
-                )
-                .order_by(ComplianceReport.version.desc())
-            )
-            reports = (await self.db.execute(reports_query)).scalars().unique().all()
-
-            return [
-                ChangelogAllocationAgreementsDTO.model_validate(report)
-                for report in reports
-            ]
-        except Exception as e:
-            logger.error(
-                f"Error in get_compliance_report_allocation_agreements_data: {e}",
-                exc_info=True,
-            )
+            logger.error(f"Error in get_changelog_data: {e}", exc_info=True)
             raise

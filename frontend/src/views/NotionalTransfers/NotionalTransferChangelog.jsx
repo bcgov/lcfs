@@ -69,7 +69,7 @@ export const NotionalTransferChangelog = () => {
           gridKey={`notional-transfer-current`}
           columnDefs={changelogCommonColDefs(false)}
           queryData={{
-            data: { items: changelogData[0].alloacationAgreements }
+            data: { items: changelogData[0].notionalTransfers }
           }}
           getRowId={getRowId}
           suppressPagination
@@ -96,7 +96,7 @@ export const NotionalTransferChangelog = () => {
                     ? changelogCommonColDefs(false)
                     : changelogColDefs()
                 }
-                queryData={{ data: { items: item.alloacationAgreements } }}
+                queryData={{ data: { items: item.notionalTransfers } }}
                 getRowId={getRowId}
                 suppressPagination
                 gridOptions={

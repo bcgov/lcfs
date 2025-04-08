@@ -69,7 +69,7 @@ export const FuelExportChangelog = () => {
           gridKey={`fuel-export-current`}
           columnDefs={changelogCommonColDefs(false)}
           queryData={{
-            data: { items: changelogData[0].alloacationAgreements }
+            data: { items: changelogData[0].fuelExports }
           }}
           getRowId={getRowId}
           suppressPagination
@@ -96,7 +96,7 @@ export const FuelExportChangelog = () => {
                     ? changelogCommonColDefs(false)
                     : changelogColDefs()
                 }
-                queryData={{ data: { items: item.alloacationAgreements } }}
+                queryData={{ data: { items: item.fuelExports } }}
                 getRowId={getRowId}
                 suppressPagination
                 gridOptions={
