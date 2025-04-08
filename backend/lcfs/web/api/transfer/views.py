@@ -31,7 +31,7 @@ async def get_transfer(
     validate: TransferValidation = Depends(),
 ):
     """Endpoint to fetch a transfer by its ID."""
-    response = await service.get_transfer(transfer_id)
+    response = await service.get_transfer(request.user, transfer_id)
     await validate.get_transfer(response)
     return response
 
@@ -50,7 +50,7 @@ async def government_update_transfer(
     """Endpoint to set an existing transfers status to 'Deleted'."""
     await validate.government_update_transfer(request, transfer_data)
     transfer_data.transfer_id = transfer_id
-    return await service.update_transfer(transfer_data)
+    return await service.update_transfer(transfer_data, request.user)
 
 
 @router.put(

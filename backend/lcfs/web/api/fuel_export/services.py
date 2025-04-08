@@ -95,6 +95,7 @@ class FuelExportServices:
                     row_data["fuel_code_carbon_intensity"], 2
                 ),
                 fuel_code_effective_date=row_data["fuel_code_effective_date"],
+                fuel_code_expiration_date=row_data["fuel_code_expiration_date"],
             )
             if row_data["fuel_code_id"]
             else None
