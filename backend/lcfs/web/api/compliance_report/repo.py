@@ -926,66 +926,6 @@ class ComplianceReportRepository:
         )
         return result
 
-    @repo_handler
-    async def get_changelog_data(self, compliance_report_ids: List[int], selection):
-        """
-        Fetch changelog data for multiple compliance reports.
-
-        Args:
-            compliance_report_ids: List of compliance report IDs to fetch data for
-            selection: The model to select (e.g. FuelSupply, OtherUses, etc.)
-
-        Returns:
-            A dictionary with compliance_report_id as keys and lists of model rows as values
-        """
-        try:
-            # Instead of trying to load relationships, we'll simply focus on querying
-            # the base entities and fetching only the specific attributes we need
-
-            # Base query to get all records for the provided compliance report IDs
-            query = (
-                select(selection)
-                .where(selection.compliance_report_id.in_(compliance_report_ids))
-                .order_by(selection.create_date.asc())
-            )
-
-            # Execute the query
-            result = await self.db.execute(query)
-            rows = result.scalars().all()
-
-            # Create copies of the data to avoid detached instance issues
-            # We'll extract only the necessary attributes and create dictionaries
-            grouped_results = {}
-
-            for row in rows:
-                compliance_report_id = row.compliance_report_id
-
-                if compliance_report_id not in grouped_results:
-                    grouped_results[compliance_report_id] = []
-
-                # Use SQLAlchemy inspect to get column attributes safely
-                mapper = inspect(type(row))
-                columns = [c.key for c in mapper.columns]
-
-                # Create a clean dictionary with just the column data
-                attributes = {}
-                for column in columns:
-                    if hasattr(row, column):
-                        try:
-                            attributes[column] = getattr(row, column)
-                        except Exception:
-                            # If we can't access an attribute, set it to None
-                            attributes[column] = None
-
-                # Add the clean dictionary to our results
-                grouped_results[compliance_report_id].append(attributes)
-
-            return grouped_results
-
-        except Exception as e:
-            logger.error(f"Error in get_changelog_data: {e}", exc_info=True)
-            raise
-
     async def get_previous_summary(
         self, compliance_report: ComplianceReport
     ) -> ComplianceReportSummary:

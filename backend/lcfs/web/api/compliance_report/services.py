@@ -648,11 +648,14 @@ class ComplianceReportServices:
             compliance_report_group_uuid, config
         )
 
+        if not reports or len(reports) == 0:
+            return []
+
         group_map = defaultdict(dict)
 
         for report in reports:
-            for fs in getattr(report, data_type) or []:
-                group_map[fs.group_uuid][fs.version] = fs
+            for data in getattr(report, data_type) or []:
+                group_map[data.group_uuid][data.version] = data
 
         grouped_fs_reports = []
 
@@ -660,15 +663,15 @@ class ComplianceReportServices:
             seen_ids = set()
             items = []
 
-            for fs in getattr(report, data_type) or []:
-                items.append(fs)
-                seen_ids.add(getattr(fs, id_field))
+            for data in getattr(report, data_type) or []:
+                items.append(data)
+                seen_ids.add(getattr(data, id_field))
 
-                if fs.action_type == "UPDATE":
-                    prev = group_map[fs.group_uuid].get(fs.version - 1)
+                if data.action_type == "UPDATE":
+                    prev = group_map[data.group_uuid].get(data.version - 1)
                     if prev and getattr(prev, id_field) not in seen_ids:
                         diff = []
-                        for key, value in fs.__dict__.items():
+                        for key, value in data.__dict__.items():
                             prev_value = getattr(prev, key, None)
                             if prev_value != value:
                                 camel_case_key = key.split("_")[0] + "".join(
@@ -679,7 +682,7 @@ class ComplianceReportServices:
                         prev.diff = diff
                         prev.updated = True
                         prev.action_type = "UPDATE"
-                        fs.diff = diff
+                        data.diff = diff
 
                         items.append(prev)
                         seen_ids.add(getattr(prev, id_field))
