@@ -144,5 +144,7 @@ export const apiRoutes = {
   getNotificationSubscriptions: '/notifications/subscriptions',
   saveNotificationSubscriptions: '/notifications/subscriptions/save',
   // public endpoints
-  getPublicCompliancePeriods: '/public/calculator/compliance-periods'
+  getPublicCompliancePeriods: '/public/calculator/compliance-periods',
+  getPublicFuelTypes: '/public/calculator/:complianceYear/',
+  getPublicFuelTypeOptions: '/public/calculator/:complianceYear/fuel-type-options/'
 }

@@ -9,3 +9,5 @@ class FuelTypeSchema(BaseSchema):
     renewable: Optional[bool] = None
     unrecognized: Optional[bool] = None
     units: Optional[str] = None
+    fuel_category_id: Optional[int] = None
+    category: Optional[str] = None

@@ -23,12 +23,15 @@ import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import BCButton from '@/components/BCButton'
 import { BCFormRadio } from '@/components/BCForm'
 import { NumericFormat } from 'react-number-format'
-import { useFuelSupplyOptions } from '@/hooks/useFuelSupply'
-import { useGetCompliancePeriodList } from '@/hooks/usePublic'
+import {
+  useGetCompliancePeriodList,
+  useGetFuelTypeList,
+  useGetFuelTypeOptions
+} from '@/hooks/usePublic'
 import Loading from '@/components/Loading'
+import { FUEL_CATEGORIES } from '@/constants/common'
 
 // Constants moved outside the component for better performance and readability
-const FUEL_CATEGORIES = ['Diesel', 'Gasoline', 'Jet fuel']
 const FUEL_CODES = [
   { value: 'BCLCF999.0', label: 'BCLCF999.0' },
   { value: 'BCLCF123.4', label: 'BCLCF123.4' }
@@ -43,40 +46,6 @@ const CARBON_INTENSITY_METHODS = [
     label: 'Fuel code - section 19 (b) (ii)'
   }
 ]
-const COMPLIANCE_OPTIONS = [
-  {
-    value: 'Renewable fuel requirement & Low carbon fuel requirement',
-    label: 'Renewable fuel requirement & Low carbon fuel requirement'
-  },
-  {
-    value: 'Low carbon fuel requirement only',
-    label: 'Low carbon fuel requirement only'
-  }
-]
-const SELECTABLE_FUEL_TYPES = [
-  'Biodiesel',
-  'CNG',
-  'Electricity',
-  'Fossil-derived diesel',
-  'HDRD',
-  'Hydrogen',
-  'LNG',
-  'Other diesel fuel',
-  'Other',
-  'Propane'
-]
-const END_USES = [
-  'Battery bus',
-  'Battery truck',
-  'Cargo handling equipment',
-  'Fixed guiderail',
-  'Ground support equipment',
-  'Heavy forklift',
-  'Marine',
-  'Other or unknown',
-  'Shore power',
-  'Trolley bus'
-]
 
 export const CreditCalculator = () => {
   const { t } = useTranslation(['report'])
@@ -84,7 +53,15 @@ export const CreditCalculator = () => {
     () => t('report:ciParameters', { returnObjects: true }),
     [t]
   )
+  const fuelRequirementOptions = useMemo(() => {
+    const arr = t('report:fuelRequirementOptions', { returnObjects: true })
+    if (!Array.isArray(arr)) return []
 
+    return arr.map((option) => ({
+      value: option,
+      label: option
+    }))
+  }, [t])
   // Fetch compliance periods from API
   const {
     data: compliancePeriods,
@@ -97,10 +74,6 @@ export const CreditCalculator = () => {
     if (!compliancePeriods?.data?.length) return []
 
     return compliancePeriods.data
-      .filter(
-        (period) =>
-          period.compliancePeriodId >= 4 && period.compliancePeriodId <= 17
-      )
       .map((period) => ({
         value: period.description,
         label: period.description
@@ -137,11 +110,11 @@ export const CreditCalculator = () => {
   const methods = useForm({
     defaultValues: {
       complianceYear: String(defaultCompliancePeriod),
-      complianceType: COMPLIANCE_OPTIONS[0].value,
-      fuelType: FUEL_CATEGORIES[0],
-      fuelCode: FUEL_CODES[0].value,
-      carbonIntensityMethod: CARBON_INTENSITY_METHODS[0].value,
-      quantity: '100000',
+      fuelRequirement: fuelRequirementOptions[0].value,
+      fuelType: '',
+      fuelCode: '',
+      carbonIntensityMethod: 0,
+      quantity: 0,
       fuelCategory: '',
       endUseType: ''
     }
@@ -158,51 +131,80 @@ export const CreditCalculator = () => {
 
   const watchedValues = watch()
   const complianceYear = watchedValues.complianceYear
+  const fuelCategory = watchedValues.fuelCategory
+  const fuelRequirement = watchedValues.fuelRequirement
 
   // State for selected items from lists
-  const [selectedFuelType, setSelectedFuelType] = useState('LNG')
-  const [selectedEndUse, setSelectedEndUse] = useState('Battery bus')
+  const [selectedFuelType, setSelectedFuelType] = useState()
+  const [selectedEndUse, setSelectedEndUse] = useState()
   const [calculatedResults, setCalculatedResults] = useState(null)
 
-  // Fetch fuel supply options based on compliance period
-  const { data: tableOptions, isLoading: isLoadingFuelOptions } =
-    useFuelSupplyOptions(
-      { compliancePeriod: complianceYear },
-      { enabled: !!isFetched }
+  const { data: fuelTypeListData, isLoading: isFuelTypeListLoading } =
+    useGetFuelTypeList(
+      {
+        complianceYear,
+        fuelCategory,
+        lcfsOnly: fuelRequirement === 'Low carbon fuel requirement only'
+      },
+      { enabled: !!fuelCategory }
     )
 
   // Get the selected fuel based on user selection
   const selectedFuel = useMemo(() => {
-    return tableOptions?.fuelTypes?.find(
+    return fuelTypeListData?.data?.find(
       (ft) => ft.fuelType === watchedValues.fuelType
     )
-  }, [tableOptions, watchedValues.fuelType])
+  }, [fuelTypeListData, watchedValues.fuelType])
 
   // Memoized selector options to prevent unnecessary re-renders
+  const selectedFuelObj = useMemo(() => {
+    return fuelTypeListData?.data?.find(
+      (ft) => ft.fuelType === selectedFuelType
+    )
+  }, [fuelTypeListData, selectedFuelType])
+
+  const fuelTypes = useMemo(() => {
+    return (
+      fuelTypeListData?.data?.map((ft) => ({
+        label: ft.fuelType,
+        value: ft.fuelType
+      })) ?? []
+    )
+  }, [fuelTypeListData])
+
   const fuelCodeOptions = useMemo(() => {
     return (
       selectedFuel?.fuelCodes?.map((fc) => ({
         value: fc.fuelCode,
         label: fc.fuelCode
-      })) || FUEL_CODES
+      })) || []
     )
   }, [selectedFuel])
 
-  const fuelCategoryOptions = useMemo(() => {
-    return (
-      selectedFuel?.fuelCategories?.map((cat) => ({
-        value: cat.fuelCategory,
-        label: cat.fuelCategory
-      })) || [{ value: 'Any', label: 'Any' }]
-    )
-  }, [selectedFuel])
+  // Fetch fuel supply options based on compliance period
+  const {
+    data: fuelTypeOptions,
+    isLoading: isLoadingFuelOptions,
+    error
+  } = useGetFuelTypeOptions(
+    {
+      complianceYear,
+      fuelCategoryId: selectedFuelObj?.fuelCategoryId,
+      fuelTypeId: selectedFuelObj?.fuelTypeId,
+      lcfs_only: fuelRequirement === 'Low carbon fuel requirement only'
+    },
+    {
+      enabled:
+        !!selectedFuelObj &&
+        !!selectedFuelType &&
+        !!fuelCategory &&
+        !!selectedFuel
+    }
+  )
 
-  const endUseOptions = useMemo(() => {
-    if (!selectedFuel?.eerRatios?.length)
-      return [{ value: 'Any', label: 'Any' }]
-
+  const endUses = useMemo(() => {
     const uniqueEndUses = new Map()
-    selectedFuel.eerRatios.forEach((eer) => {
+    fuelTypeOptions?.data?.eerRatios?.forEach((eer) => {
       const endUse = eer.endUseType
       if (endUse) {
         uniqueEndUses.set(endUse.type, {
@@ -214,8 +216,8 @@ export const CreditCalculator = () => {
 
     return Array.from(uniqueEndUses.values()).length
       ? Array.from(uniqueEndUses.values())
-      : [{ value: 'Any', label: 'Any' }]
-  }, [selectedFuel])
+      : undefined
+  }, [fuelTypeOptions, selectedFuelType])
 
   // Get unit based on selected fuel
   const unit = useMemo(() => {
@@ -230,7 +232,7 @@ export const CreditCalculator = () => {
     if (selectedEndUse) {
       setValue('endUseType', selectedEndUse)
     }
-  }, [selectedFuelType, selectedEndUse, setValue])
+  }, [selectedFuelType, selectedEndUse, setValue, fuelCategory])
 
   // Calculate credits when form values change
   const calculateCredits = async (data) => {
@@ -241,7 +243,7 @@ export const CreditCalculator = () => {
         fuelType: data.fuelType,
         fuelCode: data.fuelCode,
         carbonIntensityMethod: data.carbonIntensityMethod,
-        fuelCategory: data.fuelCategory || fuelCategoryOptions[0]?.value,
+        fuelCategory: data.fuelCategory,
         endUseType: data.endUseType,
         compliancePeriod: data.complianceYear
       }
@@ -270,7 +272,7 @@ export const CreditCalculator = () => {
   const handleClear = () => {
     reset({
       complianceYear: String(defaultCompliancePeriod),
-      complianceType: COMPLIANCE_OPTIONS[0].value,
+      fuelRequirement: fuelRequirementOptions[0].value,
       fuelType: FUEL_CATEGORIES[0],
       fuelCode: FUEL_CODES[0].value,
       carbonIntensityMethod: CARBON_INTENSITY_METHODS[0].value,
@@ -278,8 +280,8 @@ export const CreditCalculator = () => {
       fuelCategory: '',
       endUseType: ''
     })
-    setSelectedFuelType('LNG')
-    setSelectedEndUse('Battery bus')
+    setSelectedFuelType()
+    setSelectedEndUse()
     setCalculatedResults(null)
   }
 
@@ -303,7 +305,7 @@ export const CreditCalculator = () => {
     )
   }
 
-  if (isLoadingPeriods || isLoadingFuelOptions) {
+  if (isLoadingPeriods || isFuelTypeListLoading) {
     return <Loading />
   }
 
@@ -329,7 +331,7 @@ export const CreditCalculator = () => {
       sx={{
         '& .MuiCardContent-root': { padding: '0 !important', margin: 0 },
         '& .MuiFormLabel-root': {
-          transform: 'translate(-1px, -32px) scale(1)'
+          transform: 'translate(-2px, -32px) scale(1)'
         }
       }}
     >
@@ -345,6 +347,7 @@ export const CreditCalculator = () => {
                   {t('report:fuelType')}
                 </BCTypography>
                 <Stack direction={'row'} spacing={4}>
+                  {/* Compliance Year */}
                   <FormControl
                     sx={{
                       width: '140px',
@@ -404,27 +407,30 @@ export const CreditCalculator = () => {
                     />
                     {renderError('complianceYear')}
                   </FormControl>
-
-                  <BCFormRadio
-                    name="complianceType"
-                    control={control}
-                    options={COMPLIANCE_OPTIONS}
-                    sx={{
-                      backgroundColor: colors.background.grey,
-                      padding: 1,
-                      pb: 2,
-                      maxWidth: '32rem',
-                      transform: 'translate(0px, -16px) scale(1)'
-                    }}
-                  />
+                  {/* fuel requirement type selection */}
+                  {fuelRequirementOptions.length > 0 && (
+                    <BCFormRadio
+                      name="fuelRequirement"
+                      control={control}
+                      options={fuelRequirementOptions}
+                      sx={{
+                        backgroundColor: colors.background.grey,
+                        padding: 1,
+                        pb: 2,
+                        maxWidth: '32rem',
+                        transform: 'translate(0px, -16px) scale(1)'
+                      }}
+                    />
+                  )}
                 </Stack>
                 <Grid container spacing={1}>
                   <Divider
                     orientation="horizontal"
                     sx={{ maxWidth: '18rem', borderColor: 'rgba(0,0,0,1)' }}
                   />
+                  {/* Fuel Category} */}
                   <BCFormRadio
-                    name="fuelType"
+                    name="fuelCategory"
                     control={control}
                     options={FUEL_CATEGORIES.map((type) => ({
                       value: type,
@@ -443,6 +449,7 @@ export const CreditCalculator = () => {
                     <BCTypography variant="h6" color="primary">
                       {t('report:selectFuelType')}
                     </BCTypography>
+                    {/* Fuel type */}
                     <List
                       component="nav"
                       sx={{
@@ -450,60 +457,61 @@ export const CreditCalculator = () => {
                         pl: 2
                       }}
                     >
-                      {SELECTABLE_FUEL_TYPES.map((type) => (
-                        <ListItemButton
-                          component="span"
-                          key={type}
-                          sx={{
-                            display: 'list-item',
-                            listStyleType: 'disc',
-                            p: 0.4,
-                            color: colors.primary.main,
-                            '&::marker': {
-                              fontSize: '0.7em'
-                            }
-                          }}
-                        >
-                          <BCBox
+                      {fuelTypes?.length > 0 &&
+                        fuelTypes?.map(({ label, value }) => (
+                          <ListItemButton
+                            component="span"
+                            key={value}
                             sx={{
-                              cursor: 'pointer',
-                              '&.selected': {
-                                '& .list-text': {
-                                  color: 'text.primary',
-                                  textDecoration: 'none',
-                                  fontWeight: 'bold'
-                                }
+                              display: 'list-item',
+                              listStyleType: 'disc',
+                              p: 0.4,
+                              color: colors.primary.main,
+                              '&::marker': {
+                                fontSize: '0.7em'
                               }
                             }}
-                            component="a"
-                            tabIndex={0}
-                            className={
-                              selectedFuelType === type ? 'selected' : ''
-                            }
-                            alignItems="flex-start"
-                            onClick={() => setSelectedFuelType(type)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                setSelectedFuelType(type)
-                              }
-                            }}
-                            data-test={type}
                           >
-                            <BCTypography
-                              variant="subtitle2"
-                              color="link"
-                              className="list-text"
+                            <BCBox
                               sx={{
-                                textDecoration: 'underline',
-                                '&:hover': { color: 'info.main' }
+                                cursor: 'pointer',
+                                '&.selected': {
+                                  '& .list-text': {
+                                    color: 'text.primary',
+                                    textDecoration: 'none',
+                                    fontWeight: 'bold'
+                                  }
+                                }
                               }}
+                              component="a"
+                              tabIndex={0}
+                              className={
+                                selectedFuelType === value ? 'selected' : ''
+                              }
+                              alignItems="flex-start"
+                              onClick={() => setSelectedFuelType(value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  setSelectedFuelType(value)
+                                }
+                              }}
+                              data-test={value}
                             >
-                              {type}
-                            </BCTypography>
-                          </BCBox>
-                        </ListItemButton>
-                      ))}
+                              <BCTypography
+                                variant="subtitle2"
+                                color="link"
+                                className="list-text"
+                                sx={{
+                                  textDecoration: 'underline',
+                                  '&:hover': { color: 'info.main' }
+                                }}
+                              >
+                                {value}
+                              </BCTypography>
+                            </BCBox>
+                          </ListItemButton>
+                        ))}
                     </List>
                   </Grid>
 
@@ -511,67 +519,71 @@ export const CreditCalculator = () => {
                     <BCTypography variant="h6" color="primary">
                       {t('report:endUse')}
                     </BCTypography>
+                    {/* End Use Type */}
                     <List
                       component="nav"
                       sx={{
                         pl: 2
                       }}
                     >
-                      {END_USES.map((use) => (
-                        <ListItemButton
-                          component="span"
-                          key={use}
-                          sx={{
-                            display: 'list-item',
-                            listStyleType: 'disc',
-                            p: 0.4,
-                            color: colors.primary.main,
-                            '&::marker': {
-                              fontSize: '0.7em'
-                            },
-                            '&.selected': {
-                              pl: 2
-                            }
-                          }}
-                        >
-                          <BCBox
+                      {endUses &&
+                        endUses?.map((use) => (
+                          <ListItemButton
+                            component="span"
+                            key={use.value}
                             sx={{
-                              cursor: 'pointer',
+                              display: 'list-item',
+                              listStyleType: 'disc',
+                              p: 0.4,
+                              color: colors.primary.main,
+                              '&::marker': {
+                                fontSize: '0.7em'
+                              },
                               '&.selected': {
-                                '& .list-text': {
-                                  color: 'text.primary',
-                                  textDecoration: 'none',
-                                  fontWeight: 'bold'
-                                }
+                                pl: 2
                               }
                             }}
-                            component="a"
-                            tabIndex={0}
-                            className={selectedEndUse === use ? 'selected' : ''}
-                            alignItems="flex-start"
-                            onClick={() => setSelectedEndUse(use)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault()
-                                setSelectedEndUse(use)
-                              }
-                            }}
-                            data-test={use}
                           >
-                            <BCTypography
-                              variant="subtitle2"
-                              color="link"
-                              className="list-text"
+                            <BCBox
                               sx={{
-                                textDecoration: 'underline',
-                                '&:hover': { color: 'info.main' }
+                                cursor: 'pointer',
+                                '&.selected': {
+                                  '& .list-text': {
+                                    color: 'text.primary',
+                                    textDecoration: 'none',
+                                    fontWeight: 'bold'
+                                  }
+                                }
                               }}
+                              component="a"
+                              tabIndex={0}
+                              className={
+                                selectedEndUse === use.value ? 'selected' : ''
+                              }
+                              alignItems="flex-start"
+                              onClick={() => setSelectedEndUse(use.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  setSelectedEndUse(use.value)
+                                }
+                              }}
+                              data-test={use.value}
                             >
-                              {use}
-                            </BCTypography>
-                          </BCBox>
-                        </ListItemButton>
-                      ))}
+                              <BCTypography
+                                variant="subtitle2"
+                                color="link"
+                                className="list-text"
+                                sx={{
+                                  textDecoration: 'underline',
+                                  '&:hover': { color: 'info.main' }
+                                }}
+                              >
+                                {use.value}
+                              </BCTypography>
+                            </BCBox>
+                          </ListItemButton>
+                        ))}
                     </List>
                   </Grid>
                 </Grid>

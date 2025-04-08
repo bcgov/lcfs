@@ -1,13 +1,26 @@
 from typing import List
 from fastapi import Depends
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.fuel_supply.schema import (
+    FuelTypeOptionsResponse,
+    FuelTypeOptionsSchema,
+)
+from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.public.repo import PublicRepository
 from lcfs.web.core.decorators import service_handler
 
 
 class PublicService:
-    def __init__(self, repo: PublicRepository = Depends()):
+    def __init__(
+        self,
+        repo: PublicRepository = Depends(),
+        fs_service: FuelSupplyServices = Depends(),
+        fuel_repo: FuelCodeRepository = Depends(),
+    ):
         self.repo = repo
+        self.fs_service = fs_service
+        self.fuel_repo = fuel_repo
 
     @service_handler
     async def get_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
@@ -33,4 +46,58 @@ class PublicService:
 
         return await self.repo.get_fuel_types(
             lcfs_only, fuel_category, is_legacy=is_legacy
+        )
+
+    @service_handler
+    async def get_fuel_type_options(
+        self,
+        compliance_period: str,
+        fuel_type_id: int,
+        fuel_category_id: int,
+        lcfs_only: bool = False,
+    ):
+        """Fetches all fuel type options for a given compliance period, fuel type, and fuel category."""
+
+        try:
+            compliance_year = int(compliance_period)
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid compliance_period: '{compliance_period}' must be an integer"
+            ) from e
+
+        # Determine if legacy records should be included
+        include_legacy = compliance_year < 2024
+
+        options = await self.repo.get_fuel_type_options(
+            compliance_period,
+            fuel_type_id,
+            fuel_category_id,
+            lcfs_only=lcfs_only,
+            include_legacy=include_legacy,
+        )
+
+        fuel_types = []
+        for row in options["fuel_types"]:
+            self.fs_service.fuel_type_row_mapper(compliance_period, fuel_types, row)
+
+        if not fuel_types:
+            return {}
+        return FuelTypeOptionsSchema.model_validate(fuel_types[0])
+
+    @service_handler
+    async def get_calculated_data(
+        self,
+        compliance_period: str,
+        fuel_type_id: int,
+        fuel_category_id: int,
+        end_use_id: int,
+        fuel_code_id: int,
+    ):
+        # Fetch standardized fuel data
+        fuel_data = await self.fuel_repo.get_standardized_fuel_data(
+            fuel_type_id=fuel_type_id,
+            fuel_category_id=fuel_category_id,
+            end_use_id=end_use_id,
+            compliance_period=compliance_period,
+            fuel_code_id=fuel_code_id,
         )

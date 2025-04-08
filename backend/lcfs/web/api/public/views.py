@@ -41,3 +41,24 @@ async def get_fuel_types(
     if fuel_category not in FUEL_CATEGORIES:
         return []
     return await service.get_fuel_types(compliance_period, lcfs_only, fuel_category)
+
+
+@router.get(
+    "/calculator/{compliance_period}/fuel-type-options",
+    tags=["public"],
+    status_code=status.HTTP_200_OK,
+)
+async def get_fuel_type_options(
+    request: Request,
+    compliance_period: str,
+    fuel_category_id: int,
+    fuel_type_id: int,
+    lcfs_only: bool = False,
+    service: PublicService = Depends(),
+):
+    """
+    Get list of fuel type options
+    """
+    return await service.get_fuel_type_options(
+        compliance_period, fuel_type_id, fuel_category_id, lcfs_only
+    )
