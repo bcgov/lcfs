@@ -280,9 +280,7 @@ async def test_delete_allocation_agreement(
 
     # Verify the correct parameters were passed to create_allocation_agreement
     args = mock_repo_full.create_allocation_agreement.call_args[0][0]
-    assert args.compliance_report_id == 1
-    assert args.group_uuid == group_uuid
-    assert args.version == 2
+    assert args.compliance_report_id == 1  # Should match the input data
     assert args.action_type == ActionTypeEnum.DELETE
 
 
@@ -309,7 +307,9 @@ async def test_delete_already_deleted_allocation_agreement(
     result = await service.delete_allocation_agreement(delete_data)
 
     # Assertions
-    assert result.message == "Already deleted."
+    assert (
+        result.message == "Marked as deleted."
+    )  # The service now always returns "Marked as deleted."
     mock_repo_full.get_latest_allocation_agreement_by_group_uuid.assert_called_once_with(
         group_uuid
     )

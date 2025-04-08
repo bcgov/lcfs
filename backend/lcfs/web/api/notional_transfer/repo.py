@@ -83,8 +83,7 @@ class NotionalTransferRepository:
 
         # Step 2: Find the maximum version and priority per group_uuid, excluding deleted groups
         conditions = [
-            NotionalTransfer.compliance_report_id.in_(
-                compliance_reports_select)
+            NotionalTransfer.compliance_report_id.in_(compliance_reports_select)
         ]
         if not changelog:
             delete_group_select = (
@@ -170,10 +169,9 @@ class NotionalTransferRepository:
 
         # Manually apply pagination
         total_count = len(notional_transfers)
-        offset = 0 if pagination.page < 1 else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_notional_transfers = notional_transfers[offset: offset + limit]
+        paginated_notional_transfers = notional_transfers[offset : offset + limit]
 
         return paginated_notional_transfers, total_count
 
@@ -265,11 +263,28 @@ class NotionalTransferRepository:
         return result.scalars().first()
 
     @repo_handler
-    async def delete_notional_transfer(self, notional_transfer_id: int):
-        """Delete a notional transfer from the database"""
+    async def get_notional_transfer_version_by_user(
+        self, group_uuid: str, version: int
+    ) -> Optional[NotionalTransfer]:
+        """
+        Retrieve a specific NotionalTransfer record by group UUID, version, and user_type.
+        """
+        query = (
+            select(NotionalTransfer)
+            .where(
+                NotionalTransfer.group_uuid == group_uuid,
+                NotionalTransfer.version == version,
+                NotionalTransfer.user_type == user_type,
+            )
+            .options(joinedload(NotionalTransfer.fuel_category))
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    async def delete_notional_transfer(self, notional_transfer_id):
         await self.db.execute(
             delete(NotionalTransfer).where(
                 NotionalTransfer.notional_transfer_id == notional_transfer_id
             )
         )
-        await self.db.flush()

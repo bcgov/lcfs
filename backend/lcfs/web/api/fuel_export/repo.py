@@ -219,8 +219,7 @@ class FuelExportRepository:
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         if not include_legacy:
             query = query.where(
-                and_(FuelType.is_legacy == False,
-                     ProvisionOfTheAct.is_legacy == False)
+                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
             )
 
         results = (await self.db.execute(query)).all()
@@ -282,10 +281,9 @@ class FuelExportRepository:
 
         # Manually apply pagination
         total_count = len(effective_fuel_exports)
-        offset = 0 if pagination.page < 1 else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_exports = effective_fuel_exports[offset: offset + limit]
+        paginated_exports = effective_fuel_exports[offset : offset + limit]
 
         return paginated_exports, total_count
 
@@ -374,14 +372,12 @@ class FuelExportRepository:
             )
         )
 
-        conditions = [FuelExport.compliance_report_id.in_(
-            compliance_reports_select)]
+        conditions = [FuelExport.compliance_report_id.in_(compliance_reports_select)]
         if not changelog:
             delete_group_select = (
                 select(FuelExport.group_uuid)
                 .where(
-                    FuelExport.compliance_report_id.in_(
-                        compliance_reports_select),
+                    FuelExport.compliance_report_id.in_(compliance_reports_select),
                     FuelExport.action_type == ActionTypeEnum.DELETE,
                 )
                 .distinct()
@@ -431,11 +427,7 @@ class FuelExportRepository:
 
         return fuel_exports
 
-    @repo_handler
-    async def delete_fuel_export(self, fuel_export_id: int):
-        """Delete a fuel supply row from the database"""
+    async def delete_fuel_export(self, fuel_export_id):
         await self.db.execute(
-            delete(FuelExport).where(
-                FuelExport.fuel_export_id == fuel_export_id)
+            delete(FuelExport).where(FuelExport.fuel_export_id == fuel_export_id)
         )
-        await self.db.flush()

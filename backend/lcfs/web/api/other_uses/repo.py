@@ -40,8 +40,7 @@ class OtherUsesRepository:
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         fuel_categories = await self.fuel_code_repo.get_fuel_categories()
         fuel_types = await self.get_formatted_fuel_types(
-            include_legacy=include_legacy, compliance_period=int(
-                compliance_period)
+            include_legacy=include_legacy, compliance_period=int(compliance_period)
         )
         expected_uses = await self.fuel_code_repo.get_expected_use_types()
         units_of_measure = [unit.value for unit in QuantityUnitsEnum]
@@ -153,14 +152,12 @@ class OtherUsesRepository:
             )
         )
 
-        conditions = [OtherUses.compliance_report_id.in_(
-            compliance_reports_select)]
+        conditions = [OtherUses.compliance_report_id.in_(compliance_reports_select)]
         if not changelog:
             delete_group_select = (
                 select(OtherUses.group_uuid)
                 .where(
-                    OtherUses.compliance_report_id.in_(
-                        compliance_reports_select),
+                    OtherUses.compliance_report_id.in_(compliance_reports_select),
                     OtherUses.action_type == ActionTypeEnum.DELETE,
                 )
                 .distinct()
@@ -182,7 +179,7 @@ class OtherUsesRepository:
             .group_by(OtherUses.group_uuid)
         )
         # Now create a subquery for use in the JOIN
-        valid_fuel_supplies_subq = valid_other_uses_select.subquery()
+        valid_other_uses_subq = valid_other_uses_select.subquery()
 
         other_uses_select = (
             select(OtherUses)
@@ -194,10 +191,10 @@ class OtherUsesRepository:
                 joinedload(OtherUses.fuel_code),
             )
             .join(
-                valid_fuel_supplies_subq,
+                valid_other_uses_subq,
                 and_(
-                    OtherUses.group_uuid == valid_fuel_supplies_subq.c.group_uuid,
-                    OtherUses.version == valid_fuel_supplies_subq.c.max_version,
+                    OtherUses.group_uuid == valid_other_uses_subq.c.group_uuid,
+                    OtherUses.version == valid_other_uses_subq.c.max_version,
                 ),
             )
             .order_by(OtherUses.other_uses_id)
@@ -252,10 +249,9 @@ class OtherUsesRepository:
 
         # Manually apply pagination
         total_count = len(other_uses)
-        offset = 0 if pagination.page < 1 else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_other_uses = other_uses[offset: offset + limit]
+        paginated_other_uses = other_uses[offset : offset + limit]
 
         return paginated_other_uses, total_count
 
@@ -441,10 +437,7 @@ class OtherUsesRepository:
 
         return formatted_fuel_types
 
-    @repo_handler
-    async def delete_other_use(self, other_uses_id: int):
-        """Delete an other use from the database"""
+    async def delete_other_use(self, other_uses_id):
         await self.db.execute(
             delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id)
         )
-        await self.db.flush()

@@ -168,15 +168,16 @@ class FuelSupplyRepository:
                             FuelType.fossil_derived == False,
                             or_(
                                 and_(
-                                    ProvisionOfTheAct.provision_of_the_act_id.notin_([
-                                                                                     1, 8]),
-                                    current_year >= int(
-                                        LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                                    ProvisionOfTheAct.provision_of_the_act_id.notin_(
+                                        [1, 8]
+                                    ),
+                                    current_year
+                                    >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
                                 ),
                                 and_(
                                     ProvisionOfTheAct.provision_of_the_act_id != 1,
-                                    current_year < int(
-                                        LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                                    current_year
+                                    < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
                                 ),
                             ),
                         ),
@@ -229,8 +230,7 @@ class FuelSupplyRepository:
         include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         if not include_legacy:
             query = query.where(
-                and_(FuelType.is_legacy == False,
-                     ProvisionOfTheAct.is_legacy == False)
+                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
             )
 
         fuel_type_results = (await self.db.execute(query)).all()
@@ -298,10 +298,9 @@ class FuelSupplyRepository:
 
         # Manually apply pagination
         total_count = len(fuel_supplies)
-        offset = 0 if pagination.page < 1 else (
-            pagination.page - 1) * pagination.size
+        offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        paginated_supplies = fuel_supplies[offset: offset + limit]
+        paginated_supplies = fuel_supplies[offset : offset + limit]
 
         return paginated_supplies, total_count
 
@@ -464,14 +463,12 @@ class FuelSupplyRepository:
                 ComplianceReport.compliance_report_id <= compliance_report_id
             )
 
-        conditions = [FuelSupply.compliance_report_id.in_(
-            compliance_reports_select)]
+        conditions = [FuelSupply.compliance_report_id.in_(compliance_reports_select)]
         if not changelog:
             delete_group_select = (
                 select(FuelSupply.group_uuid)
                 .where(
-                    FuelSupply.compliance_report_id.in_(
-                        compliance_reports_select),
+                    FuelSupply.compliance_report_id.in_(compliance_reports_select),
                     FuelSupply.action_type == ActionTypeEnum.DELETE,
                 )
                 .distinct()
@@ -530,11 +527,7 @@ class FuelSupplyRepository:
 
         return fuel_supplies
 
-    @repo_handler
-    async def delete_fuel_supply(self, fuel_supply_id: int):
-        """Delete a fuel supply row from the database"""
+    async def delete_fuel_supply(self, fuel_supply_id):
         await self.db.execute(
-            delete(FuelSupply).where(
-                FuelSupply.fuel_supply_id == fuel_supply_id)
+            delete(FuelSupply).where(FuelSupply.fuel_supply_id == fuel_supply_id)
         )
-        await self.db.flush()
