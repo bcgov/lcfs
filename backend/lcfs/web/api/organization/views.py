@@ -208,7 +208,7 @@ async def create_transfer(
     This endpoint creates a new transfer and returns the information of the created transfer.
     """
     await validate.create_transfer(organization_id, transfer_create)
-    return await transfer_service.create_transfer(transfer_create)
+    return await transfer_service.create_transfer(transfer_create, request.user)
 
 
 @router.put(
@@ -231,7 +231,7 @@ async def update_transfer(
     """
     await validate.update_transfer(organization_id, transfer_create)
     transfer_create.transfer_id = transfer_id
-    return await transfer_service.update_transfer(transfer_create)
+    return await transfer_service.update_transfer(transfer_create, request.user)
 
 
 @router.post(
