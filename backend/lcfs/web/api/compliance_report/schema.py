@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import ClassVar, Optional, List, TypeVar, Generic, Union
+from typing import ClassVar, Optional, List, Union
 from datetime import datetime
 from typing import List, NamedTuple
 
@@ -12,7 +12,6 @@ from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
 from pydantic import Field
-from lcfs.web.api.fuel_supply.schema import FuelSupplyChangelogRead
 
 
 """
@@ -225,11 +224,6 @@ class ComplianceReportUpdateSchema(BaseSchema):
 class ExportColumn(NamedTuple):
     label: str
     key: str = None
-
-
-class ComplianceReportFuelSuppliesRead(BaseSchema):
-    label: str
-    fuel_supplies: List[FuelSupplyChangelogRead]
 
 
 # Summary section constants

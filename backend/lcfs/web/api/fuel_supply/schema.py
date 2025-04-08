@@ -10,7 +10,6 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.utils.schema_validators import fuel_code_required
-from lcfs.web.api.fuel_supply.dtos import FuelSupplyDTO
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -181,8 +180,3 @@ class DeleteFuelSupplyResponseSchema(BaseSchema):
 class FuelSuppliesSchema(BaseSchema):
     fuel_supplies: Optional[List[FuelSupplyResponseSchema]] = []
     pagination: Optional[PaginationResponseSchema] = {}
-
-
-class FuelSupplyChangelogRead(FuelSupplyDTO):
-    updated: Optional[bool] = None
-    diff: Optional[List[str]] = None

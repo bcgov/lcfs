@@ -632,7 +632,7 @@ export const changelogCommonColDefs = (highlight = true) => [
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelCode'
     ),
-    field: 'fuelCode',
+    field: 'fuelCode.fuel_code',
     cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {
