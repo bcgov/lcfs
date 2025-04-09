@@ -96,8 +96,7 @@ async def get_compliance_report_by_id(
     compliance_report = await validate.validate_organization_access(report_id)
     await validate.validate_compliance_report_access(compliance_report)
 
-    result = await service.get_compliance_report_by_id(report_id, request.user, True)
-    return result
+    return await service.get_compliance_report_chain(report_id, request.user)
 
 
 @router.get(

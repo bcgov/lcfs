@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, AsyncMock, patch
 
 from lcfs.db.models import ComplianceReport
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.tests.compliance_report.conftest import compliance_report_base_schema
 from lcfs.tests.notional_transfer.conftest import create_mock_schema
 from lcfs.web.api.base import ComplianceReportRequestSchema
 from lcfs.web.api.notional_transfer.schema import NotionalTransferTableOptionsSchema
@@ -67,6 +66,7 @@ async def test_get_notional_transfers(
     fastapi_app: FastAPI,
     set_mock_user,
     mock_notional_transfer_service,
+    compliance_report_base_schema,
 ):
     with patch(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
