@@ -1,7 +1,7 @@
 import structlog
 from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, delete
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -168,12 +168,16 @@ class FuelSupplyRepository:
                             FuelType.fossil_derived == False,
                             or_(
                                 and_(
-                                    ProvisionOfTheAct.provision_of_the_act_id.notin_([1, 8]),
-                                    current_year >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                                    ProvisionOfTheAct.provision_of_the_act_id.notin_(
+                                        [1, 8]
+                                    ),
+                                    current_year
+                                    >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
                                 ),
                                 and_(
                                     ProvisionOfTheAct.provision_of_the_act_id != 1,
-                                    current_year < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                                    current_year
+                                    < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
                                 ),
                             ),
                         ),
