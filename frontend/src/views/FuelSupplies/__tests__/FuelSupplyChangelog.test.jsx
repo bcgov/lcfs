@@ -3,8 +3,11 @@ import { render, screen } from '@testing-library/react'
 import { FuelSupplyChangelog } from '../FuelSupplyChangelog'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import { useParams } from 'react-router-dom'
+import {
+  useGetComplianceReport,
+  useGetChangeLog
+} from '@/hooks/useComplianceReports'
+import { useParams, useSearchParams } from 'react-router-dom'
 
 // Mock Loading component
 vi.mock('@/components/Loading', () => ({
@@ -29,12 +32,14 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 }))
 
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useGetComplianceReport: vi.fn()
+  useGetComplianceReport: vi.fn(),
+  useGetChangeLog: vi.fn()
 }))
 
 vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
-  useParams: vi.fn()
+  useParams: vi.fn(),
+  useSearchParams: vi.fn()
 }))
 
 vi.mock('react-i18next', () => ({
@@ -64,11 +69,18 @@ describe('FuelSupplyChangelog', () => {
       },
       isLoading: false
     })
+    useGetChangeLog.mockReturnValue({
+      data: [{ nickname: 'Test Report', fuelSupplies: [] }],
+      isLoading: false
+    })
 
     useParams.mockReturnValue({
-      complianceReportId: '123',
-      compliancePeriod: '2023'
+      complianceReportId: '123'
     })
+    useSearchParams.mockReturnValue([
+      new URLSearchParams(),
+      vi.fn(() => new URLSearchParams())
+    ])
   })
 
   it('should render both data grids', () => {
@@ -78,27 +90,20 @@ describe('FuelSupplyChangelog', () => {
     screen.debug()
 
     // Check if both grid components are rendered
-    expect(screen.getByTestId('grid-changelog')).toBeInTheDocument()
-    expect(screen.getByTestId('grid-fuelSupplies')).toBeInTheDocument()
+    expect(screen.getByTestId('bc-grid-container')).toBeInTheDocument()
   })
 
-  it('should display report nickname when not editable', () => {
-    render(<FuelSupplyChangelog canEdit={false} />, { wrapper })
-    expect(screen.getByText('Test Report')).toBeInTheDocument()
-  })
-
-  it('should display current state text when editable', () => {
-    render(<FuelSupplyChangelog canEdit={true} />, { wrapper })
-    expect(screen.getByText('common:changelogCurrentState')).toBeInTheDocument()
-  })
-
-  it('should display compliance period and report assessed text', () => {
+  it('should display report nickname', () => {
     render(<FuelSupplyChangelog />, { wrapper })
-    expect(screen.getByText('2023 report:reportAssessed')).toBeInTheDocument()
+    expect(screen.getByText('Test Report')).toBeInTheDocument()
   })
 
   it('should show loading state', () => {
     useGetComplianceReport.mockReturnValue({
+      data: null,
+      isLoading: true
+    })
+    useGetChangeLog.mockReturnValue({
       data: null,
       isLoading: true
     })
@@ -111,32 +116,19 @@ describe('FuelSupplyChangelog', () => {
     useGetComplianceReport.mockReturnValue({
       data: {
         report: {
-          nickname: 'Test Report'
-        },
-        chain: [
-          {
-            complianceReportId: '456',
-            version: 1,
-            currentStatus: {
-              status: 'Assessed'
-            }
-          },
-          {
-            complianceReportId: '789',
-            version: 2,
-            currentStatus: {
-              status: 'Assessed'
-            }
-          }
-        ]
+          complianceReportGroupUuid: 'uuid'
+        }
       },
+      isLoading: false
+    })
+    useGetChangeLog.mockReturnValue({
+      data: [{ nickname: 'Test Report', fuelSupplies: [{}] }],
       isLoading: false
     })
 
     render(<FuelSupplyChangelog />, { wrapper })
 
     // Both grids should be rendered
-    expect(screen.getByTestId('grid-changelog')).toBeInTheDocument()
-    expect(screen.getByTestId('grid-fuelSupplies')).toBeInTheDocument()
+    expect(screen.getByTestId('bc-grid-container')).toBeInTheDocument()
   })
 })

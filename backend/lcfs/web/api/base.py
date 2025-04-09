@@ -422,3 +422,14 @@ class NotificationTypeEnum(Enum):
 
     def __str__(self):
         return self.value
+
+
+class Auditable(BaseModel):
+    create_user: Optional[str]
+    update_user: Optional[str]
+
+
+class Versioning(BaseModel):
+    group_uuid: str
+    version: int
+    action_type: str
