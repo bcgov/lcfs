@@ -6,11 +6,14 @@ import { useTranslation } from 'react-i18next'
 import { useOrganizationNames } from '@/hooks/useOrganizations'
 import { numberFormatter } from '@/utils/formatters'
 
-const OrganizationList = ({ onOrgChange, onlyRegistered = true }) => {
+const OrganizationList = ({
+  selectedOrg,
+  onOrgChange,
+  onlyRegistered = true
+}) => {
   const { t } = useTranslation(['transaction'])
   const { data, isLoading } = useOrganizationNames(onlyRegistered)
   const [optionsList, setOptionsList] = useState([])
-  const [org, setOrg] = useState(null)
 
   useEffect(() => {
     if (!isLoading) {
@@ -38,18 +41,16 @@ const OrganizationList = ({ onOrgChange, onlyRegistered = true }) => {
 
   const onInputBoxChanged = (event, input) => {
     if (!input || input.name === t('txn:allOrganizations')) {
-      setOrg(null)
-      onOrgChange(null)
+      onOrgChange({ id: null, label: null })
     } else {
-      setOrg(input.label)
-      onOrgChange(input.organizationId)
+      onOrgChange({ id: input.organizationId, label: input.label })
     }
   }
 
   return (
     <Box component="div" mb={2}>
       <BCTypography variant="body2" color="primary">
-        {org}
+        {selectedOrg?.label}
       </BCTypography>
       <Stack
         component="div"
@@ -79,10 +80,17 @@ const OrganizationList = ({ onOrgChange, onlyRegistered = true }) => {
               {...params}
               placeholder={t('txn:selectOrganizationName')}
               aria-label={t('txn:selectOrganizationName')}
-              value={org}
-              inputProps={{
-                ...params.inputProps,
-                style: { fontSize: 16, padding: '8px' }
+              value={
+                optionsList.find(
+                  (option) =>
+                    option.organizationId === selectedOrg?.id
+                ) || null
+              }
+              slotProps={{
+                htmlInput: {
+                  ...params.inputProps,
+                  style: { fontSize: 16, padding: '8px' }
+                }
               }}
             />
           )}
