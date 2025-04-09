@@ -5,10 +5,10 @@ from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.schema import (
     FuelTypeOptionsSchema,
 )
-from lcfs.web.api.public.schema import CreditsResultSchema
+from lcfs.web.api.calculator.schema import CreditsResultSchema
 from lcfs.web.utils.calculations import calculate_compliance_units
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
-from lcfs.web.api.public.repo import PublicRepository
+from lcfs.web.api.calculator.repo import PublicRepository
 from lcfs.web.core.decorators import service_handler
 
 

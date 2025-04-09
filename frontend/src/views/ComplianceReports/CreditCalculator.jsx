@@ -28,7 +28,7 @@ import {
   useGetCompliancePeriodList,
   useGetFuelTypeList,
   useGetFuelTypeOptions
-} from '@/hooks/usePublic'
+} from '@/hooks/useCalculator'
 import Loading from '@/components/Loading'
 import {
   FUEL_CATEGORIES,

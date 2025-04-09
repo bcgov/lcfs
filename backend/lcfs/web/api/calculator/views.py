@@ -5,14 +5,14 @@ from fastapi.responses import JSONResponse
 from lcfs.utils.constants import FUEL_CATEGORIES
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from fastapi import Depends
-from lcfs.web.api.public.schema import CalculatorQueryParams, CreditsResultSchema
-from lcfs.web.api.public.services import PublicService
+from lcfs.web.api.calculator.schema import CalculatorQueryParams, CreditsResultSchema
+from lcfs.web.api.calculator.services import PublicService
 
 router = APIRouter()
 
 
 @router.get(
-    "/calculator/compliance-periods",
+    "/compliance-periods",
     tags=["public"],
     response_model=List[CompliancePeriodBaseSchema],
     status_code=status.HTTP_200_OK,
@@ -27,7 +27,7 @@ async def get_compliance_periods(
 
 
 @router.get(
-    "/calculator/{compliance_period}/",
+    "/{compliance_period}/",
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )
@@ -47,7 +47,7 @@ async def get_fuel_types(
 
 
 @router.get(
-    "/calculator/{compliance_period}/fuel-type-options",
+    "/{compliance_period}/fuel-type-options",
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )
@@ -68,7 +68,7 @@ async def get_fuel_type_options(
 
 
 @router.get(
-    "/calculator/{compliance_period}/calculate",
+    "/{compliance_period}/calculate",
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )

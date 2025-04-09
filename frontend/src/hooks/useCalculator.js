@@ -5,8 +5,8 @@ import { useQuery } from '@tanstack/react-query'
 export const useGetCompliancePeriodList = (options) => {
   const client = useApiService()
   return useQuery({
-    queryKey: ['public-compliance-periods'],
-    queryFn: () => client.get(apiRoutes.getPublicCompliancePeriods),
+    queryKey: ['calculator-compliance-periods'],
+    queryFn: () => client.get(apiRoutes.getCalculatorCompliancePeriods),
     staleTime: 5 * 60 * 1000, // 5 minutes
     cacheTime: 60 * 60 * 1000, // 1 hour
     refetchInterval: 10 * 60 * 1000, // 10 minutes (optional)
@@ -17,10 +17,10 @@ export const useGetCompliancePeriodList = (options) => {
 export const useGetFuelTypeList = (params) => {
   const client = useApiService()
   return useQuery({
-    queryKey: ['public-fuel-types', params],
+    queryKey: ['calculator-fuel-types', params],
     queryFn: () =>
       client.get(
-        apiRoutes.getPublicFuelTypes.replace(
+        apiRoutes.getCalculatorFuelTypes.replace(
           ':complianceYear',
           params.complianceYear
         ),
@@ -39,10 +39,10 @@ export const useGetFuelTypeList = (params) => {
 export const useGetFuelTypeOptions = (params) => {
   const client = useApiService()
   return useQuery({
-    queryKey: ['public-fuel-type-options', params],
+    queryKey: ['calculator-fuel-type-options', params],
     queryFn: () =>
       client.get(
-        apiRoutes.getPublicFuelTypeOptions.replace(
+        apiRoutes.getCalculatorFuelTypeOptions.replace(
           ':complianceYear',
           params.complianceYear
         ),
