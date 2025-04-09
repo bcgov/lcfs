@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, Float, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSONB
 
 from lcfs.db.base import BaseModel, Auditable
 
@@ -109,10 +110,11 @@ class ComplianceReportSummary(BaseModel, Auditable):
     line_21_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
     total_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
 
-    # Legacy TFRS Columns
-    credits_offset_a = Column(Integer)
-    credits_offset_b = Column(Integer)
-    credits_offset_c = Column(Integer)
+    historical_snapshot = Column(
+        JSONB,
+        nullable=True,
+        comment="Contains historical data from pre-2024 TFRS system for data retention and analysis purposes.",
+    )
 
     compliance_report = relationship("ComplianceReport", back_populates="summary")
 
