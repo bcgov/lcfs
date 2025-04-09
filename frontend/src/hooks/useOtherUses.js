@@ -13,13 +13,15 @@ export const useOtherUsesOptions = (params, options) => {
   })
 }
 
-export const useGetAllOtherUses = (complianceReportId, options) => {
+export const useGetAllOtherUses = (complianceReportId, pagination, options) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['all-other-uses', complianceReportId],
     queryFn: async () => {
       return (
-        await client.post(apiRoutes.getAllOtherUses, { complianceReportId })
+        await client.post(apiRoutes.getAllOtherUses, {
+          complianceReportId,
+          ...pagination })
       ).data.otherUses
     },
     ...options
