@@ -528,3 +528,8 @@ class FuelSupplyRepository:
         fuel_supplies = result.unique().scalars().all()
 
         return fuel_supplies
+
+    async def delete_fuel_supply(self, fuel_supply_id):
+        await self.db.execute(
+            delete(FuelSupply).where(FuelSupply.fuel_supply_id == fuel_supply_id)
+        )

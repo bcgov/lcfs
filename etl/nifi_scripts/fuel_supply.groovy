@@ -416,8 +416,8 @@ try {
                     compliance_report_id, quantity, units, compliance_units, target_ci, ci_of_fuel,
                     energy_density, eer, energy, fuel_type_other, fuel_category_id, fuel_code_id,
                     fuel_type_id, provision_of_the_act_id, end_use_id, create_date, update_date,
-                    create_user, update_user, group_uuid, version, user_type, action_type
-                ) VALUES (?, ?, ?::quantityunitsenum, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::usertypeenum, ?::actiontypeenum)
+                    create_user, update_user, group_uuid, version, action_type
+                ) VALUES (?, ?, ?::quantityunitsenum, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::actiontypeenum)
             ''')
             log.warn("record.complianceReportId: " + (complianceReportId ?: "NULL"))
 

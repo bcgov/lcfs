@@ -189,6 +189,8 @@ class OtherUsesRepository:
             .where(*conditions)
             .group_by(OtherUses.group_uuid)
         )
+
+        # Now create a subquery for use in the JOIN
         valid_other_uses_subq = valid_other_uses_select.subquery()
 
         # Get the actual records with their related data
@@ -447,3 +449,8 @@ class OtherUsesRepository:
             formatted_fuel_types.append(formatted_fuel_type)
 
         return formatted_fuel_types
+
+    async def delete_other_use(self, other_uses_id):
+        await self.db.execute(
+            delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id)
+        )

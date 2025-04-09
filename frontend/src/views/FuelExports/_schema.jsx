@@ -590,14 +590,9 @@ export const fuelExportColDefs = (
       showStepperButtons: false
     },
     valueGetter: (params) => {
-      if (isFuelTypeOther(params)) {
-        return params.data?.energyDensity + ' MJ/' + params.data?.units || 0
-      } else {
-        const ed = optionsData?.fuelTypes?.find(
-          (obj) => params.data.fuelType === obj.fuelType
-        )?.energyDensity
-        return (ed && ed.energyDensity + ' MJ/' + params.data.units) || 0
-      }
+      return params.data.energyDensity !== undefined
+        ? `${params.data.energyDensity} MJ/${params.data.units || 0}`
+        : ''
     },
     editable: (params) => isFuelTypeOther(params)
   },

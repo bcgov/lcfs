@@ -264,3 +264,30 @@ class NotionalTransferRepository:
 
         result = await self.db.execute(query)
         return result.scalars().first()
+
+    @repo_handler
+    async def get_notional_transfer_version_by_user(
+        self, group_uuid: str, version: int
+    ) -> Optional[NotionalTransfer]:
+        """
+        Retrieve a specific NotionalTransfer record by group UUID, version, and user_type.
+        """
+        query = (
+            select(NotionalTransfer)
+            .where(
+                NotionalTransfer.group_uuid == group_uuid,
+                NotionalTransfer.version == version,
+                NotionalTransfer.user_type == user_type,
+            )
+            .options(joinedload(NotionalTransfer.fuel_category))
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    async def delete_notional_transfer(self, notional_transfer_id):
+        await self.db.execute(
+            delete(NotionalTransfer).where(
+                NotionalTransfer.notional_transfer_id == notional_transfer_id
+            )
+        )
