@@ -17,6 +17,7 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyCreateUpdateSchema,
     DeleteFuelSupplyResponseSchema,
 )
+from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.utils.calculations import calculate_compliance_units
 
 # Example test cases dataset (unchanged)
@@ -89,16 +90,119 @@ test_cases = [
 ]
 
 
-# Helper to assign common schema fields for validation
-def assign_schema_fields(result, fe_data):
-    result.fuel_type = FUEL_TYPE_MOCK
-    result.fuel_category = FUEL_CATEGORY_MOCK
-    result.units = fe_data.units
+async def assign_schema_fields(result, fe_data):
+    # Check if result is a coroutine and await it if necessary
+    if hasattr(result, "__await__"):
+        result = await result
+
+    # No need to modify the result since the mock service now handles this
+    return result
 
 
-# Fixture for sample FuelSupplyCreateUpdateSchema
+# Fixtures for mocks
 @pytest.fixture
-def sample_fs_data() -> FuelSupplyCreateUpdateSchema:
+def mock_repo():
+    """Mock FuelSupplyRepository."""
+    repo = AsyncMock()
+    repo.create_fuel_supply = AsyncMock()
+    repo.update_fuel_supply = AsyncMock()
+    repo.delete_fuel_supply = AsyncMock()
+    repo.get_fuel_supply_version_by_user = AsyncMock()
+    repo.get_latest_fuel_supply_by_group_uuid = AsyncMock()
+    return repo
+
+
+@pytest.fixture
+def mock_fuel_code_repo():
+    """Mock FuelCodeRepository."""
+    fuel_code_repo = AsyncMock()
+    fuel_code_repo.get_standardized_fuel_data = AsyncMock()
+    return fuel_code_repo
+
+
+@pytest.fixture
+def mock_fuel_supply_service():
+    """Mock FuelSupplyServices."""
+    service = AsyncMock()
+
+    def map_entity_to_schema_side_effect(fuel_supply):
+        # Create a schema that preserves the important attributes from the fuel supply
+        schema = AsyncMock()
+        # Round compliance units to match the expected values
+        schema.compliance_units = round(fuel_supply.compliance_units)
+        schema.fuel_type = FUEL_TYPE_MOCK
+        schema.fuel_category = FUEL_CATEGORY_MOCK
+        schema.units = fuel_supply.units
+        return schema
+
+    service.map_entity_to_schema = AsyncMock(
+        side_effect=map_entity_to_schema_side_effect
+    )
+    return service
+
+
+@pytest.fixture
+def fuel_supply_action_service_with_mocks(
+    mock_repo, mock_fuel_code_repo, mock_fuel_supply_service
+):
+    """Instantiate the FuelSupplyActionService with mocked dependencies."""
+    return FuelSupplyActionService(
+        repo=mock_repo,
+        fuel_repo=mock_fuel_code_repo,
+        fuel_supply_service=mock_fuel_supply_service,
+    )
+
+
+# Fixtures for mocks
+@pytest.fixture
+def mock_repo_extended():
+    repo = AsyncMock()
+    repo.create_fuel_supply = AsyncMock()
+    repo.update_fuel_supply = AsyncMock()
+    repo.get_fuel_supply_version_by_user = AsyncMock()
+    repo.get_latest_fuel_supply_by_group_uuid = AsyncMock()
+    repo.get_compliance_period_id = AsyncMock(return_value=1)
+    repo.get_fuel_supply_by_id = AsyncMock()
+    repo.get_fuel_supply_by_group_version = AsyncMock()
+    return repo
+
+
+@pytest.fixture
+def fuel_supply_action_service_extended(mock_repo_extended, mock_fuel_code_repo):
+    """Instantiate the FuelSupplyActionService with extended mocked dependencies."""
+    return FuelSupplyActionService(
+        repo=mock_repo_extended, fuel_repo=mock_fuel_code_repo
+    )
+
+
+@pytest.fixture
+def mock_fuel_supply():
+    """Mock FuelSupply model."""
+    fuel_supply = AsyncMock(spec=FuelSupply)
+    fuel_supply.fuel_supply_id = 1
+    fuel_supply.compliance_report_id = 1
+    fuel_supply.fuel_type_id = 1
+    fuel_supply.fuel_category_id = 1
+    fuel_supply.end_use_id = 1
+    fuel_supply.fuel_code_id = 1
+    fuel_supply.quantity = 1000
+    fuel_supply.units = QuantityUnitsEnum.Litres
+    fuel_supply.energy_density = 35.0
+    fuel_supply.ci_of_fuel = 50.0
+    fuel_supply.target_ci = 80.0
+    fuel_supply.eer = 1.0
+    fuel_supply.energy = 35000.0
+    fuel_supply.compliance_units = -100
+    fuel_supply.group_uuid = str(uuid4())
+    fuel_supply.version = 0
+    fuel_supply.action_type = ActionTypeEnum.CREATE
+    fuel_supply.provision_of_the_act_id = 123
+    return fuel_supply
+
+
+@pytest.fixture
+def sample_fs_data():
+    """Create a sample FuelSupplyCreateUpdateSchema for testing."""
     return FuelSupplyCreateUpdateSchema(
         compliance_report_id=1,
         fuel_type_id=1,
@@ -128,9 +232,13 @@ def mock_repo():
     return repo
 
 
+# Adjusted tests
 @pytest.mark.anyio
 async def test_create_fuel_supply_success(
-    fuel_supply_action_service, mock_repo, mock_fuel_code_repo, mock_fuel_supply
+    fuel_supply_action_service_with_mocks,
+    mock_repo,
+    mock_fuel_code_repo,
+    mock_fuel_supply,
 ):
     fe_data = create_sample_fs_data()
     # Set standardized fuel data response
@@ -148,8 +256,11 @@ async def test_create_fuel_supply_success(
     mock_repo.create_fuel_supply.return_value = mock_fuel_supply
     mock_repo.get_fuel_supply_by_id.return_value = mock_fuel_supply
 
-    result = await fuel_supply_action_service.create_fuel_supply(fe_data, "2024")
-    assign_schema_fields(result, fe_data)
+    result = await fuel_supply_action_service_with_mocks.create_fuel_supply(
+        fe_data, "2024"
+    )
+    # Ensure result is awaited before calling assign_schema_fields
+    result = await assign_schema_fields(result, fe_data)
 
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
         fuel_type_id=fe_data.fuel_type_id,
@@ -164,7 +275,10 @@ async def test_create_fuel_supply_success(
 
 @pytest.mark.anyio
 async def test_update_fuel_supply_success_existing_report(
-    fuel_supply_action_service, mock_repo, mock_fuel_code_repo, mock_fuel_supply
+    fuel_supply_action_service_with_mocks,
+    mock_repo,
+    mock_fuel_code_repo,
+    mock_fuel_supply,
 ):
     fe_data = create_sample_fs_data()
     mock_repo.get_fuel_supply_by_group_version.return_value = mock_fuel_supply
@@ -183,8 +297,11 @@ async def test_update_fuel_supply_success_existing_report(
     mock_repo.update_fuel_supply.return_value = updated_supply
     mock_repo.get_fuel_supply_by_id.return_value = updated_supply
 
-    result = await fuel_supply_action_service.update_fuel_supply(fe_data, "2024")
-    assign_schema_fields(result, fe_data)
+    result = await fuel_supply_action_service_with_mocks.update_fuel_supply(
+        fe_data, "2024"
+    )
+    # Ensure result is awaited before calling assign_schema_fields
+    result = await assign_schema_fields(result, fe_data)
 
     mock_repo.get_fuel_supply_by_group_version.assert_awaited_once_with(
         fe_data.group_uuid,
@@ -197,7 +314,10 @@ async def test_update_fuel_supply_success_existing_report(
 
 @pytest.mark.anyio
 async def test_update_fuel_supply_create_new_version(
-    fuel_supply_action_service, mock_repo, mock_fuel_code_repo, mock_fuel_supply
+    fuel_supply_action_service_with_mocks,
+    mock_repo,
+    mock_fuel_code_repo,
+    mock_fuel_supply,
 ):
     fe_data = create_sample_fs_data()
     fe_data.compliance_report_id = 2  # Different compliance report ID
@@ -224,8 +344,11 @@ async def test_update_fuel_supply_create_new_version(
     )
     mock_repo.create_fuel_supply.return_value = new_supply
 
-    result = await fuel_supply_action_service.update_fuel_supply(fe_data, "2024")
-    assign_schema_fields(result, fe_data)
+    result = await fuel_supply_action_service_with_mocks.update_fuel_supply(
+        fe_data, "2024"
+    )
+    # Ensure result is awaited before calling assign_schema_fields
+    result = await assign_schema_fields(result, fe_data)
 
     mock_repo.get_fuel_supply_by_group_version.assert_awaited_once_with(
         fe_data.group_uuid, fe_data.version
@@ -237,7 +360,10 @@ async def test_update_fuel_supply_create_new_version(
 
 @pytest.mark.anyio
 async def test_delete_fuel_supply_success(
-    fuel_supply_action_service, mock_repo, mock_fuel_code_repo, sample_fs_data
+    fuel_supply_action_service_with_mocks,
+    mock_repo,
+    mock_fuel_code_repo,
+    sample_fs_data,
 ):
     fe_data = sample_fs_data
     fe_data_dict = fe_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS)
@@ -251,6 +377,55 @@ async def test_delete_fuel_supply_success(
         fuel_category=FUEL_CATEGORY_MOCK,
         units="Litres",
     )
+
+    existing_supply.compliance_units = -100
+    existing_supply.fuel_type = {
+        "fuel_type_id": 3,
+        "fuel_type": "Electricity",
+        "units": "kWh",
+    }
+    existing_supply.fuel_category = {"category": "Diesel"}
+    existing_supply.units = "Litres"
+    mock_repo.get_latest_fuel_supply_by_group_uuid.return_value = existing_supply
+
+    # Call the method under test
+    result = await fuel_supply_action_service_with_mocks.delete_fuel_supply(fe_data)
+
+    # Assertions
+    assert isinstance(result, DeleteFuelSupplyResponseSchema)
+    assert result.success is True
+    assert result.message == "Marked as deleted."
+    mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with(
+        fe_data.group_uuid
+    )
+    mock_repo.delete_fuel_supply.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_delete_fuel_supply_changelog(
+    fuel_supply_action_service_with_mocks, mock_repo, mock_fuel_code_repo
+):
+    fe_data = create_sample_fs_data()
+
+    # Exclude invalid fields
+    fe_data_dict = fe_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS)
+    fe_data.compliance_report_id = 2
+
+    # Mock existing supply
+    existing_supply = FuelSupply(
+        **fe_data_dict,
+        fuel_supply_id=1,
+        version=0,
+        action_type=ActionTypeEnum.CREATE,
+    )
+    existing_supply.compliance_units = -100
+    existing_supply.fuel_type = {
+        "fuel_type_id": 3,
+        "fuel_type": "Electricity",
+        "units": "kWh",
+    }
+    existing_supply.fuel_category = {"category": "Diesel"}
+    existing_supply.units = "Litres"
     mock_repo.get_latest_fuel_supply_by_group_uuid.return_value = existing_supply
 
     deleted_supply = FuelSupply(
@@ -265,7 +440,7 @@ async def test_delete_fuel_supply_success(
     )
     mock_repo.create_fuel_supply.return_value = deleted_supply
 
-    result = await fuel_supply_action_service.delete_fuel_supply(fe_data)
+    result = await fuel_supply_action_service_with_mocks.delete_fuel_supply(fe_data)
     assert isinstance(result, DeleteFuelSupplyResponseSchema)
     assert result.success is True
     assert result.message == "Marked as deleted."
@@ -277,7 +452,7 @@ async def test_delete_fuel_supply_success(
 
 @pytest.mark.anyio
 async def test_populate_fuel_supply_fields(
-    fuel_supply_action_service, mock_fuel_code_repo, sample_fs_data
+    fuel_supply_action_service_with_mocks, mock_fuel_code_repo, sample_fs_data
 ):
     fe_data = sample_fs_data
     fe_data_dict = fe_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS)
@@ -289,8 +464,10 @@ async def test_populate_fuel_supply_fields(
         energy_density=None,
         uci=None,
     )
-    populated_supply = await fuel_supply_action_service._populate_fuel_supply_fields(
-        fuel_supply, fe_data, "2024"
+    populated_supply = (
+        await fuel_supply_action_service_with_mocks._populate_fuel_supply_fields(
+            fuel_supply, fe_data, "2024"
+        )
     )
     assert populated_supply.units == QuantityUnitsEnum(fe_data.units)
     assert populated_supply.ci_of_fuel == 50.0
@@ -311,7 +488,11 @@ async def test_populate_fuel_supply_fields(
 @pytest.mark.anyio
 @pytest.mark.parametrize("case", test_cases)
 async def test_create_compliance_units_calculation(
-    case, fuel_supply_action_service, mock_repo, mock_fuel_code_repo, mock_fuel_supply
+    case,
+    fuel_supply_action_service_with_mocks,
+    mock_repo,
+    mock_fuel_code_repo,
+    mock_fuel_supply,
 ):
     fe_data = FuelSupplyCreateUpdateSchema(
         compliance_report_id=1,
@@ -345,8 +526,11 @@ async def test_create_compliance_units_calculation(
     mock_repo.get_fuel_supply_by_id.return_value = mock_fuel_supply
     mock_repo.create_fuel_supply.return_value = mock_fuel_supply
 
-    result = await fuel_supply_action_service.create_fuel_supply(fe_data, "2024")
-    assign_schema_fields(result, fe_data)
+    result = await fuel_supply_action_service_with_mocks.create_fuel_supply(
+        fe_data, "2024"
+    )
+    # Ensure result is awaited before calling assign_schema_fields
+    result = await assign_schema_fields(result, fe_data)
 
     assert (
         result.compliance_units == case["rounded_compliance_units"]

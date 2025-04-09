@@ -426,3 +426,8 @@ class FuelExportRepository:
         fuel_exports = result.unique().scalars().all()
 
         return fuel_exports
+
+    async def delete_fuel_export(self, fuel_export_id):
+        await self.db.execute(
+            delete(FuelExport).where(FuelExport.fuel_export_id == fuel_export_id)
+        )

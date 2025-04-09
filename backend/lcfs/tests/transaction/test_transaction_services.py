@@ -88,7 +88,9 @@ async def test_export_transactions(transactions_service):
             transaction_effective_date=datetime.now(),
             recorded_date=datetime.now(),
             approved_date=datetime.now(),
-            comment="Test Comment",
+            from_org_comment="From Org Comment",
+            to_org_comment="To Org Comment",
+            government_comment="Government Comment",
         )
     ]
     transactions_service.repo.get_transactions_paginated.return_value = (
@@ -117,4 +119,6 @@ async def test_export_transactions(transactions_service):
     assert "10" in content_str
     assert "Category A" in content_str
     assert "Approved" in content_str
-    assert "Test Comment" in content_str
+    assert "From Org Comment" in content_str
+    assert "To Org Comment" in content_str
+    assert "Government Comment" in content_str
