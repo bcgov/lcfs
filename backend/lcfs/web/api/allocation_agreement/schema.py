@@ -85,22 +85,6 @@ class AllocationAgreementChangelogFuelTypeSchema(BaseSchema):
     units: FuelTypeQuantityUnitsEnumSchema
 
 
-class AllocationAgreementDiffSchema(BaseSchema):
-    allocation_transaction_type: Optional[bool] = None
-    transaction_partner: Optional[bool] = None
-    postal_address: Optional[bool] = None
-    transaction_partner_email: Optional[bool] = None
-    transaction_partner_phone: Optional[bool] = None
-    fuel_type: Optional[bool] = None
-    fuel_type_other: Optional[bool] = None
-    fuel_category: Optional[bool] = None
-    provision_of_the_act: Optional[bool] = None
-    fuel_code: Optional[bool] = None
-    quantity: Optional[bool] = None
-    units: Optional[bool] = None
-    ci_of_fuel: Optional[bool] = None
-
-
 class AllocationAgreementResponseSchema(BaseSchema):
     compliance_report_id: int
     allocation_agreement_id: int
@@ -122,7 +106,6 @@ class AllocationAgreementResponseSchema(BaseSchema):
     group_uuid: str
     version: int
     action_type: str
-    diff: Optional[AllocationAgreementDiffSchema] = None
     updated: Optional[bool] = None
 
 
@@ -146,7 +129,6 @@ class AllocationAgreementChangelogSchema(BaseSchema):
     group_uuid: Optional[str] = None
     version: Optional[int] = None
     action_type: Optional[str] = None
-    diff: Optional[AllocationAgreementDiffSchema] = None
     updated: Optional[bool] = None
 
 

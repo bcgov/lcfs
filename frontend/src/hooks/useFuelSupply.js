@@ -1,7 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCurrentUser } from './useCurrentUser'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 export const useFuelSupplyOptions = (params, options) => {
   const client = useApiService()

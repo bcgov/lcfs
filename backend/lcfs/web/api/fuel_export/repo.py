@@ -1,7 +1,7 @@
 from datetime import datetime
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, func
+from sqlalchemy import and_, or_, select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from typing import List, Optional, Tuple
