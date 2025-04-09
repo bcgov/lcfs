@@ -10,8 +10,7 @@ import {
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { ScheduleASummary } from '@/views/ComplianceReports/legacy/ScheduleASummary.jsx'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses.js'
@@ -19,6 +18,7 @@ import { ScheduleCSummary } from '@/views/ComplianceReports/legacy/ScheduleCSumm
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply.js'
 import { ScheduleBSummary } from '@/views/ComplianceReports/legacy/ScheduleBSummary.jsx'
 import { isArrayEmpty } from '@/utils/array.js'
+import { ExpandMore } from '@mui/icons-material'
 
 const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
   const { t } = useTranslation(['legacy'])
@@ -31,10 +31,10 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
         name: t('legacy:activityLists.scheduleA'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetAllNotionalTransfers,
         component: (data) =>
@@ -46,10 +46,10 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
         name: t('legacy:activityLists.scheduleB'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetFuelSupplies,
         component: (data) =>
@@ -61,10 +61,10 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
         name: t('legacy:activityLists.scheduleC'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.OTHER_USE_FUELS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetAllOtherUses,
         component: (data) =>
@@ -141,7 +141,7 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
             >
               <AccordionSummary
                 expandIcon={
-                  <ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />
+                  <ExpandMore sx={{ width: '2rem', height: '2rem' }} />
                 }
                 aria-controls={`panel${index}-content`}
                 id={`panel${index}-header`}

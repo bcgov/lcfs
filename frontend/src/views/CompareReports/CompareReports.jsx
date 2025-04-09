@@ -1,5 +1,4 @@
-import BCAlert from '@/components/BCAlert'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -8,14 +7,15 @@ import {
   renewableFuelColumns
 } from '@/views/CompareReports/_schema'
 import {
-  useGetComplianceReportSummary,
-  useListComplianceReports
+  useGetComplianceReport,
+  useGetComplianceReportSummary
 } from '@/hooks/useComplianceReports'
 import { Icon, MenuItem, Select } from '@mui/material'
 import Box from '@mui/material/Box'
 import Loading from '@/components/Loading'
 import CompareTable from '@/views/CompareReports/components/CompareTable'
 import { styled } from '@mui/material/styles'
+import { useParams } from 'react-router-dom'
 
 const Controls = styled(Box)({
   width: '66%'
@@ -23,45 +23,46 @@ const Controls = styled(Box)({
 
 export const CompareReports = () => {
   const { t } = useTranslation(['common', 'report'])
-  const [alertMessage, setAlertMessage] = useState('')
   const [isLoading, setIsLoading] = useState(true)
-  const [alertSeverity, setAlertSeverity] = useState('info')
+  const { data: currentUser } = useCurrentUser()
+  const [reportChain, setReportChain] = useState([])
 
-  const alertRef = useRef()
-  const { hasRoles, data: currentUser } = useCurrentUser()
-  const [reports, setReports] = useState([])
-
-  const { data: response } = useListComplianceReports(
-    currentUser?.organization?.organizationId
+  const { complianceReportId } = useParams()
+  const { data: complianceReport } = useGetComplianceReport(
+    currentUser?.organization?.organizationId,
+    complianceReportId,
+    {
+      enabled: !!complianceReportId
+    }
   )
 
-  const [report1, setReport1] = useState(null)
-  const [report2, setReport2] = useState(null)
+  const [report1ID, setReport1ID] = useState(null)
+  const [report2ID, setReport2ID] = useState(null)
   const [fuelType, setFuelType] = useState('gasoline')
   useEffect(() => {
-    if (response) {
-      const { reports } = response.data
-      if (reports?.length > 0) {
-        setReport1(reports[0])
+    if (complianceReport) {
+      const { chain } = complianceReport
+      if (chain?.length > 0) {
+        setReport2ID(chain[0].complianceReportId)
       }
-      if (reports?.length > 1) {
-        setReport2(reports[1])
+      if (chain?.length > 1) {
+        setReport1ID(chain[1].complianceReportId)
       }
-      setReports(reports)
+      setReportChain(chain)
       setIsLoading(false)
     }
-  }, [response])
+  }, [complianceReport])
 
-  const { data: report1Summary } = useGetComplianceReportSummary(
-    report1?.complianceReportId
-  )
-  const { data: report2Summary } = useGetComplianceReportSummary(
-    report2?.complianceReportId
-  )
+  const { data: report1Summary } = useGetComplianceReportSummary(report1ID, {
+    enabled: !!report1ID
+  })
+  const { data: report2Summary } = useGetComplianceReportSummary(report2ID, {
+    enabled: !!report2ID
+  })
 
-  const [renewableSummary, SetRenewableSummary] = useState([])
-  const [lowCarbonSummary, SetLowCarbonSummary] = useState([])
-  const [nonCompliancePenaltySummary, SetNonCompliancePenaltySummary] =
+  const [renewableSummary, setRenewableSummary] = useState([])
+  const [lowCarbonSummary, setLowCarbonSummary] = useState([])
+  const [nonCompliancePenaltySummary, setNonCompliancePenaltySummary] =
     useState([])
   useEffect(() => {
     const renewableSummary = []
@@ -116,45 +117,35 @@ export const CompareReports = () => {
         row.delta = row.report2 !== null ? row.report2 - row.report1 : null
       }
     }
-    SetRenewableSummary(renewableSummary)
-    SetLowCarbonSummary(lowCarbonSummary)
-    SetNonCompliancePenaltySummary(nonCompliancePenaltySummary)
+    setRenewableSummary(renewableSummary)
+    setLowCarbonSummary(lowCarbonSummary)
+    setNonCompliancePenaltySummary(nonCompliancePenaltySummary)
   }, [report1Summary, report2Summary, fuelType])
 
   function onSelectReport1(event) {
-    const compliancePeriod = event.target.value
-    const report = reports.find(
-      (report) => report.compliancePeriod === compliancePeriod
-    )
-    setReport1(report)
+    setReport1ID(event.target.value)
   }
 
   function onSelectReport2(event) {
-    const compliancePeriod = event.target.value
-    const report = reports.find(
-      (report) => report.compliancePeriod === compliancePeriod
-    )
-    setReport2(report)
+    setReport2ID(event.target.value)
   }
 
   if (isLoading) {
     return <Loading />
   }
 
+  const selectedReportName1 = report1ID
+    ? reportChain.find((report) => report.complianceReportId === report1ID)
+        .nickname
+    : ''
+
+  const selectedReportName2 = report2ID
+    ? reportChain.find((report) => report.complianceReportId === report2ID)
+        .nickname
+    : ''
+
   return (
     <>
-      <Box>
-        {alertMessage && (
-          <BCAlert
-            ref={alertRef}
-            data-test="alert-box"
-            severity={alertSeverity}
-            delay={6500}
-          >
-            {alertMessage}
-          </BCAlert>
-        )}
-      </Box>
       <Controls>
         <Box>
           <h5>{t('report:compareReports')}:</h5>
@@ -173,13 +164,16 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report1?.compliancePeriod}
+              value={report1ID}
               variant="outlined"
               onChange={onSelectReport1}
             >
-              {reports.map((report, index) => (
-                <MenuItem key={index} value={report.compliancePeriod}>
-                  {`${t('report:complianceReport')} ${report.compliancePeriod}`}
+              {reportChain.map((report) => (
+                <MenuItem
+                  key={report.complianceReportId}
+                  value={report.complianceReportId}
+                >
+                  {report.nickname}
                 </MenuItem>
               ))}
             </Select>
@@ -193,13 +187,16 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report2?.compliancePeriod}
+              value={report2ID}
               variant="outlined"
               onChange={onSelectReport2}
             >
-              {reports.map((report, index) => (
-                <MenuItem key={index} value={report.compliancePeriod}>
-                  {`${t('report:complianceReport')} ${report.compliancePeriod}`}
+              {reportChain.map((report) => (
+                <MenuItem
+                  key={report.complianceReportId}
+                  value={report.complianceReportId}
+                >
+                  {report.nickname}
                 </MenuItem>
               ))}
             </Select>
@@ -210,30 +207,26 @@ export const CompareReports = () => {
         title={t('report:renewableFuelTargetSummary')}
         columns={renewableFuelColumns(
           t,
-          report1 ? `CR${report1.compliancePeriod}` : '',
-          report2 ? `CR${report2.compliancePeriod}` : ''
+          selectedReportName1,
+          selectedReportName2
         )}
         data={renewableSummary}
-        useParenthesis={true}
-        enableFuelControls={true}
+        useParenthesis
+        enableFuelControls
         setFuelType={setFuelType}
         fuelType={fuelType}
       />
       <CompareTable
         title={t('report:lowCarbonFuelTargetSummary')}
-        columns={lowCarbonColumns(
-          t,
-          report1 ? `CR${report1.compliancePeriod}` : '',
-          report2 ? `CR${report2.compliancePeriod}` : ''
-        )}
+        columns={lowCarbonColumns(t, selectedReportName1, selectedReportName2)}
         data={lowCarbonSummary}
       />
       <CompareTable
         title={t('report:nonCompliancePenaltySummary')}
         columns={nonCompliancePenaltyColumns(
           t,
-          report1 ? `CR${report1.compliancePeriod}` : '',
-          report2 ? `CR${report2.compliancePeriod}` : ''
+          report1ID ? `CR${report1ID.compliancePeriod}` : '',
+          report2ID ? `CR${report2ID.compliancePeriod}` : ''
         )}
         data={nonCompliancePenaltySummary}
       />

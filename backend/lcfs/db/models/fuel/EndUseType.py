@@ -32,5 +32,5 @@ class EndUseType(BaseModel, Auditable, DisplayOrder):
     additional_carbon_intensities = relationship(
         "AdditionalCarbonIntensity",
         back_populates="end_use_type",
-        overlaps="additional_carbon_intensity"
+        overlaps="additional_carbon_intensity",
     )

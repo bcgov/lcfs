@@ -1,7 +1,7 @@
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import * as ROUTES from '@/constants/routes/routes.js'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -13,7 +13,7 @@ import { isArrayEmpty } from '@/utils/array'
 import { cleanEmptyStringValues } from '@/utils/formatters'
 import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -40,12 +40,12 @@ export const AddEditOtherUses = () => {
     isFetched
   } = useOtherUsesOptions({ compliancePeriod })
 
-  const { mutateAsync: saveRow } = useSaveOtherUses({ complianceReportId })
+  const { mutateAsync: saveRow } = useSaveOtherUses(complianceReportId)
   const navigate = useNavigate()
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
   const isSupplemental = complianceReport?.report?.version !== 0
@@ -319,10 +319,10 @@ export const AddEditOtherUses = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
+      buildPath(ROUTES.REPORTS.VIEW, {
+        compliancePeriod,
+        complianceReportId
+      })
     )
   }, [navigate, compliancePeriod, complianceReportId])
 

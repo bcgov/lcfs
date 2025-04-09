@@ -4,7 +4,7 @@ import { useInternalComments } from '@/hooks/useInternalComments'
 import InternalCommentList from './InternalCommentList'
 import Loading from '@/components/Loading'
 
-const InternalComments = ({ entityType, entityId, onCommentChange }) => {
+const InternalComments = ({ entityType, entityId }) => {
   const { t } = useTranslation(['internalComment'])
   const {
     comments,
@@ -20,17 +20,23 @@ const InternalComments = ({ entityType, entityId, onCommentChange }) => {
 
   const showAddCommentBtn = entityId !== null
 
-  if (isLoading) return <Loading message={t('internalComment:loadingComments')} />
-  if (error) return <div>{t('internalComment:errorLoadingComments')} {error.message}</div>
+  if (isLoading) {
+    return <Loading message={t('internalComment:loadingComments')} />
+  }
+  if (error) {
+    return (
+      <div>
+        {t('internalComment:errorLoadingComments')} {error.message}
+      </div>
+    )
+  }
 
   const handleAddComment = async () => {
     await addComment()
-    onCommentChange()
   }
 
   const handleEditComment = async (commentId, commentText) => {
     await editComment({ commentId, commentText })
-    onCommentChange()
   }
 
   return (

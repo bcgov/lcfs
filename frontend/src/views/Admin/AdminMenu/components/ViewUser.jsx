@@ -17,7 +17,8 @@ import {
   defaultSortModel,
   userActivityColDefs
 } from '@/views/Admin/AdminMenu/components/_schema'
-import { apiRoutes, ROUTES } from '@/constants/routes'
+import { apiRoutes } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { roles } from '@/constants/roles'
 import { useOrganizationUser } from '@/hooks/useOrganization'
 import { Role } from '@/components/Role'
@@ -55,14 +56,11 @@ export const ViewUser = () => {
   useEffect(() => {
     let route = null
     if (hasRoles(roles.supplier)) {
-      route = ROUTES.ORGANIZATION_EDITUSER.replace(':userID', userID)
+      route = buildPath(ROUTES.ORGANIZATION.EDIT_USER, { userID })
     } else if (orgID) {
-      route = ROUTES.ORGANIZATIONS_EDITUSER.replace(':orgID', orgID).replace(
-        ':userID',
-        userID
-      )
+      route = buildPath(ROUTES.ORGANIZATION.EDIT_USER, { orgID, userID })
     } else {
-      route = ROUTES.ADMIN_USERS_EDIT.replace(':userID', userID)
+      route = buildPath(ROUTES.ADMIN.USERS.EDIT, { userID })
     }
     setEditButtonRoute(route)
   }, [hasRoles, orgID, userID])
@@ -85,17 +83,17 @@ export const ViewUser = () => {
           const { transactionType, transactionId } = data.data
           switch (transactionType) {
             case 'Transfer':
-              return ROUTES.TRANSFERS_VIEW.replace(':transferId', transactionId)
+              return buildPath(ROUTES.TRANSFERS.VIEW, {
+                transferId: transactionId
+              })
             case 'AdminAdjustment':
-              return ROUTES.ADMIN_ADJUSTMENT_VIEW.replace(
-                ':transactionId',
+              return buildPath(ROUTES.TRANSACTIONS.ADMIN_ADJUSTMENT.VIEW, {
                 transactionId
-              )
+              })
             case 'InitiativeAgreement':
-              return ROUTES.INITIATIVE_AGREEMENT_VIEW.replace(
-                ':transactionId',
+              return buildPath(ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW, {
                 transactionId
-              )
+              })
           }
         }
       }

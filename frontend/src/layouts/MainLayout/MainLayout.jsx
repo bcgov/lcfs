@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react'
 import { Outlet, useMatches, useNavigate } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
-import { Container } from '@mui/material'
-import Grid from '@mui/material/Unstable_Grid2'
+import { ROUTES } from '@/routes/routes'
+import { Container, Stack } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import Footer from '@/components/Footer'
 import { RequireAuth } from '@/components/RequireAuth'
@@ -29,13 +28,13 @@ export const MainLayout = () => {
 
   useEffect(() => {
     // If "forbidden" is set, go to unauthorized page (unless we're already there)
-    if (forbidden && window.location.pathname !== ROUTES.UNAUTHORIZED) {
-      navigate(ROUTES.UNAUTHORIZED)
+    if (forbidden && window.location.pathname !== ROUTES.AUTH.UNAUTHORIZED) {
+      navigate(ROUTES.AUTH.UNAUTHORIZED)
     }
   }, [forbidden, navigate])
 
   return (
-    <RequireAuth redirectTo={ROUTES.LOGIN}>
+    <RequireAuth redirectTo={ROUTES.AUTH.LOGIN}>
       <BCBox display="flex" flexDirection="column" minHeight="100vh">
         <BCTypography variant="h1" className="visually-hidden">
           {pageTitle}
@@ -52,30 +51,28 @@ export const MainLayout = () => {
           }}
           disableGutters
         >
-          <Grid container spacing={2}>
-            <Grid item="true" xs={12} mt={-2}>
+          <Stack container spacing={2}>
+            <BCBox mt={-2} size={12}>
               <Crumb />
-            </Grid>
-            <Grid item="true" xs={12}>
-              <BCBox
-                elevation={5}
-                sx={{
-                  padding: '1rem 0rem',
-                  minHeight: 'auto'
-                }}
-              >
-                <Outlet />
-              </BCBox>
-            </Grid>
-            <Grid item="true" xs={12} px={2}>
+            </BCBox>
+            <BCBox
+              elevation={5}
+              sx={{
+                padding: '1rem 0rem',
+                minHeight: 'auto'
+              }}
+            >
+              <Outlet />
+            </BCBox>
+            <BCBox px={2} size={12}>
               <DisclaimerBanner
                 messages={[
                   t('layout.disclaimer.part1'),
                   !isGovernmentRole ? t('layout.disclaimer.part2') : undefined
                 ]}
               />
-            </Grid>
-          </Grid>
+            </BCBox>
+          </Stack>
         </Container>
         <Footer />
       </BCBox>

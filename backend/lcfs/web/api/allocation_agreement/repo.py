@@ -1,31 +1,24 @@
 import structlog
+from fastapi import Depends
+from sqlalchemy import and_, select, delete, func, or_
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 from typing import List, Optional
 
-from fastapi import Depends
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
-
-from sqlalchemy import and_, case, select, delete, func, distinct
-from sqlalchemy.orm import joinedload, selectinload
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from lcfs.db.models.compliance import ComplianceReport
-from lcfs.db.models.compliance import ComplianceReportStatus
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.AllocationTransactionType import (
     AllocationTransactionType,
 )
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
-from lcfs.db.models.fuel.FuelCategory import FuelCategory
-from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.FuelCode import FuelCode
-
-from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
+from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
+from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.utils.constants import LCFS_Constants
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.allocation_agreement.schema import AllocationAgreementSchema
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -76,7 +69,7 @@ class AllocationAgreementRepository:
 
     @repo_handler
     async def get_allocation_agreements(
-        self, compliance_report_id: int, exclude_draft_reports: bool = False
+        self, compliance_report_id: int, changelog: bool = False
     ) -> List[AllocationAgreementSchema]:
         """
         Queries allocation agreements from the database for a specific compliance report.
@@ -92,30 +85,32 @@ class AllocationAgreementRepository:
             return []
 
         return await self.get_effective_allocation_agreements(
-            group_uuid, exclude_draft_reports
+            compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
+            changelog=changelog,
         )
 
     async def get_effective_allocation_agreements(
-        self, compliance_report_group_uuid: str, exclude_draft_reports: bool = False
+        self,
+        compliance_report_group_uuid: str,
+        compliance_report_id: int,
+        changelog: bool = False,
     ) -> List[AllocationAgreementSchema]:
         """
         Queries allocation agreements from the database for a specific compliance report.
+        If changelog=True, includes deleted records to show history.
         """
-        # Step 1: Get all compliance_report_ids in the specified group
+        # Get all compliance report IDs in the group up to the specified report
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
-            ComplianceReport.compliance_report_group_uuid
-            == compliance_report_group_uuid
-        )
-        if exclude_draft_reports:
-            compliance_reports_select = compliance_reports_select.where(
-                ComplianceReport.current_status.has(
-                    ComplianceReportStatus.status
-                    != ComplianceReportStatusEnum.Draft.value
-                )
+            and_(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                ComplianceReport.compliance_report_id <= compliance_report_id,
             )
+        )
 
-        # Step 2: Identify group_uuids that have any DELETE action
-        delete_group_select = (
+        # Get groups that have any deleted records
+        deleted_groups = (
             select(AllocationAgreement.group_uuid)
             .where(
                 AllocationAgreement.compliance_report_id.in_(compliance_reports_select),
@@ -124,29 +119,38 @@ class AllocationAgreementRepository:
             .distinct()
         )
 
-        # Step 3: Get latest versions with government priority
-        user_type_priority = case(
-            (AllocationAgreement.user_type == UserTypeEnum.GOVERNMENT, 1),
-            (AllocationAgreement.user_type == UserTypeEnum.SUPPLIER, 0),
-            else_=0,
-        )
+        # Build query conditions
+        conditions = [
+            AllocationAgreement.compliance_report_id.in_(compliance_reports_select)
+        ]
 
+        if changelog:
+            # In changelog view, include all groups (both active and deleted)
+            conditions.extend(
+                [
+                    or_(
+                        ~AllocationAgreement.group_uuid.in_(deleted_groups),
+                        AllocationAgreement.group_uuid.in_(deleted_groups),
+                    )
+                ]
+            )
+        else:
+            # In regular view, exclude any groups that have deleted records
+            conditions.extend([~AllocationAgreement.group_uuid.in_(deleted_groups)])
+
+        # Get the latest version of each record
         valid_agreements_select = (
             select(
                 AllocationAgreement.group_uuid,
                 func.max(AllocationAgreement.version).label("max_version"),
-                func.max(user_type_priority).label("max_role_priority"),
             )
-            .where(
-                AllocationAgreement.compliance_report_id.in_(compliance_reports_select),
-                AllocationAgreement.action_type != ActionTypeEnum.DELETE,
-                ~AllocationAgreement.group_uuid.in_(delete_group_select),
-            )
+            .where(*conditions)
             .group_by(AllocationAgreement.group_uuid)
         )
+
         valid_agreements_subq = valid_agreements_select.subquery()
 
-        # Step 4: Get the effective records
+        # Get the actual records with their related data
         allocation_agreements_select = (
             select(AllocationAgreement)
             .options(
@@ -162,7 +166,6 @@ class AllocationAgreementRepository:
                     AllocationAgreement.group_uuid
                     == valid_agreements_subq.c.group_uuid,
                     AllocationAgreement.version == valid_agreements_subq.c.max_version,
-                    user_type_priority == valid_agreements_subq.c.max_role_priority,
                 ),
             )
             .order_by(AllocationAgreement.allocation_agreement_id)
@@ -195,7 +198,6 @@ class AllocationAgreementRepository:
                 ),
                 group_uuid=allocation_agreement.group_uuid,
                 version=allocation_agreement.version,
-                user_type=allocation_agreement.user_type,
                 action_type=allocation_agreement.action_type,
             )
             for allocation_agreement in allocation_agreements
@@ -331,9 +333,6 @@ class AllocationAgreementRepository:
             select(AllocationAgreement)
             .where(AllocationAgreement.group_uuid == group_uuid)
             .order_by(
-                # OtherUses.user_type == UserTypeEnum.SUPPLIER evaluates to False for GOVERNMENT,
-                # thus bringing GOVERNMENT records to the top in the ordered results.
-                AllocationAgreement.user_type == UserTypeEnum.SUPPLIER,
                 AllocationAgreement.version.desc(),
             )
         )

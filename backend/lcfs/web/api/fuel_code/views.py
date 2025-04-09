@@ -121,7 +121,9 @@ async def search_table_options_strings(
         return await service.search_company(company)
     elif fp_city or fp_province or fp_country:
         logger.info("Searching fuel production facility location")
-        return await service.search_fp_facility_location(fp_city, fp_province, fp_country)
+        return await service.search_fp_facility_location(
+            fp_city, fp_province, fp_country
+        )
     else:
         raise ValueError("Invalid parameters provided for search")
 
@@ -142,7 +144,7 @@ async def get_fuel_codes(
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_users(
     request: Request,
-    format: str = Query(default="xls", description="File export format"),
+    format: str = Query(default="xlsx", description="File export format"),
     exporter: FuelCodeExporter = Depends(),
 ):
     """

@@ -1,22 +1,32 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { useGetNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema.jsx'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const NotionalTransferSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { complianceReportId } = useParams()
 
-  const { t } = useTranslation(['common', 'notionalTransfers'])
+  const [paginationOptions, setPaginationOptions] = useState(
+    defaultInitialPagination
+  )
+
   const location = useLocation()
+  const queryData = useGetNotionalTransfers(
+    { ...paginationOptions, complianceReportId },
+    {
+      cacheTime: 0,
+      staleTime: 0
+    }
+  )
 
   useEffect(() => {
     if (location.state?.message) {
@@ -25,7 +35,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
     }
   }, [location.state])
 
-  const getRowId = (params) => params.data.notionalTransferId
+  const getRowId = (params) => params.data.notionalTransferId.toString()
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
@@ -54,8 +64,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
           getRowId={getRowId}
           columnDefs={notionalTransferSummaryColDefs}
           defaultColDef={defaultColDef}
-          query={useGetNotionalTransfers}
-          queryParams={{ complianceReportId }}
+          queryData={queryData}
           dataKey="notionalTransfers"
           suppressPagination={data?.length <= 10}
           autoSizeStrategy={{
@@ -64,8 +73,13 @@ export const NotionalTransferSummary = ({ data, status }) => {
             defaultMaxWidth: 600
           }}
           enableCellTextSelection
-          ensureDomOrder
-          handleRo
+          paginationOptions={paginationOptions}
+          onPaginationChange={(newPagination) =>
+            setPaginationOptions((prev) => ({
+              ...prev,
+              ...newPagination
+            }))
+          }
         />
       </BCBox>
     </Grid2>

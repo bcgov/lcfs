@@ -7,7 +7,7 @@ import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import withRole from '@/utils/withRole'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useDirectorReviewCounts } from '@/hooks/useDashboard'
 import { FILTER_KEYS } from '@/constants/common'
 import {
@@ -19,7 +19,7 @@ import {
 // Constants for filter configurations
 const FILTER_CONFIGS = {
   transfers: {
-    route: ROUTES.TRANSACTIONS,
+    route: ROUTES.TRANSACTIONS.LIST,
     gridKey: FILTER_KEYS.TRANSACTIONS_GRID,
     filter: JSON.stringify({
       transactionType: {
@@ -35,7 +35,7 @@ const FILTER_CONFIGS = {
     })
   },
   complianceReports: {
-    route: ROUTES.REPORTS,
+    route: ROUTES.REPORTS.LIST,
     gridKey: FILTER_KEYS.COMPLIANCE_REPORT_GRID,
     filter: JSON.stringify({
       status: {
@@ -46,7 +46,7 @@ const FILTER_CONFIGS = {
     })
   },
   initiativeAgreements: {
-    route: ROUTES.TRANSACTIONS,
+    route: ROUTES.TRANSACTIONS.LIST,
     gridKey: FILTER_KEYS.TRANSACTIONS_GRID,
     filter: JSON.stringify({
       transactionType: {
@@ -62,7 +62,7 @@ const FILTER_CONFIGS = {
     })
   },
   adminAdjustments: {
-    route: ROUTES.TRANSACTIONS,
+    route: ROUTES.TRANSACTIONS.LIST,
     gridKey: FILTER_KEYS.TRANSACTIONS_GRID,
     filter: JSON.stringify({
       transactionType: {

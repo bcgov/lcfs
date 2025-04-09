@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import List, Dict, Any, Union, Optional, Sequence
 
 import structlog
@@ -725,17 +725,17 @@ class FuelCodeRepository:
                 WHERE fcp.prefix = :prefix
             ),
             range_params AS (
-                SELECT 
-                    CASE 
-                        WHEN :prefix = 'PROXY' THEN 1 
-                        ELSE 101 
+                SELECT
+                    CASE
+                        WHEN :prefix = 'PROXY' THEN 1
+                        ELSE 101
                     END AS min_code
             ),
             all_possible_codes AS (
                 SELECT generate_series(
                     (SELECT min_code FROM range_params),
                     GREATEST(
-                        (SELECT min_code FROM range_params), 
+                        (SELECT min_code FROM range_params),
                         COALESCE((SELECT MAX(base_code) FROM parsed_codes), 0) + 1
                     )
                 ) AS base_code
@@ -981,12 +981,13 @@ class FuelCodeRepository:
         end_use_id: int,
         compliance_period: str,
         fuel_code_id: Optional[int] = None,
+        provision_of_the_act: Optional[str] = None,
+        export_date: Optional[date] = None,
     ) -> CarbonIntensityResult:
         """
         Fetch and standardize fuel data values required for compliance calculations.
         """
         compliance_period_id = await self.get_compliance_period_id(compliance_period)
-
         # Fetch the fuel type details
         fuel_type = await self.get_fuel_type_by_id(fuel_type_id)
         if not fuel_type:
@@ -1002,19 +1003,65 @@ class FuelCodeRepository:
             else None
         )
 
-        # Set effective carbon intensity and target carbon intensity
-        if fuel_code_id:
-            fuel_code = await self.get_fuel_code(fuel_code_id)
-            effective_carbon_intensity = fuel_code.carbon_intensity
-        # Other Fuel uses the Default CI of the Category
-        elif fuel_type.unrecognized:
-            effective_carbon_intensity = await self.get_category_carbon_intensity(
-                fuel_category_id=fuel_category_id, compliance_period=compliance_period
+        # Find lowest CI from active fuel codes in last 12 months if provision_of_the_act is 'unknown'
+        if provision_of_the_act and provision_of_the_act.lower() == "unknown":
+            if not export_date:
+                raise ValueError(
+                    "Export date is required when provision_of_the_act is 'unknown'."
+                )
+
+            # Calculate 12 months prior
+            twelve_months_ago = export_date - timedelta(days=365)
+
+            # Fetch the lowest carbon intensity from active fuel codes
+            stmt = (
+                select(FuelCode.carbon_intensity)
+                .join(FuelCode.fuel_code_status)
+                .where(
+                    and_(
+                        FuelCode.fuel_type_id == fuel_type_id,
+                        FuelCodeStatus.status == FuelCodeStatusEnum.Approved,
+                        or_(
+                            FuelCode.effective_date.is_(None),
+                            FuelCode.effective_date <= export_date,
+                        ),
+                        or_(
+                            FuelCode.expiration_date.is_(None),
+                            FuelCode.expiration_date > export_date,
+                        ),
+                        or_(
+                            FuelCode.effective_date.is_(None),
+                            FuelCode.effective_date >= twelve_months_ago,
+                        ),
+                    )
+                )
+                .order_by(asc(FuelCode.carbon_intensity))
+                .limit(1)
             )
+            lowest_ci = (await self.db.execute(stmt)).scalar_one_or_none()
+
+            if lowest_ci is None:
+                # If we can't find any active fuel codes, just revert to the default carbon intensity
+                effective_carbon_intensity = await self.get_default_carbon_intensity(
+                    fuel_type_id, compliance_period
+                )
+            else:
+                effective_carbon_intensity = lowest_ci
+
         else:
-            effective_carbon_intensity = await self.get_default_carbon_intensity(
-                fuel_type_id=fuel_type_id, compliance_period=compliance_period
-            )
+            if fuel_code_id:
+                fuel_code = await self.get_fuel_code(fuel_code_id)
+                effective_carbon_intensity = fuel_code.carbon_intensity
+            # Other Fuel uses the Default CI of the Category
+            elif fuel_type.unrecognized:
+                effective_carbon_intensity = await self.get_category_carbon_intensity(
+                    fuel_category_id=fuel_category_id,
+                    compliance_period=compliance_period,
+                )
+            else:
+                effective_carbon_intensity = await self.get_default_carbon_intensity(
+                    fuel_type_id=fuel_type_id, compliance_period=compliance_period
+                )
 
         # Get energy effectiveness ratio (EER)
         energy_effectiveness = await self.get_energy_effectiveness_ratio(

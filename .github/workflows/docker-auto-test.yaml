@@ -12,7 +12,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -147,3 +146,83 @@ jobs:
           fail_on: "errors"
           report_individual_runs: "true"
           deduplicate_classes_by_file_name: "true"
+  teams-notification:
+    needs: [backend-tests, frontend-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Determine Test Status
+        id: test_status
+        run: |
+          if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.frontend-tests.result, 'failure') }}" == "true" ]]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "theme_color=FF0000" >> $GITHUB_OUTPUT
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "theme_color=00FF00" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send custom Teams notification
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          REPO="${{ github.repository }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+          AVATAR_URL="${{ github.event.pull_request.user.avatar_url }}"
+          THREAD_ID="pr-${PR_NUMBER}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
+
+          COLOR="${{ steps.test_status.outputs.theme_color }}"
+
+          cat <<EOF > teams_card.json
+          {
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "themeColor": "$COLOR",
+            "summary": "GitHub Notification for PR #$PR_NUMBER",
+            "sections": [
+              {
+                "activityTitle": "$PR_TITLE - PR #$PR_NUMBER",
+                "activitySubtitle": "Repository: $REPO, Author: $PR_AUTHOR",
+                "activityImage": "$AVATAR_URL",
+                "facts": [
+                  { "name": "Repository", "value": "$REPO" },
+                  { "name": "PR Title", "value": "$PR_TITLE" },
+                  { "name": "Branch", "value": "${{ github.head_ref }}" },
+                  { "name": "Commit", "value": "$COMMIT_SHA" },
+                ],
+                "text": "$MESSAGE",
+                "markdown": true
+              }
+            ],
+            "replyToId": "$THREAD_ID",
+            "potentialAction": [
+              {
+                "@type": "OpenUri",
+                "name": "View Pull Request",
+                "targets": [
+                  {
+                    "os": "default",
+                    "uri": "$PR_URL"
+                  }
+                ]
+              },
+              {
+                "@type": "OpenUri",
+                "name": "View Workflow Run",
+                "targets": [
+                  {
+                    "os": "default",
+                    "uri": "$WORKFLOW_URL"
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+
+          curl -H "Content-Type: application/json" -d @teams_card.json "${{ secrets.TEAMS_WEBHOOK_URL }}"

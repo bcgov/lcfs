@@ -1,29 +1,26 @@
-from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
-from lcfs.db.models.fuel import FuelCodeStatus
 import structlog
 from datetime import date, datetime
-from typing import List, Optional, Tuple, Dict, Any
-
 from fastapi import Depends
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
-from lcfs.db.dependencies import get_async_db_session
-
-from sqlalchemy import select, delete, func, case, and_, or_
-from sqlalchemy.orm import joinedload, contains_eager
+from sqlalchemy import select, func, and_, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, contains_eager
+from typing import List, Optional, Dict, Any
 
-from lcfs.db.models.compliance import ComplianceReport, ComplianceReportStatus
+from lcfs.db.base import ActionTypeEnum
+from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models.compliance import ComplianceReport
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
+from lcfs.db.models.fuel import FuelCodeStatus
 from lcfs.db.models.fuel.FuelCode import FuelCode
-from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
 from lcfs.db.models.fuel.FuelInstance import FuelInstance
+from lcfs.db.models.fuel.FuelType import FuelType, QuantityUnitsEnum
+from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.utils.constants import LCFS_Constants
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
-from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import repo_handler
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -103,9 +100,6 @@ class OtherUsesRepository:
             select(OtherUses)
             .where(OtherUses.group_uuid == group_uuid)
             .order_by(
-                # OtherUses.user_type == UserTypeEnum.SUPPLIER evaluates to False for GOVERNMENT,
-                # thus bringing GOVERNMENT records to the top in the ordered results.
-                OtherUses.user_type == UserTypeEnum.SUPPLIER,
                 OtherUses.version.desc(),
             )
         )
@@ -118,7 +112,6 @@ class OtherUsesRepository:
         self,
         compliance_report_id: int,
         changelog: bool = False,
-        exclude_draft_reports: bool = False,
     ) -> List[OtherUsesSchema]:
         """
         Queries other uses from the database for a specific compliance report.
@@ -135,72 +128,72 @@ class OtherUsesRepository:
             return []
 
         result = await self.get_effective_other_uses(
-            group_uuid, False, exclude_draft_reports, changelog
+            group_uuid, compliance_report_id, False, changelog
         )
         return result
 
+    @repo_handler
     async def get_effective_other_uses(
         self,
         compliance_report_group_uuid: str,
+        compliance_report_id: int,
         return_model: bool = False,
-        exclude_draft_reports: bool = False,
         changelog: bool = False,
     ) -> List[OtherUsesSchema]:
         """
         Queries other uses from the database for a specific compliance report.
+        If changelog=True, includes deleted records to show history.
         """
-
-        # Step 1: Subquery to get all compliance_report_ids in the specified group
+        # Get all compliance report IDs in the group up to the specified report
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
-            ComplianceReport.compliance_report_group_uuid
-            == compliance_report_group_uuid
-        )
-        if exclude_draft_reports:
-            compliance_reports_select = compliance_reports_select.where(
-                ComplianceReport.current_status.has(
-                    ComplianceReportStatus.status
-                    != ComplianceReportStatusEnum.Draft.value
-                )
+            and_(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                ComplianceReport.compliance_report_id <= compliance_report_id,
             )
-
-        # Step 3: Subquery to find the maximum version and priority per group_uuid,
-        # excluding groups with any DELETE action
-        user_type_priority = case(
-            (OtherUses.user_type == UserTypeEnum.GOVERNMENT, 1),
-            (OtherUses.user_type == UserTypeEnum.SUPPLIER, 0),
-            else_=0,
         )
 
+        # Get groups that have any deleted records
+        deleted_groups = (
+            select(OtherUses.group_uuid)
+            .where(
+                OtherUses.compliance_report_id.in_(compliance_reports_select),
+                OtherUses.action_type == ActionTypeEnum.DELETE,
+            )
+            .distinct()
+        )
+
+        # Build query conditions
         conditions = [OtherUses.compliance_report_id.in_(compliance_reports_select)]
-        if not changelog:
-            delete_group_select = (
-                select(OtherUses.group_uuid)
-                .where(
-                    OtherUses.compliance_report_id.in_(compliance_reports_select),
-                    OtherUses.action_type == ActionTypeEnum.DELETE,
-                )
-                .distinct()
-            )
 
+        if changelog:
+            # In changelog view, include all groups (both active and deleted)
             conditions.extend(
                 [
-                    OtherUses.action_type != ActionTypeEnum.DELETE,
-                    ~OtherUses.group_uuid.in_(delete_group_select),
+                    or_(
+                        ~OtherUses.group_uuid.in_(deleted_groups),
+                        OtherUses.group_uuid.in_(deleted_groups),
+                    )
                 ]
             )
+        else:
+            # In regular view, exclude any groups that have deleted records
+            conditions.extend([~OtherUses.group_uuid.in_(deleted_groups)])
 
+        # Get the latest version of each record
         valid_other_uses_select = (
             select(
                 OtherUses.group_uuid,
                 func.max(OtherUses.version).label("max_version"),
-                func.max(user_type_priority).label("max_role_priority"),
             )
             .where(*conditions)
             .group_by(OtherUses.group_uuid)
         )
+
         # Now create a subquery for use in the JOIN
         valid_other_uses_subq = valid_other_uses_select.subquery()
 
+        # Get the actual records with their related data
         other_uses_select = (
             select(OtherUses)
             .options(
@@ -215,7 +208,6 @@ class OtherUsesRepository:
                 and_(
                     OtherUses.group_uuid == valid_other_uses_subq.c.group_uuid,
                     OtherUses.version == valid_other_uses_subq.c.max_version,
-                    user_type_priority == valid_other_uses_subq.c.max_role_priority,
                 ),
             )
             .order_by(OtherUses.other_uses_id)
@@ -244,7 +236,6 @@ class OtherUsesRepository:
                 rationale=ou.rationale,
                 group_uuid=ou.group_uuid,
                 version=ou.version,
-                user_type=ou.user_type,
                 action_type=ou.action_type,
             )
             for ou in other_uses
@@ -254,7 +245,6 @@ class OtherUsesRepository:
         self,
         pagination: PaginationRequestSchema,
         compliance_report_id: int,
-        exclude_draft_reports: bool = False,
     ) -> tuple[list[Any], int] | tuple[list[OtherUsesSchema], int]:
         # Retrieve the compliance report's group UUID
         report_group_query = await self.db.execute(
@@ -266,10 +256,8 @@ class OtherUsesRepository:
         if not group_uuid:
             return [], 0
 
-        # Retrieve effective fuel supplies using the group UUID
         other_uses = await self.get_effective_other_uses(
-            compliance_report_group_uuid=group_uuid,
-            exclude_draft_reports=exclude_draft_reports,
+            group_uuid, compliance_report_id
         )
 
         # Manually apply pagination
@@ -332,33 +320,6 @@ class OtherUsesRepository:
             ],
         )
         return other_use
-
-    @repo_handler
-    async def get_other_use_version_by_user(
-        self, group_uuid: str, version: int, user_type: UserTypeEnum
-    ) -> Optional[OtherUses]:
-        """
-        Retrieve a specific OtherUses record by group UUID, version, and user_type.
-        This method explicitly requires user_type to avoid ambiguity.
-        """
-        query = (
-            select(OtherUses)
-            .where(
-                OtherUses.group_uuid == group_uuid,
-                OtherUses.version == version,
-                OtherUses.user_type == user_type,
-            )
-            .options(
-                joinedload(OtherUses.fuel_category),
-                joinedload(OtherUses.fuel_type),
-                joinedload(OtherUses.expected_use),
-                joinedload(OtherUses.provision_of_the_act),
-                joinedload(OtherUses.fuel_code),
-            )
-        )
-
-        result = await self.db.execute(query)
-        return result.scalars().first()
 
     @repo_handler
     async def get_formatted_fuel_types(

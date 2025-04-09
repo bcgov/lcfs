@@ -33,6 +33,7 @@ from lcfs.web.api.user.repo import UserRepository
 from fastapi_cache import FastAPICache
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.notification.services import NotificationService
+from lcfs.web.api.role.services import RoleServices
 
 logger = structlog.get_logger(__name__)
 
@@ -45,17 +46,20 @@ IDIR_NOTIFICATION_ROLES = {
 
 
 class UserServices:
+
     def __init__(
         self,
         request: Request = None,
         repo: UserRepository = Depends(UserRepository),
         session: AsyncSession = Depends(get_async_db_session),
         notification_service: NotificationService = Depends(NotificationService),
+        role_service: RoleServices = Depends(RoleServices),
     ) -> None:
         self.repo = repo
         self.request = request
         self.session = session
         self.notification_service = notification_service
+        self.role_service = role_service
 
     @service_handler
     async def export_users(self, export_format) -> StreamingResponse:
@@ -147,11 +151,12 @@ class UserServices:
     @service_handler
     async def get_user_by_id(self, user_id: int) -> UserBaseSchema:
         """
-        Get user info by ID
+        Get information of a user by ID, plus indicates if they're safe to remove.
         """
         user = await self.repo.get_user_by_id(user_id)
         if not user:
             raise DataNotFoundException("User not found")
+
         if user_has_roles(self.request.user, [RoleEnum.GOVERNMENT]):
             pass
         elif (
@@ -163,7 +168,14 @@ class UserServices:
                 status_code=403,
                 detail="You do not have permission to view this user's information.",
             )
-        return UserBaseSchema.model_validate(user)
+
+        user_schema = UserBaseSchema.model_validate(user)
+
+        # Check if the user is safe to remove
+        is_safe = await self.repo.is_user_safe_to_remove(user.keycloak_username)
+        user_schema.is_safe_to_remove = is_safe
+
+        return user_schema
 
     @service_handler
     async def create_user(self, user_create: UserCreateSchema) -> str:
@@ -281,20 +293,6 @@ class UserServices:
 
         await FastAPICache.clear(namespace="users")
         return user
-
-    @service_handler
-    async def delete_user(self, user_id: int) -> None:
-        """
-        Delete only if the user has never logged in to the system.
-        """
-        user = await self.repo.get_user_by_id(user_id)
-        if not user:
-            raise DataNotFoundException("User not found")
-        history = await self.repo.get_user_history(user_id)
-        if len(history) <= 0:
-            await self.repo.delete_user(user)
-            await FastAPICache.clear(namespace="users")
-        return None
 
     @service_handler
     async def get_user_roles(self, user_id: int) -> List[dict]:
@@ -444,3 +442,26 @@ class UserServices:
         except Exception as e:
             logger.error(f"Error updating email: {e}")
             raise HTTPException(status_code=500, detail="Internal Server Error")
+
+    @service_handler
+    async def remove_user(self, user_id: int) -> None:
+        """
+        Removes user from the system following the safe-to-remove check.
+        """
+        user = await self.repo.get_user_by_id(user_id)
+        if not user:
+            raise DataNotFoundException("User not found")
+
+        # Check if safe to remove
+        is_safe = await self.repo.is_user_safe_to_remove(user.keycloak_username)
+        if not is_safe:
+            raise HTTPException(status_code=400, detail="User is not safe to remove.")
+
+        await self.role_service.remove_roles_for_user(user.user_profile_id)
+        await self.notification_service.remove_subscriptions_for_user(
+            user.user_profile_id
+        )
+        await self.repo.delete_user(user)
+        await FastAPICache.clear(namespace="users")
+
+        return None

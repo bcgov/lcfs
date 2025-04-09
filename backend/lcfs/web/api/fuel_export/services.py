@@ -53,7 +53,8 @@ class FuelExportServices:
             fuel_category_id=row_data["fuel_category_id"],
             fuel_category=row_data["category"],
             default_and_prescribed_ci=(
-                default_ci if default_ci is not None and row_data["fuel_type"] != "Other"
+                default_ci
+                if default_ci is not None and row_data["fuel_type"] != "Other"
                 else category_ci if category_ci is not None else None
             ),
         )
@@ -72,15 +73,13 @@ class FuelExportServices:
         )
         eer = EnergyEffectivenessRatioSchema(
             eer_id=row_data["eer_id"],
-            energy_effectiveness_ratio=round(
-                row_data["energy_effectiveness_ratio"], 2),
+            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"], 2),
             fuel_category=fuel_category,
             end_use_type=end_use_type,
         )
         tci = TargetCarbonIntensitySchema(
             target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
-            target_carbon_intensity=round(
-                row_data["target_carbon_intensity"], 5),
+            target_carbon_intensity=round(row_data["target_carbon_intensity"], 5),
             reduction_target_percentage=round(
                 row_data["reduction_target_percentage"], 2
             ),
@@ -95,14 +94,15 @@ class FuelExportServices:
                 fuel_code_carbon_intensity=round(
                     row_data["fuel_code_carbon_intensity"], 2
                 ),
+                fuel_code_effective_date=row_data["fuel_code_effective_date"],
+                fuel_code_expiration_date=row_data["fuel_code_expiration_date"],
             )
             if row_data["fuel_code_id"]
             else None
         )
         # Find the existing fuel type if it exists
         existing_fuel_type = next(
-            (ft for ft in fuel_types if ft.fuel_type ==
-             row_data["fuel_type"]), None
+            (ft for ft in fuel_types if ft.fuel_type == row_data["fuel_type"]), None
         )
 
         if existing_fuel_type:
@@ -245,8 +245,7 @@ class FuelExportServices:
         fuel_export_models = await self.repo.get_fuel_export_list(
             compliance_report_id, changelog, exclude_draft_reports=is_gov_user
         )
-        fs_list = [FuelExportSchema.model_validate(
-            fs) for fs in fuel_export_models]
+        fs_list = [FuelExportSchema.model_validate(fs) for fs in fuel_export_models]
         return FuelExportsSchema(fuel_exports=fs_list if fs_list else [])
 
     @service_handler
@@ -254,9 +253,8 @@ class FuelExportServices:
         self, pagination: PaginationRequestSchema, compliance_report_id: int
     ):
         """Get paginated fuel export list for a compliance report"""
-        is_gov_user = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
         fuel_exports, total_count = await self.repo.get_fuel_exports_paginated(
-            pagination, compliance_report_id, exclude_draft_reports=is_gov_user
+            pagination, compliance_report_id
         )
         return FuelExportsSchema(
             pagination=PaginationResponseSchema(
@@ -264,12 +262,10 @@ class FuelExportServices:
                 size=pagination.size,
                 total=total_count,
                 total_pages=(
-                    math.ceil(total_count /
-                              pagination.size) if total_count > 0 else 0
+                    math.ceil(total_count / pagination.size) if total_count > 0 else 0
                 ),
             ),
-            fuel_exports=[FuelExportSchema.model_validate(
-                fs) for fs in fuel_exports],
+            fuel_exports=[FuelExportSchema.model_validate(fs) for fs in fuel_exports],
         )
 
     @service_handler

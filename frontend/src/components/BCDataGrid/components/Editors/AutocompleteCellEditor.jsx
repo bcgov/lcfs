@@ -15,11 +15,10 @@ import {
   Stack,
   Divider
 } from '@mui/material'
-import CheckBoxIcon from '@mui/icons-material/CheckBox'
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
+import { CheckBox, CheckBoxOutlineBlank } from '@mui/icons-material'
 
-const icon = <CheckBoxOutlineBlankIcon fontSize="medium" />
-const checkedIcon = <CheckBoxIcon fontSize="medium" />
+const icon = <CheckBoxOutlineBlank fontSize="medium" />
+const checkedIcon = <CheckBox fontSize="medium" />
 
 export const AutocompleteCellEditor = forwardRef((props, ref) => {
   const {

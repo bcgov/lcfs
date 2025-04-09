@@ -4,18 +4,17 @@ import {
   NumberEditor,
   RequiredHeader
 } from '@/components/BCDataGrid/components'
-import BCTypography from '@/components/BCTypography'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
 import {
   decimalFormatter,
   formatNumberWithCommas as valueFormatter
 } from '@/utils/formatters'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers.jsx'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -344,67 +343,62 @@ export const defaultColDef = {
   singleClickEdit: true
 }
 
-export const changelogCommonColDefs = [
+export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelType'),
-    field: 'fuelType',
-    valueGetter: (params) =>
-      params.data.fuelType?.fuelType || params.data.fuelType,
-    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+    field: 'fuelType.fuelType',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCategory'),
-    field: 'fuelCategory',
-    valueGetter: (params) =>
-      params.data.fuelCategory?.category || params.data.fuelCategory,
-    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+    field: 'fuelCategory.category',
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'fuelCategory')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.provisionOfTheAct'),
-    field: 'provisionOfTheAct',
-    valueGetter: (params) =>
-      params.data.provisionOfTheAct?.name || params.data.provisionOfTheAct,
-    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+    field: 'provisionOfTheAct.name',
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'provisionOfTheAct')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
-    field: 'fuelCode',
-    valueGetter: (params) => params.data.endUseType?.type || 'Any',
-    cellStyle: (params) => changelogCellStyle(params, 'fuelCode')
+    field: 'endUseType.type',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
     field: 'quantitySupplied',
     valueFormatter,
-    cellStyle: (params) => changelogCellStyle(params, 'quantitySupplied')
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'quantitySupplied')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.units'),
     field: 'units',
-    cellStyle: (params) => changelogCellStyle(params, 'units')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.ciOfFuel'),
     field: 'ciOfFuel',
     valueFormatter,
-    cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.expectedUse'),
-    field: 'expectedUse',
-    valueGetter: (params) =>
-      params.data.expectedUse?.name || params.data.expectedUse,
-    cellStyle: (params) => changelogCellStyle(params, 'expectedUse')
+    field: 'expectedUse.name',
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'expectedUse')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.otherExpectedUse'),
     field: 'rationale',
 
-    cellStyle: (params) => changelogCellStyle(params, 'rationale')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'rationale')
   }
 ]
 
-export const changelogColDefs = [
+export const changelogColDefs = (highlight = true) => [
   {
     field: 'groupUuid',
     hide: true,
@@ -430,12 +424,12 @@ export const changelogColDefs = [
       }
     },
     cellStyle: (params) => {
-      if (params.data.actionType === 'UPDATE') {
+      if (highlight && params.data.actionType === 'UPDATE') {
         return { backgroundColor: colors.alerts.warning.background }
       }
     }
   },
-  ...changelogCommonColDefs
+  ...changelogCommonColDefs(highlight)
 ]
 
 export const changelogDefaultColDefs = {

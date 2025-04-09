@@ -1,14 +1,11 @@
 import math
+import structlog
 import uuid
+from fastapi import Depends, HTTPException, status, Request
 from typing import Optional
 
-import structlog
-from fastapi import Depends, HTTPException, status, Request
-
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
-from lcfs.db.models import UserProfile
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
@@ -26,7 +23,6 @@ from lcfs.web.api.other_uses.schema import (
     FuelCodeSchema,
     DeleteOtherUsesResponseSchema,
 )
-from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
@@ -86,7 +82,7 @@ class OtherUsesServices:
                     "fuel_code",
                     "expected_use",
                     "deleted",
-                    "is_new_supplemental_entry"
+                    "is_new_supplemental_entry",
                 }
             ),
             fuel_category_id=fuel_category.fuel_category_id,
@@ -112,7 +108,6 @@ class OtherUsesServices:
             fuel_code=model.fuel_code.fuel_code if model.fuel_code else None,
             ci_of_fuel=model.ci_of_fuel,
             expected_use=model.expected_use.name,
-            user_type=model.user_type,
             group_uuid=model.group_uuid,
             version=model.version,
             action_type=model.action_type,
@@ -153,22 +148,14 @@ class OtherUsesServices:
 
     @service_handler
     async def get_other_uses(
-        self, compliance_report_id: int,
-        user: UserProfile,
-        changelog: bool = False
-    ) -> OtherUsesListSchema:
+        self, compliance_report_id: int, changelog: bool = False
+    ) -> OtherUsesAllSchema:
         """
         Gets the list of other uses for a specific compliance report.
         """
-        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
-        other_uses = await self.repo.get_other_uses(
-            compliance_report_id,
-            changelog,
-            exclude_draft_reports=is_gov_user
-        )
+        other_uses = await self.repo.get_other_uses(compliance_report_id, changelog)
         return OtherUsesAllSchema(
-            other_uses=[OtherUsesSchema.model_validate(
-                ou) for ou in other_uses]
+            other_uses=[OtherUsesSchema.model_validate(ou) for ou in other_uses]
         )
 
     @service_handler
@@ -176,11 +163,9 @@ class OtherUsesServices:
         self,
         pagination: PaginationRequestSchema,
         compliance_report_id: int,
-        user: UserProfile,
     ) -> OtherUsesListSchema:
-        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         other_uses, total_count = await self.repo.get_other_uses_paginated(
-            pagination, compliance_report_id, exclude_draft_reports=is_gov_user
+            pagination, compliance_report_id
         )
         return OtherUsesListSchema(
             pagination=PaginationResponseSchema(
@@ -194,12 +179,10 @@ class OtherUsesServices:
 
     @service_handler
     async def update_other_use(
-        self, other_use_data: OtherUsesCreateSchema, user_type: UserTypeEnum
+        self, other_use_data: OtherUsesCreateSchema
     ) -> OtherUsesSchema:
         """Update an existing other use"""
-        other_use = await self.repo.get_other_use_version_by_user(
-            other_use_data.group_uuid, other_use_data.version, user_type
-        )
+        other_use = await self.repo.get_other_use(other_use_data.other_uses_id)
 
         if not other_use:
             raise ValueError("Other use not found")
@@ -262,7 +245,7 @@ class OtherUsesServices:
 
         else:
             updated_use = await self.create_other_use(
-                other_use_data, user_type, existing_record=other_use
+                other_use_data, existing_record=other_use
             )
             return OtherUsesSchema.model_validate(updated_use)
 
@@ -270,7 +253,6 @@ class OtherUsesServices:
     async def create_other_use(
         self,
         other_use_data: OtherUsesCreateSchema,
-        user_type: UserTypeEnum,
         existing_record: Optional[OtherUses] = None,
     ) -> OtherUsesSchema:
         """Create a new other use"""
@@ -283,16 +265,13 @@ class OtherUsesServices:
             ActionTypeEnum.CREATE if not existing_record else ActionTypeEnum.UPDATE
         )
         other_use.version = 0 if not existing_record else existing_record.version + 1
-        other_use.user_type = user_type
         created_use = await self.repo.create_other_use(other_use)
 
         return self.model_to_schema(created_use)
 
     @service_handler
     async def delete_other_use(
-        self,
-        other_use_data: OtherUsesCreateSchema,
-        user_type: UserTypeEnum,
+        self, other_use_data: OtherUsesCreateSchema
     ) -> DeleteOtherUsesResponseSchema:
         """Delete an other use"""
         existing_other_use = await self.repo.get_latest_other_uses_by_group_uuid(
@@ -311,7 +290,6 @@ class OtherUsesServices:
                 group_uuid=other_use_data.group_uuid,
                 version=existing_other_use.version + 1,
                 action_type=ActionTypeEnum.DELETE,
-                user_type=user_type,
             )
 
             # Copy fields from the latest version for the deletion record

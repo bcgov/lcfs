@@ -1,5 +1,6 @@
 import pytest
 
+from lcfs.db.models import ComplianceReport
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.tests.transaction.transaction_payloads import *
 from lcfs.web.api.base import SortOrder
@@ -63,7 +64,6 @@ async def test_calculate_available_balance(
 async def test_create_transaction(dbsession, transaction_repo):
     dbsession.add_all([test_org])
     await dbsession.flush()
-
 
     new_transaction = await transaction_repo.create_transaction(
         TransactionActionEnum.Adjustment, 100, test_org_id
@@ -195,3 +195,33 @@ async def test_get_visible_statuses_for_government(dbsession, transaction_repo):
     assert set(visible_statuses) == set(
         expected_statuses
     ), "Unexpected statuses returned for government"
+
+
+@pytest.mark.anyio
+async def test_delete_transaction_success(dbsession, transaction_repo):
+    """
+    Verify that a transaction is deleted and its associated compliance report
+    has its transaction_id set to None.
+    """
+    # Create and add a Transaction and a ComplianceReport referencing that transaction.
+    transaction = Transaction(transaction_id=1000)
+    compliance_report = ComplianceReport(
+        compliance_report_id=2000,
+        transaction_id=1000,
+        compliance_period_id=15,
+        organization_id=1,
+    )
+    dbsession.add_all([transaction, compliance_report])
+    await dbsession.flush()
+
+    # Call the delete_transaction method.
+    await transaction_repo.delete_transaction(1000, 2000)
+    await dbsession.commit()
+
+    # Verify the Transaction is deleted.
+    deleted_transaction = await dbsession.get(Transaction, 1000)
+    assert deleted_transaction is None
+
+    # Verify the ComplianceReport has been updated.
+    updated_report = await dbsession.get(ComplianceReport, 2000)
+    assert updated_report.transaction_id is None

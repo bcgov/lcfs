@@ -1,19 +1,21 @@
+/**
+ * This file contains all the routes used in the application.
+ */
+
 export const ROUTES = {
-  // Auth routes
+  DASHBOARD: '/',
+  API_DOCS: '/docs',
+  FILE_SUBMISSION: '/file-submissions',
+
   AUTH: {
     LOGIN: '/login',
     UNAUTHORIZED: '/unauthorized',
     LOG_OUT: '/log-out'
   },
 
-  // Core routes
-  DASHBOARD: '/',
-  API_DOCS: '/docs',
-  FILE_SUBMISSION: '/file-submissions',
-
-  // Transaction routes
   TRANSACTIONS: {
     LIST: '/transactions',
+    LIST_HIGHLIGHTED: '/transactions/?hid=:hid',
     ADD: '/transactions/add',
     EDIT: '/transactions/edit/:transactionId',
     VIEW: '/transactions/:transactionId',
@@ -29,7 +31,6 @@ export const ROUTES = {
     }
   },
 
-  // Transfer routes
   TRANSFERS: {
     LIST: '/transfers',
     ADD: '/transfers/add',
@@ -37,7 +38,6 @@ export const ROUTES = {
     VIEW: '/transfers/:transferId'
   },
 
-  // Organization routes
   ORGANIZATION: {
     ORG: '/organization',
     ADD_USER: '/organization/add-user',
@@ -55,7 +55,6 @@ export const ROUTES = {
     EDIT_USER: '/organizations/:orgID/:userID/edit-user'
   },
 
-  // Compliance reporting routes
   REPORTS: {
     LIST: '/compliance-reporting',
     VIEW: '/compliance-reporting/:compliancePeriod/:complianceReportId',
@@ -73,28 +72,14 @@ export const ROUTES = {
         '/compliance-reporting/:compliancePeriod/:complianceReportId/fuels-other-use',
       FUEL_EXPORTS:
         '/compliance-reporting/:compliancePeriod/:complianceReportId/fuel-exports'
-    },
-    CHANGELOG: {
-      SUPPLY_OF_FUEL:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/supply-of-fuel/changelog',
-      NOTIONAL_TRANSFERS:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/notional-transfers/changelog',
-      OTHER_USE_FUELS:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/fuels-other-use/changelog',
-      FUEL_EXPORTS:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/fuel-exports/changelog',
-      ALLOCATION_AGREEMENTS:
-        '/compliance-reporting/:compliancePeriod/:complianceReportId/allocation-agreements/changelog'
     }
   },
 
-  // Notification routes
   NOTIFICATIONS: {
     LIST: '/notifications',
     SETTINGS: '/notifications/configure'
   },
 
-  // Admin routes
   ADMIN: {
     MAIN: '/admin',
     USERS: {
@@ -111,32 +96,25 @@ export const ROUTES = {
     }
   },
 
-  // Fuel code routes
   FUEL_CODES: {
     LIST: '/fuel-codes',
     ADD: '/fuel-codes/add-fuel-code',
-    EDIT: '/fuel-codes/:fuelCodeID'
+    EDIT: '/fuel-codes/:fuelCodeID',
+    EXPORT: '/fuel-codes/export'
   }
 }
 
-// Helper function to generate paths with parameters
-export const generatePath = {
-  organizationView: (orgId) =>
-    ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', orgId),
-  organizationUserView: (orgId, userId) =>
-    ROUTES.ORGANIZATIONS.VIEW_USER.replace(':orgID', orgId).replace(
-      ':userID',
-      userId
-    ),
-  transactionView: (transactionId) =>
-    ROUTES.TRANSACTIONS.VIEW.replace(':transactionId', transactionId),
-  reportView: (period, reportId) =>
-    ROUTES.REPORTS.VIEW.replace(':compliancePeriod', period).replace(
-      ':complianceReportId',
-      reportId
-    ),
-  auditLogView: (logId) =>
-    ROUTES.ADMIN.AUDIT_LOG.VIEW.replace(':auditLogId', logId)
+/**
+ * Generates a path by replacing :key placeholders with param values.
+ *
+ * @param {string} route - The base route with placeholders.
+ * @param {Object} [params={}] - Key-value pairs for replacements.
+ * @returns {string} Modified route.
+ */
+export function buildPath(route, params = {}) {
+  return Object.entries(params).reduce((result, [key, value]) => {
+    return result.replace(`:${key}`, value)
+  }, route)
 }
 
 export default ROUTES

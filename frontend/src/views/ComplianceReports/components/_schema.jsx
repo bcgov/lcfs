@@ -5,6 +5,7 @@ import {
 import { SUMMARY } from '@/constants/common'
 import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
+import { useGetComplianceReportStatuses } from '@/hooks/useComplianceReports'
 
 export const reportsColDefs = (t, bceidRole) => [
   {
@@ -67,28 +68,9 @@ export const reportsColDefs = (t, bceidRole) => [
     },
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
-      // TODO: change this to api Query later
-      optionsQuery: () => ({
-        data: bceidRole
-          ? [
-              { id: 1, name: 'Draft' },
-              { id: 2, name: 'Submitted' },
-              { id: 3, name: 'Assessed' },
-              { id: 4, name: 'Reassessed' },
-              { id: 7, name: 'Rejected' }
-            ]
-          : [
-              { id: 2, name: 'Submitted' },
-              { id: 5, name: 'Recommended by analyst' },
-              { id: 6, name: 'Recommended by manager' },
-              { id: 3, name: 'Assessed' },
-              { id: 4, name: 'Reassessed' },
-              { id: 7, name: 'Rejected' }
-            ],
-        isLoading: false
-      }),
-      valueKey: 'name',
-      labelKey: 'name'
+      optionsQuery: useGetComplianceReportStatuses,
+      valueKey: 'status',
+      labelKey: 'status'
     },
     suppressFloatingFilterButton: true
   },

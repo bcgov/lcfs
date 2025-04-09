@@ -424,3 +424,29 @@ async def test_add_subscriptions_for_user_role(notification_repo, mock_db_sessio
     assert (
         call_count == expected_inserts
     ), f"Expected {expected_inserts} calls to 'add', got {call_count}"
+
+
+@pytest.mark.anyio
+async def test_delete_subscriptions_for_user(mock_db_session):
+    # Prepare two fake subscriptions for a given user_profile_id
+    fake_sub1 = MagicMock(spec=NotificationChannelSubscription)
+    fake_sub2 = MagicMock(spec=NotificationChannelSubscription)
+
+    # Mock the result of the subscription query
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [fake_sub1, fake_sub2]
+    mock_db_session.execute = AsyncMock(return_value=mock_result)
+
+    repo = NotificationRepository(db=mock_db_session)
+    
+    user_profile_id = 42
+    await repo.delete_subscriptions_for_user(user_profile_id)
+
+    mock_db_session.execute.assert_called_once()
+    expected_query = delete(NotificationChannelSubscription).where(
+        NotificationChannelSubscription.user_profile_id == user_profile_id
+    )
+    actual_query = mock_db_session.execute.call_args[0][0]
+    assert str(actual_query) == str(expected_query)
+
+    mock_db_session.flush.assert_awaited_once()

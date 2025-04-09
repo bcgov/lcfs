@@ -91,7 +91,7 @@ class OrganizationsService:
         """
         data = await self.repo.get_organizations_with_balances()
 
-        export_format = "xls"
+        export_format = "xlsx"
 
         # Create a spreadsheet
         builder = SpreadsheetBuilder(file_format=export_format)

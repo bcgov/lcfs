@@ -1,6 +1,6 @@
 import asyncio
 import json
-import logging
+import structlog
 from typing import Optional
 
 from fastapi import FastAPI
@@ -22,7 +22,7 @@ from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.user.repo import UserRepository
 from lcfs.web.exception.exceptions import ServiceException
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger()
 
 consumer = None
 consumer_task = None

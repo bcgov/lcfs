@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useMemo } from 'react'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import withRole from '@/utils/withRole'
 import { useTranslation } from 'react-i18next'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
@@ -14,15 +14,15 @@ const AdminLinksCard = () => {
     () => [
       {
         title: t('dashboard:adminLinks.mngGovUsrsLabel'),
-        route: ROUTES.ADMIN_USERS
+        route: ROUTES.ADMIN.USERS.LIST
       },
       {
         title: t('dashboard:adminLinks.addEditOrgsLabel'),
-        route: ROUTES.ORGANIZATIONS
+        route: ROUTES.ORGANIZATIONS.LIST
       },
       {
         title: t('dashboard:adminLinks.usrActivity'),
-        route: ROUTES.ADMIN_USERACTIVITY
+        route: ROUTES.ADMIN.USER_ACTIVITY
       }
     ],
     [t]

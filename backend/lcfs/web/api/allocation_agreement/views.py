@@ -22,6 +22,7 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
     AllocationAgreementOptionsSchema,
     AllocationAgreementListSchema,
+    AllocationAgreementRequestSchema,
     DeleteAllocationAgreementResponseSchema,
     PaginatedAllocationAgreementRequestSchema,
     AllocationAgreementAllSchema,
@@ -66,7 +67,7 @@ async def get_table_options(
 )
 async def get_allocation_agreements(
     request: Request,
-    request_data: ComplianceReportRequestSchema = Body(...),
+    request_data: AllocationAgreementRequestSchema = Body(...),
     response: Response = None,
     service: AllocationAgreementServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
@@ -75,7 +76,7 @@ async def get_allocation_agreements(
     try:
         compliance_report_id = request_data.compliance_report_id
 
-        compliance_report = await service.get_compliance_report_by_id(
+        compliance_report = await report_validate.validate_organization_access(
             compliance_report_id
         )
         if not compliance_report:
@@ -85,12 +86,8 @@ async def get_allocation_agreements(
             )
 
         await report_validate.validate_compliance_report_access(compliance_report)
-        await report_validate.validate_organization_access(
-            request_data.compliance_report_id
-        )
         return await service.get_allocation_agreements(
-            request_data.compliance_report_id,
-            request.user
+            request_data.compliance_report_id, request_data.changelog
         )
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
@@ -135,7 +132,9 @@ async def get_allocation_agreements_paginated(
     "/save",
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST]
+)
 async def save_allocation_agreements_row(
     request: Request,
     request_data: AllocationAgreementCreateSchema = Body(...),
@@ -147,19 +146,15 @@ async def save_allocation_agreements_row(
     compliance_report_id = request_data.compliance_report_id
     allocation_agreement_id: Optional[int] = request_data.allocation_agreement_id
 
-    await report_validate.validate_organization_access(compliance_report_id)
-
-    # Determine user type for record creation
-    current_user_type = request.user.user_type
-    if not current_user_type:
-        raise HTTPException(
-            status_code=403, detail="User does not have the required role."
-        )
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
+    await report_validate.validate_compliance_report_access(compliance_report)
 
     await validate.validate_compliance_report_id(compliance_report_id, [request_data])
     if request_data.deleted:
         # Delete existing allocation agreement
-        await service.delete_allocation_agreement(request_data, current_user_type)
+        await service.delete_allocation_agreement(request_data)
         return DeleteAllocationAgreementResponseSchema(
             message="Allocation agreement deleted successfully"
         )
@@ -168,13 +163,13 @@ async def save_allocation_agreements_row(
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]
         )
-        return await service.update_allocation_agreement(request_data, current_user_type)
+        return await service.update_allocation_agreement(request_data)
     else:
         # Create new Allocation agreement
         await validate.validate_compliance_report_id(
             compliance_report_id, [request_data]
         )
-        return await service.create_allocation_agreement(request_data, current_user_type)
+        return await service.create_allocation_agreement(request_data)
 
 
 @router.get("/search", response_model=List[OrganizationDetailsSchema], status_code=200)

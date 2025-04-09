@@ -115,7 +115,9 @@ async def get_final_supply_equipments(
     ],
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST]
+)
 async def save_final_supply_equipment_row(
     request: Request,
     request_data: FinalSupplyEquipmentCreateSchema = Body(...),
@@ -127,7 +129,10 @@ async def save_final_supply_equipment_row(
     compliance_report_id = request_data.compliance_report_id
     fse_id: Optional[int] = request_data.final_supply_equipment_id
 
-    await report_validate.validate_organization_access(compliance_report_id)
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
+    await report_validate.validate_compliance_report_access(compliance_report)
 
     if request_data.deleted:
         # Delete existing final supply equipment row
@@ -143,12 +148,14 @@ async def save_final_supply_equipment_row(
         await fse_validate.check_equipment_uniqueness_and_overlap(data=request_data)
         # Create new final supply equipment row
         return await fse_service.create_final_supply_equipment(
-            request_data, request.user
+            request_data, compliance_report.organization.organization_code
         )
 
 
 @router.get("/search", response_model=List[str], status_code=status.HTTP_200_OK)
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST]
+)
 async def search_table_options(
     request: Request,
     manufacturer: Optional[str] = Query(
@@ -187,7 +194,7 @@ async def export(
     await report_validate.validate_organization_access(compliance_report_id)
 
     organization = request.user.organization
-    return await exporter.export(compliance_report_id, organization, True)
+    return await exporter.export(compliance_report_id, request.user, organization, True)
 
 
 @router.post(
@@ -267,7 +274,9 @@ async def get_template(
     await report_validate.validate_organization_access(compliance_report_id)
 
     organization = request.user.organization
-    return await exporter.export(compliance_report_id, organization, False)
+    return await exporter.export(
+        compliance_report_id, request.user, organization, False
+    )
 
 
 @router.get(

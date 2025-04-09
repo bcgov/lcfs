@@ -269,14 +269,36 @@ class NotificationRepository:
         """
         Delete a notification_message by id
         """
-        query = delete(NotificationMessage).where(
-            and_(
+        stmt = (
+            delete(NotificationMessage)
+            .where(
                 NotificationMessage.notification_message_id.in_(notification_ids),
                 NotificationMessage.related_user_profile_id == user_id,
             )
+            .returning(NotificationMessage.notification_message_id)
         )
-        await self.db.execute(query)
+        result = await self.db.execute(stmt)
         await self.db.flush()
+
+        deleted_ids = result.scalars().all()
+        return deleted_ids or []
+
+    @repo_handler
+    async def delete_all_notifications_for_user(self, user_id: int) -> list[int]:
+        """
+        Deletes ALL notifications for a user.
+        Returns the IDs of the notifications that were deleted.
+        """
+        stmt = (
+            delete(NotificationMessage)
+            .where(NotificationMessage.related_user_profile_id == user_id)
+            .returning(NotificationMessage.notification_message_id)
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+
+        deleted_ids = result.scalars().all()
+        return deleted_ids
 
     @repo_handler
     async def mark_notification_as_read(
@@ -322,6 +344,24 @@ class NotificationRepository:
         await self.db.flush()
 
         return notification_ids
+
+    @repo_handler
+    async def mark_all_notifications_as_read_for_user(self, user_id: int) -> list[int]:
+        """
+        Marks ALL notifications as read for a user.
+        Returns the IDs of the notifications that were updated.
+        """
+        stmt = (
+            update(NotificationMessage)
+            .where(NotificationMessage.related_user_profile_id == user_id)
+            .values(is_read=True)
+            .returning(NotificationMessage.notification_message_id)
+        )
+        result = await self.db.execute(stmt)
+        await self.db.flush()
+
+        updated_ids = result.scalars().all()
+        return updated_ids
 
     @repo_handler
     async def create_notification_channel_subscription(
@@ -562,4 +602,16 @@ class NotificationRepository:
                     )
                     self.db.add(new_sub)
 
+        await self.db.flush()
+
+    @repo_handler
+    async def delete_subscriptions_for_user(self, user_profile_id: int):
+        """
+        Delete all NotificationChannelSubscription rows referencing the user.
+        """
+        await self.db.execute(
+            delete(NotificationChannelSubscription).where(
+                NotificationChannelSubscription.user_profile_id == user_profile_id
+            )
+        )
         await self.db.flush()

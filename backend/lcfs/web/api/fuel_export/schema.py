@@ -11,7 +11,12 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
-from lcfs.web.utils.schema_validators import fuel_code_required
+from lcfs.web.utils.schema_validators import (
+    fuel_code_required,
+    unknown_provision_requires_date,
+    quantity_must_be_positive,
+    energy_must_be_within_range,
+)
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -77,6 +82,8 @@ class FuelCodeSchema(BaseSchema):
     fuel_code_prefix_id: int
     fuel_code: str
     fuel_code_carbon_intensity: float
+    fuel_code_effective_date: Optional[date] = None
+    fuel_code_expiration_date: Optional[date] = None
 
 
 class FuelTypeOptionsSchema(BaseSchema):
@@ -124,31 +131,12 @@ class FuelCategoryResponseSchema(BaseSchema):
     category: str
 
 
-class FuelExportDiffSchema(BaseSchema):
-    compliance_units: Optional[bool] = None
-    export_date: Optional[bool] = None
-    fuel_type_id: Optional[bool] = None
-    fuel_category_id: Optional[bool] = None
-    end_use_id: Optional[bool] = None
-    provision_of_the_act_id: Optional[bool] = None
-    fuel_code_id: Optional[bool] = None
-    quantity: Optional[bool] = None
-    units: Optional[bool] = None
-    target_ci: Optional[bool] = None
-    ci_of_fuel: Optional[bool] = None
-    uci: Optional[bool] = None
-    energy_density: Optional[bool] = None
-    eer: Optional[bool] = None
-    energy: Optional[bool] = None
-
-
 class FuelExportSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
-    export_date: date
+    export_date: Optional[date] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     compliance_period: Optional[str] = None
     fuel_type_id: int
@@ -171,7 +159,6 @@ class FuelExportSchema(BaseSchema):
     energy: Optional[float] = None
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
-    diff: Optional[FuelExportDiffSchema] = None
     updated: Optional[bool] = None
 
     @field_validator("compliance_units", mode="before")
@@ -184,16 +171,16 @@ class FuelExportSchema(BaseSchema):
 class FuelExportCreateUpdateSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
-    export_date: date
+    export_date: Optional[date] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     compliance_period: Optional[str] = None
     fuel_type_other: Optional[str] = None
     fuel_type_id: int
     fuel_category_id: int
     end_use_id: int
+    provision_of_the_act: Optional[str] = None
     provision_of_the_act_id: int
     fuel_code_id: Optional[int] = None
     quantity: int = Field(..., gt=0)
@@ -209,10 +196,11 @@ class FuelExportCreateUpdateSchema(BaseSchema):
 
     @model_validator(mode="before")
     @classmethod
-    def quantity_must_be_positive(cls, values):
-        quantity = values.get("quantity")
-        if quantity and quantity <= 0:
-            raise ValueError("quantity must be greater than zero")
+    def model_validations(cls, values):
+        values = fuel_code_required(values)
+        values = unknown_provision_requires_date(values)
+        values = quantity_must_be_positive(values)
+        values = energy_must_be_within_range(values)
         return values
 
     @model_validator(mode="before")

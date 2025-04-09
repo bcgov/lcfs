@@ -77,7 +77,6 @@ async def get_fuel_exports(
         await report_validate.validate_compliance_report_access(compliance_report)
         await report_validate.validate_organization_access(compliance_report_id)
         if hasattr(request_data, "page") and request_data.page is not None:
-            # handle pagination.
             pagination = PaginationRequestSchema(
                 page=request_data.page,
                 size=request_data.size,
@@ -88,7 +87,9 @@ async def get_fuel_exports(
                 pagination, compliance_report_id
             )
         else:
-            return await service.get_fuel_export_list(compliance_report_id, request_data.changelog)
+            return await service.get_fuel_export_list(
+                compliance_report_id, request_data.changelog
+            )
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
         raise http_ex
@@ -106,7 +107,9 @@ async def get_fuel_exports(
     response_model=Union[FuelExportSchema, DeleteFuelExportResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST]
+)
 async def save_fuel_export_row(
     request: Request,
     request_data: FuelExportCreateUpdateSchema = Body(...),
@@ -119,25 +122,15 @@ async def save_fuel_export_row(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
-
-    # Determine user type for record creation
-    current_user_type = request.user.user_type
-    if not current_user_type:
-        raise HTTPException(
-            status_code=403, detail="User does not have the required role."
-        )
+    await report_validate.validate_compliance_report_access(compliance_report)
 
     if request_data.deleted:
         # Use action service to handle delete logic
-        return await action_service.delete_fuel_export(request_data, current_user_type)
+        return await action_service.delete_fuel_export(request_data)
     else:
         if request_data.fuel_export_id:
             # Use action service to handle update logic
-            return await action_service.update_fuel_export(
-                request_data, current_user_type
-            )
+            return await action_service.update_fuel_export(request_data)
         else:
             # Use action service to handle create logic
-            return await action_service.create_fuel_export(
-                request_data, current_user_type
-            )
+            return await action_service.create_fuel_export(request_data)

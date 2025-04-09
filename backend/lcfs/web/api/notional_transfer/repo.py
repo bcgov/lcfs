@@ -1,25 +1,21 @@
 import structlog
-from typing import List, Optional, Tuple, Any
-
 from fastapi import Depends
-
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
-from lcfs.db.dependencies import get_async_db_session
-
-from sqlalchemy import select, delete, func, case, and_
-from sqlalchemy.orm import joinedload
+from sqlalchemy import select, func, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
+from typing import List, Optional, Tuple
 
+from lcfs.db.base import ActionTypeEnum
+from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models.compliance import ComplianceReport
 from lcfs.db.models.compliance.NotionalTransfer import (
     NotionalTransfer,
     ReceivedOrTransferredEnum,
 )
-from lcfs.db.models.compliance import ComplianceReport, ComplianceReportStatus
+from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.notional_transfer.schema import NotionalTransferSchema
-from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.core.decorators import repo_handler
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 
 logger = structlog.get_logger(__name__)
 
@@ -48,7 +44,6 @@ class NotionalTransferRepository:
         self,
         compliance_report_id: int,
         changelog: bool = False,
-        exclude_draft_reports: bool = False,
     ) -> List[NotionalTransferSchema]:
         """
         Queries notional transfers from the database for a specific compliance report.
@@ -64,14 +59,16 @@ class NotionalTransferRepository:
             return []
 
         result = await self.get_effective_notional_transfers(
-            group_uuid, exclude_draft_reports, changelog
+            compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
+            changelog=changelog
         )
         return result
 
     async def get_effective_notional_transfers(
         self,
         compliance_report_group_uuid: str,
-        exclude_draft_reports: bool = False,
+        compliance_report_id: int,
         changelog: bool = False,
     ) -> List[NotionalTransferSchema]:
         """
@@ -79,23 +76,14 @@ class NotionalTransferRepository:
         """
         # Step 1: Get all compliance_report_ids in the specified group
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
-            ComplianceReport.compliance_report_group_uuid
-            == compliance_report_group_uuid
-        )
-        if exclude_draft_reports:
-            compliance_reports_select = compliance_reports_select.where(
-                ComplianceReport.current_status.has(
-                    ComplianceReportStatus.status
-                    != ComplianceReportStatusEnum.Draft.value
-                )
+            and_(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                ComplianceReport.compliance_report_id <= compliance_report_id,
             )
-
-        # Step 3: Find the maximum version and priority per group_uuid, excluding deleted groups
-        user_type_priority = case(
-            (NotionalTransfer.user_type == UserTypeEnum.GOVERNMENT, 1),
-            (NotionalTransfer.user_type == UserTypeEnum.SUPPLIER, 0),
-            else_=0,
         )
+
+        # Step 2: Find the maximum version and priority per group_uuid, excluding deleted groups
         conditions = [
             NotionalTransfer.compliance_report_id.in_(compliance_reports_select)
         ]
@@ -121,7 +109,6 @@ class NotionalTransferRepository:
             select(
                 NotionalTransfer.group_uuid,
                 func.max(NotionalTransfer.version).label("max_version"),
-                func.max(user_type_priority).label("max_role_priority"),
             )
             .where(*conditions)
             .group_by(NotionalTransfer.group_uuid)
@@ -138,8 +125,6 @@ class NotionalTransferRepository:
                     == valid_notional_transfers_subq.c.group_uuid,
                     NotionalTransfer.version
                     == valid_notional_transfers_subq.c.max_version,
-                    user_type_priority
-                    == valid_notional_transfers_subq.c.max_role_priority,
                 ),
             )
             .order_by(NotionalTransfer.notional_transfer_id)
@@ -159,7 +144,6 @@ class NotionalTransferRepository:
                 received_or_transferred=nt.received_or_transferred,
                 group_uuid=nt.group_uuid,
                 version=nt.version,
-                user_type=nt.user_type,
                 action_type=nt.action_type,
             )
             for nt in notional_transfers
@@ -169,7 +153,6 @@ class NotionalTransferRepository:
         self,
         pagination: PaginationRequestSchema,
         compliance_report_id: int,
-        exclude_draft_reports: bool = False,
     ) -> Tuple[List[NotionalTransferSchema], int]:
         # Retrieve the compliance report's group UUID
         report_group_query = await self.db.execute(
@@ -184,7 +167,7 @@ class NotionalTransferRepository:
         # Retrieve effective notional transfers using the group UUID
         notional_transfers = await self.get_effective_notional_transfers(
             compliance_report_group_uuid=group_uuid,
-            exclude_draft_reports=exclude_draft_reports,
+            compliance_report_id=compliance_report_id,
         )
 
         # Manually apply pagination
@@ -275,7 +258,6 @@ class NotionalTransferRepository:
             .options(joinedload(NotionalTransfer.fuel_category))
             .where(NotionalTransfer.group_uuid == group_uuid)
             .order_by(
-                NotionalTransfer.user_type == UserTypeEnum.SUPPLIER,
                 NotionalTransfer.version.desc(),
             )
         )
@@ -285,7 +267,7 @@ class NotionalTransferRepository:
 
     @repo_handler
     async def get_notional_transfer_version_by_user(
-        self, group_uuid: str, version: int, user_type: UserTypeEnum
+        self, group_uuid: str, version: int
     ) -> Optional[NotionalTransfer]:
         """
         Retrieve a specific NotionalTransfer record by group UUID, version, and user_type.

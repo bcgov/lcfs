@@ -1,35 +1,43 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Stack, Grid } from '@mui/material'
+import { Grid, Stack } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
-
 import BCButton from '@/components/BCButton'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { columnDefs, routesMapping } from './_schema'
 import {
+  useDeleteNotificationMessages,
   useGetNotificationMessages,
-  useMarkNotificationAsRead,
-  useDeleteNotificationMessages
+  useMarkNotificationAsRead
 } from '@/hooks/useNotifications'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const Notifications = () => {
   const gridRef = useRef(null)
   const alertRef = useRef(null)
+  const [gridApi, setGridApi] = useState(null)
   const [isAllSelected, setIsAllSelected] = useState(false)
   const [selectedRowCount, setSelectedRowCount] = useState(0)
-  const [resetGridFn, setResetGridFn] = useState(null)
+
+  const [paginationOptions, setPaginationOptions] = useState(
+    defaultInitialPagination
+  )
 
   const { t } = useTranslation(['notifications'])
   const navigate = useNavigate()
   const { data: currentUser } = useCurrentUser()
-  // react query hooks
   const { refetch } = useGetNotificationMessages()
   const markAsReadMutation = useMarkNotificationAsRead()
   const deleteMutation = useDeleteNotificationMessages()
+
+  const queryData = useGetNotificationMessages(paginationOptions, {
+    cacheTime: 0,
+    staleTime: 0
+  })
 
   // row class rules for unread messages
   const rowClassRules = useMemo(
@@ -55,14 +63,16 @@ export const Notifications = () => {
   // Consolidated mutation handler
   const handleMutation = useCallback(
     (mutation, selectedNotifications, successMessage, errorMessage) => {
-      if (selectedNotifications.length === 0) {
+      const ids = Array.isArray(selectedNotifications)
+        ? selectedNotifications
+        : selectedNotifications.notification_ids || []
+      if (ids.length === 0) {
         alertRef.current?.triggerAlert({
           message: t('notifications:noNotificationsSelectedText'),
           severity: 'warning'
         })
         return
       }
-
       mutation.mutate(selectedNotifications, {
         onSuccess: () => {
           // eslint-disable-next-line chai-friendly/no-unused-expressions
@@ -84,47 +94,53 @@ export const Notifications = () => {
     [t, refetch]
   )
 
+  const onGridReady = useCallback((params) => {
+    setGridApi(params.api)
+  }, [])
+
   // Toggle selection for visible rows
   const toggleSelectVisibleRows = useCallback(() => {
-    const gridApi = gridRef.current?.api
-    if (gridApi) {
-      gridApi.forEachNodeAfterFilterAndSort((node) => {
-        node.setSelected(!isAllSelected)
-      })
-      setIsAllSelected(!isAllSelected)
-    }
-  }, [isAllSelected])
+    if (!gridApi) return
+    gridApi.forEachNodeAfterFilterAndSort((node) => {
+      node.setSelected(!isAllSelected)
+    })
+    setIsAllSelected(!isAllSelected)
+  }, [gridApi, isAllSelected])
 
   // event handlers for delete, markAsRead, and row-level deletes
   const handleMarkAsRead = useCallback(() => {
-    const gridApi = gridRef.current?.api
-    if (gridApi) {
-      const selectedNotifications = gridApi
-        .getSelectedNodes()
-        .map((node) => node.data.notificationMessageId)
-      handleMutation(
-        markAsReadMutation,
-        selectedNotifications,
-        'notifications:markAsReadSuccessText',
-        'notifications:markAsReadErrorText'
-      )
-    }
-  }, [handleMutation, markAsReadMutation])
+    if (!gridApi) return
+    const payload = isAllSelected
+      ? { applyToAll: true }
+      : {
+          notification_ids: gridApi
+            .getSelectedNodes()
+            .map((n) => n.data.notificationMessageId)
+        }
+    handleMutation(
+      markAsReadMutation,
+      payload,
+      'notifications:markAsReadSuccessText',
+      'notifications:markAsReadErrorText'
+    )
+  }, [gridApi, isAllSelected, handleMutation, markAsReadMutation])
 
   const handleDelete = useCallback(() => {
-    const gridApi = gridRef.current?.api
-    if (gridApi) {
-      const selectedNotifications = gridApi
-        .getSelectedNodes()
-        .map((node) => node.data.notificationMessageId)
-      handleMutation(
-        deleteMutation,
-        selectedNotifications,
-        'notifications:deleteSuccessText',
-        'notifications:deleteErrorText'
-      )
-    }
-  }, [handleMutation, deleteMutation])
+    if (!gridApi) return
+    const payload = isAllSelected
+      ? { applyToAll: true }
+      : {
+          notification_ids: gridApi
+            .getSelectedNodes()
+            .map((n) => n.data.notificationMessageId)
+        }
+    handleMutation(
+      deleteMutation,
+      payload,
+      'notifications:deleteSuccessText',
+      'notifications:deleteErrorText'
+    )
+  }, [gridApi, isAllSelected, handleMutation, deleteMutation])
 
   const handleRowClicked = useCallback(
     (params) => {
@@ -141,10 +157,12 @@ export const Notifications = () => {
             .replace(':compliancePeriod', compliancePeriod)
             .replace(':complianceReportId', id)
         )
-        handleMutation(markAsReadMutation, [params.data.notificationMessageId])
+        handleMutation(markAsReadMutation, {
+          notification_ids: [params.data.notificationMessageId]
+        })
       }
     },
-    [currentUser, navigate]
+    [currentUser, navigate, markAsReadMutation, handleMutation]
   )
 
   const onCellClicked = useCallback(
@@ -155,7 +173,7 @@ export const Notifications = () => {
       ) {
         handleMutation(
           deleteMutation,
-          [params.data.notificationMessageId],
+          { notification_ids: [params.data.notificationMessageId] },
           'notifications:deleteSuccessText',
           'notifications:deleteErrorText'
         )
@@ -164,10 +182,10 @@ export const Notifications = () => {
     [handleMutation, deleteMutation]
   )
 
-  const onSelectionChanged = useCallback(() => {
-    const gridApi = gridRef.current?.api
+  const onSelectionChanged = useCallback((params) => {
+    const { api } = params
     const visibleRows = []
-    gridApi.forEachNodeAfterFilterAndSort((node) => {
+    api.forEachNodeAfterFilterAndSort((node) => {
       visibleRows.push(node)
     })
     const selectedRows = visibleRows.filter((node) => node.isSelected())
@@ -177,15 +195,12 @@ export const Notifications = () => {
     )
   }, [])
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
+  const handleClearFilters = () => {
+    setPaginationOptions(defaultInitialPagination)
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
     }
-  }, [resetGridFn])
+  }
 
   return (
     <Grid>
@@ -224,16 +239,15 @@ export const Notifications = () => {
         >
           {t('notifications:buttonStack.deleteSelected')}
         </BCButton>
-        <ClearFiltersButton 
-          onClick={handleClearFilters}
-        />
+        <ClearFiltersButton onClick={handleClearFilters} />
       </Stack>
       <BCGridViewer
         gridKey="notifications-grid"
+        onGridReady={onGridReady}
         gridRef={gridRef}
         alertRef={alertRef}
         columnDefs={columnDefs(t, currentUser)}
-        query={useGetNotificationMessages}
+        queryData={queryData}
         dataKey="notifications"
         overlayNoRowsTemplate={t('notifications:noNotificationsFound')}
         autoSizeStrategy={{
@@ -247,7 +261,13 @@ export const Notifications = () => {
         selectionColumnDef={selectionColumnDef}
         onSelectionChanged={onSelectionChanged}
         onRowClicked={handleRowClicked}
-        onSetResetGrid={handleSetResetGrid}
+        paginationOptions={paginationOptions}
+        onPaginationChange={(newPagination) =>
+          setPaginationOptions((prev) => ({
+            ...prev,
+            ...newPagination
+          }))
+        }
       />
     </Grid>
   )

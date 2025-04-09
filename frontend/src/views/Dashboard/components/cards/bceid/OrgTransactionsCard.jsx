@@ -8,7 +8,7 @@ import { faShareFromSquare } from '@fortawesome/free-solid-svg-icons'
 import Loading from '@/components/Loading'
 import withRole from '@/utils/withRole'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useOrgTransactionCounts } from '@/hooks/useDashboard'
 import { FILTER_KEYS } from '@/constants/common'
@@ -118,12 +118,12 @@ const OrgTransactionsCard = () => {
             >
               <ListItemButton
                 component="a"
-                onClick={() => handleNavigation(ROUTES.TRANSACTIONS)}
+                onClick={() => handleNavigation(ROUTES.TRANSACTIONS.LIST)}
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.transfersInProgress'),
                   counts?.transfers || 0,
-                  () => handleNavigation(ROUTES.TRANSACTIONS)
+                  () => handleNavigation(ROUTES.TRANSACTIONS.LIST)
                 )}
               </ListItemButton>
 
@@ -151,12 +151,12 @@ const OrgTransactionsCard = () => {
 
               <ListItemButton
                 component="a"
-                onClick={() => navigate(ROUTES.TRANSFERS_ADD)}
+                onClick={() => navigate(ROUTES.TRANSFERS.ADD)}
               >
                 {renderLinkWithCount(
                   t('dashboard:orgTransactions.startNewTransfer'),
                   null,
-                  () => navigate(ROUTES.TRANSFERS_ADD)
+                  () => navigate(ROUTES.TRANSFERS.ADD)
                 )}
               </ListItemButton>
             </List>

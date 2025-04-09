@@ -15,10 +15,9 @@ import {
   CircularProgress,
   Tooltip
 } from '@mui/material'
-import NotificationsIcon from '@mui/icons-material/Notifications'
+import { Notifications, Logout } from '@mui/icons-material'
 import { NavLink, useLocation } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
-import LogoutIcon from '@mui/icons-material/Logout'
+import { ROUTES, buildPath } from '@/routes/routes'
 
 export const UserProfileActions = () => {
   const { t } = useTranslation()
@@ -57,7 +56,7 @@ export const UserProfileActions = () => {
         badgeContent={notificationsCount > 0 ? notificationsCount : null}
         color="error"
       >
-        <NotificationsIcon />
+        <Notifications />
       </Badge>
     </IconButton>
   )
@@ -74,13 +73,15 @@ export const UserProfileActions = () => {
           <>
             <BCTypography
               component={NavLink}
-              to={(currentUser?.isGovernmentUser
-                ? ROUTES.ADMIN_USERS_VIEW
-                : ROUTES.ORGANIZATION_VIEWUSER.replace(
-                    ':orgID',
-                    currentUser?.organization?.organizationId
-                  )
-              ).replace(':userID', currentUser?.userProfileId)}
+              to={buildPath(
+                currentUser?.isGovernmentUser
+                  ? ROUTES.ADMIN.USERS.VIEW
+                  : ROUTES.ORGANIZATION.VIEW_USER,
+                {
+                  orgID: currentUser?.organization?.organizationId,
+                  userID: currentUser?.userProfileId
+                }
+              )}
               style={{
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -116,7 +117,7 @@ export const UserProfileActions = () => {
               <DefaultNavbarLink
                 icon={iconBtn}
                 name={''}
-                route={ROUTES.NOTIFICATIONS}
+                route={ROUTES.NOTIFICATIONS.LIST}
                 light={false}
                 isMobileView={false}
                 sx={{
@@ -158,7 +159,7 @@ export const UserProfileActions = () => {
           size="small"
           variant="outlined"
           data-test="logout-button"
-          startIcon={<LogoutIcon sx={{ width: '18px', height: '18px' }} />}
+          startIcon={<Logout sx={{ width: '18px', height: '18px' }} />}
           sx={{
             maxHeight: '32px',
             '&:hover': {

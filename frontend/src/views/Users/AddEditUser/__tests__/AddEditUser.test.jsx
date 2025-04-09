@@ -5,7 +5,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { render, renderHook, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { wrapper } from '@/tests/utils/wrapper'
-import { describe, it } from 'vitest'
+import { describe, it, vi } from 'vitest'
 import { HttpResponse } from 'msw'
 import { httpOverwrite } from '@/tests/utils/handlers'
 
@@ -23,7 +23,15 @@ vi.mock('@react-keycloak/web', () => ({
 // Mock the API service
 vi.mock('@/services/useApiService', () => ({
   useApiService: () => ({
-    get: vi.fn(() => Promise.resolve({ data: 'mock-data' }))
+    get: vi.fn((url) => {
+      if (url.includes('/users/deleted')) {
+        return Promise.reject({ response: { status: 404 } })
+      }
+      return Promise.resolve({ data: 'mock-data' })
+    }),
+    post: vi.fn(() => Promise.resolve({ data: 'mock-data' })),
+    put: vi.fn(() => Promise.resolve({ data: 'mock-data' })),
+    delete: vi.fn(() => Promise.resolve({ data: 'deleted' }))
   })
 }))
 
@@ -79,8 +87,8 @@ describe('AddEditUser component', () => {
 
     // Add assertion after click to ensure test doesn't complete too early
     await waitFor(() => {
-      expect(saveButton).toBeInTheDocument();
-    });
+      expect(saveButton).toBeInTheDocument()
+    })
   }, 10000) // Increase timeout for this test
   it('renders the form to add BCeID user', async () => {
     const { container } = render(<AddEditUser userType="bceid" />, { wrapper })
@@ -105,9 +113,10 @@ describe('AddEditUser component', () => {
     const saveButton = screen.getByRole('button', { name: /save/i })
     userEvent.click(saveButton)
     await waitFor(() => {
-      expect(saveButton).toBeInTheDocument();
-    });
+      expect(saveButton).toBeInTheDocument()
+    })
   }, 10000)
+
   it('validates user form', async () => {
     render(<AddEditUser />, { wrapper })
 
@@ -133,5 +142,17 @@ describe('AddEditUser component', () => {
     expect(
       await screen.findByText('Phone number is not valid')
     ).toBeInTheDocument()
+  })
+
+  it('handles deleted user gracefully', async () => {
+    // Override the useApiService.get mock to simulate a 404 error for a deleted user.
+    const { useApiService } = await import('@/services/useApiService')
+    useApiService().get.mockImplementationOnce((url) => {
+      if (url.includes('/users/')) {
+        return Promise.reject({ response: { status: 404 } })
+      }
+      return Promise.resolve({ data: 'mock-data' })
+    })
+    render(<AddEditUser />, { wrapper })
   })
 })

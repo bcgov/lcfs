@@ -1,22 +1,19 @@
-from datetime import datetime
-from typing import List, Optional, Sequence, Any
-
 import structlog
+from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import and_, delete, or_, select, case
+from sqlalchemy import and_, or_, select, delete
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
+from typing import List, Optional, Sequence, Any
 
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import (
     CompliancePeriod,
     FuelSupply,
     ComplianceReport,
-    ComplianceReportStatus,
 )
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.fuel import (
     CategoryCarbonIntensity,
     DefaultCarbonIntensity,
@@ -62,7 +59,6 @@ class FuelSupplyRepository:
             joinedload(FuelSupply.provision_of_the_act),
             joinedload(FuelSupply.end_use_type),
         )
-
 
     @repo_handler
     async def get_fuel_supply_table_options(self, compliance_period: str):
@@ -146,26 +142,45 @@ class FuelSupplyRepository:
                 DefaultCarbonIntensity,
                 and_(
                     DefaultCarbonIntensity.fuel_type_id == FuelType.fuel_type_id,
-                    DefaultCarbonIntensity.compliance_period_id == subquery_compliance_period_id
+                    DefaultCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
                 ),
             )
             .outerjoin(
                 CategoryCarbonIntensity,
                 and_(
-                    CategoryCarbonIntensity.fuel_category_id == FuelCategory.fuel_category_id,
-                    CategoryCarbonIntensity.compliance_period_id == subquery_compliance_period_id
+                    CategoryCarbonIntensity.fuel_category_id
+                    == FuelCategory.fuel_category_id,
+                    CategoryCarbonIntensity.compliance_period_id
+                    == subquery_compliance_period_id,
                 ),
             )
             .outerjoin(
                 ProvisionOfTheAct,
-                or_(
-                    and_(
-                        FuelType.fossil_derived == True,
-                        ProvisionOfTheAct.provision_of_the_act_id == 1,
-                    ),
-                    and_(
-                        FuelType.fossil_derived == False,
-                        ProvisionOfTheAct.provision_of_the_act_id != 1,
+                and_(
+                    ProvisionOfTheAct.name != "Unknown",
+                    or_(
+                        and_(
+                            FuelType.fossil_derived == True,
+                            ProvisionOfTheAct.provision_of_the_act_id == 1,
+                        ),
+                        and_(
+                            FuelType.fossil_derived == False,
+                            or_(
+                                and_(
+                                    ProvisionOfTheAct.provision_of_the_act_id.notin_(
+                                        [1, 8]
+                                    ),
+                                    current_year
+                                    >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                                ),
+                                and_(
+                                    ProvisionOfTheAct.provision_of_the_act_id != 1,
+                                    current_year
+                                    < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
+                                ),
+                            ),
+                        ),
                     ),
                 ),
             )
@@ -229,7 +244,6 @@ class FuelSupplyRepository:
         self,
         compliance_report_id: int,
         changelog: Optional[bool] = False,
-        exclude_draft_reports: bool = False,
     ) -> List[FuelSupply]:
         """
         Retrieve the list of effective fuel supplies for a given compliance report.
@@ -245,11 +259,10 @@ class FuelSupplyRepository:
             return []
 
         # Retrieve effective fuel supplies using the group UUID,
-        # optionally excluding draft records.
         effective_fuel_supplies = await self.get_effective_fuel_supplies(
             compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
             changelog=changelog,
-            exclude_draft_reports=exclude_draft_reports,
         )
 
         return effective_fuel_supplies
@@ -259,7 +272,6 @@ class FuelSupplyRepository:
         self,
         pagination: PaginationRequestSchema,
         compliance_report_id: int,
-        exclude_draft_reports: bool = False,
         effective: bool = True,
     ) -> tuple[list[Any], int] | tuple[Sequence[FuelSupply] | list[FuelSupply], int]:
         """
@@ -278,9 +290,8 @@ class FuelSupplyRepository:
         if effective:
             # Retrieve effective fuel supplies using the group UUID
             fuel_supplies = await self.get_effective_fuel_supplies(
-                compliance_report_group_uuid=group_uuid,
-                compliance_report_id=compliance_report_id,
-                exclude_draft_reports=exclude_draft_reports,
+                group_uuid,
+                compliance_report_id,
             )
         else:
             fuel_supplies = await self.get_fuel_supplies(compliance_report_id)
@@ -393,8 +404,8 @@ class FuelSupplyRepository:
         return result.scalars().first()
 
     @repo_handler
-    async def get_fuel_supply_version_by_user(
-        self, group_uuid: str, version: int, user_type: UserTypeEnum
+    async def get_fuel_supply_by_group_version(
+        self, group_uuid: str, version: int
     ) -> Optional[FuelSupply]:
         """
         Retrieve a specific FuelSupply record by group UUID, version, and user_type.
@@ -403,7 +414,6 @@ class FuelSupplyRepository:
         query = select(FuelSupply).where(
             FuelSupply.group_uuid == group_uuid,
             FuelSupply.version == version,
-            FuelSupply.user_type == user_type,
         )
 
         result = await self.db.execute(query)
@@ -415,16 +425,12 @@ class FuelSupplyRepository:
     ) -> Optional[FuelSupply]:
         """
         Retrieve the latest FuelSupply record for a given group UUID.
-        Government records are prioritized over supplier records by ordering first by `user_type`
-        (with GOVERNMENT records coming first) and then by `version` in descending order.
+        Ordered by `version` in descending order.
         """
         query = (
             select(FuelSupply)
             .where(FuelSupply.group_uuid == group_uuid)
             .order_by(
-                # FuelSupply.user_type == UserTypeEnum.SUPPLIER evaluates to False for GOVERNMENT,
-                # thus bringing GOVERNMENT records to the top in the ordered results.
-                FuelSupply.user_type == UserTypeEnum.SUPPLIER,
                 FuelSupply.version.desc(),
             )
         )
@@ -436,70 +442,62 @@ class FuelSupplyRepository:
     async def get_effective_fuel_supplies(
         self,
         compliance_report_group_uuid: str,
-        exclude_draft_reports: bool = False,
-        compliance_report_id: Optional[int] = None,
+        compliance_report_id: int,
         changelog: Optional[bool] = False,
     ) -> Sequence[FuelSupply]:
         """
-        Retrieve effective FuelSupply records associated with the given compliance_report_group_uuid.
-        For each group_uuid:
-            - Exclude the entire group if any record in the group is marked as DELETE.
-            - From the remaining groups, select the record with the highest version and highest priority.
-        Optionally, exclude fuel supplies associated with draft compliance reports if exclude_draft is True.
+        Queries fuel supplies from the database for a specific compliance report.
+        If changelog=True, includes deleted records to show history.
         """
-        # Step 1: Subquery to get all compliance_report_ids in the specified group
+        # Get all compliance report IDs in the group up to the specified report
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
-            ComplianceReport.compliance_report_group_uuid
-            == compliance_report_group_uuid
+            and_(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                ComplianceReport.compliance_report_id <= compliance_report_id,
+            )
         )
 
-        if compliance_report_id is not None:
-            compliance_reports_select = compliance_reports_select.where(
-                ComplianceReport.compliance_report_id <= compliance_report_id
+        # Get groups that have any deleted records
+        deleted_groups = (
+            select(FuelSupply.group_uuid)
+            .where(
+                FuelSupply.compliance_report_id.in_(compliance_reports_select),
+                FuelSupply.action_type == ActionTypeEnum.DELETE,
             )
-        if exclude_draft_reports:
-            compliance_reports_select = compliance_reports_select.where(
-                ComplianceReport.current_status.has(
-                    ComplianceReportStatus.status
-                    != ComplianceReportStatusEnum.Draft.value
-                )
-            )
-
-        # Step 2 & 3: Build conditions; exclude DELETE rows only when changelog is False
-        user_type_priority = case(
-            (FuelSupply.user_type == UserTypeEnum.GOVERNMENT, 1),
-            (FuelSupply.user_type == UserTypeEnum.SUPPLIER, 0),
-            else_=0,
+            .distinct()
         )
+
+        # Build query conditions
         conditions = [FuelSupply.compliance_report_id.in_(compliance_reports_select)]
-        if not changelog:
-            delete_group_select = (
-                select(FuelSupply.group_uuid)
-                .where(
-                    FuelSupply.compliance_report_id.in_(compliance_reports_select),
-                    FuelSupply.action_type == ActionTypeEnum.DELETE,
-                )
-                .distinct()
-            )
+
+        if changelog:
+            # In changelog view, include all groups (both active and deleted)
             conditions.extend(
                 [
-                    FuelSupply.action_type != ActionTypeEnum.DELETE,
-                    ~FuelSupply.group_uuid.in_(delete_group_select),
+                    or_(
+                        ~FuelSupply.group_uuid.in_(deleted_groups),
+                        FuelSupply.group_uuid.in_(deleted_groups),
+                    )
                 ]
             )
+        else:
+            # In regular view, exclude any groups that have deleted records
+            conditions.extend([~FuelSupply.group_uuid.in_(deleted_groups)])
 
+        # Get the latest version of each record
         valid_fuel_supplies_select = (
             select(
                 FuelSupply.group_uuid,
                 func.max(FuelSupply.version).label("max_version"),
-                func.max(user_type_priority).label("max_role_priority"),
             )
             .where(*conditions)
             .group_by(FuelSupply.group_uuid)
         )
+
         valid_fuel_supplies_subq = valid_fuel_supplies_select.subquery()
 
-        # Step 4: Main query to retrieve FuelSupply records with necessary eager relationships
+        # Get the actual records with their related data
         query = (
             select(FuelSupply)
             .options(
@@ -524,14 +522,12 @@ class FuelSupplyRepository:
                 and_(
                     FuelSupply.group_uuid == valid_fuel_supplies_subq.c.group_uuid,
                     FuelSupply.version == valid_fuel_supplies_subq.c.max_version,
-                    user_type_priority == valid_fuel_supplies_subq.c.max_role_priority,
                 ),
                 isouter=False,
             )
             .order_by(FuelSupply.create_date.asc())
         )
 
-        # Step 5: Execute the query and retrieve results using unique()
         result = await self.db.execute(query)
         fuel_supplies = result.unique().scalars().all()
 

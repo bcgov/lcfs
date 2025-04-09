@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import {
   useFuelExportOptions,
   useGetFuelExportsList,
@@ -9,7 +9,7 @@ import {
 } from '@/hooks/useFuelExport'
 import { isArrayEmpty } from '@/utils/array.js'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -17,7 +17,6 @@ import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelExportColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import colors from '@/themes/base/colors'
 import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 
 export const AddEditFuelExports = () => {
@@ -37,7 +36,7 @@ export const AddEditFuelExports = () => {
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
 
@@ -104,7 +103,7 @@ export const AddEditFuelExports = () => {
         const lastRowIndex = params.api.getLastDisplayedRowIndex()
         params.api.startEditingCell({
           rowIndex: lastRowIndex,
-          colKey: 'exportDate'
+          colKey: 'fuelTypeId'
         })
         setGridReady(true)
       }, 500)
@@ -247,6 +246,17 @@ export const AddEditFuelExports = () => {
         updatedData
       })
 
+      updatedData = {
+        ...updatedData,
+        fuelType: updatedData.fuelType?.fuelType ?? updatedData.fuelType,
+        fuelCategory:
+          updatedData.fuelCategory?.category ?? updatedData.fuelCategory,
+        provisionOfTheAct:
+          updatedData.provisionOfTheAct?.name ?? updatedData.provisionOfTheAct,
+        fuelCode: updatedData.fuelCode?.fuelCode ?? updatedData.fuelCode,
+        endUseType: updatedData.endUse?.type ?? updatedData.endUseType
+      }
+
       params.node.updateData(updatedData)
     },
     [saveRow, t, compliancePeriod]
@@ -270,10 +280,10 @@ export const AddEditFuelExports = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
+      buildPath(ROUTES.REPORTS.VIEW, {
+        compliancePeriod,
+        complianceReportId
+      })
     )
   }, [navigate, compliancePeriod, complianceReportId])
 

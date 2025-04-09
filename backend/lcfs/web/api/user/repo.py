@@ -1,7 +1,7 @@
 from typing import List
 
 import structlog
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import (
     and_,
     select,
@@ -12,6 +12,7 @@ from sqlalchemy import (
     func,
     cast,
     String,
+    text,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -34,6 +35,9 @@ from lcfs.db.models.user import UserLoginHistory
 from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.user.UserRole import UserRole
+from lcfs.db.models.notification.NotificationChannelSubscription import (
+    NotificationChannelSubscription,
+)
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     camel_to_snake,
@@ -690,3 +694,22 @@ class UserRepository:
         await self.db.refresh(user_profile)
 
         return user_profile
+
+    @repo_handler
+    async def is_user_safe_to_remove(self, keycloak_username: str) -> bool:
+        """
+        Invokes the is_user_safe_to_remove() SQL function,
+        returning True if no references exist in create_user/update_user columns.
+        """
+        query_text = text("SELECT is_user_safe_to_remove(:username) AS safe")
+        result = await self.db.execute(query_text, {"username": keycloak_username})
+        safe_to_remove = result.scalar()
+        return safe_to_remove
+
+    @repo_handler
+    async def delete_user(self, user: UserProfile) -> None:
+        """
+        Deletes the user.
+        """
+        await self.db.delete(user)
+        await self.db.flush()

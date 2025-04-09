@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Box, Collapse, IconButton, TextField } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useFormContext } from 'react-hook-form'
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
+import { ExpandLess, ExpandMore } from '@mui/icons-material'
 
 export const Comments = ({ commentField, isEditable }) => {
   const { t } = useTranslation(['txn'])
@@ -41,7 +40,7 @@ export const Comments = ({ commentField, isEditable }) => {
             {t('txn:commentsDescText')}
           </BCTypography>
           <IconButton>
-            {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            {isExpanded ? <ExpandLess /> : <ExpandMore />}
           </IconButton>
         </Box>
 

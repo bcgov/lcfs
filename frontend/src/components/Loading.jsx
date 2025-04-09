@@ -29,8 +29,8 @@ const Loading = ({ message = 'Loading...', fixed = false }) => {
           justifyContent: 'center',
           alignItems: 'center',
           flexDirection: 'column',
-          border: fixed && `1px solid ${colors.primary.main}`,
-          borderRadius: fixed && borders.borderRadius.lg,
+          border: fixed ? `1px solid ${colors.primary.main}` : undefined,
+          borderRadius: fixed ? borders.borderRadius.lg : undefined,
           padding: fixed && '20px',
           background: fixed && 'white'
         }}

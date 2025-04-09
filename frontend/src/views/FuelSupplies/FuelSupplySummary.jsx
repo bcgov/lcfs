@@ -5,7 +5,7 @@ import { apiRoutes } from '@/constants/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { fuelSupplySummaryColDef } from '@/views/FuelSupplies/_schema.jsx'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
@@ -72,7 +72,11 @@ export const FuelSupplySummary = ({ data, status }) => {
           </BCAlert>
         )}
       </div>
-      <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
+      <BCBox
+        component="div"
+        sx={{ height: '100%', width: '100%' }}
+        data-test="fuel-supply-summary"
+      >
         <BCDataGridServer
           className={'ag-theme-material'}
           gridRef={gridRef}

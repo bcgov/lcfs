@@ -1,16 +1,23 @@
-from datetime import datetime
 import pytest
-from unittest.mock import AsyncMock, MagicMock
-from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
-from lcfs.web.api.compliance_report.schema import ComplianceReportHistorySchema, ComplianceReportOrganizationSchema, ComplianceReportStatusSchema, ComplianceReportUserSchema, SummarySchema
-from lcfs.web.api.fuel_export.repo import FuelExportRepository
-from lcfs.web.api.fuel_code.repo import FuelCodeRepository
-from lcfs.web.api.fuel_export.services import FuelExportServices
-from lcfs.web.api.fuel_export.actions_service import FuelExportActionService
+from datetime import datetime
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.inmemory import InMemoryBackend
 from sqlalchemy.ext.asyncio import AsyncSession
+from unittest.mock import AsyncMock, MagicMock
+
+from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportHistorySchema,
+    ComplianceReportOrganizationSchema,
+    ComplianceReportStatusSchema,
+    ComplianceReportUserSchema,
+    SummarySchema,
+)
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.fuel_export.actions_service import FuelExportActionService
+from lcfs.web.api.fuel_export.repo import FuelExportRepository
+from lcfs.web.api.fuel_export.services import FuelExportServices
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -37,7 +44,6 @@ def mock_repo(mock_db):
     repo.update_fuel_export = AsyncMock()
     repo.delete_fuel_export = AsyncMock()
     repo.get_effective_fuel_exports = AsyncMock()
-    repo.get_fuel_export_version_by_user = AsyncMock()
     repo.get_latest_fuel_export_by_group_uuid = AsyncMock()
     return repo
 
@@ -47,6 +53,7 @@ def mock_compliance_report_repo():
     """Mock ComplianceReportRepository."""
     repo = AsyncMock(spec=ComplianceReportRepository)
     return repo
+
 
 @pytest.fixture
 def compliance_period_schema():
@@ -58,19 +65,28 @@ def compliance_period_schema():
         display_order=1,
     )
 
+
 @pytest.fixture
 def compliance_report_organization_schema():
     return ComplianceReportOrganizationSchema(
         organization_id=1, name="Acme Corporation"
     )
 
+
 @pytest.fixture
 def summary_schema():
-    return SummarySchema(summary_id=1, is_locked=False)
+    return SummarySchema(
+        summary_id=1,
+        is_locked=False,
+        line_11_fossil_derived_base_fuel_total=0,
+        line_21_non_compliance_penalty_payable=0,
+    )
+
 
 @pytest.fixture
 def compliance_report_status_schema():
     return ComplianceReportStatusSchema(compliance_report_status_id=1, status="Draft")
+
 
 @pytest.fixture
 def compliance_report_user_schema(compliance_report_organization_schema):
@@ -79,6 +95,7 @@ def compliance_report_user_schema(compliance_report_organization_schema):
         last_name="Doe",
         organization=compliance_report_organization_schema,
     )
+
 
 @pytest.fixture
 def compliance_report_history_schema(
@@ -91,6 +108,7 @@ def compliance_report_history_schema(
         user_profile=compliance_report_user_schema,
         create_date=datetime(2024, 4, 1, 12, 0, 0),
     )
+
 
 @pytest.fixture
 def mock_fuel_code_repo():

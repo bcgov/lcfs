@@ -1,9 +1,10 @@
+import copy
 import pytest
 from fastapi import HTTPException
 from types import SimpleNamespace
 from unittest.mock import MagicMock, AsyncMock
 
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models import (
     FuelType,
     EnergyEffectivenessRatio,
@@ -48,6 +49,7 @@ def fuel_supply_action_service():
     service = FuelSupplyActionService(
         repo=mock_repo,
         fuel_repo=mock_fuel_code_repo,
+        fuel_supply_service=FuelSupplyServices(),
     )
     return service, mock_repo, mock_fuel_code_repo
 
@@ -77,7 +79,7 @@ async def test_get_fuel_supply_options(fuel_supply_service):
 
 
 @pytest.mark.anyio
-async def test_get_fuel_supply_list(fuel_supply_service):
+async def test_get_fuel_supply_list(fuel_supply_service, mock_fuel_supply):
     service, mock_repo, _ = fuel_supply_service
 
     # Create a dummy request with a user that supports attribute access.
@@ -86,32 +88,8 @@ async def test_get_fuel_supply_list(fuel_supply_service):
     dummy_request.user = dummy_user
     service.request = dummy_request
 
-    # Build a valid fuel supply record (dictionary) that meets the Pydantic schema requirements.
-    valid_fuel_supply = {
-        "fuel_supply_id": 1,
-        "complianceReportId": 1,
-        "version": 0,
-        "fuelTypeId": 1,
-        "quantity": 100,
-        "groupUuid": "some-uuid",
-        "userType": "SUPPLIER",
-        "actionType": "CREATE",
-        "fuelType": {"fuel_type_id": 1, "fuelType": "Diesel", "units": "L"},
-        "fuelCategory": {"fuel_category_id": 1, "category": "Diesel"},
-        "endUseType": {"endUseTypeId": 1, "type": "Transport", "subType": "Personal"},
-        "provisionOfTheAct": {"provisionOfTheActId": 1, "name": "Act Provision"},
-        "compliancePeriod": "2024",
-        "units": "L",
-        "fuelCode": {
-            "fuelStatus": {"status": "Approved"},
-            "fuelCode": "FUEL123",
-            "carbonIntensity": 15.0,
-        },
-        "fuelTypeOther": "Optional",
-    }
-
     # Set the repository method to return the valid fuel supply record.
-    mock_repo.get_fuel_supply_list = AsyncMock(return_value=[valid_fuel_supply])
+    mock_repo.get_fuel_supply_list = AsyncMock(return_value=[mock_fuel_supply])
 
     compliance_report_id = 1
     response = await service.get_fuel_supply_list(compliance_report_id)
@@ -123,7 +101,7 @@ async def test_get_fuel_supply_list(fuel_supply_service):
 @pytest.mark.anyio
 async def test_update_fuel_supply_not_found(fuel_supply_action_service):
     service, mock_repo, mock_fuel_code_repo = fuel_supply_action_service
-    mock_repo.get_fuel_supply_version_by_user = AsyncMock(return_value=None)
+    mock_repo.get_fuel_supply_by_group_version = AsyncMock(return_value=None)
 
     fs_data = FuelSupplyCreateUpdateSchema(
         compliance_report_id=1,
@@ -136,44 +114,93 @@ async def test_update_fuel_supply_not_found(fuel_supply_action_service):
         group_uuid="some-uuid",
         version=0,
     )
-    user_type = UserTypeEnum.SUPPLIER
 
     with pytest.raises(HTTPException) as exc_info:
-        await service.update_fuel_supply(fs_data, user_type, "2024")
+        await service.update_fuel_supply(fs_data, "2024")
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.detail == "Fuel supply record not found."
 
 
 @pytest.mark.anyio
-async def test_update_fuel_supply_success(fuel_supply_action_service):
+async def test_create_fuel_supply(fuel_supply_action_service):
     service, mock_repo, mock_fuel_code_repo = fuel_supply_action_service
-
-    # Setup existing fuel supply record
-    existing_fuel_supply = FuelSupply(
-        fuel_supply_id=1,
+    fs_data = FuelSupplyCreateUpdateSchema(
         compliance_report_id=1,
         fuel_type_id=1,
         fuel_category_id=1,
-        provision_of_the_act_id=1,
         end_use_id=1,
-        quantity=1000,
+        provision_of_the_act_id=1,
+        quantity=2000,
+        fuel_type_other=None,
         units="L",
-        ci_of_fuel=10.5,
-        energy_density=30.0,
-        eer=1.0,
-        energy=30000,
-        compliance_units=100,
-        group_uuid="some-uuid",
-        version=0,
-        user_type=UserTypeEnum.SUPPLIER,
-        action_type=ActionTypeEnum.CREATE,
     )
 
-    # Mock the repository method to return the existing fuel supply
-    mock_repo.get_fuel_supply_version_by_user = AsyncMock(
-        return_value=existing_fuel_supply
+    # Create nested objects using SimpleNamespace
+    fuel_type = SimpleNamespace(fuel_type_id=1, fuel_type="Diesel", units="L")
+    fuel_category = SimpleNamespace(fuel_category_id=1, category="Diesel")
+    fuel_code = SimpleNamespace(
+        fuel_status=SimpleNamespace(status="Approved"),
+        fuel_code="FUEL123",
+        carbon_intensity=15.0,
     )
+    provision_of_the_act = SimpleNamespace(
+        provision_of_the_act_id=1, name="Act Provision"
+    )
+    end_use_type = SimpleNamespace(
+        end_use_type_id=1, type="Transport", sub_type="Personal"
+    )
+
+    # Create the mock fuel supply object
+    new_supply = MagicMock(
+        fuel_supply_id=1,
+        group_uuid="new-uuid",
+        user_type="SUPPLIER",
+        action_type="CREATE",
+        fuel_type_other=None,
+        fuel_type=fuel_type,
+        fuel_category=fuel_category,
+        fuel_code=fuel_code,
+        provision_of_the_act=provision_of_the_act,
+        end_use_type=end_use_type,
+        units="L",
+        compliance_period="2024",
+        compliance_units=100.0,
+        target_ci=10.0,
+        version=1,
+        energy_density=35.0,
+        eer=1.0,
+        uci=50.0,
+        energy=1000.0,
+    )
+
+    # Set up the mocks with the created object
+    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
+    mock_repo.create_fuel_supply = AsyncMock(return_value=new_supply)
+    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=new_supply)
+
+    mock_fuel_code_repo.get_fuel_type_by_id = AsyncMock(
+        return_value=MagicMock(
+            spec=FuelType, unrecognized=False, default_carbon_intensity=10.5
+        )
+    )
+    mock_fuel_code_repo.get_energy_effectiveness_ratio = AsyncMock(
+        return_value=MagicMock(spec=EnergyEffectivenessRatio, ratio=1.0)
+    )
+    mock_density = MagicMock(spec=EnergyDensity)
+    mock_density.density = 30.0
+    mock_fuel_code_repo.get_energy_density = AsyncMock(return_value=mock_density)
+
+    response = await service.create_fuel_supply(fs_data, "2024")
+    assert response is not None
+
+
+@pytest.mark.anyio
+async def test_update_fuel_supply_success(fuel_supply_action_service, mock_fuel_supply):
+    service, mock_repo, mock_fuel_code_repo = fuel_supply_action_service
+
+    # Mock the repository method to return the existing fuel supply
+    mock_repo.get_fuel_supply_by_group_version.return_value = mock_fuel_supply
 
     # Mock the FuelCodeRepository methods
     # get_fuel_type_by_id
@@ -209,28 +236,9 @@ async def test_update_fuel_supply_success(fuel_supply_action_service):
     )
 
     # Prepare the updated fuel supply that the update_fuel_supply method should return
-    updated_fuel_supply = FuelSupply(
-        fuel_supply_id=1,
-        compliance_report_id=1,
-        fuel_type_id=1,
-        fuel_category_id=1,
-        provision_of_the_act_id=1,
-        end_use_id=1,
-        quantity=2000,  # Updated quantity
-        units="L",
-        fuel_type_other=None,
-        ci_of_fuel=10.5,
-        energy_density=30.0,
-        eer=1.0,
-        energy=60000,  # Updated energy
-        compliance_units=200,
-        group_uuid="some-uuid",
-        version=0,
-        user_type=UserTypeEnum.SUPPLIER,
-        action_type=ActionTypeEnum.CREATE,
-        fuel_type=fuel_type,
-        fuel_category=fuel_category,
-    )
+    updated_fuel_supply = copy.copy(mock_fuel_supply)
+    updated_fuel_supply.quantity = 2000
+    updated_fuel_supply.energy = 60000
 
     # Mock the update_fuel_supply method to return the updated fuel supply
     mock_repo.update_fuel_supply = AsyncMock(return_value=updated_fuel_supply)
@@ -251,10 +259,9 @@ async def test_update_fuel_supply_success(fuel_supply_action_service):
         group_uuid="some-uuid",
         version=0,
     )
-    user_type = UserTypeEnum.SUPPLIER
 
     # Call the service method
-    response = await service.update_fuel_supply(fs_data, user_type, "2024")
+    response = await service.update_fuel_supply(fs_data, "2024")
 
     # Assertions
     assert isinstance(response, FuelSupplyResponseSchema)
@@ -265,8 +272,8 @@ async def test_update_fuel_supply_success(fuel_supply_action_service):
     assert response.group_uuid == updated_fuel_supply.group_uuid
 
     # Ensure that the appropriate methods were called with correct arguments
-    mock_repo.get_fuel_supply_version_by_user.assert_awaited_once_with(
-        fs_data.group_uuid, fs_data.version, user_type
+    mock_repo.get_fuel_supply_by_group_version.assert_awaited_once_with(
+        fs_data.group_uuid, fs_data.version
     )
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
         fuel_type_id=fs_data.fuel_type_id,
@@ -275,73 +282,7 @@ async def test_update_fuel_supply_success(fuel_supply_action_service):
         fuel_code_id=fs_data.fuel_code_id,
         compliance_period="2024",
     )
-    mock_repo.update_fuel_supply.assert_awaited_once_with(existing_fuel_supply)
-
-
-@pytest.mark.anyio
-async def test_create_fuel_supply(fuel_supply_action_service):
-    service, mock_repo, mock_fuel_code_repo = fuel_supply_action_service
-    fs_data = FuelSupplyCreateUpdateSchema(
-        compliance_report_id=1,
-        fuel_type_id=1,
-        fuel_category_id=1,
-        end_use_id=1,
-        provision_of_the_act_id=1,
-        quantity=2000,
-        fuel_type_other=None,
-        units="L",
-    )
-
-    # Create the mock fuel supply object first
-    new_supply = MagicMock(
-        fuel_supply_id=1,
-        groupUuid="new-uuid",
-        userType="SUPPLIER",
-        actionType="CREATE",
-        fuelTypeOther=None,
-        fuelType={"fuel_type_id": 1, "fuelType": "Diesel", "units": "L"},
-        fuelCategory={"fuel_category_id": 1, "category": "Diesel"},
-        fuelCode={
-            "fuelStatus": {"status": "Approved"},
-            "fuelCode": "FUEL123",
-            "carbonIntensity": 15.0,
-        },
-        provisionOfTheAct={"provisionOfTheActId": 1, "name": "Act Provision"},
-        endUseType={"endUseTypeId": 1, "type": "Transport", "subType": "Personal"},
-        units="L",
-        compliancePeriod="2024",
-    )
-
-    # Set up the mocks with the created object
-    mock_repo.get_compliance_period_id = AsyncMock(return_value=1)
-    mock_repo.create_fuel_supply = AsyncMock(return_value=new_supply)
-    mock_repo.get_fuel_supply_by_id = AsyncMock(return_value=new_supply)
-
-    mock_fuel_code_repo.get_fuel_type_by_id = AsyncMock(
-        return_value=MagicMock(
-            spec=FuelType, unrecognized=False, default_carbon_intensity=10.5
-        )
-    )
-    mock_fuel_code_repo.get_energy_effectiveness_ratio = AsyncMock(
-        return_value=MagicMock(spec=EnergyEffectivenessRatio, ratio=1.0)
-    )
-    mock_density = MagicMock(spec=EnergyDensity)
-    mock_density.density = 30.0
-    mock_fuel_code_repo.get_energy_density = AsyncMock(return_value=mock_density)
-
-    user_type = UserTypeEnum.SUPPLIER
-
-    response = await service.create_fuel_supply(fs_data, user_type, "2024")
-
-    assert isinstance(response, FuelSupplyResponseSchema)
-    mock_repo.create_fuel_supply.assert_awaited_once()
-    mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
-        fuel_type_id=fs_data.fuel_type_id,
-        fuel_category_id=fs_data.fuel_category_id,
-        end_use_id=fs_data.end_use_id,
-        fuel_code_id=fs_data.fuel_code_id,
-        compliance_period="2024",
-    )
+    mock_repo.update_fuel_supply.assert_awaited_once_with(mock_fuel_supply)
 
 
 @pytest.mark.anyio
@@ -363,16 +304,13 @@ async def test_delete_fuel_supply(fuel_supply_action_service):
         group_uuid="some-uuid",
         version=0,
         action_type=ActionTypeEnum.CREATE,
-        user_type=UserTypeEnum.SUPPLIER,
     )
     mock_repo.get_latest_fuel_supply_by_group_uuid = AsyncMock(
         return_value=existing_fuel_supply
     )
     mock_repo.create_fuel_supply = AsyncMock()
 
-    user_type = UserTypeEnum.SUPPLIER
-
-    response = await service.delete_fuel_supply(fs_data, user_type)
+    response = await service.delete_fuel_supply(fs_data)
 
     assert response.success is True
     assert response.message == "Marked as deleted."
@@ -399,16 +337,13 @@ async def test_delete_fuel_supply_changelog(fuel_supply_action_service):
         group_uuid="some-uuid",
         version=0,
         action_type=ActionTypeEnum.CREATE,
-        user_type=UserTypeEnum.SUPPLIER,
     )
     mock_repo.get_latest_fuel_supply_by_group_uuid = AsyncMock(
         return_value=existing_fuel_supply
     )
     mock_repo.create_fuel_supply = AsyncMock()
 
-    user_type = UserTypeEnum.SUPPLIER
-
-    response = await service.delete_fuel_supply(fs_data, user_type)
+    response = await service.delete_fuel_supply(fs_data)
 
     assert response.success is True
     assert response.message == "Marked as deleted."

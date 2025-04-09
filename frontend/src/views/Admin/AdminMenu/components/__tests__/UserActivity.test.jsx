@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { UserActivity } from '../UserActivity'
 import { wrapper } from '@/tests/utils/wrapper'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

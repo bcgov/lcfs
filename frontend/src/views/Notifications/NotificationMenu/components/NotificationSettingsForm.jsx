@@ -25,12 +25,11 @@ import {
   notificationTypes,
   notificationChannels
 } from '@/constants/notificationTypes'
-import MailIcon from '@mui/icons-material/Mail'
-import NotificationsIcon from '@mui/icons-material/Notifications'
 import BCButton from '@/components/BCButton'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
 import BCTypography from '@/components/BCTypography'
+import { Mail, Notifications } from '@mui/icons-material'
 
 const NotificationSettingsForm = ({
   categories,
@@ -213,9 +212,7 @@ const NotificationSettingsForm = ({
                 }
               }}
             >
-              <MailIcon
-                sx={{ color: '#547D59', width: '22px', height: '22px' }}
-              />
+              <Mail sx={{ color: '#547D59', width: '22px', height: '22px' }} />
               <BCTypography variant="body2" sx={{ color: 'text.primary' }}>
                 {t('emailNotification')}
               </BCTypography>
@@ -233,7 +230,7 @@ const NotificationSettingsForm = ({
                 }
               }}
             >
-              <NotificationsIcon
+              <Notifications
                 sx={{ color: '#547D59', width: '22px', height: '22px' }}
               />
               <BCTypography variant="body2" sx={{ color: 'text.primary' }}>
@@ -261,7 +258,7 @@ const NotificationSettingsForm = ({
                             paddingTop: index === 0 ? 1 : 4
                           }}
                         >
-                          <MailIcon
+                          <Mail
                             style={{
                               color: '#547D59',
                               width: '22px',
@@ -278,7 +275,7 @@ const NotificationSettingsForm = ({
                             paddingTop: index === 0 ? 1 : 4
                           }}
                         >
-                          <NotificationsIcon
+                          <Notifications
                             style={{
                               color: '#547D59',
                               width: '22px',

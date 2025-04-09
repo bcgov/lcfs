@@ -24,7 +24,6 @@ export const TransferDetails = () => {
   const [showAdjustmentAlert, setShowAdjustmentAlert] = useState(false)
   const { data: balanceData } = useCurrentOrgBalance()
   const {
-    register,
     control,
     watch,
     formState: { errors }
@@ -56,14 +55,6 @@ export const TransferDetails = () => {
       setTotalValue(newTotalValue)
     }
   }, [quantity, pricePerUnit])
-
-  useEffect(() => {
-    if (quantity === availableBalance) {
-      setShowAdjustmentAlert(true)
-    } else if (quantity < availableBalance) {
-      setShowAdjustmentAlert(false)
-    }
-  }, [quantity, availableBalance])
 
   const renderError = (fieldName, sameAsField = null) => {
     // If the sameAsField is provided and is true, hide errors for this field
@@ -123,6 +114,7 @@ export const TransferDetails = () => {
                   const { floatValue } = values
                   if (floatValue > availableBalance) {
                     onChange(availableBalance)
+                    setShowAdjustmentAlert(true)
                     return
                   }
                   return (
@@ -133,8 +125,10 @@ export const TransferDetails = () => {
                   const newValue = values.floatValue || 0
                   if (newValue > availableBalance) {
                     onChange(availableBalance)
+                    setShowAdjustmentAlert(true)
                     return
                   }
+                  setShowAdjustmentAlert(false)
                   onChange(newValue)
                 }}
                 onBlur={onBlur}

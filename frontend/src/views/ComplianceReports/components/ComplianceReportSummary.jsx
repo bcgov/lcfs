@@ -1,19 +1,18 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Accordion,
-  AccordionSummary,
   AccordionDetails,
+  AccordionSummary,
   Stack
 } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
 import SummaryTable from './SummaryTable'
 import {
-  renewableFuelColumns,
   lowCarbonColumns,
-  nonComplianceColumns
+  nonComplianceColumns,
+  renewableFuelColumns
 } from './_schema'
 import {
   useGetComplianceReportSummary,
@@ -26,16 +25,19 @@ import Loading from '@/components/Loading'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { roles } from '@/constants/roles'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
+import { CompareReports } from '@/views/CompareReports/CompareReports.jsx'
+import { TogglePanel } from '@/components/TogglePanel.jsx'
+import { ExpandMore } from '@mui/icons-material'
 
 const ComplianceReportSummary = ({
   reportID,
   currentStatus,
+  canEdit,
   compliancePeriodYear,
   setIsSigningAuthorityDeclared,
   buttonClusterConfig,
   methods,
-  setHasMetRenewables,
-  setHasMetLowCarbon,
+  enableCompareMode,
   alertRef
 }) => {
   const [summaryData, setSummaryData] = useState(null)
@@ -47,23 +49,12 @@ const ComplianceReportSummary = ({
 
   const { hasRoles } = useCurrentUser()
 
-  const { data, isLoading, isError, error } =
+  const { data, isLoading, isError, error, isFetching } =
     useGetComplianceReportSummary(reportID)
   const { mutate: updateComplianceReportSummary } =
     useUpdateComplianceReportSummary(data?.complianceReportId, {
       onSuccess: (response) => {
         setSummaryData(response.data)
-        const renewablePenaltyAmount =
-          response.data?.nonCompliancePenaltySummary.find(
-            (line) => line.line === 11
-          )
-        const lowCarbonPenaltyAmount =
-          response.data?.nonCompliancePenaltySummary.find(
-            (line) => line.line === 21
-          )
-
-        setHasMetRenewables(renewablePenaltyAmount.totalValue <= 0)
-        setHasMetLowCarbon(lowCarbonPenaltyAmount.totalValue <= 0)
       },
       onError: (error) => {
         alertRef.current?.triggerAlert({
@@ -75,15 +66,6 @@ const ComplianceReportSummary = ({
   useEffect(() => {
     if (data) {
       setSummaryData(data)
-      const renewablePenaltyAmount = data?.nonCompliancePenaltySummary.find(
-        (line) => line.line === 11
-      )
-      const lowCarbonPenaltyAmount = data?.nonCompliancePenaltySummary.find(
-        (line) => line.line === 21
-      )
-
-      setHasMetRenewables(renewablePenaltyAmount.totalValue <= 0)
-      setHasMetLowCarbon(lowCarbonPenaltyAmount.totalValue <= 0)
       setHasRecords(data && data.canSign)
     }
     if (isError) {
@@ -92,7 +74,7 @@ const ComplianceReportSummary = ({
         severity: 'error'
       })
     }
-  }, [alertRef, data, error, isError, setHasMetRenewables, setHasMetLowCarbon])
+  }, [alertRef, data, error, isError])
 
   useEffect(() => {
     if (snapshotData) {
@@ -120,7 +102,7 @@ const ComplianceReportSummary = ({
     [summaryData, updateComplianceReportSummary]
   )
 
-  if (isLoading) {
+  if (isLoading || isFetching) {
     return <Loading message={t('report:summaryLoadingMsg')} />
   }
 
@@ -137,7 +119,7 @@ const ComplianceReportSummary = ({
       </BCTypography>
       <Accordion defaultExpanded>
         <AccordionSummary
-          expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
+          expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
           aria-controls="panel1-content"
         >
           <BCTypography color="primary" variant="h6" component="div">
@@ -145,36 +127,45 @@ const ComplianceReportSummary = ({
           </BCTypography>
         </AccordionSummary>
         <AccordionDetails>
-          <SummaryTable
-            data-test="renewable-summary"
-            title={t('report:renewableFuelTargetSummary')}
-            columns={
-              summaryData
-                ? renewableFuelColumns(
-                    t,
-                    summaryData?.renewableFuelTargetSummary,
-                    currentStatus === 'Draft',
-                    compliancePeriodYear
-                  )
-                : []
+          <TogglePanel
+            label="Compare mode"
+            disabled={!enableCompareMode}
+            onComponent={<CompareReports />}
+            offComponent={
+              <>
+                <SummaryTable
+                  data-test="renewable-summary"
+                  title={t('report:renewableFuelTargetSummary')}
+                  columns={
+                    summaryData
+                      ? renewableFuelColumns(
+                          t,
+                          summaryData?.renewableFuelTargetSummary,
+                          canEdit,
+                          compliancePeriodYear
+                        )
+                      : []
+                  }
+                  data={summaryData?.renewableFuelTargetSummary}
+                  onCellEditStopped={handleCellEdit}
+                  useParenthesis={true}
+                />
+                <SummaryTable
+                  data-test="low-carbon-summary"
+                  title={t('report:lowCarbonFuelTargetSummary')}
+                  columns={lowCarbonColumns(t)}
+                  data={summaryData?.lowCarbonFuelTargetSummary}
+                  width={'80.65%'}
+                />
+                <SummaryTable
+                  data-test="non-compliance-summary"
+                  title={t('report:nonCompliancePenaltySummary')}
+                  columns={nonComplianceColumns(t)}
+                  data={summaryData?.nonCompliancePenaltySummary}
+                  width={'80.65%'}
+                />
+              </>
             }
-            data={summaryData?.renewableFuelTargetSummary}
-            onCellEditStopped={handleCellEdit}
-            useParenthesis={true}
-          />
-          <SummaryTable
-            data-test="low-carbon-summary"
-            title={t('report:lowCarbonFuelTargetSummary')}
-            columns={lowCarbonColumns(t)}
-            data={summaryData?.lowCarbonFuelTargetSummary}
-            width={'80.65%'}
-          />
-          <SummaryTable
-            data-test="non-compliance-summary"
-            title={t('report:nonCompliancePenaltySummary')}
-            columns={nonComplianceColumns(t)}
-            data={summaryData?.nonCompliancePenaltySummary}
-            width={'80.65%'}
           />
           {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
             <>

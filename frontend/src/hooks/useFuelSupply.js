@@ -1,7 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCurrentUser } from './useCurrentUser'
+import { useMutation, useQuery } from '@tanstack/react-query'
 
 export const useFuelSupplyOptions = (params, options) => {
   const client = useApiService()
@@ -51,8 +50,6 @@ export const useGetFuelSuppliesList = (
 
 export const useSaveFuelSupply = (params, options) => {
   const client = useApiService()
-  const queryClient = useQueryClient()
-
   return useMutation({
     ...options,
     mutationFn: async (data) => {
@@ -62,16 +59,6 @@ export const useSaveFuelSupply = (params, options) => {
       }
 
       return await client.post(apiRoutes.saveFuelSupplies, modifedData)
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries([
-        'fuel-supplies',
-        params.complianceReportId
-      ])
-      queryClient.invalidateQueries([
-        'compliance-report-summary',
-        params.complianceReportId
-      ])
     }
   })
 }

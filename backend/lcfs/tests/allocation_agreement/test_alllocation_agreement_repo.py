@@ -1,17 +1,10 @@
-from datetime import date, timedelta
-from unittest.mock import AsyncMock, MagicMock, Mock
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
+from unittest.mock import AsyncMock, MagicMock, Mock
 
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
-from lcfs.db.models.compliance.AllocationTransactionType import (
-    AllocationTransactionType,
-)
-from lcfs.db.models.fuel import FuelType, ProvisionOfTheAct, FuelCode
-from lcfs.db.models.fuel.FuelCategory import FuelCategory
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
-from lcfs.web.api.allocation_agreement.schema import AllocationAgreementSchema
 
 
 @pytest.fixture
@@ -52,7 +45,6 @@ def create_mock_allocation_agreement():
         mock_agreement.group_uuid = data.get("group_uuid", "group-1")
         mock_agreement.version = data.get("version", 1)
         mock_agreement.action_type = data.get("action_type", ActionTypeEnum.CREATE)
-        mock_agreement.user_type = data.get("user_type", UserTypeEnum.SUPPLIER)
         mock_agreement.transaction_partner = data.get(
             "transaction_partner", "LCFS Org 2"
         )
@@ -108,7 +100,6 @@ async def test_get_latest_allocation_agreement_by_group_uuid(
 
     # Create mock records with different versions/user types
     mock_agreement_gov = MagicMock(spec=AllocationAgreement)
-    mock_agreement_gov.user_type = UserTypeEnum.GOVERNMENT
     mock_agreement_gov.version = 2
     mock_agreement_gov.action_type = ActionTypeEnum.UPDATE
 
@@ -125,7 +116,6 @@ async def test_get_latest_allocation_agreement_by_group_uuid(
         )
     )
 
-    assert result.user_type == UserTypeEnum.GOVERNMENT
     assert result.version == 2
     assert result.action_type == ActionTypeEnum.UPDATE
 
@@ -148,7 +138,7 @@ async def test_get_effective_allocation_agreements(
     mock_db_session.execute = AsyncMock(return_value=mock_result)
 
     result = await allocation_agreement_repo.get_effective_allocation_agreements(
-        "test-group-uuid"
+        "test-group-uuid", 1
     )
 
     # Verify the result
@@ -172,7 +162,6 @@ async def test_create_allocation_agreement(
             "group_uuid": "new-group",
             "version": 0,
             "action_type": ActionTypeEnum.CREATE,
-            "user_type": UserTypeEnum.SUPPLIER,
         }
     )
 

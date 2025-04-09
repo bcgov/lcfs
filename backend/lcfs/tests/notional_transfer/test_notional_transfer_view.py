@@ -3,19 +3,18 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from unittest.mock import MagicMock, AsyncMock, patch
 
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.models import ComplianceReport
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.tests.compliance_report.conftest import compliance_report_base_schema
+from lcfs.tests.notional_transfer.conftest import create_mock_schema
 from lcfs.web.api.base import ComplianceReportRequestSchema
+from lcfs.web.api.notional_transfer.schema import NotionalTransferTableOptionsSchema
 from lcfs.web.api.notional_transfer.schema import (
     PaginatedNotionalTransferRequestSchema,
     DeleteNotionalTransferResponseSchema,
-    NotionalTransferTableOptionsSchema,
 )
-from lcfs.web.api.notional_transfer.schema import NotionalTransferTableOptionsSchema
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
-from lcfs.tests.notional_transfer.conftest import create_mock_schema
 
 
 @pytest.fixture
@@ -148,13 +147,15 @@ async def test_save_notional_transfer_row_create(
 ):
     with patch(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
+        mock_validate_organization_access.return_value = ComplianceReport()
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_notional_transfer_row")
         payload = create_mock_schema({}).model_dump()
 
         mock_notional_transfer_service.create_notional_transfer.return_value = payload
-        mock_validate_organization_access.return_value = True
 
         fastapi_app.dependency_overrides[NotionalTransferServices] = (
             lambda: mock_notional_transfer_service
@@ -182,7 +183,10 @@ async def test_save_notional_transfer_row_update(
 ):
     with patch(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
+        mock_validate_organization_access.return_value = ComplianceReport()
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_notional_transfer_row")
         payload = create_mock_schema(
@@ -194,7 +198,6 @@ async def test_save_notional_transfer_row_update(
         ).model_dump()
 
         mock_notional_transfer_service.update_notional_transfer.return_value = payload
-        mock_validate_organization_access.return_value = True
 
         fastapi_app.dependency_overrides[NotionalTransferServices] = (
             lambda: mock_notional_transfer_service
@@ -222,7 +225,10 @@ async def test_save_notional_transfer_row_delete(
 ):
     with patch(
         "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
+        mock_validate_organization_access.return_value = ComplianceReport()
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = "/api/notional-transfers/save"
         mock_schema = create_mock_schema(
@@ -239,7 +245,6 @@ async def test_save_notional_transfer_row_delete(
                 message="Notional transfer deleted successfully"
             )
         )
-        mock_validate_organization_access.return_value = True
         mock_notional_transfer_validation.validate_compliance_report_id.return_value = (
             None
         )
@@ -257,7 +262,6 @@ async def test_save_notional_transfer_row_delete(
         data = response.json()
         assert data == {"message": "Notional transfer deleted successfully"}
 
-        # Adjusted to use UserTypeEnum.COMPLIANCE_REPORTING
         mock_notional_transfer_service.delete_notional_transfer.assert_called_once_with(
-            mock_schema, UserTypeEnum.SUPPLIER
+            mock_schema
         )

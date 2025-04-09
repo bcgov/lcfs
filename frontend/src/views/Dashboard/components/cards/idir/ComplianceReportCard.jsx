@@ -2,7 +2,7 @@ import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
 import { FILTER_KEYS } from '@/constants/common'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useComplianceReportCounts } from '@/hooks/useDashboard'
 import { List, ListItemButton, Stack } from '@mui/material'
@@ -35,12 +35,13 @@ export const ComplianceReportCard = () => {
         filter: [
           COMPLIANCE_REPORT_STATUSES.SUBMITTED,
           COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST,
-          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+          COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER,
+          COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
         ]
       }
     }
     sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, JSON.stringify(filter))
-    navigate(ROUTES.REPORTS)
+    navigate(ROUTES.REPORTS.LIST)
   }
 
   const renderLinkWithCount = (text, count, onClick) => {

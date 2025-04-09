@@ -1,8 +1,8 @@
+import { roles } from '@/constants/roles'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
-import { roles } from '@/constants/roles'
 
 export const useCompliancePeriod = (options) => {
   const client = useApiService()
@@ -57,7 +57,9 @@ export const useGetComplianceReport = (orgID, reportID, options) => {
   return useQuery({
     queryKey: ['compliance-report', reportID],
     queryFn: async () => {
-      return (await client.get(path)).data
+      const { data } = await client.get(path)
+
+      return data
     },
     ...options
   })
@@ -108,30 +110,47 @@ export const useUpdateComplianceReportSummary = (reportID, options) => {
 export const useUpdateComplianceReport = (reportID, options) => {
   const client = useApiService()
   const path = apiRoutes.updateComplianceReport.replace(':reportID', reportID)
+  const queryClient = useQueryClient()
 
   return useMutation({
     ...options,
     mutationFn: async (data) => {
       return await client.put(path, data)
+    },
+    onSettled: (data) => {
+      queryClient.setQueryData(['compliance-report', reportID], data.data)
     }
   })
 }
 
 export const useDeleteComplianceReport = (orgID, reportID, options) => {
   const client = useApiService()
+  const { hasRoles } = useCurrentUser()
   const queryClient = useQueryClient()
-  const path = apiRoutes.deleteSupplementalReport.replace(':orgID', orgID).replace(':reportID', reportID)
+  const path = (
+    hasRoles(roles.government)
+      ? apiRoutes.deleteComplianceReport
+      : apiRoutes.deleteSupplementalReport.replace(':orgID', orgID)
+  ).replace(':reportID', reportID)
+  const queriesToInvalidate = [
+    ['compliance-reports'],
+    ['allocation-agreements', reportID],
+    ['final-supply-equipments', reportID],
+    ['fuel-exports', reportID],
+    ['fuel-supplies', reportID],
+    ['other-uses', reportID]
+  ]
   return useMutation({
-    ...options,
     mutationFn: async () => {
       return await client.delete(path)
     },
     onSuccess: () => {
-      queryClient.invalidateQueries(['compliance-reports'])
-      if (options && options.onSuccess) {
-        options.onSuccess()
-      }
-    }
+      queriesToInvalidate.forEach((query) =>
+        queryClient.invalidateQueries(query)
+      )
+      options.onSuccess?.()
+    },
+    ...options
   })
 }
 
@@ -156,6 +175,27 @@ export const useCreateSupplementalReport = (reportID, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
   const path = apiRoutes.createSupplementalReport.replace(':reportID', reportID)
+
+  return useMutation({
+    mutationFn: () => client.post(path),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(['compliance-reports'])
+      if (options && options.onSuccess) {
+        options.onSuccess(data)
+      }
+    },
+    onError: (error) => {
+      if (options && options.onError) {
+        options.onError(error)
+      }
+    }
+  })
+}
+
+export const useCreateAnalystAdjustment = (reportID, options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const path = apiRoutes.createAnalystAdjustment.replace(':reportID', reportID)
 
   return useMutation({
     mutationFn: () => client.post(path),
@@ -210,5 +250,29 @@ export const useGetComplianceReportList = (
       }
     },
     ...options
+  })
+}
+
+export const useGetComplianceReportStatuses = (options) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['compliance-report-statuses'],
+    queryFn: async () =>
+      (await client.get(apiRoutes.getComplianceReportStatuses)).data,
+    ...options
+  })
+}
+
+export const useGetChangeLog = ({ complianceReportGroupUuid, dataType }) => {
+  const client = useApiService()
+  const path = apiRoutes.getChangelog
+    .replace(':complianceReportGroupUuid', complianceReportGroupUuid)
+    .replace(':dataType', dataType)
+  return useQuery({
+    queryKey: ['changelog', complianceReportGroupUuid, dataType],
+    queryFn: async () => {
+      const response = await client.get(path)
+      return response.data
+    }
   })
 }

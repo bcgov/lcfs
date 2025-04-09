@@ -1,23 +1,20 @@
 import math
 import uuid
-from typing import List, Union, Type
+from typing import List, Union, Literal
 
 import structlog
 from fastapi import Depends
+
 
 from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,
     SupplementalInitiatorType,
     ReportingFrequency,
 )
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
-from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
-from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.compliance.FuelExport import FuelExport
-from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.user import UserProfile
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
@@ -25,11 +22,28 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
     ComplianceReportListSchema,
+    ComplianceReportStatusSchema,
     ComplianceReportViewSchema,
 )
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
+from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
+from collections import defaultdict
+from typing import List
+
+from lcfs.web.api.compliance_report.dtos import (
+    ChangelogFuelSuppliesDTO,
+    ChangelogAllocationAgreementsDTO,
+    ChangelogFuelExportsDTO,
+    ChangelogNotionalTransfersDTO,
+    ChangelogOtherUsesDTO,
+)
+from lcfs.db.models.compliance.FuelExport import FuelExport
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 
 logger = structlog.get_logger(__name__)
 
@@ -97,6 +111,74 @@ class ComplianceReportServices:
         return ComplianceReportBaseSchema.model_validate(report)
 
     @service_handler
+    async def create_analyst_adjustment_report(
+        self, existing_report_id: int, user: UserProfile
+    ) -> ComplianceReportBaseSchema:
+        """
+        Creates a new analyst adjustment report.
+        The report_id can be any report in the series (original or supplemental).
+        Analyst adjustments are only allowed if the status of the current report is 'Submitted'.
+        """
+        # Fetch the current report using the provided report_id
+        current_report = await self.repo.get_compliance_report_by_id(
+            existing_report_id, is_model=True
+        )
+        if not current_report:
+            raise DataNotFoundException("Compliance report not found.")
+
+        # Validate that the status of the current report is 'Submitted'
+        if current_report.current_status.status != ComplianceReportStatusEnum.Submitted:
+            raise ServiceException(
+                "An analyst adjustment can only be created if the current report's status is 'Submitted'."
+            )
+
+        # Get the group_uuid from the current report
+        group_uuid = current_report.compliance_report_group_uuid
+
+        # Fetch the latest version number for the given group_uuid
+        latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
+        if not latest_report:
+            raise DataNotFoundException("Latest compliance report not found.")
+
+        new_version = latest_report.version + 1
+
+        analyst_adjustment_status = (
+            await self.repo.get_compliance_report_status_by_desc(
+                ComplianceReportStatusEnum.Analyst_adjustment.value
+            )
+        )
+        if not analyst_adjustment_status:
+            raise DataNotFoundException("Draft status not found.")
+
+        # Create the new supplemental compliance report
+        new_report = ComplianceReport(
+            compliance_period_id=current_report.compliance_period_id,
+            organization_id=current_report.organization_id,
+            current_status_id=analyst_adjustment_status.compliance_report_status_id,
+            reporting_frequency=current_report.reporting_frequency,
+            compliance_report_group_uuid=group_uuid,  # Use the same group_uuid
+            version=new_version,  # Increment the version
+            supplemental_initiator=SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
+            nickname=f"Government adjustment {new_version}",
+            summary=ComplianceReportSummary(),  # Create an empty summary object
+        )
+
+        # Add the new supplemental report
+        new_report = await self.repo.create_compliance_report(new_report)
+
+        # Snapshot the Organization Details
+        await self.snapshot_services.create_organization_snapshot(
+            new_report.compliance_report_id,
+            current_report.organization_id,
+            current_report.compliance_report_id,
+        )
+
+        # Create the history record for the new supplemental report
+        await self.repo.add_compliance_report_history(new_report, user)
+
+        return ComplianceReportBaseSchema.model_validate(new_report)
+
+    @service_handler
     async def create_supplemental_report(
         self, report_id: int, user: UserProfile = None, legacy_id: int = None
     ) -> ComplianceReportBaseSchema:
@@ -138,9 +220,29 @@ class ComplianceReportServices:
         new_version = latest_report.version + 1
 
         # Get the 'Draft' status
-        draft_status = await self.repo.get_compliance_report_status_by_desc("Draft")
+        draft_status = await self.repo.get_compliance_report_status_by_desc(
+            ComplianceReportStatusEnum.Draft.value
+        )
         if not draft_status:
             raise DataNotFoundException("Draft status not found.")
+
+        # Retrieve the assessed report for the current compliance period
+        assessed_report = await self.repo.get_assessed_compliance_report_by_period(
+            current_report.organization_id,
+            int(current_report.compliance_period.description),
+        )
+        if not assessed_report or not assessed_report.summary:
+            raise DataNotFoundException(
+                "Assessed report summary not found for the same period"
+            )
+
+        # Copy over the summary lines from the assessed report.
+        summary_data = {
+            column: getattr(assessed_report.summary, column)
+            for column in assessed_report.summary.__table__.columns.keys()
+            if any(column.startswith(f"line_{i}") for i in range(6, 10))
+        }
+        new_summary = ComplianceReportSummary(**summary_data)
 
         # Create the new supplemental compliance report
         new_report = ComplianceReport(
@@ -153,15 +255,17 @@ class ComplianceReportServices:
             version=new_version,  # Increment the version
             supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
             nickname=f"Supplemental report {new_version}",
-            summary=ComplianceReportSummary(),  # Create an empty summary object
+            summary=new_summary,
         )
 
         # Add the new supplemental report
         new_report = await self.repo.create_compliance_report(new_report)
 
-        # Snapshot the Organization Details
+        # Snapshot the organization details from the previous report
         await self.snapshot_services.create_organization_snapshot(
-            new_report.compliance_report_id, current_report.organization_id
+            new_report.compliance_report_id,
+            current_report.organization_id,
+            current_report.compliance_report_id,
         )
 
         # Create the history record for the new supplemental report
@@ -170,13 +274,13 @@ class ComplianceReportServices:
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
-    async def delete_supplemental_report(
-        self, report_id: int, user: UserProfile = None
-    ):
+    async def delete_compliance_report(self, report_id: int, user: UserProfile = None):
         """
-        Deletes a supplemental compliance report.
-        The report_id can be any report in the series (original or supplemental).
-        Supplemental reports are only allowed if the status of the current report is 'Draft'.
+        Deletes a compliance report.
+        - The report_id can be any report in the series (original or supplemental).
+        - Supplemental reports are only allowed if the status of the current report is 'Draft'.
+        - Compliance/Supplemental report that is in 'Analyst_adjustment / In Re-assessment
+          status then allow Gov users to delete the report.
         """
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(
@@ -186,30 +290,39 @@ class ComplianceReportServices:
             raise DataNotFoundException("Compliance report not found.")
 
         # Validate that the user has permission to delete a supplemental report
-        if user.organization_id != current_report.organization_id:
+        if (
+            user.organization_id is not None
+            and user.organization_id != current_report.organization_id
+        ) or (
+            user.organization_id is None
+            and not user_has_roles(user, [RoleEnum.GOVERNMENT])
+        ):
             raise ServiceException(
-                "You do not have permission to delete a supplemental report for this organization."
+                "You do not have permission to delete a this report."
             )
 
         # Validate that the status of the current report is 'Draft'
-        if current_report.current_status.status != ComplianceReportStatusEnum.Draft:
+        if current_report.current_status.status not in [
+            ComplianceReportStatusEnum.Draft,
+            ComplianceReportStatusEnum.Analyst_adjustment,
+        ]:
             raise ServiceException(
-                "A supplemental report can only be deleted if the status is 'Draft'."
+                "A supplemental report can only be deleted if the status is 'Draft/Analyst_adjustment'."
             )
 
-        # Delete the supplemental report
-        await self.repo.delete_supplemental_report(report_id)
+        # Delete the compliance report
+        await self.repo.delete_compliance_report(report_id)
         return True
 
     @service_handler
     async def get_compliance_reports_paginated(
         self,
         pagination,
-        organization_id: int = None,
-        bceid_user: bool = False,
+        user: UserProfile,
     ):
         """Fetches all compliance reports"""
-        if bceid_user:
+        is_bceid_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        if is_bceid_user:
             for filter in pagination.filters:
                 if (
                     filter.field == "status"
@@ -222,12 +335,9 @@ class ComplianceReportServices:
                         ComplianceReportStatusEnum.Submitted,
                     ]
 
-        reports, total_count = await self.repo.get_reports_paginated(
-            pagination, organization_id
-        )
+        reports, total_count = await self.repo.get_reports_paginated(pagination, user)
 
-        if bceid_user and reports:
-            reports = self._mask_report_status(reports)
+        reports = self._mask_report_status(reports, user)
 
         return ComplianceReportListSchema(
             pagination=PaginationResponseSchema(
@@ -239,39 +349,72 @@ class ComplianceReportServices:
             reports=reports,
         )
 
-    def _mask_report_status(self, reports: List) -> List:
-        for report in reports:
-            if isinstance(report, ComplianceReportViewSchema):
-                statuses = {
-                    ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
-                    ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
-                }
-                if report.report_status in statuses:
-                    report.report_status, report.report_status_id = (
-                        ComplianceReportStatusEnum.Submitted.value,
-                        None,
-                    )
-            elif isinstance(report, ComplianceReportBaseSchema):
-                statuses = {
-                    ComplianceReportStatusEnum.Recommended_by_analyst.value,
-                    ComplianceReportStatusEnum.Recommended_by_manager.value,
-                }
-                if report.current_status.status in statuses:
-                    (
-                        report.current_status.status,
-                        report.current_status.compliance_report_status_id,
-                    ) = (
-                        ComplianceReportStatusEnum.Submitted.value,
-                        None,
-                    )
+    def _mask_report_status(self, reports: List, user: UserProfile) -> List:
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+        is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
+
+        becid_only_statuses = {
+            ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
+            ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
+        }
+
+        becid_only_statuses_regular = {
+            ComplianceReportStatusEnum.Recommended_by_analyst.value,
+            ComplianceReportStatusEnum.Recommended_by_manager.value,
+        }
+
+        analyst_only_statuses = {
+            ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
+        }
+
+        analyst_only_statuses_regular = {
+            ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
+        }
+
+        if is_supplier:
+            for report in reports:
+                if isinstance(report, ComplianceReportViewSchema):
+                    if is_supplier and report.report_status in becid_only_statuses:
+                        report.report_status, report.report_status_id = (
+                            ComplianceReportStatusEnum.Submitted.value,
+                            None,
+                        )
+                    if not is_analyst and report.report_status in analyst_only_statuses:
+                        report.report_status, report.report_status_id = (
+                            ComplianceReportStatusEnum.Submitted.value,
+                            None,
+                        )
+                elif isinstance(report, ComplianceReportBaseSchema):
+                    if (
+                        is_supplier
+                        and report.current_status.status in becid_only_statuses_regular
+                    ):
+                        (
+                            report.current_status.status,
+                            report.current_status.compliance_report_status_id,
+                        ) = (
+                            ComplianceReportStatusEnum.Submitted.value,
+                            None,
+                        )
+                    if (
+                        not is_analyst
+                        and report.current_status.status
+                        in analyst_only_statuses_regular
+                    ):
+                        (
+                            report.current_status.status,
+                            report.current_status.compliance_report_status_id,
+                        ) = (
+                            ComplianceReportStatusEnum.Submitted.value,
+                            None,
+                        )
         return reports
 
     @service_handler
     async def get_compliance_report_by_id(
         self,
         report_id: int,
-        apply_masking: bool = False,
-        is_gov: bool = False,
+        user: UserProfile,
         get_chain: bool = False,
     ):
         """
@@ -282,47 +425,25 @@ class ComplianceReportServices:
             raise DataNotFoundException("Compliance report not found.")
 
         validated_report = ComplianceReportBaseSchema.model_validate(report)
-
-        # Remove 'Draft' entries from the report history
-        if is_gov:
-            validated_report = self._remove_draft_entries(validated_report)
-
-        masked_report = (
-            self._mask_report_status([validated_report])[0]
-            if apply_masking
-            else validated_report
-        )
+        masked_report = self._mask_report_status([validated_report], user)[0]
 
         history_masked_report = self._mask_report_status_for_history(
-            masked_report, apply_masking
+            masked_report, user
         )
 
         if get_chain:
             compliance_report_chain = await self.repo.get_compliance_report_chain(
-                report.compliance_report_group_uuid
+                report.compliance_report_group_uuid, report.version
             )
 
-            # Remove 'Draft' reports from the chain
-            compliance_report_chain = self._remove_draft_reports(
-                compliance_report_chain
-            )
-
-            # Remove 'Draft' entries from the report history
-            draft_cleaned_chain = []
-            for item in compliance_report_chain:
-                cleaned_item = self._remove_draft_entries(item)
-                if cleaned_item:
-                    draft_cleaned_chain.append(cleaned_item)
-
-            if apply_masking:
-                # Apply masking to each report in the chain
-                masked_chain = self._mask_report_status(draft_cleaned_chain)
-                # Apply history masking to each report in the chain
-                masked_chain = [
-                    self._mask_report_status_for_history(report, apply_masking)
-                    for report in masked_chain
-                ]
-                compliance_report_chain = masked_chain
+            # Apply masking to each report in the chain
+            masked_chain = self._mask_report_status(compliance_report_chain, user)
+            # Apply history masking to each report in the chain
+            masked_chain = [
+                self._mask_report_status_for_history(report, user)
+                for report in masked_chain
+            ]
+            compliance_report_chain = masked_chain
 
             return {
                 "report": history_masked_report,
@@ -332,30 +453,39 @@ class ComplianceReportServices:
         return history_masked_report
 
     def _mask_report_status_for_history(
-        self, report: ComplianceReportBaseSchema, apply_masking: bool = False
+        self, report: ComplianceReportBaseSchema, user: UserProfile
     ) -> ComplianceReportBaseSchema:
-        recommended_statuses = {
+        is_bceid = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+        bceid_only_status = {
             ComplianceReportStatusEnum.Recommended_by_analyst.value,
             ComplianceReportStatusEnum.Recommended_by_manager.value,
         }
         if (
-            apply_masking
+            not is_bceid
             or report.current_status.status
             == ComplianceReportStatusEnum.Submitted.value
         ):
             report.history = [
-                h for h in report.history if h.status.status not in recommended_statuses
+                h for h in report.history if h.status.status not in bceid_only_status
             ]
-        elif (
-            report.current_status.status
-            == ComplianceReportStatusEnum.Recommended_by_analyst.value
+
+        if (
+            not is_analyst
+            and report.current_status.status
+            == ComplianceReportStatusEnum.Analyst_adjustment.value
         ):
             report.history = [
                 h
                 for h in report.history
                 if h.status.status
-                != ComplianceReportStatusEnum.Recommended_by_manager.value
+                != ComplianceReportStatusEnum.Analyst_adjustment.value
             ]
+        report.history = [
+            h
+            for h in report.history
+            if h.status.status != ComplianceReportStatusEnum.Draft.value
+        ]
 
         return report
 
@@ -376,56 +506,6 @@ class ComplianceReportServices:
             except Exception:
                 result[key] = None
         return result
-
-    @service_handler
-    async def get_changelog_data(
-        self,
-        pagination: PaginationResponseSchema,
-        compliance_report_id: int,
-        selection: Type[
-            Union[
-                FuelSupply, OtherUses, NotionalTransfer, FuelExport, AllocationAgreement
-            ]
-        ],
-    ):
-        changelog, total_count = await self.repo.get_changelog_data(
-            pagination, compliance_report_id, selection
-        )
-
-        groups = {}
-        for record in changelog:
-            groups.setdefault(record.group_uuid, []).append(record)
-        for group in groups.values():
-            if len(group) == 2:
-                first, second = group
-                diff = {}
-                first_dict = self._model_to_dict(first)
-                second_dict = self._model_to_dict(second)
-                keys = set(first_dict.keys()).union(second_dict.keys())
-                for key in keys:
-                    if first_dict.get(key) != second_dict.get(key):
-                        diff[key] = True
-                setattr(first, "diff", diff)
-                setattr(second, "diff", diff)
-                # Identify older record by version and mark it as updated
-                if getattr(first, "version", 0) < getattr(second, "version", 0):
-                    setattr(first, "updated", True)
-                else:
-                    setattr(second, "updated", True)
-
-        changelog = [record for group in groups.values() for record in group]
-
-        return {
-            "pagination": PaginationResponseSchema(
-                total=total_count,
-                page=pagination.page,
-                size=pagination.size,
-                total_pages=(
-                    math.ceil(total_count / pagination.size) if pagination.size else 0
-                ),
-            ),
-            "changelog": changelog,
-        }
 
     def _remove_draft_entries(
         self, report: ComplianceReportBaseSchema
@@ -455,3 +535,188 @@ class ComplianceReportServices:
                 continue
             filtered.append(r)
         return filtered
+
+    @service_handler
+    async def get_compliance_report_statuses(
+        self, user: UserProfile
+    ) -> List[ComplianceReportStatusSchema]:
+        """
+        Fetches all compliance report statuses.
+        """
+        statuses = await self.repo.get_compliance_report_statuses()
+        if user_has_roles(user, [RoleEnum.GOVERNMENT]):
+            statuses = [
+                s
+                for s in statuses
+                if s.status not in [ComplianceReportStatusEnum.Draft]
+            ]
+        else:
+            statuses = [
+                s
+                for s in statuses
+                if s.status
+                not in [
+                    ComplianceReportStatusEnum.Recommended_by_analyst,
+                    ComplianceReportStatusEnum.Recommended_by_manager,
+                    ComplianceReportStatusEnum.Not_recommended_by_analyst,
+                    ComplianceReportStatusEnum.Not_recommended_by_manager,
+                    ComplianceReportStatusEnum.Analyst_adjustment,
+                ]
+            ]
+        return statuses
+
+    @service_handler
+    async def get_changelog_data(
+        self,
+        compliance_report_group_uuid: str,
+        data_type: Literal[
+            "fuel_supplies",
+            "fuel_exports",
+            "notional_transfers",
+            "other_uses",
+            "allocation_agreements",
+        ],
+    ) -> List:
+
+        data_map = {
+            "fuel_supplies": {
+                "model": FuelSupply,
+                "dto": ChangelogFuelSuppliesDTO,
+                "id_field": "fuel_supply_id",
+                "relationships": [
+                    ("fuel_supplies", "fuel_type"),
+                    ("fuel_supplies", "fuel_category"),
+                    ("fuel_supplies", "fuel_code"),
+                    ("fuel_supplies", "end_use_type"),
+                    ("fuel_supplies", "provision_of_the_act"),
+                ],
+            },
+            "fuel_exports": {
+                "model": FuelExport,
+                "dto": ChangelogFuelExportsDTO,
+                "id_field": "fuel_export_id",
+                "relationships": [
+                    ("fuel_exports", "fuel_type"),
+                    ("fuel_exports", "fuel_category"),
+                    ("fuel_exports", "fuel_code"),
+                    ("fuel_exports", "end_use_type"),
+                    ("fuel_exports", "provision_of_the_act"),
+                ],
+            },
+            "notional_transfers": {
+                "model": NotionalTransfer,
+                "dto": ChangelogNotionalTransfersDTO,
+                "id_field": "notional_transfer_id",
+                "relationships": [
+                    ("notional_transfers", "fuel_category"),
+                ],
+            },
+            "other_uses": {
+                "model": OtherUses,
+                "dto": ChangelogOtherUsesDTO,
+                "id_field": "other_uses_id",
+                "relationships": [
+                    ("other_uses", "fuel_type"),
+                    ("other_uses", "fuel_category"),
+                    ("other_uses", "fuel_code"),
+                    ("other_uses", "expected_use"),
+                    ("other_uses", "provision_of_the_act"),
+                ],
+            },
+            "allocation_agreements": {
+                "model": AllocationAgreement,
+                "dto": ChangelogAllocationAgreementsDTO,
+                "id_field": "allocation_agreement_id",
+                "relationships": [
+                    ("allocation_agreements", "allocation_transaction_type"),
+                    ("allocation_agreements", "fuel_type"),
+                    ("allocation_agreements", "fuel_category"),
+                    ("allocation_agreements", "fuel_code"),
+                    ("allocation_agreements", "provision_of_the_act"),
+                ],
+            },
+        }
+
+        if data_type not in data_map:
+            raise ValueError(f"Invalid data_type: {data_type}")
+
+        config = data_map[data_type]
+        dto = config["dto"]
+        id_field = config["id_field"]
+
+        reports = await self.repo.get_changelog_data(
+            compliance_report_group_uuid, config
+        )
+
+        if not reports or len(reports) == 0:
+            return []
+
+        group_map = defaultdict(dict)
+
+        for report in reports:
+            for data in getattr(report, data_type) or []:
+                group_map[data.group_uuid][data.version] = data
+
+        grouped_fs_reports = []
+
+        for report in reports:
+            seen_ids = set()
+            items = []
+
+            for data in getattr(report, data_type) or []:
+                items.append(data)
+                seen_ids.add(getattr(data, id_field))
+
+                if data.action_type == "UPDATE":
+                    prev = group_map[data.group_uuid].get(data.version - 1)
+                    if prev and getattr(prev, id_field) not in seen_ids:
+                        diff = []
+                        for key, value in data.__dict__.items():
+                            prev_value = getattr(prev, key, None)
+                            if prev_value != value:
+                                camel_case_key = key.split("_")[0] + "".join(
+                                    x.capitalize() for x in key.split("_")[1:]
+                                )
+                                diff.append(camel_case_key)
+
+                        prev.diff = diff
+                        prev.updated = True
+                        prev.action_type = "UPDATE"
+                        data.diff = diff
+
+                        items.append(prev)
+                        seen_ids.add(getattr(prev, id_field))
+
+            grouped_fs_reports.append(
+                dto(
+                    nickname=report.nickname,
+                    version=report.version,
+                    compliance_report_id=report.compliance_report_id,
+                    **{data_type: items},
+                )
+            )
+
+        latest_entries = {}
+
+        for group_uuid, versions in group_map.items():
+            latest_version = max(versions.keys())
+            latest_item = versions[latest_version]
+
+            if latest_item.action_type == "DELETE":
+                continue
+
+            latest_entries[group_uuid] = latest_item
+
+        latest_entries_list = list(latest_entries.values())
+
+        grouped_fs_reports.insert(
+            0,
+            dto(
+                nickname="Current State",
+                version=reports[0].version,
+                compliance_report_id=reports[0].compliance_report_id,
+                **{data_type: latest_entries_list},
+            ),
+        )
+
+        return grouped_fs_reports

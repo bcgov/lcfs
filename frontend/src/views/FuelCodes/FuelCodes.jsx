@@ -1,13 +1,13 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
-import { BCGridViewer2 } from '@/components/BCDataGrid/BCGridViewer2'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { DownloadButton } from '@/components/DownloadButton'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { useGetFuelCodes } from '@/hooks/useFuelCode'
 import { useApiService } from '@/services/useApiService'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
@@ -15,21 +15,15 @@ import withRole from '@/utils/withRole'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { Stack } from '@mui/material'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { fuelCodeColDefs } from './_schema'
-
-const initialPaginationOptions = {
-  page: 1,
-  size: 10,
-  sortOrders: [],
-  filters: []
-}
+import { defaultInitialPagination } from '@/constants/schedules.js'
 
 const FuelCodesBase = () => {
-  const ref = useRef(null)
+  const gridRef = useRef(null)
 
   const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
 
@@ -38,7 +32,7 @@ const FuelCodesBase = () => {
   const downloadButtonRef = useRef(null)
 
   const [paginationOptions, setPaginationOptions] = useState(
-    initialPaginationOptions
+    defaultInitialPagination
   )
 
   const apiService = useApiService()
@@ -76,7 +70,7 @@ const FuelCodesBase = () => {
     setIsDownloadingFuelCodes(true)
     setAlertMessage('')
     try {
-      await apiService.download(ROUTES.FUELCODES + '/export')
+      await apiService.download(ROUTES.FUEL_CODES.EXPORT)
       setIsDownloadingFuelCodes(false)
     } catch (error) {
       console.error('Error downloading fuel code information:', error)
@@ -87,8 +81,13 @@ const FuelCodesBase = () => {
   }
 
   const handleClearFilters = () => {
-    ref.current?.resetGrid()
-    setPaginationOptions(initialPaginationOptions)
+    setPaginationOptions({
+      ...paginationOptions,
+      filters: []
+    })
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
+    }
   }
 
   return (
@@ -120,7 +119,7 @@ const FuelCodesBase = () => {
               <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
             }
             data-test="new-fuel-code-btn"
-            onClick={() => navigate(ROUTES.FUELCODES_ADD)}
+            onClick={() => navigate(ROUTES.FUEL_CODES.ADD)}
           >
             <BCTypography variant="subtitle2">
               {t('fuelCode:newFuelCodeBtn')}
@@ -144,16 +143,16 @@ const FuelCodesBase = () => {
         />
       </Stack>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer2
-          ref={ref}
-          gridKey={'fuel-codes-grid'}
+        <BCGridViewer
+          gridRef={gridRef}
+          gridKey="fuel-codes-grid"
           columnDefs={fuelCodeColDefs(t)}
           getRowId={getRowId}
           overlayNoRowsTemplate={t('fuelCode:noFuelCodesFound')}
           defaultColDef={defaultColDef}
           queryData={queryData}
           dataKey="fuelCodes"
-          initialPaginationOptions={initialPaginationOptions}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

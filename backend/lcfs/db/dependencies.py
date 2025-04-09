@@ -1,5 +1,5 @@
-import logging
 from typing import AsyncGenerator
+import structlog
 
 from fastapi import Request
 from sqlalchemy import text
@@ -14,7 +14,7 @@ if settings.environment == "dev":
 
 db_url = make_url(str(settings.db_url.with_path(f"/{settings.db_base}")))
 async_engine = create_async_engine(db_url, future=True)
-logging.getLogger("sqlalchemy.engine").setLevel(logging.WARN)
+logger = structlog.get_logger("sqlalchemy.engine")
 
 
 async def set_user_context(session: AsyncSession, username: str):
@@ -25,7 +25,8 @@ async def set_user_context(session: AsyncSession, username: str):
         await session.execute(text(f"SET SESSION app.username = '{username}'"))
 
     except Exception as e:
-        logging.error(f"Failed to execute SET LOCAL app.user_id = '{username}': {e}")
+        structlog.get_logger().error(
+            f"Failed to execute SET LOCAL app.user_id = '{username}': {e}")
         raise e
 
 

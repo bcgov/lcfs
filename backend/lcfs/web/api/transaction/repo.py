@@ -5,10 +5,23 @@ from enum import Enum
 from typing import List, Optional
 
 from fastapi import Depends
-from sqlalchemy import exists, select, update, func, desc, asc, and_, case, or_, extract
+from sqlalchemy import (
+    exists,
+    select,
+    update,
+    func,
+    desc,
+    asc,
+    and_,
+    case,
+    or_,
+    extract,
+    delete,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models import ComplianceReport
 from lcfs.db.models.transaction.Transaction import Transaction, TransactionActionEnum
 from lcfs.db.models.transaction.TransactionStatusView import TransactionStatusView
 from lcfs.db.models.transaction.TransactionView import TransactionView
@@ -288,7 +301,6 @@ class TransactionRepository:
                 ).label("available_balance")
             ).where(Transaction.organization_id == organization_id)
         )
-        print("BALANCE: ", available_balance)
         return available_balance or 0
 
     @repo_handler
@@ -422,7 +434,9 @@ class TransactionRepository:
         result = await self.db.execute(
             update(Transaction)
             .where(Transaction.transaction_id == transaction_id)
-            .values(transaction_action=TransactionActionEnum.Adjustment)
+            .values(
+                transaction_action=TransactionActionEnum.Adjustment,
+            )
         )
         # Commit the update to make it permanent
         # await self.db.commit()
@@ -493,3 +507,15 @@ class TransactionRepository:
         )
 
         return oldest_year
+
+    @repo_handler
+    async def delete_transaction(self, transaction_id, attached_report_id):
+        """Deletes a transaction with the given ID"""
+        await self.db.execute(
+            update(ComplianceReport)
+            .where(ComplianceReport.compliance_report_id == attached_report_id)
+            .values(transaction_id=None)
+        )
+        await self.db.execute(
+            delete(Transaction).where(Transaction.transaction_id == transaction_id)
+        )

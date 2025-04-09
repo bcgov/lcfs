@@ -1,9 +1,9 @@
-import logging
 import re
 from datetime import datetime
 from decimal import Decimal
 from typing import List, Tuple, Dict, Optional, Union
 
+import structlog
 from fastapi import Depends
 from lcfs.utils.constants import LCFS_Constants
 from sqlalchemy import inspect
@@ -36,7 +36,8 @@ from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.utils.calculations import calculate_compliance_units
 
-logger = logging.getLogger(__name__)
+
+logger = structlog.get_logger(__name__)
 
 
 class ComplianceDataService:
@@ -395,8 +396,6 @@ class ComplianceReportSummaryService:
         self, report_id: int
     ) -> ComplianceReportSummarySchema:
         """Several fields on Report Summary are Transient until locked, this function will re-calculate fields as necessary"""
-        # TODO this method will have to be updated to handle supplemental reports
-
         # Fetch the compliance report details
         compliance_report = await self.repo.get_compliance_report_by_id(
             report_id, is_model=True
@@ -404,12 +403,12 @@ class ComplianceReportSummaryService:
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
 
-        prev_compliance_report = (
-            await self.repo.get_assessed_compliance_report_by_period(
+        prev_compliance_report = None
+        if not compliance_report.supplemental_initiator:
+            prev_compliance_report = await self.repo.get_assessed_compliance_report_by_period(
                 compliance_report.organization_id,
                 int(compliance_report.compliance_period.description) - 1,
             )
-        )
 
         summary_model = compliance_report.summary
         compliance_data_service.set_nickname(compliance_report.nickname)
@@ -454,9 +453,7 @@ class ComplianceReportSummaryService:
             }
 
         notional_transfers = (
-            await self.notional_transfer_service.get_notional_transfers(
-                report_id, False
-            )
+            await self.notional_transfer_service.get_notional_transfers(report_id)
         )
 
         notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
@@ -472,13 +469,17 @@ class ComplianceReportSummaryService:
                 notional_transfers_sums[normalized_category] -= transfer.quantity
 
         # Get effective fuel supplies using the updated logic
-        effective_fuel_supplies = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid
+        effective_fuel_supplies = (
+            await self.fuel_supply_repo.get_effective_fuel_supplies(
+                compliance_report.compliance_report_group_uuid,
+                compliance_report.compliance_report_id,
+            )
         )
 
         # Get effective other uses
         effective_other_uses = await self.other_uses_repo.get_effective_other_uses(
-            compliance_report_group_uuid=compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_id,
             return_model=True,
         )
 
@@ -533,12 +534,13 @@ class ComplianceReportSummaryService:
         existing_summary = self.convert_summary_to_dict(summary_model)
 
         fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
-            compliance_report.compliance_report_group_uuid
+            compliance_report.compliance_report_group_uuid,
+            compliance_report.compliance_report_id,
         )
 
         allocation_agreements = (
             await self.allocation_agreement_repo.get_allocation_agreements(
-                compliance_report_id=compliance_report.compliance_report_id
+                compliance_report.compliance_report_id
             )
         )
 
@@ -560,7 +562,7 @@ class ComplianceReportSummaryService:
 
         # Only save if summary has changed
         if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):
-            logger.debug(
+            logger.info(
                 f"Report has changed, updating summary for report {compliance_report.compliance_report_id}"
             )
             await self.repo.save_compliance_report_summary(summary)
@@ -785,16 +787,10 @@ class ComplianceReportSummaryService:
             compliance_period_start, compliance_period_end, organization_id
         )  # line 14
         compliance_units_prev_issued_for_fuel_supply = (
-            previous_summary.line_18_units_to_be_banked
-            + previous_summary.line_15_banked_units_used
-            if previous_summary
-            else 0
+            previous_summary.line_18_units_to_be_banked if previous_summary else 0
         )  # line 15
         compliance_units_prev_issued_for_fuel_export = (
-            previous_summary.line_19_units_to_be_exported
-            + previous_summary.line_16_banked_units_remaining
-            if previous_summary
-            else 0
+            previous_summary.line_19_units_to_be_exported if previous_summary else 0
         )  # line 16
         available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(
             organization_id, compliance_period_start.year
@@ -936,7 +932,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid
+            report.compliance_report_group_uuid, report.compliance_report_id
         )
 
         # Initialize compliance units sum
@@ -966,7 +962,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel export records
         fuel_export_records = await self.fuel_export_repo.get_effective_fuel_exports(
-            report.compliance_report_group_uuid
+            report.compliance_report_group_uuid, report.compliance_report_id
         )
 
         # Initialize compliance units sum

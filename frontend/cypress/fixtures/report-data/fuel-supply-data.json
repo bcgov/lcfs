@@ -20,15 +20,15 @@
       "fuelCategory": "Diesel",
       "endUseType": "Any",
       "provisionOfTheAct": "Default carbon intensity - section 19 (b) (ii)",
-      "quantity": 100000,
+      "quantity": 200000,
       "units": "L",
-      "complianceUnits": -79,
+      "complianceUnits": -159,
       "targetCi": 79.2792,
       "ciOfFuel": 100.21,
       "uci": null,
       "energyDensity": 37.89,
       "eer": 1.0,
-      "energy": 3789000.0
+      "energy": 7578000.0
     }
   ]
 }

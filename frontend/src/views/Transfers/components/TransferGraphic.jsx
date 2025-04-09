@@ -3,14 +3,12 @@ import { useTheme, Box, Paper } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 
 // MUI Icons
-import SyncAltIcon from '@mui/icons-material/SyncAlt'
-import TrendingFlatIcon from '@mui/icons-material/TrendingFlat'
-import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule'
 import { useFormContext } from 'react-hook-form'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useRegExtOrgs } from '@/hooks/useOrganizations'
 import { useParams } from 'react-router-dom'
 import { useTransfer } from '@/hooks/useTransfer'
+import { HorizontalRule, SyncAlt, TrendingFlat } from '@mui/icons-material'
 
 export const TransferGraphic = () => {
   const theme = useTheme()
@@ -51,7 +49,7 @@ export const TransferGraphic = () => {
   const renderIcon = () => {
     if (isNumberOfCreditsValid(quantity) && isTotalValueValid(totalValue)) {
       return (
-        <SyncAltIcon
+        <SyncAlt
           data-test="SyncAltIcon"
           color="primary"
           sx={{ ...iconSizeStyle, marginTop: '-20px', marginBottom: '-25px' }}
@@ -59,7 +57,7 @@ export const TransferGraphic = () => {
       )
     } else if (isNumberOfCreditsValid(quantity)) {
       return (
-        <TrendingFlatIcon
+        <TrendingFlat
           data-test="TrendingFlatIcon"
           color="primary"
           sx={{ ...iconSizeStyle, marginTop: '-37px' }}
@@ -67,7 +65,7 @@ export const TransferGraphic = () => {
       )
     } else {
       return (
-        <HorizontalRuleIcon
+        <HorizontalRule
           data-test="HorizontalRuleIcon"
           color="primary"
           sx={iconSizeStyle}

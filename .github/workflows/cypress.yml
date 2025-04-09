@@ -51,15 +51,16 @@ jobs:
         run: docker exec backend poetry run python /app/lcfs/db/seeders/seed_database.py
 
       - name: Build Frontend Service
-        run: docker build -t frontend-service -f ./frontend/Dockerfile.dev ./frontend -e DB_CYPRESS_PASS=development_only -e DB_CYPRESS_USER=lcfs
+        run: docker build -t frontend-service -f ./frontend/Dockerfile.dev ./frontend
 
       - name: Run Frontend Service
-        run: docker run -d --name frontend --network=host frontend-service
+        run: docker run -d --name frontend --network=host -e DB_CYPRESS_PASS=development_only -e DB_CYPRESS_USER=lcfs frontend-service
 
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
-          browser: chrome
+          headed: false
+          browser: electron
           wait-on: "http://localhost:3000"
           wait-on-timeout: 60
           record: false
@@ -77,7 +78,19 @@ jobs:
           CYPRESS_ORG1_BCEID_PASSWORD: ${{ secrets.ORG1_BCEID_PASSWORD }}
           CYPRESS_ORG2_BCEID_USERNAME: ${{ secrets.ORG2_BCEID_USERNAME }}
           CYPRESS_ORG2_BCEID_PASSWORD: ${{ secrets.ORG2_BCEID_PASSWORD }}
-
+          DB_CYPRESS_USER: ${{ secrets.DB_CYPRESS_USER }}
+          DB_CYPRESS_PASSWORD: ${{ secrets.DB_CYPRESS_PASSWORD }}
+          CYPRESS_BROWSER_ARGS: --no-sandbox
+      - name: Upload Cypress Artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-artifacts
+          path: |
+            frontend/cypress/screenshots
+            frontend/cypress/videos
+            frontend/cypress/reports
+        
       # Print backend logs if something goes wrong
       - name: Print backend logs
         if: failure()
@@ -93,3 +106,77 @@ jobs:
         run: |
           docker stop backend frontend
           docker rm backend frontend
+  teams-notification:
+    needs: cypress
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Determine Cypress Test Status
+        id: test_status
+        run: |
+          if [[ "${{ needs.cypress.result }}" == "cancelled" ]]; then
+            echo "status=cancelled" >> $GITHUB_OUTPUT
+            echo "theme_color=808080" >> $GITHUB_OUTPUT  # Gray
+          elif [[ "${{ needs.cypress.result }}" == "failure" ]]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "theme_color=FF0000" >> $GITHUB_OUTPUT  # Red
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "theme_color=00FF00" >> $GITHUB_OUTPUT  # Green
+          fi
+
+      - name: Send Teams notification
+        run: |
+          REPO="${{ github.repository }}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          COLOR="${{ steps.test_status.outputs.theme_color }}"
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M UTC")
+
+          STATUS="${{ steps.test_status.outputs.status }}"
+          if [[ "$STATUS" == "failure" ]]; then
+            STATUS_EMOJI="❌ Failed"
+          elif [[ "$STATUS" == "cancelled" ]]; then
+            STATUS_EMOJI="⚠️ Cancelled"
+          else
+            STATUS_EMOJI="✅ Passed"
+          fi
+
+          MESSAGE="**Cypress Daily Test Run**\n- **Status:** $STATUS_EMOJI\n- **Time:** $TIMESTAMP"
+
+
+          cat <<EOF > teams_card.json
+          {
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "themeColor": "$COLOR",
+            "summary": "Cypress Daily Test Result",
+            "sections": [
+              {
+                "activityTitle": "Cypress Daily Test Result",
+                "activitySubtitle": "Repository: $REPO",
+                "facts": [
+                  { "name": "Workflow", "value": "Cypress Daily" },
+                  { "name": "Status", "value": "$STATUS" },
+                  { "name": "Run Time", "value": "$TIMESTAMP" }
+                ],
+                "text": "$MESSAGE",
+                "markdown": true
+              }
+            ],
+            "potentialAction": [
+              {
+                "@type": "OpenUri",
+                "name": "View Workflow Run",
+                "targets": [
+                  {
+                    "os": "default",
+                    "uri": "$WORKFLOW_URL"
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+
+          curl -H "Content-Type: application/json" -d @teams_card.json "${{ secrets.TEAMS_WEBHOOK_URL }}"
+      

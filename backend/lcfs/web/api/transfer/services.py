@@ -1,44 +1,36 @@
 import json
+import structlog
+from datetime import datetime
+from fastapi import Depends, HTTPException
+from typing import List, Optional
+
+from lcfs.db.models import UserProfile
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.transfer.TransferCategory import TransferCategoryEnum
+from lcfs.db.models.transfer.TransferComment import TransferCommentSourceEnum
+from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.notification.schema import (
     TRANSFER_STATUS_NOTIFICATION_MAPPER,
     NotificationMessageSchema,
     NotificationRequestSchema,
 )
 from lcfs.web.api.notification.services import NotificationService
-import structlog
-from typing import List, Optional
-from fastapi import Depends, Request, HTTPException
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
-
-from lcfs.db.models.user.Role import RoleEnum
-from lcfs.web.api.transfer.validation import TransferValidation
-from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
-
-# models
-from lcfs.db.models.transfer.Transfer import Transfer
-from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
-from lcfs.db.models.transfer.TransferCategory import TransferCategoryEnum
-from lcfs.db.models.transfer.TransferComment import TransferCommentSourceEnum
-from lcfs.db.models.transaction.Transaction import TransactionActionEnum
-
-# services
+from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.organizations.services import OrganizationsService
-
-# schema
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.web.api.transfer.repo import TransferRepository
 from lcfs.web.api.transfer.schema import (
     CreateTransferHistorySchema,
     TransferCommentSchema,
     TransferSchema,
     TransferCreateSchema,
 )
-
-# repo
-from lcfs.web.api.organizations.repo import OrganizationsRepository
-from lcfs.web.api.transfer.repo import TransferRepository
-from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.web.api.transfer.validation import TransferValidation
+from lcfs.web.core.decorators import service_handler
+from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 logger = structlog.get_logger(__name__)
 
@@ -46,7 +38,6 @@ logger = structlog.get_logger(__name__)
 class TransferServices:
     def __init__(
         self,
-        request: Request = None,
         validate: TransferValidation = Depends(TransferValidation),
         repo: TransferRepository = Depends(TransferRepository),
         org_repo: OrganizationsRepository = Depends(OrganizationsRepository),
@@ -56,7 +47,6 @@ class TransferServices:
     ) -> None:
         self.validate = validate
         self.repo = repo
-        self.request = request
         self.org_repo = org_repo
         self.org_service = org_service
         self.transaction_repo = transaction_repo
@@ -80,19 +70,12 @@ class TransferServices:
             result_list.append(transfer_schema)
         return result_list
 
-    # @service_handler
-    # async def get_transfers_paginated(
-    #     self, page: int, size: int
-    # ) -> List[TransferSchema]:
-    #     transfers = await self.repo.get_transfers_paginated(page, size)
-    #     return [TransferSchema.model_validate(transfer) for transfer in transfers]
-
     @service_handler
-    async def get_transfer(self, transfer_id: int) -> TransferSchema:
+    async def get_transfer(self, user: UserProfile, transfer_id: int) -> TransferSchema:
         """Fetches a single transfer by its ID and converts it to a Pydantic model."""
         transfer = await self.repo.get_transfer_by_id(transfer_id)
         # Check if the current viewer is a gov user
-        is_government_viewer = user_has_roles(self.request.user, [RoleEnum.GOVERNMENT])
+        is_government_viewer = user_has_roles(user, [RoleEnum.GOVERNMENT])
         if not transfer or (
             is_government_viewer
             and transfer.current_status.status
@@ -100,10 +83,9 @@ class TransferServices:
                 TransferStatusEnum.Draft,
                 TransferStatusEnum.Sent,
             ]
-            or
-            (
-                transfer.current_status.status == TransferStatusEnum.Rescinded and
-                not any(
+            or (
+                transfer.current_status.status == TransferStatusEnum.Rescinded
+                and not any(
                     history.transfer_status.status == TransferStatusEnum.Submitted
                     and history.create_date < transfer.update_date
                     for history in transfer.transfer_history
@@ -148,7 +130,7 @@ class TransferServices:
 
         # Hide Recommended status to organizations or if the transfer is returned to analyst by the director and it is in Submitted status
         if (
-            self.request.user.organization is not None
+            user.organization is not None
             or transfer_view.current_status.status == TransferStatusEnum.Submitted.value
         ):
             if (
@@ -172,7 +154,7 @@ class TransferServices:
 
     @service_handler
     async def create_transfer(
-        self, transfer_data: TransferCreateSchema
+        self, transfer_data: TransferCreateSchema, user: UserProfile
     ) -> TransferSchema:
         """
         Handles creating a transfer, including creating a comment and any necessary
@@ -194,12 +176,10 @@ class TransferServices:
         current_status = await self.repo.get_transfer_status_by_name(
             transfer_data.current_status
         )
-        # TODO: Currenty by default category id is set to CATEGORY - A
-        # transfer.transfer_category_id = 1
 
         transfer.current_status = current_status
         if current_status.status == TransferStatusEnum.Sent:
-            await self.sign_and_send_from_supplier(transfer)
+            await self.sign_and_send_from_supplier(transfer, user)
 
         transfer = await self.repo.create_transfer(transfer)
 
@@ -231,17 +211,17 @@ class TransferServices:
                 transfer_history_id=None,
                 transfer_id=transfer.transfer_id,
                 transfer_status_id=current_status.transfer_status_id,
-                user_profile_id=self.request.user.user_profile_id,
-                display_name=(
-                    f"{self.request.user.first_name} {self.request.user.last_name}"
-                ),
+                user_profile_id=user.user_profile_id,
+                display_name=(f"{user.first_name} {user.last_name}"),
             )
         )
-        await self._perform_notification_call(transfer, current_status.status)
+        await self._perform_notification_call(transfer, current_status.status, user)
         return transfer
 
     @service_handler
-    async def update_transfer(self, transfer_data: TransferCreateSchema) -> Transfer:
+    async def update_transfer(
+        self, transfer_data: TransferCreateSchema, user: UserProfile
+    ) -> Transfer:
         """Updates an existing transfer record with new data."""
         new_status = await self.repo.get_transfer_status_by_name(
             transfer_data.current_status
@@ -315,21 +295,20 @@ class TransferServices:
             transfer.current_status = await self.repo.update_transfer_history(
                 transfer_id=transfer.transfer_id,
                 transfer_status_id=new_status.transfer_status_id,
-                user_profile_id=self.request.user.user_profile_id,
+                user_profile_id=user.user_profile_id,
             )
         # Update transfer history and handle status-specific actions if the status has changed
         if status_has_changed:
-            logger.debug(
+            logger.info(
                 f"Status change: \
                   {transfer.current_status.status} -> {new_status.status}"
             )
 
             # Matching the current status with enums directly is safer if they are comparable
             if new_status.status == TransferStatusEnum.Sent:
-                await self.sign_and_send_from_supplier(transfer)
+                await self.sign_and_send_from_supplier(transfer, user)
             elif new_status.status == TransferStatusEnum.Recorded:
-
-                await self.director_record_transfer(transfer)
+                await self.director_record_transfer(transfer, user)
             elif new_status.status in [
                 TransferStatusEnum.Declined,
                 TransferStatusEnum.Rescinded,
@@ -346,10 +325,8 @@ class TransferServices:
                     transfer_history_id=None,
                     transfer_id=transfer_data.transfer_id,
                     transfer_status_id=new_status.transfer_status_id,
-                    user_profile_id=self.request.user.user_profile_id,
-                    display_name=self.request.user.first_name
-                    + " "
-                    + self.request.user.last_name,
+                    user_profile_id=user.user_profile_id,
+                    display_name=user.first_name + " " + user.last_name,
                 )
             )
 
@@ -363,11 +340,15 @@ class TransferServices:
                 if status_has_changed or re_recommended
                 else "Return to analyst"
             ),
+            user=user,
         )
         return transfer_result
 
     async def _perform_notification_call(
-        self, transfer: TransferSchema, status: TransferStatusEnum
+        self,
+        transfer: TransferSchema,
+        status: TransferStatusEnum,
+        user: UserProfile,
     ):
         """Send notifications based on the current status of the transfer."""
         notifications = TRANSFER_STATUS_NOTIFICATION_MAPPER.get(status)
@@ -419,7 +400,7 @@ class TransferServices:
                 related_transaction_id=f"CT{transfer.transfer_id}",
                 message=json.dumps(message_data),
                 related_organization_id=org_id,
-                origin_user_profile_id=self.request.user.user_profile_id,
+                origin_user_profile_id=user.user_profile_id,
             )
             if notifications and isinstance(notifications, list):
                 await self.notfn_service.send_notification(
@@ -429,9 +410,8 @@ class TransferServices:
                     )
                 )
 
-    async def sign_and_send_from_supplier(self, transfer):
+    async def sign_and_send_from_supplier(self, transfer: Transfer, user: UserProfile):
         """Create reserved transaction to reserve compliance units for sending organization."""
-        user = self.request.user
         has_signing_role = user_has_roles(
             user, [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY]
         )
@@ -445,10 +425,8 @@ class TransferServices:
         )
         transfer.from_transaction = from_transaction
 
-    async def director_record_transfer(self, transfer: Transfer):
+    async def director_record_transfer(self, transfer: Transfer, user: UserProfile):
         """Confirm transaction for sending organization and create new transaction for receiving org."""
-
-        user = self.request.user
         has_director_role = user_has_roles(
             user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
         )
@@ -477,18 +455,23 @@ class TransferServices:
 
         if not hasattr(transfer.transfer_category, "category"):
             today = datetime.now()
-
-            diff = relativedelta(today, transfer.agreement_date)
+            diff_seconds = today.timestamp() - transfer.agreement_date.timestamp()
+            # Define approximate thresholds in seconds
+            ONE_DAY = 24 * 60 * 60
+            SIX_MONTHS = 6 * 30 * ONE_DAY
+            ONE_YEAR = 365 * ONE_DAY
 
             category = "A"
-            if (diff.years == 0 and diff.months >= 6 and diff.days > 1) or (
-                diff.years == 1 and diff.months == 0 and diff.days == 1
-            ):
+            if (diff_seconds >= SIX_MONTHS) and (diff_seconds < ONE_YEAR):
                 category = "B"
-            elif diff.years >= 1:
+            elif diff_seconds >= ONE_YEAR:
                 category = "C"
 
-            await self.update_category(transfer.transfer_id, category)
+            updated_transfer = await self.update_category(
+                transfer.transfer_id, category
+            )
+            updated_transfer.transaction_effective_date = datetime.now()
+            await self.repo.update_transfer(transfer)
 
         await self.repo.refresh_transfer(transfer)
 

@@ -78,7 +78,9 @@ async def get_fuel_supply(
                 pagination, compliance_report_id
             )
         else:
-            return await service.get_fuel_supply_list(compliance_report_id, request_data.changelog)
+            return await service.get_fuel_supply_list(
+                compliance_report_id, request_data.changelog
+            )
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
         raise http_ex
@@ -93,8 +95,7 @@ async def get_fuel_supply(
 
 @router.post(
     "/save",
-    response_model=Union[FuelSupplyResponseSchema,
-                         DeleteFuelSupplyResponseSchema],
+    response_model=Union[FuelSupplyResponseSchema, DeleteFuelSupplyResponseSchema],
     status_code=status.HTTP_201_CREATED,
 )
 @view_handler(
@@ -114,15 +115,8 @@ async def save_fuel_supply_row(
         compliance_report_id
     )
 
-    # Determine user type for record creation
-    current_user_type = request.user.user_type
-    if not current_user_type:
-        raise HTTPException(
-            status_code=403, detail="User does not have the required role."
-        )
     if request_data.deleted:
-        # Delete existing fuel supply row using actions service
-        return await action_service.delete_fuel_supply(request_data, current_user_type)
+        return await action_service.delete_fuel_supply(request_data)
     else:
         duplicate_id = await fs_validate.check_duplicate(request_data)
         await fs_validate.validate_other(request_data)
@@ -133,14 +127,12 @@ async def save_fuel_supply_row(
             # Update existing fuel supply row using actions service
             return await action_service.update_fuel_supply(
                 request_data,
-                current_user_type,
                 compliance_report.compliance_period.description,
             )
         else:
             # Create new fuel supply row using actions service
             return await action_service.create_fuel_supply(
                 request_data,
-                current_user_type,
                 compliance_report.compliance_period.description,
             )
 
