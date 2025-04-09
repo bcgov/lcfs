@@ -106,6 +106,68 @@ async def get_compliance_report_by_id(
     return result
 
 
+@router.put(
+    "/{report_id}",
+    response_model=ChainedComplianceReportSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(
+    [
+        RoleEnum.GOVERNMENT,
+        RoleEnum.COMPLIANCE_REPORTING,
+        RoleEnum.SIGNING_AUTHORITY,
+    ]
+)
+async def update_compliance_report(
+    request: Request,
+    report_id: int,
+    report_data: ComplianceReportUpdateSchema,
+    service: ComplianceReportServices = Depends(),
+    update_service: ComplianceReportUpdateService = Depends(),
+    validate: ComplianceReportValidation = Depends(),
+) -> ChainedComplianceReportSchema:
+    """Update an existing compliance report."""
+    await validate.validate_organization_access(report_id)
+    await update_service.update_compliance_report(report_id, report_data, request.user)
+
+    result = await service.get_compliance_report_by_id(report_id, request.user, True)
+    return result
+
+
+@router.post(
+    "/{report_id}/supplemental",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+async def create_supplemental_report(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+) -> ComplianceReportBaseSchema:
+    """
+    Create a supplemental compliance report.
+    """
+    return await service.create_supplemental_report(report_id, request.user)
+
+
+@router.post(
+    "/{report_id}/adjustment",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def create_government_adjustment(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+) -> ComplianceReportBaseSchema:
+    """
+    Create a government adjustment.
+    """
+    return await service.create_analyst_adjustment_report(report_id, request.user)
+
+
 @router.get(
     "/{report_id}/summary",
     response_model=ComplianceReportSummarySchema,
@@ -150,66 +212,6 @@ async def update_compliance_report_summary(
     return await summary_service.update_compliance_report_summary(
         report_id, summary_data
     )
-
-
-@router.put(
-    "/{report_id}",
-    response_model=ComplianceReportBaseSchema,
-    status_code=status.HTTP_200_OK,
-)
-@view_handler(
-    [
-        RoleEnum.GOVERNMENT,
-        RoleEnum.COMPLIANCE_REPORTING,
-        RoleEnum.SIGNING_AUTHORITY,
-    ]
-)
-async def update_compliance_report(
-    request: Request,
-    report_id: int,
-    report_data: ComplianceReportUpdateSchema,
-    update_service: ComplianceReportUpdateService = Depends(),
-    validate: ComplianceReportValidation = Depends(),
-) -> ComplianceReportBaseSchema:
-    """Update an existing compliance report."""
-    await validate.validate_organization_access(report_id)
-    return await update_service.update_compliance_report(
-        report_id, report_data, request.user
-    )
-
-
-@router.post(
-    "/{report_id}/supplemental",
-    response_model=ComplianceReportBaseSchema,
-    status_code=status.HTTP_201_CREATED,
-)
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
-async def create_supplemental_report(
-    request: Request,
-    report_id: int,
-    service: ComplianceReportServices = Depends(),
-) -> ComplianceReportBaseSchema:
-    """
-    Create a supplemental compliance report.
-    """
-    return await service.create_supplemental_report(report_id, request.user)
-
-
-@router.post(
-    "/{report_id}/adjustment",
-    response_model=ComplianceReportBaseSchema,
-    status_code=status.HTTP_201_CREATED,
-)
-@view_handler([RoleEnum.GOVERNMENT])
-async def create_government_adjustment(
-    request: Request,
-    report_id: int,
-    service: ComplianceReportServices = Depends(),
-) -> ComplianceReportBaseSchema:
-    """
-    Create a government adjustment.
-    """
-    return await service.create_analyst_adjustment_report(report_id, request.user)
 
 
 @router.post(
