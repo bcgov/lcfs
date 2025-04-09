@@ -56,12 +56,15 @@ export const Transactions = () => {
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
-  const [selectedOrgId, setSelectedOrgId] = useState(null)
+  const [selectedOrg, setSelectedOrg] = useState({
+    id: null,
+    label: null
+  })
 
   const queryData = useGetTransactionList(
     {
       ...paginationOptions,
-      selectedOrgId
+      selectedOrgId: selectedOrg?.id
     },
     {
       cacheTime: 0,
@@ -161,14 +164,14 @@ export const Transactions = () => {
   const getExportApiEndpoint = useCallback(() => {
     if (hasRoles(roles.supplier)) {
       return apiRoutes.exportOrgTransactions
-    } else if (selectedOrgId) {
+    } else if (selectedOrg.id) {
       return apiRoutes.exportFilteredTransactionsByOrg.replace(
         ':orgID',
-        selectedOrgId
+        selectedOrg?.id
       )
     }
     return apiRoutes.exportTransactions
-  }, [selectedOrgId, currentUser, hasRoles])
+  }, [selectedOrg, currentUser, hasRoles])
 
   const handleDownloadTransactions = async () => {
     setIsDownloadingTransactions(true)
@@ -194,6 +197,7 @@ export const Transactions = () => {
 
   const handleClearFilters = () => {
     setPaginationOptions(defaultInitialPagination)
+    setSelectedOrg({ organizationId: null, label: null })
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
     }
@@ -291,7 +295,10 @@ export const Transactions = () => {
         >
           <Role roles={govRoles}>
             <OrganizationList
-              onOrgChange={setSelectedOrgId}
+              selectedOrg={selectedOrg}
+              onOrgChange={({ id, label }) => {
+                setSelectedOrg({ id, label })
+              }}
               onlyRegistered={false}
             />
           </Role>

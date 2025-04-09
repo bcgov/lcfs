@@ -1,6 +1,6 @@
 import structlog
 from fastapi import Depends
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from typing import List, Optional, Tuple
@@ -59,7 +59,9 @@ class NotionalTransferRepository:
             return []
 
         result = await self.get_effective_notional_transfers(
-            group_uuid, compliance_report_id, changelog
+            compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
+            changelog=changelog
         )
         return result
 
@@ -164,7 +166,8 @@ class NotionalTransferRepository:
 
         # Retrieve effective notional transfers using the group UUID
         notional_transfers = await self.get_effective_notional_transfers(
-            group_uuid, compliance_report_id
+            compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
         )
 
         # Manually apply pagination
