@@ -3,9 +3,10 @@ from fastapi import Depends
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.schema import (
-    FuelTypeOptionsResponse,
     FuelTypeOptionsSchema,
 )
+from lcfs.web.api.public.schema import CreditsResultSchema
+from lcfs.web.utils.calculations import calculate_compliance_units
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.public.repo import PublicRepository
 from lcfs.web.core.decorators import service_handler
@@ -92,6 +93,7 @@ class PublicService:
         fuel_category_id: int,
         end_use_id: int,
         fuel_code_id: int,
+        quantity: int,
     ):
         # Fetch standardized fuel data
         fuel_data = await self.fuel_repo.get_standardized_fuel_data(
@@ -100,4 +102,25 @@ class PublicService:
             end_use_id=end_use_id,
             compliance_period=compliance_period,
             fuel_code_id=fuel_code_id,
+        )
+
+        compliance_units = calculate_compliance_units(
+            TCI=fuel_data.target_ci or 0,
+            EER=fuel_data.eer or 1,
+            RCI=fuel_data.effective_carbon_intensity or 0,
+            UCI=fuel_data.uci or 0,
+            Q=quantity,
+            ED=fuel_data.energy_density or 0,
+        )
+
+        # Return Credits result
+        return CreditsResultSchema(
+            rci=round(fuel_data.effective_carbon_intensity, 2),
+            tci=round(fuel_data.target_ci, 2),
+            eer=round(fuel_data.eer, 2),
+            energy_density=round(fuel_data.energy_density or 0, 2),
+            uci=fuel_data.uci,
+            quantity=quantity,
+            energy_content=(quantity * (fuel_data.energy_density or 0)),
+            compliance_units=round(compliance_units),
         )

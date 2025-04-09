@@ -146,5 +146,6 @@ export const apiRoutes = {
   // public endpoints
   getPublicCompliancePeriods: '/public/calculator/compliance-periods',
   getPublicFuelTypes: '/public/calculator/:complianceYear/',
-  getPublicFuelTypeOptions: '/public/calculator/:complianceYear/fuel-type-options/'
+  getPublicFuelTypeOptions: '/public/calculator/:complianceYear/fuel-type-options/',
+  getCalculatedComplianceUnits: '/public/calculator/:complianceYear/calculate/',
 }

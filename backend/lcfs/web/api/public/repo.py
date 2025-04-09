@@ -86,9 +86,9 @@ class PublicRepository:
                 FuelCategory.fuel_category_id == FuelInstance.fuel_category_id,
             )
             .where(FuelCategory.category == fuel_category)
-            .where(FuelType.is_legacy == is_legacy)
         )
-
+        if not is_legacy:
+            query = query.where(FuelType.is_legacy == False)
         if lcfs_only:
             query = query.where(and_(FuelType.renewable == False))
 
@@ -272,9 +272,9 @@ class PublicRepository:
         include_legacy = int(compliance_period) < int(
             LCFS_Constants.LEGISLATION_TRANSITION_YEAR
         )
-        if include_legacy:
+        if not include_legacy:
             query = query.where(
-                and_(FuelType.is_legacy == True, ProvisionOfTheAct.is_legacy == True)
+                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
             )
         if lcfs_only:
             query = query.where(and_(FuelType.renewable == False))

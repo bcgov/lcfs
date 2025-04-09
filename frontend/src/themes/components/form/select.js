@@ -12,6 +12,9 @@ const select = {
 
       '& .Mui-selected': {
         backgroundColor: transparent.main
+      },
+      '&.Mui-disabled': {
+        opacity: 0.8
       }
     },
 
@@ -20,6 +23,18 @@ const select = {
       height: 'none',
       minHeight: 'none',
       overflow: 'unset'
+    },
+    root: {
+      '&.Mui-disabled': {
+        '& .MuiOutlinedInput-notchedOutline': {
+          borderColor: colors.grey[300]
+        }
+      },
+      '&.Mui-disabled:hover': {
+        '& .MuiOutlinedInput-notchedOutline': {
+          borderColor: colors.grey[400]
+        }
+      }
     }
   }
 }

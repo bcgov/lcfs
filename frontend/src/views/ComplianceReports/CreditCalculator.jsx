@@ -24,28 +24,18 @@ import BCButton from '@/components/BCButton'
 import { BCFormRadio } from '@/components/BCForm'
 import { NumericFormat } from 'react-number-format'
 import {
+  useCalculateComplianceUnits,
   useGetCompliancePeriodList,
   useGetFuelTypeList,
   useGetFuelTypeOptions
 } from '@/hooks/usePublic'
 import Loading from '@/components/Loading'
-import { FUEL_CATEGORIES } from '@/constants/common'
-
-// Constants moved outside the component for better performance and readability
-const FUEL_CODES = [
-  { value: 'BCLCF999.0', label: 'BCLCF999.0' },
-  { value: 'BCLCF123.4', label: 'BCLCF123.4' }
-]
-const CARBON_INTENSITY_METHODS = [
-  {
-    value: 'Fuel code - section 19 (b) (i)',
-    label: 'Fuel code - section 19 (b) (i)'
-  },
-  {
-    value: 'Fuel code - section 19 (b) (ii)',
-    label: 'Fuel code - section 19 (b) (ii)'
-  }
-]
+import {
+  FUEL_CATEGORIES,
+  LEGISLATION_TRANSITION_YEAR
+} from '@/constants/common'
+import { numberFormatter } from '@/utils/formatters'
+import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 
 export const CreditCalculator = () => {
   const { t } = useTranslation(['report'])
@@ -62,12 +52,10 @@ export const CreditCalculator = () => {
       label: option
     }))
   }, [t])
+  const { data: orgBalance } = useCurrentOrgBalance()
   // Fetch compliance periods from API
-  const {
-    data: compliancePeriods,
-    isLoading: isLoadingPeriods,
-    isFetched
-  } = useGetCompliancePeriodList()
+  const { data: compliancePeriods, isLoading: isLoadingPeriods } =
+    useGetCompliancePeriodList()
 
   // Transform compliance periods data for select input
   const formattedCompliancePeriods = useMemo(() => {
@@ -110,10 +98,13 @@ export const CreditCalculator = () => {
   const methods = useForm({
     defaultValues: {
       complianceYear: String(defaultCompliancePeriod),
-      fuelRequirement: fuelRequirementOptions[0].value,
+      fuelRequirement:
+        fuelRequirementOptions.length > 0
+          ? fuelRequirementOptions[0].value
+          : '',
       fuelType: '',
       fuelCode: '',
-      carbonIntensityMethod: 0,
+      provisionOfTheAct: 0,
       quantity: 0,
       fuelCategory: '',
       endUseType: ''
@@ -133,6 +124,8 @@ export const CreditCalculator = () => {
   const complianceYear = watchedValues.complianceYear
   const fuelCategory = watchedValues.fuelCategory
   const fuelRequirement = watchedValues.fuelRequirement
+  const endUseType = watchedValues.endUseType
+  const provisionOfTheAct = watchedValues.provisionOfTheAct
 
   // State for selected items from lists
   const [selectedFuelType, setSelectedFuelType] = useState()
@@ -172,15 +165,6 @@ export const CreditCalculator = () => {
     )
   }, [fuelTypeListData])
 
-  const fuelCodeOptions = useMemo(() => {
-    return (
-      selectedFuel?.fuelCodes?.map((fc) => ({
-        value: fc.fuelCode,
-        label: fc.fuelCode
-      })) || []
-    )
-  }, [selectedFuel])
-
   // Fetch fuel supply options based on compliance period
   const {
     data: fuelTypeOptions,
@@ -191,7 +175,7 @@ export const CreditCalculator = () => {
       complianceYear,
       fuelCategoryId: selectedFuelObj?.fuelCategoryId,
       fuelTypeId: selectedFuelObj?.fuelTypeId,
-      lcfs_only: fuelRequirement === 'Low carbon fuel requirement only'
+      lcfsOnly: fuelRequirement === 'Low carbon fuel requirement only'
     },
     {
       enabled:
@@ -217,68 +201,79 @@ export const CreditCalculator = () => {
     return Array.from(uniqueEndUses.values()).length
       ? Array.from(uniqueEndUses.values())
       : undefined
-  }, [fuelTypeOptions, selectedFuelType])
+  }, [fuelTypeOptions])
 
   // Get unit based on selected fuel
   const unit = useMemo(() => {
-    return selectedFuel?.unit || 'kWh'
-  }, [selectedFuel])
+    return fuelTypeOptions?.data?.unit || ''
+  }, [fuelTypeOptions])
 
   // Apply fuel type and end use selection to form
   useEffect(() => {
     if (selectedFuelType) {
       setValue('fuelType', selectedFuelType)
+      // Clear dependent fields
+      setValue('endUseType', '')
+      setValue('provisionOfTheAct', '')
+      setValue('fuelCode', '')
+      setValue('quantity', 0)
+      setSelectedEndUse(undefined)
     }
+  }, [selectedFuelType, setValue, fuelCategory])
+
+  useEffect(() => {
     if (selectedEndUse) {
       setValue('endUseType', selectedEndUse)
+      setValue('provisionOfTheAct', '')
+      setValue('fuelCode', '')
+      setValue('quantity', 0)
     }
-  }, [selectedFuelType, selectedEndUse, setValue, fuelCategory])
+  }, [selectedEndUse, setValue])
 
   // Calculate credits when form values change
-  const calculateCredits = async (data) => {
-    try {
-      const payload = {
-        quantity: Number(data.quantity),
-        unit,
-        fuelType: data.fuelType,
-        fuelCode: data.fuelCode,
-        carbonIntensityMethod: data.carbonIntensityMethod,
-        fuelCategory: data.fuelCategory,
-        endUseType: data.endUseType,
-        compliancePeriod: data.complianceYear
-      }
+  const fuelTypeId = selectedFuelObj?.fuelTypeId
+  const fuelCategoryId = selectedFuelObj?.fuelCategoryId
+  const endUseId = fuelTypeOptions?.data?.eerRatios?.find(
+    (e) => e.endUseType?.type === endUseType
+  )?.endUseType?.endUseTypeId
 
-      const result = await fetch('/api/credit-calculation', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-
-      if (!result.ok) {
-        throw new Error('Failed to calculate credits')
-      }
-
-      const json = await result.json()
-      setCalculatedResults(json)
-    } catch (err) {
-      console.error('Failed to calculate credits', err)
-      // Here you might want to add error handling UI feedback
-    }
-  }
-
-  const onSubmit = handleSubmit(calculateCredits)
+  const {
+    data: calculatedData,
+    isFetching: isCalculating,
+    error: calcError
+  } = useCalculateComplianceUnits({
+    compliancePeriod: complianceYear,
+    fuelCategoryId,
+    fuelTypeId,
+    endUseId,
+    quantity: Number(watchedValues.quantity),
+    fuelCodeId: fuelTypeOptions?.data?.fuelCodes?.find(
+      (f) => f.fuelCode === watchedValues.fuelCode
+    )?.fuelCodeId,
+    enabled:
+      !!complianceYear &&
+      !!fuelCategoryId &&
+      !!fuelTypeId &&
+      !!endUseId &&
+      !!watchedValues.quantity &&
+      (watchedValues.provisionOfTheAct !== 'Fuel code - section 19 (b) (i)' ||
+        !!watchedValues.fuelCode)
+  })
 
   // Handle form reset
   const handleClear = () => {
     reset({
       complianceYear: String(defaultCompliancePeriod),
-      fuelRequirement: fuelRequirementOptions[0].value,
-      fuelType: FUEL_CATEGORIES[0],
-      fuelCode: FUEL_CODES[0].value,
-      carbonIntensityMethod: CARBON_INTENSITY_METHODS[0].value,
-      quantity: '100000',
+      fuelRequirement:
+        fuelRequirementOptions.length > 0
+          ? fuelRequirementOptions[0].value
+          : '',
+      fuelType: undefined,
+      fuelCode: undefined,
+      provisionOfTheAct: undefined,
+      quantity: 0,
       fuelCategory: '',
-      endUseType: ''
+      endUseType: undefined
     })
     setSelectedFuelType()
     setSelectedEndUse()
@@ -305,33 +300,52 @@ export const CreditCalculator = () => {
     )
   }
 
-  if (isLoadingPeriods || isFuelTypeListLoading) {
+  // Extracted result data for display (would come from API response)
+  const resultData = useMemo(() => {
+    const fallback = {
+      credits: 0,
+      availableUnits: 0,
+      previousUnits: 0,
+      formulaValues: {
+        carbonIntensity: 0,
+        eer: 0,
+        ci: 0,
+        uci: 0,
+        energyContent: 0,
+        energyDensity: 0
+      },
+      formulaDisplay: '0 = (0 * 0 - (0 + N/A)) * 0 / 1,000,000'
+    }
+
+    if (!calculatedData?.data) return fallback
+
+    return {
+      credits: calculatedData?.data.complianceUnits ?? 0,
+      availableUnits: numberFormatter(
+        orgBalance?.totalBalance + calculatedData?.data.complianceUnits
+      ),
+      previousUnits: numberFormatter(orgBalance?.totalBalance ?? 0),
+      formulaValues: {
+        carbonIntensity: calculatedData?.data.tci ?? 0,
+        eer: calculatedData?.data.eer.toFixed(2) ?? 0,
+        ci: calculatedData?.data.rci ?? 0,
+        uci: calculatedData?.data.uci ?? 0,
+        energyContent: numberFormatter(calculatedData?.data.energyContent ?? 0),
+        energyDensity: `${calculatedData?.data.energyDensity ?? 0} ${fuelTypeOptions?.data?.energyDensity?.unit?.name}`
+      },
+      formulaDisplay: `${(calculatedData?.data.complianceUnits ?? 0).toLocaleString()} = (${calculatedData?.data.tci ?? 0} * ${calculatedData?.data.eer ?? 0} - (${calculatedData?.data.rci ?? 0} + ${calculatedData?.data.uci || 'N/A'})) * ${numberFormatter(calculatedData?.data.energyContent ?? 0)} / 1,000,000`
+    }
+  }, [calculatedData?.data, fuelTypeOptions?.data?.energyDensity?.unit?.name])
+
+  if (isLoadingPeriods) {
     return <Loading />
   }
-
-  // Extracted result data for display (would come from API response)
-  const resultData = calculatedResults || {
-    credits: 888888,
-    availableUnits: 51255,
-    previousUnits: 51154,
-    formulaValues: {
-      ci: 88.83,
-      eer: 88.83,
-      carbonIntensity: 88.83,
-      energyDensity: 88.83,
-      energyContent: 88.83,
-      fuelClass: 88.83
-    },
-    formulaDisplay:
-      '888,888 = (78.68 * 3.9 - (12.14 + N/A)) * 360,000 / 1,000,000'
-  }
-
   return (
     <BCBox
       sx={{
         '& .MuiCardContent-root': { padding: '0 !important', margin: 0 },
         '& .MuiFormLabel-root': {
-          transform: 'translate(-2px, -32px) scale(1)'
+          transform: 'translate(-0px, -32px) scale(1) !important'
         }
       }}
     >
@@ -428,7 +442,7 @@ export const CreditCalculator = () => {
                     orientation="horizontal"
                     sx={{ maxWidth: '18rem', borderColor: 'rgba(0,0,0,1)' }}
                   />
-                  {/* Fuel Category} */}
+                  {/* Fuel Category */}
                   <BCFormRadio
                     name="fuelCategory"
                     control={control}
@@ -457,6 +471,7 @@ export const CreditCalculator = () => {
                         pl: 2
                       }}
                     >
+                      {isFuelTypeListLoading && <Loading />}
                       {fuelTypes?.length > 0 &&
                         fuelTypes?.map(({ label, value }) => (
                           <ListItemButton
@@ -526,6 +541,7 @@ export const CreditCalculator = () => {
                         pl: 2
                       }}
                     >
+                      {isLoadingFuelOptions && <Loading />}
                       {endUses &&
                         endUses?.map((use) => (
                           <ListItemButton
@@ -588,20 +604,24 @@ export const CreditCalculator = () => {
                   </Grid>
                 </Grid>
 
-                <Stack direction="row" spacing={2} mt={2}>
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  mt={2}
+                  sx={{
+                    justifyContent: 'flex-start',
+                    position: 'absolute',
+                    bottom: 30,
+                    left: 30
+                  }}
+                >
+                  {/* Clear button */}
                   <BCButton
                     variant="outlined"
                     color="primary"
                     onClick={handleClear}
                   >
                     Clear
-                  </BCButton>
-                  <BCButton
-                    variant="contained"
-                    color="primary"
-                    onClick={onSubmit}
-                  >
-                    Calculate
                   </BCButton>
                 </Stack>
               </Grid>
@@ -612,10 +632,11 @@ export const CreditCalculator = () => {
                 sx={{ m: 0, pt: 2, backgroundColor: colors.background.grey }}
               >
                 <Stack direction={'row'} spacing={4} m={4} mb={0} ml={10}>
+                  {/* Provision of the act */}
                   <FormControl
                     sx={{
-                      width: '350px',
-                      height: '40px',
+                      width: '28rem',
+                      height: '2.5rem',
                       '.MuiOutlinedInput-root': {
                         height: '100%'
                       },
@@ -627,7 +648,7 @@ export const CreditCalculator = () => {
                     }}
                   >
                     <InputLabel
-                      htmlFor="carbon-intensity-method"
+                      htmlFor="provision-of-the-act"
                       component="label"
                       className="form-label"
                       shrink
@@ -637,14 +658,15 @@ export const CreditCalculator = () => {
                       </BCTypography>
                     </InputLabel>
                     <Controller
-                      name="carbonIntensityMethod"
+                      name="provisionOfTheAct"
                       control={control}
                       render={({ field }) => (
                         <Select
-                          id="carbon-intensity-method"
-                          labelId="carbon-intensity-method-select-label"
+                          id="provision-of-the-act"
+                          labelId="provision-of-the-act-select-label"
                           {...field}
-                          error={!!errors.carbonIntensityMethod}
+                          error={!!errors.provisionOfTheAct}
+                          disabled={!endUseType}
                           displayEmpty
                           MenuProps={{
                             sx: {
@@ -660,16 +682,22 @@ export const CreditCalculator = () => {
                             }
                           }}
                         >
-                          {CARBON_INTENSITY_METHODS.map((method) => (
-                            <MenuItem key={method.value} value={method.value}>
-                              {method.label}
-                            </MenuItem>
-                          ))}
+                          {fuelTypeOptions?.data?.provisions?.map(
+                            (provision) => (
+                              <MenuItem
+                                key={provision.provisionOfTheActId}
+                                value={provision.name}
+                              >
+                                {provision.name}
+                              </MenuItem>
+                            )
+                          )}
                         </Select>
                       )}
                     />
-                    {renderError('carbonIntensityMethod')}
+                    {renderError('provisionOfTheAct')}
                   </FormControl>
+                  {/* Fuel Code */}
                   <FormControl
                     sx={{
                       width: '240px',
@@ -703,6 +731,11 @@ export const CreditCalculator = () => {
                           labelId="fuel-code-select-label"
                           {...field}
                           error={!!errors.fuelCode}
+                          disabled={
+                            !endUseType ||
+                            provisionOfTheAct !==
+                              'Fuel code - section 19 (b) (i)'
+                          }
                           displayEmpty
                           MenuProps={{
                             sx: {
@@ -718,9 +751,12 @@ export const CreditCalculator = () => {
                             }
                           }}
                         >
-                          {fuelCodeOptions.map((code) => (
-                            <MenuItem key={code.value} value={code.value}>
-                              {code.label}
+                          {fuelTypeOptions?.data?.fuelCodes?.map((code) => (
+                            <MenuItem
+                              key={code.fuelCodeId}
+                              value={code.fuelCode}
+                            >
+                              {code.fuelCode}
                             </MenuItem>
                           ))}
                         </Select>
@@ -737,15 +773,16 @@ export const CreditCalculator = () => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     mx: 'auto',
-                    maxWidth: '12rem'
+                    maxWidth: '12rem',
+                    transform: 'translate(0px, 24px) scale(1) !important'
                   }}
                 >
+                  {/* quantity */}
                   <InputLabel
                     htmlFor="quantity"
                     sx={{
                       pb: 1,
-                      maxWidth: '240px',
-                      transform: 'translate(0px, 0px) scale(1) !important'
+                      maxWidth: '240px'
                     }}
                   >
                     <BCTypography
@@ -756,7 +793,8 @@ export const CreditCalculator = () => {
                         flexDirection: 'column',
                         alignItems: 'center',
                         mx: 'auto',
-                        color: '#313132'
+                        color: '#313132',
+                        transform: 'translate(0px, 24px) scale(1) !important'
                       }}
                       fontWeight="bold"
                     >
@@ -789,19 +827,19 @@ export const CreditCalculator = () => {
                           marginInline: '0.2rem',
                           bottom: '0.2rem'
                         }}
-                        InputProps={{
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <BCTypography variant="subtitle2">
-                                {unit}
-                              </BCTypography>
-                            </InputAdornment>
-                          ),
-                          style: { textAlign: 'left' }
-                        }}
-                        inputProps={{
-                          maxLength: 13,
-                          'data-test': 'quantity'
+                        slotProps={{
+                          input: {
+                            endAdornment: (
+                              <InputAdornment position="end">
+                                <BCTypography variant="subtitle2">
+                                  {unit}
+                                </BCTypography>
+                              </InputAdornment>
+                            ),
+                            style: { textAlign: 'left' },
+                            maxLength: 13,
+                            'data-test': 'quantity'
+                          }
                         }}
                       />
                     )}
@@ -811,7 +849,7 @@ export const CreditCalculator = () => {
                 <BCTypography
                   variant="body3"
                   sx={{
-                    mt: 2,
+                    mt: 4,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -819,7 +857,9 @@ export const CreditCalculator = () => {
                   }}
                   fontWeight="bold"
                 >
-                  {t('report:formula')}
+                  {parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR
+                    ? t('report:formulaBefore2024')
+                    : t('report:formulaAfter2024')}
                 </BCTypography>
 
                 <Paper
@@ -827,7 +867,7 @@ export const CreditCalculator = () => {
                   sx={{
                     p: 2,
                     mt: 2,
-                    width: '60%',
+                    width: '65%',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -912,8 +952,8 @@ export const CreditCalculator = () => {
                 >
                   <BCBox
                     sx={{
-                      minWidth: 90,
-                      minHeight: 90,
+                      minWidth: 110,
+                      minHeight: 110,
                       borderRadius: '50%',
                       bgcolor: colors.white.main
                     }}
@@ -926,27 +966,30 @@ export const CreditCalculator = () => {
                     </BCTypography>
                   </BCBox>
                 </BCBox>
-                <Stack
-                  component="div"
-                  sx={{
-                    backgroundColor: colors.primary.light,
-                    width: '100%',
-                    height: '8rem',
-                    p: 4,
-                    borderBottomRightRadius: '10px'
-                  }}
-                  color={colors.white.main}
-                  spacing={1}
-                >
-                  <BCTypography align="center" variant="h6" fontWeight="bold">
-                    Compliance units available
-                  </BCTypography>
-                  <BCTypography align="center" variant="h3">
-                    {resultData.previousUnits.toLocaleString()} +{' '}
-                    {resultData.credits.toLocaleString()} ={' '}
-                    {resultData.availableUnits.toLocaleString()}
-                  </BCTypography>
-                </Stack>
+                {orgBalance && (
+                  <Stack
+                    component="div"
+                    sx={{
+                      backgroundColor: colors.primary.light,
+                      width: '100%',
+                      height: '8rem',
+                      p: 4,
+                      borderBottomRightRadius: '10px'
+                    }}
+                    color={colors.white.main}
+                    spacing={1}
+                  >
+                    <BCTypography align="center" variant="h6" fontWeight="bold">
+                      {t('report:changeInUnits')}
+                    </BCTypography>
+                    <BCTypography align="center" variant="h3">
+                      {resultData.previousUnits.toLocaleString()}{' '}
+                      {resultData.credits > 0 ? '+' : '-'}{' '}
+                      {Math.abs(resultData.credits).toLocaleString()} ={' '}
+                      {resultData.availableUnits.toLocaleString()}
+                    </BCTypography>
+                  </Stack>
+                )}
               </Grid>
             </Grid>
           }

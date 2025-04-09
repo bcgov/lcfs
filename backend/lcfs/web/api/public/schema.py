@@ -1,6 +1,9 @@
 from lcfs.web.api.base import BaseSchema
 from typing import Optional
 
+from lcfs.web.api.fuel_code.repo import CarbonIntensityResult
+from pydantic import Field
+
 
 class FuelTypeSchema(BaseSchema):
     fuel_type_id: int
@@ -11,3 +14,22 @@ class FuelTypeSchema(BaseSchema):
     units: Optional[str] = None
     fuel_category_id: Optional[int] = None
     category: Optional[str] = None
+
+
+class CalculatorQueryParams(BaseSchema):
+    fuel_category_id: int = Field(..., alias="fuelCategoryId")
+    fuel_type_id: int = Field(..., alias="fuelTypeId")
+    end_use_id: int = Field(..., alias="endUseId")
+    quantity: int
+    fuel_code_id: Optional[int] = Field(None, alias="fuelCodeId")
+
+
+class CreditsResultSchema(BaseSchema):
+    rci: float
+    tci: float | None
+    eer: float
+    energy_density: float | None
+    uci: float | None
+    quantity: int
+    energy_content: float
+    compliance_units: int

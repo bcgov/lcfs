@@ -211,7 +211,8 @@
   "ciLabel": "Determining carbon intensity",
   "fuelCodeLabel": "Fuel code",
   "qtySuppliedLabel": "Quantity supplied",
-  "formula": "Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000",
+  "formulaBefore2024": "Credit or Debit = (CI class × EER fuel – CI fuel) × EC fuel/1,000,000",
+  "formulaAfter2024": "Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000",
   "ciParameters": {
     "tci": "Target carbon intensity",
     "eer": "Energy effectiveness ratio",
@@ -224,5 +225,6 @@
     "Renewable fuel requirement & Low carbon fuel requirement",
     "Low carbon fuel requirement only"
   ],
+  "changeInUnits": "Projected change in compliance units balance",
   "generatedLabel": "Credits generated"
 }

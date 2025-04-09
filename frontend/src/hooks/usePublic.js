@@ -58,3 +58,50 @@ export const useGetFuelTypeOptions = (params) => {
     enabled: !!params.fuelTypeId && !!(params.fuelTypeId !== '')
   })
 }
+
+export const useCalculateComplianceUnits = ({
+  compliancePeriod,
+  fuelCategoryId,
+  fuelTypeId,
+  endUseId,
+  quantity,
+  fuelCodeId,
+  enabled = true
+}) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: [
+      'calculatedData',
+      compliancePeriod,
+      fuelCategoryId,
+      fuelTypeId,
+      endUseId,
+      quantity,
+      fuelCodeId
+    ],
+    queryFn: () =>
+      client.get(
+        apiRoutes.getCalculatedComplianceUnits.replace(
+          ':complianceYear',
+          compliancePeriod
+        ),
+        {
+          params: {
+            fuelCategoryId,
+            fuelTypeId,
+            endUseId,
+            quantity,
+            fuelCodeId
+          }
+        }
+      ),
+    staleTime: 5 * 60 * 1000,
+    enabled:
+      enabled &&
+      !!compliancePeriod &&
+      !!fuelCategoryId &&
+      !!fuelTypeId &&
+      !!endUseId &&
+      !!quantity
+  })
+}
