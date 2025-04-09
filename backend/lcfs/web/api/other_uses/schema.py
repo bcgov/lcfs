@@ -136,18 +136,6 @@ class OtherUsesChangelogFuelTypeSchema(BaseSchema):
     units: FuelTypeQuantityUnitsEnumSchema
 
 
-class OtherUsesDiffSchema(BaseSchema):
-    fuel_type: Optional[bool] = None
-    fuel_category: Optional[bool] = None
-    provision_of_the_act: Optional[bool] = None
-    fuel_code: Optional[bool] = None
-    quantity_supplied: Optional[bool] = None
-    units: Optional[bool] = None
-    ci_of_fuel: Optional[bool] = None
-    expected_use: Optional[bool] = None
-    rationale: Optional[bool] = None
-
-
 class OtherUsesChangelogSchema(BaseSchema):
     other_uses_id: Optional[int] = None
     compliance_report_id: int
@@ -165,7 +153,6 @@ class OtherUsesChangelogSchema(BaseSchema):
     version: Optional[int] = None
     action_type: Optional[str] = None
 
-    diff: Optional[OtherUsesDiffSchema] = None
     updated: Optional[bool] = None
 
 
