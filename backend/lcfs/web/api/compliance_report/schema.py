@@ -311,6 +311,7 @@ ALLOCATION_AGREEMENT_COLUMNS = [
     ExportColumn("Phone"),
     ExportColumn("Fuel type"),
     ExportColumn("Fuel type other"),
+    ExportColumn("Fuel category"),
     ExportColumn("Determining carbon intensity"),
     ExportColumn("Fuel code"),
     ExportColumn("RCI"),
