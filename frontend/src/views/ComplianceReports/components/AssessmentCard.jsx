@@ -18,13 +18,14 @@ import { useApiService } from '@/services/useApiService.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
 import { OrganizationAddress } from '@/views/ComplianceReports/components/OrganizationAddress.jsx'
 import { Assignment, FileDownload } from '@mui/icons-material'
-import { List, ListItemText, Stack } from '@mui/material'
+import { List, ListItemText, Stack, Tooltip } from '@mui/material'
 import Box from '@mui/material/Box'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 export const AssessmentCard = ({
+  reportData,
   orgData,
   hasSupplemental,
   isGovernmentUser,
@@ -43,13 +44,6 @@ export const AssessmentCard = ({
   } = useCurrentUser()
 
   const [isEditing, setIsEditing] = useState(false)
-
-  const { data: reportData, isLoading: isReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId,
-      { enabled: !isCurrentUserLoading }
-    )
 
   const onEdit = () => {
     setIsEditing(true)
@@ -101,7 +95,7 @@ export const AssessmentCard = ({
     return chain.filter((report) => report.history && report.history.length > 0)
   }, [chain])
 
-  if (isCurrentUserLoading || isReportLoading) {
+  if (isCurrentUserLoading) {
     return <Loading />
   }
 
@@ -201,20 +195,29 @@ export const AssessmentCard = ({
                       {t('report:supplementalWarning')}
                     </BCTypography>
                     <Box>
-                      <BCButton
-                        data-test="create-supplemental"
-                        size="small"
-                        variant="contained"
-                        color="primary"
-                        onClick={() => {
-                          createSupplementalReport()
-                        }}
-                        startIcon={<Assignment />}
-                        sx={{ mt: 2 }}
-                        disabled={isLoading}
+                      <Tooltip
+                        title={
+                          reportData.isNewest
+                            ? ''
+                            : 'Government has a reassessment in progress.'
+                        }
+                        placement="right"
                       >
-                        {t('report:createSupplementalRptBtn')}
-                      </BCButton>
+                        <BCButton
+                          data-test="create-supplemental"
+                          size="small"
+                          variant="contained"
+                          color="primary"
+                          onClick={() => {
+                            createSupplementalReport()
+                          }}
+                          startIcon={<Assignment />}
+                          sx={{ mt: 2 }}
+                          disabled={isLoading}
+                        >
+                          {t('report:createSupplementalRptBtn')}
+                        </BCButton>
+                      </Tooltip>
                     </Box>
                   </>
                 )}
