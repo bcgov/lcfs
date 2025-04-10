@@ -471,9 +471,6 @@ class TransferServices:
                 transfer.transfer_id, category
             )
             updated_transfer.transaction_effective_date = datetime.now()
-            await self.repo.update_transfer(transfer)
-
-        await self.repo.refresh_transfer(transfer)
 
         # Create new transaction for receiving organization
         to_transaction = await self.org_service.adjust_balance(
@@ -483,6 +480,7 @@ class TransferServices:
         )
         transfer.to_transaction = to_transaction
 
+        await self.repo.update_transfer(transfer)
         await self.repo.refresh_transfer(transfer)
 
     async def cancel_transfer(self, transfer):
