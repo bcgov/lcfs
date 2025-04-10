@@ -295,9 +295,9 @@ export const AddEditUser = ({ userType }) => {
             <Grid2
               size={{
                 xs: 12,
-                md: 5,
-                lg: 4
-              }}>
+                md: 5
+              }}
+            >
               <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
                 {textFields.map((field) => (
                   <BCFormText
@@ -314,9 +314,9 @@ export const AddEditUser = ({ userType }) => {
             <Grid2
               size={{
                 xs: 12,
-                md: 7,
-                lg: 6
-              }}>
+                md: 7
+              }}
+            >
               <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
                 <BCFormRadio
                   control={control}
@@ -344,9 +344,9 @@ export const AddEditUser = ({ userType }) => {
             <Grid2
               size={{
                 xs: 12,
-                md: 5,
-                lg: 4
-              }}>
+                md: 5
+              }}
+            >
               <Box
                 bgcolor={colors.background.grey}
                 p={3}

@@ -123,13 +123,13 @@ class AllocationAgreementServices:
 
     @service_handler
     async def get_allocation_agreements(
-        self, compliance_report_id: int
+        self, compliance_report_id: int, changelog: bool = False
     ) -> AllocationAgreementListSchema:
         """
         Gets the list of allocation agreements for a specific compliance report.
         """
         allocation_agreements = await self.repo.get_allocation_agreements(
-            compliance_report_id
+            compliance_report_id, changelog=changelog
         )
 
         return AllocationAgreementAllSchema(
@@ -377,8 +377,9 @@ class AllocationAgreementServices:
 
     @service_handler
     async def delete_allocation_agreement(
-        self, allocation_agreement_data: AllocationAgreementCreateSchema
-    ) -> str:
+        self,
+        allocation_agreement_data: AllocationAgreementCreateSchema,
+    ) -> DeleteAllocationAgreementResponseSchema:
         """Delete an allocation agreement"""
         existing_allocation_agreement = (
             await self.repo.get_latest_allocation_agreement_by_group_uuid(
@@ -386,8 +387,9 @@ class AllocationAgreementServices:
             )
         )
 
+        # If the record is already deleted, just return success
         if existing_allocation_agreement.action_type == ActionTypeEnum.DELETE:
-            return DeleteAllocationAgreementResponseSchema(message="Already deleted.")
+            return DeleteAllocationAgreementResponseSchema(message="Marked as deleted.")
 
         # Create a deletion record
         deleted_entity = AllocationAgreement(
@@ -404,11 +406,18 @@ class AllocationAgreementServices:
                     deleted_entity, field, getattr(existing_allocation_agreement, field)
                 )
 
-        deleted_entity.compliance_report_id = (
-            allocation_agreement_data.compliance_report_id
-        )
+        # If the compliance report IDs match, also delete the original record
+        if (
+            existing_allocation_agreement.compliance_report_id
+            == allocation_agreement_data.compliance_report_id
+        ):
+            await self.repo.delete_allocation_agreement(
+                allocation_agreement_data.allocation_agreement_id
+            )
 
+        # Always create the deletion record
         await self.repo.create_allocation_agreement(deleted_entity)
+
         return DeleteAllocationAgreementResponseSchema(message="Marked as deleted.")
 
     @service_handler

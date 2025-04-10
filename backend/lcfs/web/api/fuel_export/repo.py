@@ -1,7 +1,7 @@
 from datetime import datetime
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, func
+from sqlalchemy import and_, or_, select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from typing import List, Optional, Tuple
@@ -360,10 +360,10 @@ class FuelExportRepository:
         changelog: Optional[bool] = False,
     ) -> List[FuelExport]:
         """
-        Retrieve effective FuelExport records associated with the given compliance_report_group_uuid.
-        Excludes groups with any DELETE action and selects the highest version and priority.
+        Queries fuel exports from the database for a specific compliance report.
+        If changelog=True, includes deleted records to show history.
         """
-        # Step 1: Select to get all compliance_report_ids in the specified group
+        # Get all compliance report IDs in the group up to the specified report
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
             and_(
                 ComplianceReport.compliance_report_group_uuid
@@ -372,23 +372,34 @@ class FuelExportRepository:
             )
         )
 
-        conditions = [FuelExport.compliance_report_id.in_(compliance_reports_select)]
-        if not changelog:
-            delete_group_select = (
-                select(FuelExport.group_uuid)
-                .where(
-                    FuelExport.compliance_report_id.in_(compliance_reports_select),
-                    FuelExport.action_type == ActionTypeEnum.DELETE,
-                )
-                .distinct()
+        # Get groups that have any deleted records
+        deleted_groups = (
+            select(FuelExport.group_uuid)
+            .where(
+                FuelExport.compliance_report_id.in_(compliance_reports_select),
+                FuelExport.action_type == ActionTypeEnum.DELETE,
             )
+            .distinct()
+        )
+
+        # Build query conditions
+        conditions = [FuelExport.compliance_report_id.in_(compliance_reports_select)]
+
+        if changelog:
+            # In changelog view, include all groups (both active and deleted)
             conditions.extend(
                 [
-                    FuelExport.action_type != ActionTypeEnum.DELETE,
-                    ~FuelExport.group_uuid.in_(delete_group_select),
+                    or_(
+                        ~FuelExport.group_uuid.in_(deleted_groups),
+                        FuelExport.group_uuid.in_(deleted_groups),
+                    )
                 ]
             )
+        else:
+            # In regular view, exclude any groups that have deleted records
+            conditions.extend([~FuelExport.group_uuid.in_(deleted_groups)])
 
+        # Get the latest version of each record
         valid_fuel_exports_select = (
             select(
                 FuelExport.group_uuid,
@@ -398,14 +409,12 @@ class FuelExportRepository:
             .group_by(FuelExport.group_uuid)
         )
 
-        # Now create a subquery for use in the JOIN
         valid_fuel_exports_subq = valid_fuel_exports_select.subquery()
 
-        # Step 4: Main query to retrieve effective FuelExport records
+        # Get the actual records with their related data
         query = (
             select(FuelExport)
             .options(
-                # Load necessary related data
                 joinedload(FuelExport.fuel_code),
                 joinedload(FuelExport.fuel_category),
                 joinedload(FuelExport.fuel_type),
@@ -426,3 +435,8 @@ class FuelExportRepository:
         fuel_exports = result.unique().scalars().all()
 
         return fuel_exports
+
+    async def delete_fuel_export(self, fuel_export_id):
+        await self.db.execute(
+            delete(FuelExport).where(FuelExport.fuel_export_id == fuel_export_id)
+        )

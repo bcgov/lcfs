@@ -7,14 +7,14 @@ import {
 } from '@/components/BCDataGrid/components'
 import BCTypography from '@/components/BCTypography'
 import { apiRoutes } from '@/constants/routes'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const notionalTransferColDefs = (
   optionsData,
@@ -208,12 +208,12 @@ export const defaultColDef = {
   flex: 1
 }
 
-export const changelogCommonColDefs = [
+export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
     field: 'legalName',
 
-    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
   },
   {
     headerName: i18n.t(
@@ -221,33 +221,34 @@ export const changelogCommonColDefs = [
     ),
     field: 'addressForService',
 
-    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'fuelCategory')
   },
   {
     headerName: i18n.t(
       'notionalTransfer:notionalTransferColLabels.fuelCategory'
     ),
-    field: 'fuelCategory',
-    valueGetter: (params) =>
-      params.data.fuelCategory?.category || params.data.fuelCategory,
-    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+    field: 'fuelCategory.category',
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'provisionOfTheAct')
   },
   {
     headerName: i18n.t(
       'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
     ),
     field: 'receivedOrTransferred',
-    cellStyle: (params) => changelogCellStyle(params, 'fuelCode')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
     field: 'quantity',
     valueFormatter,
-    cellStyle: (params) => changelogCellStyle(params, 'quantitySupplied')
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'quantitySupplied')
   }
 ]
 
-export const changelogColDefs = [
+export const changelogColDefs = (highlight = true) => [
   {
     field: 'groupUuid',
     hide: true,
@@ -273,12 +274,12 @@ export const changelogColDefs = [
       }
     },
     cellStyle: (params) => {
-      if (params.data.actionType === 'UPDATE') {
+      if (highlight && params.data.actionType === 'UPDATE') {
         return { backgroundColor: colors.alerts.warning.background }
       }
     }
   },
-  ...changelogCommonColDefs
+  ...changelogCommonColDefs(highlight)
 ]
 
 export const changelogDefaultColDefs = {
@@ -287,7 +288,7 @@ export const changelogDefaultColDefs = {
 }
 
 export const changelogCommonGridOptions = {
-  overlayNoRowsTemplate: i18n.t('notionalTransfer:noOtherUsesFound'),
+  overlayNoRowsTemplate: i18n.t('notionalTransfer:noNotionalTransfersFound'),
   autoSizeStrategy: {
     type: 'fitCellContents',
     defaultMinWidth: 50,

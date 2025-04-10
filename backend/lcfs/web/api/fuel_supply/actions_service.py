@@ -46,10 +46,18 @@ class FuelSupplyActionService:
         repo: FuelSupplyRepository = Depends(),
         fuel_repo: FuelCodeRepository = Depends(),
         fuel_supply_service: FuelSupplyServices = Depends(),
-    ) -> None:
-        self.fuel_supply_service = fuel_supply_service
+    ):
+        """
+        Initialize the service with required repositories.
+
+        Args:
+            repo (FuelSupplyRepository): Repository for fuel supply operations.
+            fuel_repo (FuelCodeRepository): Repository for fuel code operations.
+            fuel_supply_service (FuelSupplyServices): Service for fuel supply operations.
+        """
         self.repo = repo
         self.fuel_repo = fuel_repo
+        self.fuel_supply_service = fuel_supply_service
 
     async def _populate_fuel_supply_fields(
         self,
@@ -246,7 +254,7 @@ class FuelSupplyActionService:
             fs_data.group_uuid
         )
 
-        if fs_data.is_new_supplemental_entry:
+        if existing_fuel_supply.compliance_report_id == fs_data.compliance_report_id:
             await self.repo.delete_fuel_supply(fuel_supply_id=fs_data.fuel_supply_id)
             return DeleteFuelSupplyResponseSchema(
                 success=True, message="Marked as deleted."

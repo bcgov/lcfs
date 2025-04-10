@@ -131,24 +131,6 @@ class FuelCategoryResponseSchema(BaseSchema):
     category: str
 
 
-class FuelExportDiffSchema(BaseSchema):
-    compliance_units: Optional[bool] = None
-    export_date: Optional[bool] = None
-    fuel_type_id: Optional[bool] = None
-    fuel_category_id: Optional[bool] = None
-    end_use_id: Optional[bool] = None
-    provision_of_the_act_id: Optional[bool] = None
-    fuel_code_id: Optional[bool] = None
-    quantity: Optional[bool] = None
-    units: Optional[bool] = None
-    target_ci: Optional[bool] = None
-    ci_of_fuel: Optional[bool] = None
-    uci: Optional[bool] = None
-    energy_density: Optional[bool] = None
-    eer: Optional[bool] = None
-    energy: Optional[bool] = None
-
-
 class FuelExportSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
@@ -177,7 +159,6 @@ class FuelExportSchema(BaseSchema):
     energy: Optional[float] = None
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
-    diff: Optional[FuelExportDiffSchema] = None
     updated: Optional[bool] = None
 
     @field_validator("compliance_units", mode="before")
@@ -222,9 +203,22 @@ class FuelExportCreateUpdateSchema(BaseSchema):
         values = energy_must_be_within_range(values)
         return values
 
+    @model_validator(mode="before")
+    @classmethod
+    def check_fuel_code_required(cls, values):
+        return fuel_code_required(values)
+
+    @field_validator("energy")
+    def validate_energy_range(cls, value):
+        if value is not None and abs(value) >= 9999999999:
+            formatted_value = f"{value:,.2f}"
+            raise ValueError(
+                f"Energy value must be less than 99,999,999,999 but got {formatted_value}"
+            )
+        return value
+
 
 class DeleteFuelExportResponseSchema(BaseSchema):
-    success: bool
     message: str
 
 
