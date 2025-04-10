@@ -2,13 +2,16 @@ import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
 import { roles } from '@/constants/roles'
 import {
+  COMPLIANCE_REPORT_STATUSES,
   getAllFuelCodeStatuses,
-  getAllOrganizationStatuses
+  getAllOrganizationStatuses,
+  TRANSACTION_STATUSES,
+  TRANSFER_STATUSES
 } from '@/constants/statuses'
 import { Link, useLocation } from 'react-router-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import colors from '@/themes/base/colors'
-import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown'
+import { ArrowDropDown } from '@mui/icons-material'
 
 export const TextRenderer = (props) => {
   return (
@@ -61,7 +64,7 @@ export const SelectRenderer = (params) => {
     >
       {displayValue}
       {hasOptions && isEditable && (
-        <ArrowDropDownIcon sx={{ height: 22, width: 22, color: '#44474e' }} />
+        <ArrowDropDown sx={{ height: 22, width: 22, color: '#44474e' }} />
       )}
     </div>
   )
@@ -98,7 +101,7 @@ export const MultiSelectRenderer = (params) => {
     >
       {displayValue}
       {hasOptions && isEditable && (
-        <ArrowDropDownIcon sx={{ height: 22, width: 22, color: '#44474e' }} />
+        <ArrowDropDown sx={{ height: 22, width: 22, color: '#44474e' }} />
       )}
     </div>
   )
@@ -241,34 +244,22 @@ export const FuelCodeStatusRenderer = (props) => {
   )
 }
 
+const TRANSFER_STATUS_TO_COLOR_MAP = {
+  [TRANSFER_STATUSES.NEW]: 'info',
+  [TRANSFER_STATUSES.DRAFT]: 'info',
+  [TRANSFER_STATUSES.SENT]: 'info',
+  [TRANSFER_STATUSES.SUBMITTED]: 'info',
+  [TRANSFER_STATUSES.RECOMMENDED]: 'info',
+  [COMPLIANCE_REPORT_STATUSES.ASSESSED]: 'success',
+  [TRANSACTION_STATUSES.APPROVED]: 'success',
+  [TRANSFER_STATUSES.RECORDED]: 'success',
+  [TRANSFER_STATUSES.REFUSED]: 'error',
+  [TRANSFER_STATUSES.DECLINED]: 'error',
+  [TRANSFER_STATUSES.RESCINDED]: 'error',
+  [TRANSFER_STATUSES.DELETED]: 'error'
+}
+
 export const TransactionStatusRenderer = (props) => {
-  const statusArr = [
-    'Draft',
-    'Recommended',
-    'Sent',
-    'Submitted',
-    'Approved',
-    'Assessed',
-    'Recorded',
-    'Refused',
-    'Deleted',
-    'Declined',
-    'Rescinded'
-  ]
-  const statusColorArr = [
-    'info',
-    'info',
-    'info',
-    'info',
-    'success',
-    'success',
-    'success',
-    'error',
-    'error',
-    'error',
-    'error'
-  ]
-  const statusIndex = statusArr.indexOf(props.data.status)
   const component = (
     <BCBox
       m={1}
@@ -278,8 +269,8 @@ export const TransactionStatusRenderer = (props) => {
       }}
     >
       <BCBadge
-        badgeContent={statusArr[statusIndex]}
-        color={statusColorArr[statusIndex]}
+        badgeContent={props.data.status}
+        color={TRANSFER_STATUS_TO_COLOR_MAP[props.data.status]}
         variant="contained"
         size="lg"
         sx={{
@@ -308,28 +299,18 @@ export const TransactionStatusRenderer = (props) => {
     return component
   }
 }
+
+const STATUS_TO_COLOR_MAP = {
+  [COMPLIANCE_REPORT_STATUSES.DRAFT]: 'info',
+  [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: 'info',
+  [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: 'info',
+  [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: 'info',
+  [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: 'info',
+  [COMPLIANCE_REPORT_STATUSES.ASSESSED]: 'success',
+  [COMPLIANCE_REPORT_STATUSES.REJECTED]: 'error'
+}
+
 export const ReportsStatusRenderer = (props) => {
-  const statusArr = [
-    'Draft',
-    'Submitted',
-    'Recommended by analyst',
-    'Recommended by manager',
-    'Assessed',
-    'Reassessed',
-    'Rejected'
-  ]
-  const statusColorArr = [
-    'info',
-    'info',
-    'info',
-    'info',
-    'success',
-    'success',
-    'error'
-  ]
-  const statusIndex = statusArr.indexOf(
-    props.data.reportStatus.replaceAll('_', ' ')
-  )
   return (
     <Link
       to={
@@ -345,8 +326,8 @@ export const ReportsStatusRenderer = (props) => {
         }}
       >
         <BCBadge
-          badgeContent={statusArr[statusIndex]}
-          color={statusColorArr[statusIndex]}
+          badgeContent={props.data.reportStatus.replaceAll('_', ' ')}
+          color={STATUS_TO_COLOR_MAP[props.data.reportStatus]}
           variant="contained"
           size="lg"
           sx={{
@@ -465,7 +446,7 @@ const GenericChipRenderer = ({
     // Column resize listener for ag-Grid
     const resizeListener = (event) => {
       const resizedColumn = event.column
-      if (resizedColumn.getColId() === colDef.field) {
+      if (resizedColumn && resizedColumn.getColId() === colDef.field) {
         const { visibleChips, hiddenChipsCount } = calculateChipWidths()
         setVisibleChips(visibleChips)
         setHiddenChipsCount(hiddenChipsCount)

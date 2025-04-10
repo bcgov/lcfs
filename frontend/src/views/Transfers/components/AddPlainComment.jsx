@@ -2,11 +2,10 @@ import { Box, Collapse, IconButton, TextField } from '@mui/material'
 import { useState } from 'react'
 import PropTypes from 'prop-types'
 // MUI Icons
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { ExpandLess, ExpandMore } from '@mui/icons-material'
 
 export const AddPlainComment = ({
   toOrgId,
@@ -49,9 +48,9 @@ export const AddPlainComment = ({
         >
           <IconButton data-test="toggle-comments" aria-label="expand comments">
             {isExpanded ? (
-              <ExpandLessIcon data-testid="ExpandLessIcon" />
+              <ExpandLess data-testid="ExpandLessIcon" />
             ) : (
-              <ExpandMoreIcon data-testid="ExpandMoreIcon" />
+              <ExpandMore data-testid="ExpandMoreIcon" />
             )}
           </IconButton>
         </Box>

@@ -1,11 +1,11 @@
-import logging
+import structlog
 from fastapi import FastAPI
 from redis.asyncio import Redis
 from redis.exceptions import RedisError, TimeoutError
 import asyncio
 from lcfs.settings import settings
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def init_redis(app: FastAPI) -> None:
@@ -34,12 +34,14 @@ async def init_redis(app: FastAPI) -> None:
             logger.info("Redis client initialized and connection successful.")
             break
         except TimeoutError as e:
-            logger.error(f"Redis timeout during initialization attempt {i + 1}: {e}")
+            logger.error(
+                f"Redis timeout during initialization attempt {i + 1}: {e}")
             if i == retries - 1:
                 raise
             await asyncio.sleep(2**i)  # Exponential backoff
         except RedisError as e:
-            logger.error(f"Redis error during initialization attempt {i + 1}: {e}")
+            logger.error(
+                f"Redis error during initialization attempt {i + 1}: {e}")
             if i == retries - 1:
                 raise
             await asyncio.sleep(2**i)  # Exponential backoff

@@ -2,7 +2,7 @@ import PropTypes from 'prop-types'
 import { Link } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import GitHubIcon from '@mui/icons-material/GitHub'
+import { GitHub } from '@mui/icons-material'
 import typography from '@/themes/base/typography'
 
 function Footer({
@@ -110,7 +110,7 @@ function Footer({
           aria-label={repoDetails.label}
           id={repoDetails.id}
         >
-          <GitHubIcon fontSize="small" />
+          <GitHub fontSize="small" />
           <BCTypography
             ml={1}
             variant="button"

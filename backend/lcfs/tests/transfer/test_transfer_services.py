@@ -1,6 +1,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import date
+from datetime import date, datetime, timedelta
+
+from lcfs.db.models import UserProfile
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.transfer.schema import (
     TransferSchema,
     TransferCreateSchema,
@@ -9,6 +12,33 @@ from lcfs.web.api.transfer.schema import (
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
 from lcfs.db.models.transfer.TransferStatus import TransferStatus
 from lcfs.db.models.organization.Organization import Organization
+
+
+@pytest.fixture
+def dummy_transfer():
+    from types import SimpleNamespace
+
+    transfer = SimpleNamespace(
+        transfer_id="t1",
+        from_transaction=object(),  # non-None so that check passes
+        from_transaction_id="ft1",
+        transfer_category=SimpleNamespace(),  # No 'category' attribute by default.
+        agreement_date=datetime.now(),
+        quantity=100,
+        to_organization_id="org2",
+        to_transaction=None,
+        category="Existing",
+    )
+    return transfer
+
+
+@pytest.fixture
+def mock_director():
+    mock_user = MagicMock(spec=UserProfile)
+    mock_user.role_names = [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
+    mock_user.first_name = "First Name"
+    mock_user.last_name = "Last Name"
+    return mock_user
 
 
 @pytest.mark.anyio
@@ -80,14 +110,16 @@ async def test_get_transfer_success(transfer_service, mock_transfer_repo):
 
     mock_transfer_repo.get_transfer_by_id.return_value = transfer_obj
 
-    result = await transfer_service.get_transfer(transfer_id)
+    result = await transfer_service.get_transfer(UserProfile(), transfer_id)
     assert result.transfer_id == transfer_id
     assert isinstance(result, TransferSchema)
     mock_transfer_repo.get_transfer_by_id.assert_called_once_with(transfer_id)
 
 
 @pytest.mark.anyio
-async def test_create_transfer_success(transfer_service, mock_transfer_repo):
+async def test_create_transfer_success(
+    transfer_service, mock_transfer_repo, mock_director
+):
     """
     Ensure we supply a valid status from TransferStatusEnum. E.g. 'Sent', 'Draft', etc.
     """
@@ -110,7 +142,7 @@ async def test_create_transfer_success(transfer_service, mock_transfer_repo):
     mock_transfer_repo.create_transfer.return_value = transfer_data
 
     with patch.object(transfer_service, "_perform_notification_call", AsyncMock()):
-        result = await transfer_service.create_transfer(transfer_data)
+        result = await transfer_service.create_transfer(transfer_data, mock_director)
 
         assert result.transfer_id == transfer_id
         assert isinstance(result, TransferCreateSchema)
@@ -119,7 +151,7 @@ async def test_create_transfer_success(transfer_service, mock_transfer_repo):
 
 @pytest.mark.anyio
 async def test_update_transfer_success(
-    transfer_service, mock_transfer_repo, mock_request
+    transfer_service, mock_transfer_repo, mock_director
 ):
     """
     DB object is in 'Draft'. We'll move to 'Submitted'.
@@ -165,14 +197,14 @@ async def test_update_transfer_success(
         recommendation="Refuse",  # valid
     )
 
-    result = await transfer_service.update_transfer(update_data)
+    result = await transfer_service.update_transfer(update_data, mock_director)
     assert result.transfer_id == transfer_id
     assert isinstance(result, Transfer)
 
     mock_transfer_repo.get_transfer_by_id.assert_called_once_with(transfer_id)
     mock_transfer_repo.update_transfer.assert_called_once_with(transfer_obj)
     transfer_service._perform_notification_call.assert_awaited_once_with(
-        transfer_obj, status="Submitted"
+        transfer_obj, status="Submitted", user=mock_director
     )
 
 
@@ -199,3 +231,72 @@ async def test_update_category_success(transfer_service, mock_transfer_repo):
     assert result.transfer_id == transfer_id
     assert isinstance(result, Transfer)
     mock_transfer_repo.get_transfer_by_id.assert_called_once_with(transfer_id)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "days_diff, expected_category",
+    [
+        (1, "A"),  # Less than six months → Category "A"
+        (200, "B"),  # Between six months and one year → Category "B"
+        (400, "C"),  # More than one year → Category "C"
+    ],
+)
+async def test_update_category_flow(
+    transfer_service, dummy_transfer, days_diff, expected_category, mock_director
+):
+    dummy_transfer.agreement_date = datetime.now() - timedelta(days=days_diff)
+    transfer_service.dummy_transfer = dummy_transfer
+
+    async def dummy_update_category_fn(transfer_id, category):
+        dummy_transfer.called_category = category
+        return dummy_transfer
+
+    transfer_service.update_category = dummy_update_category_fn
+
+    async def confirm_success(tx_id):
+        return True
+
+    transfer_service.transaction_repo.confirm_transaction = confirm_success
+
+    async def dummy_adjust_balance_fn(
+        *, transaction_action, compliance_units, organization_id
+    ):
+        return "new_transaction"
+
+    transfer_service.org_service.adjust_balance = dummy_adjust_balance_fn
+
+    await transfer_service.director_record_transfer(dummy_transfer, mock_director)
+
+    assert getattr(dummy_transfer, "called_category", None) == expected_category
+    assert dummy_transfer.to_transaction == "new_transaction"
+
+
+@pytest.mark.anyio
+async def test_no_category_update_when_category_exists(
+    transfer_service, dummy_transfer, mock_director
+):
+    # Pre-set a category on the transfer_category attribute.
+    dummy_transfer.transfer_category.category = "Existing"
+
+    async def confirm_success(tx_id):
+        return True
+
+    transfer_service.transaction_repo.confirm_transaction = confirm_success
+
+    async def dummy_adjust_balance_fn(
+        *, transaction_action, compliance_units, organization_id
+    ):
+        return "new_transaction"
+
+    transfer_service.org_service.adjust_balance = dummy_adjust_balance_fn
+
+    async def should_not_be_called(*args, **kwargs):
+        raise Exception("update_category should not be called")
+
+    transfer_service.update_category = should_not_be_called
+
+    await transfer_service.director_record_transfer(dummy_transfer, mock_director)
+
+    assert dummy_transfer.to_transaction == "new_transaction"
+    assert dummy_transfer.category == "Existing"

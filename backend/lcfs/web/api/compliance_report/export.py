@@ -1,28 +1,43 @@
+import asyncio
+import decimal
 import io
+from datetime import datetime
 from fastapi import Depends
-from openpyxl import styles
+from openpyxl import Workbook
+from openpyxl.styles import Font, Alignment
+from openpyxl.utils import get_column_letter
+from openpyxl.worksheet.table import Table, TableStyleInfo
 from starlette.responses import StreamingResponse
-from typing import List
+from typing import List, Union, Any
 
 from lcfs.db.models import ComplianceReportSummary
-from lcfs.db.models.compliance import ComplianceReport
-from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.utils.constants import FILE_MEDIA_TYPE
-from lcfs.utils.spreadsheet_builder import (
-    SpreadsheetBuilder,
-    SpreadsheetColumn,
-    RawSpreadsheet,
-)
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.compliance_report.schema import (
+    SUMMARY_SHEET,
+    FUEL_SUPPLY_SHEET,
+    NOTIONAL_TRANSFER_SHEET,
+    OTHER_USES_SHEET,
+    EXPORT_FUEL_SHEET,
+    ALLOCATION_AGREEMENTS_SHEET,
+    FSE_EXPORT_SHEET,
+    FUEL_SUPPLY_COLUMNS,
+    NOTIONAL_TRANSFER_COLUMNS,
+    OTHER_USES_COLUMNS,
+    EXPORT_FUEL_COLUMNS,
+    ALLOCATION_AGREEMENT_COLUMNS,
+    FSE_EXPORT_COLUMNS,
+    RENEWABLE_REQUIREMENT_TITLE,
+    LOW_CARBON_SUMMARY_TITLE,
+    PENALTY_SUMMARY_TITLE,
+    TABLE_STYLE,
+    SHOW_ROW_STRIPES,
+    SHOW_COL_STRIPES,
+)
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
-)
-from lcfs.web.api.final_supply_equipment.export import (
-    FSE_EXPORT_SHEETNAME,
-    FSE_EXPORT_COLUMNS,
 )
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
@@ -31,83 +46,6 @@ from lcfs.web.api.notional_transfer.repo import NotionalTransferRepository
 from lcfs.web.api.other_uses.repo import OtherUsesRepository
 from lcfs.web.api.other_uses.schema import OtherUsesSchema
 from lcfs.web.core.decorators import service_handler
-
-FS_EXPORT_NAME = "Supply of fuel"
-FS_EXPORT_COLUMNS = [
-    SpreadsheetColumn("Compliance Units", "int"),
-    SpreadsheetColumn("Fuel Type", "text"),
-    SpreadsheetColumn("Fuel type Other", "text"),
-    SpreadsheetColumn("Fuel category", "text"),
-    SpreadsheetColumn("End use", "text"),
-    SpreadsheetColumn("Determining carbon intensity", "text"),
-    SpreadsheetColumn("Fuel code", "text"),
-    SpreadsheetColumn("Quantity supplied", "int"),
-    SpreadsheetColumn("Units", "text"),
-    SpreadsheetColumn("Target CI", "float"),
-    SpreadsheetColumn("RCI", "float"),
-    SpreadsheetColumn("UCI", "float"),
-    SpreadsheetColumn("Energy density", "int"),
-    SpreadsheetColumn("EER", "float"),
-    SpreadsheetColumn("Energy content", "int"),
-]
-
-NT_EXPORT_NAME = "Notional transfer"
-NT_EXPORT_COLUMNS = [
-    SpreadsheetColumn("Legal name of trading partner", "int"),
-    SpreadsheetColumn("Address for service", "text"),
-    SpreadsheetColumn("Fuel category", "text"),
-    SpreadsheetColumn("Received OR Transferred", "text"),
-    SpreadsheetColumn("Quantity", "int"),
-]
-
-OU_EXPORT_NAME = "Fuel for other use"
-OU_EXPORT_COLUMNS = [
-    SpreadsheetColumn("Fuel Type", "text"),
-    SpreadsheetColumn("Fuel category", "text"),
-    SpreadsheetColumn("Determining carbon intensity", "text"),
-    SpreadsheetColumn("Fuel code", "text"),
-    SpreadsheetColumn("Quantity supplied", "int"),
-    SpreadsheetColumn("Units", "text"),
-    SpreadsheetColumn("RCI", "float"),
-    SpreadsheetColumn("Expected use", "text"),
-    SpreadsheetColumn("If other, enter expected use", "text"),
-]
-
-EF_EXPORT_NAME = "Export fuel"
-EF_EXPORT_COLUMNS = [
-    SpreadsheetColumn("Compliance units", "text"),
-    SpreadsheetColumn("Export date", "date"),
-    SpreadsheetColumn("Fuel type", "text"),
-    SpreadsheetColumn("Fuel type other", "text"),
-    SpreadsheetColumn("Fuel category", "text"),
-    SpreadsheetColumn("End use", "text"),
-    SpreadsheetColumn("Determining carbon intensity", "text"),
-    SpreadsheetColumn("Fuel code", "text"),
-    SpreadsheetColumn("Quantity supplied", "int"),
-    SpreadsheetColumn("Units", "text"),
-    SpreadsheetColumn("Target CI", "float"),
-    SpreadsheetColumn("RCI", "float"),
-    SpreadsheetColumn("UCI", "float"),
-    SpreadsheetColumn("Energy density", "text"),
-    SpreadsheetColumn("EER", "float"),
-    SpreadsheetColumn("Energy content", "int"),
-]
-
-AA_EXPORT_NAME = "Allocation agreements"
-AA_EXPORT_COLUMNS = [
-    SpreadsheetColumn("Responsibility", "text"),
-    SpreadsheetColumn("Legal name of transaction partner", "text"),
-    SpreadsheetColumn("Address for service", "text"),
-    SpreadsheetColumn("Email", "text"),
-    SpreadsheetColumn("Phone", "text"),
-    SpreadsheetColumn("Fuel type", "text"),
-    SpreadsheetColumn("Fuel type other", "text"),
-    SpreadsheetColumn("Determining carbon intensity", "text"),
-    SpreadsheetColumn("Fuel code", "text"),
-    SpreadsheetColumn("RCI", "float"),
-    SpreadsheetColumn("Quantity", "int"),
-    SpreadsheetColumn("Units", "text"),
-]
 
 
 class ComplianceReportExporter:
@@ -135,380 +73,420 @@ class ComplianceReportExporter:
         self.cr_repo = cr_repo
         self.fse_repo = fse_repo
 
+        # Data loader mapping
+        self.data_loaders = {
+            FUEL_SUPPLY_SHEET: self._load_fuel_supply_data,
+            NOTIONAL_TRANSFER_SHEET: self._load_notional_transfer_data,
+            OTHER_USES_SHEET: self._load_fuels_for_other_use_data,
+            EXPORT_FUEL_SHEET: self._load_export_fuel_data,
+            ALLOCATION_AGREEMENTS_SHEET: self._load_allocation_agreement_data,
+            FSE_EXPORT_SHEET: self._load_fse_data,
+        }
+
+        # Column definitions mapping
+        self.column_definitions = {
+            FUEL_SUPPLY_SHEET: FUEL_SUPPLY_COLUMNS,
+            NOTIONAL_TRANSFER_SHEET: NOTIONAL_TRANSFER_COLUMNS,
+            OTHER_USES_SHEET: OTHER_USES_COLUMNS,
+            EXPORT_FUEL_SHEET: EXPORT_FUEL_COLUMNS,
+            ALLOCATION_AGREEMENTS_SHEET: ALLOCATION_AGREEMENT_COLUMNS,
+            FSE_EXPORT_SHEET: FSE_EXPORT_COLUMNS,
+        }
+
     @service_handler
     async def export(self, compliance_report_id: int) -> StreamingResponse:
-        export_format = "xlsx"  # Use modern Excel format
-        compliance_report: ComplianceReport = (
-            await self.cr_repo.get_compliance_report_by_id(
-                report_id=compliance_report_id, is_model=True
-            )
-        )
+        wb = Workbook()
+        wb.remove(wb.active)
 
-        builder = SpreadsheetBuilder(file_format=export_format)
+        # Get report data
+        report = await self.cr_repo.get_compliance_report_by_id(
+            report_id=compliance_report_id, is_model=True
+        )
+        uuid = report.compliance_report_group_uuid
+        cid = report.compliance_report_id
 
-        # Include draft data if report status is Draft
-        include_draft = (
-            compliance_report.current_status.status == ComplianceReportStatusEnum.Draft
-        )
+        # Add summary sheet
+        await self._add_summary_sheet(wb, report.summary)
 
-        # Add sheets (in reverse desired order)
-        await self.add_summary_sheet(builder, compliance_report.summary)
-        await self.add_allocation_agreement_sheet(
-            builder, compliance_report.compliance_report_id
-        )
-        await self.add_fse_sheet(builder, compliance_report_id)
-        await self.add_export_fuel_sheet(
-            builder, compliance_report.compliance_report_group_uuid, include_draft
-        )
-        await self.add_fuels_for_other_use_sheet(
-            builder, compliance_report.compliance_report_group_uuid, include_draft
-        )
-        await self.add_notional_transfer_sheet(
-            builder, compliance_report.compliance_report_group_uuid, include_draft
-        )
-        await self.add_fuel_supply_sheet(
-            builder, compliance_report.compliance_report_group_uuid, include_draft
-        )
+        # Add all schedule data sheets
+        tasks = []
+        sheet_names = []
 
-        compliance_period = compliance_report.compliance_period.description
-        filename = f"CR-{compliance_report.organization.name}-{compliance_period}-{compliance_report.current_status.status.value}.{export_format}"
+        for sheet_name, loader in self.data_loaders.items():
+            sheet_names.append(sheet_name)
+            if sheet_name in [FSE_EXPORT_SHEET, ALLOCATION_AGREEMENTS_SHEET]:
+                tasks.append(loader(cid))
+            else:
+                tasks.append(loader(uuid, cid))
+        # Concurrently gather results
+        results = await asyncio.gather(*tasks)
+
+        # Process each result
+        for sheet_name, data in zip(sheet_names, results):
+            if data:
+                await self._add_sheet(wb, sheet_name, data)
+
+        # Export to stream
+        stream = io.BytesIO()
+        wb.save(stream)
+        stream.seek(0)
+
+        # Generate filename
+        filename = f"CR-{report.organization.name}-{report.compliance_period.description}-{report.current_status.status.value}.xlsx"
         headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
-        file_content = builder.build_spreadsheet()
         return StreamingResponse(
-            io.BytesIO(file_content),
-            media_type=FILE_MEDIA_TYPE[export_format.upper()].value,
-            headers=headers,
+            stream, media_type=FILE_MEDIA_TYPE["XLSX"].value, headers=headers
         )
 
-    async def add_fse_sheet(
-        self, builder: SpreadsheetBuilder, compliance_report_id: int
-    ) -> SpreadsheetBuilder:
-        data = await self.load_fse_data(compliance_report_id)
-        builder.add_sheet(
-            sheet_name=FSE_EXPORT_SHEETNAME,
-            columns=FSE_EXPORT_COLUMNS,
-            rows=data,
-            styles={"bold_headers": True},
-        )
-        return builder
+    async def _add_sheet(
+        self,
+        wb: Workbook,
+        title: str,
+        data: List[List[Union[str, int, float, datetime]]],
+    ) -> None:
+        """Add a data sheet to the workbook with proper formatting and table styling."""
+        if not data or len(data) <= 1:  # Skip if no data found
+            return
 
-    async def load_fse_data(self, compliance_report_id: int) -> List[List]:
-        results = await self.fse_repo.get_fse_paginated(
-            compliance_report_id=compliance_report_id,
+        # Create sheet with truncated name
+        ws = wb.create_sheet(title=title[:31])
+
+        headers = data[0]
+        rows = data[1:]
+
+        # Add headers
+        ws.append(headers)
+
+        # Add and format data rows
+        for row_idx, row in enumerate(rows, start=2):
+            ws.append(row)
+            for col_idx, val in enumerate(row, start=1):
+                cell = ws.cell(row=row_idx, column=col_idx)
+                self._format_cell(cell, val)
+
+        # Add excel table formatting
+        self._add_table(ws, title, len(headers), len(rows))
+
+        # Auto-size columns
+        self._auto_size_columns(ws)
+
+    def _format_cell(self, cell, value) -> None:
+        """Format cell based on data type."""
+        if isinstance(value, int):
+            cell.number_format = "#,##0"
+        elif isinstance(value, float) or isinstance(value, decimal.Decimal):
+            cell.number_format = "#,##0.00##############"
+
+    def _add_table(self, ws, title: str, cols: int, rows: int) -> None:
+        """Add a styled table to the worksheet."""
+        table_name = title.replace(" ", "") + "Tbl"
+        table_ref = f"A1:{get_column_letter(cols)}{rows+1}"
+
+        tab = Table(displayName=table_name, ref=table_ref)
+        tab.tableStyleInfo = TableStyleInfo(
+            name=TABLE_STYLE,
+            showRowStripes=SHOW_ROW_STRIPES,
+            showColumnStripes=SHOW_COL_STRIPES,
+        )
+        ws.add_table(tab)
+
+    def _auto_size_columns(self, ws) -> None:
+        """Auto-size columns based on content."""
+        for col in ws.columns:
+            max_length = max(len(str(cell.value)) if cell.value else 0 for cell in col)
+            ws.column_dimensions[get_column_letter(col[0].column)].width = (
+                max_length + 2
+            )
+
+    async def _add_summary_sheet(
+        self, wb: Workbook, summary: ComplianceReportSummary
+    ) -> None:
+        """Add the summary sheet with all three tables."""
+        ws = wb.create_sheet(title=SUMMARY_SHEET)
+        summary_model = self.summary_service.convert_summary_to_dict(summary)
+        bold = Font(bold=True)
+
+        def append_and_bold(row):
+            ws.append(row)
+            for i, _ in enumerate(row):
+                cell = ws.cell(row=ws.max_row, column=i + 1)
+                cell.font = bold
+                cell.alignment = Alignment(horizontal="center")
+
+        # Add Renewable fuel target summary
+        ws.append(["", "", "", "", ""])
+        self._add_centered_title(ws, RENEWABLE_REQUIREMENT_TITLE, 5)
+
+        header_row = ws.max_row + 1
+        append_and_bold(["Line", "Description", "Gasoline", "Diesel", "Jet"])
+
+        for line in summary_model.renewable_fuel_target_summary:
+            row = [
+                line.line,
+                line.description,
+                line.gasoline,
+                line.diesel,
+                line.jet_fuel,
+            ]
+            ws.append(row)
+            for col_idx, val in enumerate(row, start=1):
+                cell = ws.cell(row=ws.max_row, column=col_idx)
+                if line.line == 11 and col_idx > 2:
+                    cell.number_format = '"$"#,##0.00'
+                else:
+                    self._format_cell(cell, val)
+
+        end_row = ws.max_row
+        tab = Table(
+            displayName="RenewableTbl",
+            ref=f"A{header_row}:{get_column_letter(5)}{end_row}",
+        )
+        tab.tableStyleInfo = TableStyleInfo(
+            name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
+        )
+        ws.add_table(tab)
+
+        # Add Low Carbon Fuel Target Summary
+        ws.append(["", "", ""])
+        self._add_centered_title(ws, LOW_CARBON_SUMMARY_TITLE, 3)
+
+        header_row = ws.max_row + 1
+        append_and_bold(["Line", "Description", "Value"])
+
+        for line in summary_model.low_carbon_fuel_target_summary:
+            row = [line.line, line.description, line.value]
+            ws.append(row)
+            last_col_idx = len(row)
+            cell = ws.cell(row=ws.max_row, column=last_col_idx)
+            cell.number_format = "#,##0"
+            if line.line == 21:
+                cell.number_format = '"$"#,##0.00'
+
+        end_row = ws.max_row
+        tab = Table(
+            displayName="LowCarbonTbl",
+            ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
+        )
+        tab.tableStyleInfo = TableStyleInfo(
+            name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
+        )
+        ws.add_table(tab)
+
+        # Add Non-Compliance Penalty Summary
+        ws.append(["", "", ""])
+        self._add_centered_title(ws, PENALTY_SUMMARY_TITLE, 3)
+
+        header_row = ws.max_row + 1
+        append_and_bold(["Line", "Description", "Total Value"])
+
+        for line in summary_model.non_compliance_penalty_summary:
+            row = ["", line.description, line.total_value]
+            ws.append(row)
+            last_col_idx = len(row)
+            cell = ws.cell(row=ws.max_row, column=last_col_idx)
+            cell.number_format = '"$"#,##0.00'
+
+        end_row = ws.max_row
+        tab = Table(
+            displayName="PenaltyTbl",
+            ref=f"A{header_row}:{get_column_letter(3)}{end_row}",
+        )
+        tab.tableStyleInfo = TableStyleInfo(
+            name=TABLE_STYLE, showRowStripes=False, showColumnStripes=False
+        )
+        ws.add_table(tab)
+        self._auto_size_columns(ws)
+
+    def _add_centered_title(self, ws, title: str, columns: int) -> None:
+        """Add a centered merged cell title."""
+        row_num = ws.max_row + 1
+        ws.append([title] + [""] * (columns - 1))
+        ws.merge_cells(
+            start_row=row_num, start_column=1, end_row=row_num, end_column=columns
+        )
+        cell = ws.cell(row=row_num, column=1)
+        cell.alignment = Alignment(horizontal="center")
+        cell.font = Font(bold=True)
+
+    def _format_date(self, val) -> Union[datetime, str]:
+        """Format date values consistently."""
+        if isinstance(val, datetime):
+            return val
+        if hasattr(val, "year") and hasattr(val, "month") and hasattr(val, "day"):
+            try:
+                return val
+            except Exception:
+                pass
+        return str(val) if val else None
+
+    async def _load_fuel_supply_data(self, uuid, cid) -> List[List[Any]]:
+        """Load fuel supply data."""
+        data = await self.fs_repo.get_effective_fuel_supplies(uuid, cid)
+        headers = [col.label for col in FUEL_SUPPLY_COLUMNS]
+
+        rows = []
+        for fs in data:
+            rows.append(
+                [
+                    round(fs.compliance_units) if fs.compliance_units else None,
+                    fs.fuel_type.fuel_type if fs.fuel_type else None,
+                    fs.fuel_type_other,
+                    fs.fuel_category.category if fs.fuel_category else None,
+                    fs.end_use_type.type if fs.end_use_type else None,
+                    fs.provision_of_the_act.name if fs.provision_of_the_act else None,
+                    fs.fuel_code.fuel_code if fs.fuel_code else None,
+                    fs.quantity,
+                    fs.units.value if fs.units else None,
+                    fs.target_ci,
+                    fs.ci_of_fuel,
+                    fs.uci,
+                    fs.energy_density,
+                    fs.eer,
+                    fs.energy,
+                ]
+            )
+
+        return [headers] + rows
+
+    async def _load_notional_transfer_data(self, uuid, cid) -> List[List[Any]]:
+        """Load notional transfer data."""
+        data = await self.nt_repo.get_effective_notional_transfers(uuid, cid)
+        headers = [col.label for col in NOTIONAL_TRANSFER_COLUMNS]
+
+        rows = []
+        for nt in data:
+            rows.append(
+                [
+                    nt.legal_name,
+                    nt.address_for_service,
+                    nt.fuel_category,
+                    (
+                        nt.received_or_transferred.value
+                        if nt.received_or_transferred
+                        else None
+                    ),
+                    nt.quantity,
+                ]
+            )
+
+        return [headers] + rows
+
+    async def _load_fuels_for_other_use_data(self, uuid, cid) -> List[List[Any]]:
+        """Load fuels for other use data."""
+        data: List[OtherUsesSchema] = await self.ou_repo.get_effective_other_uses(
+            uuid, cid
+        )
+        headers = [col.label for col in OTHER_USES_COLUMNS]
+
+        rows = []
+        for ou in data:
+            rows.append(
+                [
+                    ou.fuel_type,
+                    ou.fuel_category,
+                    ou.provision_of_the_act,
+                    ou.fuel_code,
+                    ou.quantity_supplied,
+                    ou.units,
+                    ou.ci_of_fuel,
+                    ou.expected_use,
+                    ou.rationale,
+                ]
+            )
+
+        return [headers] + rows
+
+    async def _load_export_fuel_data(self, uuid, cid) -> List[List[Any]]:
+        """Load export fuel data."""
+        data = await self.ef_repo.get_effective_fuel_exports(uuid, cid)
+        headers = [col.label for col in EXPORT_FUEL_COLUMNS]
+
+        rows = []
+        for ef in data:
+            rows.append(
+                [
+                    round(ef.compliance_units) if ef.compliance_units else None,
+                    self._format_date(ef.export_date),
+                    ef.fuel_type.fuel_type if ef.fuel_type else None,
+                    ef.fuel_type_other,
+                    ef.fuel_category.category if ef.fuel_category else None,
+                    ef.end_use_type.type if ef.end_use_type else None,
+                    ef.provision_of_the_act.name if ef.provision_of_the_act else None,
+                    ef.fuel_code.fuel_code if ef.fuel_code else None,
+                    ef.quantity,
+                    ef.units.value if ef.units else None,
+                    ef.target_ci,
+                    ef.ci_of_fuel,
+                    ef.uci,
+                    ef.energy_density,
+                    ef.eer,
+                    ef.energy,
+                ]
+            )
+
+        return [headers] + rows
+
+    async def _load_allocation_agreement_data(self, cid) -> List[List[Any]]:
+        """Load allocation agreement data."""
+        data = await self.aa_repo.get_allocation_agreements(cid)
+        headers = [col.label for col in ALLOCATION_AGREEMENT_COLUMNS]
+
+        rows = []
+        for aa in data:
+            rows.append(
+                [
+                    aa.allocation_transaction_type,
+                    aa.transaction_partner,
+                    aa.postal_address,
+                    aa.transaction_partner_email,
+                    aa.transaction_partner_phone,
+                    aa.fuel_type,
+                    aa.fuel_type_other,
+                    aa.fuel_category,
+                    aa.provision_of_the_act,
+                    aa.fuel_code,
+                    aa.ci_of_fuel,
+                    aa.quantity,
+                    aa.units,
+                ]
+            )
+
+        return [headers] + rows
+
+    async def _load_fse_data(self, cid) -> List[List[Any]]:
+        """Load final supply equipment data."""
+        result = await self.fse_repo.get_fse_paginated(
+            compliance_report_id=cid,
             pagination=PaginationRequestSchema(
                 page=1, size=1000, filters=[], sort_orders=[]
             ),
         )
-        return [
-            [
-                fse.organization_name,
-                fse.supply_from_date,
-                fse.supply_to_date,
-                fse.kwh_usage,
-                fse.serial_nbr,
-                fse.manufacturer,
-                fse.model,
-                fse.level_of_equipment.name,
-                fse.ports,
-                ", ".join(ut.type for ut in fse.intended_use_types),
-                ", ".join(uut.type_name for uut in fse.intended_user_types),
-                fse.street_address,
-                fse.city,
-                fse.postal_code,
-                fse.latitude,
-                fse.longitude,
-                fse.notes,
-            ]
-            for fse in results[0]
-        ]
 
-    async def add_fuel_supply_sheet(
-        self,
-        builder: SpreadsheetBuilder,
-        compliance_report_group_uuid: str,
-        is_draft: bool,
-    ) -> SpreadsheetBuilder:
-        data = await self.load_fuel_supply_data(compliance_report_group_uuid, is_draft)
-        builder.add_sheet(
-            sheet_name=FS_EXPORT_NAME,
-            columns=FS_EXPORT_COLUMNS,
-            rows=data,
-            styles={"bold_headers": True},
-        )
-        return builder
+        headers = [col.label for col in FSE_EXPORT_COLUMNS]
 
-    async def load_fuel_supply_data(
-        self, compliance_report_group_uuid: str, is_draft: bool
-    ) -> List[List]:
-        results = await self.fs_repo.get_effective_fuel_supplies(
-            compliance_report_group_uuid, not is_draft
-        )
-        return [
-            [
-                round(fs.compliance_units),
-                fs.fuel_type.fuel_type,
-                fs.fuel_type_other,
-                fs.fuel_category.category,
-                fs.end_use_type.type,
-                fs.provision_of_the_act.name,
-                fs.fuel_code.fuel_code if fs.fuel_code else None,
-                fs.quantity,
-                fs.units.value,
-                fs.target_ci,
-                fs.ci_of_fuel,
-                fs.uci,
-                fs.energy_density,
-                fs.eer,
-                fs.energy,
-            ]
-            for fs in results
-        ]
+        rows = []
+        for fse in result[0]:
+            rows.append(
+                [
+                    fse.organization_name,
+                    self._format_date(fse.supply_from_date),
+                    self._format_date(fse.supply_to_date),
+                    fse.kwh_usage,
+                    fse.serial_nbr,
+                    fse.manufacturer,
+                    fse.model,
+                    fse.level_of_equipment.name if fse.level_of_equipment else None,
+                    fse.ports,
+                    ", ".join(ut.type for ut in fse.intended_use_types if ut),
+                    ", ".join(uut.type_name for uut in fse.intended_user_types if uut),
+                    fse.street_address,
+                    fse.city,
+                    fse.postal_code,
+                    fse.latitude,
+                    fse.longitude,
+                    fse.notes,
+                ]
+            )
 
-    async def add_notional_transfer_sheet(
-        self,
-        builder: SpreadsheetBuilder,
-        compliance_report_group_uuid: str,
-        is_draft: bool,
-    ) -> SpreadsheetBuilder:
-        data = await self.load_notional_transfer_data(
-            compliance_report_group_uuid, is_draft
-        )
-        builder.add_sheet(
-            sheet_name=NT_EXPORT_NAME,
-            columns=NT_EXPORT_COLUMNS,
-            rows=data,
-            styles={"bold_headers": True},
-        )
-        return builder
-
-    async def load_notional_transfer_data(
-        self, compliance_report_group_uuid: str, is_draft: bool
-    ) -> List[List]:
-        results = await self.nt_repo.get_effective_notional_transfers(
-            compliance_report_group_uuid, not is_draft
-        )
-        return [
-            [
-                nt.legal_name,
-                nt.address_for_service,
-                nt.fuel_category,
-                nt.received_or_transferred.value,
-                nt.quantity,
-            ]
-            for nt in results
-        ]
-
-    async def add_fuels_for_other_use_sheet(
-        self,
-        builder: SpreadsheetBuilder,
-        compliance_report_group_uuid: str,
-        is_draft: bool,
-    ) -> SpreadsheetBuilder:
-        data = await self.load_fuels_for_other_use_data(
-            compliance_report_group_uuid, is_draft
-        )
-        builder.add_sheet(
-            sheet_name=OU_EXPORT_NAME,
-            columns=OU_EXPORT_COLUMNS,
-            rows=data,
-            styles={"bold_headers": True},
-        )
-        return builder
-
-    async def load_fuels_for_other_use_data(
-        self, compliance_report_group_uuid: str, is_draft: bool
-    ) -> List[List]:
-        results: List[OtherUsesSchema] = await self.ou_repo.get_effective_other_uses(
-            compliance_report_group_uuid, False, not is_draft, False
-        )
-        return [
-            [
-                ou.fuel_type,
-                ou.fuel_category,
-                ou.provision_of_the_act,
-                ou.fuel_code,
-                ou.quantity_supplied,
-                ou.units,
-                ou.ci_of_fuel,
-                ou.expected_use,
-                ou.rationale,
-            ]
-            for ou in results
-        ]
-
-    async def add_export_fuel_sheet(
-        self,
-        builder: SpreadsheetBuilder,
-        compliance_report_group_uuid: str,
-        is_draft: bool,
-    ) -> SpreadsheetBuilder:
-        data = await self.load_export_fuel_data(compliance_report_group_uuid, is_draft)
-        builder.add_sheet(
-            sheet_name=EF_EXPORT_NAME,
-            columns=EF_EXPORT_COLUMNS,
-            rows=data,
-            styles={"bold_headers": True},
-        )
-        return builder
-
-    async def load_export_fuel_data(
-        self, compliance_report_group_uuid: str, is_draft: bool
-    ) -> List[List]:
-        results = await self.ef_repo.get_effective_fuel_exports(
-            compliance_report_group_uuid, False, not is_draft
-        )
-        return [
-            [
-                round(ef.compliance_units),
-                ef.export_date,
-                ef.fuel_type.fuel_type,
-                ef.fuel_type_other,
-                ef.fuel_category.category,
-                ef.end_use_type.type,
-                ef.provision_of_the_act.name,
-                ef.fuel_code.fuel_code if ef.fuel_code else None,
-                ef.quantity,
-                ef.units.value,
-                ef.target_ci,
-                ef.ci_of_fuel,
-                ef.uci,
-                ef.energy_density,
-                ef.eer,
-                ef.energy,
-            ]
-            for ef in results
-        ]
-
-    async def add_allocation_agreement_sheet(
-        self, builder: SpreadsheetBuilder, compliance_report_id: int
-    ) -> SpreadsheetBuilder:
-        data = await self.load_allocation_agreement_data(compliance_report_id)
-        builder.add_sheet(
-            sheet_name=AA_EXPORT_NAME,
-            columns=AA_EXPORT_COLUMNS,
-            rows=data,
-            styles={"bold_headers": True},
-        )
-        return builder
-
-    async def load_allocation_agreement_data(
-        self, compliance_report_id: int
-    ) -> List[List]:
-        results = await self.aa_repo.get_allocation_agreements(compliance_report_id)
-        return [
-            [
-                aa.allocation_transaction_type,
-                aa.transaction_partner,
-                aa.postal_address,
-                aa.transaction_partner_email,
-                aa.transaction_partner_phone,
-                aa.fuel_type,
-                aa.fuel_type_other,
-                aa.provision_of_the_act,
-                aa.fuel_code,
-                aa.ci_of_fuel,
-                aa.quantity,
-                aa.units,
-            ]
-            for aa in results
-        ]
-
-    async def add_summary_sheet(
-        self, builder: SpreadsheetBuilder, summary: ComplianceReportSummary
-    ) -> SpreadsheetBuilder:
-        summary_model = self.summary_service.convert_summary_to_dict(summary)
-
-        data = (
-            [
-                ["Renewable Requirement", "", "", "", ""],
-                ["Line", "Description", "Gasoline", "Diesel", "Jet"],
-            ]
-            + [
-                [line.line, line.description, line.gasoline, line.diesel, line.jet_fuel]
-                for line in summary_model.renewable_fuel_target_summary
-            ]
-            + [
-                ["", "", "", "", ""],
-                ["Low carbon fuel target summary", "", "", "", ""],
-                ["Line", "Description", "Value", "", ""],
-            ]
-            + [
-                [line.line, line.description, line.value, "", ""]
-                for line in summary_model.low_carbon_fuel_target_summary
-            ]
-            + [
-                ["", "", "", "", ""],
-                ["Non-compliance penalty payable summary", "", "", "", ""],
-                ["", "Description", "Total Value", "", ""],
-            ]
-            + [
-                ["", line.description, line.total_value]
-                for line in summary_model.non_compliance_penalty_summary
-            ]
-        )
-
-        bold_font = styles.Font(bold=True)
-        my_styles = [
-            [{"font": bold_font}, {}, {}, {}, {}],
-            [
-                {"font": bold_font},
-                {"font": bold_font},
-                {"font": bold_font},
-                {"font": bold_font},
-                {"font": bold_font},
-            ],
-            [
-                {},
-                {},
-                {"type": "int"},
-                {"type": "int"},
-                {"type": "int"},
-            ],  # Start Renewable Table
-            [{}, {}, {"type": "int"}, {"type": "int"}, {"type": "int"}],
-            [{}, {}, {"type": "int"}, {"type": "int"}, {"type": "int"}],
-            [{}, {}, {"type": "int"}, {"type": "int"}, {"type": "int"}],
-            [{}, {}, {"type": "int"}, {"type": "int"}, {"type": "int"}],
-            [{}, {}, {"type": "int"}, {"type": "int"}, {"type": "int"}],
-            [{}, {}, {"type": "int"}, {"type": "int"}, {"type": "int"}],
-            [{}, {}, {"type": "int"}, {"type": "int"}, {"type": "int"}],
-            [{}, {}, {"type": "int"}, {"type": "int"}, {"type": "int"}],
-            [{}, {}, {"type": "int"}, {"type": "int"}, {"type": "int"}],
-            [
-                {},
-                {},
-                {"type": "float"},
-                {"type": "float"},
-                {"type": "float"},
-            ],  # End Renewable Table
-            [{}, {}, {}, {}, {}],
-            [{"font": bold_font}, {}, {}, {}, {}],  # Start Low Carbon Table
-            [
-                {"font": bold_font},
-                {"font": bold_font},
-                {"font": bold_font},
-                {"font": bold_font},
-                {"font": bold_font},
-            ],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {"type": "int"}, {}, {}],
-            [{}, {}, {}, {}, {}],
-            [{"font": bold_font}, {}, {}, {}, {}],  # Start Summary Table
-            [{}, {"font": bold_font}, {"font": bold_font}, {}, {}],
-            [{}, {}, {"type": "float"}, {}, {}],
-            [{}, {}, {"type": "float"}, {}, {}],
-            [{}, {}, {"type": "float"}, {}, {}],
-        ]
-
-        raw_sheet = RawSpreadsheet(data=data, label="Summary", styles=my_styles)
-        builder.add_raw_sheet(raw_sheet)
-        return builder
+        return [headers] + rows

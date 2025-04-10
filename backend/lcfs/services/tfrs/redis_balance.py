@@ -1,4 +1,4 @@
-import logging
+import structlog
 from datetime import datetime
 
 from fastapi import FastAPI, Depends
@@ -13,7 +13,7 @@ from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 
 app = FastAPI()
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
 
 
 async def init_org_balance_cache(app: FastAPI):
@@ -53,10 +53,6 @@ async def init_org_balance_cache(app: FastAPI):
                     )
                     # Set the balance in Redis
                     await set_cache_value(org.organization_id, year, balance, redis)
-                    logger.debug(
-                        f"Set balance for organization {org.name} "
-                        f"for {year} to {balance}"
-                    )
 
             logger.info(f"Cache populated with {len(all_orgs)} organizations")
 
@@ -89,9 +85,6 @@ class RedisBalanceService:
             )
 
             await set_cache_value(organization_id, year, balance, self.redis_client)
-            logger.debug(
-                f"Set balance for org {organization_id} for {year} to {balance}"
-            )
 
 
 async def set_cache_value(

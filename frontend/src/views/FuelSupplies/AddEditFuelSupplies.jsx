@@ -2,7 +2,7 @@ import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
 import { DEFAULT_CI_FUEL } from '@/constants/common'
-import * as ROUTES from '@/constants/routes/routes.js'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -14,7 +14,7 @@ import { isArrayEmpty } from '@/utils/array.js'
 import { cleanEmptyStringValues } from '@/utils/formatters'
 import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -37,7 +37,7 @@ export const AddEditFuelSupplies = () => {
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
 
@@ -110,14 +110,6 @@ export const AddEditFuelSupplies = () => {
             ...item,
             complianceReportId, // This takes current reportId, important for versioning
             compliancePeriod,
-            fuelCategory: item.fuelCategory?.category,
-            fuelType: item.fuelType?.fuelType,
-            fuelTypeOther:
-              item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
-            provisionOfTheAct: item.provisionOfTheAct?.name,
-            provisionOfTheActId: item.provisionOfTheActId,
-            fuelCode: item.fuelCode?.fuelCode,
-            endUse: item.endUse?.type,
             isNewSupplementalEntry:
               isSupplemental && item.complianceReportId === +complianceReportId,
             id: uuid()
@@ -155,14 +147,6 @@ export const AddEditFuelSupplies = () => {
           ...item,
           complianceReportId, // This takes current reportId, important for versioning
           compliancePeriod,
-          fuelCategory: item.fuelCategory?.category,
-          fuelType: item.fuelType?.fuelType,
-          fuelTypeOther:
-            item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
-          provisionOfTheAct: item.provisionOfTheAct?.name,
-          provisionOfTheActId: item.provisionOfTheAct?.provisionOfTheActId,
-          fuelCode: item.fuelCode?.fuelCode,
-          endUse: item.endUse?.type,
           isNewSupplementalEntry:
             isSupplemental && item.complianceReportId === +complianceReportId,
           id: uuid()
@@ -312,10 +296,10 @@ export const AddEditFuelSupplies = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
+      buildPath(ROUTES.REPORTS.VIEW, {
+        compliancePeriod,
+        complianceReportId
+      })
     )
   }, [navigate, compliancePeriod, complianceReportId])
 

@@ -2,7 +2,7 @@ import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import * as ROUTES from '@/constants/routes/routes.js'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -13,7 +13,7 @@ import {
 import { isArrayEmpty } from '@/utils/array'
 import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -41,7 +41,7 @@ export const AddEditNotionalTransfers = () => {
   const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
-      currentUser?.organization.organizationId,
+      currentUser?.organization?.organizationId,
       complianceReportId
     )
 
@@ -141,10 +141,11 @@ export const AddEditNotionalTransfers = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'legalName') {
+        const orgName = currentUser.organization?.name
         if (
           (typeof params.newValue === 'object' &&
-            params.newValue?.name === currentUser.organization.name) ||
-          params.newValue === currentUser.organization.name
+            params.newValue?.name === orgName) ||
+          params.newValue === orgName
         ) {
           alertRef.current?.triggerAlert({
             message:
@@ -272,10 +273,10 @@ export const AddEditNotionalTransfers = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
+      buildPath(ROUTES.REPORTS.VIEW, {
+        compliancePeriod,
+        complianceReportId
+      })
     )
   }, [navigate, compliancePeriod, complianceReportId])
 

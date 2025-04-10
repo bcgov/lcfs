@@ -113,7 +113,7 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
     field: 'fuelSuffix',
     editable: canEdit,
     headerComponent: canEdit ? RequiredHeader : undefined,
-    headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelCode'),
+    headerName: i18n.t('fuelCode:fuelCodeColLabels.fuelSuffix'),
     cellDataType: 'text',
     cellRenderer: createCellRenderer('fuelSuffix'),
     cellEditor: AsyncSuggestionEditor,

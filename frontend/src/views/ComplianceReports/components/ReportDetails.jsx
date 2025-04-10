@@ -1,22 +1,18 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   Accordion,
-  AccordionSummary,
   AccordionDetails,
-  Link,
+  AccordionSummary,
   CircularProgress,
-  IconButton
+  IconButton,
+  Link
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
-import { faPen } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'
-import { ROUTES } from '@/constants/routes'
-import { ROUTES as ROUTES2 } from '@/routes/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { roles } from '@/constants/roles'
 import { Role } from '@/components/Role'
 import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary'
@@ -26,7 +22,7 @@ import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
-import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement'
+import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
@@ -39,8 +35,15 @@ import {
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { isArrayEmpty } from '@/utils/array.js'
+import { TogglePanel } from '@/components/TogglePanel.jsx'
+import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog.jsx'
+import { AllocationAgreementChangelog } from '@/views/AllocationAgreements/AllocationAgreementChangelog.jsx'
+import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog.jsx'
+import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog.jsx'
+import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog.jsx'
+import { Edit, ExpandMore } from '@mui/icons-material'
 
-const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
+const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
@@ -52,52 +55,26 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
   )
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
-  const isAnalystRole = hasRoles('Analyst')
-  const isSupplierRole = hasRoles('Supplier')
-  const isGovernmentRole = hasRoles('Government')
+  const hasAnalystRole = hasRoles('Analyst')
+  const hasSupplierRole = hasRoles('Supplier')
+  const isSupplemental = complianceReportData.report.version > 0
+  const hasVersions = complianceReportData.chain.length > 1
 
   const editSupportingDocs = useMemo(() => {
     return (
       // Allow BCeID users to edit in Draft status
-      (isSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) ||
+      (hasSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) ||
       // Allow analysts to edit in Submitted or Assessed status
-      (isAnalystRole &&
+      (hasAnalystRole &&
         (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
           currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED))
     )
-  }, [isAnalystRole, isSupplierRole, currentStatus])
-
-  const editAnalyst = useMemo(() => {
-    return (
-      isAnalystRole && currentStatus === COMPLIANCE_REPORT_STATUSES.REASSESSED
-    )
-  }, [isAnalystRole, currentStatus])
-
-  const editSupplier = useMemo(() => {
-    return isSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
-  }, [isSupplierRole, currentStatus])
-
+  }, [hasAnalystRole, hasSupplierRole, currentStatus])
   const shouldShowEditIcon = (activityName) => {
     if (activityName === t('report:supportingDocs')) {
       return editSupportingDocs
     }
-    return editAnalyst || editSupplier
-  }
-  const shouldShowChangelogButton = (activityName) => {
-    if (complianceReportData.report.version === 0) {
-      return false
-    }
-    return (
-      (isGovernmentRole || isSupplierRole) &&
-      currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED &&
-      [
-        t('report:activityLists.supplyOfFuel'),
-        t('report:activityLists.notionalTransfers'),
-        t('otherUses:summaryTitle'),
-        t('fuelExport:fuelExportTitle'),
-        t('report:activityLists.allocationAgreements')
-      ].includes(activityName)
-    )
+    return canEdit
   }
 
   const activityList = useMemo(
@@ -132,29 +109,32 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         name: t('report:activityLists.supplyOfFuel'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_SUPPLY_OF_FUEL.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetFuelSupplies,
         component: (data) =>
           data.fuelSupplies.length > 0 && (
-            <FuelSupplySummary status={currentStatus} data={data} />
-          ),
-        changelogRoute: ROUTES2.REPORTS.CHANGELOG.SUPPLY_OF_FUEL.replace(
-          ':compliancePeriod',
-          compliancePeriod
-        ).replace(':complianceReportId', complianceReportId)
+            <TogglePanel
+              label="Change log"
+              disabled={!(hasVersions || isSupplemental)}
+              onComponent={<FuelSupplyChangelog canEdit={canEdit} />}
+              offComponent={
+                <FuelSupplySummary status={currentStatus} data={data} />
+              }
+            />
+          )
       },
       {
         name: t('finalSupplyEquipment:fseTitle'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_FINAL_SUPPLY_EQUIPMENTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetFinalSupplyEquipments,
         component: (data) =>
@@ -166,77 +146,92 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         name: t('report:activityLists.allocationAgreements'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_ALLOCATION_AGREEMENTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
-        useFetch: useGetAllocationAgreements,
+        useFetch: useGetAllAllocationAgreements,
         component: (data) =>
           data.allocationAgreements.length > 0 && (
-            <AllocationAgreementSummary status={currentStatus} data={data} />
-          ),
-        changelogRoute: ROUTES2.REPORTS.CHANGELOG.ALLOCATION_AGREEMENTS.replace(
-          ':compliancePeriod',
-          compliancePeriod
-        ).replace(':complianceReportId', complianceReportId)
+            <TogglePanel
+              label="Change log"
+              disabled={!(hasVersions || isSupplemental)}
+              onComponent={<AllocationAgreementChangelog canEdit={canEdit} />}
+              offComponent={
+                <AllocationAgreementSummary
+                  status={currentStatus}
+                  data={data}
+                />
+              }
+            />
+          )
       },
       {
         name: t('report:activityLists.notionalTransfers'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_NOTIONAL_TRANSFERS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetAllNotionalTransfers,
         component: (data) =>
           data.length > 0 && (
-            <NotionalTransferSummary status={currentStatus} data={data} />
-          ),
-        changelogRoute: ROUTES2.REPORTS.CHANGELOG.NOTIONAL_TRANSFERS.replace(
-          ':compliancePeriod',
-          compliancePeriod
-        ).replace(':complianceReportId', complianceReportId)
+            <TogglePanel
+              label="Change log"
+              disabled={!(hasVersions || isSupplemental)}
+              onComponent={<NotionalTransferChangelog canEdit={canEdit} />}
+              offComponent={
+                <NotionalTransferSummary status={currentStatus} data={data} />
+              }
+            />
+          )
       },
       {
         name: t('otherUses:summaryTitle'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_OTHER_USE_FUELS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.OTHER_USE_FUELS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetAllOtherUses,
         component: (data) =>
           data.length > 0 && (
-            <OtherUsesSummary status={currentStatus} data={data} />
-          ),
-        changelogRoute: ROUTES2.REPORTS.CHANGELOG.OTHER_USE_FUELS.replace(
-          ':compliancePeriod',
-          compliancePeriod
-        ).replace(':complianceReportId', complianceReportId)
+            <TogglePanel
+              label="Change log"
+              disabled={!(hasVersions || isSupplemental)}
+              onComponent={<OtherUsesChangelog canEdit={canEdit} />}
+              offComponent={
+                <OtherUsesSummary status={currentStatus} data={data} />
+              }
+            />
+          )
       },
       {
         name: t('fuelExport:fuelExportTitle'),
         action: () =>
           navigate(
-            ROUTES.REPORTS_ADD_FUEL_EXPORTS.replace(
-              ':compliancePeriod',
-              compliancePeriod
-            ).replace(':complianceReportId', complianceReportId)
+            buildPath(ROUTES.REPORTS.ADD.FUEL_EXPORTS, {
+              compliancePeriod,
+              complianceReportId
+            })
           ),
         useFetch: useGetFuelExports,
         component: (data) =>
           !isArrayEmpty(data) && (
-            <FuelExportSummary status={currentStatus} data={data} />
-          ),
-        changelogRoute: ROUTES2.REPORTS.CHANGELOG.FUEL_EXPORTS.replace(
-          ':compliancePeriod',
-          compliancePeriod
-        ).replace(':complianceReportId', complianceReportId)
+            <TogglePanel
+              label="Change log"
+              disabled={!(hasVersions || isSupplemental)}
+              onComponent={<FuelExportChangelog canEdit={canEdit} />}
+              offComponent={
+                <FuelExportSummary status={currentStatus} data={data} />
+              }
+            />
+          )
       }
     ],
     [
@@ -300,10 +295,11 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
         </Link>
       </BCTypography>
       {activityList.map((activity, index) => {
-        const { data, error, isLoading } = activity.useFetch(complianceReportId)
+        const { data, error, isLoading } = activity.useFetch(complianceReportId, {
+                  changelog: isSupplemental})
         return (
-          data &&
-          !isArrayEmpty(data) && (
+          (data &&
+            !isArrayEmpty(data) || hasVersions) && (
             <Accordion
               key={index}
               expanded={expanded.includes(`panel${index}`)}
@@ -311,7 +307,7 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
             >
               <AccordionSummary
                 expandIcon={
-                  <ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />
+                  <ExpandMore sx={{ width: '2rem', height: '2rem' }} />
                 }
                 aria-controls={`panel${index}-content`}
                 id={`panel${index}-header`}
@@ -324,34 +320,20 @@ const ReportDetails = ({ currentStatus = 'Draft', userRoles }) => {
                   component="div"
                 >
                   {activity.name}&nbsp;&nbsp;
-                  {shouldShowChangelogButton(activity.name) && (
-                    <>
-                      |
-                      <Link
-                        component="button"
-                        variant="body2"
-                        onClick={() => navigate(activity.changelogRoute)}
-                        sx={{ ml: 2, mr: 1, textDecoration: 'underline' }}
-                      >
-                        {t('report:changelog')}
-                      </Link>
-                    </>
-                  )}
                   {shouldShowEditIcon(activity.name) && (
                     <Role
                       roles={[
-                        roles.supplier,
+                        roles.signing_authority,
                         roles.compliance_reporting,
                         roles.analyst
                       ]}
                     >
                       <IconButton
                         color="primary"
-                        size="small"
                         aria-label="edit"
                         onClick={activity.action}
                       >
-                        <FontAwesomeIcon className="small-icon" icon={faPen} />
+                        <Edit />
                       </IconButton>
                     </Role>
                   )}

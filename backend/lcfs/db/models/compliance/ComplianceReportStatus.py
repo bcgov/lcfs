@@ -8,12 +8,14 @@ from lcfs.db.base import BaseModel, EffectiveDates
 class ComplianceReportStatusEnum(enum.Enum):
     Draft = "Draft"
     Submitted = "Submitted"
+    Analyst_adjustment = "Analyst adjustment"
     Recommended_by_analyst = "Recommended by analyst"
     Recommended_by_manager = "Recommended by manager"
+    Assessed = "Assessed"
+
+    # Historical (TFRS)
     Not_recommended_by_analyst = "Not recommended by analyst"
     Not_recommended_by_manager = "Not recommended by manager"
-    Assessed = "Assessed"
-    Reassessed = "Reassessed"
     Rejected = "Rejected"
 
     def underscore_value(self) -> str:

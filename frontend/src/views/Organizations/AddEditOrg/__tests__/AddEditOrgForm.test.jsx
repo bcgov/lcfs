@@ -6,7 +6,7 @@ import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useApiService } from '@/services/useApiService'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 
 const mockSetValue = vi.fn()
 const mockWatch = vi.fn()
@@ -357,7 +357,7 @@ describe('AddEditOrgForm Component', () => {
     await user.click(screen.getByText('backBtn'))
 
     // Verify navigation
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS)
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST)
   })
 
 

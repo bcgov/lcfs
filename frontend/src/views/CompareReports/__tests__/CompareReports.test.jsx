@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
+  useGetComplianceReport,
   useGetComplianceReportSummary,
   useListComplianceReports
 } from '@/hooks/useComplianceReports'
@@ -19,17 +20,18 @@ describe('CompareReports Component', () => {
       data: { organization: { organizationId: 1 } }
     })
 
-    const reportData = [
-      {
-        compliancePeriod: '2021',
-        complianceReportId: 1
-      },
-      { compliancePeriod: '2022', complianceReportId: 2 }
-    ]
-    useListComplianceReports.mockReturnValue({
+    useGetComplianceReport.mockReturnValue({
       data: {
-        data: {
-          reports: reportData
+        chain: [
+          { nickname: 'Original Report', complianceReportId: 1 },
+          {
+            nickname: 'Supplemental Report 1',
+            complianceReportId: 2
+          }
+        ],
+        report: {
+          compliancePeriod: '2021',
+          complianceReportId: 1
         }
       }
     })
@@ -103,13 +105,6 @@ describe('CompareReports Component', () => {
     })
   })
 
-  it('renders loading state initially', () => {
-    useListComplianceReports.mockReturnValue({ data: null })
-
-    render(<CompareReports />, { wrapper })
-    expect(screen.getByText(/loading/i)).toBeInTheDocument()
-  })
-
   it('allows selecting different reports', async () => {
     render(<CompareReports />, { wrapper })
 
@@ -118,17 +113,15 @@ describe('CompareReports Component', () => {
 
     fireEvent.mouseDown(report1Select)
 
-    fireEvent.click(
-      screen.getByRole('option', { name: 'Compliance report 2022' })
-    )
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
 
     fireEvent.mouseDown(report2Select)
     fireEvent.click(
-      screen.getByRole('option', { name: 'Compliance report 2021' })
+      screen.getByRole('option', { name: 'Supplemental Report 1' })
     )
 
-    expect(report1Select).toHaveTextContent('Compliance report 2022')
-    expect(report2Select).toHaveTextContent('Compliance report 2021')
+    expect(report1Select).toHaveTextContent('Original Report')
+    expect(report2Select).toHaveTextContent('Supplemental Report 1')
   })
 
   it('displays correct data in CompareTable', async () => {

@@ -1,6 +1,8 @@
 from enum import Enum
-from typing import ClassVar, Optional, List, TypeVar, Generic, Union
-from datetime import datetime, date
+from typing import ClassVar, Optional, List, Union
+from datetime import datetime
+from typing import List, NamedTuple
+
 from enum import Enum
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
@@ -10,6 +12,7 @@ from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
 from pydantic import Field
+
 
 """
 Base - all shared attributes of a resource
@@ -51,6 +54,8 @@ class PortsEnum(str, Enum):
 class SummarySchema(BaseSchema):
     summary_id: int
     is_locked: bool
+    line_11_fossil_derived_base_fuel_total: float
+    line_21_non_compliance_penalty_payable: float
 
     class Config:
         extra = "allow"
@@ -131,6 +136,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     history: Optional[List[ComplianceReportHistorySchema]] = None
     has_supplemental: bool
     legacy_id: Optional[int] = None
+    assessment_statement: Optional[str] = None
 
 
 class ComplianceReportViewSchema(BaseSchema):
@@ -212,11 +218,123 @@ class CommonPaginatedReportRequestSchema(BaseSchema):
 class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
+    assessment_statement: Optional[str] = None
 
 
-T = TypeVar('T')
+class ExportColumn(NamedTuple):
+    label: str
+    key: str = None
 
 
-class ComplianceReportChangelogSchema(BaseSchema, Generic[T]):
-    changelog: Optional[List[T]] = []
-    pagination: Optional[PaginationResponseSchema] = {}
+# Summary section constants
+RENEWABLE_REQUIREMENT_TITLE = "Renewable fuel target summary"
+LOW_CARBON_SUMMARY_TITLE = "Low carbon fuel target summary"
+PENALTY_SUMMARY_TITLE = "Non-compliance penalty payable summary"
+
+# Table style constants
+TABLE_STYLE = "TableStyleLight15"
+SHOW_ROW_STRIPES = False
+SHOW_COL_STRIPES = False
+
+# Sheet names
+SUMMARY_SHEET = "Summary"
+FUEL_SUPPLY_SHEET = "Fuel supply"
+NOTIONAL_TRANSFER_SHEET = "Notional transfer"
+OTHER_USES_SHEET = "Other uses"
+EXPORT_FUEL_SHEET = "Export fuel"
+ALLOCATION_AGREEMENTS_SHEET = "Allocation agreements"
+FSE_EXPORT_SHEET = "Final supply equipment"
+
+# Column definitions for each sheet
+FUEL_SUPPLY_COLUMNS = [
+    ExportColumn("Compliance Units"),
+    ExportColumn("Fuel type"),
+    ExportColumn("Fuel type Other"),
+    ExportColumn("Fuel category"),
+    ExportColumn("End use"),
+    ExportColumn("Determining carbon intensity"),
+    ExportColumn("Fuel code"),
+    ExportColumn("Quantity supplied"),
+    ExportColumn("Units"),
+    ExportColumn("Target CI"),
+    ExportColumn("RCI"),
+    ExportColumn("UCI"),
+    ExportColumn("Energy density"),
+    ExportColumn("EER"),
+    ExportColumn("Energy content"),
+]
+
+NOTIONAL_TRANSFER_COLUMNS = [
+    ExportColumn("Legal name of trading partner"),
+    ExportColumn("Address for service"),
+    ExportColumn("Fuel category"),
+    ExportColumn("Received OR Transferred"),
+    ExportColumn("Quantity"),
+]
+
+OTHER_USES_COLUMNS = [
+    ExportColumn("Fuel type"),
+    ExportColumn("Fuel category"),
+    ExportColumn("Determining carbon intensity"),
+    ExportColumn("Fuel code"),
+    ExportColumn("Quantity supplied"),
+    ExportColumn("Units"),
+    ExportColumn("RCI"),
+    ExportColumn("Expected use"),
+    ExportColumn("If other, enter expected use"),
+]
+
+EXPORT_FUEL_COLUMNS = [
+    ExportColumn("Compliance units"),
+    ExportColumn("Export date"),
+    ExportColumn("Fuel type"),
+    ExportColumn("Fuel type other"),
+    ExportColumn("Fuel category"),
+    ExportColumn("End use"),
+    ExportColumn("Determining carbon intensity"),
+    ExportColumn("Fuel code"),
+    ExportColumn("Quantity supplied"),
+    ExportColumn("Units"),
+    ExportColumn("Target CI"),
+    ExportColumn("RCI"),
+    ExportColumn("UCI"),
+    ExportColumn("Energy density"),
+    ExportColumn("EER"),
+    ExportColumn("Energy content"),
+]
+
+ALLOCATION_AGREEMENT_COLUMNS = [
+    ExportColumn("Responsibility"),
+    ExportColumn("Legal name of transaction partner"),
+    ExportColumn("Address for service"),
+    ExportColumn("Email"),
+    ExportColumn("Phone"),
+    ExportColumn("Fuel type"),
+    ExportColumn("Fuel type other"),
+    ExportColumn("Fuel category"),
+    ExportColumn("Determining carbon intensity"),
+    ExportColumn("Fuel code"),
+    ExportColumn("RCI"),
+    ExportColumn("Quantity"),
+    ExportColumn("Units"),
+]
+
+FSE_EXPORT_COLUMNS = [
+    ExportColumn("Organization name"),
+    ExportColumn("Supply from Date"),
+    ExportColumn("Supply to Date"),
+    ExportColumn("kWh Usage"),
+    ExportColumn("Serial #"),
+    ExportColumn("Manufacturer"),
+    ExportColumn("Model"),
+    ExportColumn("Level of equipment"),
+    ExportColumn("Ports"),
+    ExportColumn("Intended use types"),
+    ExportColumn("Intended user types"),
+    ExportColumn("Street address"),
+    ExportColumn("City"),
+    ExportColumn("Postal code"),
+    ExportColumn("Latitude"),
+    ExportColumn("Longitude"),
+    ExportColumn("Notes"),
+]

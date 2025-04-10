@@ -1,10 +1,9 @@
 import { Box, Collapse, IconButton, TextField } from '@mui/material'
 import { useState } from 'react'
-import ExpandLessIcon from '@mui/icons-material/ExpandLess'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { useFormContext } from 'react-hook-form'
 import { LabelBox } from './LabelBox'
 import { useTranslation } from 'react-i18next'
+import { ExpandLess, ExpandMore } from '@mui/icons-material'
 
 export const Comments = ({
   editorMode,
@@ -47,7 +46,7 @@ export const Comments = ({
               data-test="collapse-button"
               aria-label="expand comments"
             >
-              {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+              {isExpanded ? <ExpandLess /> : <ExpandMore />}
             </IconButton>
           </Box>
 

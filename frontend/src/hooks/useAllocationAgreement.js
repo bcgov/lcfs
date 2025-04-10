@@ -1,7 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCurrentUser } from './useCurrentUser'
 
 export const useAllocationAgreementOptions = (params, options) => {
   const client = useApiService()
@@ -25,8 +24,47 @@ export const useGetAllocationAgreements = (
   return useQuery({
     queryKey: ['allocation-agreements', complianceReportId, pagination],
     queryFn: async () => {
+      const response = await client.post(apiRoutes.getAllocationAgreements, {
+        complianceReportId,
+        ...pagination
+      })
+      return response.data
+    },
+    ...options
+  })
+}
+
+export const useGetAllAllocationAgreements = (
+  complianceReportId,
+  pagination,
+  options
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['allocation-agreements', complianceReportId, pagination],
+    queryFn: async () => {
       const response = await client.post(apiRoutes.getAllAllocationAgreements, {
         complianceReportId,
+        ...pagination
+      })
+      return response.data
+    },
+    ...options
+  })
+}
+
+export const useGetAllocationAgreementsList = (
+  {complianceReportId, changelog = false},
+  pagination,
+  options
+) => {
+  const client = useApiService()
+  return useQuery({
+    queryKey: ['allocation-agreements', complianceReportId, changelog],
+    queryFn: async () => {
+      const response = await client.post(apiRoutes.getAllAllocationAgreements, {
+        complianceReportId,
+        changelog,
         ...pagination
       })
       return response.data
@@ -38,7 +76,6 @@ export const useGetAllocationAgreements = (
 export const useSaveAllocationAgreement = (params, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
-  const { data: currentUser } = useCurrentUser()
 
   return useMutation({
     ...options,
@@ -47,12 +84,7 @@ export const useSaveAllocationAgreement = (params, options) => {
         complianceReportId: params.complianceReportId,
         ...data
       }
-      return await client.post(
-        apiRoutes.saveAllocationAgreements
-          .replace(':orgID', currentUser.organization.organizationId)
-          .replace(':reportID', params.complianceReportId),
-        modifiedData
-      )
+      return await client.post(apiRoutes.saveAllocationAgreements, modifiedData)
     },
     onSettled: () => {
       queryClient.invalidateQueries([

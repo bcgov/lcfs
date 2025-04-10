@@ -1,7 +1,6 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useCurrentUser } from './useCurrentUser'
 
 export const useFuelExportOptions = (params, options) => {
   const client = useApiService()
@@ -21,7 +20,8 @@ export const useGetFuelExports = (params, pagination, options) => {
     queryFn: async () => {
       const response = await client.post(apiRoutes.getAllFuelExports, {
         ...(typeof params === 'string' && { complianceReportId: params }),
-        ...(typeof params !== 'string' && params)
+        ...(typeof params !== 'string' && params),
+        ...pagination
       })
       return response.data
     },
@@ -53,7 +53,6 @@ export const useGetFuelExportsList = (
 export const useSaveFuelExport = (params, options) => {
   const client = useApiService()
   const queryClient = useQueryClient()
-  const { data: currentUser } = useCurrentUser()
 
   return useMutation({
     ...options,
@@ -62,12 +61,7 @@ export const useSaveFuelExport = (params, options) => {
         complianceReportId: params.complianceReportId,
         ...data
       }
-      return await client.post(
-        apiRoutes.saveFuelExports
-          .replace(':orgID', currentUser.organization.organizationId)
-          .replace(':reportID', params.complianceReportId),
-        modifedData
-      )
+      return await client.post(apiRoutes.saveFuelExports, modifedData)
     },
     onSettled: () => {
       queryClient.invalidateQueries(['fuel-exports', params.complianceReportId])

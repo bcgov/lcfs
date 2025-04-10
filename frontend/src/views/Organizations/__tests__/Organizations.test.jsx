@@ -1,7 +1,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { Organizations } from '../Organizations'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 import { act } from 'react'
 
@@ -89,7 +89,7 @@ describe('Organizations Component', () => {
       fireEvent.click(addButton)
     })
 
-    expect(navigateMock).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS_ADD)
+    expect(navigateMock).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.ADD)
   })
 
   it('handles organization download correctly', async () => {

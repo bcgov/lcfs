@@ -22,6 +22,12 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
   cy.getByDataTest(userType === 'idir' ? 'link-idir' : 'link-bceid').click()
   const loginProcess = (args) => {
     const [username, password] = args
+
+    cy.on('uncaught:exception', (_err, runnable) => {
+      // Return false to ignore exceptions in case wrong credentials or account lock issues.
+      return false
+    })
+
     console.log('username', username)
     cy.get('input[name=user]').type(username, { log: false })
     cy.get('input[name=password]').type(password, { log: false })
@@ -35,10 +41,6 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
     loginProcess
   )
   cy.wait(5000)
-  cy.on('uncaught:exception', (_err, runnable) => {
-    // Return false to ignore exceptions in case wrong credentials or account lock issues.
-    return false
-  })
 })
 
 /**
@@ -130,8 +132,11 @@ Cypress.Commands.add('setIDIRRoles', (role) => {
 
 Cypress.Commands.add(
   'selectWithRetry',
-  (cellSelector, optionSelector, index, retries = 2) => {
+  (cellSelector, optionSelector, index, attempts = 3) => {
     function attemptSelection(attemptsLeft) {
+      // Deselect anything
+      cy.get('body').click(50, 50, { force: true })
+
       cy.get(cellSelector)
         .eq(index)
         .click()
@@ -139,7 +144,8 @@ Cypress.Commands.add(
           cy.get('body').then(($body) => {
             // Check if optionSelector exists in the DOM
             if ($body.find(optionSelector).length > 0) {
-              cy.get(optionSelector).click()
+              cy.get(optionSelector).scrollIntoView().click()
+              cy.wait(300)
             } else {
               // If optionSelector not found, start process from cellSelector again
               cy.log(
@@ -148,20 +154,27 @@ Cypress.Commands.add(
               if (attemptsLeft > 0) {
                 cy.wait(500)
                 attemptSelection(attemptsLeft - 1) // Retry from cellSelector
+              } else {
+                throw new Error(
+                  `Failed to find selector after all attempts ${cellSelector}`
+                )
               }
             }
           })
         })
     }
 
-    attemptSelection(retries)
+    attemptSelection(attempts)
   }
 )
 
 Cypress.Commands.add(
   'inputTextWithRetry',
-  (cellSelector, inputValue, index, retries = 2) => {
+  (cellSelector, inputValue, index, attempts = 3) => {
     function attemptInput(attemptsLeft) {
+      // Deselect anything
+      cy.get('body').click(50, 50, { force: true })
+
       cy.get(cellSelector)
         .eq(index)
         .click()
@@ -170,6 +183,7 @@ Cypress.Commands.add(
             // Check if input exists in the cell
             if ($cell.find('input').length > 0) {
               cy.wrap($cell).find('input').clear().type(`${inputValue}{enter}`)
+              cy.wait(300)
             } else {
               // If input not found, retry the cell click
               cy.log(
@@ -178,12 +192,16 @@ Cypress.Commands.add(
               if (attemptsLeft > 0) {
                 cy.wait(500)
                 attemptInput(attemptsLeft - 1) // Retry
+              } else {
+                throw new Error(
+                  `Failed to find selector after all attempts ${cellSelector}`
+                )
               }
             }
           })
         })
     }
 
-    attemptInput(retries)
+    attemptInput(attempts)
   }
 )

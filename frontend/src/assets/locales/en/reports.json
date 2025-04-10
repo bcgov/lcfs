@@ -20,14 +20,15 @@
   "orgDetails": "Organization details",
   "supportingDocs": "Supporting documents",
   "assessment": "Assessment",
-  "assessmentLn1": "{{name}} <strong>{{hasMet}}</strong> renewable fuel targets set under section 9 of the <i>Low Carbon Fuels Act.</i>",
-  "assessmentLn2": "{{name}} <strong>{{hasMet}}</strong> the low carbon fuel targets set under section 12 of the <i>Low Carbon Fuels Act.</i>",
+  "assessmentLn1": "{{name}} {{hasMet}} renewable fuel targets set under section 9 of the Low Carbon Fuels Act.",
+  "assessmentLn2": "{{name}} {{hasMet}} the low carbon fuel targets set under section 12 of the Low Carbon Fuels Act.",
   "supplementalWarning": "If you become aware that this report is incomplete or inaccurate, you must submit a supplemental report within 30 days.",
   "supplementalReport": "Supplemental Report",
   "createSupplementalRptBtn": "Create supplemental report",
   "createReassessmentBtn": "Create reassessment",
   "downloadExcel": "Download Excel",
   "supplementalCreated": "Supplemental report created successfully.",
+  "analystAdjustmentCreated": "Analyst adjustment created successfully.",
   "clickDrag": "Drag and drop your (PDF, JPG, PNG, MSG, DOC, XLS) file(s) here or click to select the file(s) from your machine to upload.",
   "activityLinksList": "Click links to report activities",
   "activitySecondList": "Verification details",
@@ -60,12 +61,13 @@
     "recommendReportManagerBtn": "Recommend to director",
     "assessReportBtn": "Issue assessment",
     "reAssessReportBtn": "Re-assess report",
-    "deleteSupplementalReportBtn": "Delete supplemental report"
+    "deleteSupplementalReportBtn": "Delete supplemental report",
+    "deleteAnalystAdjustmentBtn": "Delete analyst adjustment"
   },
   "savedSuccessText": "Compliance report successfully {{status}}",
-  "supplementalReportDeleted": "Supplemental report successfully deleted",
+  "reportDeleteSuccessText": "Draft compliance report successfully deleted",
   "submitConfirmText": "Are you sure you want to sign and submit this compliance report?",
-  "deleteConfirmText": "Are you sure you want to delete this item? This action cannot be undone, and all changes will be lost.",
+  "deleteConfirmText": "Are you sure you want to delete this draft report? This action cannot be undone, and all changes will be lost.",
   "recommendConfirmText": "Are you sure you want to recommend this compliance report?",
   "returnToAnalystConfirmText": "Are you sure you want to return this compliance report back to analyst?",
   "returnToManagerConfirmText": "Are you sure you want to return this compliance report back to compliance manager?",
@@ -134,6 +136,7 @@
   "reportDetails": "Report details",
   "summaryAndDeclaration": "Summary & declaration",
   "summary": "Summary",
+  "compareMode": "Compare Mode",
   "addRenewableFuelRetention": "Add a renewable fuel retention or obligation deferral",
   "errorRetrieving": "Error retrieving the record",
   "renewableFuelTarget": "Renewable fuel target",
@@ -160,6 +163,7 @@
   "complianceReportHistory": {
     "Draft": "Draft {{createDate}} by {{displayName}}.",
     "Submitted": "Signed and submitted {{createDate}} by {{displayName}}.",
+    "Analyst adjustment": "Created {{createDate}} by {{displayName}}.",
     "Recommended by analyst": "Recommended {{createDate}} by {{displayName}}.",
     "Recommended by manager": "Recommended {{createDate}} by {{displayName}}.",
     "Not recommended by analyst": "Not recommended {{createDate}} by {{displayName}}.",
@@ -167,7 +171,9 @@
     "Rejected": "Rejected {{createDate}} by {{displayName}}.",
     "Assessed": "Assessed {{createDate}} by {{displayName}}.",
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
-    "Reassessed": "Re-assessed"
+    "Reassessed": "Re-assessed",
+    "renewableTarget": "Renewable fuel target",
+    "lowCarbonTarget": "Low carbon fuel target"
   },
   "internalComments": "Internal comments",
   "fuelLabels": {
@@ -189,5 +195,13 @@
   "viewLegacyBtn": "View Full Historical Report in TFRS",
   "reportAssessed": "Compliance report, Assessed",
   "changelog": "Change log",
-  "documentLabel": "Add file attachments (maximum file size: 50 MB):"
+  "documentLabel": "Add file attachments (maximum file size: 50 MB):",
+  "assessmentStatement": "Assessment statement from the director",
+  "assessmentStatementEdit": "(can be edited below)",
+  "assessmentRecommendation": "Assessment recommendation",
+  "directorStatement": "Director assessment statement to the organization (optional)",
+  "assessmentStatementInstructions": "The analyst and/or compliance manager can draft an assessment statement to the organization. The director can edit or delete this statement. This is suggested when making analyst adjustments or reassessments.",
+  "saveStatement": "Save statement",
+  "assessmentStatementSaveSuccess": "Assessment statement saved successfully.",
+  "assessmentStatementSaveError": "Error saving assessment statement."
 }

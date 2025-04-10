@@ -1,16 +1,16 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import BCBox from '@/components/BCBox'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useTranslation } from 'react-i18next'
 import { auditLogColDefs, defaultAuditLogSortModel } from './_schema'
-import { apiRoutes } from '@/constants/routes'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { defaultInitialPagination } from '@/constants/schedules.js'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { useAuditLogs } from '@/hooks/useAuditLog.js'
 
 export const AuditLog = () => {
   const { t } = useTranslation(['common', 'admin'])
-  const [resetGridFn, setResetGridFn] = useState(null)
   const gridRef = useRef()
 
   const gridOptions = {
@@ -23,7 +23,14 @@ export const AuditLog = () => {
     return params.data.auditLogId.toString()
   }, [])
 
-  const apiEndpoint = apiRoutes.getAuditLogs
+  const [paginationOptions, setPaginationOptions] = useState(
+    defaultInitialPagination
+  )
+
+  const queryData = useAuditLogs(paginationOptions, {
+    cacheTime: 0,
+    staleTime: 0
+  })
 
   const defaultColDef = useMemo(
     () => ({
@@ -35,15 +42,12 @@ export const AuditLog = () => {
     []
   )
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
+  const handleClearFilters = () => {
+    setPaginationOptions(defaultInitialPagination)
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
     }
-  }, [resetGridFn])
+  }
 
   return (
     <BCBox>
@@ -51,14 +55,12 @@ export const AuditLog = () => {
         {t('admin:AuditLog')}
       </BCTypography>
       <BCBox mb={2}>
-        <ClearFiltersButton
-          onClick={handleClearFilters}
-        />
+        <ClearFiltersButton onClick={handleClearFilters} />
       </BCBox>
-      <BCDataGridServer
+      <BCGridViewer
         gridRef={gridRef}
-        apiEndpoint={apiEndpoint}
-        apiData="auditLogs"
+        queryData={queryData}
+        dataKey="auditLogs"
         columnDefs={auditLogColDefs(t)}
         gridKey="audit-log-grid"
         getRowId={getRowId}
@@ -68,7 +70,13 @@ export const AuditLog = () => {
         enableExportButton={true}
         exportName="AuditLog"
         defaultColDef={defaultColDef}
-        onSetResetGrid={handleSetResetGrid}
+        paginationOptions={paginationOptions}
+        onPaginationChange={(newPagination) =>
+          setPaginationOptions((prev) => ({
+            ...prev,
+            ...newPagination
+          }))
+        }
       />
     </BCBox>
   )

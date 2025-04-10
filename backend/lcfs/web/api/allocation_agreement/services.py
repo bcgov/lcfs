@@ -1,17 +1,12 @@
 import math
-from typing import Optional
-import uuid
-from lcfs.db.base import ActionTypeEnum, UserTypeEnum
-from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 import structlog
+import uuid
 from fastapi import Depends, HTTPException, status
-from lcfs.db.models.user.Role import RoleEnum
-from lcfs.db.models import UserProfile
-from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.core.decorators import service_handler
+from typing import Optional
+
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
-from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
     AllocationAgreementOptionsSchema,
@@ -22,8 +17,11 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationTransactionTypeSchema,
     DeleteAllocationAgreementResponseSchema,
 )
-from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.fuel_supply.services import FuelSupplyServices
+from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
 
@@ -37,6 +35,7 @@ ALLOCATION_AGREEMENT_EXCLUDE_FIELDS = {
     "version",
     "action_type",
 }
+
 
 class AllocationAgreementServices:
     def __init__(
@@ -119,27 +118,26 @@ class AllocationAgreementServices:
                     "allocation_transaction_types"
                 ]
             ],
-            fuel_types=options.fuel_types
+            fuel_types=options.fuel_types,
         )
 
     @service_handler
     async def get_allocation_agreements(
-        self, compliance_report_id: int, user: UserProfile
+        self, compliance_report_id: int, changelog: bool = False
     ) -> AllocationAgreementListSchema:
         """
         Gets the list of allocation agreements for a specific compliance report.
         """
-        is_gov_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
         allocation_agreements = await self.repo.get_allocation_agreements(
-            compliance_report_id, exclude_draft_reports=is_gov_user
+            compliance_report_id, changelog=changelog
         )
 
         return AllocationAgreementAllSchema(
-        allocation_agreements=[
-            AllocationAgreementSchema.model_validate(aa)
-            for aa in allocation_agreements
-        ]
-    )
+            allocation_agreements=[
+                AllocationAgreementSchema.model_validate(aa)
+                for aa in allocation_agreements
+            ]
+        )
 
     @service_handler
     async def get_allocation_agreements_paginated(
@@ -187,11 +185,12 @@ class AllocationAgreementServices:
     async def update_allocation_agreement(
         self,
         allocation_agreement_data: AllocationAgreementCreateSchema,
-        user_type: UserTypeEnum,
     ) -> AllocationAgreementSchema:
         """Update an existing Allocation agreement"""
-        existing_allocation_agreement = await self.repo.get_latest_allocation_agreement_by_group_uuid(
-            allocation_agreement_data.group_uuid
+        existing_allocation_agreement = (
+            await self.repo.get_latest_allocation_agreement_by_group_uuid(
+                allocation_agreement_data.group_uuid
+            )
         )
         if not existing_allocation_agreement:
             raise ValueError("Allocation agreement not found")
@@ -266,15 +265,20 @@ class AllocationAgreementServices:
             existing_allocation_agreement.postal_address = (
                 allocation_agreement_data.postal_address
             )
-            existing_allocation_agreement.ci_of_fuel = allocation_agreement_data.ci_of_fuel
+            existing_allocation_agreement.ci_of_fuel = (
+                allocation_agreement_data.ci_of_fuel
+            )
             existing_allocation_agreement.quantity = allocation_agreement_data.quantity
             existing_allocation_agreement.units = allocation_agreement_data.units
             existing_allocation_agreement.fuel_type_other = (
                 allocation_agreement_data.fuel_type_other
             )
-            existing_allocation_agreement.group_uuid = allocation_agreement_data.group_uuid
-            existing_allocation_agreement.version = existing_allocation_agreement.version + 1
-            existing_allocation_agreement.user_type = user_type
+            existing_allocation_agreement.group_uuid = (
+                allocation_agreement_data.group_uuid
+            )
+            existing_allocation_agreement.version = (
+                existing_allocation_agreement.version + 1
+            )
             existing_allocation_agreement.action_type = ActionTypeEnum.UPDATE
 
             updated_allocation_agreement = await self.repo.update_allocation_agreement(
@@ -303,19 +307,17 @@ class AllocationAgreementServices:
                 ),
                 group_uuid=updated_allocation_agreement.group_uuid,
                 version=updated_allocation_agreement.version,
-                user_type=updated_allocation_agreement.user_type,
                 action_type=updated_allocation_agreement.action_type,
             )
         else:
             return await self.create_allocation_agreement(
-                allocation_agreement_data, user_type, existing_allocation_agreement
+                allocation_agreement_data, existing_allocation_agreement
             )
 
     @service_handler
     async def create_allocation_agreement(
         self,
-        allocation_agreement_data: AllocationAgreementCreateSchema, 
-        user_type: UserTypeEnum,
+        allocation_agreement_data: AllocationAgreementCreateSchema,
         existing_record: Optional[AllocationAgreement] = None,
     ) -> AllocationAgreementSchema:
         """Create a new Allocation agreement"""
@@ -331,7 +333,6 @@ class AllocationAgreementServices:
         allocation_agreement.version = (
             0 if not existing_record else existing_record.version + 1
         )
-        allocation_agreement.user_type = user_type
 
         created_allocation_agreement = await self.repo.create_allocation_agreement(
             allocation_agreement
@@ -371,7 +372,6 @@ class AllocationAgreementServices:
             fuel_code=fuel_code_value,
             group_uuid=created_allocation_agreement.group_uuid,
             version=created_allocation_agreement.version,
-            user_type=created_allocation_agreement.user_type,
             action_type=created_allocation_agreement.action_type,
         )
 
@@ -379,7 +379,6 @@ class AllocationAgreementServices:
     async def delete_allocation_agreement(
         self,
         allocation_agreement_data: AllocationAgreementCreateSchema,
-        user_type: UserTypeEnum,
     ) -> DeleteAllocationAgreementResponseSchema:
         """Delete an allocation agreement"""
         existing_allocation_agreement = (
@@ -388,6 +387,26 @@ class AllocationAgreementServices:
             )
         )
 
+        # If the record is already deleted, just return success
+        if existing_allocation_agreement.action_type == ActionTypeEnum.DELETE:
+            return DeleteAllocationAgreementResponseSchema(message="Marked as deleted.")
+
+        # Create a deletion record
+        deleted_entity = AllocationAgreement(
+            compliance_report_id=allocation_agreement_data.compliance_report_id,
+            group_uuid=allocation_agreement_data.group_uuid,
+            version=existing_allocation_agreement.version + 1,
+            action_type=ActionTypeEnum.DELETE,
+        )
+
+        # Copy fields from the latest version for the deletion record
+        for field in existing_allocation_agreement.__table__.columns.keys():
+            if field not in ALLOCATION_AGREEMENT_EXCLUDE_FIELDS:
+                setattr(
+                    deleted_entity, field, getattr(existing_allocation_agreement, field)
+                )
+
+        # If the compliance report IDs match, also delete the original record
         if (
             existing_allocation_agreement.compliance_report_id
             == allocation_agreement_data.compliance_report_id
@@ -395,30 +414,10 @@ class AllocationAgreementServices:
             await self.repo.delete_allocation_agreement(
                 allocation_agreement_data.allocation_agreement_id
             )
-        else:
-            # Create a deletion record
-            deleted_entity = AllocationAgreement(
-                compliance_report_id=allocation_agreement_data.compliance_report_id,
-                group_uuid=allocation_agreement_data.group_uuid,
-                version=existing_allocation_agreement.version + 1,
-                action_type=ActionTypeEnum.DELETE,
-                user_type=user_type,
-            )
 
-            # Copy fields from the latest version for the deletion record
-            for field in existing_allocation_agreement.__table__.columns.keys():
-                if field not in ALLOCATION_AGREEMENT_EXCLUDE_FIELDS:
-                    setattr(
-                        deleted_entity,
-                        field,
-                        getattr(existing_allocation_agreement, field),
-                    )
+        # Always create the deletion record
+        await self.repo.create_allocation_agreement(deleted_entity)
 
-            deleted_entity.compliance_report_id = (
-                allocation_agreement_data.compliance_report_id
-            )
-
-            await self.repo.create_allocation_agreement(deleted_entity)
         return DeleteAllocationAgreementResponseSchema(message="Marked as deleted.")
 
     @service_handler

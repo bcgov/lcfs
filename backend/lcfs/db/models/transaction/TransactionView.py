@@ -71,9 +71,17 @@ class TransactionView(BaseModel):
         String,
         comment="Status of the transaction (e.g., Approved, Pending).",
     )
-    comment = Column(
+    from_org_comment = Column(
         String,
-        comment="Additional comments on the transaction.",
+        comment="Comments made by the sending org.",
+    )
+    to_org_comment = Column(
+        String,
+        comment="Comments made by the receiving org.",
+    )
+    government_comment = Column(
+        String,
+        comment="Comments made by government.",
     )
     category = Column(
         String,

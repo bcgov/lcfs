@@ -29,7 +29,7 @@ class FuelExport(BaseModel, Auditable, Versioning):
     )
 
     # data columns
-    export_date = Column(Date, nullable=False, comment="Date of fuel supply")
+    export_date = Column(Date, nullable=True, comment="Date of fuel supply")
     quarter = Column(
         Enum(Quarter), nullable=True, comment="Quarter for quarterly reports"
     )

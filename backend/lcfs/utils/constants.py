@@ -52,7 +52,9 @@ class LCFS_Constants:
         SpreadsheetColumn("Effective Date", "date"),
         SpreadsheetColumn("Recorded", "date"),
         SpreadsheetColumn("Approved", "date"),
-        SpreadsheetColumn("Comments (external)", "text"),
+        SpreadsheetColumn("From Org Comment", "text"),
+        SpreadsheetColumn("To Org Comment", "text"),
+        SpreadsheetColumn("Government Comment", "text"),
     ]
     TRANSACTIONS_EXPORT_SHEETNAME = "Transactions"
     TRANSACTIONS_EXPORT_FILENAME = "BC-LCFS-transactions"

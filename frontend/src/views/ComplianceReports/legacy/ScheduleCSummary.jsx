@@ -1,14 +1,15 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { useGetOtherUses } from '@/hooks/useOtherUses.js'
-import Grid2 from '@mui/material/Unstable_Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { scheduleCSummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { defaultInitialPagination } from '@/constants/schedules.js'
+import { useGetOtherUses } from '@/hooks/useOtherUses.js'
 
 export const ScheduleCSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -18,6 +19,18 @@ export const ScheduleCSummary = ({ data, status }) => {
   const { complianceReportId } = useParams()
 
   const location = useLocation()
+
+  const [paginationOptions, setPaginationOptions] = useState(
+    defaultInitialPagination
+  )
+
+  const queryData = useGetOtherUses(
+    { ...paginationOptions, complianceReportId },
+    {
+      cacheTime: 0,
+      staleTime: 0
+    }
+  )
 
   useEffect(() => {
     if (location.state?.message) {
@@ -43,7 +56,7 @@ export const ScheduleCSummary = ({ data, status }) => {
     return scheduleCSummaryColDefs(t)
   }, [t])
 
-  const getRowId = (params) => params.data.otherUsesId
+  const getRowId = (params) => params.data.otherUsesId.toString()
 
   return (
     <Grid2 className="other-uses-container" data-test="container" mx={-1}>
@@ -60,17 +73,22 @@ export const ScheduleCSummary = ({ data, status }) => {
           getRowId={getRowId}
           columnDefs={columns}
           defaultColDef={defaultColDef}
-          query={useGetOtherUses}
-          queryParams={{ complianceReportId }}
+          queryData={queryData}
           dataKey="otherUses"
           suppressPagination={data?.length <= 10}
+          paginationOptions={paginationOptions}
+          onPaginationChange={(newPagination) =>
+            setPaginationOptions((prev) => ({
+              ...prev,
+              ...newPagination
+            }))
+          }
           autoSizeStrategy={{
             type: 'fitCellContents',
             defaultMinWidth: 50,
             defaultMaxWidth: 600
           }}
           enableCellTextSelection
-          ensureDomOrder
         />
       </BCBox>
     </Grid2>

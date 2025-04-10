@@ -1,24 +1,19 @@
-from datetime import datetime
-import json
 from unittest import mock
 
-from lcfs.web.api.email.repo import CHESEmailRepository
+import json
 import pytest
-
-from unittest.mock import patch, AsyncMock
-from httpx import AsyncClient
 from fastapi import FastAPI
+from httpx import AsyncClient
+from unittest.mock import patch, AsyncMock
 
 from lcfs.db.models.user.Role import RoleEnum
-
-from lcfs.web.exception.exceptions import DataNotFoundException
-from lcfs.web.api.base import FilterModel
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
     ChainedComplianceReportSchema,
 )
-from lcfs.services.s3.client import DocumentService
+from lcfs.web.api.email.repo import CHESEmailRepository
+from lcfs.web.exception.exceptions import DataNotFoundException
 
 
 @pytest.fixture
@@ -233,7 +228,9 @@ async def test_get_compliance_report_by_id_success(
         "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
     ) as mock_get_compliance_report_by_id, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = ChainedComplianceReportSchema(
@@ -241,7 +238,8 @@ async def test_get_compliance_report_by_id_success(
         )
 
         mock_get_compliance_report_by_id.return_value = mock_compliance_report
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = mock_compliance_report
+        mock_validate_compliance_report_access.return_value = True
 
         url = fastapi_app.url_path_for("get_compliance_report_by_id", report_id=1)
 
@@ -252,10 +250,11 @@ async def test_get_compliance_report_by_id_success(
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
         assert response.json() == expected_response
-        mock_get_compliance_report_by_id.assert_called_once_with(
-            1, False, True, get_chain=True
-        )
+        mock_get_compliance_report_by_id.assert_called_once_with(1, mock.ANY, True)
         mock_validate_organization_access.assert_called_once_with(1)
+        mock_validate_compliance_report_access.assert_called_once_with(
+            mock_compliance_report
+        )
 
 
 @pytest.mark.anyio
@@ -392,6 +391,7 @@ async def test_update_compliance_report_summary_success(
     client: AsyncClient,
     fastapi_app: FastAPI,
     compliance_report_summary_schema,
+    compliance_report_base_schema,
     set_mock_user,
 ):
     with patch(
@@ -410,7 +410,7 @@ async def test_update_compliance_report_summary_success(
             non_compliance_penalty_summary=mock_compliance_report_summary.non_compliance_penalty_summary,
             summary_id=mock_compliance_report_summary.summary_id,
         )
-        mock_validate_organization_access.return_value = None
+        mock_validate_organization_access.return_value = compliance_report_base_schema()
         mock_update_compliance_report_summary.return_value = (
             mock_compliance_report_summary
         )
@@ -428,9 +428,7 @@ async def test_update_compliance_report_summary_success(
         )
 
         assert response.json() == expected_response
-        mock_update_compliance_report_summary.assert_called_once_with(
-            1, request_schema
-        )
+        mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
 
         mock_validate_organization_access.assert_called_once_with(1)
 
@@ -505,12 +503,17 @@ async def test_update_compliance_report_success(
         "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
+    ) as mock_get_compliance_report_by_id:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
+        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+            report=mock_compliance_report, chain=[]
+        )
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -525,7 +528,7 @@ async def test_update_compliance_report_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -605,12 +608,17 @@ async def test_update_compliance_report_draft_success(
         "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
+    ) as mock_get_compliance_report_by_id:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
+        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+            report=mock_compliance_report, chain=[]
+        )
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -625,7 +633,7 @@ async def test_update_compliance_report_draft_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -643,12 +651,17 @@ async def test_update_compliance_report_submitted_success(
         "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
+    ) as mock_get_compliance_report_by_id:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
+        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+            report=mock_compliance_report, chain=[]
+        )
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -663,7 +676,7 @@ async def test_update_compliance_report_submitted_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -681,12 +694,17 @@ async def test_update_compliance_report_recommended_by_analyst_success(
         "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
+    ) as mock_get_compliance_report_by_id:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
+        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+            report=mock_compliance_report, chain=[]
+        )
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -704,7 +722,7 @@ async def test_update_compliance_report_recommended_by_analyst_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -722,12 +740,17 @@ async def test_update_compliance_report_recommended_by_manager_success(
         "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
+    ) as mock_get_compliance_report_by_id:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
+        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+            report=mock_compliance_report, chain=[]
+        )
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -745,7 +768,7 @@ async def test_update_compliance_report_recommended_by_manager_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -763,12 +786,17 @@ async def test_update_compliance_report_assessed_success(
         "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
+    ) as mock_get_compliance_report_by_id:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
+        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+            report=mock_compliance_report, chain=[]
+        )
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -783,7 +811,7 @@ async def test_update_compliance_report_assessed_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY

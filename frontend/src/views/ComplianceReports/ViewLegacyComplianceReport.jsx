@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
 import Loading from '@/components/Loading'
 import { Fab, Stack, Tooltip } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
-import KeyboardArrowUpIcon from '@mui/icons-material/KeyboardArrowUp'
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import colors from '@/themes/base/colors.js'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -16,6 +14,7 @@ import { LegacyAssessmentCard } from '@/views/ComplianceReports/components/Legac
 import LegacyReportDetails from '@/views/ComplianceReports/legacy/LegacyReportDetails.jsx'
 import LegacyReportSummary from './legacy/LegacyReportSummary'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
+import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 
 const iconStyle = {
   width: '2rem',
@@ -122,8 +121,6 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
             <LegacyReportDetails currentStatus={currentStatus} />
             <LegacyReportSummary
               reportID={complianceReportId}
-              currentStatus={currentStatus}
-              compliancePeriodYear={compliancePeriod}
               alertRef={alertRef}
             />
           </>
@@ -163,9 +160,9 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
             }}
           >
             {isScrollingUp ? (
-              <KeyboardArrowUpIcon sx={iconStyle} />
+              <KeyboardArrowUp sx={iconStyle} />
             ) : (
-              <KeyboardArrowDownIcon sx={iconStyle} />
+              <KeyboardArrowDown sx={iconStyle} />
             )}
           </Fab>
         </Tooltip>

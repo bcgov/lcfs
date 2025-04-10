@@ -4,7 +4,6 @@ import MuiAccordion from '@mui/material/Accordion'
 import MuiAccordionSummary, {
   accordionSummaryClasses
 } from '@mui/material/AccordionSummary'
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import MuiAccordionDetails from '@mui/material/AccordionDetails'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
 import { useTranslation } from 'react-i18next'
@@ -12,6 +11,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import BCTypography from '@/components/BCTypography/index.jsx'
 import { StyledListItem } from '@/components/StyledListItem.jsx'
 import { timezoneFormatter } from '@/utils/formatters.js'
+import { ExpandMore } from '@mui/icons-material'
 
 const Accordion = styled((props) => (
   <MuiAccordion disableGutters elevation={0} square {...props} />
@@ -24,7 +24,7 @@ const Accordion = styled((props) => (
 
 const AccordionSummary = styled((props) => (
   <MuiAccordionSummary
-    expandIcon={<ExpandMoreIcon sx={{ fontSize: '0.9rem' }} />}
+    expandIcon={<ExpandMore sx={{ fontSize: '0.9rem' }} />}
     {...props}
   />
 ))(() => ({
@@ -72,7 +72,7 @@ export const HistoryCard = ({ report }) => {
   return (
     <Accordion>
       <AccordionSummary
-        expandIcon={<ExpandMoreIcon sx={{ width: '2rem', height: '2rem' }} />}
+        expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
         aria-controls="panel1-content"
       >
         <BCTypography color="link" variant="body2">
@@ -107,6 +107,45 @@ export const HistoryCard = ({ report }) => {
                     }}
                   />
                 </ListItemText>
+                {item.status.status === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
+                  <List sx={{ p: 0, m: 0 }}>
+                    <StyledListItem key={index} disablePadding>
+                      <ListItemText
+                        primaryTypographyProps={{ variant: 'body4' }}
+                      >
+                        <strong>
+                          {t('report:complianceReportHistory.renewableTarget')}
+                          :&nbsp;
+                        </strong>
+                        {t('report:assessmentLn1', {
+                          name: report.organization.name,
+                          hasMet:
+                            report.summary.line11FossilDerivedBaseFuelTotal <= 0
+                              ? 'has met'
+                              : 'has not met'
+                        })}
+                      </ListItemText>
+                    </StyledListItem>
+                    <StyledListItem key={index} disablePadding>
+                      <ListItemText
+                        primaryTypographyProps={{ variant: 'body4' }}
+                      >
+                        <strong>
+                          {t('report:complianceReportHistory.lowCarbonTarget')}
+                          :&nbsp;
+                        </strong>
+                        {t('report:assessmentLn2', {
+                          name: report.organization.name,
+                          hasMet:
+                            report.summary.line21NonCompliancePenaltyPayable <=
+                            0
+                              ? 'has met'
+                              : 'has not met'
+                        })}
+                      </ListItemText>
+                    </StyledListItem>
+                  </List>
+                )}
               </StyledListItem>
             ))}
           </List>

@@ -44,7 +44,7 @@ async def get_transactions_paginated_by_org(
 async def export_transactions_by_org(
     request: Request,
     organization_id: int = None,
-    format: str = Query(default="xls", description="File export format"),
+    format: str = Query(default="xlsx", description="File export format"),
     service: TransactionsService = Depends(),
 ):
     """
@@ -70,7 +70,7 @@ async def get_transactions_paginated(
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_transactions(
     request: Request,
-    format: str = Query(default="xls", description="File export format"),
+    format: str = Query(default="xlsx", description="File export format"),
     service: TransactionsService = Depends(),
 ):
     """

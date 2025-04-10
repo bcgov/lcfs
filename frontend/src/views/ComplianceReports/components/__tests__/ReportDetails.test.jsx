@@ -50,7 +50,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 
 vi.mock('@/hooks/useComplianceReports', () => ({
   useGetComplianceReport: () => ({
-    data: { report: { version: 1 } }
+    data: { report: { version: 1 }, chain: [] }
   }),
   useComplianceReportDocuments: () => ({
     data: [],
@@ -93,7 +93,7 @@ vi.mock('@/hooks/useFinalSupplyEquipment', () => ({
   })
 }))
 vi.mock('@/hooks/useAllocationAgreement', () => ({
-  useGetAllocationAgreements: () => ({
+  useGetAllAllocationAgreements: () => ({
     data: { allocationAgreements: [] },
     isLoading: false,
     error: null
@@ -143,7 +143,8 @@ describe('ReportDetails', () => {
     fireEvent.click(screen.getByText('report:expandAll'))
 
     await waitFor(() => {
-      expect(screen.getAllByTestId(/panel\d+-summary/)).toHaveLength(2)
+      // Update this line to expect all activity panels to be expanded instead of 2
+      expect(screen.getAllByTestId(/panel\d+-summary/)).toHaveLength(7)
     })
   })
 
@@ -166,11 +167,22 @@ describe('ReportDetails', () => {
     expect(editButtons.length).toBe(0) // No edit icons visible
   })
 
-  it('conditionally shows changelog button based on role and status', () => {
+  it('conditionally shows changelog toggles based on role and status', () => {
     vi.mock('@/hooks/useCurrentUser', () => ({
       useCurrentUser: () => ({
         data: { organization: { organizationId: '1' }, isGovernmentUser: true },
         hasRoles: (role) => role === 'Government'
+      })
+    }))
+
+    vi.mock('@/hooks/useComplianceReports', () => ({
+      useGetComplianceReport: () => ({
+        data: { report: { version: 1 }, chain: [{}, {}] }
+      }),
+      useComplianceReportDocuments: () => ({
+        data: [],
+        isLoading: false,
+        error: null
       })
     }))
 
@@ -179,6 +191,6 @@ describe('ReportDetails', () => {
       { wrapper }
     )
 
-    expect(screen.getAllByText('report:changelog').length).toBeGreaterThan(0) // Changelog links visible
+    expect(screen.getAllByText('Change log off').length).toBeGreaterThan(0) // Changelog links visible
   })
 })

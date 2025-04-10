@@ -1,10 +1,5 @@
 import BCBox from '@/components/BCBox'
-import {
-  ADMIN_USER_LOGIN_HISTORY,
-  ADMIN_USERACTIVITY,
-  ADMIN_USERS,
-  ADMIN_AUDIT_LOG
-} from '@/constants/routes/routes'
+import { ROUTES } from '@/routes/routes'
 import breakpoints from '@/themes/base/breakpoints'
 import { AdminTabPanel } from '@/views/Admin/AdminMenu/components/AdminTabPanel'
 import { AppBar, Tab, Tabs } from '@mui/material'
@@ -29,10 +24,10 @@ export function AdminMenu({ tabIndex }) {
   const navigate = useNavigate()
   const paths = useMemo(
     () => [
-      ADMIN_USERS,
-      ADMIN_USERACTIVITY,
-      ADMIN_USER_LOGIN_HISTORY,
-      ADMIN_AUDIT_LOG
+      ROUTES.ADMIN.USERS.LIST,
+      ROUTES.ADMIN.USER_ACTIVITY,
+      ROUTES.ADMIN.USER_LOGIN_HISTORY,
+      ROUTES.ADMIN.AUDIT_LOG.LIST
     ],
     []
   )

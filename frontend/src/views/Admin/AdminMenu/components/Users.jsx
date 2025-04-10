@@ -9,7 +9,8 @@ import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { apiRoutes, ROUTES } from '@/constants/routes'
+import { apiRoutes } from '@/constants/routes'
+import { ROUTES } from '@/routes/routes'
 import { usersColumnDefs } from './_schema'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 
@@ -42,7 +43,7 @@ export const Users = () => {
   const navigate = useNavigate()
 
   const handleNewUserClick = () => {
-    navigate(ROUTES.ADMIN_USERS_ADD)
+    navigate(ROUTES.ADMIN.USERS.ADD)
   }
   const getRowId = useCallback((params) => {
     return params.data.userProfileId.toString()

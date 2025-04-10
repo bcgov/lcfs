@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import BCTypography from '@/components/BCTypography'
-import Grid2 from '@mui/material/Unstable_Grid2/Grid2'
+import Grid2 from '@mui/material/Grid2'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import BCBox from '@/components/BCBox'
@@ -12,7 +12,7 @@ import {
   useSaveFinalSupplyEquipment
 } from '@/hooks/useFinalSupplyEquipment'
 import { v4 as uuid } from 'uuid'
-import * as ROUTES from '@/constants/routes/routes.js'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import { isArrayEmpty } from '@/utils/array.js'
 import { useApiService } from '@/services/useApiService.js'
@@ -258,10 +258,10 @@ export const AddEditFinalSupplyEquipments = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      ROUTES.REPORTS_VIEW.replace(
-        ':compliancePeriod',
-        compliancePeriod
-      ).replace(':complianceReportId', complianceReportId)
+      buildPath(ROUTES.REPORTS.VIEW, {
+        compliancePeriod,
+        complianceReportId
+      })
     )
   }, [navigate, compliancePeriod, complianceReportId])
 

@@ -1,6 +1,4 @@
 import PropTypes from 'prop-types'
-import SyncAltIcon from '@mui/icons-material/SyncAlt'
-import SwapVertIcon from '@mui/icons-material/SwapVert'
 import { Stack, useMediaQuery, useTheme } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import BCBox from '@/components/BCBox'
@@ -11,6 +9,7 @@ import {
   currencyFormatter,
   formatNumberWithCommas
 } from '@/utils/formatters'
+import { SwapVert, SyncAlt } from '@mui/icons-material'
 
 export const TransferDetailsCard = ({
   fromOrgId,
@@ -51,7 +50,9 @@ export const TransferDetailsCard = ({
           <BCTypography variant="caption1" textAlign="center">
             {isMobileSize
               ? currencyFormatter({ value: totalValue })
-              : `${formatNumberWithCommas({ value: quantity })} ${t('transfer:complianceUnits')}`}
+              : `${formatNumberWithCommas({ value: quantity })} ${t(
+                  'transfer:complianceUnits'
+                )}`}
           </BCTypography>
           <BCBox
             display="flex"
@@ -61,13 +62,13 @@ export const TransferDetailsCard = ({
             py={1}
           >
             {isMobileSize ? (
-              <SwapVertIcon
+              <SwapVert
                 data-test="SwapVertIcon"
                 color="primary"
                 sx={{ ...iconSizeStyle }}
               />
             ) : (
-              <SyncAltIcon
+              <SyncAlt
                 data-test="SyncAltIcon"
                 color="primary"
                 sx={{ ...iconSizeStyle }}
@@ -77,7 +78,9 @@ export const TransferDetailsCard = ({
           <BCTypography variant="caption1" textAlign="center">
             {!isMobileSize
               ? currencyFormatter({ value: totalValue })
-              : `${formatNumberWithCommas({ value: quantity })} ${t('transfer:complianceUnits')}`}
+              : `${formatNumberWithCommas({ value: quantity })} ${t(
+                  'transfer:complianceUnits'
+                )}`}
           </BCTypography>
         </Stack>
         <OrganizationBadge

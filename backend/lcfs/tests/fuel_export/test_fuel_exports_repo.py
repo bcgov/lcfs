@@ -1,11 +1,10 @@
 import pytest
-from unittest.mock import MagicMock, AsyncMock
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import select, and_, delete
+from unittest.mock import MagicMock, AsyncMock
 
-from lcfs.db.models.compliance import FuelExport, ComplianceReport
+from lcfs.db.base import ActionTypeEnum
+from lcfs.db.models.compliance import FuelExport
 from lcfs.web.exception.exceptions import DatabaseException
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
 
 
 # get_fuel_export_table_options
@@ -124,32 +123,9 @@ async def test_get_fuel_export_by_id_success(fuel_export_repo, mock_db):
 
 # Version control related tests
 @pytest.mark.anyio
-async def test_get_fuel_export_version_by_user_success(fuel_export_repo, mock_db):
-    group_uuid = "test-uuid"
-    version = 0
-    user_type = UserTypeEnum.SUPPLIER
-    expected_export = FuelExport(
-        group_uuid=group_uuid, version=version, user_type=user_type
-    )
-
-    mock_result = MagicMock()
-    mock_result.scalars.return_value.first.return_value = expected_export
-    mock_db.execute.return_value = mock_result
-
-    result = await fuel_export_repo.get_fuel_export_version_by_user(
-        group_uuid, version, user_type
-    )
-
-    assert result == expected_export
-    mock_db.execute.assert_called_once()
-
-
-@pytest.mark.anyio
 async def test_get_latest_fuel_export_by_group_uuid_success(fuel_export_repo, mock_db):
     group_uuid = "test-uuid"
-    expected_export = FuelExport(
-        group_uuid=group_uuid, version=1, user_type=UserTypeEnum.SUPPLIER
-    )
+    expected_export = FuelExport(group_uuid=group_uuid, version=1)
 
     mock_result = MagicMock()
     mock_result.scalars.return_value.first.return_value = expected_export
@@ -164,9 +140,7 @@ async def test_get_latest_fuel_export_by_group_uuid_success(fuel_export_repo, mo
 @pytest.mark.anyio
 async def test_get_effective_fuel_exports_success(fuel_export_repo, mock_db):
     group_uuid = "test-uuid"
-    expected_exports = [
-        FuelExport(group_uuid=group_uuid, version=1, user_type=UserTypeEnum.SUPPLIER)
-    ]
+    expected_exports = [FuelExport(group_uuid=group_uuid, version=1)]
 
     mock_result = MagicMock()
     mock_result.unique.return_value.scalars.return_value.all.return_value = (
@@ -174,7 +148,7 @@ async def test_get_effective_fuel_exports_success(fuel_export_repo, mock_db):
     )
     mock_db.execute.return_value = mock_result
 
-    result = await fuel_export_repo.get_effective_fuel_exports(group_uuid)
+    result = await fuel_export_repo.get_effective_fuel_exports(group_uuid, 1)
 
     assert result == expected_exports
     mock_db.execute.assert_called_once()
@@ -187,7 +161,6 @@ async def test_create_fuel_export_success(fuel_export_repo, mock_db):
         compliance_report_id=1,
         group_uuid="test-uuid",
         version=0,
-        user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.CREATE,
     )
 
@@ -209,7 +182,6 @@ async def test_update_fuel_export_success(fuel_export_repo, mock_db):
         fuel_export_id=1,
         group_uuid="test-uuid",
         version=1,
-        user_type=UserTypeEnum.SUPPLIER,
         action_type=ActionTypeEnum.UPDATE,
     )
     updated_fuel_export = FuelExport(fuel_export_id=1)

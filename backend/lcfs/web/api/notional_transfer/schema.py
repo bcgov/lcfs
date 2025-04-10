@@ -6,9 +6,8 @@ from lcfs.web.api.base import (
     SortOrder,
     PaginationRequestSchema,
     PaginationResponseSchema,
-    ComplianceReportRequestSchema
+    ComplianceReportRequestSchema,
 )
-
 from enum import Enum
 
 
@@ -27,14 +26,6 @@ class NotionalTransfersRequestSchema(ComplianceReportRequestSchema):
     changelog: Optional[bool] = None
 
 
-class NotionalTransferDiffSchema(BaseSchema):
-    legal_name: Optional[bool] = None
-    address_for_service: Optional[bool] = None
-    fuel_category: Optional[bool] = None
-    received_or_transferred: Optional[bool] = None
-    quantity: Optional[bool] = None
-
-
 class NotionalTransferChangelogSchema(BaseSchema):
     legal_name: str
     address_for_service: str
@@ -46,9 +37,7 @@ class NotionalTransferChangelogSchema(BaseSchema):
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
-    diff: Optional[NotionalTransferDiffSchema] = None
     updated: Optional[bool] = None
 
 
@@ -63,7 +52,6 @@ class NotionalTransferCreateSchema(BaseSchema):
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     is_new_supplemental_entry: Optional[bool] = None
 

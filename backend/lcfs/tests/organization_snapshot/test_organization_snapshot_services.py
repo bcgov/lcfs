@@ -100,3 +100,45 @@ async def test_update_no_snapshot(service, mock_repo):
 
     with pytest.raises(NoResultFound):
         await service.update(request_data, compliance_report_id)
+
+
+@pytest.mark.anyio
+async def test_create_organization_snapshot_prev_report_not_found(service, mock_repo):
+    prev_report_id = 2
+    compliance_report_id = 3
+    organization_id = 1
+
+    mock_repo.get_by_compliance_report_id.side_effect = [None]
+    org_mock = MagicMock()
+
+    # Set up proper org_address mock
+    org_address_mock = MagicMock()
+    org_address_mock.street_address = "123 Fake St"
+    org_address_mock.address_other = None
+    org_address_mock.city = "Victoria"
+    org_address_mock.province_state = "BC"
+    org_address_mock.country = "Canada"
+    org_address_mock.postalCode_zipCode = "V9A 1A1"
+    org_mock.org_address = org_address_mock
+
+    # Properly set up the attorney address mock with string values
+    attorney_address_mock = MagicMock()
+    attorney_address_mock.street_address = "456 Legal Ave"
+    attorney_address_mock.address_other = "Suite 789"
+    attorney_address_mock.city = "Vancouver"
+    attorney_address_mock.province_state = "BC"
+    attorney_address_mock.country = "Canada"
+    attorney_address_mock.postalCode_zipCode = "V6B 2N2"
+    org_mock.org_attorney_address = attorney_address_mock
+
+    mock_repo.get_organization.return_value = org_mock
+    mock_repo.save_snapshot.return_value = ComplianceReportOrganizationSnapshot()
+
+    result = await service.create_organization_snapshot(
+        compliance_report_id, organization_id, prev_report_id
+    )
+
+    assert result  # verify snapshot was created
+    mock_repo.get_by_compliance_report_id.assert_awaited_once_with(prev_report_id)
+    mock_repo.get_organization.assert_awaited_once_with(organization_id)
+    mock_repo.save_snapshot.assert_awaited_once()

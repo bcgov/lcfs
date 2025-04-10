@@ -8,8 +8,7 @@ import {
   useParams
 } from 'react-router-dom'
 import { roles, govRoles } from '@/constants/roles'
-import { ROUTES } from '@/constants/routes'
-import { TRANSACTIONS } from '@/constants/routes/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
@@ -165,10 +164,9 @@ export const AddEditViewTransfer = () => {
         setModalData(null)
         if (response.data.currentStatus.status === TRANSFER_STATUSES.DRAFT) {
           navigate(
-            ROUTES.TRANSFERS_EDIT.replace(
-              ':transferId',
-              response.data.transferId
-            ),
+            buildPath(ROUTES.TRANSFERS.EDIT, {
+              transferId: response.data.transferId
+            }),
             {
               state: {
                 message: t(
@@ -191,7 +189,8 @@ export const AddEditViewTransfer = () => {
         } else {
           // Navigate to the transactions list view
           navigate(
-            TRANSACTIONS + `/?hid=transfer-${response.data.transferId}`,
+            ROUTES.TRANSACTIONS.LIST +
+              `/?hid=transfer-${response.data.transferId}`,
             {
               state: {
                 message: t('transfer:actionMsgs.successText', {
@@ -483,7 +482,7 @@ export const AddEditViewTransfer = () => {
                 style={{
                   gap: 8
                 }}
-                onClick={() => navigate(ROUTES.TRANSACTIONS)}
+                onClick={() => navigate(ROUTES.TRANSACTIONS.LIST)}
               >
                 <FontAwesomeIcon icon={faArrowLeft} fontSize={8} />
                 <BCTypography

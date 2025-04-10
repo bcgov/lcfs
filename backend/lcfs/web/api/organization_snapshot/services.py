@@ -25,17 +25,55 @@ class OrganizationSnapshotService:
         snapshot = await self.repo.get_by_compliance_report_id(compliance_report_id)
         return snapshot
 
-    async def create_organization_snapshot(self, compliance_report_id, organization_id):
+    async def create_organization_snapshot(
+        self, compliance_report_id, organization_id, prev_report_id=None
+    ):
         """
-        Creates a snapshot of the given organization, linking it to the specified report.
+        Create a snapshot for a compliance report.
+
+        If prev_report_id is provided and a snapshot exists, reuse it.
+        Otherwise, create a new snapshot using the organization data.
+        Note: If prev_report_id is provided but no snapshot is found,
+        the function gracefully continues to create a new snapshot.
+
+        Args:
+            compliance_report_id: Current report ID.
+            organization_id: Organization ID.
+            prev_report_id (optional): ID of the previous report to reuse snapshot.
+
+        Returns:
+            A ComplianceReportOrganizationSnapshot instance.
+
+        Raises:
+            NoResultFound: If the organization is not found.
         """
-        # 1. Fetch the Organization object
+        # If prev_report_id is provided, try to reuse the snapshot
+        if prev_report_id:
+            try:
+                prev_snapshot = await self.repo.get_by_compliance_report_id(
+                    prev_report_id
+                )
+                if prev_snapshot:
+                    org_snapshot = ComplianceReportOrganizationSnapshot(
+                        name=prev_snapshot.name,
+                        operating_name=prev_snapshot.operating_name,
+                        email=prev_snapshot.email,
+                        phone=prev_snapshot.phone,
+                        head_office_address=prev_snapshot.head_office_address,
+                        records_address=prev_snapshot.records_address,
+                        service_address=prev_snapshot.service_address,
+                        compliance_report_id=compliance_report_id,
+                    )
+                    return await self.repo.save_snapshot(org_snapshot)
+            except NoResultFound:
+                pass
+
+        # Otherwise, get the organization data to create a new snapshot
         organization = await self.repo.get_organization(organization_id)
 
         if not organization:
             raise NoResultFound(f"Organization with ID {organization_id} not found.")
 
-        # 2. Derive BC address and service address from OrganizationAddress
         bc_address = None
         head_office_address = None
         org_address = organization.org_address
@@ -63,7 +101,6 @@ class OrganizationSnapshotService:
             ]
             head_office_address = ", ".join(filter(None, service_addr_parts))
 
-        # 3. Create the Snapshot
         org_snapshot = ComplianceReportOrganizationSnapshot(
             name=organization.name,
             operating_name=organization.operating_name or organization.name,

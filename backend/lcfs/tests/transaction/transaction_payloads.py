@@ -1,3 +1,5 @@
+import zoneinfo
+
 from datetime import datetime
 
 from lcfs.db.models import (
@@ -17,7 +19,7 @@ from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnu
 
 # Utility function to format datetime for consistency
 def formatted_date():
-    return datetime.strptime("2023-01-01", "%Y-%m-%d").date()
+    return datetime.strptime("2023-01-01", "%Y-%m-%d")
 
 
 test_org_id = 111
@@ -123,6 +125,18 @@ recorded_transfer_orm = Transfer(
     recommendation=TransferRecommendationEnum.Record,
 )
 
+edge_case_transfer_orm = Transfer(
+    from_organization_id=test_org_id,
+    to_organization_id=test_org_2_id,
+    agreement_date=formatted_date(),
+    transaction_effective_date=formatted_date(),
+    price_per_unit=2.0,
+    quantity=20,
+    transfer_category_id=1,
+    current_status_id=6,
+    recommendation=TransferRecommendationEnum.Record,
+)
+
 refused_transfer_orm = Transfer(
     from_organization_id=test_org_id,
     to_organization_id=test_org_2_id,
@@ -194,4 +208,17 @@ adjustment_transaction_orm = Transaction(
     compliance_units=100,
     organization_id=test_org_id,
     create_date=datetime.now(),
+)
+
+edge_case_transaction_orm = Transaction(
+    transaction_id=6,
+    transaction_action=TransactionActionEnum.Adjustment,
+    compliance_units=133,
+    organization_id=test_org_id,
+    create_date=datetime.strptime(f"2023-03-31", "%Y-%m-%d").replace(
+        hour=23,
+        minute=59,
+        second=0,
+        tzinfo=zoneinfo.ZoneInfo("America/Vancouver"),
+    ),
 )

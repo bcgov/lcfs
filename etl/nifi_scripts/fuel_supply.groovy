@@ -12,10 +12,49 @@ import java.time.Instant
 def sourceDbcpService = context.controllerServiceLookup.getControllerService('3245b078-0192-1000-ffff-ffffba20c1eb')
 def destinationDbcpService = context.controllerServiceLookup.getControllerService('3244bf63-0192-1000-ffff-ffffc8ec6d93')
 
-log.warn('**** BEGIN SCHEDULE B MIGRATION ****')
+log.warn('**** BEGIN FUEL SUPPLY MIGRATION ****')
+// Declare connection variables at script level so they're visible in finally block
+Connection sourceConn = null
+Connection destinationConn = null
+// Track records with null quantity issues
+def failedRecords = []
+
 try {
-    Connection sourceConn = sourceDbcpService.getConnection()
-    Connection destinationConn = destinationDbcpService.getConnection()
+    // Validate database connections can be established
+    try {
+        sourceConn = sourceDbcpService.getConnection()
+        log.warn('Successfully connected to source database')
+    } catch (Exception e) {
+        log.error('Failed to connect to source database: ' + e.getMessage())
+        throw e
+    }
+    
+    try {
+        destinationConn = destinationDbcpService.getConnection()
+        log.warn('Successfully connected to destination database')
+    } catch (Exception e) {
+        log.error('Failed to connect to destination database: ' + e.getMessage())
+        throw e
+    }
+    
+    // Validate source database structure
+    def sourceTableCheckStmt = sourceConn.prepareStatement('''
+        SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_name = 'compliance_report_schedule_b_record'
+        ) AS table_exists
+    ''')
+    def sourceTableCheckRS = sourceTableCheckStmt.executeQuery()
+    def tableExists = false
+    if (sourceTableCheckRS.next()) {
+        tableExists = sourceTableCheckRS.getBoolean('table_exists')
+    }
+    sourceTableCheckRS.close()
+    sourceTableCheckStmt.close()
+    
+    if (!tableExists) {
+        throw new Exception("Table 'compliance_report_schedule_b_record' does not exist in source database")
+    }
 
     // Unit mapping dictionary
     def unitMapping = [
@@ -135,51 +174,241 @@ try {
             scheduleBRecords = fuelSupplyStmt.executeQuery().collect { it }
         }
 
-        scheduleBRecords.each { record ->
-            // Map unit values
-            def unitFullForm = unitMapping.get(record.unit_of_measure, record.unit_of_measure)
+        log.warn("Processing ${scheduleBRecords.size()} schedule B records")
+        
+        // Add validation to ensure we have valid records before iterating
+        if (scheduleBRecords == null) {
+            log.warn("scheduleBRecords is null - skipping processing")
+            continue
+        }
+        
+        if (scheduleBRecords.isEmpty()) {
+            log.warn("No schedule B records found for compliance report ${legacyId}")
+            continue
+        }
+        
+        // For debugging special cases
+        if (legacyId == 7) {
+            log.warn("DEBUG: Examining scheduleBRecords for CR ID 7:")
+            scheduleBRecords.eachWithIndex { rec, idx ->
+                log.warn("Record #${idx} type: ${rec.getClass().name}")
+                if (rec instanceof Map) {
+                    log.warn("Keys available: ${rec.keySet()}")
+                    // Print first few values to see structure
+                    def count = 0
+                    rec.each { k, v ->
+                        if (count < 5) {
+                            log.warn("   $k = $v (${v?.getClass()?.name ?: 'null'})")
+                            count++
+                        }
+                    }
+                } else {
+                    log.warn("Not a map: ${rec}")
+                }
+            }
+        }
+        
+        try {
+            scheduleBRecords.each { record ->
+                // Skip null records
+                if (record == null) {
+                    log.warn("Skipping null record")
+                    return
+                }
+                
+                log.warn("Processing record of type: ${record.getClass().name}")
+                
+                // Safely access unit_of_measure without defaults
+                def unitOfMeasure = null
+                try {
+                    if (useSnapshot) {
+                        unitOfMeasure = record.unit_of_measure
+                    } else {
+                        // For ResultSet objects, try to get the value safely
+                        try {
+                            unitOfMeasure = record.getString("unit_of_measure")
+                        } catch (Exception e1) {
+                            // Try direct property access as fallback
+                            try {
+                                unitOfMeasure = record.unit_of_measure
+                            } catch (Exception e2) {
+                                log.warn("Cannot access unit_of_measure: " + e2.getMessage())
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Error accessing unit_of_measure: " + e.getMessage())
+                }
+            
+            // Map unit values - keep original if not in mapping
+            def unitFullForm = unitOfMeasure != null ? unitMapping.get(unitOfMeasure, unitOfMeasure) : null
 
-            // Lookup provision_of_the_act_id
-            def provisionLookupValue = useSnapshot ? "${record.provision_of_the_act_description} - ${record.provision_of_the_act}" : record.provision_act
-            def provisionStmt = destinationConn.prepareStatement('''
-                SELECT provision_of_the_act_id FROM provision_of_the_act WHERE name = ?
-            ''')
-            provisionStmt.setString(1, provisionLookupValue)
-            def provisionResult = provisionStmt.executeQuery()
-            def provisionId = provisionResult.next() ? provisionResult.getInt('provision_of_the_act_id') : null
+            // Lookup provision_of_the_act_id - safely access properties
+            def provisionLookupValue = null
+            try {
+                if (useSnapshot) {
+                    def description = null
+                    def provision = null
+                    try {
+                        description = record.provision_of_the_act_description
+                        provision = record.provision_of_the_act
+                        if (description != null && provision != null) {
+                            provisionLookupValue = "${description} - ${provision}"
+                        }
+                    } catch (Exception e) {
+                        log.warn("Error accessing provision data from snapshot: " + e.getMessage())
+                    }
+                } else {
+                    // Try to get provision_act safely from ResultSet
+                    try {
+                        provisionLookupValue = record.getString("provision_act")
+                    } catch (Exception e1) {
+                        try {
+                            provisionLookupValue = record.provision_act
+                        } catch (Exception e2) {
+                            log.warn("Cannot access provision_act: " + e2.getMessage())
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Error determining provision value: " + e.getMessage())
+            }
+            
+            def provisionId = null
+            if (provisionLookupValue != null) {
+                def provisionStmt = destinationConn.prepareStatement('''
+                    SELECT provision_of_the_act_id FROM provision_of_the_act WHERE name = ?
+                ''')
+                provisionStmt.setString(1, provisionLookupValue)
+                def provisionResult = provisionStmt.executeQuery()
+                provisionId = provisionResult.next() ? provisionResult.getInt('provision_of_the_act_id') : null
+            }
 
-            // Lookup fuel_category_id
-            def fuelCategoryLookupValue = useSnapshot ? record.fuel_class : record.fuel_category
-            def fuelCategoryStmt = destinationConn.prepareStatement('''
-                SELECT fuel_category_id FROM fuel_category WHERE category = ?::fuel_category_enum
-            ''')
-            fuelCategoryStmt.setString(1, fuelCategoryLookupValue)
-            def fuelCategoryResult = fuelCategoryStmt.executeQuery()
-            def fuelCategoryId = fuelCategoryResult.next() ? fuelCategoryResult.getInt('fuel_category_id') : null
+            // Lookup fuel_category_id - safely access properties
+            def fuelCategoryLookupValue = null
+            try {
+                if (useSnapshot) {
+                    try {
+                        fuelCategoryLookupValue = record.fuel_class
+                    } catch (Exception e) {
+                        log.warn("Cannot access fuel_class from snapshot: " + e.getMessage())
+                    }
+                } else {
+                    // Try to get fuel_category safely from ResultSet
+                    try {
+                        fuelCategoryLookupValue = record.getString("fuel_category")
+                    } catch (Exception e1) {
+                        try {
+                            fuelCategoryLookupValue = record.fuel_category
+                        } catch (Exception e2) {
+                            log.warn("Cannot access fuel_category: " + e2.getMessage())
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Error determining fuel category: " + e.getMessage())
+            }
+            
+            def fuelCategoryId = null
+            if (fuelCategoryLookupValue != null) {
+                def fuelCategoryStmt = destinationConn.prepareStatement('''
+                    SELECT fuel_category_id FROM fuel_category WHERE category = ?::fuel_category_enum
+                ''')
+                fuelCategoryStmt.setString(1, fuelCategoryLookupValue)
+                def fuelCategoryResult = fuelCategoryStmt.executeQuery()
+                fuelCategoryId = fuelCategoryResult.next() ? fuelCategoryResult.getInt('fuel_category_id') : null
+            }
 
             // Lookup fuel_code_id
             def fuelCodeStmt = destinationConn.prepareStatement('''
                 select * from fuel_code fc, fuel_code_prefix fcp where fcp.fuel_code_prefix_id  = fc.prefix_id and fcp.prefix = ? and fc.fuel_suffix = ?
             ''')
             def fuelCodeId = null
-            def fuelCode = record.fuel_code ?: null  // Ensure it's not null
-            if (fuelCode) {
-                def prefix = fuelCode.length() >= 4 ? fuelCode.take(4) : fuelCode
-                def suffix = fuelCode.length() > 4 ? fuelCode.drop(4) : ""
-                fuelCodeStmt.setString(1, prefix)
-                fuelCodeStmt.setBigDecimal(2, suffix)
-                def fuelCodeResult = fuelCodeStmt.executeQuery()
-                fuelCodeId = fuelCodeResult.next() ? fuelCodeResult.getInt('fuel_code_id') : null
-                log.warn("fuelCodeId", fuelCodeId)
+            def fuelCode = null
+            
+            // Safely access fuel_code or fuel_code_prefix
+            try {
+                if (useSnapshot) {
+                    try {
+                        fuelCode = record.fuel_code
+                    } catch (Exception e) {
+                        log.warn("Cannot access fuel_code from snapshot: " + e.getMessage())
+                    }
+                } else {
+                    // For SQL data, try to get fuel_code_prefix
+                    try {
+                        fuelCode = record.getString("fuel_code_prefix")
+                    } catch (Exception e1) {
+                        try {
+                            fuelCode = record.fuel_code_prefix
+                        } catch (Exception e2) {
+                            log.warn("Cannot access fuel_code_prefix: " + e2.getMessage())
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Error determining fuel code: " + e.getMessage())
             }
-            // Lookup fuel_type_id
-            def fuelTypeStmt = destinationConn.prepareStatement('''
-                SELECT fuel_type_id FROM fuel_type WHERE fuel_type = ?
-            ''')
-            fuelTypeStmt.setString(1, record.fuel_type)
-            def fuelTypeResult = fuelTypeStmt.executeQuery()
-            def fuelTypeId = fuelTypeResult.next() ? fuelTypeResult.getInt('fuel_type_id') : null
-            log.warn("fuelTypeId", fuelTypeId)
+            
+            if (fuelCode != null) {
+                try {
+                    // Convert to string if it's not already a string
+                    String fuelCodeStr = fuelCode.toString()
+                    
+                    def prefix = fuelCodeStr.length() >= 4 ? fuelCodeStr.substring(0, 4) : fuelCodeStr
+                    def suffix = fuelCodeStr.length() > 4 ? fuelCodeStr.substring(4) : ""
+                    
+                    fuelCodeStmt.setString(1, prefix)
+                    try {
+                        // Try to parse suffix as BigDecimal
+                        fuelCodeStmt.setBigDecimal(2, new BigDecimal(suffix))
+                    } catch (Exception e) {
+                        // If parsing fails, use the string as is
+                        fuelCodeStmt.setString(2, suffix)
+                    }
+                    
+                    def fuelCodeResult = fuelCodeStmt.executeQuery()
+                    fuelCodeId = fuelCodeResult.next() ? fuelCodeResult.getInt('fuel_code_id') : null
+                    log.warn("fuelCodeId: " + fuelCodeId)
+                } catch (Exception e) {
+                    log.warn("Error processing fuel code: " + e.getMessage())
+                }
+            }
+            // Lookup fuel_type_id - safely access properties
+            def fuelTypeValue = null
+            try {
+                if (useSnapshot) {
+                    try {
+                        fuelTypeValue = record.fuel_type
+                    } catch (Exception e) {
+                        log.warn("Cannot access fuel_type from snapshot: " + e.getMessage())
+                    }
+                } else {
+                    // Try to get fuel_type safely from ResultSet
+                    try {
+                        fuelTypeValue = record.getString("fuel_type")
+                    } catch (Exception e1) {
+                        try {
+                            fuelTypeValue = record.fuel_type
+                        } catch (Exception e2) {
+                            log.warn("Cannot access fuel_type: " + e2.getMessage())
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Error determining fuel type: " + e.getMessage())
+            }
+            
+            def fuelTypeId = null
+            if (fuelTypeValue != null) {
+                def fuelTypeStmt = destinationConn.prepareStatement('''
+                    SELECT fuel_type_id FROM fuel_type WHERE fuel_type = ?
+                ''')
+                fuelTypeStmt.setString(1, fuelTypeValue)
+                def fuelTypeResult = fuelTypeStmt.executeQuery()
+                fuelTypeId = fuelTypeResult.next() ? fuelTypeResult.getInt('fuel_type_id') : null
+                log.warn("fuelTypeId: " + fuelTypeId)
+            }
 
             // Insert records into fuel_supply table in LCFS (destination)
             def fuelSupplyInsertStmt = destinationConn.prepareStatement('''
@@ -187,39 +416,246 @@ try {
                     compliance_report_id, quantity, units, compliance_units, target_ci, ci_of_fuel,
                     energy_density, eer, energy, fuel_type_other, fuel_category_id, fuel_code_id,
                     fuel_type_id, provision_of_the_act_id, end_use_id, create_date, update_date,
-                    create_user, update_user, group_uuid, version, user_type, action_type
-                ) VALUES (?, ?, ?::quantityunitsenum, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::usertypeenum, ?::actiontypeenum)
+                    create_user, update_user, group_uuid, version, action_type
+                ) VALUES (?, ?, ?::quantityunitsenum, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?::actiontypeenum)
             ''')
             log.warn("record.complianceReportId: " + (complianceReportId ?: "NULL"))
 
-            def quantity = record.quantity instanceof String ? record.quantity.isNumber() ? new BigDecimal(record.quantity) : 0 : record.quantity
-            // Determine compliance units
-            def complianceUnits = useSnapshot ?
-                (record.credits ? new BigDecimal(record.credits).negate() : (record.debits ? new BigDecimal(record.debits) : BigDecimal.ZERO)) :
-                (record.compliance_units instanceof String && record.compliance_units.isNumber() ? new BigDecimal(record.compliance_units) : record.compliance_units)
-            def ciLimit = record.ci_limit instanceof String ? record.ci_limit.isNumber() ? new BigDecimal(record.ci_limit) : 0 : record.ci_limit
-            def ciOfFuel = record.ci_of_fuel instanceof String ? record.ci_of_fuel.isNumber() ? new BigDecimal(record.ci_of_fuel) : 0 : record.ci_of_fuel
-            def energyDensity = record.energy_density instanceof String ? record.energy_density.isNumber() ? new BigDecimal(record.energy_density) : 0 : record.energy_density
-            def eer = record.eer instanceof String ? record.eer.isNumber() ? new BigDecimal(record.eer) : 0 : record.eer
-            def energyContent = record.energy_content instanceof String ? record.energy_content.isNumber() ? new BigDecimal(record.energy_content) : 0 : record.energy_content
+            // Safe function to get numeric values - improved for snapshot handling
+            def safeGetNumber = { fieldName ->
+            def result = null
+            def val = null
+            try {
+                if (useSnapshot) {
+                    // For JSON snapshot records, access the key directly.
+                    val = record[fieldName]
+                } else {
+                    // For SQL ResultSet objects, try multiple variants.
+                    try {
+                        val = record.getString(fieldName)
+                    } catch (Exception e1) {
+                        // Try direct property access.
+                        try {
+                            val = record."$fieldName"
+                        } catch (Exception e2) {
+                            // Try alternative key formats.
+                            def altFieldNames = [
+                                fieldName,
+                                fieldName.toUpperCase(),
+                                fieldName.toLowerCase(),
+                                fieldName.replaceAll(/([A-Z])/, '_$1').toLowerCase(),
+                                fieldName.replaceAll(/_([a-z])/) { _, c -> c.toUpperCase() }
+                            ]
+                            for (alt in altFieldNames) {
+                                try {
+                                    val = record.getString(alt)
+                                    if (val != null) {
+                                        log.warn("Using alternative field name '${alt}' for ${fieldName}: ${val}")
+                                        break
+                                    }
+                                } catch (Exception ignore) {
+                                    // Continue trying other alternatives.
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Handle explicit "null" string values.
+                if (val == "null") {
+                    val = null
+                }
+                
+                // If the field is missing or null, record the issue for quantity.
+                if (val == null) {
+                    if (fieldName == "quantity") {
+                        def errorMsg = "ERROR: Found null quantity in source data for field '${fieldName}'"
+                        log.error(errorMsg)
+                        failedRecords << [
+                            crId: legacyId,
+                            complianceReportId: complianceReportId,
+                            recordType: record.getClass().name,
+                            reason: "Null quantity value",
+                            recordData: useSnapshot ?
+                                record.toString().take(200) + "..." :
+                                "SQL ResultSet (details unavailable)"
+                        ]
+                    }
+                    return new BigDecimal(0)
+                }
+                
+                // Convert to BigDecimal.
+                if (val instanceof String) {
+                    val = val.trim().replaceAll(",", "")
+                    if (val.matches("-?\\d+(\\.\\d+)?")) {
+                        result = new BigDecimal(val)
+                    } else {
+                        log.warn("String value '${val}' for ${fieldName} is not a valid number")
+                        if (fieldName == "quantity") {
+                            log.error("ERROR: Invalid quantity value '${val}' in source data.")
+                            failedRecords << [
+                                crId: legacyId,
+                                complianceReportId: complianceReportId,
+                                recordType: record.getClass().name,
+                                reason: "Non-numeric quantity value: '${val}'",
+                                recordData: useSnapshot ?
+                                    record.toString().take(200) + "..." :
+                                    "SQL ResultSet (details unavailable)"
+                            ]
+                            return new BigDecimal(0)
+                        }
+                        result = null
+                    }
+                } else if (val instanceof Number) {
+                    result = new BigDecimal(val.toString())
+                } else {
+                    log.warn("Unknown type for ${fieldName}: ${val.getClass().name}")
+                    if (fieldName == "quantity") {
+                        log.error("ERROR: Quantity has unexpected type: ${val.getClass().name}. Cannot convert to numeric value.")
+                        failedRecords << [
+                            crId: legacyId,
+                            complianceReportId: complianceReportId,
+                            recordType: record.getClass().name,
+                            reason: "Quantity has unexpected type: ${val.getClass().name}",
+                            recordData: useSnapshot ?
+                                record.toString().take(200) + "..." :
+                                "SQL ResultSet (details unavailable)"
+                        ]
+                        return new BigDecimal(0)
+                    }
+                    result = null
+                }
+            } catch (Exception e) {
+                log.warn("Error converting ${fieldName}: " + e.getMessage())
+                if (fieldName == "quantity") {
+                    log.error("ERROR: Exception while processing quantity value: ${e.getMessage()}")
+                    failedRecords << [
+                        crId: legacyId,
+                        complianceReportId: complianceReportId,
+                        recordType: record.getClass().name,
+                        reason: "Exception while processing quantity: ${e.getMessage()}",
+                        recordData: useSnapshot ?
+                            record.toString().take(200) + "..." :
+                            "SQL ResultSet (details unavailable)"
+                    ]
+                    return new BigDecimal(0)
+                }
+            }
+            return result
+        }
 
+            
+            // Get numeric values safely
+            def quantity = safeGetNumber("quantity")
+            
+            // Determine compliance units
+            def complianceUnits = null
+            if (useSnapshot) {
+                def credits = safeGetNumber("credits")
+                def debits = safeGetNumber("debits")
+                
+                if (credits != null) {
+                    complianceUnits = credits.negate()
+                } else if (debits != null) {
+                    complianceUnits = debits
+                }
+            } else {
+                complianceUnits = safeGetNumber("compliance_units")
+            }
+            
+            // Get other numeric values safely
+            def ciLimit = safeGetNumber("ci_limit")
+            def ciOfFuel = safeGetNumber("ci_of_fuel")
+            def energyDensity = safeGetNumber("energy_density")
+            def eer = safeGetNumber("eer")
+            def energyContent = safeGetNumber("energy_content")
+
+            // Must use setNull for potentially null values
             fuelSupplyInsertStmt.setInt(1, complianceReportId)
-            fuelSupplyInsertStmt.setBigDecimal(2, quantity)
-            fuelSupplyInsertStmt.setString(3, unitFullForm)
-            fuelSupplyInsertStmt.setBigDecimal(4, complianceUnits)
-            fuelSupplyInsertStmt.setBigDecimal(5, ciLimit)
-            fuelSupplyInsertStmt.setBigDecimal(6, ciOfFuel)
-            fuelSupplyInsertStmt.setBigDecimal(7, energyDensity)
-            fuelSupplyInsertStmt.setBigDecimal(8, eer)
-            fuelSupplyInsertStmt.setBigDecimal(9, energyContent)
-            fuelSupplyInsertStmt.setObject(10, null)
-            fuelSupplyInsertStmt.setInt(11, fuelCategoryId)
-            fuelSupplyInsertStmt.setObject(12, fuelCodeId)
-            fuelSupplyInsertStmt.setInt(13, fuelTypeId)
-            fuelSupplyInsertStmt.setInt(14, provisionId)
-            fuelSupplyInsertStmt.setObject(15, null)
-            fuelSupplyInsertStmt.setObject(16, null)
-            fuelSupplyInsertStmt.setObject(17, null)
+            
+            // Handle numeric values safely
+            if (quantity != null) {
+                fuelSupplyInsertStmt.setBigDecimal(2, quantity)
+            } else {
+                fuelSupplyInsertStmt.setNull(2, java.sql.Types.NUMERIC)
+            }
+            
+            if (unitFullForm != null) {
+                fuelSupplyInsertStmt.setString(3, unitFullForm)
+            } else {
+                fuelSupplyInsertStmt.setNull(3, java.sql.Types.VARCHAR)
+            }
+            
+            if (complianceUnits != null) {
+                fuelSupplyInsertStmt.setBigDecimal(4, complianceUnits)
+            } else {
+                fuelSupplyInsertStmt.setNull(4, java.sql.Types.NUMERIC)
+            }
+            
+            if (ciLimit != null) {
+                fuelSupplyInsertStmt.setBigDecimal(5, ciLimit)
+            } else {
+                fuelSupplyInsertStmt.setNull(5, java.sql.Types.NUMERIC)
+            }
+            
+            if (ciOfFuel != null) {
+                fuelSupplyInsertStmt.setBigDecimal(6, ciOfFuel)
+            } else {
+                fuelSupplyInsertStmt.setNull(6, java.sql.Types.NUMERIC)
+            }
+            
+            if (energyDensity != null) {
+                fuelSupplyInsertStmt.setBigDecimal(7, energyDensity)
+            } else {
+                fuelSupplyInsertStmt.setNull(7, java.sql.Types.NUMERIC)
+            }
+            
+            if (eer != null) {
+                fuelSupplyInsertStmt.setBigDecimal(8, eer)
+            } else {
+                fuelSupplyInsertStmt.setNull(8, java.sql.Types.NUMERIC)
+            }
+            
+            if (energyContent != null) {
+                fuelSupplyInsertStmt.setBigDecimal(9, energyContent)
+            } else {
+                fuelSupplyInsertStmt.setNull(9, java.sql.Types.NUMERIC)
+            }
+            
+            // Always null for fuel_type_other
+            fuelSupplyInsertStmt.setNull(10, java.sql.Types.VARCHAR)
+            
+            // Handle integer IDs safely
+            if (fuelCategoryId != null) {
+                fuelSupplyInsertStmt.setInt(11, fuelCategoryId)
+            } else {
+                fuelSupplyInsertStmt.setNull(11, java.sql.Types.INTEGER)
+            }
+            
+            if (fuelCodeId != null) {
+                fuelSupplyInsertStmt.setInt(12, fuelCodeId)
+            } else {
+                fuelSupplyInsertStmt.setNull(12, java.sql.Types.INTEGER)
+            }
+            
+            if (fuelTypeId != null) {
+                fuelSupplyInsertStmt.setInt(13, fuelTypeId)
+            } else {
+                fuelSupplyInsertStmt.setNull(13, java.sql.Types.INTEGER)
+            }
+            
+            if (provisionId != null) {
+                fuelSupplyInsertStmt.setInt(14, provisionId)
+            } else {
+                fuelSupplyInsertStmt.setNull(14, java.sql.Types.INTEGER)
+            }
+            
+            // Always null fields
+            fuelSupplyInsertStmt.setNull(15, java.sql.Types.INTEGER) // end_use_id
+            fuelSupplyInsertStmt.setNull(16, java.sql.Types.TIMESTAMP) // create_date
+            fuelSupplyInsertStmt.setNull(17, java.sql.Types.TIMESTAMP) // update_date
+            
+            // Non-null string values
             fuelSupplyInsertStmt.setString(18, 'ETL')
             fuelSupplyInsertStmt.setString(19, 'ETL')
             fuelSupplyInsertStmt.setString(20, groupUuid)
@@ -227,15 +663,52 @@ try {
             fuelSupplyInsertStmt.setString(22, 'SUPPLIER')
             fuelSupplyInsertStmt.setString(23, 'CREATE')
             fuelSupplyInsertStmt.executeUpdate()
-        }
-    }
-} catch (Exception e) {
-    log.error('Error running Schedule B migration', e)
+                } // end of record loop
+            } catch (Exception e) {
+                log.error("Error processing individual record: " + e.getMessage())
+                log.error("Stack trace: " + e.getStackTrace().join("\n"))
+                // Continue processing other records
+            }
+        } // end of scheduleBRecords.each
+    } catch (Exception e) {
+    log.error('Error running Fuel Supply migration: ' + e.getMessage())
+    log.error('Stack trace: ' + e.getStackTrace().join("\n"))
     throw e
 } finally {
-    sourceConn.close()
-    destinationConn.close()
+    // Safely close connections
+    if (sourceConn != null) {
+        try {
+            sourceConn.close()
+            log.warn("Source connection closed")
+        } catch (Exception e) {
+            log.error("Error closing source connection: " + e.getMessage())
+        }
+    }
+    
+    if (destinationConn != null) {
+        try {
+            destinationConn.close()
+            log.warn("Destination connection closed")
+        } catch (Exception e) {
+            log.error("Error closing destination connection: " + e.getMessage())
+        }
+    }
+    
+    // Output statistics on records that failed due to null quantity
+    log.warn("**** SCHEDULE B MIGRATION ISSUES SUMMARY ****")
+    log.warn("Total records with issues: ${failedRecords.size()}")
+    
+    if (failedRecords.size() > 0) {
+        log.warn("\nList of records with issues:")
+        failedRecords.eachWithIndex { record, index ->
+            log.warn("${index + 1}. Compliance Report ID: ${record.crId} (LCFS ID: ${record.complianceReportId})")
+            log.warn("   Reason: ${record.reason}")
+            log.warn("   Record Type: ${record.recordType}")
+            log.warn("   Data Preview: ${record.recordData}")
+            log.warn("   -----------------------------")
+        }
+    }
 }
 
 
-log.warn('**** DONE: SCHEDULE B MIGRATION ****')
+log.warn('**** DONE: FUEL SUPPLY MIGRATION ****')

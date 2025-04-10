@@ -1,5 +1,6 @@
 import pytest
 
+from lcfs.db.models import ComplianceReport
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
 from lcfs.tests.transaction.transaction_payloads import *
 from lcfs.web.api.base import SortOrder
@@ -27,9 +28,11 @@ async def mock_transactions(dbsession):
         declined_transfer_orm,
         rescinded_transfer_orm,
         initiative_agreement_orm,
+        edge_case_transfer_orm,
         admin_adjustment_orm,
         adjustment_transaction_orm,
         reserved_transaction_orm,
+        edge_case_transaction_orm,
     ]
     dbsession.add_all(transactions)
     await dbsession.flush()
@@ -40,7 +43,7 @@ async def mock_transactions(dbsession):
 @pytest.mark.anyio
 async def test_calculate_total_balance(dbsession, transaction_repo, mock_transactions):
     total_balance = await transaction_repo.calculate_total_balance(test_org_id)
-    assert total_balance == 100
+    assert total_balance == 233
 
 
 @pytest.mark.anyio
@@ -56,14 +59,34 @@ async def test_calculate_available_balance(
     dbsession, transaction_repo, mock_transactions
 ):
     available_balance = await transaction_repo.calculate_available_balance(test_org_id)
+    assert available_balance == 133
+
+
+@pytest.mark.anyio
+async def test_edge_case_transaction_in_proper_period(
+    dbsession, transaction_repo, mock_transactions
+):
+    """Transaction is right on the edge of the compliance period (March 31st), check it shows up in 2022 and after"""
+    available_balance = await transaction_repo.calculate_available_balance_for_period(
+        test_org_id, 2021
+    )
     assert available_balance == 0
+
+    available_balance = await transaction_repo.calculate_available_balance_for_period(
+        test_org_id, 2022
+    )
+    assert available_balance == 33
+
+    available_balance = await transaction_repo.calculate_available_balance_for_period(
+        test_org_id, 2023
+    )
+    assert available_balance == 33
 
 
 @pytest.mark.anyio
 async def test_create_transaction(dbsession, transaction_repo):
     dbsession.add_all([test_org])
     await dbsession.flush()
-
 
     new_transaction = await transaction_repo.create_transaction(
         TransactionActionEnum.Adjustment, 100, test_org_id
@@ -120,15 +143,15 @@ async def test_transactions_in_have_correct_visibilities(
         await transaction_repo.get_transactions_paginated(0, 10, [], sort_orders)
     )
 
-    assert len(transactions_transferor) == 8
-    assert total_count_transferor == 8
+    assert len(transactions_transferor) == 9
+    assert total_count_transferor == 9
 
-    assert len(transactions_transferee) == 7
-    assert total_count_transferee == 7
+    assert len(transactions_transferee) == 8
+    assert total_count_transferee == 8
 
     # No Rescinded transfer shown in the government transactions
-    assert len(transactions_gov) == 8
-    assert total_count_gov == 8
+    assert len(transactions_gov) == 9
+    assert total_count_gov == 9
 
 
 @pytest.mark.anyio
@@ -195,3 +218,33 @@ async def test_get_visible_statuses_for_government(dbsession, transaction_repo):
     assert set(visible_statuses) == set(
         expected_statuses
     ), "Unexpected statuses returned for government"
+
+
+@pytest.mark.anyio
+async def test_delete_transaction_success(dbsession, transaction_repo):
+    """
+    Verify that a transaction is deleted and its associated compliance report
+    has its transaction_id set to None.
+    """
+    # Create and add a Transaction and a ComplianceReport referencing that transaction.
+    transaction = Transaction(transaction_id=1000)
+    compliance_report = ComplianceReport(
+        compliance_report_id=2000,
+        transaction_id=1000,
+        compliance_period_id=15,
+        organization_id=1,
+    )
+    dbsession.add_all([transaction, compliance_report])
+    await dbsession.flush()
+
+    # Call the delete_transaction method.
+    await transaction_repo.delete_transaction(1000, 2000)
+    await dbsession.commit()
+
+    # Verify the Transaction is deleted.
+    deleted_transaction = await dbsession.get(Transaction, 1000)
+    assert deleted_transaction is None
+
+    # Verify the ComplianceReport has been updated.
+    updated_report = await dbsession.get(ComplianceReport, 2000)
+    assert updated_report.transaction_id is None

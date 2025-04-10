@@ -8,7 +8,7 @@ from lcfs.web.api.base import (
     FilterModel,
     SortOrder,
     PaginationResponseSchema,
-    ComplianceReportRequestSchema
+    ComplianceReportRequestSchema,
 )
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.utils.schema_validators import fuel_code_required_label
@@ -105,7 +105,6 @@ class OtherUsesCreateSchema(BaseSchema):
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
     is_new_supplemental_entry: Optional[bool] = None
 
@@ -137,18 +136,6 @@ class OtherUsesChangelogFuelTypeSchema(BaseSchema):
     units: FuelTypeQuantityUnitsEnumSchema
 
 
-class OtherUsesDiffSchema(BaseSchema):
-    fuel_type: Optional[bool] = None
-    fuel_category: Optional[bool] = None
-    provision_of_the_act: Optional[bool] = None
-    fuel_code: Optional[bool] = None
-    quantity_supplied: Optional[bool] = None
-    units: Optional[bool] = None
-    ci_of_fuel: Optional[bool] = None
-    expected_use: Optional[bool] = None
-    rationale: Optional[bool] = None
-
-
 class OtherUsesChangelogSchema(BaseSchema):
     other_uses_id: Optional[int] = None
     compliance_report_id: int
@@ -164,10 +151,8 @@ class OtherUsesChangelogSchema(BaseSchema):
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
     version: Optional[int] = None
-    user_type: Optional[str] = None
     action_type: Optional[str] = None
 
-    diff: Optional[OtherUsesDiffSchema] = None
     updated: Optional[bool] = None
 
 

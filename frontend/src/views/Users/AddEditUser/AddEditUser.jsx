@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useMutation } from '@tanstack/react-query'
 import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { useUser } from '@/hooks/useUser'
+import { useUser, useDeleteUser } from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   userInfoSchema,
@@ -15,15 +15,28 @@ import {
   statusOptions
 } from './_schema'
 import { useApiService } from '@/services/useApiService'
-import { ROUTES } from '@/constants/routes'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { BCFormRadio, BCFormText } from '@/components/BCForm'
 import colors from '@/themes/base/colors'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFloppyDisk, faArrowLeft } from '@fortawesome/free-solid-svg-icons'
+import {
+  faFloppyDisk,
+  faArrowLeft,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
-import { Box, Stack } from '@mui/material'
+import {
+  Box,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Tooltip
+} from '@mui/material'
 import BCTypography from '@/components/BCTypography'
-import Grid2 from '@mui/material/Unstable_Grid2'
+import Grid2 from '@mui/material/Grid2'
 import BCAlert from '@/components/BCAlert'
 import Loading from '@/components/Loading'
 import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
@@ -43,6 +56,7 @@ export const AddEditUser = ({ userType }) => {
   const { t } = useTranslation(['common', 'admin'])
   const { userID, orgID } = useParams()
   const [orgName, setOrgName] = useState('')
+  const [openConfirm, setOpenConfirm] = useState(false)
 
   const {
     data,
@@ -58,6 +72,9 @@ export const AddEditUser = ({ userType }) => {
       : { undefined, isLoading: false, isFetched: false }
     : // eslint-disable-next-line react-hooks/rules-of-hooks
       useUser(userID, { enabled: !!userID, retry: false })
+
+  // Determine if user is safe to remove
+  const safeToDelete = data?.isSafeToRemove
 
   // User form hook and form validation
   const form = useForm({
@@ -195,16 +212,16 @@ export const AddEditUser = ({ userType }) => {
     onSuccess: () => {
       // on success navigate somewhere
       if (hasRoles(roles.supplier)) {
-        navigate(ROUTES.ORGANIZATION)
+        navigate(ROUTES.ORGANIZATION.ORG)
       } else if (orgID) {
-        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
+        navigate(buildPath(ROUTES.ORGANIZATIONS.VIEW, { orgID }), {
           state: {
             message: 'User has been successfully saved.',
             severity: 'success'
           }
         })
       } else {
-        navigate(ROUTES.ADMIN_USERS, {
+        navigate(ROUTES.ADMIN.USERS.LIST, {
           state: {
             message: 'User has been successfully saved.',
             severity: 'success'
@@ -217,6 +234,40 @@ export const AddEditUser = ({ userType }) => {
       console.error('Error saving user:', error)
     }
   })
+
+  // Delete mutation hook (only used for BCeID users)
+  const { mutate: deleteUser } = useDeleteUser()
+
+  // Handler for confirming deletion
+  const handleConfirmDelete = () => {
+    deleteUser(userID, {
+      onSuccess: () => {
+        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
+          state: {
+            message: t('admin:deleteUser.success'),
+            severity: 'success'
+          }
+        })
+      },
+      onError: (error) => {
+        console.error('Error deleting user:', error)
+      }
+    })
+    setOpenConfirm(false)
+  }
+
+  // Cancel deletion
+  const handleCancelDelete = () => {
+    setOpenConfirm(false)
+  }
+
+  // Handler for delete button click – opens confirmation dialog
+  const handleDelete = () => {
+    // Only allow deletion for BCeID users
+    if (userType === 'bceid' && safeToDelete) {
+      setOpenConfirm(true)
+    }
+  }
 
   if (isUserLoading || isCurrentUserLoading) {
     return <Loading message="Loading..." />
@@ -241,7 +292,12 @@ export const AddEditUser = ({ userType }) => {
         <FormProvider {...{ control, setValue }}>
           <Grid2 container columnSpacing={2.5} rowSpacing={0.5}>
             {/* Form fields */}
-            <Grid2 item xs={12} md={5} lg={4}>
+            <Grid2
+              size={{
+                xs: 12,
+                md: 5
+              }}
+            >
               <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
                 {textFields.map((field) => (
                   <BCFormText
@@ -255,7 +311,12 @@ export const AddEditUser = ({ userType }) => {
                 ))}
               </Stack>
             </Grid2>
-            <Grid2 item xs={12} md={7} lg={6}>
+            <Grid2
+              size={{
+                xs: 12,
+                md: 7
+              }}
+            >
               <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
                 <BCFormRadio
                   control={control}
@@ -280,7 +341,12 @@ export const AddEditUser = ({ userType }) => {
                 )}
               </Stack>
             </Grid2>
-            <Grid2 item xs={12} md={5} lg={4}>
+            <Grid2
+              size={{
+                xs: 12,
+                md: 5
+              }}
+            >
               <Box
                 bgcolor={colors.background.grey}
                 p={3}
@@ -303,11 +369,11 @@ export const AddEditUser = ({ userType }) => {
                   }
                   onClick={() =>
                     hasRoles(roles.supplier)
-                      ? navigate(ROUTES.ORGANIZATION)
+                      ? navigate(ROUTES.ORGANIZATION.ORG)
                       : navigate(
                           userType === 'idir'
-                            ? ROUTES.ADMIN_USERS
-                            : ROUTES.ORGANIZATIONS
+                            ? ROUTES.ADMIN.USERS.LIST
+                            : ROUTES.ORGANIZATIONS.LIST
                         )
                   }
                 >
@@ -315,6 +381,68 @@ export const AddEditUser = ({ userType }) => {
                     {t('backBtn')}
                   </BCTypography>
                 </BCButton>
+                {/* Only render delete button for BCeID users */}
+                {userID &&
+                  userType === 'bceid' &&
+                  (safeToDelete ? (
+                    <BCButton
+                      variant="outlined"
+                      size="medium"
+                      sx={{
+                        backgroundColor: 'white.main',
+                        borderColor: colors.error.main,
+                        color: colors.error.main
+                      }}
+                      data-test="delete-user-btn"
+                      startIcon={
+                        <FontAwesomeIcon
+                          icon={faTrash}
+                          className="small-icon"
+                        />
+                      }
+                      onClick={handleDelete}
+                    >
+                      <BCTypography variant="subtitle2" textTransform="none">
+                        {t('admin:deleteUser.button')}
+                      </BCTypography>
+                    </BCButton>
+                  ) : (
+                    <Tooltip title={t('admin:deleteUser.notSafe')}>
+                      <span>
+                        <BCButton
+                          variant="outlined"
+                          size="medium"
+                          sx={{
+                            backgroundColor: 'white.main',
+                            borderColor: colors.error.main,
+                            color: colors.error.main,
+                            '&.Mui-disabled': {
+                              backgroundColor: 'white.main',
+                              borderColor: colors.error.main,
+                              color: colors.error.main,
+                              opacity: 0.5, // slightly faded to indicate disabled state
+                              cursor: 'not-allowed'
+                            }
+                          }}
+                          disabled
+                          data-test="delete-user-btn"
+                          startIcon={
+                            <FontAwesomeIcon
+                              icon={faTrash}
+                              className="small-icon"
+                            />
+                          }
+                        >
+                          <BCTypography
+                            variant="subtitle2"
+                            textTransform="none"
+                          >
+                            {t('admin:deleteUser.button')}
+                          </BCTypography>
+                        </BCButton>
+                      </span>
+                    </Tooltip>
+                  ))}
                 <BCButton
                   type="submit"
                   variant="contained"
@@ -336,6 +464,43 @@ export const AddEditUser = ({ userType }) => {
           </Grid2>
         </FormProvider>
       </form>
+
+      {/* Confirmation Dialog for deletion */}
+      <Dialog open={openConfirm} onClose={handleCancelDelete}>
+        <DialogTitle>
+          <BCTypography variant="h6" color={colors.primary.main}>
+            {t('admin:deleteUser.confirmTitle')}
+          </BCTypography>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <BCTypography variant="body5">
+            {t('admin:deleteUser.confirmMessage')}
+          </BCTypography>
+        </DialogContent>
+        <DialogActions>
+          <BCButton
+            variant="outlined"
+            size="medium"
+            color="primary"
+            data-test="back-btn"
+            sx={{
+              backgroundColor: 'white.main'
+            }}
+            onClick={handleCancelDelete}
+          >
+            {t('cancelBtn')}
+          </BCButton>
+          <BCButton
+            type="submit"
+            variant="contained"
+            size="medium"
+            color="error"
+            onClick={handleConfirmDelete}
+          >
+            {t('admin:deleteUser.button')}
+          </BCButton>
+        </DialogActions>
+      </Dialog>
     </div>
   )
 }

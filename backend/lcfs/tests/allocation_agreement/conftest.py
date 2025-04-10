@@ -1,6 +1,7 @@
-from unittest.mock import MagicMock, AsyncMock, patch
 import pytest
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from unittest.mock import MagicMock, AsyncMock
+
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementSchema,
@@ -32,7 +33,6 @@ def create_mock_schema(overrides: dict):
         deleted=None,
         group_uuid="test-group-uuid",
         version=0,
-        user_type=UserTypeEnum.SUPPLIER.value,
         action_type=ActionTypeEnum.CREATE.value,
     )
 
@@ -64,7 +64,6 @@ def create_mock_update_schema(overrides: dict):
         deleted=None,
         group_uuid="test-group-uuid",
         version=1,
-        user_type=UserTypeEnum.SUPPLIER.value,
         action_type=ActionTypeEnum.UPDATE.value,
     )
 
@@ -96,7 +95,6 @@ def create_mock_delete_schema(overrides: dict):
         deleted=True,  # Set to True for deletes
         group_uuid="test-group-uuid",
         version=1,
-        user_type=UserTypeEnum.SUPPLIER.value,
         action_type=ActionTypeEnum.DELETE.value,  # Set to DELETE for deletes
     )
 
@@ -138,7 +136,6 @@ def create_mock_response_schema(overrides: dict):
         fuel_code=None,
         group_uuid="test-group-uuid",
         version=1,
-        user_type=UserTypeEnum.SUPPLIER.value,
         action_type=ActionTypeEnum.CREATE.value,
         diff=None,
         updated=None,
@@ -182,7 +179,6 @@ def create_mock_update_response_schema(overrides: dict):
         fuel_code=None,
         group_uuid="test-group-uuid",
         version=1,
-        user_type=UserTypeEnum.SUPPLIER.value,
         action_type=ActionTypeEnum.UPDATE.value,
         diff=None,
         updated=None,
@@ -208,7 +204,6 @@ def create_mock_allocation_agreement():
         mock_agreement.group_uuid = data.get("group_uuid", "group-1")
         mock_agreement.version = data.get("version", 1)
         mock_agreement.action_type = data.get("action_type", ActionTypeEnum.CREATE)
-        mock_agreement.user_type = data.get("user_type", UserTypeEnum.SUPPLIER)
         mock_agreement.transaction_partner = data.get(
             "transaction_partner", "LCFS Org 2"
         )
@@ -310,7 +305,6 @@ def mock_allocation_agreement_full(
         mock_agreement.group_uuid = data.get("group_uuid", "group-1")
         mock_agreement.version = data.get("version", 1)
         mock_agreement.action_type = data.get("action_type", ActionTypeEnum.CREATE)
-        mock_agreement.user_type = data.get("user_type", UserTypeEnum.SUPPLIER)
         mock_agreement.transaction_partner = data.get(
             "transaction_partner", "LCFS Org 2"
         )

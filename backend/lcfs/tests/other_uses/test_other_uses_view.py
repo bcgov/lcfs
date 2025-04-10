@@ -1,14 +1,14 @@
-from unittest.mock import MagicMock, AsyncMock, patch
-
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
+from unittest.mock import MagicMock, AsyncMock, patch
 
-from lcfs.db.base import UserTypeEnum
+from lcfs.db.models import ComplianceReport
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.tests.compliance_report.conftest import compliance_report_base_schema
 from lcfs.tests.other_uses.conftest import create_mock_schema
 from lcfs.web.api.base import ComplianceReportRequestSchema
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.other_uses.schema import (
     PaginatedOtherUsesRequestSchema,
     OtherUsesSchema,
@@ -27,6 +27,14 @@ def mock_other_uses_validation():
     validation = MagicMock(spec=OtherUsesValidation)
     validation.validate_organization_access = AsyncMock()
     validation.validate_compliance_report_id = AsyncMock()
+    return validation
+
+
+@pytest.fixture
+def mock_report_validation():
+    validation = MagicMock(spec=ComplianceReportValidation)
+    validation.validate_organization_access.return_value = ComplianceReport()
+    validation.validate_compliance_report_access = AsyncMock()
     return validation
 
 
@@ -63,6 +71,7 @@ async def test_get_other_uses(
     fastapi_app: FastAPI,
     set_mock_user,
     mock_other_uses_service,
+    mock_report_validation,
 ):
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
@@ -76,7 +85,7 @@ async def test_get_other_uses(
         url = fastapi_app.url_path_for("get_other_uses")
         payload = ComplianceReportRequestSchema(compliance_report_id=1).model_dump()
 
-        mock_validate_organization_access.return_value = True
+        mock_validate_organization_access.return_value = ComplianceReport()
 
         mock_get_compliance_report_by_id.return_value = compliance_report_base_schema
         mock_validate_compliance_report_access.return_value = True
@@ -103,7 +112,9 @@ async def test_get_other_uses_paginated(
 ):
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("get_other_uses_paginated")
         payload = PaginatedOtherUsesRequestSchema(
@@ -114,7 +125,7 @@ async def test_get_other_uses_paginated(
             filters=[],
         ).model_dump()
 
-        mock_validate_organization_access.return_value = True
+        mock_validate_organization_access.return_value = ComplianceReport()
         mock_other_uses_service.get_other_uses_paginated.return_value = {
             "pagination": {"total": 0, "page": 1, "size": 10, "totalPages": 1},
             "otherUses": [],
@@ -142,7 +153,9 @@ async def test_save_other_uses_row_create(
 ):
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_other_uses_row")
         payload = create_mock_schema({}).model_dump()
@@ -152,7 +165,7 @@ async def test_save_other_uses_row_create(
             **payload
         )
 
-        mock_validate_organization_access.return_value = True
+        mock_validate_organization_access.return_value = ComplianceReport()
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
             lambda: mock_other_uses_service
@@ -180,7 +193,9 @@ async def test_save_other_uses_row_update(
 ):
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_other_uses_row")
         payload = create_mock_schema(
@@ -192,7 +207,7 @@ async def test_save_other_uses_row_update(
         ).model_dump()
 
         mock_other_uses_service.update_other_use.return_value = payload
-        mock_validate_organization_access.return_value = True
+        mock_validate_organization_access.return_value = ComplianceReport()
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
             lambda: mock_other_uses_service
@@ -220,7 +235,9 @@ async def test_save_other_uses_row_delete(
 ):
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
-    ) as mock_validate_organization_access:
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.notional_transfer.views.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_compliance_report_access:
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_other_uses_row")
         mock_schema = create_mock_schema(
@@ -231,7 +248,7 @@ async def test_save_other_uses_row_delete(
         )
 
         mock_other_uses_service.delete_other_use.return_value = None
-        mock_validate_organization_access.return_value = True
+        mock_validate_organization_access.return_value = ComplianceReport()
         mock_other_uses_validation.validate_compliance_report_id.return_value = None
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
@@ -247,8 +264,6 @@ async def test_save_other_uses_row_delete(
         data = response.json()
         assert data == {"message": "Other use deleted successfully"}
 
-        mock_other_uses_service.delete_other_use.assert_called_once_with(
-            mock_schema, UserTypeEnum.SUPPLIER
-        )
+        mock_other_uses_service.delete_other_use.assert_called_once_with(mock_schema)
         mock_validate_organization_access.assert_called_once_with(1)
         mock_other_uses_validation.validate_compliance_report_id.assert_called_once()

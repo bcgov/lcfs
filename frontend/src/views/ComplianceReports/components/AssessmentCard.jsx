@@ -1,30 +1,31 @@
-import React, { useMemo, useState } from 'react'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
+import Loading from '@/components/Loading.jsx'
 import { Role } from '@/components/Role'
 import { StyledListItem } from '@/components/StyledListItem'
-import { roles } from '@/constants/roles'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
-import AssignmentIcon from '@mui/icons-material/Assignment'
-import { List, ListItemText, Stack } from '@mui/material'
-import Box from '@mui/material/Box'
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
+import { roles } from '@/constants/roles'
+import { apiRoutes } from '@/constants/routes/index.js'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import {
+  useCreateSupplementalReport,
+  useGetComplianceReport
+} from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
+import { useApiService } from '@/services/useApiService.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
 import { OrganizationAddress } from '@/views/ComplianceReports/components/OrganizationAddress.jsx'
-import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
-import Loading from '@/components/Loading.jsx'
-import { apiRoutes } from '@/constants/routes/index.js'
-import { useApiService } from '@/services/useApiService.js'
-import { FileDownload } from '@mui/icons-material'
+import { Assignment, FileDownload } from '@mui/icons-material'
+import { List, ListItemText, Stack } from '@mui/material'
+import Box from '@mui/material/Box'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 export const AssessmentCard = ({
   orgData,
-  hasMetRenewables,
-  hasMetLowCarbon,
   hasSupplemental,
   isGovernmentUser,
   currentStatus,
@@ -35,8 +36,19 @@ export const AssessmentCard = ({
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
+  const {
+    data: currentUser,
+    isLoading: isCurrentUserLoading,
+    hasRoles
+  } = useCurrentUser()
 
-  const [isEditing, setIsEditing] = React.useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+
+  const { data: reportData, isLoading: isReportLoading } =
+    useGetComplianceReport(
+      currentUser?.organization?.organizationId,
+      complianceReportId
+    )
 
   const onEdit = () => {
     setIsEditing(true)
@@ -85,10 +97,12 @@ export const AssessmentCard = ({
     })
 
   const filteredChain = useMemo(() => {
-    return chain.filter((report) => {
-      return report.history && report.history.length > 0
-    })
+    return chain.filter((report) => report.history && report.history.length > 0)
   }, [chain])
+
+  if (isCurrentUserLoading || isReportLoading) {
+    return <Loading />
+  }
 
   return (
     <BCWidgetCard
@@ -116,7 +130,6 @@ export const AssessmentCard = ({
               {orgData?.name}{' '}
               {snapshotData?.isEdited && t('report:addressEdited')}
             </BCTypography>
-
             {snapshotLoading && <Loading />}
             {!snapshotLoading && (
               <OrganizationAddress
@@ -126,50 +139,34 @@ export const AssessmentCard = ({
                 setIsEditing={setIsEditing}
               />
             )}
-
-            {(isGovernmentUser ||
-              hasSupplemental ||
-              currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED) && (
+            {((!isGovernmentUser &&
+              ['Assessed', 'Reassessed', 'Rejected'].includes(
+                reportData.report.currentStatus?.status
+              )) ||
+              isGovernmentUser) && (
               <>
                 <BCTypography
                   sx={{ paddingTop: '16px' }}
+                  component="div"
                   variant="h6"
                   color="primary"
                 >
-                  {t('report:renewableFuelTarget')}
+                  {t('report:assessmentStatement')}
+                  {((hasRoles('Analyst') && currentStatus === 'Submitted') ||
+                    (hasRoles('Compliance Manager') &&
+                      currentStatus === 'Recommended by analyst') ||
+                    (hasRoles('Director') &&
+                      currentStatus === 'Recommended by manager')) && (
+                    <span style={{ color: 'red' }}>
+                      {' '}
+                      {t('report:assessmentStatementEdit')}
+                    </span>
+                  )}
                 </BCTypography>
                 <List sx={{ padding: 0 }}>
                   <StyledListItem>
                     <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
-                      <span
-                        dangerouslySetInnerHTML={{
-                          __html: t('report:assessmentLn1', {
-                            name: orgData.name,
-                            hasMet: hasMetRenewables ? 'has met' : 'has not met'
-                          })
-                        }}
-                      />
-                    </ListItemText>
-                  </StyledListItem>
-                </List>
-                <BCTypography
-                  sx={{ paddingTop: '16px' }}
-                  variant="h6"
-                  color="primary"
-                >
-                  {t('report:lowCarbonFuelTargetSummary')}
-                </BCTypography>
-                <List sx={{ padding: 0 }}>
-                  <StyledListItem>
-                    <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
-                      <span
-                        dangerouslySetInnerHTML={{
-                          __html: t('report:assessmentLn2', {
-                            name: orgData.name,
-                            hasMet: hasMetLowCarbon ? 'has met' : 'has not met'
-                          })
-                        }}
-                      />
+                      {reportData.report.assessmentStatement || 'N/A'}
                     </ListItemText>
                   </StyledListItem>
                 </List>
@@ -191,7 +188,6 @@ export const AssessmentCard = ({
                   ))}
                 </>
               )}
-
             <Role roles={[roles.supplier]}>
               {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
                 currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
@@ -212,7 +208,7 @@ export const AssessmentCard = ({
                         onClick={() => {
                           createSupplementalReport()
                         }}
-                        startIcon={<AssignmentIcon />}
+                        startIcon={<Assignment />}
                         sx={{ mt: 2 }}
                         disabled={isLoading}
                       >
@@ -240,25 +236,6 @@ export const AssessmentCard = ({
                 </BCButton>
               </Box>
             )}
-            <Role roles={[roles.analyst]}>
-              <Box>
-                <BCButton
-                  data-test="create-supplemental"
-                  size="small"
-                  className="svg-icon-button"
-                  variant="contained"
-                  color="primary"
-                  onClick={() => {
-                    alert('TODO')
-                  }}
-                  startIcon={<AssignmentIcon />}
-                  sx={{ mt: 2 }}
-                  disabled={isLoading}
-                >
-                  {t('report:createReassessmentBtn')}
-                </BCButton>
-              </Box>
-            </Role>
           </Stack>
         </>
       }

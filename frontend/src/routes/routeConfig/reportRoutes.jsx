@@ -1,5 +1,4 @@
 import { ComplianceReports } from '@/views/ComplianceReports'
-import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { ComplianceReportViewSelector } from '@/views/ComplianceReports/ComplianceReportViewSelector'
 import ROUTES from '../routes'
 import { AddEditNotionalTransfers } from '@/views/NotionalTransfers'
@@ -8,23 +7,12 @@ import { AddEditOtherUses } from '@/views/OtherUses/AddEditOtherUses'
 import { AddEditFinalSupplyEquipments } from '@/views/FinalSupplyEquipments/AddEditFinalSupplyEquipments'
 import { AddEditFuelSupplies } from '@/views/FuelSupplies/AddEditFuelSupplies'
 import { AddEditFuelExports } from '@/views/FuelExports/AddEditFuelExports'
-import { element } from 'prop-types'
-import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog'
-import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog'
-import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog'
-import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog'
-import { AllocationAgreementChangelog } from '@/views/AllocationAgreements/AllocationAgreementChangelog'
 
 export const reportRoutes = [
   {
     path: ROUTES.REPORTS.LIST,
     element: <ComplianceReports />,
     handle: { title: 'Compliance reporting' }
-  },
-  {
-    path: ROUTES.REPORTS.COMPARE,
-    element: <CompareReports />,
-    handle: { title: 'Compare reports' }
   },
   {
     path: ROUTES.REPORTS.VIEW,
@@ -77,41 +65,6 @@ export const reportRoutes = [
     handle: {
       title: 'Export fuels',
       mode: 'add'
-    }
-  },
-  {
-    path: ROUTES.REPORTS.CHANGELOG.SUPPLY_OF_FUEL,
-    element: <FuelSupplyChangelog />,
-    handle: {
-      title: 'Change log'
-    }
-  },
-  {
-    path: ROUTES.REPORTS.CHANGELOG.NOTIONAL_TRANSFERS,
-    element: <NotionalTransferChangelog />,
-    handle: {
-      title: 'Change log'
-    }
-  },
-  {
-    path: ROUTES.REPORTS.CHANGELOG.OTHER_USE_FUELS,
-    element: <OtherUsesChangelog />,
-    handle: {
-      title: 'Change log'
-    }
-  },
-  {
-    path: ROUTES.REPORTS.CHANGELOG.FUEL_EXPORTS,
-    element: <FuelExportChangelog />,
-    handle: {
-      title: 'Change log'
-    }
-  },
-  {
-    path: ROUTES.REPORTS.CHANGELOG.ALLOCATION_AGREEMENTS,
-    element: <AllocationAgreementChangelog />,
-    handle: {
-      title: 'Change log'
     }
   }
 ]

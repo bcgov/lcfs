@@ -778,6 +778,28 @@ async def test_can_sign_flag_logic(
     mock_notional_transfers = MagicMock(notional_transfers=[MagicMock()])
     mock_fuel_exports = [MagicMock()]
     mock_allocation_agreements = [MagicMock()]
+
+    # Create a mock summary with real numeric values
+    mock_summary = MagicMock(
+        is_locked=False,
+        # Add all the required attributes with real numbers
+        line_6_renewable_fuel_retained_gasoline=10,
+        line_6_renewable_fuel_retained_diesel=20,
+        line_6_renewable_fuel_retained_jet_fuel=30,
+        line_7_previously_retained_gasoline=10,
+        line_7_previously_retained_diesel=20,
+        line_7_previously_retained_jet_fuel=30,
+        line_8_obligation_deferred_gasoline=5,
+        line_8_obligation_deferred_diesel=10,
+        line_8_obligation_deferred_jet_fuel=15,
+        line_9_obligation_added_gasoline=5,
+        line_9_obligation_added_diesel=10,
+        line_9_obligation_added_jet_fuel=15,
+        line_4_eligible_renewable_fuel_required_gasoline=25,
+        line_4_eligible_renewable_fuel_required_diesel=50,
+        line_4_eligible_renewable_fuel_required_jet_fuel=10,
+    )
+
     mock_compliance_report = MagicMock(
         version=0,
         compliance_report_group_uuid="mock-group-uuid",
@@ -787,7 +809,7 @@ async def test_can_sign_flag_logic(
         nickname="test-report",
         organization_id=1,
         compliance_report_id=1,
-        summary=MagicMock(is_locked=False),
+        summary=mock_summary,
     )
 
     mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
@@ -827,45 +849,71 @@ async def test_can_sign_flag_logic(
         )
     )
 
-    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
-        AsyncMock(return_value=mock_effective_fuel_supplies)
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(
+        return_value=mock_effective_fuel_supplies
     )
     compliance_report_summary_service.notional_transfer_service.calculate_notional_transfers = AsyncMock(
         return_value=mock_notional_transfers
     )
-    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
-        AsyncMock(return_value=mock_fuel_exports)
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = AsyncMock(
+        return_value=mock_fuel_exports
     )
     compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
         return_value=mock_allocation_agreements
     )
 
-    # Call the method
-    result = (
-        await compliance_report_summary_service.calculate_compliance_report_summary(1)
+    # Mock calculation methods with real dictionaries
+    compliance_report_summary_service.calculate_fossil_fuel_quantities = AsyncMock(
+        return_value={"gasoline": 100, "diesel": 200, "jet_fuel": 50}
     )
+    compliance_report_summary_service.calculate_renewable_fuel_quantities = AsyncMock(
+        return_value={"gasoline": 50, "diesel": 100, "jet_fuel": 20}
+    )
+    compliance_report_summary_service.calculate_notional_transfers_sum = AsyncMock(
+        return_value={"gasoline": 10, "diesel": 20, "jet_fuel": 5}
+    )
+
+    def mock_calculate_renewable_fuel_target_summary(*args, **kwargs):
+        # Create test summary rows with safe values
+        result = []
+        for line in range(1, 12):  # Lines 1-11
+            row = ComplianceReportSummaryRowSchema(
+                line=line,
+                line_type="test",
+                description="test description",
+                gasoline=10.0,
+                diesel=10.0,
+                jet_fuel=10.0,
+                total_value=30.0
+            )
+            result.append(row)
+        return result
+
+    # Replace the method completely
+    compliance_report_summary_service.calculate_renewable_fuel_target_summary = mock_calculate_renewable_fuel_target_summary
+
+    # Call the method
+    result = await compliance_report_summary_service.calculate_compliance_report_summary(1)
 
     # Assert that `can_sign` is True
     assert result.can_sign is True
 
     # Scenario 2: No conditions met
-    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
-        AsyncMock(return_value=[])
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(
+        return_value=[]
     )
     compliance_report_summary_service.notional_transfer_service.calculate_notional_transfers = AsyncMock(
         return_value=MagicMock(notional_transfers=[])
     )
-    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
-        AsyncMock(return_value=[])
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = AsyncMock(
+        return_value=[]
     )
     compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
         return_value=[]
     )
 
     # Call the method again
-    result = (
-        await compliance_report_summary_service.calculate_compliance_report_summary(1)
-    )
+    result = await compliance_report_summary_service.calculate_compliance_report_summary(1)
 
     # Assert that `can_sign` is False
     assert result.can_sign is False

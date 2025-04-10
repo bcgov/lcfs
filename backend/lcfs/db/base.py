@@ -105,11 +105,6 @@ class EffectiveDates(Base):
     )
 
 
-class UserTypeEnum(enum.Enum):
-    SUPPLIER = "SUPPLIER"
-    GOVERNMENT = "GOVERNMENT"
-
-
 class ActionTypeEnum(enum.Enum):
     CREATE = "CREATE"
     UPDATE = "UPDATE"
@@ -130,11 +125,6 @@ class Versioning(Base):
         nullable=False,
         default=0,
         comment="Version number of the record",
-    )
-    user_type = Column(
-        Enum(UserTypeEnum),
-        nullable=False,
-        comment="Indicates whether the record was created/modified by a supplier or government user",
     )
     action_type = Column(
         Enum(ActionTypeEnum),
