@@ -43,7 +43,10 @@ export const Unauthorized = () => {
         {t('unauthorized.title')}
       </BCTypography>
 
-      <BCTypography variant="body2" sx={{ fontWeight: 'bold', maxWidth: 700, mb: 3 }}>
+      <BCTypography
+        variant="body2"
+        sx={{ fontWeight: 'bold', maxWidth: 700, mb: 3 }}
+      >
         {t('unauthorized.message')}
         <br />
         {t('unauthorized.contact')}{' '}
@@ -63,7 +66,9 @@ export const Unauthorized = () => {
         variant="contained"
         color="primary"
         onClick={handleLoginClick}
-        startIcon={<FontAwesomeIcon icon={faRightToBracket} className="small-icon" />}
+        startIcon={
+          <FontAwesomeIcon icon={faRightToBracket} className="small-icon" />
+        }
         data-test="return-login-button"
       >
         {t('unauthorized.returnToLogin')}

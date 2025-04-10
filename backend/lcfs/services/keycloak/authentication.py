@@ -159,7 +159,6 @@ class UserAuthentication(AuthenticationBackend):
                         )
                     )
                     user = result.unique().scalar_one_or_none()
-
                     if user:
                         # Check if the user is active
                         if not user.is_active:

@@ -46,9 +46,10 @@ export const useGetTransactionList = (
   options
 ) => {
   const client = useApiService()
-  const { hasRoles } = useCurrentUser()
+  const { hasRoles, isLoading } = useCurrentUser()
 
   return useQuery({
+    enabled: !isLoading,
     queryKey: [
       'transactions-list',
       page,

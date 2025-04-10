@@ -40,8 +40,8 @@ vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
   default: () => <div data-test="mockedBCDataGridServer"></div>
 }))
 
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
+vi.mock('@/contexts/AuthorizationContext', () => ({
+  useAuthorization: () => ({
     setForbidden: vi.fn()
   })
 }))

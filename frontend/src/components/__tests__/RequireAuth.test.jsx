@@ -11,8 +11,8 @@ const keycloak = vi.hoisted(() => ({
 }))
 vi.mock('@react-keycloak/web', () => keycloak)
 
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
+vi.mock('@/contexts/AuthorizationContext', () => ({
+  useAuthorization: () => ({
     setForbidden: vi.fn()
   })
 }))

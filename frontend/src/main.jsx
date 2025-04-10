@@ -1,25 +1,23 @@
-import { CssBaseline, ThemeProvider } from '@mui/material'
-import { createRoot } from 'react-dom/client'
-import App from './App'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import theme from '@/themes'
-import './i18n'
 import { KeycloakProvider } from '@/components/KeycloakProvider'
-import { getKeycloak } from '@/utils/keycloak'
+import { AuthorizationProvider } from '@/contexts/AuthorizationContext'
+import theme from '@/themes'
+import { CssBaseline, ThemeProvider } from '@mui/material'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFnsV3'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SnackbarProvider } from 'notistack'
-import { AuthProvider } from '@/contexts/AuthContext'
+import { createRoot } from 'react-dom/client'
+import App from './App'
+import './i18n'
 
 const queryClient = new QueryClient()
-const keycloak = getKeycloak()
 const root = document.getElementById('root')
 
 if (root) {
   createRoot(root).render(
     <main>
-      <KeycloakProvider authClient={keycloak}>
-        <AuthProvider>
+      <KeycloakProvider>
+        <AuthorizationProvider>
           <QueryClientProvider client={queryClient}>
             <ThemeProvider theme={theme}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -30,7 +28,7 @@ if (root) {
               </LocalizationProvider>
             </ThemeProvider>
           </QueryClientProvider>
-        </AuthProvider>
+        </AuthorizationProvider>
       </KeycloakProvider>
     </main>
   )

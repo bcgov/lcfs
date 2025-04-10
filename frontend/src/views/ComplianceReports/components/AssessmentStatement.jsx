@@ -27,7 +27,8 @@ export const AssessmentStatement = () => {
   const { data: reportData, isLoading: isReportLoading } =
     useGetComplianceReport(
       currentUser?.organization?.organizationId,
-      complianceReportId
+      complianceReportId,
+      { enabled: !isCurrentUserLoading }
     )
   const [assessmentStatement, setAssessmentStatement] = useState(
     reportData?.report.assessmentStatement

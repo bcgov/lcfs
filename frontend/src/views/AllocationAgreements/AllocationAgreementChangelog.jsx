@@ -8,20 +8,20 @@ import {
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'
-import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 
 export const AllocationAgreementChangelog = () => {
   const { complianceReportId } = useParams()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    useCurrentUser()
   const { t } = useTranslation(['common', 'allocationAgreement', 'report'])
   const { data: currentReportData, isLoading } = useGetComplianceReport(
     currentUser?.organization?.organizationId,
     complianceReportId,
     {
-      enabled: !!complianceReportId
+      enabled: !!complianceReportId && !isCurrentUserLoading
     }
   )
 

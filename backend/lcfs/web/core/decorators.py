@@ -124,23 +124,21 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
             user = getattr(request, "user", None)
             user_var.set(user)
             session = (
-                request.state.session if hasattr(
-                    request.state, "session") else None
+                request.state.session if hasattr(request.state, "session") else None
             )
             session_var.set(session)
 
             # check if user is authenticated
             if not user:
-                raise HTTPException(
-                    status_code=401, detail="User not authenticated")
+                raise HTTPException(status_code=401, detail="User not authenticated")
 
             # check if the endpoint can be accessed
             if "*" in required_roles:
                 logger.warn(
-                    f"Endpoint {request.method} {request.url.path} is accessible by all roles")
+                    f"Endpoint {request.method} {request.url.path} is accessible by all roles"
+                )
             else:
                 user_roles = user.role_names
-
                 # Check if user has all the required roles
                 if not any(
                     required_role in user_roles for required_role in required_roles
@@ -178,8 +176,7 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                     source_info=source_info,
                     exc_info=e,
                 )
-                raise HTTPException(
-                    status_code=500, detail="Internal Server Error")
+                raise HTTPException(status_code=500, detail="Internal Server Error")
             except HTTPException as e:
                 source_info = get_source_info(func=func)
                 logger.error(
@@ -188,8 +185,7 @@ def view_handler(required_roles: List[Union[RoleEnum, Literal["*"]]]):
                     exc_info=e,
                 )
                 if e.status_code == 403:
-                    raise HTTPException(
-                        status_code=403, detail="Forbidden resource")
+                    raise HTTPException(status_code=403, detail="Forbidden resource")
                 raise
             except DataNotFoundException:
                 raise HTTPException(status_code=404, detail="Not Found")
@@ -233,7 +229,13 @@ def service_handler(func):
             return await func(*args, **kwargs)
 
         # raise the error to the view layer
-        except (DatabaseException, HTTPException, DataNotFoundException, ValueError, ValidationErrorException):
+        except (
+            DatabaseException,
+            HTTPException,
+            DataNotFoundException,
+            ValueError,
+            ValidationErrorException,
+        ):
             raise
         # all other errors that occur in the service layer will log an error
         except Exception as e:
@@ -260,8 +262,7 @@ def repo_handler(func):
         # all exceptions will trigger a DatabaseError and cause a 500 response in the view layer
         except Exception as e:
             context = extract_context()
-            log_unhandled_exception(
-                logger, e, context, "repository", func=func)
+            log_unhandled_exception(logger, e, context, "repository", func=func)
             # Raise DatabaseException with original traceback
             new_exception = DatabaseException()
             raise new_exception.with_traceback(e.__traceback__) from e

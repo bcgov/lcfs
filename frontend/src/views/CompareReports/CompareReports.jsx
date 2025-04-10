@@ -24,7 +24,8 @@ const Controls = styled(Box)({
 export const CompareReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [isLoading, setIsLoading] = useState(true)
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    useCurrentUser()
   const [reportChain, setReportChain] = useState([])
 
   const { complianceReportId } = useParams()
@@ -32,7 +33,7 @@ export const CompareReports = () => {
     currentUser?.organization?.organizationId,
     complianceReportId,
     {
-      enabled: !!complianceReportId
+      enabled: !!complianceReportId && !isCurrentUserLoading
     }
   )
 

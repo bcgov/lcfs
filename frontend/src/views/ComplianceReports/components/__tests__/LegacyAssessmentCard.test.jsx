@@ -23,9 +23,9 @@ vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({ keycloak: {} })
 }))
 
-// 4. Mock the `useAuth` so we don't get \"Cannot destructure property 'setForbidden'\"
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
+// 4. Mock the `useAuthorization` so we don't get \"Cannot destructure property 'setForbidden'\"
+vi.mock('@/contexts/AuthorizationContext', () => ({
+  useAuthorization: () => ({
     setForbidden: vi.fn()
   })
 }))
