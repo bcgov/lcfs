@@ -57,7 +57,9 @@ export const useGetComplianceReport = (orgID, reportID, options) => {
   return useQuery({
     queryKey: ['compliance-report', reportID],
     queryFn: async () => {
-      return (await client.get(path)).data
+      const { data } = await client.get(path)
+
+      return data
     },
     ...options
   })
@@ -259,5 +261,19 @@ export const useGetComplianceReportStatuses = (options) => {
     queryFn: async () =>
       (await client.get(apiRoutes.getComplianceReportStatuses)).data,
     ...options
+  })
+}
+
+export const useGetChangeLog = ({ complianceReportGroupUuid, dataType }) => {
+  const client = useApiService()
+  const path = apiRoutes.getChangelog
+    .replace(':complianceReportGroupUuid', complianceReportGroupUuid)
+    .replace(':dataType', dataType)
+  return useQuery({
+    queryKey: ['changelog', complianceReportGroupUuid, dataType],
+    queryFn: async () => {
+      const response = await client.get(path)
+      return response.data
+    }
   })
 }

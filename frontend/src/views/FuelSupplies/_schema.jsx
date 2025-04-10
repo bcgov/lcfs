@@ -6,25 +6,21 @@ import {
   RequiredHeader
 } from '@/components/BCDataGrid/components'
 import { apiRoutes } from '@/constants/routes'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
-import {
-  decimalFormatter,
-  formatNumberWithCommas,
-  numberFormatter
-} from '@/utils/formatters'
+import { formatNumberWithCommas } from '@/utils/formatters'
 import {
   fuelTypeOtherConditionalStyle,
   isFuelTypeOther
 } from '@/utils/fuelTypeOther'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import {
   StandardCellStyle,
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_GHGENIUS =
@@ -599,90 +595,89 @@ export const defaultColDef = {
   singleClickEdit: true
 }
 
-export const changelogCommonColDefs = [
+export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
     field: 'complianceUnits',
     valueFormatter: formatNumberWithCommas,
-    cellStyle: (params) => changelogCellStyle(params, 'complianceUnits')
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'complianceUnits')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
-    field: 'fuelType',
-    valueGetter: (params) => params.data.fuelType,
-    cellStyle: (params) => changelogCellStyle(params, 'fuelTypeId')
+    field: 'fuelType.fuelType',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelTypeId')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
-    field: 'fuelCategory',
-    valueGetter: (params) => params.data.fuelCategory,
-    cellStyle: (params) => changelogCellStyle(params, 'fuelCategoryId')
+    field: 'fuelCategory.category',
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'fuelCategoryId')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.endUseId'),
-    field: 'endUseType',
-    valueGetter: (params) => params.data.endUseType,
-    cellStyle: (params) => changelogCellStyle(params, 'endUseId')
+    field: 'endUseType.type',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'endUseId')
   },
   {
     headerName: i18n.t(
       'fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'
     ),
-    field: 'determiningCarbonIntensity',
-    valueGetter: (params) => params.data.provisionOfTheAct,
-    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheActId')
+    field: 'provisionOfTheAct.name',
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'provisionOfTheActId')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
-    field: 'fuelCode',
-    valueGetter: (params) => params.data.fuelCode,
-    cellStyle: (params) => changelogCellStyle(params, 'fuelCodeId')
+    field: 'fuelCode.fuelCode',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCodeId')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
     field: 'quantity',
     valueFormatter: formatNumberWithCommas,
-    cellStyle: (params) => changelogCellStyle(params, 'quantity')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.units'),
     field: 'units',
-    cellStyle: (params) => changelogCellStyle(params, 'units')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.targetCi'),
     field: 'targetCi',
-    cellStyle: (params) => changelogCellStyle(params, 'targetCi')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'targetCi')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.ciOfFuel'),
     field: 'ciOfFuel',
-    cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
     field: 'uci',
-    cellStyle: (params) => changelogCellStyle(params, 'uci')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'uci')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
     field: 'energyDensity',
-    cellStyle: (params) => changelogCellStyle(params, 'energyDensity')
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'energyDensity')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'),
     field: 'eer',
-    cellStyle: (params) => changelogCellStyle(params, 'eer')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'eer')
   },
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energy'),
     field: 'energy',
     valueFormatter: formatNumberWithCommas,
-    cellStyle: (params) => changelogCellStyle(params, 'energy')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'energy')
   }
 ]
 
-export const changelogColDefs = [
+export const changelogColDefs = (highlight = true) => [
   {
     field: 'groupUuid',
     hide: true,
@@ -708,12 +703,12 @@ export const changelogColDefs = [
       }
     },
     cellStyle: (params) => {
-      if (params.data.actionType === 'UPDATE') {
+      if (highlight && params.data.actionType === 'UPDATE') {
         return { backgroundColor: colors.alerts.warning.background }
       }
     }
   },
-  ...changelogCommonColDefs
+  ...changelogCommonColDefs(highlight)
 ]
 
 export const changelogDefaultColDefs = {

@@ -143,7 +143,8 @@ describe('ReportDetails', () => {
     fireEvent.click(screen.getByText('report:expandAll'))
 
     await waitFor(() => {
-      expect(screen.getAllByTestId(/panel\d+-summary/)).toHaveLength(2)
+      // Update this line to expect all activity panels to be expanded instead of 2
+      expect(screen.getAllByTestId(/panel\d+-summary/)).toHaveLength(7)
     })
   })
 
