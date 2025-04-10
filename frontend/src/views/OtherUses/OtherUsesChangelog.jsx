@@ -18,13 +18,14 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
 export const OtherUsesChangelog = ({ canEdit }) => {
   const { complianceReportId, compliancePeriod } = useParams()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    useCurrentUser()
   const { t } = useTranslation(['common', 'otherUses', 'report'])
   const { data: currentReportData, isLoading } = useGetComplianceReport(
     currentUser?.organization?.organizationId,
     complianceReportId,
     {
-      enabled: !!complianceReportId
+      enabled: !!complianceReportId && !isCurrentUserLoading
     }
   )
 

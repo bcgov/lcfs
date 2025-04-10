@@ -216,9 +216,10 @@ export const useGetComplianceReportList = (
   options
 ) => {
   const client = useApiService()
-  const { data: currentUser, hasRoles } = useCurrentUser()
+  const { data: currentUser, hasRoles, isLoading } = useCurrentUser()
 
   return useQuery({
+    enabled: !isLoading,
     queryKey: ['compliance-reports-list', page, size, sortOrders, filters],
     queryFn: async () => {
       if (hasRoles(roles.supplier)) {
@@ -255,7 +256,8 @@ export const useGetComplianceReportStatuses = (options) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['compliance-report-statuses'],
-    queryFn: async () => (await client.get(apiRoutes.getComplianceReportStatuses)).data,
+    queryFn: async () =>
+      (await client.get(apiRoutes.getComplianceReportStatuses)).data,
     ...options
   })
 }

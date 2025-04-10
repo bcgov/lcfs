@@ -18,13 +18,14 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
 export const AllocationAgreementChangelog = ({ canEdit }) => {
   const { complianceReportId, compliancePeriod } = useParams()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    useCurrentUser()
   const { t } = useTranslation(['common', 'allocationAgreement', 'report'])
   const { data: currentReportData, isLoading } = useGetComplianceReport(
     currentUser?.organization?.organizationId,
     complianceReportId,
     {
-      enabled: !!complianceReportId
+      enabled: !!complianceReportId && !isCurrentUserLoading
     }
   )
 
@@ -57,9 +58,9 @@ export const AllocationAgreementChangelog = ({ canEdit }) => {
       </BCTypography>
       <Box mb={4}>
         <BCDataGridServer
-          className='ag-theme-material'
+          className="ag-theme-material"
           apiEndpoint={apiRoutes.getAllocationAgreements}
-          apiData='allocationAgreements'
+          apiData="allocationAgreements"
           apiParams={{ complianceReportId }}
           columnDefs={changelogCommonColDefs}
           gridOptions={changelogCommonGridOptions}

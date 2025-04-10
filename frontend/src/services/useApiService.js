@@ -3,12 +3,12 @@ import axios from 'axios'
 import { useKeycloak } from '@react-keycloak/web'
 import { CONFIG } from '@/constants/config'
 import { useSnackbar } from 'notistack'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthorization } from '@/contexts/AuthorizationContext'
 
 export const useApiService = (opts = {}) => {
   const { keycloak } = useKeycloak()
   const { enqueueSnackbar } = useSnackbar()
-  const { setForbidden } = useAuth()
+  const { setForbidden } = useAuthorization()
 
   // useMemo to memoize the apiService instance
   const apiService = useMemo(() => {
@@ -46,7 +46,6 @@ export const useApiService = (opts = {}) => {
             })
           }
         }
-
         if (error.response?.status === 403) {
           setForbidden(true)
         }

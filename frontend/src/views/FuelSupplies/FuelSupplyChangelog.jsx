@@ -19,13 +19,14 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
 export const FuelSupplyChangelog = ({ canEdit }) => {
   const { complianceReportId, compliancePeriod } = useParams()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    useCurrentUser()
   const { t } = useTranslation(['common', 'fuelSupply', 'report'])
   const { data: currentReportData, isLoading } = useGetComplianceReport(
     currentUser?.organization?.organizationId,
     complianceReportId,
     {
-      enabled: !!complianceReportId
+      enabled: !!complianceReportId && !isCurrentUserLoading
     }
   )
 
