@@ -9,14 +9,14 @@ from lcfs.web.api.fuel_supply.schema import (
 from lcfs.web.api.calculator.schema import CreditsResultSchema
 from lcfs.web.utils.calculations import calculate_compliance_units, calculate_legacy_compliance_units
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
-from lcfs.web.api.calculator.repo import PublicRepository
+from lcfs.web.api.calculator.repo import CalculatorRepository
 from lcfs.web.core.decorators import service_handler
 
 
-class PublicService:
+class CalculatorService:
     def __init__(
         self,
-        repo: PublicRepository = Depends(),
+        repo: CalculatorRepository = Depends(),
         fs_service: FuelSupplyServices = Depends(),
         fuel_repo: FuelCodeRepository = Depends(),
     ):

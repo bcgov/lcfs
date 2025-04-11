@@ -1,7 +1,5 @@
 from lcfs.web.api.base import BaseSchema
 from typing import Optional
-
-from lcfs.web.api.fuel_code.repo import CarbonIntensityResult
 from pydantic import Field
 
 

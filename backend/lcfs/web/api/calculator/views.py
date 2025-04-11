@@ -1,12 +1,10 @@
-from typing import List, Optional
-from urllib.parse import urlencode
-from fastapi import APIRouter, Query, Request, status
-from fastapi.responses import JSONResponse
+from typing import List
+from fastapi import APIRouter, Request, status
 from lcfs.utils.constants import FUEL_CATEGORIES
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from fastapi import Depends
 from lcfs.web.api.calculator.schema import CalculatorQueryParams, CreditsResultSchema
-from lcfs.web.api.calculator.services import PublicService
+from lcfs.web.api.calculator.services import CalculatorService
 
 router = APIRouter()
 
@@ -17,8 +15,8 @@ router = APIRouter()
     response_model=List[CompliancePeriodBaseSchema],
     status_code=status.HTTP_200_OK,
 )
-async def get_compliance_periods(
-    request: Request, service: PublicService = Depends()
+async def get_calculator_compliance_periods(
+    request: Request, service: CalculatorService = Depends()
 ) -> str:
     """
     Get list of compliance periods
@@ -31,12 +29,12 @@ async def get_compliance_periods(
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )
-async def get_fuel_types(
+async def get_calculator_fuel_types(
     request: Request,
     compliance_period: int,
     lcfs_only: bool = False,
     fuel_category: str = None,
-    service: PublicService = Depends(),
+    service: CalculatorService = Depends(),
 ):
     """
     Get list of fuel types
@@ -51,13 +49,13 @@ async def get_fuel_types(
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )
-async def get_fuel_type_options(
+async def get_calculator_fuel_type_options(
     request: Request,
     compliance_period: str,
     fuel_category_id: int,
     fuel_type_id: int,
     lcfs_only: bool = False,
-    service: PublicService = Depends(),
+    service: CalculatorService = Depends(),
 ):
     """
     Get list of fuel type options
@@ -76,7 +74,7 @@ async def get_calculated_data(
     request: Request,
     compliance_period: str,
     query: CalculatorQueryParams = Depends(),
-    service: PublicService = Depends(),
+    service: CalculatorService = Depends(),
 ) -> CreditsResultSchema:
     """
     Get calculated compliance units.

@@ -72,7 +72,7 @@ class LazyAuthenticationBackend(AuthenticationBackend):
             return AuthCredentials([]), UnauthenticatedUser()
 
         if (
-            request.url.path.startswith("/api/public")
+            request.url.path.startswith("/api/calculator")
             or request.url.path == "/api/health"
         ):  # Skip authentication check
             return AuthCredentials([]), UnauthenticatedUser()

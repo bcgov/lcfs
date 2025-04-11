@@ -19,7 +19,7 @@ from lcfs.db.models.fuel import (
 )
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.calculator.schema import FuelTypeSchema
-from sqlalchemy import String, and_, cast, desc, func, or_, select
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.web.core.decorators import repo_handler
 from lcfs.db.dependencies import get_async_db_session
@@ -29,7 +29,7 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 
-class PublicRepository:
+class CalculatorRepository:
     def __init__(
         self,
         db: AsyncSession = Depends(get_async_db_session),
