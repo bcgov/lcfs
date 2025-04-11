@@ -50,6 +50,21 @@ class PublicRepository:
                         CompliancePeriod.compliance_period_id
                         == DefaultCarbonIntensity.compliance_period_id,
                     )
+                    .join(
+                        TargetCarbonIntensity,
+                        CompliancePeriod.compliance_period_id
+                        == TargetCarbonIntensity.compliance_period_id,
+                    )
+                    .join(
+                        EnergyDensity,
+                        CompliancePeriod.compliance_period_id
+                        == EnergyDensity.compliance_period_id,
+                    )
+                    .join(
+                        EnergyEffectivenessRatio,
+                        CompliancePeriod.compliance_period_id
+                        == EnergyEffectivenessRatio.compliance_period_id,
+                    )
                     .distinct()
                     .order_by(desc(CompliancePeriod.description))
                 )
@@ -276,12 +291,22 @@ class PublicRepository:
             query = query.where(
                 and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
             )
+        else:
+            query = query.where(ProvisionOfTheAct.is_legacy == True)
         if lcfs_only:
             query = query.where(and_(FuelType.renewable == False))
         if fuel_category_id:
             query = query.where(FuelCategory.fuel_category_id == fuel_category_id)
         if fuel_type_id:
             query = query.where(FuelType.fuel_type_id == fuel_type_id)
+            print("Generated SQL Query:")
+        from sqlalchemy.dialects import postgresql
+
+        print(
+            query.compile(
+                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
+            )
+        )
         fuel_type_results = (await self.db.execute(query)).all()
 
         return {

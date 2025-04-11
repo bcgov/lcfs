@@ -45,14 +45,13 @@ export const CreditCalculator = () => {
   )
   const fuelRequirementOptions = useMemo(() => {
     const arr = t('report:fuelRequirementOptions', { returnObjects: true })
-    if (!Array.isArray(arr)) return []
-
-    return arr.map((option) => ({
-      value: option,
-      label: option
-    }))
+    return Array.isArray(arr)
+      ? arr.map((option) => ({ value: option, label: option }))
+      : []
   }, [t])
+
   const { data: orgBalance } = useCurrentOrgBalance()
+
   // Fetch compliance periods from API
   const { data: compliancePeriods, isLoading: isLoadingPeriods } =
     useGetCompliancePeriodList()
@@ -71,20 +70,15 @@ export const CreditCalculator = () => {
 
   // Get the most recent compliance period for default value
   const defaultCompliancePeriod = useMemo(() => {
-    if (!formattedCompliancePeriods.length) {
-      const today = new Date()
-      const currentYear = today.getFullYear()
-      const isBeforeMarch31 =
-        today.getMonth() < 2 ||
-        (today.getMonth() === 2 && today.getDate() <= 31)
-      return isBeforeMarch31 ? currentYear - 1 : currentYear
-    }
-
     const today = new Date()
     const currentYear = today.getFullYear()
     const isBeforeMarch31 =
       today.getMonth() < 2 || (today.getMonth() === 2 && today.getDate() <= 31)
     const targetYear = isBeforeMarch31 ? currentYear - 1 : currentYear
+
+    if (!formattedCompliancePeriods.length) {
+      return targetYear.toString()
+    }
 
     const matchedPeriod = formattedCompliancePeriods.find(
       (p) => parseInt(p.value) === targetYear
@@ -98,13 +92,10 @@ export const CreditCalculator = () => {
   const methods = useForm({
     defaultValues: {
       complianceYear: String(defaultCompliancePeriod),
-      fuelRequirement:
-        fuelRequirementOptions.length > 0
-          ? fuelRequirementOptions[0].value
-          : '',
+      fuelRequirement: fuelRequirementOptions[0]?.value || '',
       fuelType: '',
       fuelCode: '',
-      provisionOfTheAct: 0,
+      provisionOfTheAct: '',
       quantity: 0,
       fuelCategory: '',
       endUseType: ''
@@ -121,11 +112,15 @@ export const CreditCalculator = () => {
   } = methods
 
   const watchedValues = watch()
-  const complianceYear = watchedValues.complianceYear
-  const fuelCategory = watchedValues.fuelCategory
-  const fuelRequirement = watchedValues.fuelRequirement
-  const endUseType = watchedValues.endUseType
-  const provisionOfTheAct = watchedValues.provisionOfTheAct
+  const {
+    complianceYear,
+    fuelCategory,
+    fuelRequirement,
+    endUseType,
+    provisionOfTheAct,
+    quantity,
+    fuelCode
+  } = watchedValues
 
   // State for selected items from lists
   const [selectedFuelType, setSelectedFuelType] = useState()
@@ -139,7 +134,7 @@ export const CreditCalculator = () => {
         fuelCategory,
         lcfsOnly: fuelRequirement === 'Low carbon fuel requirement only'
       },
-      { enabled: !!fuelCategory }
+      { enabled: Boolean(fuelCategory) }
     )
 
   // Get the selected fuel based on user selection
@@ -161,34 +156,31 @@ export const CreditCalculator = () => {
       fuelTypeListData?.data?.map((ft) => ({
         label: ft.fuelType,
         value: ft.fuelType
-      })) ?? []
+      })) || []
     )
   }, [fuelTypeListData])
 
   // Fetch fuel supply options based on compliance period
-  const {
-    data: fuelTypeOptions,
-    isLoading: isLoadingFuelOptions,
-    error
-  } = useGetFuelTypeOptions(
-    {
-      complianceYear,
-      fuelCategoryId: selectedFuelObj?.fuelCategoryId,
-      fuelTypeId: selectedFuelObj?.fuelTypeId,
-      lcfsOnly: fuelRequirement === 'Low carbon fuel requirement only'
-    },
-    {
-      enabled:
-        !!selectedFuelObj &&
-        !!selectedFuelType &&
-        !!fuelCategory &&
-        !!selectedFuel
-    }
-  )
+  const { data: fuelTypeOptions, isLoading: isLoadingFuelOptions } =
+    useGetFuelTypeOptions(
+      {
+        complianceYear,
+        fuelCategoryId: selectedFuelObj?.fuelCategoryId,
+        fuelTypeId: selectedFuelObj?.fuelTypeId,
+        lcfsOnly: fuelRequirement === 'Low carbon fuel requirement only'
+      },
+      {
+        enabled: Boolean(
+          selectedFuelObj && selectedFuelType && fuelCategory && selectedFuel
+        )
+      }
+    )
 
   const endUses = useMemo(() => {
+    if (!fuelTypeOptions?.data?.eerRatios) return []
+
     const uniqueEndUses = new Map()
-    fuelTypeOptions?.data?.eerRatios?.forEach((eer) => {
+    fuelTypeOptions.data.eerRatios.forEach((eer) => {
       const endUse = eer.endUseType
       if (endUse) {
         uniqueEndUses.set(endUse.type, {
@@ -198,9 +190,7 @@ export const CreditCalculator = () => {
       }
     })
 
-    return Array.from(uniqueEndUses.values()).length
-      ? Array.from(uniqueEndUses.values())
-      : undefined
+    return Array.from(uniqueEndUses.values())
   }, [fuelTypeOptions])
 
   // Get unit based on selected fuel
@@ -237,66 +227,70 @@ export const CreditCalculator = () => {
     (e) => e.endUseType?.type === endUseType
   )?.endUseType?.endUseTypeId
 
-  const {
-    data: calculatedData,
-    isFetching: isCalculating,
-    error: calcError
-  } = useCalculateComplianceUnits({
+  const { data: calculatedData } = useCalculateComplianceUnits({
     compliancePeriod: complianceYear,
     fuelCategoryId,
     fuelTypeId,
     endUseId,
-    quantity: Number(watchedValues.quantity),
+    quantity: Number(quantity),
     fuelCodeId: fuelTypeOptions?.data?.fuelCodes?.find(
-      (f) => f.fuelCode === watchedValues.fuelCode
+      (f) => f.fuelCode === fuelCode
     )?.fuelCodeId,
     enabled:
-      !!complianceYear &&
-      !!fuelCategoryId &&
-      !!fuelTypeId &&
-      !!endUseId &&
-      !!watchedValues.quantity &&
-      (watchedValues.provisionOfTheAct !== 'Fuel code - section 19 (b) (i)' ||
-        !!watchedValues.fuelCode)
+      Boolean(complianceYear) &&
+      Boolean(fuelCategoryId) &&
+      Boolean(fuelTypeId) &&
+      Boolean(endUseId) &&
+      Boolean(quantity) &&
+      (provisionOfTheAct !== 'Fuel code - section 19 (b) (i)' ||
+        Boolean(fuelCode))
   })
 
   // Handle form reset
   const handleClear = () => {
     reset({
       complianceYear: String(defaultCompliancePeriod),
-      fuelRequirement:
-        fuelRequirementOptions.length > 0
-          ? fuelRequirementOptions[0].value
-          : '',
-      fuelType: undefined,
-      fuelCode: undefined,
-      provisionOfTheAct: undefined,
+      fuelRequirement: fuelRequirementOptions[0]?.value || '',
+      fuelType: '',
+      fuelCode: '',
+      provisionOfTheAct: '',
       quantity: 0,
       fuelCategory: '',
-      endUseType: undefined
+      endUseType: ''
     })
-    setSelectedFuelType()
-    setSelectedEndUse()
+    setSelectedFuelType(undefined)
+    setSelectedEndUse(undefined)
     setCalculatedResults(null)
   }
 
   // Helper function for rendering field errors
   const renderError = (fieldName) => {
-    return (
-      errors[fieldName] && (
-        <BCTypography
-          color="error"
-          variant="caption"
-          sx={{
-            marginLeft: '14px',
-            marginRight: '14px',
-            marginTop: '4px',
-            marginBottom: '-20px'
-          }}
-        >
-          {errors[fieldName].message}
-        </BCTypography>
-      )
+    return errors[fieldName] ? (
+      <BCTypography
+        color="error"
+        variant="caption"
+        sx={{
+          marginLeft: '14px',
+          marginRight: '14px',
+          marginTop: '4px',
+          marginBottom: '-20px'
+        }}
+      >
+        {errors[fieldName].message}
+      </BCTypography>
+    ) : null
+  }
+
+  // Check if fuel code selection should be disabled
+  const isFuelCodeDisabled = () => {
+    // If provisionOfTheAct is null, undefined, or empty string, disable the field
+    if (!provisionOfTheAct) return true
+
+    // Enable only if the provision includes specific text
+    return !(
+      provisionOfTheAct.includes('Fuel code - section') ||
+      provisionOfTheAct.includes('Prescribed carbon intensity') ||
+      provisionOfTheAct.includes('Approved fuel code')
     )
   }
 
@@ -319,27 +313,29 @@ export const CreditCalculator = () => {
 
     if (!calculatedData?.data) return fallback
 
+    const data = calculatedData.data
+    const totalBalance = orgBalance?.totalBalance || 0
+
     return {
-      credits: calculatedData?.data.complianceUnits ?? 0,
-      availableUnits: numberFormatter(
-        orgBalance?.totalBalance + calculatedData?.data.complianceUnits
-      ),
-      previousUnits: numberFormatter(orgBalance?.totalBalance ?? 0),
+      credits: data.complianceUnits || 0,
+      availableUnits: numberFormatter(totalBalance + data.complianceUnits),
+      previousUnits: numberFormatter(totalBalance),
       formulaValues: {
-        carbonIntensity: calculatedData?.data.tci ?? 0,
-        eer: calculatedData?.data.eer.toFixed(2) ?? 0,
-        ci: calculatedData?.data.rci ?? 0,
-        uci: calculatedData?.data.uci ?? 0,
-        energyContent: numberFormatter(calculatedData?.data.energyContent ?? 0),
-        energyDensity: `${calculatedData?.data.energyDensity ?? 0} ${fuelTypeOptions?.data?.energyDensity?.unit?.name}`
+        carbonIntensity: data.tci || 0,
+        eer: (data.eer || 0).toFixed(2),
+        ci: data.rci || 0,
+        uci: data.uci || 0,
+        energyContent: numberFormatter(data.energyContent || 0),
+        energyDensity: `${data.energyDensity || 0} ${fuelTypeOptions?.data?.energyDensity?.unit?.name || ''}`
       },
-      formulaDisplay: `${(calculatedData?.data.complianceUnits ?? 0).toLocaleString()} = (${calculatedData?.data.tci ?? 0} * ${calculatedData?.data.eer ?? 0} - (${calculatedData?.data.rci ?? 0} + ${calculatedData?.data.uci || 'N/A'})) * ${numberFormatter(calculatedData?.data.energyContent ?? 0)} / 1,000,000`
+      formulaDisplay: `${(data.complianceUnits || 0).toLocaleString()} = (${data.tci || 0} * ${data.eer || 0} - (${data.rci || 0} + ${data.uci || 'N/A'})) * ${numberFormatter(data.energyContent || 0)} / 1,000,000`
     }
-  }, [calculatedData?.data, fuelTypeOptions?.data?.energyDensity?.unit?.name])
+  }, [calculatedData, fuelTypeOptions, orgBalance])
 
   if (isLoadingPeriods) {
     return <Loading />
   }
+
   return (
     <BCBox
       sx={{
@@ -440,13 +436,23 @@ export const CreditCalculator = () => {
                 <Grid container spacing={1}>
                   <Divider
                     orientation="horizontal"
-                    sx={{ maxWidth: '18rem', borderColor: 'rgba(0,0,0,1)' }}
+                    sx={{
+                      maxWidth: '18rem',
+                      borderColor: 'rgba(0,0,0,1)',
+                      width: '-webkit-fill-available'
+                    }}
                   />
                   {/* Fuel Category */}
                   <BCFormRadio
                     name="fuelCategory"
                     control={control}
-                    options={FUEL_CATEGORIES.map((type) => ({
+                    options={FUEL_CATEGORIES.filter(
+                      (category) =>
+                        (parseInt(complianceYear) <
+                          LEGISLATION_TRANSITION_YEAR &&
+                          category !== 'Jet fuel') ||
+                        parseInt(complianceYear) >= LEGISLATION_TRANSITION_YEAR
+                    ).map((type) => ({
                       value: type,
                       label: type
                     }))}
@@ -455,7 +461,11 @@ export const CreditCalculator = () => {
                   />
                   <Divider
                     orientation="horizontal"
-                    sx={{ maxWidth: '18rem', borderColor: 'rgba(0,0,0,1)' }}
+                    sx={{
+                      maxWidth: '18rem',
+                      borderColor: 'rgba(0,0,0,1)',
+                      width: '-webkit-fill-available'
+                    }}
                   />
                 </Grid>
                 <Grid container flexDirection={'row'} rowSpacing={1} mt={4}>
@@ -472,8 +482,8 @@ export const CreditCalculator = () => {
                       }}
                     >
                       {isFuelTypeListLoading && <Loading />}
-                      {fuelTypes?.length > 0 &&
-                        fuelTypes?.map(({ label, value }) => (
+                      {fuelTypes.length > 0 &&
+                        fuelTypes.map(({ label, value }) => (
                           <ListItemButton
                             component="span"
                             key={value}
@@ -529,79 +539,80 @@ export const CreditCalculator = () => {
                         ))}
                     </List>
                   </Grid>
-
-                  <Grid size={8}>
-                    <BCTypography variant="h6" color="primary">
-                      {t('report:endUse')}
-                    </BCTypography>
-                    {/* End Use Type */}
-                    <List
-                      component="nav"
-                      sx={{
-                        pl: 2
-                      }}
-                    >
-                      {isLoadingFuelOptions && <Loading />}
-                      {endUses &&
-                        endUses?.map((use) => (
-                          <ListItemButton
-                            component="span"
-                            key={use.value}
-                            sx={{
-                              display: 'list-item',
-                              listStyleType: 'disc',
-                              p: 0.4,
-                              color: colors.primary.main,
-                              '&::marker': {
-                                fontSize: '0.7em'
-                              },
-                              '&.selected': {
-                                pl: 2
-                              }
-                            }}
-                          >
-                            <BCBox
+                  {parseInt(complianceYear) >= LEGISLATION_TRANSITION_YEAR && (
+                    <Grid size={8}>
+                      <BCTypography variant="h6" color="primary">
+                        {t('report:endUse')}
+                      </BCTypography>
+                      {/* End Use Type */}
+                      <List
+                        component="nav"
+                        sx={{
+                          pl: 2
+                        }}
+                      >
+                        {isLoadingFuelOptions && <Loading />}
+                        {endUses.length > 0 &&
+                          endUses.map((use) => (
+                            <ListItemButton
+                              component="span"
+                              key={use.value}
                               sx={{
-                                cursor: 'pointer',
+                                display: 'list-item',
+                                listStyleType: 'disc',
+                                p: 0.4,
+                                color: colors.primary.main,
+                                '&::marker': {
+                                  fontSize: '0.7em'
+                                },
                                 '&.selected': {
-                                  '& .list-text': {
-                                    color: 'text.primary',
-                                    textDecoration: 'none',
-                                    fontWeight: 'bold'
-                                  }
+                                  pl: 2
                                 }
                               }}
-                              component="a"
-                              tabIndex={0}
-                              className={
-                                selectedEndUse === use.value ? 'selected' : ''
-                              }
-                              alignItems="flex-start"
-                              onClick={() => setSelectedEndUse(use.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                  e.preventDefault()
-                                  setSelectedEndUse(use.value)
-                                }
-                              }}
-                              data-test={use.value}
                             >
-                              <BCTypography
-                                variant="subtitle2"
-                                color="link"
-                                className="list-text"
+                              <BCBox
                                 sx={{
-                                  textDecoration: 'underline',
-                                  '&:hover': { color: 'info.main' }
+                                  cursor: 'pointer',
+                                  '&.selected': {
+                                    '& .list-text': {
+                                      color: 'text.primary',
+                                      textDecoration: 'none',
+                                      fontWeight: 'bold'
+                                    }
+                                  }
                                 }}
+                                component="a"
+                                tabIndex={0}
+                                className={
+                                  selectedEndUse === use.value ? 'selected' : ''
+                                }
+                                alignItems="flex-start"
+                                onClick={() => setSelectedEndUse(use.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    setSelectedEndUse(use.value)
+                                  }
+                                }}
+                                data-test={use.value}
                               >
-                                {use.value}
-                              </BCTypography>
-                            </BCBox>
-                          </ListItemButton>
-                        ))}
-                    </List>
-                  </Grid>
+                                <BCTypography
+                                  variant="subtitle2"
+                                  color="link"
+                                  className="list-text"
+                                  sx={{
+                                    textDecoration: 'underline',
+                                    '&:hover': { color: 'info.main' }
+                                  }}
+                                >
+                                  {use.value}
+                                </BCTypography>
+                              </BCBox>
+                            </ListItemButton>
+                          ))}
+                      </List>
+                    </Grid>
+                  )}
                 </Grid>
 
                 <Stack
@@ -666,7 +677,14 @@ export const CreditCalculator = () => {
                           labelId="provision-of-the-act-select-label"
                           {...field}
                           error={!!errors.provisionOfTheAct}
-                          disabled={!endUseType}
+                          disabled={
+                            (!endUseType &&
+                              parseInt(complianceYear) >=
+                                LEGISLATION_TRANSITION_YEAR) ||
+                            (!selectedFuelType &&
+                              parseInt(complianceYear) <
+                                LEGISLATION_TRANSITION_YEAR)
+                          }
                           displayEmpty
                           MenuProps={{
                             sx: {
@@ -731,11 +749,7 @@ export const CreditCalculator = () => {
                           labelId="fuel-code-select-label"
                           {...field}
                           error={!!errors.fuelCode}
-                          disabled={
-                            !endUseType ||
-                            provisionOfTheAct !==
-                              'Fuel code - section 19 (b) (i)'
-                          }
+                          disabled={isFuelCodeDisabled()}
                           displayEmpty
                           MenuProps={{
                             sx: {
@@ -829,13 +843,13 @@ export const CreditCalculator = () => {
                         }}
                         slotProps={{
                           input: {
-                            endAdornment: (
+                            endAdornment: unit ? (
                               <InputAdornment position="end">
                                 <BCTypography variant="subtitle2">
                                   {unit}
                                 </BCTypography>
                               </InputAdornment>
-                            ),
+                            ) : null,
                             style: { textAlign: 'left' },
                             maxLength: 13,
                             'data-test': 'quantity'

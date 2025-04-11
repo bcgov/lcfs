@@ -1,3 +1,4 @@
+import { LEGISLATION_TRANSITION_YEAR } from '@/constants/common'
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useQuery } from '@tanstack/react-query'
@@ -7,9 +8,9 @@ export const useGetCompliancePeriodList = (options) => {
   return useQuery({
     queryKey: ['calculator-compliance-periods'],
     queryFn: () => client.get(apiRoutes.getCalculatorCompliancePeriods),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 60 * 60 * 1000,
     cacheTime: 60 * 60 * 1000, // 1 hour
-    refetchInterval: 10 * 60 * 1000, // 10 minutes (optional)
+    refetchInterval: 10 * 60 * 1000,
     ...options
   })
 }
@@ -32,7 +33,7 @@ export const useGetFuelTypeList = (params) => {
         }
       ),
     staleTime: 5 * 60 * 1000,
-    enabled: !!params.fuelCategory && !!(params.fuelCategory !== '') // only fetch if fuel_category is provided
+    enabled: !!params.fuelCategory && !!(params.fuelCategory !== '')
   })
 }
 
@@ -101,7 +102,9 @@ export const useCalculateComplianceUnits = ({
       !!compliancePeriod &&
       !!fuelCategoryId &&
       !!fuelTypeId &&
-      !!endUseId &&
+      !!(
+        endUseId || parseInt(compliancePeriod) >= LEGISLATION_TRANSITION_YEAR
+      ) &&
       !!quantity
   })
 }

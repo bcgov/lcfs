@@ -19,7 +19,7 @@ class FuelTypeSchema(BaseSchema):
 class CalculatorQueryParams(BaseSchema):
     fuel_category_id: int = Field(..., alias="fuelCategoryId")
     fuel_type_id: int = Field(..., alias="fuelTypeId")
-    end_use_id: int = Field(..., alias="endUseId")
+    end_use_id: Optional[int] = Field(None, alias="endUseId")
     quantity: int
     fuel_code_id: Optional[int] = Field(None, alias="fuelCodeId")
 
