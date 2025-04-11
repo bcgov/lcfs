@@ -378,6 +378,7 @@ async def test_get_compliance_report_by_id_success(
     fastapi_app: FastAPI,
     set_mock_user,
     mock_compliance_report_services,
+    compliance_report_base_schema,
 ):
     # Mock user setup
     set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
@@ -390,27 +391,12 @@ async def test_get_compliance_report_by_id_success(
     )
 
     # Mock the compliance report service's method
-    mock_compliance_report_services.get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
-        report={
-            "compliance_report_id": 1,
-            "compliance_period_id": 1,
-            "compliance_period": {"compliance_period_id": 1, "description": "2024"},
-            "organization_id": 1,
-            "organization": {"organization_id": 1, "name": "org1"},
-            "current_status_id": 1,
-            "current_status": {"compliance_report_status_id": 1, "status": "status"},
-            "summary": {
-                "summary_id": 1,
-                "is_locked": False,
-                "line_11_fossil_derived_base_fuel_total": 0.0,
-                "line_21_non_compliance_penalty_payable": 0.0,
-            },
-            "compliance_report_group_uuid": "uuid",
-            "version": 0,
-            "supplemental_initiator": SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
-            "has_supplemental": False,
-        },
-        chain=[],
+    mock_compliance_report_services.get_compliance_report_chain.return_value = (
+        ChainedComplianceReportSchema(
+            report=compliance_report_base_schema(),
+            chain=[],
+            is_newest=False,
+        )
     )
 
     # Create a mock for the validation service
@@ -435,8 +421,8 @@ async def test_get_compliance_report_by_id_success(
 
     # Assertions
     assert response.status_code == 200
-    mock_compliance_report_services.get_compliance_report_by_id.assert_awaited_once_with(
-        1, mock.ANY, True
+    mock_compliance_report_services.get_compliance_report_chain.assert_awaited_once_with(
+        1, mock.ANY
     )
     mock_compliance_report_validation.validate_organization_access.assert_awaited_once_with(
         1

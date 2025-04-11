@@ -305,9 +305,7 @@ async def get_compliance_report_by_id(
     """
     compliance_report = await report_validate.validate_organization_access(report_id)
     await report_validate.validate_compliance_report_access(compliance_report)
-    return await report_service.get_compliance_report_by_id(
-        report_id, request.user, True
-    )
+    return await report_service.get_compliance_report_chain(report_id, request.user)
 
 
 @router.delete(

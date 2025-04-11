@@ -250,6 +250,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               />
             )}
             <AssessmentCard
+              reportData={reportData}
               orgData={orgData}
               isGovernmentUser={isGovernmentUser}
               currentStatus={currentStatus}
@@ -288,6 +289,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
           {isGovernmentUser && <AssessmentStatement />}
           {hasRoles(roles.analyst) && (
             <AssessmentRecommendation
+              reportData={reportData}
               complianceReportId={complianceReportId}
               currentStatus={currentStatus}
             />

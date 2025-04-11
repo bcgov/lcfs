@@ -225,20 +225,21 @@ async def test_get_compliance_report_by_id_success(
     set_mock_user,
 ):
     with patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
-    ) as mock_get_compliance_report_by_id, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_compliance_report_chain, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_compliance_report_access"
     ) as mock_validate_compliance_report_access:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
-        mock_compliance_report = ChainedComplianceReportSchema(
-            report=compliance_report_base_schema(), chain=[]
+        mock_report = compliance_report_base_schema()
+        mock_chained_schema = ChainedComplianceReportSchema(
+            report=mock_report, chain=[], is_newest=True
         )
 
-        mock_get_compliance_report_by_id.return_value = mock_compliance_report
-        mock_validate_organization_access.return_value = mock_compliance_report
+        mock_get_compliance_report_chain.return_value = mock_chained_schema
+        mock_validate_organization_access.return_value = mock_report
         mock_validate_compliance_report_access.return_value = True
 
         url = fastapi_app.url_path_for("get_compliance_report_by_id", report_id=1)
@@ -247,14 +248,14 @@ async def test_get_compliance_report_by_id_success(
 
         assert response.status_code == 200
 
-        expected_response = json.loads(mock_compliance_report.json(by_alias=True))
+        expected_response = json.loads(
+            mock_chained_schema.model_dump_json(by_alias=True)
+        )
 
         assert response.json() == expected_response
-        mock_get_compliance_report_by_id.assert_called_once_with(1, mock.ANY, True)
+        mock_get_compliance_report_chain.assert_called_once_with(1, mock.ANY)
         mock_validate_organization_access.assert_called_once_with(1)
-        mock_validate_compliance_report_access.assert_called_once_with(
-            mock_compliance_report
-        )
+        mock_validate_compliance_report_access.assert_called_once_with(mock_report)
 
 
 @pytest.mark.anyio
