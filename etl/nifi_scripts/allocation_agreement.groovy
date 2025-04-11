@@ -101,8 +101,7 @@ INSERT INTO allocation_agreement(
   fuel_category_id,
   group_uuid,
   version,
-  action_type,
-  user_type
+  action_type
 ) VALUES( ?
   , ?
   , ?
@@ -115,7 +114,6 @@ INSERT INTO allocation_agreement(
   , ?
   , ?
   , ?::actiontypeenum
-  , 'SUPPLIER'
 )
 '''
 @Field
