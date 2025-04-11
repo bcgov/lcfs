@@ -148,7 +148,7 @@
   "nonCompliancePenaltySummary": "Non-compliance penalty payable summary",
   "delta": "Delta",
   "compareReports": "Compare summary data between the following 2 report versions",
-  "fuelType": "Fuel Type",
+  "fuelType": "Fuel type",
   "signingAuthorityDeclaration": "Signing authority declaration",
   "declarationText": "I certify that the information in this report is true and complete to the best of my knowledge and I understand that I may be required to provide to the Director records evidencing the truth of that information.",
   "submitReport": "Submit Report",
@@ -203,5 +203,28 @@
   "assessmentStatementInstructions": "The analyst and/or compliance manager can draft an assessment statement to the organization. The director can edit or delete this statement. This is suggested when making analyst adjustments or reassessments.",
   "saveStatement": "Save statement",
   "assessmentStatementSaveSuccess": "Assessment statement saved successfully.",
-  "assessmentStatementSaveError": "Error saving assessment statement."
+  "assessmentStatementSaveError": "Error saving assessment statement.",
+  "calcTitle": "Credit calculator",
+  "complianceYear": "Compliance year",
+  "selectFuelType": "Select fuel type",
+  "endUse": "End use",
+  "ciLabel": "Determining carbon intensity",
+  "fuelCodeLabel": "Fuel code",
+  "qtySuppliedLabel": "Quantity supplied",
+  "formulaBefore2024": "Credit or Debit = (CI class × EER fuel – CI fuel) × EC fuel/1,000,000",
+  "formulaAfter2024": "Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000",
+  "ciParameters": {
+    "tci": "Target carbon intensity",
+    "eer": "Energy effectiveness ratio",
+    "rci": "Recorded carbon intensity",
+    "uci": "Additional carbon intensity",
+    "ec": "Energy content",
+    "ed": "Energy density"
+  },
+  "fuelRequirementOptions": [
+    "Renewable fuel requirement & Low carbon fuel requirement",
+    "Low carbon fuel requirement only"
+  ],
+  "changeInUnits": "Projected change in compliance units balance",
+  "generatedLabel": "Credits generated"
 }
