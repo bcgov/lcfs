@@ -8,7 +8,6 @@ from lcfs.web.api.base import (
     PaginationResponseSchema,
     SortOrder,
 )
-from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.utils.schema_validators import fuel_code_required
 
@@ -154,24 +153,6 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
         return fuel_code_required(values)
 
 
-class FuelSupplyDiffSchema(BaseSchema):
-    compliance_units: Optional[bool] = None
-    fuel_type_id: Optional[bool] = None
-    fuel_category_id: Optional[bool] = None
-    end_use_id: Optional[bool] = None
-    provision_of_the_act_id: Optional[bool] = None
-    fuel_code_id: Optional[bool] = None
-    quantity: Optional[bool] = None
-    fuel_type_other: Optional[bool] = None
-    units: Optional[bool] = None
-    target_ci: Optional[bool] = None
-    ci_of_fuel: Optional[bool] = None
-    uci: Optional[bool] = None
-    energy_density: Optional[bool] = None
-    eer: Optional[bool] = None
-    energy: Optional[bool] = None
-
-
 class FuelSupplyResponseSchema(FuelSupplyCreateUpdateSchema):
     action_type: str
     fuel_type: str
@@ -183,7 +164,6 @@ class FuelSupplyResponseSchema(FuelSupplyCreateUpdateSchema):
     fuel_code: Optional[str]
     uci: Optional[float] = None
     fuel_code: Optional[str] = None
-    diff: Optional[FuelSupplyDiffSchema] = None
 
     @field_validator("compliance_units", mode="before")
     def round_compliance_units(cls, value):
