@@ -13,6 +13,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.tests.compliance_report.conftest import mock_summary_repo
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryRowSchema,
@@ -49,15 +50,6 @@ def mock_environment_vars():
         mock_settings.ches_sender_email = "noreply@gov.bc.ca"
         mock_settings.ches_sender_name = "Mock Notification System"
         yield mock_settings
-
-
-# Mock for adjust_balance method within the OrganizationsService
-@pytest.fixture
-def mock_org_service():
-    mock_org_service = MagicMock()
-    mock_org_service.adjust_balance = AsyncMock()  # Mock the adjust_balance method
-    mock_org_service.calculate_available_balance = AsyncMock(return_value=1000)
-    return mock_org_service
 
 
 # update_compliance_report
@@ -207,9 +199,10 @@ async def test_handle_submitted_status_insufficient_permissions(
 async def test_handle_submitted_status_with_existing_summary(
     compliance_report_update_service,
     mock_repo,
+    mock_summary_repo,
     mock_user_has_roles,
     mock_org_service,
-    compliance_report_summary_service,
+    mock_summary_service,
 ):
     # Mock data
     report_id = 1
@@ -263,8 +256,8 @@ async def test_handle_submitted_status_with_existing_summary(
     )
 
     # Set up mocks
-    mock_repo.get_summary_by_report_id.return_value = existing_summary
-    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+    mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
 
@@ -284,13 +277,13 @@ async def test_handle_submitted_status_with_existing_summary(
         mock.ANY,
         [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY],
     )
-    mock_repo.get_summary_by_report_id.assert_called_once_with(report_id)
-    compliance_report_summary_service.calculate_compliance_report_summary.assert_called_once_with(
+    mock_summary_repo.get_summary_by_report_id.assert_called_once_with(report_id)
+    mock_summary_service.calculate_compliance_report_summary.assert_called_once_with(
         report_id
     )
 
     # Check if the summary is locked by verifying that the save call includes a UserProfile
-    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][0]
+    saved_summary = mock_summary_repo.save_compliance_report_summary.call_args[0][0]
     assert saved_summary.is_locked == True
 
 
@@ -298,9 +291,10 @@ async def test_handle_submitted_status_with_existing_summary(
 async def test_handle_submitted_status_without_existing_summary(
     compliance_report_update_service,
     mock_repo,
+    mock_summary_repo,
     mock_user_has_roles,
     mock_org_service,
-    compliance_report_summary_service,
+    mock_summary_service,
 ):
     # Mock data
     report_id = 1
@@ -351,8 +345,8 @@ async def test_handle_submitted_status_without_existing_summary(
     )
 
     # Set up mocks
-    mock_repo.get_summary_by_report_id.return_value = None
-    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+    mock_summary_repo.get_summary_by_report_id.return_value = None
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
     # Inject the mocked org_service into the service being tested
@@ -366,14 +360,14 @@ async def test_handle_submitted_status_without_existing_summary(
     )
 
     # Assertions
-    mock_repo.get_summary_by_report_id.assert_called_once_with(report_id)
-    compliance_report_summary_service.calculate_compliance_report_summary.assert_called_once_with(
+    mock_summary_repo.get_summary_by_report_id.assert_called_once_with(report_id)
+    mock_summary_service.calculate_compliance_report_summary.assert_called_once_with(
         report_id
     )
 
     # Check if a new summary is created
-    mock_repo.add_compliance_report_summary.assert_called_once_with(mock.ANY)
-    new_summary = mock_repo.add_compliance_report_summary.call_args[0][0]
+    mock_summary_repo.add_compliance_report_summary.assert_called_once_with(mock.ANY)
+    new_summary = mock_summary_repo.add_compliance_report_summary.call_args[0][0]
 
     # Check if calculated values are used
     assert new_summary.renewable_fuel_target_summary[0].gasoline == 100  # line 6
@@ -391,9 +385,10 @@ async def test_handle_submitted_status_without_existing_summary(
 async def test_handle_submitted_status_partial_existing_values(
     compliance_report_update_service,
     mock_repo,
+    mock_summary_repo,
     mock_user_has_roles,
     mock_org_service,
-    compliance_report_summary_service,
+    mock_summary_service,
 ):
     # Mock data
     report_id = 1
@@ -448,8 +443,8 @@ async def test_handle_submitted_status_partial_existing_values(
     )
 
     # Set up mocks
-    mock_repo.get_summary_by_report_id.return_value = existing_summary
-    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+    mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
     # Inject the mocked org_service into the service being tested
@@ -463,8 +458,8 @@ async def test_handle_submitted_status_partial_existing_values(
     )
 
     # Assertions
-    mock_repo.save_compliance_report_summary.assert_called_once_with(mock.ANY)
-    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][0]
+    mock_summary_repo.save_compliance_report_summary.assert_called_once_with(mock.ANY)
+    saved_summary = mock_summary_repo.save_compliance_report_summary.call_args[0][0]
     assert (
         saved_summary.renewable_fuel_target_summary[0].gasoline == 1000
     )  # Preserved user-edited value
@@ -480,9 +475,10 @@ async def test_handle_submitted_status_partial_existing_values(
 async def test_handle_submitted_status_no_user_edits(
     compliance_report_update_service,
     mock_repo,
+    mock_summary_repo,
     mock_user_has_roles,
     mock_org_service,
-    compliance_report_summary_service,
+    mock_summary_service,
 ):
     # Mock data
     report_id = 1
@@ -541,8 +537,8 @@ async def test_handle_submitted_status_no_user_edits(
     )
 
     # Set up mocks
-    mock_repo.get_summary_by_report_id.return_value = existing_summary
-    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+    mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
     # Inject the mocked org_service into the service being tested
@@ -556,8 +552,8 @@ async def test_handle_submitted_status_no_user_edits(
     )
 
     # Assertions
-    mock_repo.save_compliance_report_summary.assert_called_once_with(mock.ANY)
-    saved_summary = mock_repo.save_compliance_report_summary.call_args[0][0]
+    mock_summary_repo.save_compliance_report_summary.assert_called_once_with(mock.ANY)
+    saved_summary = mock_summary_repo.save_compliance_report_summary.call_args[0][0]
     assert (
         saved_summary.renewable_fuel_target_summary[0].gasoline == 100
     )  # Used calculated value
@@ -573,9 +569,10 @@ async def test_handle_submitted_status_no_user_edits(
 async def test_handle_submitted_no_sign(
     compliance_report_update_service,
     mock_repo,
+    mock_summary_repo,
     mock_user_has_roles,
     mock_org_service,
-    compliance_report_summary_service,
+    mock_summary_service,
 ):
     # Mock data
     report_id = 1
@@ -601,8 +598,8 @@ async def test_handle_submitted_no_sign(
     )
 
     # Set up mocks
-    mock_repo.get_summary_by_report_id.return_value = existing_summary
-    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+    mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
     # Inject the mocked org_service into the service being tested
@@ -620,7 +617,8 @@ async def test_handle_submitted_status_no_credits(
     mock_repo,
     mock_user_has_roles,
     mock_org_service,
-    compliance_report_summary_service,
+    mock_summary_service,
+    mock_summary_repo,
 ):
     """
     Scenario: The report requires deficit units to be reserved (-100),
@@ -643,7 +641,7 @@ async def test_handle_submitted_status_no_credits(
     compliance_report_update_service.request.user = MagicMock()
 
     # Mock the summary so we skip deeper logic
-    mock_repo.get_summary_by_report_id.return_value = None
+    mock_summary_repo.get_summary_by_report_id.return_value = None
 
     # Pretend the final summary can_sign is True
     calculated_summary = ComplianceReportSummarySchema(
@@ -653,7 +651,7 @@ async def test_handle_submitted_status_no_credits(
         low_carbon_fuel_target_summary=[],
         non_compliance_penalty_summary=[],
     )
-    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
 
@@ -678,9 +676,10 @@ async def test_handle_submitted_status_no_credits(
 async def test_handle_submitted_status_insufficient_credits(
     compliance_report_update_service,
     mock_repo,
+    mock_summary_repo,
     mock_user_has_roles,
     mock_org_service,
-    compliance_report_summary_service,
+    mock_summary_service,
 ):
     """
     Scenario: The report requires deficit units of 100,
@@ -701,11 +700,11 @@ async def test_handle_submitted_status_insufficient_credits(
     compliance_report_update_service.request.user = MagicMock()
 
     # Skip deeper summary logic
-    mock_repo.get_summary_by_report_id.return_value = None
-    mock_repo.save_compliance_report_summary = AsyncMock(
+    mock_summary_repo.get_summary_by_report_id.return_value = None
+    mock_summary_repo.save_compliance_report_summary = AsyncMock(
         return_value=mock_report.summary
     )
-    mock_repo.add_compliance_report_summary = AsyncMock(
+    mock_summary_repo.add_compliance_report_summary = AsyncMock(
         return_value=mock_report.summary
     )
     calculated_summary = ComplianceReportSummarySchema(
@@ -715,7 +714,7 @@ async def test_handle_submitted_status_insufficient_credits(
         low_carbon_fuel_target_summary=[],
         non_compliance_penalty_summary=[],
     )
-    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
 
@@ -744,9 +743,10 @@ async def test_handle_submitted_status_insufficient_credits(
 async def test_handle_submitted_status_sufficient_credits(
     compliance_report_update_service,
     mock_repo,
+    mock_summary_repo,
     mock_user_has_roles,
     mock_org_service,
-    compliance_report_summary_service,
+    mock_summary_service,
 ):
     """
     Scenario: The report requires deficit units of -100,
@@ -766,11 +766,11 @@ async def test_handle_submitted_status_sufficient_credits(
     compliance_report_update_service.request.user = MagicMock()
 
     # Skip deeper summary logic
-    mock_repo.get_summary_by_report_id.return_value = None
-    mock_repo.save_compliance_report_summary = AsyncMock(
+    mock_summary_repo.get_summary_by_report_id.return_value = None
+    mock_summary_repo.save_compliance_report_summary = AsyncMock(
         return_value=mock_report.summary
     )
-    mock_repo.add_compliance_report_summary = AsyncMock(
+    mock_summary_repo.add_compliance_report_summary = AsyncMock(
         return_value=mock_report.summary
     )
     calculated_summary = ComplianceReportSummarySchema(
@@ -780,7 +780,7 @@ async def test_handle_submitted_status_sufficient_credits(
         low_carbon_fuel_target_summary=[],
         non_compliance_penalty_summary=[],
     )
-    compliance_report_summary_service.calculate_compliance_report_summary = AsyncMock(
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
 

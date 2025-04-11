@@ -197,7 +197,7 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
 
 @pytest.mark.anyio
 async def test_supplemental_low_carbon_fuel_target_summary(
-    compliance_report_summary_service, mock_trxn_repo, mock_repo
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
 ):
     # Input setup: supplemental version (version = 2)
     compliance_period_start = datetime(2024, 1, 1)
@@ -792,7 +792,7 @@ async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(
 
 @pytest.mark.anyio
 async def test_can_sign_flag_logic(
-    compliance_report_summary_service, mock_repo, mock_trxn_repo
+    compliance_report_summary_service, mock_repo, mock_summary_repo, mock_trxn_repo
 ):
     # Scenario 1: All conditions met.
     mock_effective_fuel_supplies = [MagicMock()]
@@ -842,7 +842,7 @@ async def test_can_sign_flag_logic(
     mock_repo.aggregate_other_uses_quantity = AsyncMock(
         return_value={"gasoline": 50, "diesel": 25, "jet_fuel": 10}
     )
-    mock_repo.get_assessed_compliance_report_by_period = AsyncMock(
+    mock_summary_repo.get_assessed_compliance_report_by_period = AsyncMock(
         return_value=MagicMock(
             summary=MagicMock(
                 line_6_renewable_fuel_retained_gasoline=previous_retained["gasoline"],
@@ -944,7 +944,7 @@ async def test_can_sign_flag_logic(
 )
 async def test_calculate_fuel_quantities_parametrized(
     compliance_report_summary_service,
-    mock_repo,
+    mock_summary_repo,
     mock_trxn_repo,
     mock_fuel_supply_repo,
     fossil_derived,
