@@ -95,8 +95,118 @@ def upgrade():
         )
     )
 
+    op.execute(
+        sa.text(
+            """
+        INSERT INTO fuel_instance (
+            fuel_type_id,
+            fuel_category_id,
+            create_date,
+            update_date
+        ) VALUES
+        -- Natural gas-based gasoline (21) -> Gasoline (2)
+        (21, 1, NOW(), NOW()),
+        -- Petroleum-based diesel (22) -> Diesel (1)
+        (22, 2, NOW(), NOW()),
+        -- Petroleum-based gasoline (23) -> Gasoline (2)
+        (23, 1, NOW(), NOW());
+    """
+        )
+    )
+
+    # Add EER records for legacy fuel types (2013-2023)
+    op.execute(
+        sa.text(
+            """
+        INSERT INTO energy_effectiveness_ratio (
+            fuel_category_id,
+            fuel_type_id,
+            end_use_type_id,
+            ratio,
+            create_date,
+            update_date,
+            effective_status,
+            compliance_period_id
+        ) VALUES
+        -- Natural gas-based gasoline (21) records
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 4),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 5),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 6),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 7),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 8),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 9),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 10),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 11),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 12),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 13),
+        (2, 21, 24, 1.0, NOW(), NOW(), true, 14),
+        -- Petroleum-based diesel (22) records
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 4),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 5),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 6),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 7),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 8),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 9),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 10),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 11),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 12),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 13),
+        (1, 22, 24, 1.0, NOW(), NOW(), true, 14),
+        -- Petroleum-based gasoline (23) records
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 4),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 5),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 6),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 7),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 8),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 9),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 10),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 11),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 12),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 13),
+        (2, 23, 24, 1.0, NOW(), NOW(), true, 14);
+    """
+        )
+    )
+
+    # Set fossil_derived to true for legacy fuel types
+    op.execute(
+        """
+        UPDATE fuel_type 
+        SET fossil_derived = true 
+        WHERE fuel_type_id IN (21, 22, 23)
+    """
+    )
+
 
 def downgrade():
+    # Remove the fossil_derived flag
+    op.execute(
+        """
+        UPDATE fuel_type 
+        SET fossil_derived = false 
+        WHERE fuel_type_id IN (21, 22, 23)
+    """
+    )
+    # Remove the added EER records
+    op.execute(
+        sa.text(
+            """
+        DELETE FROM energy_effectiveness_ratio
+        WHERE fuel_type_id IN (21, 22, 23);
+    """
+        )
+    )
+
+    # Remove the added fuel_instance records
+    op.execute(
+        sa.text(
+            """
+        DELETE FROM fuel_instance
+        WHERE fuel_type_id IN (21, 22, 23);
+    """
+        )
+    )
+
     # Remove the imported historical values
     op.execute(
         sa.text(

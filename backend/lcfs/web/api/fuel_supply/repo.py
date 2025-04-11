@@ -1,12 +1,13 @@
 import structlog
 from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, or_, select, literal
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 from typing import List, Optional, Sequence, Any
-
+from sqlalchemy.dialects.postgresql import array_agg
+from sqlalchemy.sql.expression import distinct
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance import (
@@ -78,12 +79,6 @@ class FuelSupplyRepository:
             .scalar_subquery()
         )
 
-        subquery_provision_of_the_act_id = (
-            select(ProvisionOfTheAct.provision_of_the_act_id)
-            .where(ProvisionOfTheAct.name == "Fuel code - section 19 (b) (i)")
-            .scalar_subquery()
-        )
-
         try:
             current_year = int(compliance_period)
         except ValueError as e:
@@ -99,44 +94,173 @@ class FuelSupplyRepository:
 
         start_of_compliance_year = datetime(current_year, 1, 1)
         end_of_compliance_year = datetime(current_year, 12, 31)
+
+        # Determine legacy years.
+        is_legacy_year = current_year < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
+
+        # Define conditions for the query based on the legacy flag.
+        if is_legacy_year:
+            # For legacy years:
+            # - Include fuel types marked as legacy or non‑fossil-derived.
+            # - Exclude jet fuel from FuelCategory.
+            # - For fossil fuels: Accept only provision ID 1.
+            # - For non‑fossil fuels: Exclude provision ID 1.
+            # - Additionally, enforce that the provision itself is flagged as legacy.
+            fuel_instance_condition = or_(
+                FuelType.is_legacy == True,
+                FuelType.fossil_derived == False,
+            )
+            fuel_category_condition = FuelCategory.fuel_category_id != 3
+            provision_condition = and_(
+                ProvisionOfTheAct.is_legacy == True,
+                or_(
+                    # For gasoline types (Natural gas-based and Petroleum-based)
+                    and_(
+                        FuelType.fuel_type.in_(
+                            ["Natural gas-based gasoline", "Petroleum-based gasoline"]
+                        ),
+                        ProvisionOfTheAct.provision_of_the_act_id == 4,
+                    ),
+                    # For Petroleum-based diesel
+                    and_(
+                        FuelType.fuel_type == "Petroleum-based diesel",
+                        ProvisionOfTheAct.provision_of_the_act_id == 5,
+                    ),
+                    # For all other non-fossil fuels
+                    and_(
+                        ~FuelType.fuel_type.in_(
+                            [
+                                "Natural gas-based gasoline",
+                                "Petroleum-based gasoline",
+                                "Petroleum-based diesel",
+                            ]
+                        ),
+                        ProvisionOfTheAct.provision_of_the_act_id.notin_([4, 5]),
+                    ),
+                ),
+            )
+        else:
+            # For non-legacy years:
+            # - Only include fuel types that are not legacy.
+            # - No special filtering on FuelCategory (jet fuel is included).
+            # - For fossil fuels: Accept only provision ID 1.
+            # - For non‑fossil fuels: Exclude provision IDs 1 and 8.
+            fuel_instance_condition = FuelType.is_legacy == False
+            fuel_category_condition = literal(True)  # No extra filtering.
+            provision_condition = and_(
+                ProvisionOfTheAct.is_legacy == False,  # Only get non-legacy provisions
+                or_(
+                    and_(
+                        FuelType.fossil_derived == True,
+                        ProvisionOfTheAct.provision_of_the_act_id == 1,
+                    ),
+                    and_(
+                        FuelType.fossil_derived == False,
+                        ProvisionOfTheAct.provision_of_the_act_id.in_(
+                            [2, 3]
+                        ),  # Only allow these non-legacy provisions for non-fossil fuels
+                    ),
+                ),
+            )
+
+        # Construct the main query using the above conditions.
         query = (
             select(
                 FuelType.fuel_type_id,
                 FuelInstance.fuel_instance_id,
-                FuelInstance.fuel_category_id,
+                EndUseType.end_use_type_id,
                 FuelType.fuel_type,
                 FuelType.fossil_derived,
+                FuelCategory.fuel_category_id,
+                FuelCategory.category,
                 DefaultCarbonIntensity.default_carbon_intensity,
                 CategoryCarbonIntensity.category_carbon_intensity,
-                FuelCategory.category,
-                ProvisionOfTheAct.provision_of_the_act_id,
-                ProvisionOfTheAct.name.label("provision_of_the_act"),
                 EnergyDensity.energy_density_id,
                 EnergyDensity.density.label("energy_density"),
                 FuelType.units.label("unit"),
                 FuelType.unrecognized,
-                EndUseType.end_use_type_id,
-                EndUseType.type.label("end_use_type"),
-                EndUseType.sub_type.label("end_use_sub_type"),
                 UnitOfMeasure.uom_id,
                 UnitOfMeasure.name,
-                EnergyEffectivenessRatio.eer_id,
-                func.coalesce(EnergyEffectivenessRatio.ratio, 1).label(
-                    "energy_effectiveness_ratio"
-                ),
-                TargetCarbonIntensity.target_carbon_intensity_id,
-                TargetCarbonIntensity.target_carbon_intensity,
-                TargetCarbonIntensity.reduction_target_percentage,
-                FuelCode.fuel_code_id,
-                FuelCode.fuel_suffix,
-                FuelCodePrefix.fuel_code_prefix_id,
-                FuelCodePrefix.prefix,
-                FuelCode.carbon_intensity.label("fuel_code_carbon_intensity"),
+                func.coalesce(
+                    array_agg(
+                        distinct(
+                            func.jsonb_build_object(
+                                "provision_of_the_act_id",
+                                ProvisionOfTheAct.provision_of_the_act_id,
+                                "name",
+                                ProvisionOfTheAct.name,
+                            )
+                        )
+                    ).filter(ProvisionOfTheAct.provision_of_the_act_id.is_not(None)),
+                    [],
+                ).label("provisions"),
+                func.coalesce(
+                    array_agg(
+                        distinct(
+                            func.jsonb_build_object(
+                                "fuel_code_id",
+                                FuelCode.fuel_code_id,
+                                "fuel_code",
+                                FuelCodePrefix.prefix + FuelCode.fuel_suffix,
+                                "fuel_code_prefix_id",
+                                FuelCodePrefix.fuel_code_prefix_id,
+                                "fuel_code_carbon_intensity",
+                                FuelCode.carbon_intensity,
+                            )
+                        )
+                    ).filter(FuelCode.fuel_code_id.is_not(None)),
+                    [],
+                ).label("fuel_codes"),
+                func.coalesce(
+                    array_agg(
+                        distinct(
+                            func.jsonb_build_object(
+                                "eer_id",
+                                EnergyEffectivenessRatio.eer_id,
+                                "energy_effectiveness_ratio",
+                                func.coalesce(EnergyEffectivenessRatio.ratio, 1),
+                                "end_use_type_id",
+                                EndUseType.end_use_type_id,
+                                "end_use_type",
+                                EndUseType.type,
+                                "end_use_sub_type",
+                                EndUseType.sub_type,
+                            )
+                        )
+                    ).filter(EnergyEffectivenessRatio.eer_id.is_not(None)),
+                    [],
+                ).label("eers"),
+                func.coalesce(
+                    array_agg(
+                        distinct(
+                            func.jsonb_build_object(
+                                "target_carbon_intensity_id",
+                                TargetCarbonIntensity.target_carbon_intensity_id,
+                                "target_carbon_intensity",
+                                TargetCarbonIntensity.target_carbon_intensity,
+                                "reduction_target_percentage",
+                                TargetCarbonIntensity.reduction_target_percentage,
+                            )
+                        )
+                    ).filter(
+                        TargetCarbonIntensity.target_carbon_intensity_id.is_not(None)
+                    ),
+                    [],
+                ).label("target_carbon_intensities"),
             )
-            .join(FuelInstance, FuelInstance.fuel_type_id == FuelType.fuel_type_id)
+            .join(
+                FuelInstance,
+                and_(
+                    FuelInstance.fuel_type_id == FuelType.fuel_type_id,
+                    fuel_instance_condition,
+                ),
+            )
             .join(
                 FuelCategory,
-                FuelCategory.fuel_category_id == FuelInstance.fuel_category_id,
+                and_(
+                    FuelCategory.fuel_category_id == FuelInstance.fuel_category_id,
+                    fuel_category_condition,
+                ),
             )
             .outerjoin(
                 DefaultCarbonIntensity,
@@ -159,31 +283,13 @@ class FuelSupplyRepository:
                 ProvisionOfTheAct,
                 and_(
                     ProvisionOfTheAct.name != "Unknown",
-                    or_(
-                        and_(
-                            FuelType.fossil_derived == True,
-                            ProvisionOfTheAct.provision_of_the_act_id == 1,
-                        ),
-                        and_(
-                            FuelType.fossil_derived == False,
-                            or_(
-                                and_(
-                                    ProvisionOfTheAct.provision_of_the_act_id.notin_([1, 8]),
-                                    current_year >= int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
-                                ),
-                                and_(
-                                    ProvisionOfTheAct.provision_of_the_act_id != 1,
-                                    current_year < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR),
-                                ),
-                            ),
-                        ),
-                    ),
+                    provision_condition,
                 ),
             )
             .outerjoin(
                 EnergyDensity, EnergyDensity.fuel_type_id == FuelType.fuel_type_id
             )
-            .outerjoin(UnitOfMeasure, EnergyDensity.uom_id == UnitOfMeasure.uom_id)
+            .outerjoin(UnitOfMeasure, UnitOfMeasure.uom_id == EnergyDensity.uom_id)
             .outerjoin(
                 EnergyEffectivenessRatio,
                 and_(
@@ -212,8 +318,6 @@ class FuelSupplyRepository:
                 and_(
                     FuelCode.fuel_type_id == FuelType.fuel_type_id,
                     FuelCode.fuel_status_id == subquery_fuel_code_status_id,
-                    ProvisionOfTheAct.provision_of_the_act_id
-                    == subquery_provision_of_the_act_id,
                     FuelCode.expiration_date >= start_of_compliance_year,
                     FuelCode.effective_date <= end_of_compliance_year,
                 ),
@@ -221,13 +325,25 @@ class FuelSupplyRepository:
             .outerjoin(
                 FuelCodePrefix, FuelCodePrefix.fuel_code_prefix_id == FuelCode.prefix_id
             )
-        )
-
-        include_legacy = compliance_period < LCFS_Constants.LEGISLATION_TRANSITION_YEAR
-        if not include_legacy:
-            query = query.where(
-                and_(FuelType.is_legacy == False, ProvisionOfTheAct.is_legacy == False)
+            .group_by(
+                FuelType.fuel_type_id,
+                FuelInstance.fuel_instance_id,
+                EndUseType.end_use_type_id,
+                FuelType.fuel_type,
+                FuelType.fossil_derived,
+                FuelCategory.fuel_category_id,
+                FuelCategory.category,
+                DefaultCarbonIntensity.default_carbon_intensity,
+                CategoryCarbonIntensity.category_carbon_intensity,
+                EnergyDensity.energy_density_id,
+                EnergyDensity.density,
+                FuelType.units,
+                FuelType.unrecognized,
+                UnitOfMeasure.uom_id,
+                UnitOfMeasure.name,
             )
+            .order_by(FuelType.fuel_type_id, FuelType.fuel_type)
+        )
 
         fuel_type_results = (await self.db.execute(query)).all()
 

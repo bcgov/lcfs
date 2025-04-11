@@ -405,9 +405,11 @@ class ComplianceReportSummaryService:
 
         prev_compliance_report = None
         if not compliance_report.supplemental_initiator:
-            prev_compliance_report = await self.repo.get_assessed_compliance_report_by_period(
-                compliance_report.organization_id,
-                int(compliance_report.compliance_period.description) - 1,
+            prev_compliance_report = (
+                await self.repo.get_assessed_compliance_report_by_period(
+                    compliance_report.organization_id,
+                    int(compliance_report.compliance_period.description) - 1,
+                )
             )
 
         summary_model = compliance_report.summary
@@ -878,7 +880,29 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_payable = int(
             (non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)
         )
-        line_11 = next(row for row in renewable_fuel_target_summary if row.line == 11)
+
+        # Find line 11 using the correct line value format for legacy/non-legacy years
+        line_11_value = self._get_line_value(
+            11, compliance_data_service.is_legacy_year()
+        )
+        line_11 = next(
+            (
+                row
+                for row in renewable_fuel_target_summary
+                if str(row.line) == str(line_11_value)
+            ),
+            None,
+        )
+
+        if line_11 is None:
+            # If line 11 is not found, create a default row with total_value of 0
+            line_11 = ComplianceReportSummaryRowSchema(
+                line=line_11_value,
+                format="number",
+                description="Non-compliance penalty",
+                field="total_value",
+                total_value=0,
+            )
 
         non_compliance_summary_lines = {
             11: {"total_value": line_11.total_value},
@@ -944,17 +968,30 @@ class ComplianceReportSummaryService:
         # Initialize compliance units sum
         compliance_units_sum = 0.0
 
+        # Check if this is a historical report (pre-2024)
+        is_historical = int(report.compliance_period.description) < 2024
+
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
-            TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity
+            TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity / CI class
             EER = fuel_supply.eer or 0  # Energy Effectiveness Ratio
-            RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity
-            UCI = fuel_supply.uci or 0  # Additional Carbon Intensity
+            RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity / CI fuel
+            UCI = (
+                fuel_supply.uci or 0
+            )  # Additional Carbon Intensity (only used in new calculation)
             Q = fuel_supply.quantity or 0  # Quantity of Fuel Supplied
             ED = fuel_supply.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
-            compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
+            # Apply the appropriate compliance units formula
+            compliance_units = calculate_compliance_units(
+                TCI=TCI,
+                EER=EER,
+                RCI=RCI,
+                UCI=UCI,
+                Q=Q,
+                ED=ED,
+                is_historical=is_historical,
+            )
             compliance_units_sum += compliance_units
 
         return round(compliance_units_sum)
@@ -971,86 +1008,35 @@ class ComplianceReportSummaryService:
             report.compliance_report_group_uuid, report.compliance_report_id
         )
 
+        # Check if this is a historical report (pre-2024)
+        is_historical = int(report.compliance_period.description) < 2024
+
         # Initialize compliance units sum
         compliance_units_sum = 0.0
         # Calculate compliance units for each fuel export record
         for fuel_export in fuel_export_records:
-            TCI = fuel_export.target_ci or 0  # Target Carbon Intensity
+            TCI = fuel_export.target_ci or 0  # Target Carbon Intensity / CI class
             EER = fuel_export.eer or 0  # Energy Effectiveness Ratio
-            RCI = fuel_export.ci_of_fuel or 0  # Recorded Carbon Intensity
-            UCI = fuel_export.uci or 0  # Additional Carbon Intensity
+            RCI = fuel_export.ci_of_fuel or 0  # Recorded Carbon Intensity / CI fuel
+            UCI = (
+                fuel_export.uci or 0
+            )  # Additional Carbon Intensity (only used in new calculation)
             Q = fuel_export.quantity or 0  # Quantity of Fuel Supplied
             ED = fuel_export.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
-            compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
+            # Apply the appropriate compliance units formula
+            compliance_units = calculate_compliance_units(
+                TCI=TCI,
+                EER=EER,
+                RCI=RCI,
+                UCI=UCI,
+                Q=Q,
+                ED=ED,
+                is_historical=is_historical,
+            )
             compliance_units = -compliance_units
             compliance_units = compliance_units if compliance_units < 0 else 0
 
             compliance_units_sum += compliance_units
 
         return round(compliance_units_sum)
-
-
-#     async def are_identical(
-#         self,
-#         report_id: int,
-#         summary_1: ComplianceReportSummarySchema,
-#         summary_2: ComplianceReportSummarySchema,
-#     ) -> bool:
-#         comparison = self.compare_summaries(report_id, summary_1, summary_2)
-
-#         # Check if all deltas are zero
-#         for field, values in comparison.items():
-#             if values["delta"] != 0:
-#                 return False
-
-#         return True
-
-#     async def compare_summaries(
-#         self,
-#         report_id: int,
-#         summary_1: ComplianceReportSummarySchema,
-#         summary_2: ComplianceReportSummarySchema,
-#     ) -> Dict[str, Dict[str, Any]]:
-#         """
-#         Compare two compliance report summaries and return the values and delta for each field.
-
-#         :param report_id: The ID of the original compliance report
-#         :param summary_1_id: The ID of the first summary to compare
-#         :param summary_2_id: The ID of the second summary to compare
-#         :return: A dictionary containing the values and delta for each field
-#         """
-#         if not summary_1 or not summary_2:
-#             raise ValueError(
-#                 f"""One or both summaries not found: {
-#                              summary_1.summary_id}, {summary_2.summary_id}"""
-#             )
-
-#         if (
-#             summary_1.compliance_report_id != report_id
-#             or summary_2.compliance_report_id != report_id
-#         ):
-#             raise ValueError(
-#                 f"""Summaries do not belong to the specified report: {report_id}"""
-#             )
-
-#         comparison = {}
-
-#         # Compare all float fields
-#         float_columns = [
-#             c.name
-#             for c in ComplianceReportSummary.__table__.columns
-#             if isinstance(c.type, Float)
-#         ]
-#         for column in float_columns:
-#             value_1 = getattr(summary_1, column)
-#             value_2 = getattr(summary_2, column)
-#             delta = value_2 - value_1
-#             comparison[column] = {
-#                 "summary_1_value": value_1,
-#                 "summary_2_value": value_2,
-#                 "delta": delta,
-#             }
-
-#         return comparison
