@@ -166,7 +166,7 @@ class ComplianceReportUpdateService:
 
     async def _check_report_exists(self, report_id: int) -> ComplianceReport:
         """Verify report exists and return it."""
-        report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
+        report = await self.repo.get_compliance_report_by_id(report_id)
         if not report:
             raise DataNotFoundException(
                 f"Compliance report with ID {report_id} not found"

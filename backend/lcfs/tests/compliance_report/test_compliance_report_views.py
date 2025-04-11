@@ -430,7 +430,6 @@ async def test_update_compliance_report_summary_success(
 
         assert response.json() == expected_response
         mock_update_compliance_report_summary.assert_called_once_with(1, request_schema)
-
         mock_validate_organization_access.assert_called_once_with(1)
 
 

@@ -128,9 +128,7 @@ class ComplianceReportServices:
         Analyst adjustments are only allowed if the status of the current report is 'Submitted'.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(
-            existing_report_id, is_model=True
-        )
+        current_report = await self.repo.get_compliance_report_by_id(existing_report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -196,9 +194,7 @@ class ComplianceReportServices:
         Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(
-            report_id, is_model=True
-        )
+        current_report = await self.repo.get_compliance_report_by_id(report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 

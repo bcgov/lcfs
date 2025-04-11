@@ -88,9 +88,7 @@ async def test_update_compliance_report_status_change(
 
     # Assertions
     assert updated_report == mock_report
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(
-        report_id, is_model=True
-    )
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id)
     mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
         report_data.status
     )
@@ -165,9 +163,7 @@ async def test_update_compliance_report_not_found(
             report_id, report_data, UserProfile()
         )
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(
-        report_id, is_model=True
-    )
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id)
 
 
 @pytest.mark.anyio

@@ -16,9 +16,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
-from typing import List, Optional, TypedDict, Type
+from typing import List, Optional, TypedDict, Type, Any, Coroutine, Sequence
 
 from lcfs.db.dependencies import get_async_db_session
+from lcfs.db.models import CompliancePeriod
 from lcfs.db.models.comment import ComplianceReportInternalComment
 from lcfs.db.models.compliance import (
     CompliancePeriod,
@@ -70,70 +71,8 @@ class ComplianceReportRepository:
         self.db = db
         self.fuel_supply_repo = fuel_supply_repo
 
-    def apply_filters(self, pagination, conditions):
-        for filter in pagination.filters:
-            filter_value = filter.filter
-            # check if the date string is selected for filter
-            if filter.filter is None:
-                filter_value = [
-                    datetime.strptime(filter.date_from, "%Y-%m-%d %H:%M:%S").strftime(
-                        "%Y-%m-%d"
-                    )
-                ]
-                if filter.date_to:
-                    filter_value.append(
-                        datetime.strptime(filter.date_to, "%Y-%m-%d %H:%M:%S").strftime(
-                            "%Y-%m-%d"
-                        )
-                    )
-            filter_option = filter.type
-            filter_type = filter.filter_type
-            if filter.field == "status":
-                field = cast(
-                    get_field_for_filter(ComplianceReportListView, "report_status"),
-                    String,
-                )
-                # Check if filter_value is a comma-separated string
-                if isinstance(filter_value, str) and "," in filter_value:
-                    filter_value = filter_value.split(",")  # Convert to list
-
-                if isinstance(filter_value, list):
-
-                    def underscore_string(val):
-                        """
-                        If the item is an enum member, get its `.value`
-                        Then do .replace(" ", "_") so we get underscores
-                        """
-                        if isinstance(val, ComplianceReportStatusEnum):
-                            val = val.value  # convert enum to string
-                        return val.replace(" ", "_")
-
-                    filter_value = [underscore_string(val) for val in filter_value]
-                    filter_type = "set"
-                else:
-                    if isinstance(filter_value, ComplianceReportStatusEnum):
-                        filter_value = filter_value.value
-                    filter_value = filter_value.replace(" ", "_")
-
-            elif filter.field == "type":
-                field = get_field_for_filter(ComplianceReportListView, "report_type")
-            elif filter.field == "organization":
-                field = get_field_for_filter(
-                    ComplianceReportListView, "organization_name"
-                )
-            elif filter.field == "compliance_period":
-                field = get_field_for_filter(
-                    ComplianceReportListView, "compliance_period"
-                )
-            else:
-                field = get_field_for_filter(ComplianceReportListView, filter.field)
-
-            conditions.append(
-                apply_filter_conditions(field, filter_value, filter_option, filter_type)
-            )
-
     @repo_handler
-    async def get_all_compliance_periods(self) -> List[CompliancePeriod]:
+    async def get_all_compliance_periods(self) -> Sequence[CompliancePeriod]:
         # Retrieve all compliance periods from the database
         periods = (
             (
@@ -187,33 +126,6 @@ class ComplianceReportRepository:
             select(CompliancePeriod).where(CompliancePeriod.description == period)
         )
         return result
-
-    @repo_handler
-    async def check_compliance_report(
-        self, compliance_report_id: int
-    ) -> Optional[ComplianceReport]:
-        """
-        Identify and retrieve the compliance report by id, including its related objects.
-        """
-        return await self.db.scalar(
-            select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.fuel_supplies),
-                joinedload(ComplianceReport.other_uses),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ),
-                joinedload(ComplianceReport.transaction),
-            )
-            .where(ComplianceReport.compliance_report_id == compliance_report_id)
-        )
 
     @repo_handler
     async def get_compliance_report_status_by_desc(
@@ -326,30 +238,13 @@ class ComplianceReportRepository:
         return ComplianceReportBaseSchema.model_validate(report)
 
     @repo_handler
-    async def get_existing_history_for_status(
-        self, compliance_report_id: int, current_status_id: int
-    ):
-        history = await self.db.execute(
-            select(ComplianceReportHistory)
-            .where(
-                and_(
-                    ComplianceReportHistory.compliance_report_id
-                    == compliance_report_id,
-                    ComplianceReportHistory.status_id == current_status_id,
-                )
-            )
-            .order_by(ComplianceReportHistory.create_date.desc())
-        )
-        return history.scalar_one_or_none()
-
-    @repo_handler
     async def add_compliance_report_history(
         self, report: ComplianceReport, user: UserProfile
     ):
         """
         Add a new compliance report history record to the database
         """
-        history = await self.get_existing_history_for_status(
+        history = await self._get_existing_history_for_status(
             report.compliance_report_id, report.current_status_id
         )
         if history:
@@ -368,6 +263,22 @@ class ComplianceReportRepository:
         self.db.add(history)
         await self.db.flush()
         return history
+
+    async def _get_existing_history_for_status(
+        self, compliance_report_id: int, current_status_id: int
+    ):
+        history = await self.db.execute(
+            select(ComplianceReportHistory)
+            .where(
+                and_(
+                    ComplianceReportHistory.compliance_report_id
+                    == compliance_report_id,
+                    ComplianceReportHistory.status_id == current_status_id,
+                )
+            )
+            .order_by(ComplianceReportHistory.create_date.desc())
+        )
+        return history.scalar_one_or_none()
 
     @repo_handler
     async def get_reports_paginated(
@@ -395,7 +306,7 @@ class ComplianceReportRepository:
         )
 
         if pagination.filters and len(pagination.filters) > 0:
-            self.apply_filters(pagination, conditions)
+            self._apply_filters(pagination, conditions)
 
         # Pagination and offset setup
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
@@ -446,8 +357,70 @@ class ComplianceReportRepository:
         ]
         return reports, total_count
 
+    def _apply_filters(self, pagination, conditions):
+        for filter in pagination.filters:
+            filter_value = filter.filter
+            # check if the date string is selected for filter
+            if filter.filter is None:
+                filter_value = [
+                    datetime.strptime(filter.date_from, "%Y-%m-%d %H:%M:%S").strftime(
+                        "%Y-%m-%d"
+                    )
+                ]
+                if filter.date_to:
+                    filter_value.append(
+                        datetime.strptime(filter.date_to, "%Y-%m-%d %H:%M:%S").strftime(
+                            "%Y-%m-%d"
+                        )
+                    )
+            filter_option = filter.type
+            filter_type = filter.filter_type
+            if filter.field == "status":
+                field = cast(
+                    get_field_for_filter(ComplianceReportListView, "report_status"),
+                    String,
+                )
+                # Check if filter_value is a comma-separated string
+                if isinstance(filter_value, str) and "," in filter_value:
+                    filter_value = filter_value.split(",")  # Convert to list
+
+                if isinstance(filter_value, list):
+
+                    def underscore_string(val):
+                        """
+                        If the item is an enum member, get its `.value`
+                        Then do .replace(" ", "_") so we get underscores
+                        """
+                        if isinstance(val, ComplianceReportStatusEnum):
+                            val = val.value  # convert enum to string
+                        return val.replace(" ", "_")
+
+                    filter_value = [underscore_string(val) for val in filter_value]
+                    filter_type = "set"
+                else:
+                    if isinstance(filter_value, ComplianceReportStatusEnum):
+                        filter_value = filter_value.value
+                    filter_value = filter_value.replace(" ", "_")
+
+            elif filter.field == "type":
+                field = get_field_for_filter(ComplianceReportListView, "report_type")
+            elif filter.field == "organization":
+                field = get_field_for_filter(
+                    ComplianceReportListView, "organization_name"
+                )
+            elif filter.field == "compliance_period":
+                field = get_field_for_filter(
+                    ComplianceReportListView, "compliance_period"
+                )
+            else:
+                field = get_field_for_filter(ComplianceReportListView, filter.field)
+
+            conditions.append(
+                apply_filter_conditions(field, filter_value, filter_option, filter_type)
+            )
+
     @repo_handler
-    async def get_compliance_report_by_id(self, report_id: int, is_model: bool = False):
+    async def get_compliance_report_by_id(self, report_id: int) -> ComplianceReport:
         """
         Retrieve a compliance report from the database by ID
         """
@@ -470,12 +443,20 @@ class ComplianceReportRepository:
         )
 
         compliance_report = result.scalars().unique().first()
+        return compliance_report
+
+    @repo_handler
+    async def get_compliance_report_schema_by_id(
+        self, report_id: int
+    ) -> ComplianceReportBaseSchema | None:
+        """
+        Retrieve a compliance report mapped to its schema from the database by ID
+        """
+
+        compliance_report = await self.get_compliance_report_by_id(report_id)
 
         if not compliance_report:
             return None
-
-        if is_model:
-            return compliance_report
 
         return ComplianceReportBaseSchema.model_validate(compliance_report)
 

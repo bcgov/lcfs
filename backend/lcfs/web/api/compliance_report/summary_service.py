@@ -402,9 +402,7 @@ class ComplianceReportSummaryService:
     ) -> ComplianceReportSummarySchema:
         """Several fields on Report Summary are Transient until locked, this function will re-calculate fields as necessary"""
         # Fetch the compliance report details
-        compliance_report = await self.cr_repo.get_compliance_report_by_id(
-            report_id, is_model=True
-        )
+        compliance_report = await self.cr_repo.get_compliance_report_by_id(report_id)
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
 

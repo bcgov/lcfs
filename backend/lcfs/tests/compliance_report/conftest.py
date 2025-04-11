@@ -1,8 +1,10 @@
 import pytest
+import uuid
 from unittest.mock import AsyncMock, MagicMock
 
 from lcfs.db.models import Organization, CompliancePeriod, ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
+from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (

@@ -95,7 +95,7 @@ async def test_get_compliance_report_success(
 ):
 
     report = await compliance_report_repo.get_compliance_report_by_id(
-        report_id=compliance_reports[0].compliance_report_id, is_model=True
+        report_id=compliance_reports[0].compliance_report_id
     )
     assert isinstance(report, ComplianceReport)
     assert report.compliance_report_id == compliance_reports[0].compliance_report_id
@@ -104,9 +104,7 @@ async def test_get_compliance_report_success(
 @pytest.mark.anyio
 async def test_get_compliance_report_not_found(compliance_report_repo):
 
-    report = await compliance_report_repo.get_compliance_report_by_id(
-        report_id=1000, is_model=True
-    )
+    report = await compliance_report_repo.get_compliance_report_by_id(report_id=1000)
 
     assert report is None
 
@@ -223,13 +221,13 @@ async def test_get_reports_paginated_success(
 
 
 @pytest.mark.anyio
-async def test_get_compliance_report_by_id_success_is_not_model(
+async def test_get_compliance_report_schema_by_id_success(
     compliance_report_repo,
     compliance_reports,
 ):
 
-    report = await compliance_report_repo.get_compliance_report_by_id(
-        report_id=compliance_reports[0].compliance_report_id, is_model=False
+    report = await compliance_report_repo.get_compliance_report_schema_by_id(
+        report_id=compliance_reports[0].compliance_report_id
     )
 
     assert isinstance(report, ComplianceReportBaseSchema)
@@ -242,7 +240,7 @@ async def test_get_compliance_report_by_id_success_is_model(
     compliance_reports,
 ):
     report = await compliance_report_repo.get_compliance_report_by_id(
-        report_id=compliance_reports[0].compliance_report_id, is_model=True
+        report_id=compliance_reports[0].compliance_report_id
     )
 
     assert isinstance(report, ComplianceReport)
@@ -254,9 +252,7 @@ async def test_get_compliance_report_by_id_success_not_found(
     compliance_report_repo,
 ):
 
-    report = await compliance_report_repo.get_compliance_report_by_id(
-        report_id=1000, is_model=True
-    )
+    report = await compliance_report_repo.get_compliance_report_by_id(report_id=1000)
 
     assert report is None
 
