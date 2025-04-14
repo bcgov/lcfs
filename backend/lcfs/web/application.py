@@ -24,7 +24,10 @@ from lcfs.services.keycloak.authentication import UserAuthentication
 from lcfs.settings import settings
 from lcfs.web.api.router import api_router
 from lcfs.web.exception.exceptions import ValidationErrorException
-from lcfs.web.exception.exception_handler import validation_error_exception_handler_no_details, validation_exception_handler
+from lcfs.web.exception.exception_handler import (
+    validation_error_exception_handler_no_details,
+    validation_exception_handler,
+)
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 
 origins = [
@@ -68,7 +71,10 @@ class LazyAuthenticationBackend(AuthenticationBackend):
         if request.scope["method"] == "OPTIONS":
             return AuthCredentials([]), UnauthenticatedUser()
 
-        if request.url.path == "/api/health":  # Skip for health check
+        if (
+            request.url.path.startswith("/api/calculator")
+            or request.url.path == "/api/health"
+        ):  # Skip authentication check
             return AuthCredentials([]), UnauthenticatedUser()
 
         # Lazily retrieve Redis, session, and settings from app state
@@ -154,7 +160,9 @@ def get_app() -> FastAPI:
 
     # Register exception handlers
     app.add_exception_handler(RequestValidationError, validation_exception_handler)
-    app.add_exception_handler(ValidationErrorException, validation_error_exception_handler_no_details)
+    app.add_exception_handler(
+        ValidationErrorException, validation_error_exception_handler_no_details
+    )
     app.add_exception_handler(Exception, global_exception_handler)
 
     # Adds prometheus metrics instrumentation.

@@ -70,15 +70,15 @@ class FuelSupplyServices:
         )
         eer = EnergyEffectivenessRatioSchema(
             eer_id=row_data["eer_id"],
-            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"], 2),
+            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"]  or 1, 2),
             fuel_category=fuel_category,
             end_use_type=end_use_type,
         )
         tci = TargetCarbonIntensitySchema(
-            target_carbon_intensity_id=row_data["target_carbon_intensity_id"],
-            target_carbon_intensity=round(row_data["target_carbon_intensity"], 5),
+            target_carbon_intensity_id=row_data["target_carbon_intensity_id"] or 0,
+            target_carbon_intensity=round(row_data["target_carbon_intensity"] or 0, 5),
             reduction_target_percentage=round(
-                row_data["reduction_target_percentage"], 2
+                row_data["reduction_target_percentage"] or 0, 2
             ),
             fuel_category=fuel_category,
             compliance_period=compliance_period,
@@ -89,7 +89,7 @@ class FuelSupplyServices:
                 fuel_code=row_data["prefix"] + row_data["fuel_suffix"],
                 fuel_code_prefix_id=row_data["fuel_code_prefix_id"],
                 fuel_code_carbon_intensity=round(
-                    row_data["fuel_code_carbon_intensity"], 2
+                    row_data["fuel_code_carbon_intensity"] or 0, 2
                 ),
             )
             if row_data["fuel_code_id"]
@@ -179,7 +179,7 @@ class FuelSupplyServices:
                 )
                 energy_density = EnergyDensitySchema(
                     energy_density_id=row_data["energy_density_id"],
-                    energy_density=round(row_data["energy_density"], 2),
+                    energy_density=round(row_data["energy_density"] or 0, 2),
                     unit=unit,
                 )
             # Only include provision if it's "Fuel code - section 19 (b) (i)" and fuel_code exists
@@ -200,7 +200,7 @@ class FuelSupplyServices:
                 fuel_type=row_data["fuel_type"],
                 fossil_derived=row_data["fossil_derived"],
                 default_carbon_intensity=(
-                    round(default_ci, 2)
+                    round(default_ci or 0, 2)
                     if default_ci is not None and row_data["fuel_type"] != "Other"
                     else category_ci if category_ci is not None else None
                 ),

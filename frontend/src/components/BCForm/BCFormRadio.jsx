@@ -10,9 +10,17 @@ import { Controller } from 'react-hook-form'
 import PropTypes from 'prop-types'
 import { CustomLabel } from './CustomLabel'
 
-export const BCFormRadio = ({ name, control, label, options, disabled }) => {
+export const BCFormRadio = ({
+  name,
+  control,
+  label,
+  options,
+  disabled,
+  orientation = 'vertical',
+  sx = {}
+}) => {
   const generateRadioOptions = () => {
-    return options.map((singleOption, idx) => (
+    return options.map((singleOption) => (
       <FormControlLabel
         key={singleOption.value}
         value={singleOption.value}
@@ -32,8 +40,8 @@ export const BCFormRadio = ({ name, control, label, options, disabled }) => {
   }
 
   return (
-    <FormControl component="fieldset">
-      <FormLabel component="legend" sx={{ marginBottom: 1 }}>
+    <FormControl component="fieldset" sx={{ ...sx }}>
+      <FormLabel component="legend">
         <BCTypography variant="label" component="span">
           {label}
         </BCTypography>
@@ -50,6 +58,7 @@ export const BCFormRadio = ({ name, control, label, options, disabled }) => {
             value={value}
             onChange={onChange}
             aria-labelledby={label}
+            row={orientation === 'horizontal'}
             style={{
               gap: 8,
               marginTop: 8
@@ -68,5 +77,7 @@ BCFormRadio.propTypes = {
   control: PropTypes.any.isRequired,
   label: PropTypes.string,
   setValue: PropTypes.any,
-  options: PropTypes.array.isRequired
+  options: PropTypes.array.isRequired,
+  disabled: PropTypes.bool,
+  orientation: PropTypes.oneOf(['vertical', 'horizontal'])
 }
