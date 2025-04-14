@@ -264,6 +264,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               alertRef={alertRef}
               hasSupplemental={reportData?.report.hasSupplemental}
               chain={reportData.chain}
+              isQuarterlyReport={isQuarterlyReport}
             />
           </Stack>
           {!location.state?.newReport && (
@@ -292,8 +293,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
-          {isGovernmentUser && <AssessmentStatement />}
-          {hasRoles(roles.analyst) && (
+          {isGovernmentUser && !isQuarterlyReport && <AssessmentStatement />}
+          {hasRoles(roles.analyst) && !isQuarterlyReport && (
             <AssessmentRecommendation
               complianceReportId={complianceReportId}
               currentStatus={currentStatus}

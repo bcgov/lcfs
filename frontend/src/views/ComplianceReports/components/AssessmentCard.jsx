@@ -31,7 +31,8 @@ export const AssessmentCard = ({
   currentStatus,
   complianceReportId,
   alertRef,
-  chain
+  chain,
+  isQuarterlyReport
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
@@ -144,35 +145,38 @@ export const AssessmentCard = ({
               ['Assessed', 'Reassessed', 'Rejected'].includes(
                 reportData.report.currentStatus?.status
               )) ||
-              isGovernmentUser) && (
-              <>
-                <BCTypography
-                  sx={{ paddingTop: '16px' }}
-                  component="div"
-                  variant="h6"
-                  color="primary"
-                >
-                  {t('report:assessmentStatement')}
-                  {((hasRoles('Analyst') && currentStatus === 'Submitted') ||
-                    (hasRoles('Compliance Manager') &&
-                      currentStatus === 'Recommended by analyst') ||
-                    (hasRoles('Director') &&
-                      currentStatus === 'Recommended by manager')) && (
-                    <span style={{ color: 'red' }}>
-                      {' '}
-                      {t('report:assessmentStatementEdit')}
-                    </span>
-                  )}
-                </BCTypography>
-                <List sx={{ padding: 0 }}>
-                  <StyledListItem>
-                    <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
-                      {reportData.report.assessmentStatement || 'N/A'}
-                    </ListItemText>
-                  </StyledListItem>
-                </List>
-              </>
-            )}
+              isGovernmentUser) &&
+              !isQuarterlyReport && (
+                <>
+                  <BCTypography
+                    sx={{ paddingTop: '16px' }}
+                    component="div"
+                    variant="h6"
+                    color="primary"
+                  >
+                    {t('report:assessmentStatement')}
+                    {((hasRoles('Analyst') && currentStatus === 'Submitted') ||
+                      (hasRoles('Compliance Manager') &&
+                        currentStatus === 'Recommended by analyst') ||
+                      (hasRoles('Director') &&
+                        currentStatus === 'Recommended by manager')) && (
+                      <span style={{ color: 'red' }}>
+                        {' '}
+                        {t('report:assessmentStatementEdit')}
+                      </span>
+                    )}
+                  </BCTypography>
+                  <List sx={{ padding: 0 }}>
+                    <StyledListItem>
+                      <ListItemText
+                        slotProps={{ primary: { variant: 'body4' } }}
+                      >
+                        {reportData.report.assessmentStatement || 'N/A'}
+                      </ListItemText>
+                    </StyledListItem>
+                  </List>
+                </>
+              )}
             {filteredChain.length > 0 &&
               currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
                 <>
