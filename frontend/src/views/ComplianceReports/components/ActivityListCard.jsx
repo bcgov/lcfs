@@ -5,7 +5,13 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import Box from '@mui/material/Box'
 
-export const ActivityListCard = ({ name, period, currentStatus }) => {
+export const ActivityListCard = ({
+  name,
+  period,
+  currentStatus,
+  quarter='',
+  isQuarterlyReport
+}) => {
   const { t } = useTranslation(['report'])
 
   return (
@@ -28,11 +34,16 @@ export const ActivityListCard = ({ name, period, currentStatus }) => {
             color="text"
             component="div"
             dangerouslySetInnerHTML={{
-              __html: t('report:activityHdrLabel', { name, period })
+              __html: isQuarterlyReport
+                ? t('report:quarterlyActivityHdrLabel', { quarter })
+                : t('report:activityHdrLabel', { name, period })
             }}
           />
           <Box>
-            <ActivityLinksList currentStatus={currentStatus} />
+            <ActivityLinksList
+              currentStatus={currentStatus}
+              isQuarterlyReport={isQuarterlyReport}
+            />
           </Box>
         </BCBox>
       }

@@ -23,7 +23,7 @@ export const StyledChip = styled(Chip)({
   backgroundColor: colors.nav.main
 })
 
-export const ActivityLinksList = ({ currentStatus }) => {
+export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const apiService = useApiService()
@@ -31,9 +31,10 @@ export const ActivityLinksList = ({ currentStatus }) => {
 
   const [isOpen, setIsOpen] = useState(false)
 
-  const createActivity = (nameKey, labelKey, route) => ({
+  const createActivity = (nameKey, labelKey, route, enableForQuarterly) => ({
     name: t(nameKey),
     label: t(labelKey),
+    enableForQuarterly,
     action: () => {
       navigate(
         route
@@ -63,22 +64,26 @@ export const ActivityLinksList = ({ currentStatus }) => {
       createActivity(
         'report:activityLists.supplyOfFuel',
         'report:activityLabels.supplyOfFuel',
-        ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL
+        ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL,
+        true
       ),
       createActivity(
         'report:activityLists.notionalTransfers',
         'report:activityLabels.notionalTransfers',
-        ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS
+        ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS,
+        false
       ),
       createActivity(
         'report:activityLists.fuelsOtherUse',
         'report:activityLabels.fuelsOtherUse',
-        ROUTES.REPORTS.ADD.OTHER_USE_FUELS
+        ROUTES.REPORTS.ADD.OTHER_USE_FUELS,
+        false
       ),
       createActivity(
         'report:activityLists.exportFuels',
         'report:activityLabels.exportFuels',
-        ROUTES.REPORTS.ADD.FUEL_EXPORTS
+        ROUTES.REPORTS.ADD.FUEL_EXPORTS,
+        false
       )
     ],
     [t, navigate, compliancePeriod, complianceReportId, createActivity]
@@ -89,19 +94,22 @@ export const ActivityLinksList = ({ currentStatus }) => {
       createActivity(
         'report:activityLists.finalSupplyEquipment',
         'report:activityLabels.finalSupplyEquipment',
-        ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS
+        ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS,
+        false
       ),
       createActivity(
         'report:activityLists.allocationAgreements',
         'report:activityLabels.allocationAgreements',
-        ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS
+        ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS,
+        false
       ),
       {
         name: t('report:activityLists.uploadDocuments'),
         label: t('report:activityLabels.uploadDocuments'),
         action: () => {
           setIsOpen(true)
-        }
+        },
+        enableForQuarterly: true
       }
     ],
     [t, navigate, compliancePeriod, complianceReportId, createActivity]
@@ -122,28 +130,32 @@ export const ActivityLinksList = ({ currentStatus }) => {
         component="div"
         sx={{ maxWidth: '100%', listStyleType: 'disc' }}
       >
-        {primaryList.map((activity) => (
-          <Box
-            sx={{ cursor: 'pointer' }}
-            component="a"
-            key={activity.name}
-            alignItems="flex-start"
-            onClick={activity.action}
-            data-test={activity.label}
-          >
-            <BCTypography
-              variant="subtitle2"
-              color="link"
-              sx={{
-                textDecoration: 'underline',
-                '&:hover': { color: 'info.main' }
-              }}
-            >
-              <StyledChip color="primary" label={activity.label} />
-              {activity.name}
-            </BCTypography>
-          </Box>
-        ))}
+        {primaryList.map(
+          (activity) =>
+            ((isQuarterlyReport && activity.enableForQuarterly) ||
+              !isQuarterlyReport) && (
+              <Box
+                sx={{ cursor: 'pointer' }}
+                component="a"
+                key={activity.name}
+                alignItems="flex-start"
+                onClick={activity.action}
+                data-test={activity.label}
+              >
+                <BCTypography
+                  variant="subtitle2"
+                  color="link"
+                  sx={{
+                    textDecoration: 'underline',
+                    '&:hover': { color: 'info.main' }
+                  }}
+                >
+                  <StyledChip color="primary" label={activity.label} />
+                  {activity.name}
+                </BCTypography>
+              </Box>
+            )
+        )}
       </List>
       <BCTypography
         variant="body4"
@@ -158,28 +170,32 @@ export const ActivityLinksList = ({ currentStatus }) => {
         component="div"
         sx={{ maxWidth: '100%', listStyleType: 'disc' }}
       >
-        {secondaryList.map((activity) => (
-          <Box
-            sx={{ cursor: 'pointer' }}
-            component="a"
-            key={activity.name}
-            alignItems="flex-start"
-            onClick={activity.action}
-            data-test={activity.label}
-          >
-            <BCTypography
-              variant="subtitle2"
-              color="link"
-              sx={{
-                textDecoration: 'underline',
-                '&:hover': { color: 'info.main' }
-              }}
-            >
-              <StyledChip color="primary" label={activity.label} />
-              {activity.name}
-            </BCTypography>
-          </Box>
-        ))}
+        {secondaryList.map(
+          (activity) =>
+            ((isQuarterlyReport && activity.enableForQuarterly) ||
+              !isQuarterlyReport) && (
+              <Box
+                sx={{ cursor: 'pointer' }}
+                component="a"
+                key={activity.name}
+                alignItems="flex-start"
+                onClick={activity.action}
+                data-test={activity.label}
+              >
+                <BCTypography
+                  variant="subtitle2"
+                  color="link"
+                  sx={{
+                    textDecoration: 'underline',
+                    '&:hover': { color: 'info.main' }
+                  }}
+                >
+                  <StyledChip color="primary" label={activity.label} />
+                  {activity.name}
+                </BCTypography>
+              </Box>
+            )
+        )}
       </List>
       {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
         <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>

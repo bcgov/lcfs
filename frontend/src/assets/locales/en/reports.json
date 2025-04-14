@@ -1,6 +1,7 @@
 {
   "title": "Compliance reporting",
   "complianceReport": "Compliance report",
+  "complianceReportEarlyIssuance": "Early issuance report - Quarter",
   "newReportBtn": "New compliance report",
   "reportColLabels": {
     "compliancePeriod": "Compliance period",
@@ -16,6 +17,7 @@
   "hoAddrLabelEdit": "Head office address (international)",
   "bcRecordLabel": "Address in B.C. (where records are maintained)",
   "activityHdrLabel": "Did <b>{{name}}</b> engage in any of the following activities between January 1, {{period}}, and December 31, {{period}}?",
+  "quarterlyActivityHdrLabel": "Report your quarter {{quarter}} fuel supply as well as any supporting documents.",
   "reportActivities": "Report activities",
   "orgDetails": "Organization details",
   "supportingDocs": "Supporting documents",

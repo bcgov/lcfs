@@ -32,7 +32,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import colors from '@/themes/base/colors.js'
 import ROUTES from '@/routes/routes.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
-import { FILTER_KEYS } from '@/constants/common.js'
+import { FILTER_KEYS, REPORT_SCHEDULES } from '@/constants/common.js'
 
 const iconStyle = {
   width: '2rem',
@@ -52,6 +52,10 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const { compliancePeriod, complianceReportId } = useParams()
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
+
+  const isQuarterlyReport = useMemo(() => {
+    return reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+  }, [reportData?.report?.reportingFrequency])
 
   const scrollToTopOrBottom = () => {
     if (isScrollingUp) {
@@ -227,8 +231,9 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             variant="h5"
             color="primary"
           >
-            {compliancePeriod + ' ' + t('report:complianceReport')} -{' '}
-            {reportData?.report.nickname}
+            {isQuarterlyReport
+              ? `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report.nickname}`
+              : `${compliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${reportData?.report?.quarter ?? [1]}`}
           </BCTypography>
           <BCTypography
             variant="h6"
@@ -245,6 +250,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <ActivityListCard
                 name={orgData?.name}
                 period={compliancePeriod}
+                isQuarterlyReport={isQuarterlyReport}
+                quarter={reportData?.report?.quarter ?? [1]}
                 reportID={complianceReportId}
                 currentStatus={currentStatus}
               />
