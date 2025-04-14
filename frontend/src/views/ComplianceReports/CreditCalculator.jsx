@@ -220,6 +220,12 @@ export const CreditCalculator = () => {
     }
   }, [selectedEndUse, setValue])
 
+  useEffect(() => {
+    if (provisionOfTheAct) {
+      setValue('fuelCode', '')
+    }
+  }, [provisionOfTheAct, setValue])
+
   // Calculate credits when form values change
   const fuelTypeId = selectedFuelObj?.fuelTypeId
   const fuelCategoryId = selectedFuelObj?.fuelCategoryId
