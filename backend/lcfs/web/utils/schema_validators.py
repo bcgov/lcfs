@@ -2,6 +2,26 @@ import re
 from fastapi.exceptions import RequestValidationError
 
 
+def fuel_quantity_required(values: dict) -> dict:
+    quantity = values.get("quantity")
+    if not quantity:
+        q1 = values.get("q1Quantity") or values.get("q1_quantity")
+        q2 = values.get("q2Quantity") or values.get("q2_quantity")
+        q3 = values.get("q3Quantity") or values.get("q3_quantity")
+        q4 = values.get("q4Quantity") or values.get("q4_quantity")
+        if not q1 and not q2 and not q3 and not q4:
+            errors = [
+                {
+                    "loc": ("quantity",),
+                    "msg": "field required",
+                    "type": "value_error",
+                }
+            ]
+            raise RequestValidationError(errors)
+
+    return values
+
+
 def fuel_code_required(values: dict) -> dict:
     # Make this function work with both dictionaries and objects
     if hasattr(values, "get"):
