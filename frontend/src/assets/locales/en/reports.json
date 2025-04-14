@@ -192,7 +192,8 @@
     "line": "Line",
     "value": "Value",
     "totalValue": "Total Value",
-    "units": "Units"
+    "units": "Units",
+    "earlyIssuanceSummary": "Early Issuance Summary"
   },
   "summaryLoadingMsg": "Loading compliance report summary...",
   "noSigningAuthorityTooltip": "Cannot submit: Signing authority role required.",
