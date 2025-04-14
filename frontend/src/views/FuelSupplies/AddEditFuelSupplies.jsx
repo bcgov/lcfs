@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { DEFAULT_CI_FUEL } from '@/constants/common'
+import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -20,6 +20,8 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelSupplyColDefs } from './_schema'
+import { ComplianceReports } from '@/views/ComplianceReports/index.js'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -43,6 +45,8 @@ export const AddEditFuelSupplies = () => {
     )
 
   const isSupplemental = complianceReport?.report?.version !== 0
+  const isEarlyIssuance =
+    complianceReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   const {
     data: optionsData,
@@ -136,10 +140,12 @@ export const AddEditFuelSupplies = () => {
       optionsData,
       errors,
       warnings,
-      isSupplemental
+      compliancePeriod,
+      isSupplemental,
+      isEarlyIssuance
     )
     setColumnDefs(updatedColumnDefs)
-  }, [isSupplemental, errors, optionsData, warnings])
+  }, [isSupplemental, isEarlyIssuance, errors, optionsData, warnings])
 
   useEffect(() => {
     if (!fuelSuppliesLoading && !isArrayEmpty(data)) {

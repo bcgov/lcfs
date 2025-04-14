@@ -42,6 +42,7 @@ import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTra
 import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog.jsx'
 import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog.jsx'
 import { Edit, ExpandMore } from '@mui/icons-material'
+import { REPORT_SCHEDULES } from '@/constants/common.js'
 
 const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
@@ -64,6 +65,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   const hasSupplierRole = hasRoles('Supplier')
   const isSupplemental = complianceReportData.report.version > 0
   const hasVersions = complianceReportData.chain.length > 1
+  const isEarlyIssuance =
+    complianceReportData.report?.reportingFrequency ===
+    REPORT_SCHEDULES.QUARTERLY
 
   const editSupportingDocs = useMemo(() => {
     return (
@@ -127,7 +131,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
               disabled={!(hasVersions || isSupplemental)}
               onComponent={<FuelSupplyChangelog canEdit={canEdit} />}
               offComponent={
-                <FuelSupplySummary status={currentStatus} data={data} />
+                <FuelSupplySummary
+                  status={currentStatus}
+                  data={data}
+                  isEarlyIssuance={isEarlyIssuance}
+                />
               }
             />
           )
