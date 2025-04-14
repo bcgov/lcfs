@@ -1,11 +1,13 @@
+from collections import defaultdict
+
 import math
-import uuid
-from typing import List, Union, Literal
-
 import structlog
+import uuid
 from fastapi import Depends
+from typing import List, Literal
+from typing import Union
 
-
+from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,
     SupplementalInitiatorType,
@@ -13,11 +15,22 @@ from lcfs.db.models.compliance.ComplianceReport import (
 )
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.compliance.FuelExport import FuelExport
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.user import UserProfile
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationResponseSchema
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
+from lcfs.web.api.compliance_report.dtos import (
+    ChangelogFuelSuppliesDTO,
+    ChangelogAllocationAgreementsDTO,
+    ChangelogFuelExportsDTO,
+    ChangelogNotionalTransfersDTO,
+    ChangelogOtherUsesDTO,
+)
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportCreateSchema,
@@ -26,24 +39,10 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportViewSchema,
 )
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
+from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
-from collections import defaultdict
-from typing import List
-
-from lcfs.web.api.compliance_report.dtos import (
-    ChangelogFuelSuppliesDTO,
-    ChangelogAllocationAgreementsDTO,
-    ChangelogFuelExportsDTO,
-    ChangelogNotionalTransfersDTO,
-    ChangelogOtherUsesDTO,
-)
-from lcfs.db.models.compliance.FuelExport import FuelExport
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
-from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
-from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 
 logger = structlog.get_logger(__name__)
 
@@ -52,8 +51,10 @@ class ComplianceReportServices:
     def __init__(
         self,
         repo: ComplianceReportRepository = Depends(),
+        org_repo: OrganizationsRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
     ) -> None:
+        self.org_repo = org_repo
         self.repo = repo
         self.snapshot_services = snapshot_services
 
@@ -81,6 +82,8 @@ class ComplianceReportServices:
         if not draft_status:
             raise DataNotFoundException(f"Status '{report_data.status}' not found.")
 
+        organization = await self.org_repo.get_organization(organization_id)
+
         # Generate a new group_uuid for the new report series
         group_uuid = str(uuid.uuid4())
 
@@ -88,7 +91,11 @@ class ComplianceReportServices:
             compliance_period_id=period.compliance_period_id,
             organization_id=organization_id,
             current_status_id=draft_status.compliance_report_status_id,
-            reporting_frequency=ReportingFrequency.ANNUAL,
+            reporting_frequency=(
+                ReportingFrequency.QUARTERLY
+                if organization.has_early_issuance
+                else ReportingFrequency.ANNUAL
+            ),
             compliance_report_group_uuid=group_uuid,  # New group_uuid for the series
             version=0,  # Start with version 0
             nickname=report_data.nickname or "Original Report",
