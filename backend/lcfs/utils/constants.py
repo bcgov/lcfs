@@ -89,5 +89,6 @@ id_prefix_to_transaction_type_map = {
     "IA": "InitiativeAgreement",
     "CR": "ComplianceReport",
 }
+FUEL_CATEGORIES = ["Diesel", "Gasoline", "Jet fuel"]
 
 POSTAL_REGEX = r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$"

@@ -78,3 +78,6 @@ export const FILTER_KEYS = {
 }
 
 export const MAX_FILE_SIZE_BYTES = 52428800 // 50MB
+
+export const FUEL_CATEGORIES = ['Diesel', 'Gasoline', 'Jet fuel']
+export const LEGISLATION_TRANSITION_YEAR = 2024
