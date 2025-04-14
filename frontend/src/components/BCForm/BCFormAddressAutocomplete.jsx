@@ -34,7 +34,7 @@ export const BCFormAddressAutocomplete = ({
               alignItems="center"
               width="100%"
               sx={{
-                minWidth: '800px', // Set a minimum width to ensure space for both elements
+                minWidth: '800px',
                 overflow: 'visible'
               }}
             >
