@@ -67,7 +67,8 @@ export const AddEditUser = ({ userType }) => {
       ? // eslint-disable-next-line react-hooks/rules-of-hooks
         useOrganizationUser(
           orgID || currentUser?.organization?.organizationId,
-          userID
+          userID,
+          { enabled: !isCurrentUserLoading }
         )
       : { undefined, isLoading: false, isFetched: false }
     : // eslint-disable-next-line react-hooks/rules-of-hooks

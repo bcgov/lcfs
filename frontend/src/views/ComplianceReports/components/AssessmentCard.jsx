@@ -47,7 +47,8 @@ export const AssessmentCard = ({
   const { data: reportData, isLoading: isReportLoading } =
     useGetComplianceReport(
       currentUser?.organization?.organizationId,
-      complianceReportId
+      complianceReportId,
+      { enabled: !isCurrentUserLoading }
     )
 
   const onEdit = () => {
