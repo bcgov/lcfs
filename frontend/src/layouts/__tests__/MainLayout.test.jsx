@@ -5,9 +5,10 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useMatches, useNavigate, useLocation, Outlet } from 'react-router-dom'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuthorization } from '@/contexts/AuthorizationContext'
 import { useLoadingStore } from '@/stores/useLoadingStore'
 import { ROUTES } from '@/routes/routes'
+import { useAuth } from '@/hooks/useAuth'
 
 // Mock all required hooks and components
 vi.mock('react-router-dom', async () => {
@@ -21,9 +22,9 @@ vi.mock('react-router-dom', async () => {
       .mockReturnValue(<div data-test="outlet-content">Outlet Content</div>)
   }
 })
-
+vi.mock('@/hooks/useAuth')
 vi.mock('@/hooks/useCurrentUser')
-vi.mock('@/contexts/AuthContext')
+vi.mock('@/contexts/AuthorizationContext')
 vi.mock('@/stores/useLoadingStore')
 vi.mock('../MainLayout/components/Navbar', () => ({
   Navbar: () => <div data-test="navbar-component">Navbar</div>
@@ -76,10 +77,13 @@ describe('MainLayout', () => {
         isGovernmentUser: true
       }
     })
-    useAuth.mockReturnValue({
+    useAuthorization.mockReturnValue({
       forbidden: false
     })
     useLoadingStore.mockReturnValue(false)
+    useAuth.mockReturnValue({
+      refreshToken: vi.fn()
+    })
 
     // Clear navigation mock calls
     navigate.mockClear()
@@ -114,7 +118,7 @@ describe('MainLayout', () => {
   })
 
   it('redirects to unauthorized page when forbidden is true', async () => {
-    useAuth.mockReturnValue({
+    useAuthorization.mockReturnValue({
       forbidden: true
     })
 
@@ -132,7 +136,7 @@ describe('MainLayout', () => {
   })
 
   it('does not redirect when already on unauthorized page', () => {
-    useAuth.mockReturnValue({
+    useAuthorization.mockReturnValue({
       forbidden: true
     })
 

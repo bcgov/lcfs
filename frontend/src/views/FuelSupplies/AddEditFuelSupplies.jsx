@@ -40,7 +40,8 @@ export const AddEditFuelSupplies = () => {
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
       currentUser?.organization?.organizationId,
-      complianceReportId
+      complianceReportId,
+      { enabled: !currentUserLoading }
     )
 
   const isSupplemental = complianceReport?.report?.version !== 0
