@@ -529,7 +529,7 @@ async def test_update_compliance_report_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -634,7 +634,7 @@ async def test_update_compliance_report_draft_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -677,7 +677,7 @@ async def test_update_compliance_report_submitted_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -723,7 +723,7 @@ async def test_update_compliance_report_recommended_by_analyst_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -769,7 +769,7 @@ async def test_update_compliance_report_recommended_by_manager_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -812,7 +812,7 @@ async def test_update_compliance_report_assessed_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json() == expected_response
+        assert response.json()["report"] == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
