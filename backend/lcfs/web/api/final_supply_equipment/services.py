@@ -298,7 +298,7 @@ class FinalSupplyEquipmentServices:
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
         compliance_report = (
-            await self.compliance_report_repo.get_compliance_report_by_id(
+            await self.compliance_report_repo.get_compliance_report_schema_by_id(
                 compliance_report_id,
             )
         )

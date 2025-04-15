@@ -1,6 +1,9 @@
 import pytest
+import uuid
 from unittest.mock import AsyncMock, MagicMock
 
+from lcfs.db.models import Organization, CompliancePeriod, ComplianceReport
+from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.constants import FORMATS
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -11,6 +14,9 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportCreateSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.compliance_report.summary_repo import (
+    ComplianceReportSummaryRepository,
+)
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
     ComplianceDataService,
@@ -151,6 +157,11 @@ def mock_other_uses_repo():
 
 
 @pytest.fixture
+def mock_summary_repo():
+    return AsyncMock(spec=ComplianceReportSummaryRepository)
+
+
+@pytest.fixture
 def mock_compliance_data_service():
     """Mock the ComplianceDataService."""
     mock_service = MagicMock(spec=ComplianceDataService)
@@ -163,6 +174,7 @@ def mock_compliance_data_service():
 @pytest.fixture
 def compliance_report_summary_service(
     mock_repo,
+    mock_summary_repo,
     mock_trxn_repo,
     mock_notional_transfer_service,
     mock_fuel_supply_repo,
@@ -171,7 +183,8 @@ def compliance_report_summary_service(
     mock_compliance_data_service,
 ):
     service = ComplianceReportSummaryService()
-    service.repo = mock_repo
+    service.repo = mock_summary_repo
+    service.cr_repo = mock_repo
     service.trxn_repo = mock_trxn_repo
     service.notional_transfer_service = mock_notional_transfer_service
     service.fuel_supply_repo = mock_fuel_supply_repo
@@ -182,16 +195,44 @@ def compliance_report_summary_service(
 
 
 @pytest.fixture
+def mock_summary_service(
+    mock_repo,
+    mock_summary_repo,
+    mock_trxn_repo,
+    mock_notional_transfer_service,
+    mock_fuel_supply_repo,
+    mock_fuel_export_repo,
+    mock_other_uses_repo,
+    mock_compliance_data_service,
+):
+    mock_service = AsyncMock(spec=ComplianceReportSummaryService)
+    return mock_service
+
+
+@pytest.fixture
 def compliance_report_update_service(
-    mock_repo, mock_org_service, compliance_report_summary_service, mock_user_profile
+    mock_repo,
+    mock_org_service,
+    mock_summary_service,
+    mock_summary_repo,
+    mock_user_profile,
 ):
     service = ComplianceReportUpdateService()
     service.repo = mock_repo
-    service.summary_service = compliance_report_summary_service
+    service.summary_repo = mock_summary_repo
+    service.summary_service = mock_summary_service
     service.request = MagicMock()
     service.request.user = mock_user_profile
     service.org_service = mock_org_service
     return service
+
+
+@pytest.fixture
+def mock_org_service():
+    mock_org_service = MagicMock()
+    mock_org_service.adjust_balance = AsyncMock()  # Mock the adjust_balance method
+    mock_org_service.calculate_available_balance = AsyncMock(return_value=1000)
+    return mock_org_service
 
 
 @pytest.fixture
@@ -227,3 +268,90 @@ def compliance_report_repo(dbsession):
     )
 
     return repo
+
+
+@pytest.fixture
+def summary_repo(dbsession):
+    # Create a mock for fuel_supply_repo
+    fuel_supply_repo_mock = MagicMock()
+    fuel_supply_repo_mock.get_effective_fuel_supplies = AsyncMock()
+
+    # Create an instance of ComplianceReportRepository with the mock
+    repo = ComplianceReportSummaryRepository(
+        db=dbsession, fuel_supply_repo=fuel_supply_repo_mock
+    )
+
+    return repo
+
+
+@pytest.fixture
+async def organizations(dbsession):
+    orgs = [
+        Organization(
+            organization_id=998,
+            organization_code="o998",
+            total_balance=0,
+            reserved_balance=0,
+            count_transfers_in_progress=0,
+            name="org998",
+        ),
+        Organization(
+            organization_id=999,
+            organization_code="o999",
+            total_balance=0,
+            reserved_balance=0,
+            count_transfers_in_progress=0,
+            name="org999",
+        ),
+    ]
+    dbsession.add_all(orgs)
+    await dbsession.commit()
+    for org in orgs:
+        await dbsession.refresh(org)
+    return orgs
+
+
+@pytest.fixture
+async def compliance_periods(dbsession):
+    periods = [
+        CompliancePeriod(compliance_period_id=998, description="998"),
+        CompliancePeriod(compliance_period_id=999, description="999"),
+    ]
+    dbsession.add_all(periods)
+    await dbsession.commit()
+    for period in periods:
+        await dbsession.refresh(period)
+    return periods
+
+
+@pytest.fixture
+async def compliance_reports(
+    dbsession, organizations, compliance_periods, compliance_report_statuses
+):
+    reports = [
+        ComplianceReport(
+            compliance_report_id=994,
+            compliance_period_id=compliance_periods[0].compliance_period_id,
+            organization_id=organizations[0].organization_id,
+            nickname="test",
+            reporting_frequency=ReportingFrequency.ANNUAL,
+            current_status_id=compliance_report_statuses[0].compliance_report_status_id,
+            compliance_report_group_uuid=str(uuid.uuid4()),
+            version=1,
+        ),
+        ComplianceReport(
+            compliance_report_id=995,
+            compliance_period_id=compliance_periods[1].compliance_period_id,
+            organization_id=organizations[1].organization_id,
+            nickname="test",
+            reporting_frequency=ReportingFrequency.ANNUAL,
+            current_status_id=compliance_report_statuses[1].compliance_report_status_id,
+            compliance_report_group_uuid=str(uuid.uuid4()),
+            version=1,
+        ),
+    ]
+    dbsession.add_all(reports)
+    await dbsession.commit()
+    for report in reports:
+        await dbsession.refresh(report)
+    return reports
