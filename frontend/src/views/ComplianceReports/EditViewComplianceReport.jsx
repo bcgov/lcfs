@@ -232,8 +232,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             color="primary"
           >
             {isQuarterlyReport
-              ? `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report.nickname}`
-              : `${compliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${reportData?.report?.quarter ?? [1]}`}
+              ? `${compliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${reportData?.report?.quarter ?? [1]}`
+              : `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report.nickname}`}
           </BCTypography>
           <BCTypography
             variant="h6"
