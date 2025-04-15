@@ -53,10 +53,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
 
-  const isQuarterlyReport = useMemo(() => {
-    return reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
-  }, [reportData?.report?.reportingFrequency])
-
   const scrollToTopOrBottom = () => {
     if (isScrollingUp) {
       window.scrollTo({
@@ -106,6 +102,45 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report.organizationId
   )
+
+  const qReport = useMemo(() => {
+    const isQuarterly =
+      reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+    let quarter = null
+
+    if (isQuarterly) {
+      const isDraft = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
+      const now = new Date()
+      const submittedDate = isDraft
+        ? now
+        : new Date(reportData?.report?.updatedDate)
+
+      // Get month (0-11) and calculate quarter
+      const month = submittedDate.getMonth()
+      const currentYear = now.getFullYear()
+      if (isDraft && currentYear > parseInt(compliancePeriod)) {
+        quarter = 4
+      } else if (month >= 0 && month <= 2) {
+        quarter = 1 // Jan-Mar: Q1
+      } else if (month >= 3 && month <= 5) {
+        quarter = 2 // Apr-Jun: Q2
+      } else if (month >= 6 && month <= 8) {
+        quarter = 3 // Jul-Sep: Q3
+      } else {
+        quarter = 4 // Oct-Dec: Q4
+      }
+    }
+
+    return {
+      quarter,
+      isQuarterly
+    }
+  }, [
+    reportData?.report?.reportingFrequency,
+    reportData?.report?.updatedDate,
+    currentStatus,
+    compliancePeriod
+  ])
 
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
@@ -231,8 +266,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             variant="h5"
             color="primary"
           >
-            {isQuarterlyReport
-              ? `${compliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${reportData?.report?.quarter ?? [1]}`
+            {qReport?.isQuarterly
+              ? `${compliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${qReport?.quarter}`
               : `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report.nickname}`}
           </BCTypography>
           <BCTypography
@@ -250,8 +285,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <ActivityListCard
                 name={orgData?.name}
                 period={compliancePeriod}
-                isQuarterlyReport={isQuarterlyReport}
-                quarter={reportData?.report?.quarter ?? [1]}
+                isQuarterlyReport={qReport?.isQuarterly}
+                quarter={qReport?.quarter}
                 reportID={complianceReportId}
                 currentStatus={currentStatus}
               />
@@ -265,7 +300,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               alertRef={alertRef}
               hasSupplemental={reportData?.report.hasSupplemental}
               chain={reportData.chain}
-              isQuarterlyReport={isQuarterlyReport}
+              isQuarterlyReport={qReport?.isQuarterly}
             />
           </Stack>
           {!location.state?.newReport && (
@@ -294,8 +329,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
-          {isGovernmentUser && !isQuarterlyReport && <AssessmentStatement />}
-          {hasRoles(roles.analyst) && !isQuarterlyReport && (
+          {isGovernmentUser && !qReport?.isQuarterly && <AssessmentStatement />}
+          {hasRoles(roles.analyst) && !qReport?.isQuarterly && (
             <AssessmentRecommendation
               reportData={reportData}
               complianceReportId={complianceReportId}

@@ -57,26 +57,6 @@ compliance_report_document_association = Table(
     ),
 )
 
-quarterly_to_annual_report = Table(
-    "quarterly_to_annual_report",
-    BaseModel.metadata,
-    Column(
-        "annual_report_id",
-        Integer,
-        ForeignKey("compliance_report.compliance_report_id", ondelete="CASCADE"),
-        primary_key=True,
-        comment="FK to the annual compliance report",
-    ),
-    Column(
-        "quarterly_report_id",
-        Integer,
-        ForeignKey("compliance_report.compliance_report_id", ondelete="CASCADE"),
-        primary_key=True,
-        comment="FK to the quarterly compliance report",
-    ),
-    comment="Associates quarterly compliance reports to their annual parent report",
-)
-
 
 class ComplianceReport(BaseModel, Auditable):
     __tablename__ = "compliance_report"
@@ -142,11 +122,6 @@ class ComplianceReport(BaseModel, Auditable):
         default=ReportingFrequency.ANNUAL,
         comment="Reporting frequency",
     )
-    quarter = Column(
-        Enum(Quarter),
-        nullable=True,
-        comment="Quarter for the compliance report",
-    )
     nickname = Column(
         String,
         nullable=True,
@@ -170,15 +145,6 @@ class ComplianceReport(BaseModel, Auditable):
     organization = relationship("Organization", back_populates="compliance_reports")
     current_status = relationship("ComplianceReportStatus")
     transaction = relationship("Transaction")
-    quarterly_reports = relationship(
-        "ComplianceReport",
-        secondary=quarterly_to_annual_report,
-        primaryjoin=compliance_report_id
-        == quarterly_to_annual_report.c.annual_report_id,
-        secondaryjoin=compliance_report_id
-        == quarterly_to_annual_report.c.quarterly_report_id,
-        backref="annual_report"
-    )
 
     # Tracking relationships
     summary = relationship(

@@ -45,11 +45,6 @@ class ReportingFrequency(str, Enum):
     ANNUAL = "Annual"
     QUARTERLY = "Quarterly"
 
-class Quarter(str, Enum):
-    Q1 = "Q1"
-    Q2 = "Q2"
-    Q3 = "Q3"
-    Q4 = "Q4"
 
 class PortsEnum(str, Enum):
     SINGLE = "Single port"
@@ -137,7 +132,6 @@ class ComplianceReportBaseSchema(BaseSchema):
     nickname: Optional[str] = None
     supplemental_note: Optional[str] = None
     reporting_frequency: Optional[ReportingFrequency] = None
-    quarter: Optional[Quarter] = None
     update_date: Optional[datetime] = None
     history: Optional[List[ComplianceReportHistorySchema]] = None
     has_supplemental: bool

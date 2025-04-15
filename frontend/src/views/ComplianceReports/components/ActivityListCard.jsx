@@ -10,7 +10,7 @@ export const ActivityListCard = ({
   period,
   currentStatus,
   quarter='',
-  isQuarterlyReport
+  isQuarterlyReport=false
 }) => {
   const { t } = useTranslation(['report'])
 

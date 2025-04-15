@@ -33,7 +33,7 @@ export const AssessmentCard = ({
   complianceReportId,
   alertRef,
   chain,
-  isQuarterlyReport
+  isQuarterlyReport=false
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()

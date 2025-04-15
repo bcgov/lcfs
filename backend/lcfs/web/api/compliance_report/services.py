@@ -61,18 +61,6 @@ class ComplianceReportServices:
         self.repo = repo
         self.snapshot_services = snapshot_services
 
-    def get_active_quarter(now_date: date, year: int):
-        now = date.today()
-        if now_date >= date(year + 1, 1, 1):
-            return 4
-        elif now_date >= date(year, 10, 1):
-            return 3
-        elif now_date >= date(year, 7, 1):
-            return 2
-        elif now_date >= date(year, 4, 1):
-            return 1
-        return None
-
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
         """Fetches all compliance periods and converts them to Pydantic models."""
@@ -88,7 +76,6 @@ class ComplianceReportServices:
     ) -> ComplianceReportBaseSchema:
         """Creates a new compliance report."""
         period = await self.repo.get_compliance_period(report_data.compliance_period)
-        active_quarter = self.get_active_quarter(int(period.description))
         if not period:
             raise DataNotFoundException("Compliance period not found.")
 
@@ -125,23 +112,6 @@ class ComplianceReportServices:
 
         # Add the new compliance report
         report = await self.repo.create_compliance_report(report)
-
-        # Link to annual report if this is a quarterly and a valid annual_report_id was given
-        if (
-            reporting_frequency == ReportingFrequency.QUARTERLY
-            and report_data.annual_report_id
-        ):
-            annual_report = await self.repo.get_compliance_report_by_id(
-                report_data.annual_report_id
-            )
-            if not annual_report:
-                raise DataNotFoundException("Provided annual report does not exist.")
-            if annual_report.reporting_frequency != ReportingFrequency.ANNUAL:
-                raise RequestValidationError("Target report is not an annual report.")
-
-            # Create the association (SQLAlchemy relationship handles this via append)
-            annual_report.quarterly_reports.append(report)
-            await self.repo.db.flush()  # or commit if needed
 
         # Snapshot the Organization Details
         await self.snapshot_services.create_organization_snapshot(
