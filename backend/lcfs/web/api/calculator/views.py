@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/compliance-periods",
+    "/compliance-periods/",
     tags=["public"],
     response_model=List[CompliancePeriodBaseSchema],
     status_code=status.HTTP_200_OK,
