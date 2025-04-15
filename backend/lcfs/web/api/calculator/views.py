@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/compliance-periods",
+    "/compliance-periods/",
     tags=["public"],
     response_model=List[CompliancePeriodBaseSchema],
     status_code=status.HTTP_200_OK,
@@ -45,7 +45,7 @@ async def get_calculator_fuel_types(
 
 
 @router.get(
-    "/{compliance_period}/fuel-type-options",
+    "/{compliance_period}/fuel-type-options/",
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )
@@ -66,7 +66,7 @@ async def get_calculator_fuel_type_options(
 
 
 @router.get(
-    "/{compliance_period}/calculate",
+    "/{compliance_period}/calculate/",
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )

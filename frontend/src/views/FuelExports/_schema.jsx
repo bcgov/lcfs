@@ -644,10 +644,6 @@ export const fuelExportSummaryColDefs = [
     valueFormatter
   },
   {
-    headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
-    field: 'exportDate'
-  },
-  {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     field: 'fuelType',
     valueGetter: (params) => params.data.fuelType?.fuelType
@@ -673,6 +669,10 @@ export const fuelExportSummaryColDefs = [
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
     field: 'fuelCode',
     valueGetter: (params) => params.data.fuelCode?.fuelCode
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
+    field: 'exportDate'
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),
@@ -725,11 +725,6 @@ export const changelogCommonColDefs = (highlight = true) => [
       highlight && changelogCellStyle(params, 'complianceUnits')
   },
   {
-    headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
-    field: 'exportDate',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'exportDate')
-  },
-  {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     field: 'fuelType.fuelType',
     cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelTypeId')
@@ -757,6 +752,11 @@ export const changelogCommonColDefs = (highlight = true) => [
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
     cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCodeId')
+  },
+  {
+    headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
+    field: 'exportDate',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'exportDate')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.quantity'),

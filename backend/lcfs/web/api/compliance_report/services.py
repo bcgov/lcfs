@@ -39,6 +39,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportListSchema,
     ComplianceReportStatusSchema,
     ComplianceReportViewSchema,
+    ChainedComplianceReportSchema,
 )
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.api.organizations.repo import OrganizationsRepository
@@ -453,12 +454,44 @@ class ComplianceReportServices:
         return reports
 
     @service_handler
+    async def get_compliance_report_chain(
+        self,
+        report_id: int,
+        user: UserProfile,
+    ) -> ChainedComplianceReportSchema:
+        """
+        Fetches a specific compliance report by ID.
+        """
+        report = await self.get_compliance_report_by_id(report_id, user)
+
+        compliance_report_chain = await self.repo.get_compliance_report_chain(
+            report.compliance_report_group_uuid
+        )
+
+        is_newest = len(compliance_report_chain) - 1 == report.version
+        filtered_chain = [
+            chained_report
+            for chained_report in compliance_report_chain
+            if chained_report.version <= report.version
+        ]
+
+        # Apply masking to each report in the chain
+        masked_chain = self._mask_report_status(filtered_chain, user)
+        # Apply history masking to each report in the chain
+        masked_chain = [
+            self._mask_report_status_for_history(report, user)
+            for report in masked_chain
+        ]
+        return ChainedComplianceReportSchema(
+            report=report, chain=masked_chain, is_newest=is_newest
+        )
+
+    @service_handler
     async def get_compliance_report_by_id(
         self,
         report_id: int,
         user: UserProfile,
-        get_chain: bool = False,
-    ):
+    ) -> ComplianceReportBaseSchema:
         """
         Fetches a specific compliance report by ID.
         """
@@ -472,25 +505,6 @@ class ComplianceReportServices:
         history_masked_report = self._mask_report_status_for_history(
             masked_report, user
         )
-
-        if get_chain:
-            compliance_report_chain = await self.repo.get_compliance_report_chain(
-                report.compliance_report_group_uuid, report.version
-            )
-
-            # Apply masking to each report in the chain
-            masked_chain = self._mask_report_status(compliance_report_chain, user)
-            # Apply history masking to each report in the chain
-            masked_chain = [
-                self._mask_report_status_for_history(report, user)
-                for report in masked_chain
-            ]
-            compliance_report_chain = masked_chain
-
-            return {
-                "report": history_masked_report,
-                "chain": compliance_report_chain,
-            }
 
         return history_masked_report
 
