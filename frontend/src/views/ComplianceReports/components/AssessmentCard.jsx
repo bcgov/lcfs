@@ -190,23 +190,21 @@ export const AssessmentCard = ({
             <Role roles={[roles.supplier]}>
               {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
                 currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
-                  <>
-                    <BCTypography
-                      sx={{ paddingTop: '16px' }}
-                      component="div"
-                      variant="body4"
-                    >
-                      {t('report:supplementalWarning')}
-                    </BCTypography>
-                    <Box>
-                      <Tooltip
-                        title={
-                          reportData.isNewest
-                            ? ''
-                            : 'Government has a reassessment in progress.'
-                        }
-                        placement="right"
-                      >
+                  <BCTypography
+                    sx={{ paddingTop: '16px' }}
+                    component="div"
+                    variant="body4"
+                  >
+                    {t('report:supplementalWarning')}
+                  </BCTypography>
+                )}
+            </Role>
+            {currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
+              <Box display={'flex'} gap={2}>
+                <Role roles={[roles.supplier]}>
+                  {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
+                    currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
+                      <Box>
                         <BCButton
                           data-test="create-supplemental"
                           size="small"
@@ -216,18 +214,14 @@ export const AssessmentCard = ({
                             createSupplementalReport()
                           }}
                           startIcon={<Assignment />}
-                          sx={{ mt: 2 }}
+                          sx={{ mt: 3 }}
                           disabled={isLoading}
                         >
                           {t('report:createSupplementalRptBtn')}
                         </BCButton>
-                      </Tooltip>
-                    </Box>
-                  </>
-                )}
-            </Role>
-            {currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
-              <Box>
+                      </Box>
+                    )}
+                </Role>
                 <BCButton
                   data-test="download-report"
                   size="small"
