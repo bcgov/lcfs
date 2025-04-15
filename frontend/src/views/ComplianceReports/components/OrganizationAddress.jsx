@@ -26,6 +26,7 @@ export const OrganizationAddress = ({
   const { t } = useTranslation(['common', 'report', 'org'])
   const [modalData, setModalData] = useState(null)
   const [sameAsService, setSameAsService] = useState(false)
+  const [sameAsLegalName, setSameAsLegalName] = useState(false)
   const [selectedServiceAddress, setSelectedServiceAddress] = useState(null)
 
   const validationSchema = Yup.object({
@@ -53,6 +54,7 @@ export const OrganizationAddress = ({
   const { handleSubmit, control, setValue, watch, reset } = form
 
   const serviceAddress = watch('serviceAddress')
+  const legalName = watch('name')
 
   // If 'same as service address' is checked, automatically update records address
   useEffect(() => {
@@ -60,6 +62,13 @@ export const OrganizationAddress = ({
       setValue('recordsAddress', serviceAddress)
     }
   }, [sameAsService, serviceAddress, setValue])
+
+  // If 'same as legal name' is checked, automatically update operating name
+  useEffect(() => {
+    if (sameAsLegalName && legalName) {
+      setValue('operatingName', legalName)
+    }
+  }, [sameAsLegalName, legalName, setValue])
 
   // Submission handlers
   const onSubmit = async (data) => {
@@ -101,6 +110,14 @@ export const OrganizationAddress = ({
     }
   }
 
+  // Checkbox to keep operating name synced with legal name
+  const handleSameNameChange = (event) => {
+    setSameAsLegalName(event.target.checked)
+    if (event.target.checked) {
+      setValue('operatingName', legalName)
+    }
+  }
+
   // Helpers to select addresses
   const handleSelectServiceAddress = (addressData) => {
     setSelectedServiceAddress(addressData)
@@ -134,6 +151,7 @@ export const OrganizationAddress = ({
       setSameAsService(
         snapshotData.serviceAddress === snapshotData.recordsAddress
       )
+      setSameAsLegalName(snapshotData.name === snapshotData.operatingName)
     }
   }, [reset, snapshotData])
 
@@ -154,7 +172,12 @@ export const OrganizationAddress = ({
     },
     {
       name: 'operatingName',
-      label: t('org:operatingNameLabel')
+      label: t('org:operatingNameLabel'),
+      checkbox: true,
+      checkboxLabel: 'same as legal name',
+      onCheckboxChange: handleSameNameChange,
+      isChecked: sameAsLegalName,
+      disabled: sameAsLegalName
     },
     {
       name: 'phone',
@@ -175,14 +198,18 @@ export const OrganizationAddress = ({
   const addressFormFields = [
     {
       name: 'serviceAddress',
-      label: t('report:serviceAddrLabel'),
+      label: isEditing
+        ? t('report:orgDetailsForm.serviceAddrLabelEdit')
+        : t('report:orgDetailsForm.serviceAddrLabelView'),
       onSelectAddress: handleSelectServiceAddress
     },
     {
       name: 'recordsAddress',
-      label: t('report:bcRecordLabel'),
+      label: isEditing
+        ? t('report:orgDetailsForm.bcRecordLabelEdit')
+        : t('report:orgDetailsForm.bcRecordLabelView'),
       checkbox: true,
-      checkboxLabel: 'Same as address for service',
+      checkboxLabel: 'same as address for service',
       onCheckboxChange: handleSameAddressChange,
       isChecked: sameAsService,
       disabled: sameAsService,
@@ -191,7 +218,12 @@ export const OrganizationAddress = ({
   ]
 
   // Merge text + address fields for read-only view
-  const allFormFields = [...textFormFields, ...addressFormFields]
+  const allFormFields = [
+    ...textFormFields.slice(0, -1),
+    ...addressFormFields,
+    textFormFields.at(-1)
+  ]
+  const headOffice = textFormFields.at(-1)
 
   // Helper to show either the value or 'Required' in read-only mode
   const displayAddressValue = (value) => (value?.trim() ? value : '')
@@ -232,13 +264,18 @@ export const OrganizationAddress = ({
           <FormProvider {...{ control, setValue }}>
             <Stack spacing={1} mb={3}>
               {/* Regular text fields */}
-              {textFormFields.map((field) => (
+              {textFormFields.slice(0, -1).map((field) => (
                 <BCFormText
                   data-test={field.name}
                   key={field.name}
                   control={control}
                   label={field.label}
                   name={field.name}
+                  checkbox={field.checkbox}
+                  checkboxLabel={field.checkboxLabel}
+                  onCheckboxChange={field.onCheckboxChange}
+                  isChecked={field.isChecked}
+                  disabled={field.disabled}
                 />
               ))}
 
@@ -256,9 +293,21 @@ export const OrganizationAddress = ({
                   isChecked={field.isChecked}
                   disabled={field.disabled}
                   onSelectAddress={field.onSelectAddress}
-                  optional={field.name !== 'serviceAddress'}
                 />
               ))}
+              {/* Head office address */}
+              <BCFormText
+                data-test={headOffice.name}
+                key={headOffice.name}
+                control={control}
+                label={headOffice.label}
+                name={headOffice.name}
+                checkbox={headOffice.checkbox}
+                checkboxLabel={headOffice.checkboxLabel}
+                onCheckboxChange={headOffice.onCheckboxChange}
+                isChecked={headOffice.isChecked}
+                disabled={headOffice.disabled}
+              />
             </Stack>
             <Box display="flex">
               <BCButton

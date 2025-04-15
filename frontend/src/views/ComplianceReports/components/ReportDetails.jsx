@@ -48,11 +48,16 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
-  const { data: currentUser, hasRoles } = useCurrentUser()
+  const {
+    data: currentUser,
+    hasRoles,
+    isLoading: isCurrentUserLoading
+  } = useCurrentUser()
 
   const { data: complianceReportData } = useGetComplianceReport(
     currentUser?.organization?.organizationId,
-    complianceReportId
+    complianceReportId,
+    { enabled: !isCurrentUserLoading }
   )
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
