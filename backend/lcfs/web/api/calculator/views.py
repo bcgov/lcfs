@@ -45,7 +45,7 @@ async def get_calculator_fuel_types(
 
 
 @router.get(
-    "/{compliance_period}/fuel-type-options",
+    "/{compliance_period}/fuel-type-options/",
     tags=["public"],
     status_code=status.HTTP_200_OK,
 )
