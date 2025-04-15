@@ -3,7 +3,7 @@ from fastapi import Depends
 from sqlalchemy import and_, select, delete, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.dependencies import get_async_db_session
@@ -16,7 +16,6 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.utils.constants import LCFS_Constants
-from lcfs.web.api.allocation_agreement.schema import AllocationAgreementSchema
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.core.decorators import repo_handler
@@ -70,9 +69,10 @@ class AllocationAgreementRepository:
     @repo_handler
     async def get_allocation_agreements(
         self, compliance_report_id: int, changelog: bool = False
-    ) -> List[AllocationAgreementSchema]:
+    ) -> List[AllocationAgreement]:
         """
         Queries allocation agreements from the database for a specific compliance report.
+        Returns raw ORM model objects.
         """
         # Retrieve the compliance report's group UUID
         report_group_query = await self.db.execute(
@@ -95,10 +95,10 @@ class AllocationAgreementRepository:
         compliance_report_group_uuid: str,
         compliance_report_id: int,
         changelog: bool = False,
-    ) -> List[AllocationAgreementSchema]:
+    ) -> List[AllocationAgreement]:
         """
-        Queries allocation agreements from the database for a specific compliance report.
-        If changelog=True, includes deleted records to show history.
+        Queries effective allocation agreements from the database.
+        Returns raw ORM model objects.
         """
         # Get all compliance report IDs in the group up to the specified report
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
@@ -173,40 +173,12 @@ class AllocationAgreementRepository:
 
         result = await self.db.execute(allocation_agreements_select)
         allocation_agreements = result.unique().scalars().all()
-
-        return [
-            AllocationAgreementSchema(
-                allocation_agreement_id=allocation_agreement.allocation_agreement_id,
-                transaction_partner=allocation_agreement.transaction_partner,
-                transaction_partner_email=allocation_agreement.transaction_partner_email,
-                transaction_partner_phone=allocation_agreement.transaction_partner_phone,
-                postal_address=allocation_agreement.postal_address,
-                ci_of_fuel=allocation_agreement.ci_of_fuel,
-                quantity=allocation_agreement.quantity,
-                units=allocation_agreement.units,
-                compliance_report_id=allocation_agreement.compliance_report_id,
-                allocation_transaction_type=allocation_agreement.allocation_transaction_type.type,
-                fuel_type=allocation_agreement.fuel_type.fuel_type,
-                fuel_type_other=allocation_agreement.fuel_type_other,
-                fuel_category=allocation_agreement.fuel_category.category,
-                provision_of_the_act=allocation_agreement.provision_of_the_act.name,
-                # Set fuel_code only if it exists
-                fuel_code=(
-                    allocation_agreement.fuel_code.fuel_code
-                    if allocation_agreement.fuel_code
-                    else None
-                ),
-                group_uuid=allocation_agreement.group_uuid,
-                version=allocation_agreement.version,
-                action_type=allocation_agreement.action_type,
-            )
-            for allocation_agreement in allocation_agreements
-        ]
+        return allocation_agreements
 
     @repo_handler
     async def get_allocation_agreements_paginated(
         self, pagination: PaginationRequestSchema, compliance_report_id: int
-    ) -> List[AllocationAgreementSchema]:
+    ) -> Tuple[List[AllocationAgreement], int]:
         conditions = [AllocationAgreement.compliance_report_id == compliance_report_id]
         offset = 0 if pagination.page < 1 else (pagination.page - 1) * pagination.size
         limit = pagination.size
