@@ -233,7 +233,9 @@ class FuelSupplyServices:
             fuel_supply_id=fuel_supply.fuel_supply_id,
             action_type=fuel_supply.action_type,
             compliance_units=round(fuel_supply.compliance_units),
-            end_use_type=fuel_supply.end_use_type.type,
+            end_use_type=(
+                fuel_supply.end_use_type.type if fuel_supply.end_use_type else None
+            ),
             target_ci=fuel_supply.target_ci,
             version=fuel_supply.version,
             quantity=fuel_supply.quantity,

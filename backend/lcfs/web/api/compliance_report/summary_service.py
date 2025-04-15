@@ -789,16 +789,10 @@ class ComplianceReportSummaryService:
             compliance_period_start, compliance_period_end, organization_id
         )  # line 14
         compliance_units_prev_issued_for_fuel_supply = (
-            previous_summary.line_18_units_to_be_banked
-            + previous_summary.line_15_banked_units_used
-            if previous_summary
-            else 0
+            previous_summary.line_18_units_to_be_banked if previous_summary else 0
         )  # line 15
         compliance_units_prev_issued_for_fuel_export = (
-            previous_summary.line_19_units_to_be_exported
-            + previous_summary.line_16_banked_units_remaining
-            if previous_summary
-            else 0
+            previous_summary.line_19_units_to_be_exported if previous_summary else 0
         )  # line 16
         available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(
             organization_id, compliance_period_start.year

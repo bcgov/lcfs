@@ -1,7 +1,7 @@
 import structlog
 from datetime import date, datetime
 from fastapi import Depends
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager
 from typing import List, Optional, Dict, Any
@@ -132,6 +132,7 @@ class OtherUsesRepository:
         )
         return result
 
+    @repo_handler
     async def get_effective_other_uses(
         self,
         compliance_report_group_uuid: str,
@@ -141,9 +142,9 @@ class OtherUsesRepository:
     ) -> List[OtherUsesSchema]:
         """
         Queries other uses from the database for a specific compliance report.
+        If changelog=True, includes deleted records to show history.
         """
-
-        # Step 1: Subquery to get all compliance_report_ids in the specified group
+        # Get all compliance report IDs in the group up to the specified report
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
             and_(
                 ComplianceReport.compliance_report_group_uuid
@@ -152,24 +153,34 @@ class OtherUsesRepository:
             )
         )
 
-        conditions = [OtherUses.compliance_report_id.in_(compliance_reports_select)]
-        if not changelog:
-            delete_group_select = (
-                select(OtherUses.group_uuid)
-                .where(
-                    OtherUses.compliance_report_id.in_(compliance_reports_select),
-                    OtherUses.action_type == ActionTypeEnum.DELETE,
-                )
-                .distinct()
+        # Get groups that have any deleted records
+        deleted_groups = (
+            select(OtherUses.group_uuid)
+            .where(
+                OtherUses.compliance_report_id.in_(compliance_reports_select),
+                OtherUses.action_type == ActionTypeEnum.DELETE,
             )
+            .distinct()
+        )
 
+        # Build query conditions
+        conditions = [OtherUses.compliance_report_id.in_(compliance_reports_select)]
+
+        if changelog:
+            # In changelog view, include all groups (both active and deleted)
             conditions.extend(
                 [
-                    OtherUses.action_type != ActionTypeEnum.DELETE,
-                    ~OtherUses.group_uuid.in_(delete_group_select),
+                    or_(
+                        ~OtherUses.group_uuid.in_(deleted_groups),
+                        OtherUses.group_uuid.in_(deleted_groups),
+                    )
                 ]
             )
+        else:
+            # In regular view, exclude any groups that have deleted records
+            conditions.extend([~OtherUses.group_uuid.in_(deleted_groups)])
 
+        # Get the latest version of each record
         valid_other_uses_select = (
             select(
                 OtherUses.group_uuid,
@@ -178,9 +189,11 @@ class OtherUsesRepository:
             .where(*conditions)
             .group_by(OtherUses.group_uuid)
         )
-        # Now create a subquery for use in the JOIN
-        valid_fuel_supplies_subq = valid_other_uses_select.subquery()
 
+        # Now create a subquery for use in the JOIN
+        valid_other_uses_subq = valid_other_uses_select.subquery()
+
+        # Get the actual records with their related data
         other_uses_select = (
             select(OtherUses)
             .options(
@@ -191,10 +204,10 @@ class OtherUsesRepository:
                 joinedload(OtherUses.fuel_code),
             )
             .join(
-                valid_fuel_supplies_subq,
+                valid_other_uses_subq,
                 and_(
-                    OtherUses.group_uuid == valid_fuel_supplies_subq.c.group_uuid,
-                    OtherUses.version == valid_fuel_supplies_subq.c.max_version,
+                    OtherUses.group_uuid == valid_other_uses_subq.c.group_uuid,
+                    OtherUses.version == valid_other_uses_subq.c.max_version,
                 ),
             )
             .order_by(OtherUses.other_uses_id)
@@ -436,3 +449,8 @@ class OtherUsesRepository:
             formatted_fuel_types.append(formatted_fuel_type)
 
         return formatted_fuel_types
+
+    async def delete_other_use(self, other_uses_id):
+        await self.db.execute(
+            delete(OtherUses).where(OtherUses.other_uses_id == other_uses_id)
+        )

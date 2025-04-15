@@ -17,11 +17,13 @@ import { useGetAllOtherUses } from '@/hooks/useOtherUses.js'
 import { ScheduleCSummary } from '@/views/ComplianceReports/legacy/ScheduleCSummary.jsx'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply.js'
 import { ScheduleBSummary } from '@/views/ComplianceReports/legacy/ScheduleBSummary.jsx'
+import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
+import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
 import { isArrayEmpty } from '@/utils/array.js'
 import { ExpandMore } from '@mui/icons-material'
 
 const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
-  const { t } = useTranslation(['legacy'])
+  const { t } = useTranslation(['legacy', 'report'])
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
 
@@ -70,6 +72,21 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
         component: (data) =>
           data.length > 0 && (
             <ScheduleCSummary status={currentStatus} data={data} />
+          )
+      },
+      {
+        name: t('report:activityLists.allocationAgreements'),
+        action: () =>
+          navigate(
+            buildPath(ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS, {
+              compliancePeriod,
+              complianceReportId
+            })
+          ),
+        useFetch: useGetAllAllocationAgreements,
+        component: (data) =>
+          data?.allocationAgreements?.length > 0 && (
+            <AllocationAgreementSummary status={currentStatus} data={data} />
           )
       }
     ],

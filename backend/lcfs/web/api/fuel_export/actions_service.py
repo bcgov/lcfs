@@ -220,11 +220,9 @@ class FuelExportActionService:
             fe_data.group_uuid
         )
 
-        if fe_data.is_new_supplemental_entry:
-            await self.repo.delete_fuel_export(fuel_export_id=fe_data.fuel_export_id)
-            return DeleteFuelExportResponseSchema(
-                success=True, message="Marked as deleted."
-            )
+        if existing_export.compliance_report_id == fe_data.compliance_report_id:
+            await self.repo.delete_fuel_export(fe_data.fuel_export_id)
+            return DeleteFuelExportResponseSchema(message="Marked as deleted.")
         else:
             delete_export = FuelExport(
                 compliance_report_id=fe_data.compliance_report_id,
@@ -243,6 +241,4 @@ class FuelExportActionService:
         delete_export.units = QuantityUnitsEnum(fe_data.units)
 
         await self.repo.create_fuel_export(delete_export)
-        return DeleteFuelExportResponseSchema(
-            success=True, message="Fuel export record marked as deleted."
-        )
+        return DeleteFuelExportResponseSchema(message="Marked as deleted.")

@@ -1,6 +1,7 @@
 import { faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
+import { DateTime } from 'luxon'
 
 const outlineBase = {
   variant: 'outlined',
@@ -232,16 +233,16 @@ export const buttonClusterConfigFn = ({
     ],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
       ...(isGovernmentUser && hasRoles('Analyst')
-        ? [
-            reportButtons.recommendByAnalyst,
-            ...(canReturnToSupplier() ? [reportButtons.returnToSupplier] : [])
-          ]
+        ? [reportButtons.recommendByAnalyst, reportButtons.returnToSupplier]
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: [
       ...(isGovernmentUser && hasRoles('Analyst')
-        ? [reportButtons.recommendByAnalyst, reportButtons.deleteAnalystAdjustment]
-        : []),
+        ? [
+            reportButtons.recommendByAnalyst,
+            reportButtons.deleteAnalystAdjustment
+          ]
+        : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: [
       ...(isGovernmentUser && hasRoles('Compliance Manager')

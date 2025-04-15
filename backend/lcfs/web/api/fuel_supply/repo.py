@@ -1,7 +1,7 @@
 import structlog
 from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, literal
+from sqlalchemy import and_, or_, select, literal, delete
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
@@ -558,40 +558,46 @@ class FuelSupplyRepository:
         changelog: Optional[bool] = False,
     ) -> Sequence[FuelSupply]:
         """
-        Retrieve effective FuelSupply records associated with the given compliance_report_group_uuid.
-        For each group_uuid:
-            - Exclude the entire group if any record in the group is marked as DELETE.
-            - From the remaining groups, select the record with the highest version and highest priority.
-        Optionally, exclude fuel supplies associated with draft compliance reports if exclude_draft is True.
+        Queries fuel supplies from the database for a specific compliance report.
+        If changelog=True, includes deleted records to show history.
         """
-        # Step 1: Subquery to get all compliance_report_ids in the specified group
+        # Get all compliance report IDs in the group up to the specified report
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
-            ComplianceReport.compliance_report_group_uuid
-            == compliance_report_group_uuid
+            and_(
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                ComplianceReport.compliance_report_id <= compliance_report_id,
+            )
         )
 
-        if compliance_report_id is not None:
-            compliance_reports_select = compliance_reports_select.where(
-                ComplianceReport.compliance_report_id <= compliance_report_id
+        # Get groups that have any deleted records
+        deleted_groups = (
+            select(FuelSupply.group_uuid)
+            .where(
+                FuelSupply.compliance_report_id.in_(compliance_reports_select),
+                FuelSupply.action_type == ActionTypeEnum.DELETE,
             )
+            .distinct()
+        )
 
+        # Build query conditions
         conditions = [FuelSupply.compliance_report_id.in_(compliance_reports_select)]
-        if not changelog:
-            delete_group_select = (
-                select(FuelSupply.group_uuid)
-                .where(
-                    FuelSupply.compliance_report_id.in_(compliance_reports_select),
-                    FuelSupply.action_type == ActionTypeEnum.DELETE,
-                )
-                .distinct()
-            )
+
+        if changelog:
+            # In changelog view, include all groups (both active and deleted)
             conditions.extend(
                 [
-                    FuelSupply.action_type != ActionTypeEnum.DELETE,
-                    ~FuelSupply.group_uuid.in_(delete_group_select),
+                    or_(
+                        ~FuelSupply.group_uuid.in_(deleted_groups),
+                        FuelSupply.group_uuid.in_(deleted_groups),
+                    )
                 ]
             )
+        else:
+            # In regular view, exclude any groups that have deleted records
+            conditions.extend([~FuelSupply.group_uuid.in_(deleted_groups)])
 
+        # Get the latest version of each record
         valid_fuel_supplies_select = (
             select(
                 FuelSupply.group_uuid,
@@ -600,9 +606,10 @@ class FuelSupplyRepository:
             .where(*conditions)
             .group_by(FuelSupply.group_uuid)
         )
+
         valid_fuel_supplies_subq = valid_fuel_supplies_select.subquery()
 
-        # Step 4: Main query to retrieve FuelSupply records with necessary eager relationships
+        # Get the actual records with their related data
         query = (
             select(FuelSupply)
             .options(
@@ -633,8 +640,12 @@ class FuelSupplyRepository:
             .order_by(FuelSupply.create_date.asc())
         )
 
-        # Step 5: Execute the query and retrieve results using unique()
         result = await self.db.execute(query)
         fuel_supplies = result.unique().scalars().all()
 
         return fuel_supplies
+
+    async def delete_fuel_supply(self, fuel_supply_id):
+        await self.db.execute(
+            delete(FuelSupply).where(FuelSupply.fuel_supply_id == fuel_supply_id)
+        )
