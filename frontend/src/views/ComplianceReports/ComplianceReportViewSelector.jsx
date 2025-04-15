@@ -17,7 +17,10 @@ export const ComplianceReportViewSelector = () => {
     error
   } = useGetComplianceReport(
     currentUser?.organization?.organizationId,
-    complianceReportId
+    complianceReportId,
+    {
+      enabled: !isCurrentUserLoading
+    }
   )
 
   if (isReportLoading || isCurrentUserLoading) {

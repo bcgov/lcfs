@@ -967,13 +967,17 @@ class ComplianceReportSummaryService:
 
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
-            TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity / CI class
+            TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity
             EER = fuel_supply.eer or 0  # Energy Effectiveness Ratio
-            RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity / CI fuel
-            UCI = (
-                fuel_supply.uci or 0
-            )  # Additional Carbon Intensity (only used in new calculation)
-            Q = fuel_supply.quantity or 0  # Quantity of Fuel Supplied
+            RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity
+            UCI = fuel_supply.uci or 0  # Additional Carbon Intensity
+            Q = (
+                (fuel_supply.quantity or 0)
+                + (fuel_supply.q1_quantity or 0)
+                + (fuel_supply.q2_quantity or 0)
+                + (fuel_supply.q3_quantity or 0)
+                + (fuel_supply.q4_quantity or 0)
+            )
             ED = fuel_supply.energy_density or 0  # Energy Density
 
             # Apply the appropriate compliance units formula

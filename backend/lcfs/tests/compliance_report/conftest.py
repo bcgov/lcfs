@@ -29,6 +29,7 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
+from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
@@ -301,6 +302,12 @@ def mock_repo():
 
 
 @pytest.fixture
+def mock_org_repo():
+    repo = AsyncMock(spec=OrganizationsRepository)
+    return repo
+
+
+@pytest.fixture
 def mock_snapshot_service():
     service = AsyncMock(spec=OrganizationSnapshotService)
     return service
@@ -379,10 +386,12 @@ def compliance_report_update_service(
 def compliance_report_service(
     mock_user_profile,
     mock_repo,
+    mock_org_repo,
     mock_snapshot_service,
 ):
     service = ComplianceReportServices()
     service.repo = mock_repo
+    service.org_repo = mock_org_repo
     service.request = MagicMock()
     service.request.user = mock_user_profile
     service.snapshot_services = mock_snapshot_service

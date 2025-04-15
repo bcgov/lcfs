@@ -58,6 +58,11 @@ export const DEFAULT_CI_FUEL = {
   'Jet fuel': 88.83
 }
 
+export const REPORT_SCHEDULES = {
+  ANNUAL: 'Annual',
+  QUARTERLY: 'Quarterly'
+}
+
 export const PHONE_REGEX =
   /^((\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})?$/
 
@@ -93,3 +98,4 @@ export const isLegacyCompliancePeriod = (compliancePeriod) => {
   return parsedPeriod < LEGISLATION_TRANSITION_YEAR
 }
 
+export const FUEL_CATEGORIES = ['Diesel', 'Gasoline', 'Jet fuel']

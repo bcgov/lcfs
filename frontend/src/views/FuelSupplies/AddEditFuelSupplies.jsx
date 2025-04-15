@@ -1,7 +1,11 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { DEFAULT_CI_FUEL, isLegacyCompliancePeriod } from '@/constants/common'
+import {
+  DEFAULT_CI_FUEL,
+  REPORT_SCHEDULES,
+  isLegacyCompliancePeriod
+} from '@/constants/common'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -39,10 +43,13 @@ export const AddEditFuelSupplies = () => {
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
       currentUser?.organization?.organizationId,
-      complianceReportId
+      complianceReportId,
+      { enabled: !currentUserLoading }
     )
 
   const isSupplemental = complianceReport?.report?.version !== 0
+  const isEarlyIssuance =
+    complianceReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   const {
     data: optionsData,
@@ -141,10 +148,12 @@ export const AddEditFuelSupplies = () => {
       optionsData,
       errors,
       warnings,
-      isSupplemental
+      compliancePeriod,
+      isSupplemental,
+      isEarlyIssuance
     )
     setColumnDefs(updatedColumnDefs)
-  }, [isSupplemental, errors, optionsData, warnings])
+  }, [isSupplemental, isEarlyIssuance, errors, optionsData, warnings])
 
   useEffect(() => {
     if (!fuelSuppliesLoading && !isArrayEmpty(data)) {

@@ -50,7 +50,6 @@ class FuelSupplyServices:
         for row in rows:
             row_data = dict(zip(row._fields, row))
             ft_key = row_data["fuel_type_id"]
-
             # Initialize fuel type entry if it doesn't exist yet
             if ft_key not in fuel_type_dict:
                 energy_density = None
@@ -239,6 +238,10 @@ class FuelSupplyServices:
             target_ci=fuel_supply.target_ci,
             version=fuel_supply.version,
             quantity=fuel_supply.quantity,
+            q1_quantity=fuel_supply.q1_quantity,
+            q2_quantity=fuel_supply.q2_quantity,
+            q3_quantity=fuel_supply.q3_quantity,
+            q4_quantity=fuel_supply.q4_quantity,
             group_uuid=fuel_supply.group_uuid,
             energy_density=fuel_supply.energy_density,
             eer=fuel_supply.eer,

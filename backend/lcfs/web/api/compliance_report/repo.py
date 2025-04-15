@@ -771,7 +771,15 @@ class ComplianceReportRepository:
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
                 fuel_category = self._format_category(record.fuel_category.category)
-                fuel_quantities[fuel_category] += record.quantity
+
+                total_quantity = (
+                    (record.quantity or 0)
+                    + (record.q1_quantity or 0)
+                    + (record.q2_quantity or 0)
+                    + (record.q3_quantity or 0)
+                    + (record.q4_quantity or 0)
+                )
+                fuel_quantities[fuel_category] += total_quantity
             elif (
                 isinstance(record, OtherUses)
                 and record.fuel_type.fossil_derived == fossil_derived

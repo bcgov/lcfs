@@ -142,5 +142,10 @@ export const apiRoutes = {
   getNotifications: '/notifications/list',
   getNotificationsCount: '/notifications/count',
   getNotificationSubscriptions: '/notifications/subscriptions',
-  saveNotificationSubscriptions: '/notifications/subscriptions/save'
+  saveNotificationSubscriptions: '/notifications/subscriptions/save',
+  // calculator endpoints
+  getCalculatorCompliancePeriods: '/calculator/compliance-periods',
+  getCalculatorFuelTypes: '/calculator/:complianceYear/',
+  getCalculatorFuelTypeOptions: '/calculator/:complianceYear/fuel-type-options/',
+  getCalculatedComplianceUnits: '/calculator/:complianceYear/calculate/',
 }
