@@ -3,9 +3,19 @@ data_management_roles:
   data_custodian: Binaipal Gill
   product_owner: Alasdair Ring
 product_external_dependencies:
-  notification_standard: [ ]
+  common_components:
+    - BC-Address-Geocoder
+    - Address-Complete
+  identity_authorization:
+    - IDIR
+    - Business-BceId
+  notification_standard:
+    - Common-Hosted-Email-Service
 product_information:
   api_specifications: [ ]
+  business_capabilities_standard:
+    - Environment Sustainability
+    - Environmental Protection
   ministry:
     - Energy, Mines and Low Carbon Innovation
   product_acronym: LCFS
@@ -18,14 +28,28 @@ product_information:
     - https://lowcarbonfuels.gov.bc.ca/
   program_area: Low Carbon Fuels Branch
 product_technology_information:
-  backend_frameworks: [ ]
+  backend_frameworks:
+    - name: FastAPI
+      version: 0.115.4
   backend_languages_version:
     - name: Python
       version: '3.11'
+  ci_cd_tools:
+    - ArgoCD
+    - GitHub-Actions
+  data_storage_platforms:
+    - Postgresql
   frontend_frameworks:
     - name: React
       version: '18'
-  frontend_languages: [ ]
+    - name: Other
+      version: Material UI - 6.4
+  frontend_languages:
+    - name: JavaScript
+      version: 'ES2022'
   hosting_platforms:
     - Private-Cloud-Openshift
+  other_tools: Cypress, Locust
+  spatial_mapping_technologies:
+    - Leaflet
 version: 1
