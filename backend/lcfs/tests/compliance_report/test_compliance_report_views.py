@@ -41,7 +41,7 @@ async def test_get_compliance_periods_success(
     set_mock_user,
 ):
     with patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_all_compliance_periods"
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_all_compliance_periods"
     ) as mock_get_all_compliance_periods:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])  # Set a valid role
 
@@ -97,7 +97,7 @@ async def test_get_compliance_periods_not_found(
     set_mock_user,
 ):
     with patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_all_compliance_periods"
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_all_compliance_periods"
     ) as mock_get_all_compliance_periods:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])  # Set a valid role
 
@@ -122,7 +122,7 @@ async def test_get_compliance_reports_success(
     pagination_request_schema,
 ):
     with patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_reports_paginated"
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_reports_paginated"
     ) as mock_get_compliance_reports_paginated:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
@@ -198,7 +198,7 @@ async def test_get_compliance_reports_not_found(
     pagination_request_schema,
 ):
     with patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_reports_paginated"
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_reports_paginated"
     ) as mock_get_compliance_reports_paginated:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
@@ -225,7 +225,7 @@ async def test_get_compliance_report_by_id_success(
     set_mock_user,
 ):
     with patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_chain"
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
     ) as mock_get_compliance_report_chain, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
@@ -293,7 +293,7 @@ async def test_get_compliance_report_by_id_not_found(
     set_mock_user,
 ):
     with patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_by_id"
     ) as mock_get_compliance_report_by_id:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
@@ -505,14 +505,14 @@ async def test_update_compliance_report_success(
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
-    ) as mock_get_compliance_report_by_id:
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_compliance_report_chain:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+        mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
         )
 
@@ -610,14 +610,14 @@ async def test_update_compliance_report_draft_success(
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
-    ) as mock_get_compliance_report_by_id:
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_compliance_report_chain:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+        mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
         )
 
@@ -653,14 +653,14 @@ async def test_update_compliance_report_submitted_success(
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
-    ) as mock_get_compliance_report_by_id:
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_compliance_report_chain:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+        mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
         )
 
@@ -696,14 +696,14 @@ async def test_update_compliance_report_recommended_by_analyst_success(
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
-    ) as mock_get_compliance_report_by_id:
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_compliance_report_chain:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+        mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
         )
 
@@ -742,14 +742,14 @@ async def test_update_compliance_report_recommended_by_manager_success(
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
-    ) as mock_get_compliance_report_by_id:
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_compliance_report_chain:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+        mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
         )
 
@@ -788,14 +788,14 @@ async def test_update_compliance_report_assessed_success(
     ) as mock_update_compliance_report, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
-        "lcfs.web.api.compliance_report.views.ComplianceReportServices.get_compliance_report_by_id"
-    ) as mock_get_compliance_report_by_id:
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_compliance_report_chain:
         set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
 
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+        mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
             report=mock_compliance_report, chain=[], is_newest=True
         )
 

@@ -179,7 +179,8 @@
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
     "Reassessed": "Re-assessed",
     "renewableTarget": "Renewable fuel target",
-    "lowCarbonTarget": "Low carbon fuel target"
+    "lowCarbonTarget": "Low carbon fuel target",
+    "directorStatement": "Assessment statement from the director"
   },
   "internalComments": "Internal comments",
   "fuelLabels": {
@@ -202,8 +203,6 @@
   "reportAssessed": "Compliance report, Assessed",
   "changelog": "Change log",
   "documentLabel": "Add file attachments (maximum file size: 50 MB):",
-  "assessmentStatement": "Assessment statement from the director",
-  "assessmentStatementEdit": "(can be edited below)",
   "assessmentRecommendation": "Assessment recommendation",
   "directorStatement": "Director assessment statement to the organization (optional)",
   "assessmentStatementInstructions": "The analyst and/or compliance manager can draft an assessment statement to the organization. The director can edit or delete this statement. This is suggested when making analyst adjustments or reassessments.",
