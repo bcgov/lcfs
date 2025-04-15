@@ -215,7 +215,9 @@ describe('OrganizationAddress', () => {
     expect(screen.queryByText('Required')).not.toBeInTheDocument()
 
     // The same check applies to the records address label:
-    expect(screen.getByText('report:bcRecordLabel:')).toBeInTheDocument()
+    expect(
+      screen.getByText('report:orgDetailsForm.bcRecordLabelView:')
+    ).toBeInTheDocument()
     // No "Required" label for empty optional address
     expect(screen.queryByText('Required')).not.toBeInTheDocument()
   })

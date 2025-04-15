@@ -29,8 +29,20 @@ export const BCFormAddressAutocomplete = ({
       render={({ field: { onChange, value }, fieldState: { error } }) => (
         <>
           <InputLabel htmlFor={name} component="label" className="form-label">
-            <Box display="flex" gap={2} flexWrap="wrap">
-              <BCTypography variant="label" component="span">
+            <Box
+              display="flex"
+              alignItems="center"
+              width="100%"
+              sx={{
+                minWidth: '800px',
+                overflow: 'visible'
+              }}
+            >
+              <BCTypography
+                variant="label"
+                component="span"
+                sx={{ flexShrink: 0 }}
+              >
                 {label}:&nbsp;
                 {optional && (
                   <span className="optional" style={{ fontWeight: 'normal' }}>
@@ -54,7 +66,12 @@ export const BCFormAddressAutocomplete = ({
                     />
                   }
                   label={
-                    <BCTypography variant="body4" component="span" color="text">
+                    <BCTypography
+                      variant="body4"
+                      component="span"
+                      color="text"
+                      sx={{ flexShrink: 0 }}
+                    >
                       {checkboxLabel}
                     </BCTypography>
                   }
