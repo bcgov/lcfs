@@ -3,7 +3,7 @@ import structlog
 from fastapi import Depends
 from sqlalchemy import and_, or_, select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from typing import List, Optional, Tuple
 
 from lcfs.db.base import ActionTypeEnum
@@ -40,24 +40,24 @@ class FuelExportRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
         self.query = select(FuelExport).options(
-            joinedload(FuelExport.fuel_code).options(
-                joinedload(FuelCode.fuel_code_status),
-                joinedload(FuelCode.fuel_code_prefix),
+            subqueryload(FuelExport.fuel_code).options(
+                subqueryload(FuelCode.fuel_code_status),
+                subqueryload(FuelCode.fuel_code_prefix),
             ),
-            joinedload(FuelExport.fuel_category).options(
-                joinedload(FuelCategory.target_carbon_intensities),
-                joinedload(FuelCategory.energy_effectiveness_ratio),
+            subqueryload(FuelExport.fuel_category).options(
+                subqueryload(FuelCategory.target_carbon_intensities),
+                subqueryload(FuelCategory.energy_effectiveness_ratio),
             ),
-            joinedload(FuelExport.fuel_type).options(
-                joinedload(FuelType.energy_density),
-                joinedload(FuelType.additional_carbon_intensity),
-                joinedload(FuelType.energy_effectiveness_ratio),
-                joinedload(FuelType.default_carbon_intensities).options(
-                    selectinload(DefaultCarbonIntensity.compliance_period)
+            subqueryload(FuelExport.fuel_type).options(
+                subqueryload(FuelType.energy_density),
+                subqueryload(FuelType.additional_carbon_intensity),
+                subqueryload(FuelType.energy_effectiveness_ratio),
+                subqueryload(FuelType.default_carbon_intensities).options(
+                    subqueryload(DefaultCarbonIntensity.compliance_period)
                 ),
             ),
-            joinedload(FuelExport.provision_of_the_act),
-            joinedload(FuelExport.end_use_type),
+            subqueryload(FuelExport.provision_of_the_act),
+            subqueryload(FuelExport.end_use_type),
         )
 
     @repo_handler
