@@ -156,6 +156,7 @@ class ComplianceReportViewSchema(BaseSchema):
 class ChainedComplianceReportSchema(BaseSchema):
     report: ComplianceReportBaseSchema
     chain: Optional[List[ComplianceReportBaseSchema]] = []
+    is_newest: bool
 
 
 class ComplianceReportCreateSchema(BaseSchema):

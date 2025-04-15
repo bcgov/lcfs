@@ -498,9 +498,7 @@ class ComplianceReportRepository:
         return ComplianceReportBaseSchema.model_validate(compliance_report)
 
     @repo_handler
-    async def get_compliance_report_chain(
-        self, group_uuid: str, version: Optional[int] = None
-    ):
+    async def get_compliance_report_chain(self, group_uuid: str):
         # Build base query with all necessary joins
         query = (
             select(ComplianceReport)
@@ -520,15 +518,9 @@ class ComplianceReportRepository:
             .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
         )
 
-        # Apply version filter only if version is provided
-        if version is not None:
-            query = query.where(ComplianceReport.version <= version)
-
         # Ensure ordering by version
         query = query.order_by(ComplianceReport.version.desc())
-
         result = await self.db.execute(query)
-
         compliance_reports = result.scalars().unique().all()
 
         return [

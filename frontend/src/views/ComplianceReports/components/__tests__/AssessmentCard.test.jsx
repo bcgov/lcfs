@@ -91,10 +91,6 @@ describe('AssessmentCard', () => {
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
       isLoading: true
     })
-    vi.mocked(useComplianceReportHook.useGetComplianceReport).mockReturnValue({
-      isLoading: true,
-      data: {}
-    })
     vi.mocked(useOrganizationSnapshot).mockReturnValue({
       isLoading: true,
       data: {}
@@ -114,13 +110,10 @@ describe('AssessmentCard', () => {
       hasRoles: vi.fn(() => true),
       isLoading: false
     })
-    vi.mocked(useComplianceReportHook.useGetComplianceReport).mockReturnValue({
-      isLoading: false,
-      data: { report: { curentStatus: { status: 'Assessed' } } }
-    })
 
     render(
       <AssessmentCard
+        reportData={{ report: { curentStatus: { status: 'Assessed' } } }}
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={false}
@@ -151,8 +144,14 @@ describe('AssessmentCard', () => {
       }
     ]
 
+    const reportData = {
+      report: {},
+      chain: mockChain
+    }
+
     render(
       <AssessmentCard
+        reportData={reportData}
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={false}
@@ -200,8 +199,14 @@ describe('AssessmentCard', () => {
       }
     ]
 
+    const reportData = {
+      report: {},
+      chain: mockChain
+    }
+
     render(
       <AssessmentCard
+        reportData={reportData}
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={false}
@@ -239,8 +244,15 @@ describe('AssessmentCard', () => {
         currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
       }
     ]
+
+    const reportData = {
+      report: {},
+      chain: mockChain
+    }
+
     render(
       <AssessmentCard
+        reportData={reportData}
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={false}
@@ -262,17 +274,15 @@ describe('AssessmentCard', () => {
       hasRoles: vi.fn(() => true),
       isLoading: false
     })
-    vi.mocked(useComplianceReportHook.useGetComplianceReport).mockReturnValue({
-      isLoading: false,
-      data: {
-        report: {
-          curentStatus: { status: 'Assessed' },
-          assessmentStatement: 'assessment statement test'
-        }
+    const mockChain = {
+      report: {
+        currentStatus: { status: 'Assessed' },
+        assessmentStatement: 'assessment statement test'
       }
-    })
+    }
     render(
       <AssessmentCard
+        reportData={mockChain}
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={true}
