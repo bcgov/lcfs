@@ -1,11 +1,11 @@
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser.js'
-import * as useComplianceReportHook from '@/hooks/useComplianceReports'
 import { wrapper } from '@/tests/utils/wrapper'
 import { render, screen, waitFor } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 import { AssessmentCard } from '../AssessmentCard'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
+import * as useComplianceReportHook from '@/hooks/useComplianceReports.js'
 
 // Mock BCWidgetCard component
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
@@ -65,19 +65,34 @@ vi.mock('@/hooks/useComplianceReports')
 vi.mock('@/hooks/useCreateSupplementalReport')
 vi.mock('@/hooks/useOrganizationSnapshot')
 
+vi.mocked(useOrganizationSnapshot).mockReturnValue({
+  isLoading: true,
+  data: {}
+})
+
+vi.mocked(useComplianceReportHook.useCreateSupplementalReport).mockReturnValue({
+  mutate: vi.fn()
+})
+
 describe('AssessmentCard', () => {
   const mockHistory = [
     {
       status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
       createDate: '2024-10-01',
       userProfile: { firstName: 'John', lastName: 'Doe' },
-      displayName: 'John Doe'
+      displayName: 'John Doe',
+      summary: {
+        line11FossilDerivedBaseFuelTotal: 1
+      }
     },
     {
       status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
       createDate: '2024-09-20',
       userProfile: { firstName: 'Jane', lastName: 'Smith' },
-      displayName: 'Jane Smith'
+      displayName: 'Jane Smith',
+      summary: {
+        line11FossilDerivedBaseFuelTotal: 1
+      }
     }
   ]
 
@@ -87,24 +102,6 @@ describe('AssessmentCard', () => {
     orgAttorneyAddress: '456 Attorney Ave, Legal City, LC'
   }
 
-  it('renders loading state', () => {
-    vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
-      isLoading: true
-    })
-    vi.mocked(useOrganizationSnapshot).mockReturnValue({
-      isLoading: true,
-      data: {}
-    })
-    vi.mocked(
-      useComplianceReportHook.useCreateSupplementalReport
-    ).mockReturnValue({
-      mutate: vi.fn()
-    })
-
-    render(<AssessmentCard chain={[]} />, { wrapper })
-    expect(screen.getByTestId('loading')).toBeInTheDocument()
-  })
-
   it('renders without crashing', async () => {
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
       hasRoles: vi.fn(() => true),
@@ -113,7 +110,6 @@ describe('AssessmentCard', () => {
 
     render(
       <AssessmentCard
-        reportData={{ report: { curentStatus: { status: 'Assessed' } } }}
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={false}
@@ -140,18 +136,15 @@ describe('AssessmentCard', () => {
         organization: {
           name: 'Test Org'
         },
-        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        summary: {
+          line11FossilDerivedBaseFuelTotal: 1
+        }
       }
     ]
 
-    const reportData = {
-      report: {},
-      chain: mockChain
-    }
-
     render(
       <AssessmentCard
-        reportData={reportData}
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={false}
@@ -181,7 +174,10 @@ describe('AssessmentCard', () => {
         status: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
         createDate: '2024-08-01',
         userProfile: { firstName: 'Alice', lastName: 'Wong' },
-        displayName: 'Alice Wong'
+        displayName: 'Alice Wong',
+        summary: {
+          line11FossilDerivedBaseFuelTotal: 1
+        }
       }
     ]
 
@@ -195,18 +191,15 @@ describe('AssessmentCard', () => {
         organization: {
           name: 'Test Org'
         },
-        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        summary: {
+          line11FossilDerivedBaseFuelTotal: 1
+        }
       }
     ]
 
-    const reportData = {
-      report: {},
-      chain: mockChain
-    }
-
     render(
       <AssessmentCard
-        reportData={reportData}
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={false}
@@ -241,18 +234,15 @@ describe('AssessmentCard', () => {
         organization: {
           name: 'Test Org'
         },
-        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED }
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        summary: {
+          line11FossilDerivedBaseFuelTotal: 1
+        }
       }
     ]
 
-    const reportData = {
-      report: {},
-      chain: mockChain
-    }
-
     render(
       <AssessmentCard
-        reportData={reportData}
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={false}
@@ -274,22 +264,32 @@ describe('AssessmentCard', () => {
       hasRoles: vi.fn(() => true),
       isLoading: false
     })
-    const mockChain = {
-      report: {
-        currentStatus: { status: 'Assessed' },
+    const mockChain = [
+      {
+        history: mockHistory,
+        version: 0,
+        compliancePeriod: {
+          description: '2024'
+        },
+        organization: {
+          name: 'Test Org'
+        },
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        summary: {
+          line11FossilDerivedBaseFuelTotal: 1
+        },
         assessmentStatement: 'assessment statement test'
       }
-    }
+    ]
     render(
       <AssessmentCard
-        reportData={mockChain}
         orgData={mockOrgData}
         hasSupplemental={false}
         isGovernmentUser={true}
         currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
         complianceReportId="123"
         alertRef={{ current: { triggerAlert: vi.fn() } }}
-        chain={[]}
+        chain={mockChain}
       />,
       { wrapper }
     )

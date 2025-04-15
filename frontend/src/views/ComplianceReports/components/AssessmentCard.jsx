@@ -3,29 +3,23 @@ import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading.jsx'
 import { Role } from '@/components/Role'
-import { StyledListItem } from '@/components/StyledListItem'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 import { roles } from '@/constants/roles'
 import { apiRoutes } from '@/constants/routes/index.js'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import {
-  useCreateSupplementalReport,
-  useGetComplianceReport
-} from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { useApiService } from '@/services/useApiService.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
 import { OrganizationAddress } from '@/views/ComplianceReports/components/OrganizationAddress.jsx'
 import { Assignment, FileDownload } from '@mui/icons-material'
-import { List, ListItemText, Stack, Tooltip } from '@mui/material'
+import { Stack } from '@mui/material'
 import Box from '@mui/material/Box'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 export const AssessmentCard = ({
-  reportData,
   orgData,
   hasSupplemental,
   isGovernmentUser,
@@ -38,11 +32,6 @@ export const AssessmentCard = ({
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
-  const {
-    data: currentUser,
-    isLoading: isCurrentUserLoading,
-    hasRoles
-  } = useCurrentUser()
 
   const [isEditing, setIsEditing] = useState(false)
 
@@ -96,10 +85,6 @@ export const AssessmentCard = ({
     return chain.filter((report) => report.history && report.history.length > 0)
   }, [chain])
 
-  if (isCurrentUserLoading) {
-    return <Loading />
-  }
-
   return (
     <BCWidgetCard
       component="div"
@@ -135,42 +120,6 @@ export const AssessmentCard = ({
                 setIsEditing={setIsEditing}
               />
             )}
-            {((!isGovernmentUser &&
-              ['Assessed', 'Reassessed', 'Rejected'].includes(
-                reportData.report.currentStatus?.status
-              )) ||
-              isGovernmentUser) &&
-              !isQuarterlyReport && (
-                <>
-                  <BCTypography
-                    sx={{ paddingTop: '16px' }}
-                    component="div"
-                    variant="h6"
-                    color="primary"
-                  >
-                    {t('report:assessmentStatement')}
-                    {((hasRoles('Analyst') && currentStatus === 'Submitted') ||
-                      (hasRoles('Compliance Manager') &&
-                        currentStatus === 'Recommended by analyst') ||
-                      (hasRoles('Director') &&
-                        currentStatus === 'Recommended by manager')) && (
-                      <span style={{ color: 'red' }}>
-                        {' '}
-                        {t('report:assessmentStatementEdit')}
-                      </span>
-                    )}
-                  </BCTypography>
-                  <List sx={{ padding: 0 }}>
-                    <StyledListItem>
-                      <ListItemText
-                        slotProps={{ primary: { variant: 'body4' } }}
-                      >
-                        {reportData.report.assessmentStatement || 'N/A'}
-                      </ListItemText>
-                    </StyledListItem>
-                  </List>
-                </>
-              )}
             {filteredChain.length > 0 &&
               currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
                 <>
@@ -182,8 +131,12 @@ export const AssessmentCard = ({
                   >
                     {t('report:reportHistory')}
                   </BCTypography>
-                  {filteredChain.map((report) => (
-                    <HistoryCard key={report.version} report={report} />
+                  {filteredChain.map((report, index) => (
+                    <HistoryCard
+                      defaultExpanded={index === 0}
+                      key={report.version}
+                      report={report}
+                    />
                   ))}
                 </>
               )}
