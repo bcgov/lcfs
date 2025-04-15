@@ -512,9 +512,7 @@ async def test_update_compliance_report_success(
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
-            report=mock_compliance_report, chain=[], is_newest=True
-        )
+        mock_get_compliance_report_by_id.return_value = mock_compliance_report
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -529,7 +527,7 @@ async def test_update_compliance_report_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json()["report"] == expected_response
+        assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -617,9 +615,7 @@ async def test_update_compliance_report_draft_success(
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
-            report=mock_compliance_report, chain=[], is_newest=True
-        )
+        mock_get_compliance_report_by_id.return_value = mock_compliance_report
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -634,7 +630,7 @@ async def test_update_compliance_report_draft_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json()["report"] == expected_response
+        assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -660,9 +656,7 @@ async def test_update_compliance_report_submitted_success(
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
-            report=mock_compliance_report, chain=[], is_newest=True
-        )
+        mock_get_compliance_report_by_id.return_value = mock_compliance_report
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -677,7 +671,7 @@ async def test_update_compliance_report_submitted_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json()["report"] == expected_response
+        assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -703,9 +697,7 @@ async def test_update_compliance_report_recommended_by_analyst_success(
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
-            report=mock_compliance_report, chain=[], is_newest=True
-        )
+        mock_get_compliance_report_by_id.return_value = mock_compliance_report
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -723,7 +715,7 @@ async def test_update_compliance_report_recommended_by_analyst_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json()["report"] == expected_response
+        assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -749,9 +741,7 @@ async def test_update_compliance_report_recommended_by_manager_success(
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
-            report=mock_compliance_report, chain=[], is_newest=True
-        )
+        mock_get_compliance_report_by_id.return_value = mock_compliance_report
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -769,7 +759,7 @@ async def test_update_compliance_report_recommended_by_manager_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json()["report"] == expected_response
+        assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
@@ -795,9 +785,7 @@ async def test_update_compliance_report_assessed_success(
         mock_compliance_report = compliance_report_base_schema()
         mock_validate_organization_access.return_value = None
         mock_update_compliance_report.return_value = mock_compliance_report
-        mock_get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
-            report=mock_compliance_report, chain=[], is_newest=True
-        )
+        mock_get_compliance_report_by_id.return_value = mock_compliance_report
 
         url = fastapi_app.url_path_for(
             "update_compliance_report",
@@ -812,7 +800,7 @@ async def test_update_compliance_report_assessed_success(
 
         expected_response = json.loads(mock_compliance_report.json(by_alias=True))
 
-        assert response.json()["report"] == expected_response
+        assert response.json() == expected_response
 
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY

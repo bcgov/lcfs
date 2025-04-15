@@ -147,7 +147,7 @@ async def update_compliance_report_summary(
 
 @router.put(
     "/{report_id}",
-    response_model=ChainedComplianceReportSchema,
+    response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_200_OK,
 )
 @view_handler(
@@ -171,7 +171,7 @@ async def update_compliance_report(
         report_id, report_data, request.user
     )
 
-    return await service.get_compliance_report_chain(report_id, request.user)
+    return await service.get_compliance_report_by_id(report_id, request.user)
 
 
 @router.post(

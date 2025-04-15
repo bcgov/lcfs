@@ -111,14 +111,23 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     if (isQuarterly) {
       const isDraft = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
       const now = new Date()
-      const submittedDate = isDraft
-        ? now
-        : new Date(reportData?.report?.updatedDate)
+      const submittedDate =
+        new Date(
+          reportData?.report?.history.find(
+            (h) => h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+          )?.createDate
+        ) ||
+        new Date(reportData?.report?.updateDate) ||
+        now
 
       // Get month (0-11) and calculate quarter
       const month = submittedDate.getMonth()
+      const submittedYear = submittedDate.getFullYear()
       const currentYear = now.getFullYear()
-      if (isDraft && currentYear > parseInt(compliancePeriod)) {
+      if (
+        (isDraft && currentYear > parseInt(compliancePeriod)) ||
+        submittedYear > parseInt(compliancePeriod)
+      ) {
         quarter = 4
       } else if (month >= 0 && month <= 2) {
         quarter = 1 // Jan-Mar: Q1
@@ -137,7 +146,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     }
   }, [
     reportData?.report?.reportingFrequency,
-    reportData?.report?.updatedDate,
+    reportData?.report?.history,
+    reportData?.report?.updateDate,
     currentStatus,
     compliancePeriod
   ])
