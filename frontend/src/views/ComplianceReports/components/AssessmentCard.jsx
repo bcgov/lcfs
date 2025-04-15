@@ -192,35 +192,38 @@ export const AssessmentCard = ({
             <Role roles={[roles.supplier]}>
               {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
                 currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
-                  <>
-                    <BCTypography
-                      sx={{ paddingTop: '16px' }}
-                      component="div"
-                      variant="body4"
-                    >
-                      {t('report:supplementalWarning')}
-                    </BCTypography>
-                    <Box>
-                      <BCButton
-                        data-test="create-supplemental"
-                        size="small"
-                        variant="contained"
-                        color="primary"
-                        onClick={() => {
-                          createSupplementalReport()
-                        }}
-                        startIcon={<Assignment />}
-                        sx={{ mt: 2 }}
-                        disabled={isLoading}
-                      >
-                        {t('report:createSupplementalRptBtn')}
-                      </BCButton>
-                    </Box>
-                  </>
+                  <BCTypography
+                    sx={{ paddingTop: '16px' }}
+                    component="div"
+                    variant="body4"
+                  >
+                    {t('report:supplementalWarning')}
+                  </BCTypography>
                 )}
             </Role>
             {currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
-              <Box>
+              <Box display={'flex'} gap={2}>
+                <Role roles={[roles.supplier]}>
+                  {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
+                    currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
+                      <Box>
+                        <BCButton
+                          data-test="create-supplemental"
+                          size="small"
+                          variant="contained"
+                          color="primary"
+                          onClick={() => {
+                            createSupplementalReport()
+                          }}
+                          startIcon={<Assignment />}
+                          sx={{ mt: 3 }}
+                          disabled={isLoading}
+                        >
+                          {t('report:createSupplementalRptBtn')}
+                        </BCButton>
+                      </Box>
+                    )}
+                </Role>
                 <BCButton
                   data-test="download-report"
                   size="small"
