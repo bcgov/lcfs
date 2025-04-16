@@ -1,3 +1,5 @@
+from datetime import date
+
 from unittest.mock import MagicMock, AsyncMock
 
 import pytest
@@ -352,3 +354,43 @@ async def test_get_compliance_report_by_id_not_found(service, mock_comp_report_r
     with pytest.raises(HTTPException, match="Compliance report not found") as exc:
         await service.get_compliance_report_by_id(99999)
     assert exc.value.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_copy_fse_between_reports(
+    service, mock_repo, mock_comp_report_repo, mock_org_repo
+):
+    """
+    Tests copying FSE's from one report to another
+    """
+    mock_existing_fse = FinalSupplyEquipment(
+        serial_nbr="SER123",
+        final_supply_equipment_id=1,
+        compliance_report_id=1,
+        supply_from_date=date(2022, 1, 1),
+        supply_to_date=date(2022, 1, 1),
+        registration_nbr="TESTORG-A1A1A1-001",
+        manufacturer="Manufacturer Inc",
+        level_of_equipment=LevelOfEquipment(
+            level_of_equipment_id=1, name="Name", display_order=1
+        ),
+        intended_use_types=[],
+        intended_user_types=[],
+        street_address="Street",
+        city="City",
+        postal_code="A1A 1A1",
+        latitude=90.0,
+        longitude=180.0,
+        organization_name="Organization Name",
+    )
+    mock_repo.get_fse_list.return_value = [mock_existing_fse]
+    mock_repo.create_final_supply_equipment.return_value = mock_existing_fse
+    mock_repo.get_current_seq_by_org_and_postal_code.return_value = 1
+    mock_org_repo.get_organization.return_value = MagicMock(spec=Organization)
+
+    await service.copy_to_report(1, 2, 1)
+
+    mock_repo.get_fse_list.assert_awaited_once()
+    mock_repo.create_final_supply_equipment.assert_awaited_once()
+    mock_repo.increment_seq_by_org_and_postal_code.assert_awaited_once()
+    mock_org_repo.get_organization.assert_awaited_once_with(1)

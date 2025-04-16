@@ -39,6 +39,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportViewSchema,
     ChainedComplianceReportSchema,
 )
+from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.role.schema import user_has_roles
@@ -54,7 +55,9 @@ class ComplianceReportServices:
         repo: ComplianceReportRepository = Depends(),
         org_repo: OrganizationsRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
+        final_supply_equipment_service: FinalSupplyEquipmentServices = Depends(),
     ) -> None:
+        self.final_supply_equipment_service = final_supply_equipment_service
         self.org_repo = org_repo
         self.repo = repo
         self.snapshot_services = snapshot_services
@@ -182,11 +185,18 @@ class ComplianceReportServices:
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
 
+        # Copy over FSE
+        await self.final_supply_equipment_service.copy_to_report(
+            existing_report_id,
+            new_report.compliance_report_id,
+            current_report.organization_id,
+        )
+
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
     async def create_supplemental_report(
-        self, report_id: int, user: UserProfile = None, legacy_id: int = None
+        self, original_report_id: int, user: UserProfile = None, legacy_id: int = None
     ) -> ComplianceReportBaseSchema:
         """
         Creates a new supplemental compliance report.
@@ -194,7 +204,7 @@ class ComplianceReportServices:
         Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(report_id)
+        current_report = await self.repo.get_compliance_report_by_id(original_report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -274,6 +284,13 @@ class ComplianceReportServices:
 
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
+
+        # Copy over FSE
+        await self.final_supply_equipment_service.copy_to_report(
+            original_report_id,
+            new_report.compliance_report_id,
+            current_report.organization_id,
+        )
 
         return ComplianceReportBaseSchema.model_validate(new_report)
 

@@ -1,3 +1,4 @@
+from sqlalchemy.orm import make_transient
 from typing import Any, Coroutine, Sequence
 
 import structlog
@@ -319,3 +320,33 @@ class FinalSupplyEquipmentServices:
     @service_handler
     async def delete_all(self, compliance_report_id: int):
         return await self.repo.delete_all(compliance_report_id)
+
+    @service_handler
+    async def copy_to_report(
+        self, original_report_id: int, target_report_id: int, organization_id: int
+    ):
+        existing_list = await self.get_fse_list(original_report_id)
+
+        for old_fse in existing_list.final_supply_equipments:
+            payload = old_fse.model_dump(
+                exclude={
+                    "final_supply_equipment_id",
+                    "level_of_equipment",
+                    "compliance_report_id",
+                    "intended_uses",
+                    "intended_users",
+                }
+            )
+            new_fse = FinalSupplyEquipmentCreateSchema(
+                **payload,
+                level_of_equipment=old_fse.level_of_equipment.name,
+                intended_uses=[
+                    use_type.type for use_type in old_fse.intended_use_types
+                ],
+                intended_users=[
+                    user_type.type_name for user_type in old_fse.intended_user_types
+                ],
+                compliance_report_id=target_report_id,
+            )
+
+            await self.create_final_supply_equipment(new_fse, organization_id)

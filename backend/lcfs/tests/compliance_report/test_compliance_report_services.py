@@ -282,7 +282,8 @@ async def test_get_all_org_reported_years_unexpected_error(
 
 @pytest.mark.anyio
 async def test_create_supplemental_report_includes_summary_lines(
-    compliance_report_service, mock_repo
+    compliance_report_service,
+    mock_repo,
 ):
     """
     Test that when creating a supplemental report, the summary lines from
@@ -381,6 +382,7 @@ async def test_create_supplemental_report_includes_summary_lines(
         assert new_summary.line_9_obligation_added_gasoline == 2
         assert new_summary.line_9_obligation_added_diesel == 4
         assert new_summary.line_9_obligation_added_jet_fuel == 6
+        compliance_report_service.final_supply_equipment_service.copy_to_report.assert_awaited_once()
 
 
 @pytest.mark.anyio
