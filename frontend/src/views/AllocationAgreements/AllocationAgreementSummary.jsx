@@ -9,7 +9,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
-import { useGetAllocationAgreements } from '@/hooks/useAllocationAgreement.js'
+import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement.js'
 
 export const AllocationAgreementSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -24,7 +24,7 @@ export const AllocationAgreementSummary = ({ data, status }) => {
   const { t } = useTranslation(['common', 'allocationAgreement'])
   const location = useLocation()
 
-  const queryData = useGetAllocationAgreements(
+  const queryData = useGetAllAllocationAgreements(
     complianceReportId,
     paginationOptions,
     {
