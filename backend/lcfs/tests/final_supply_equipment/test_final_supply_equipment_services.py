@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, AsyncMock
 import pytest
 from fastapi import HTTPException
 
-from lcfs.db.models import LevelOfEquipment
+from lcfs.db.models import LevelOfEquipment, Organization
 from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.final_supply_equipment.schema import (
@@ -45,13 +45,22 @@ def mock_comp_report_repo():
 
 
 @pytest.fixture
-def service(mock_request, mock_repo, mock_comp_report_repo):
+def mock_org_repo():
+    """
+    Return an AsyncMock for the OrganizationRepository.
+    """
+    return AsyncMock()
+
+
+@pytest.fixture
+def service(mock_request, mock_repo, mock_comp_report_repo, mock_org_repo):
     """
     Instantiate the service class with mocked dependencies.
     """
     return FinalSupplyEquipmentServices(
         repo=mock_repo,
         compliance_report_repo=mock_comp_report_repo,
+        organization_repo=mock_org_repo,
     )
 
 
@@ -234,6 +243,7 @@ async def test_update_final_supply_equipment_not_found(
 async def test_create_final_supply_equipment_success(
     service,
     mock_repo,
+    mock_org_repo,
     mock_request,
     valid_final_supply_equipment_schema,
     valid_final_supply_equipment_create_schema,
@@ -242,17 +252,20 @@ async def test_create_final_supply_equipment_success(
     Test creating a new FSE with valid data.
     """
     mock_repo.get_current_seq_by_org_and_postal_code.return_value = 0
+    organization_id = 10
     mock_repo.create_final_supply_equipment.return_value = (
         valid_final_supply_equipment_schema
     )
     mock_repo.increment_seq_by_org_and_postal_code.return_value = None
+    mock_org_repo.get_organization.return_value = MagicMock(spec=Organization)
 
     new_fse = await service.create_final_supply_equipment(
-        valid_final_supply_equipment_create_schema, mock_request.user
+        valid_final_supply_equipment_create_schema, organization_id
     )
     assert new_fse is not None
     mock_repo.create_final_supply_equipment.assert_awaited_once()
     mock_repo.increment_seq_by_org_and_postal_code.assert_awaited_once()
+    mock_org_repo.get_organization.assert_awaited_once_with(organization_id)
 
 
 @pytest.mark.anyio
@@ -320,10 +333,14 @@ async def test_get_compliance_report_by_id_success(service, mock_comp_report_rep
     """
     Test fetching existing compliance report.
     """
-    mock_comp_report_repo.get_compliance_report_schema_by_id.return_value = MagicMock(id=123)
+    mock_comp_report_repo.get_compliance_report_schema_by_id.return_value = MagicMock(
+        id=123
+    )
     report = await service.get_compliance_report_by_id(123)
     assert report.id == 123
-    mock_comp_report_repo.get_compliance_report_schema_by_id.assert_awaited_once_with(123)
+    mock_comp_report_repo.get_compliance_report_schema_by_id.assert_awaited_once_with(
+        123
+    )
 
 
 @pytest.mark.anyio
