@@ -1,21 +1,21 @@
-import React, { useEffect, useState } from 'react'
-import BCTypography from '@/components/BCTypography'
-import { useTranslation } from 'react-i18next'
-import { useUpdateOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
-import { FormProvider, useForm } from 'react-hook-form'
-import {
-  BCFormText,
-  BCFormAddressAutocomplete
-} from '@/components/BCForm/index.js'
-import { yupResolver } from '@hookform/resolvers/yup'
-import { defaultValues } from '@/views/Users/AddEditUser/_schema.js'
-import { Box, Stack, List, ListItem } from '@mui/material'
 import BCButton from '@/components/BCButton/index.jsx'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
-import * as Yup from 'yup'
-import { PHONE_REGEX } from '@/constants/common.js'
+import {
+  BCFormAddressAutocomplete,
+  BCFormText
+} from '@/components/BCForm/index.js'
 import BCModal from '@/components/BCModal.jsx'
+import BCTypography from '@/components/BCTypography'
+import { PHONE_REGEX } from '@/constants/common.js'
+import { useUpdateOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
+import { defaultValues } from '@/views/Users/AddEditUser/_schema.js'
+import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { yupResolver } from '@hookform/resolvers/yup'
+import { Box, List, ListItem, Stack } from '@mui/material'
+import { useEffect, useState } from 'react'
+import { FormProvider, useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import * as Yup from 'yup'
 
 export const OrganizationAddress = ({
   snapshotData,
@@ -25,9 +25,9 @@ export const OrganizationAddress = ({
 }) => {
   const { t } = useTranslation(['common', 'report', 'org'])
   const [modalData, setModalData] = useState(null)
-  const [sameAsService, setSameAsService] = useState(false)
+  const [recordsSameAsService, setRecordsSameAsService] = useState(false)
+  const [headOfficeSameAsService, setHeadOfficeSameAsService] = useState(false)
   const [sameAsLegalName, setSameAsLegalName] = useState(false)
-  const [selectedServiceAddress, setSelectedServiceAddress] = useState(null)
 
   const validationSchema = Yup.object({
     name: Yup.string().required('Legal name is required.'),
@@ -38,7 +38,9 @@ export const OrganizationAddress = ({
     email: Yup.string()
       .required('Email address is required.')
       .email('Please enter a valid email address.'),
-    serviceAddress: Yup.string().required('Service Address is required.')
+    serviceAddress: Yup.string().required('Service Address is required.'),
+    recordsAddress: Yup.string().required('Records Address is required.'),
+    headOfficeAddress: Yup.string().required('Head Office Address is required.')
   })
 
   // Hook for updating the organization snapshot
@@ -58,10 +60,13 @@ export const OrganizationAddress = ({
 
   // If 'same as service address' is checked, automatically update records address
   useEffect(() => {
-    if (sameAsService && serviceAddress) {
+    if (recordsSameAsService && serviceAddress) {
       setValue('recordsAddress', serviceAddress)
     }
-  }, [sameAsService, serviceAddress, setValue])
+    if (headOfficeSameAsService && serviceAddress) {
+      setValue('headOfficeAddress', serviceAddress)
+    }
+  }, [recordsSameAsService, serviceAddress, setValue, headOfficeSameAsService])
 
   // If 'same as legal name' is checked, automatically update operating name
   useEffect(() => {
@@ -104,9 +109,15 @@ export const OrganizationAddress = ({
 
   // Checkbox to keep records address synced with service address
   const handleSameAddressChange = (event) => {
-    setSameAsService(event.target.checked)
+    setRecordsSameAsService(event.target.checked)
     if (event.target.checked) {
       setValue('recordsAddress', serviceAddress)
+    }
+  }
+  const handleSameHeadOfficeAddressChange = (event) => {
+    setHeadOfficeSameAsService(event.target.checked)
+    if (event.target.checked) {
+      setValue('headOfficeAddress', serviceAddress)
     }
   }
 
@@ -120,18 +131,24 @@ export const OrganizationAddress = ({
 
   // Helpers to select addresses
   const handleSelectServiceAddress = (addressData) => {
-    setSelectedServiceAddress(addressData)
     if (typeof addressData === 'string') {
       setValue('serviceAddress', addressData)
     } else {
       setValue('serviceAddress', addressData.fullAddress)
     }
     // If 'same as service address' is checked, automatically update records too
-    if (sameAsService) {
+    if (recordsSameAsService) {
       if (typeof addressData === 'string') {
         setValue('recordsAddress', addressData)
       } else {
         setValue('recordsAddress', addressData.fullAddress)
+      }
+    }
+    if (headOfficeSameAsService) {
+      if (typeof addressData === 'string') {
+        setValue('headOfficeAddress', addressData)
+      } else {
+        setValue('headOfficeAddress', addressData.fullAddress)
       }
     }
   }
@@ -144,12 +161,23 @@ export const OrganizationAddress = ({
     }
   }
 
+  const handleSelectHeadOfficeAddress = (addressData) => {
+    if (typeof addressData === 'string') {
+      setValue('headOfficeAddress', addressData)
+    } else {
+      setValue('headOfficeAddress', addressData.fullAddress)
+    }
+  }
+
   // Sync state with snapshot data on load
   useEffect(() => {
     if (snapshotData) {
       reset(snapshotData)
-      setSameAsService(
+      setRecordsSameAsService(
         snapshotData.serviceAddress === snapshotData.recordsAddress
+      )
+      setHeadOfficeSameAsService(
+        snapshotData.serviceAddress === snapshotData.headOfficeAddress
       )
       setSameAsLegalName(snapshotData.name === snapshotData.operatingName)
     }
@@ -191,7 +219,13 @@ export const OrganizationAddress = ({
       name: 'headOfficeAddress',
       label: isEditing
         ? t('report:hoAddrLabelEdit')
-        : t('report:hoAddrLabelView')
+        : t('report:hoAddrLabelView'),
+      onSelectAddress: handleSelectHeadOfficeAddress,
+      onCheckboxChange: handleSameHeadOfficeAddressChange,
+      checkbox: true,
+      checkboxLabel: 'same as address for service',
+      isChecked: headOfficeSameAsService,
+      disabled: headOfficeSameAsService
     }
   ]
 
@@ -211,8 +245,8 @@ export const OrganizationAddress = ({
       checkbox: true,
       checkboxLabel: 'same as address for service',
       onCheckboxChange: handleSameAddressChange,
-      isChecked: sameAsService,
-      disabled: sameAsService,
+      isChecked: recordsSameAsService,
+      disabled: recordsSameAsService,
       onSelectAddress: handleSelectRecordsAddress
     }
   ]
