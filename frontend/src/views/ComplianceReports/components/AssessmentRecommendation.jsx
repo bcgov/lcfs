@@ -8,6 +8,7 @@ import BCBox from '@/components/BCBox/index.jsx'
 import BCModal from '@/components/BCModal.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { Assignment } from '@mui/icons-material'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 import { Tooltip } from '@mui/material'
 
 export const AssessmentRecommendation = ({
@@ -68,21 +69,34 @@ export const AssessmentRecommendation = ({
 
   return (
     <BCBox sx={{ mt: 2 }}>
-      {currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED && (
-        <BCTypography variant="body2">
-          The analyst can make changes to the reported activity information if
-          it is known to be incorrect, click to put the report in edit mode:
-          <br />
+      {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
+        currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED && (
+          <BCTypography variant="body2">
+            The analyst can make changes to the reported activity information if
+            it is known to be incorrect, click to put the report in edit mode:
+            <br />
+            <BCButton
+              onClick={openAdjustmentDialog}
+              sx={{ mt: 2 }}
+              color="primary"
+              variant="outlined"
+            >
+              Analyst adjustment
+            </BCButton>
+          </BCTypography>
+        )}
+      {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
+        currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
           <BCButton
-            onClick={openAdjustmentDialog}
+            onClick={openReassessmentDialog}
             sx={{ mt: 2 }}
             color="primary"
-            variant="outlined"
+            startIcon={<Assignment />}
+            disabled={isLoading}
           >
-            Analyst adjustment
+            {t('report:createReassessmentBtn')}
           </BCButton>
-        </BCTypography>
-      )}
+        )}
       {currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
         <Tooltip
           title={
