@@ -46,6 +46,7 @@ function Footer({
           target="_blank"
           aria-label={link.label}
           id={link.id}
+          data-test={link.id}
         >
           <BCTypography variant="button" fontWeight="regular" color="white">
             {link.name}
@@ -109,6 +110,7 @@ function Footer({
           target="_blank"
           aria-label={repoDetails.label}
           id={repoDetails.id}
+          data-test={repoDetails.id}
         >
           <GitHub fontSize="small" />
           <BCTypography
