@@ -5,7 +5,6 @@ from unittest.mock import MagicMock, AsyncMock, patch
 
 from lcfs.db.models import ComplianceReport
 from lcfs.db.models.user.Role import RoleEnum
-from lcfs.tests.compliance_report.conftest import compliance_report_base_schema
 from lcfs.tests.other_uses.conftest import create_mock_schema
 from lcfs.web.api.base import ComplianceReportRequestSchema
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
@@ -72,6 +71,7 @@ async def test_get_other_uses(
     set_mock_user,
     mock_other_uses_service,
     mock_report_validation,
+    compliance_report_base_schema,
 ):
     with patch(
         "lcfs.web.api.other_uses.views.ComplianceReportValidation.validate_organization_access"
