@@ -179,17 +179,17 @@ class OtherUsesServices:
 
     @service_handler
     async def update_other_use(
-        self, other_use_data: OtherUsesCreateSchema
+        self, new_data: OtherUsesCreateSchema
     ) -> OtherUsesSchema:
         """Update an existing other use"""
-        other_use = await self.repo.get_other_use(other_use_data.other_uses_id)
+        existing_other_use = await self.repo.get_other_use(new_data.other_uses_id)
 
-        if not other_use:
+        if not existing_other_use:
             raise ValueError("Other use not found")
 
-        if other_use.compliance_report_id == other_use_data.compliance_report_id:
+        if existing_other_use.compliance_report_id == new_data.compliance_report_id:
             # Update existing record if compliance report ID matches
-            for field, value in other_use_data.model_dump(
+            for field, value in new_data.model_dump(
                 exclude={
                     "id",
                     "deleted",
@@ -200,52 +200,54 @@ class OtherUsesServices:
                     "fuel_code",
                 }
             ).items():
-                setattr(other_use, field, value)
+                setattr(existing_other_use, field, value)
 
-            if other_use.fuel_type.fuel_type != other_use_data.fuel_type:
-                other_use.fuel_type = await self.fuel_repo.get_fuel_type_by_name(
-                    other_use_data.fuel_type
+            if existing_other_use.fuel_type.fuel_type != new_data.fuel_type:
+                existing_other_use.fuel_type = (
+                    await self.fuel_repo.get_fuel_type_by_name(new_data.fuel_type)
                 )
 
-            if other_use.fuel_category.category != other_use_data.fuel_category:
-                other_use.fuel_category = await self.fuel_repo.get_fuel_category_by(
-                    category=other_use_data.fuel_category
+            if existing_other_use.fuel_category.category != new_data.fuel_category:
+                existing_other_use.fuel_category = (
+                    await self.fuel_repo.get_fuel_category_by(
+                        category=new_data.fuel_category
+                    )
                 )
 
-            if other_use.expected_use.name != other_use_data.expected_use:
-                other_use.expected_use = (
+            if existing_other_use.expected_use.name != new_data.expected_use:
+                existing_other_use.expected_use = (
                     await self.fuel_repo.get_expected_use_type_by_name(
-                        other_use_data.expected_use
+                        new_data.expected_use
                     )
                 )
 
             if (
-                not other_use.provision_of_the_act
-                or other_use.provision_of_the_act.name
-                != other_use_data.provision_of_the_act
+                existing_other_use.provision_of_the_act.name
+                != new_data.provision_of_the_act
             ):
-                other_use.provision_of_the_act = (
+                existing_other_use.provision_of_the_act = (
                     await self.fuel_repo.get_provision_of_the_act_by_name(
-                        other_use_data.provision_of_the_act
+                        new_data.provision_of_the_act
                     )
                 )
-            if (
-                other_use.fuel_code is None
-                or other_use_data.fuel_code is None
-                or other_use.fuel_code.fuel_code != other_use_data.fuel_code
-            ):
-                other_use.fuel_code = await self.fuel_repo.get_fuel_code_by_name(
-                    other_use_data.fuel_code
-                )
-            other_use.ci_of_fuel = other_use_data.ci_of_fuel
 
-            updated_use = await self.repo.update_other_use(other_use)
+            if (
+                existing_other_use.fuel_code is None
+                or new_data.fuel_code is None
+                or existing_other_use.fuel_code.fuel_code != new_data.fuel_code
+            ):
+                existing_other_use.fuel_code = (
+                    await self.fuel_repo.get_fuel_code_by_name(new_data.fuel_code)
+                )
+            existing_other_use.ci_of_fuel = new_data.ci_of_fuel
+
+            updated_use = await self.repo.update_other_use(existing_other_use)
             updated_schema = self.model_to_schema(updated_use)
             return OtherUsesSchema.model_validate(updated_schema)
 
         else:
             updated_use = await self.create_other_use(
-                other_use_data, existing_record=other_use
+                new_data, existing_record=existing_other_use
             )
             return OtherUsesSchema.model_validate(updated_use)
 
