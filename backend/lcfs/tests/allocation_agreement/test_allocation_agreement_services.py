@@ -7,7 +7,6 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
 )
 from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
-from lcfs.web.api.base import PaginationResponseSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.dtos import ChangelogAllocationAgreementsDTO
 
