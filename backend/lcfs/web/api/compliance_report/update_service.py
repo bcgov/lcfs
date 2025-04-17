@@ -18,7 +18,9 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ReturnStatus,
     ComplianceReportBaseSchema,
-    ComplianceReportSummarySchema,
+)
+from lcfs.web.api.compliance_report.summary_repo import (
+    ComplianceReportSummaryRepository,
 )
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
@@ -40,12 +42,14 @@ class ComplianceReportUpdateService:
     def __init__(
         self,
         repo: ComplianceReportRepository = Depends(),
+        summary_repo: ComplianceReportSummaryRepository = Depends(),
         summary_service: ComplianceReportSummaryService = Depends(),
         org_service: OrganizationsService = Depends(OrganizationsService),
         trx_service: TransactionsService = Depends(TransactionsService),
         trx_repo: TransactionRepository = Depends(TransactionRepository),
         notfn_service: NotificationService = Depends(NotificationService),
     ):
+        self.summary_repo = summary_repo
         self.trx_repo = trx_repo
         self.repo = repo
         self.summary_service = summary_service
@@ -75,7 +79,7 @@ class ComplianceReportUpdateService:
 
             # Handle "Return to supplier"
             if current_status == ReturnStatus.SUPPLIER.value:
-                await self.repo.reset_summary_lock(report.compliance_report_id)
+                await self.summary_repo.reset_summary_lock(report.compliance_report_id)
                 await self.trx_repo.delete_transaction(report.transaction_id, report_id)
         else:
             # Handle normal status change
@@ -162,16 +166,7 @@ class ComplianceReportUpdateService:
 
     async def _check_report_exists(self, report_id: int) -> ComplianceReport:
         """Verify report exists and return it."""
-        report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
-        if not report:
-            raise DataNotFoundException(
-                f"Compliance report with ID {report_id} not found"
-            )
-        return report
-
-    async def _check_report_exists(self, report_id: int) -> ComplianceReport:
-        """Verify report exists and return it."""
-        report = await self.repo.get_compliance_report_by_id(report_id, is_model=True)
+        report = await self.repo.get_compliance_report_by_id(report_id)
         if not report:
             raise DataNotFoundException(
                 f"Compliance report with ID {report_id} not found"
@@ -208,13 +203,6 @@ class ComplianceReportUpdateService:
         await self.repo.update_compliance_report(report)
 
         return calculated_summary
-
-    async def _handle_return_status(
-        self, report_data: ComplianceReportUpdateSchema
-    ) -> Tuple[str, bool]:
-        """Handle return status logic and return new status and change flag."""
-        mapped_status = RETURN_STATUS_MAPPER.get(report_data.status)
-        return mapped_status, False
 
     async def handle_analyst_adjustment_status(
         self, report: ComplianceReport, user: UserProfile
@@ -294,7 +282,7 @@ class ComplianceReportUpdateService:
         self, report, user
     ) -> ComplianceReportSummary:
         # Fetch the existing summary from the database, if any
-        existing_summary = await self.repo.get_summary_by_report_id(
+        existing_summary = await self.summary_repo.get_summary_by_report_id(
             report.compliance_report_id
         )
         # Calculate a new summary based on the current report data
@@ -353,13 +341,13 @@ class ComplianceReportUpdateService:
         calculated_summary.is_locked = True
         # Save the summary
         if report.summary:
-            new_summary = await self.repo.save_compliance_report_summary(
+            new_summary = await self.summary_repo.save_compliance_report_summary(
                 calculated_summary
             )
             report.summary = new_summary
         else:
             # Create new summary if it doesn't exist
-            new_summary = await self.repo.add_compliance_report_summary(
+            new_summary = await self.summary_repo.add_compliance_report_summary(
                 calculated_summary
             )
             report.summary = new_summary

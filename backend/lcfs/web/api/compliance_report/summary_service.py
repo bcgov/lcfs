@@ -27,6 +27,9 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummarySchema,
     ComplianceReportSummaryUpdateSchema,
 )
+from lcfs.web.api.compliance_report.summary_repo import (
+    ComplianceReportSummaryRepository,
+)
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
@@ -76,7 +79,8 @@ def get_compliance_data_service():
 class ComplianceReportSummaryService:
     def __init__(
         self,
-        repo: ComplianceReportRepository = Depends(),
+        repo: ComplianceReportSummaryRepository = Depends(),
+        cr_repo: ComplianceReportRepository = Depends(),
         trxn_repo: TransactionRepository = Depends(),
         notional_transfer_service: NotionalTransferServices = Depends(
             NotionalTransferServices
@@ -92,6 +96,7 @@ class ComplianceReportSummaryService:
         ),
     ):
         self.repo = repo
+        self.cr_repo = cr_repo
         self.notional_transfer_service = notional_transfer_service
         self.trxn_repo = trxn_repo
         self.fuel_supply_repo = fuel_supply_repo
@@ -397,17 +402,17 @@ class ComplianceReportSummaryService:
     ) -> ComplianceReportSummarySchema:
         """Several fields on Report Summary are Transient until locked, this function will re-calculate fields as necessary"""
         # Fetch the compliance report details
-        compliance_report = await self.repo.get_compliance_report_by_id(
-            report_id, is_model=True
-        )
+        compliance_report = await self.cr_repo.get_compliance_report_by_id(report_id)
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
 
         prev_compliance_report = None
         if not compliance_report.supplemental_initiator:
-            prev_compliance_report = await self.repo.get_assessed_compliance_report_by_period(
-                compliance_report.organization_id,
-                int(compliance_report.compliance_period.description) - 1,
+            prev_compliance_report = (
+                await self.cr_repo.get_assessed_compliance_report_by_period(
+                    compliance_report.organization_id,
+                    int(compliance_report.compliance_period.description) - 1,
+                )
             )
 
         summary_model = compliance_report.summary
@@ -940,11 +945,18 @@ class ComplianceReportSummaryService:
 
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
+
             TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity
             EER = fuel_supply.eer or 0  # Energy Effectiveness Ratio
             RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity
             UCI = fuel_supply.uci or 0  # Additional Carbon Intensity
-            Q = fuel_supply.quantity or 0  # Quantity of Fuel Supplied
+            Q = (
+                (fuel_supply.quantity or 0)
+                + (fuel_supply.q1_quantity or 0)
+                + (fuel_supply.q2_quantity or 0)
+                + (fuel_supply.q3_quantity or 0)
+                + (fuel_supply.q4_quantity or 0)
+            )
             ED = fuel_supply.energy_density or 0  # Energy Density
 
             # Apply the compliance units formula

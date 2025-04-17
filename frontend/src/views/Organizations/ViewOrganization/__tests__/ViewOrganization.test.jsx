@@ -4,6 +4,7 @@ import { ViewOrganization } from '../ViewOrganization'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
+import { roles } from '@/constants/roles.js'
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
@@ -31,25 +32,15 @@ vi.mock('@/services/useApiService', () => {
 
 const mockCurrentUserHook = {
   data: {
-    roles: [{ name: 'Government' }]
+    roles: [{ name: roles.government }]
   },
   isLoading: false,
   hasRoles: vi.fn().mockReturnValue(true),
   hasAnyRole: vi.fn().mockReturnValue(true)
-};
+}
 
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockCurrentUserHook
-}));
-
-vi.mock('@/hooks/useSetResetGrid', () => ({
-  useSetResetGrid: vi.fn((callback) => {
-    // Store the callback for testing
-    if (callback) {
-      vi.mock.resetGridCallback = callback;
-    }
-    return vi.mock.resetGridCallback || vi.fn();
-  })
 }))
 
 // Mock the specific import of BCDataGridServer
@@ -61,15 +52,11 @@ vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
 
 vi.mock('@/components/ClearFiltersButton', () => ({
   ClearFiltersButton: ({ onClick, ...props }) => (
-    <button
-      data-testid="clear-filters-button"
-      onClick={onClick}
-      {...props}
-    >
+    <button data-testid="clear-filters-button" onClick={onClick} {...props}>
       Clear filters
     </button>
   )
-}));
+}))
 
 vi.mock('@/hooks/useOrganization', () => ({
   useOrganization: vi.fn((orgId) => ({
@@ -132,16 +119,16 @@ const renderComponent = (props) => {
   )
 }
 
-const setupRoleTest = (roleName, hasAdminAccess) => {
-  cleanup();
+const setupRoleTest = (roleName, passCheck) => {
+  cleanup()
 
   // Configure mock
-  mockCurrentUserHook.data = { roles: [{ name: roleName }] };
-  mockCurrentUserHook.hasRoles = vi.fn().mockReturnValue(hasAdminAccess);
+  mockCurrentUserHook.data = { roles: [{ name: roleName }] }
+  mockCurrentUserHook.hasRoles = vi.fn().mockReturnValue(passCheck)
 
   // Render with this configuration
-  renderComponent();
-};
+  renderComponent()
+}
 
 describe('ViewOrganization Component Tests', () => {
   beforeEach(() => {
@@ -181,34 +168,42 @@ describe('ViewOrganization Component Tests', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows "No" for early issuance if hasEarlyIssuance is not provided', () => {
+  it('shows nothing for early issuance if hasEarlyIssuance is not provided', () => {
+    setupRoleTest(roles.supplier, false)
+    expect(
+      screen.queryByText(/Early issuance reporting/i)
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows no for early issuance if user is government', () => {
+    setupRoleTest(roles.government, true)
     expect(screen.getByText(/Early issuance reporting/i)).toBeInTheDocument()
     expect(screen.getByText(/No/i)).toBeInTheDocument()
   })
 
   it('has a functioning clear filters button', () => {
-    const clearFilterButtons = screen.getAllByTestId('clear-filters-button');
-    expect(clearFilterButtons.length).toBeGreaterThan(0);
-    expect(clearFilterButtons[0]).not.toBeDisabled();
+    const clearFilterButtons = screen.getAllByTestId('clear-filters-button')
+    expect(clearFilterButtons.length).toBeGreaterThan(0)
+    expect(clearFilterButtons[0]).not.toBeDisabled()
 
-    const button = clearFilterButtons[0];
-    expect(() => fireEvent.click(button)).not.toThrow();
-  });
+    const button = clearFilterButtons[0]
+    expect(() => fireEvent.click(button)).not.toThrow()
+  })
 
   it('shows edit button when user has administrator role', () => {
-    setupRoleTest('Administrator', true);
-    expect(screen.getByText('Edit')).toBeInTheDocument();
-  });
+    setupRoleTest('Administrator', true)
+    expect(screen.getByText('Edit')).toBeInTheDocument()
+  })
 
   it('does not show edit button when user lacks administrator role', () => {
-    setupRoleTest('Supplier', false);
-    expect(screen.queryByText('Edit')).not.toBeInTheDocument();
-  });
+    setupRoleTest('Supplier', false)
+    expect(screen.queryByText('Edit')).not.toBeInTheDocument()
+  })
 
   it('shows New User button for users with administrator role', () => {
-    setupRoleTest('Administrator', true);
+    setupRoleTest('Administrator', true)
 
     // Check for the New User button
-    expect(screen.getByText(/new user/i)).toBeInTheDocument();
-  });
+    expect(screen.getByText(/new user/i)).toBeInTheDocument()
+  })
 })

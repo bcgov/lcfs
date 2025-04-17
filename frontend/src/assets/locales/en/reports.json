@@ -11,9 +11,15 @@
   },
   "noReportsFound": "No compliance reports found",
   "serviceAddrLabel": "Address for service",
+  "orgDetailsForm": {
+    "serviceAddrLabelView": "Address for service in B.C.",
+    "serviceAddrLabelEdit": "Address for service in B.C. (postal address)",
+    "bcRecordLabelView": "Address in B.C. (where records are maintained)",
+    "bcRecordLabelEdit": "Address in B.C. (where records are maintained, optional)"
+  },
   "hoAddrLabel": "Head office (optional)",
   "hoAddrLabelView": "Head office address",
-  "hoAddrLabelEdit": "Head office address (international)",
+  "hoAddrLabelEdit": "Head office address (can be an international address, optional)",
   "bcRecordLabel": "Address in B.C. (where records are maintained)",
   "activityHdrLabel": "Did <b>{{name}}</b> engage in any of the following activities between January 1, {{period}}, and December 31, {{period}}?",
   "reportActivities": "Report activities",
@@ -148,7 +154,7 @@
   "nonCompliancePenaltySummary": "Non-compliance penalty payable summary",
   "delta": "Delta",
   "compareReports": "Compare summary data between the following 2 report versions",
-  "fuelType": "Fuel Type",
+  "fuelType": "Fuel type",
   "signingAuthorityDeclaration": "Signing authority declaration",
   "declarationText": "I certify that the information in this report is true and complete to the best of my knowledge and I understand that I may be required to provide to the Director records evidencing the truth of that information.",
   "submitReport": "Submit Report",
@@ -173,7 +179,8 @@
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
     "Reassessed": "Re-assessed",
     "renewableTarget": "Renewable fuel target",
-    "lowCarbonTarget": "Low carbon fuel target"
+    "lowCarbonTarget": "Low carbon fuel target",
+    "directorStatement": "Assessment statement from the director"
   },
   "internalComments": "Internal comments",
   "fuelLabels": {
@@ -196,12 +203,33 @@
   "reportAssessed": "Compliance report, Assessed",
   "changelog": "Change log",
   "documentLabel": "Add file attachments (maximum file size: 50 MB):",
-  "assessmentStatement": "Assessment statement from the director",
-  "assessmentStatementEdit": "(can be edited below)",
   "assessmentRecommendation": "Assessment recommendation",
   "directorStatement": "Director assessment statement to the organization (optional)",
   "assessmentStatementInstructions": "The analyst and/or compliance manager can draft an assessment statement to the organization. The director can edit or delete this statement. This is suggested when making analyst adjustments or reassessments.",
   "saveStatement": "Save statement",
   "assessmentStatementSaveSuccess": "Assessment statement saved successfully.",
-  "assessmentStatementSaveError": "Error saving assessment statement."
+  "assessmentStatementSaveError": "Error saving assessment statement.",
+  "calcTitle": "Credit calculator",
+  "complianceYear": "Compliance year",
+  "selectFuelType": "Select fuel type",
+  "endUse": "End use",
+  "ciLabel": "Determining carbon intensity",
+  "fuelCodeLabel": "Fuel code",
+  "qtySuppliedLabel": "Quantity supplied",
+  "formulaBefore2024": "Credit or Debit = (CI class × EER fuel – CI fuel) × EC fuel/1,000,000",
+  "formulaAfter2024": "Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000",
+  "ciParameters": {
+    "tci": "Target carbon intensity",
+    "eer": "Energy effectiveness ratio",
+    "rci": "Recorded carbon intensity",
+    "uci": "Additional carbon intensity",
+    "ec": "Energy content",
+    "ed": "Energy density"
+  },
+  "fuelRequirementOptions": [
+    "Renewable fuel requirement & Low carbon fuel requirement",
+    "Low carbon fuel requirement only"
+  ],
+  "changeInUnits": "Projected change in compliance units balance",
+  "generatedLabel": "Credits generated"
 }

@@ -205,12 +205,15 @@ export const ViewOrganization = () => {
                       : t('org:registeredTransferNo')}
                   </BCTypography>
 
-                  <BCTypography variant="body4">
-                    <strong>{t('org:earlyIssuanceIndicator')}:</strong>{' '}
-                    {orgData?.hasEarlyIssuance
-                      ? t('common:yes')
-                      : t('common:no')}
-                  </BCTypography>
+                  {(hasRoles(roles.government) ||
+                    orgData?.hasEarlyIssuance) && (
+                    <BCTypography variant="body4">
+                      <strong>{t('org:earlyIssuanceIndicator')}:</strong>{' '}
+                      {orgData?.hasEarlyIssuance
+                        ? t('common:yes')
+                        : t('common:no')}
+                    </BCTypography>
+                  )}
                 </BCBox>
               </BCBox>
 

@@ -108,6 +108,25 @@ const OrgComplianceReportsCard = () => {
                 </List>
               </>
             )}
+            {
+              <ListItemButton
+                component="a"
+                sx={{ pl: '4.2rem' }}
+                onClick={() => navigate(ROUTES.REPORTS.CALCULATOR)}
+              >
+                <BCTypography
+                  variant="body2"
+                  color="link"
+                  sx={{
+                    textDecoration: 'underline',
+                    '&:hover': { color: 'info.main' }
+                  }}
+                  onClick={() => navigate(ROUTES.REPORTS.CALCULATOR)}
+                >
+                  {t('report:calcTitle')}
+                </BCTypography>
+              </ListItemButton>
+            }
           </Stack>
         )
       }

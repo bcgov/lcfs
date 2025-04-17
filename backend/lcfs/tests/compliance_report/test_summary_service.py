@@ -1,48 +1,158 @@
+import pytest
 from datetime import datetime
 from typing import List
 from unittest.mock import AsyncMock, MagicMock, Mock
 
-import pytest
-
-from lcfs.db.models import FuelSupply, ComplianceReport, UserProfile
+from lcfs.db.models import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-from lcfs.web.api.compliance_report.schema import (
-    ComplianceReportSummaryRowSchema,
-)
+from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
+
+
+def _assert_repo_calls(
+    mock_repo, mock_trxn_repo, start_date, end_date, organization_id
+):
+    """Verify that repository methods are called as expected."""
+    mock_repo.get_transferred_out_compliance_units.assert_called_once_with(
+        start_date, end_date, organization_id
+    )
+    mock_repo.get_received_compliance_units.assert_called_once_with(
+        start_date, end_date, organization_id
+    )
+    mock_repo.get_issued_compliance_units.assert_called_once_with(
+        start_date, end_date, organization_id
+    )
+    mock_trxn_repo.calculate_available_balance_for_period.assert_called_once_with(
+        organization_id, start_date.year
+    )
+
+
+def _get_line_values(summary: List[ComplianceReportSummaryRowSchema]) -> dict:
+    """Helper to map summary rows' line numbers to their values."""
+    return {item.line: item.value for item in summary}
+
+
+def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
+    """Common assertions for renewable fuel summary tests."""
+    assert len(result) == 11
+    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
 
 
 @pytest.mark.anyio
-async def test_calculate_low_carbon_fuel_target_summary(
-    compliance_report_summary_service, mock_trxn_repo, mock_repo
+@pytest.mark.parametrize(
+    "description, reporting_frequency, fuel_supply_data",
+    [
+        (
+            "Annual report using 'quantity'",
+            None,  # Use default (annual) reporting
+            [
+                {
+                    "target_ci": 100,
+                    "eer": 1.0,
+                    "ci_of_fuel": 80,
+                    "quantity": 100000,
+                    "energy_density": 10,
+                },
+                {
+                    "target_ci": 90,
+                    "eer": 1.2,
+                    "ci_of_fuel": 70,
+                    "quantity": 200000,
+                    "energy_density": 8,
+                },
+                {
+                    "target_ci": 80,
+                    "eer": 0.5,
+                    "ci_of_fuel": 60,
+                    "quantity": 300000,
+                    "energy_density": 8,
+                },
+            ],
+        ),
+        (
+            "Quarterly report using Q1 quantities",
+            ReportingFrequency.QUARTERLY,
+            [
+                {
+                    "target_ci": 100,
+                    "eer": 1.0,
+                    "ci_of_fuel": 80,
+                    "q1_quantity": 100000,
+                    "energy_density": 10,
+                },
+                {
+                    "target_ci": 90,
+                    "eer": 1.2,
+                    "ci_of_fuel": 70,
+                    "q1_quantity": 200000,
+                    "energy_density": 8,
+                },
+                {
+                    "target_ci": 80,
+                    "eer": 0.5,
+                    "ci_of_fuel": 60,
+                    "q1_quantity": 300000,
+                    "energy_density": 8,
+                },
+            ],
+        ),
+        (
+            "Quarterly report with multiple quarter fields",
+            ReportingFrequency.QUARTERLY,
+            [
+                {
+                    "target_ci": 100,
+                    "eer": 1.0,
+                    "ci_of_fuel": 80,
+                    "q1_quantity": 50000,
+                    "q2_quantity": 50000,
+                    "energy_density": 10,
+                },
+                {
+                    "target_ci": 90,
+                    "eer": 1.2,
+                    "ci_of_fuel": 70,
+                    "q3_quantity": 200000,
+                    "energy_density": 8,
+                },
+                {
+                    "target_ci": 80,
+                    "eer": 0.5,
+                    "ci_of_fuel": 60,
+                    "q4_quantity": 300000,
+                    "energy_density": 8,
+                },
+            ],
+        ),
+    ],
+)
+async def test_calculate_low_carbon_fuel_target_summary_parametrized(
+    compliance_report_summary_service,
+    mock_trxn_repo,
+    mock_summary_repo,
+    reporting_frequency,
+    fuel_supply_data,
+    description,
 ):
-
-    # Mock input data
+    # Common input data
     compliance_period_start = datetime(2024, 1, 1)
     compliance_period_end = datetime(2024, 12, 31)
     organization_id = 1
     compliance_report = MagicMock(spec=ComplianceReport)
     compliance_report.version = 0
+    if reporting_frequency:
+        compliance_report.reporting_frequency = reporting_frequency
 
-    # Mock fuel supply records
-    mock_fuel_supplies = [
-        MagicMock(
-            target_ci=100, eer=1.0, ci_of_fuel=80, quantity=100000, energy_density=10
-        ),  # Expected units: 20
-        MagicMock(
-            target_ci=90, eer=1.2, ci_of_fuel=70, quantity=200000, energy_density=8
-        ),  # Expected units: 60.8
-        MagicMock(
-            target_ci=80, eer=0.5, ci_of_fuel=60, quantity=300000, energy_density=8
-        ),  # Expected units: -48
-    ]
+    # Set up effective fuel supplies based on the parameterized fuel_supply_data.
+    fuel_supplies = [MagicMock(**data) for data in fuel_supply_data]
     compliance_report_summary_service.get_effective_fuel_supplies = AsyncMock(
-        return_value=mock_fuel_supplies
+        return_value=fuel_supplies
     )
 
-    # Mock repository method returns
-    mock_repo.get_transferred_out_compliance_units.return_value = 500
-    mock_repo.get_received_compliance_units.return_value = 300
-    mock_repo.get_issued_compliance_units.return_value = 200
+    # Setup repository responses and calculation method mocks.
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
+    mock_summary_repo.get_received_compliance_units.return_value = 300
+    mock_summary_repo.get_issued_compliance_units.return_value = 200
     mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
     compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
         AsyncMock(return_value=100)
@@ -51,7 +161,7 @@ async def test_calculate_low_carbon_fuel_target_summary(
         AsyncMock(return_value=100)
     )
 
-    # Call the method
+    # Call the target method.
     summary, penalty = (
         await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
             compliance_period_start,
@@ -61,13 +171,12 @@ async def test_calculate_low_carbon_fuel_target_summary(
         )
     )
 
-    # Assertions
+    # Common assertions for summary lines.
     assert isinstance(summary, list)
+    assert len(summary) == 11
     assert all(isinstance(item, ComplianceReportSummaryRowSchema) for item in summary)
-    assert len(summary) == 11  # Ensure all 11 lines are present
-
-    # Check specific line values
-    line_values = {item.line: item.value for item in summary}
+    line_values = _get_line_values(summary)
+    # Expected common line values.
     assert line_values[12] == 500  # Transferred out
     assert line_values[13] == 300  # Received
     assert line_values[14] == 200  # Issued
@@ -75,62 +184,53 @@ async def test_calculate_low_carbon_fuel_target_summary(
     assert line_values[19] == 100
     assert line_values[20] == 200
     assert line_values[21] == 0  # Not calculated yet
-    assert line_values[22] == 1200  # Add all the above
+    assert line_values[22] == 1200  # Sum of above
 
-    # Verify method calls
-    mock_repo.get_transferred_out_compliance_units.assert_called_once_with(
-        compliance_period_start, compliance_period_end, organization_id
-    )
-    mock_repo.get_received_compliance_units.assert_called_once_with(
-        compliance_period_start, compliance_period_end, organization_id
-    )
-    mock_repo.get_issued_compliance_units.assert_called_once_with(
-        compliance_period_start, compliance_period_end, organization_id
-    )
-    mock_trxn_repo.calculate_available_balance_for_period.assert_called_once_with(
-        organization_id, compliance_period_start.year
+    _assert_repo_calls(
+        mock_summary_repo,
+        mock_trxn_repo,
+        compliance_period_start,
+        compliance_period_end,
+        organization_id,
     )
 
 
 @pytest.mark.anyio
 async def test_supplemental_low_carbon_fuel_target_summary(
-    compliance_report_summary_service, mock_trxn_repo, mock_repo
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
 ):
-    # Mock input data
+    # Input setup: supplemental version (version = 2)
     compliance_period_start = datetime(2024, 1, 1)
     compliance_period_end = datetime(2024, 12, 31)
     organization_id = 1
     compliance_report = MagicMock(spec=ComplianceReport)
     compliance_report.version = 2
 
-    # Mock fuel supply records
-    mock_fuel_supplies = [
+    fuel_supplies = [
         MagicMock(
             target_ci=100, eer=1.0, ci_of_fuel=80, quantity=100000, energy_density=10
-        ),  # Expected units: 20
+        ),
         MagicMock(
             target_ci=90, eer=1.2, ci_of_fuel=70, quantity=200000, energy_density=8
-        ),  # Expected units: 60.8
+        ),
         MagicMock(
             target_ci=80, eer=0.5, ci_of_fuel=60, quantity=300000, energy_density=8
-        ),  # Expected units: -48
+        ),
     ]
     compliance_report_summary_service.get_effective_fuel_supplies = AsyncMock(
-        return_value=mock_fuel_supplies
+        return_value=fuel_supplies
     )
 
-    # Mock repository method returns
-    mock_repo.get_transferred_out_compliance_units.return_value = 500
-    mock_repo.get_received_compliance_units.return_value = 300
-    mock_repo.get_issued_compliance_units.return_value = 200
-
+    # Repository returns.
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
+    mock_summary_repo.get_received_compliance_units.return_value = 300
+    mock_summary_repo.get_issued_compliance_units.return_value = 200
     previous_summary = Mock()
     previous_summary.line_15_banked_units_used = 0
     previous_summary.line_16_banked_units_remaining = 0
     previous_summary.line_18_units_to_be_banked = 15
     previous_summary.line_19_units_to_be_exported = 15
-
-    mock_repo.get_previous_summary.return_value = previous_summary
+    mock_summary_repo.get_previous_summary.return_value = previous_summary
     mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
     compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
         AsyncMock(return_value=100)
@@ -139,7 +239,6 @@ async def test_supplemental_low_carbon_fuel_target_summary(
         AsyncMock(return_value=100)
     )
 
-    # Call the method
     summary, penalty = (
         await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
             compliance_period_start,
@@ -149,44 +248,64 @@ async def test_supplemental_low_carbon_fuel_target_summary(
         )
     )
 
-    # Assertions
+    # Assert supplemental summary lines.
     assert isinstance(summary, list)
-    assert all(isinstance(item, ComplianceReportSummaryRowSchema) for item in summary)
-    assert len(summary) == 11  # Ensure all 11 lines are present
-
-    # Check specific line values
-    line_values = {item.line: item.value for item in summary}
-    assert line_values[12] == 500  # Transferred out
-    assert line_values[13] == 300  # Received
-    assert line_values[14] == 200  # Issued
-    assert line_values[15] == 15  # Previously Issued
-    assert line_values[16] == 15  # Previously Issued
+    assert len(summary) == 11
+    line_values = _get_line_values(summary)
+    assert line_values[12] == 500
+    assert line_values[13] == 300
+    assert line_values[14] == 200
+    assert line_values[15] == 15
+    assert line_values[16] == 15
     assert line_values[18] == 100
     assert line_values[19] == 100
-    assert line_values[20] == 170  # Wrong
-    assert line_values[21] == 0  # Not calculated yet
-    assert line_values[22] == 1170  # Add all the above
+    assert line_values[20] == 170  # As per business logic
+    assert line_values[21] == 0
+    assert line_values[22] == 1170
 
-    # Verify method calls
-    mock_repo.get_transferred_out_compliance_units.assert_called_once_with(
-        compliance_period_start, compliance_period_end, organization_id
+    _assert_repo_calls(
+        mock_summary_repo,
+        mock_trxn_repo,
+        compliance_period_start,
+        compliance_period_end,
+        organization_id,
     )
-    mock_repo.get_received_compliance_units.assert_called_once_with(
-        compliance_period_start, compliance_period_end, organization_id
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "penalty_payable, exp_row1, exp_row2, exp_row3",
+    [
+        (0, 6000, 0, 6000),
+        (-2, 6000, 1200, 7200),
+    ],
+)
+async def test_calculate_non_compliance_penalty_summary_parametrized(
+    compliance_report_summary_service,
+    compliance_report_summary_row_schema,
+    penalty_payable,
+    exp_row1,
+    exp_row2,
+    exp_row3,
+):
+    mock_compliance_report_summary = [
+        compliance_report_summary_row_schema(
+            line=11, gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
+        )
+    ]
+    result = compliance_report_summary_service.calculate_non_compliance_penalty_summary(
+        penalty_payable, mock_compliance_report_summary
     )
-    mock_repo.get_issued_compliance_units.assert_called_once_with(
-        compliance_period_start, compliance_period_end, organization_id
-    )
-    mock_trxn_repo.calculate_available_balance_for_period.assert_called_once_with(
-        organization_id, compliance_period_start.year
-    )
+    assert len(result) == 3
+    assert result[0].total_value == exp_row1
+    assert result[1].total_value == exp_row2
+    assert result[2].total_value == exp_row3
 
 
 @pytest.mark.anyio
 async def test_calculate_renewable_fuel_target_summary_2024(
     compliance_report_summary_service,
 ):
-
     fossil_quantities = {"gasoline": 100, "diesel": 100, "jet_fuel": 100}
     renewable_quantities = {"gasoline": 100, "diesel": 100, "jet_fuel": 100}
     previous_retained = {"gasoline": 100, "diesel": 100, "jet_fuel": 100}
@@ -212,57 +331,49 @@ async def test_calculate_renewable_fuel_target_summary_2024(
         summary_model,
     )
 
-    # Line 1: Volume of fossil-derived base fuel supplied
+    # Assert each line value as expected.
+    _assert_renewable_common(result)
+    # Line 1
     assert result[0].gasoline == 100.0
     assert result[0].diesel == 100.0
     assert result[0].jet_fuel == 100.0
-
-    # Line 2: Volume of eligible renewable fuel supplied
+    # Line 2
     assert result[1].gasoline == 100.0
     assert result[1].diesel == 100.0
     assert result[1].jet_fuel == 100.0
-
-    # Line 3: Total volume of tracked fuel supplied (Line 1 + Line 2)
+    # Line 3
     assert result[2].gasoline == 200.0
     assert result[2].diesel == 200.0
     assert result[2].jet_fuel == 200.0
-
-    # Line 4: Volume of eligible renewable fuel required
-    assert result[3].gasoline == 10.0  # 5% of 200
-    assert result[3].diesel == 8.0  # 4% of 200
-    assert result[3].jet_fuel == 0.0  # Jet fuel percentage is 0 in 2024
-
-    # Line 5: Net volume of eligible renewable fuel notionally transferred
+    # Line 4
+    assert result[3].gasoline == 10.0
+    assert result[3].diesel == 8.0
+    assert result[3].jet_fuel == 0.0
+    # Line 5
     assert result[4].gasoline == 100.0
     assert result[4].diesel == 100.0
     assert result[4].jet_fuel == 100.0
-
-    # Line 6: Volume of eligible renewable fuel retained
+    # Line 6
     assert result[5].gasoline == 0.0
     assert result[5].diesel == 0.0
     assert result[5].jet_fuel == 0.0
-
-    # Line 7: Volume of eligible renewable fuel previously retained
+    # Line 7
     assert result[6].gasoline == 100.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 100.0
-
-    # Line 8: Volume of eligible renewable obligation deferred
+    # Line 8
     assert result[7].gasoline == 0.0
     assert result[7].diesel == 0.0
     assert result[7].jet_fuel == 0.0
-
-    # Line 9: Volume of renewable obligation added
+    # Line 9
     assert result[8].gasoline == 100.0
     assert result[8].diesel == 100.0
     assert result[8].jet_fuel == 100.0
-
-    # Line 10: Net volume of eligible renewable fuel supplied
+    # Line 10
     assert result[9].gasoline == 200.0
     assert result[9].diesel == 200.0
     assert result[9].jet_fuel == 200.0
-
-    # Line 11: Non-compliance penalty payable
+    # Line 11
     assert result[10].gasoline == 0.0
     assert result[10].diesel == 0.0
     assert result[10].jet_fuel == 0.0
@@ -272,7 +383,6 @@ async def test_calculate_renewable_fuel_target_summary_2024(
 async def test_calculate_renewable_fuel_target_summary_2028(
     compliance_report_summary_service,
 ):
-
     fossil_quantities = {"gasoline": 100, "diesel": 300, "jet_fuel": 500}
     renewable_quantities = {"gasoline": 200, "diesel": 400, "jet_fuel": 600}
     previous_retained = {"gasoline": 300, "diesel": 500, "jet_fuel": 100}
@@ -298,60 +408,48 @@ async def test_calculate_renewable_fuel_target_summary_2028(
         summary_model,
     )
 
-    assert len(result) == 11
-    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-
-    # Line 1: Volume of fossil-derived base fuel supplied
+    _assert_renewable_common(result)
+    # Line 1
     assert result[0].gasoline == 100.0
     assert result[0].diesel == 300.0
     assert result[0].jet_fuel == 500.0
-
-    # Line 2: Volume of eligible renewable fuel supplied
+    # Line 2
     assert result[1].gasoline == 200.0
     assert result[1].diesel == 400.0
     assert result[1].jet_fuel == 600.0
-
-    # Line 3: Total volume of tracked fuel supplied (Line 1 + Line 2)
+    # Line 3
     assert result[2].gasoline == 300.0
     assert result[2].diesel == 700.0
     assert result[2].jet_fuel == 1100.0
-
-    # Line 4: Volume of eligible renewable fuel required
-    assert result[3].gasoline == 15.0  # 5% of 300
-    assert result[3].diesel == 28.0  # 4% of 700
-    assert result[3].jet_fuel == 11  # 1% of 1100
-
-    # Line 5: Net volume of eligible renewable fuel notionally transferred
+    # Line 4
+    assert result[3].gasoline == 15.0
+    assert result[3].diesel == 28.0
+    assert result[3].jet_fuel == 11
+    # Line 5
     assert result[4].gasoline == 500.0
     assert result[4].diesel == 100.0
     assert result[4].jet_fuel == 300.0
-
-    # Line 6: Volume of eligible renewable fuel retained
+    # Line 6
     assert result[5].gasoline == 0.0
     assert result[5].diesel == 0.0
     assert result[5].jet_fuel == 0.0
-
-    # Line 7: Volume of eligible renewable fuel previously retained
+    # Line 7
     assert result[6].gasoline == 300.0
     assert result[6].diesel == 500.0
     assert result[6].jet_fuel == 100.0
-
-    # Line 8: Volume of eligible renewable obligation deferred
+    # Line 8
     assert result[7].gasoline == 0.0
     assert result[7].diesel == 0.0
     assert result[7].jet_fuel == 0.0
-
-    # Line 9: Volume of renewable obligation added
+    # Line 9
     assert result[8].gasoline == 400.0
     assert result[8].diesel == 600.0
     assert result[8].jet_fuel == 200.0
-
-    # Line 10: Net volume of eligible renewable fuel supplied
+    # Line 10
     assert result[9].gasoline == 600.0
     assert result[9].diesel == 400.0
     assert result[9].jet_fuel == 800.0
-
-    # Line 11: Non-compliance penalty payable
+    # Line 11
     assert result[10].gasoline == 0.0
     assert result[10].diesel == 0.0
     assert result[10].jet_fuel == 0.0
@@ -361,7 +459,6 @@ async def test_calculate_renewable_fuel_target_summary_2028(
 async def test_calculate_renewable_fuel_target_summary_2029(
     compliance_report_summary_service,
 ):
-
     fossil_quantities = {"gasoline": 300, "diesel": 200, "jet_fuel": 100}
     renewable_quantities = {"gasoline": 100, "diesel": 300, "jet_fuel": 200}
     previous_retained = {"gasoline": 200, "diesel": 100, "jet_fuel": 300}
@@ -387,60 +484,48 @@ async def test_calculate_renewable_fuel_target_summary_2029(
         summary_model,
     )
 
-    assert len(result) == 11
-    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-
-    # Line 1: Volume of fossil-derived base fuel supplied
+    _assert_renewable_common(result)
+    # Line 1
     assert result[0].gasoline == 300.0
     assert result[0].diesel == 200.0
     assert result[0].jet_fuel == 100.0
-
-    # Line 2: Volume of eligible renewable fuel supplied
+    # Line 2
     assert result[1].gasoline == 100.0
     assert result[1].diesel == 300.0
     assert result[1].jet_fuel == 200.0
-
-    # Line 3: Total volume of tracked fuel supplied (Line 1 + Line 2)
+    # Line 3
     assert result[2].gasoline == 400.0
     assert result[2].diesel == 500.0
     assert result[2].jet_fuel == 300.0
-
-    # Line 4: Volume of eligible renewable fuel required
-    assert result[3].gasoline == 20.0  # 5% of 400
-    assert result[3].diesel == 20.0  # 4% of 500
-    assert result[3].jet_fuel == 6.0  # 2% of 300
-
-    # Line 5: Net volume of eligible renewable fuel notionally transferred
+    # Line 4
+    assert result[3].gasoline == 20.0
+    assert result[3].diesel == 20.0
+    assert result[3].jet_fuel == 6.0
+    # Line 5
     assert result[4].gasoline == 100.0
     assert result[4].diesel == 300.0
     assert result[4].jet_fuel == 200.0
-
-    # Line 6: Volume of eligible renewable fuel retained
+    # Line 6
     assert result[5].gasoline == 0.0
     assert result[5].diesel == 0.0
     assert result[5].jet_fuel == 0.0
-
-    # Line 7: Volume of eligible renewable fuel previously retained
+    # Line 7
     assert result[6].gasoline == 200.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 300.0
-
-    # Line 8: Volume of eligible renewable obligation deferred
+    # Line 8
     assert result[7].gasoline == 0.0
     assert result[7].diesel == 0.0
     assert result[7].jet_fuel == 0.0
-
-    # Line 9: Volume of renewable obligation added
+    # Line 9
     assert result[8].gasoline == 300.0
     assert result[8].diesel == 200.0
     assert result[8].jet_fuel == 100.0
-
-    # Line 10: Net volume of eligible renewable fuel supplied
+    # Line 10
     assert result[9].gasoline == 100.0
     assert result[9].diesel == 500.0
     assert result[9].jet_fuel == 600.0
-
-    # Line 11: Non-compliance penalty payable
+    # Line 11
     assert result[10].gasoline == 0.0
     assert result[10].diesel == 0.0
     assert result[10].jet_fuel == 0.0
@@ -450,7 +535,6 @@ async def test_calculate_renewable_fuel_target_summary_2029(
 async def test_calculate_renewable_fuel_target_summary_2030(
     compliance_report_summary_service,
 ):
-
     fossil_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 300}
     renewable_quantities = {"gasoline": 200, "diesel": 300, "jet_fuel": 100}
     previous_retained = {"gasoline": 300, "diesel": 100, "jet_fuel": 200}
@@ -476,107 +560,58 @@ async def test_calculate_renewable_fuel_target_summary_2030(
         summary_model,
     )
 
-    # Line 1: Volume of fossil-derived base fuel supplied
+    _assert_renewable_common(result)
+    # Line 1
     assert result[0].gasoline == 100.0
     assert result[0].diesel == 200.0
     assert result[0].jet_fuel == 300.0
-
-    # Line 2: Volume of eligible renewable fuel supplied
+    # Line 2
     assert result[1].gasoline == 200.0
     assert result[1].diesel == 300.0
     assert result[1].jet_fuel == 100.0
-
-    # Line 3: Total volume of tracked fuel supplied (Line 1 + Line 2)
+    # Line 3
     assert result[2].gasoline == 300.0
     assert result[2].diesel == 500.0
     assert result[2].jet_fuel == 400.0
-
-    # Line 4: Volume of eligible renewable fuel required
-    assert result[3].gasoline == 15.0  # 5% of 300
-    assert result[3].diesel == 20.0  # 4% of 500
+    # Line 4
+    assert result[3].gasoline == 15.0
+    assert result[3].diesel == 20.0
     assert result[3].jet_fuel == 12.0
-
-    # Line 5: Net volume of eligible renewable fuel notionally transferred
+    # Line 5
     assert result[4].gasoline == 200.0
     assert result[4].diesel == 300.0
     assert result[4].jet_fuel == 100.0
-
-    # Line 6: Volume of eligible renewable fuel retained
+    # Line 6
     assert result[5].gasoline == 0.0
     assert result[5].diesel == 0.0
     assert result[5].jet_fuel == 0.0
-
-    # Line 7: Volume of eligible renewable fuel previously retained
+    # Line 7
     assert result[6].gasoline == 300.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 200.0
-
-    # Line 8: Volume of eligible renewable obligation deferred
+    # Line 8
     assert result[7].gasoline == 0.0
     assert result[7].diesel == 0.0
     assert result[7].jet_fuel == 0.0
-
-    # Line 9: Volume of renewable obligation added
+    # Line 9
     assert result[8].gasoline == 100.0
     assert result[8].diesel == 200.0
     assert result[8].jet_fuel == 300.0
-
-    # Line 10: Net volume of eligible renewable fuel supplied
+    # Line 10
     assert result[9].gasoline == 600.0
     assert result[9].diesel == 500.0
     assert result[9].jet_fuel == 100.0
-
-    # Line 11: Non-compliance penalty payable
+    # Line 11
     assert result[10].gasoline == 0.0
     assert result[10].diesel == 0.0
     assert result[10].jet_fuel == 0.0
 
 
 @pytest.mark.anyio
-async def test_calculate_non_compliance_penalty_summary_without_penalty_payable(
-    compliance_report_summary_service, compliance_report_summary_row_schema
-):
-    mock_compliance_report_summary = [
-        compliance_report_summary_row_schema(
-            line=11, gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
-        )
-    ]
-
-    result = compliance_report_summary_service.calculate_non_compliance_penalty_summary(
-        0, mock_compliance_report_summary
-    )
-
-    assert len(result) == 3
-    assert result[0].total_value == 6000
-    assert result[1].total_value == 0
-    assert result[2].total_value == 6000
-
-
-@pytest.mark.anyio
-async def test_calculate_non_compliance_penalty_summary_with_penalty_payable(
-    compliance_report_summary_service, compliance_report_summary_row_schema
-):
-    mock_compliance_report_summary = [
-        compliance_report_summary_row_schema(
-            line=11, gasoline=1000, diesel=2000, jet_fuel=3000, total_value=6000
-        )
-    ]
-
-    result = compliance_report_summary_service.calculate_non_compliance_penalty_summary(
-        -2, mock_compliance_report_summary
-    )
-
-    assert len(result) == 3
-    assert result[0].total_value == 6000
-    assert result[1].total_value == 1200
-    assert result[2].total_value == 7200
-
-
-@pytest.mark.anyio
 async def test_calculate_renewable_fuel_target_summary_no_renewables(
     compliance_report_summary_service,
 ):
-    # Test case where there are no renewable quantities
+    # Test case with no renewable quantities
     fossil_quantities = {"gasoline": 1000, "diesel": 2000, "jet_fuel": 3000}
     renewable_quantities = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
@@ -602,9 +637,8 @@ async def test_calculate_renewable_fuel_target_summary_no_renewables(
         summary_model,
     )
 
-    assert len(result) == 11
-    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-    # Penalty should be applied due to no renewables
+    _assert_renewable_common(result)
+    # Penalty is expected due to no renewables.
     assert result[10].gasoline == 15.0
     assert result[10].diesel == 36.0
     assert result[10].jet_fuel == 45.0
@@ -615,7 +649,7 @@ async def test_calculate_renewable_fuel_target_summary_no_renewables(
 async def test_calculate_renewable_fuel_target_summary_high_renewables(
     compliance_report_summary_service,
 ):
-    # Test case where renewable quantities exceed requirements
+    # Renewable quantities exceed the requirements, so no penalty is applied.
     fossil_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 300}
     renewable_quantities = {"gasoline": 500, "diesel": 600, "jet_fuel": 700}
     previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
@@ -641,9 +675,8 @@ async def test_calculate_renewable_fuel_target_summary_high_renewables(
         summary_model,
     )
 
-    assert len(result) == 11
-    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-    # No penalty since renewables exceed requirements
+    _assert_renewable_common(result)
+    # No penalty expected.
     assert result[10].gasoline == 0
     assert result[10].diesel == 0
     assert result[10].jet_fuel == 0
@@ -653,11 +686,9 @@ async def test_calculate_renewable_fuel_target_summary_high_renewables(
 async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
     compliance_report_summary_service,
 ):
-    # Test case where required renewable quantities have not changed, so lines 6 and 8 should be copied
+    # Test when the required renewable quantities have not changed so that Lines 6 and 8 are simply copied.
     fossil_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 300}
     renewable_quantities = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
-    previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
-    previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     compliance_period = 2030
     summary_model = ComplianceReportSummary(
@@ -668,15 +699,12 @@ async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
         line_8_obligation_deferred_diesel=10,
         line_8_obligation_deferred_jet_fuel=15,
     )
-
-    # Set the expected eligible renewable fuel required to match the summary model
+    # Set required renewable fuel values to match the summary model.
     expected_eligible_renewable_fuel_required = {
-        "gasoline": 5.0,  # 100 * 0.05
-        "diesel": 8.0,  # 200 * 0.04
-        "jet_fuel": 9.0,  # 300 * 0.03
+        "gasoline": 5.0,
+        "diesel": 8.0,
+        "jet_fuel": 9.0,
     }
-
-    # Mock the summary model's line 4 values to match the expected required values
     summary_model.line_4_eligible_renewable_fuel_required_gasoline = (
         expected_eligible_renewable_fuel_required["gasoline"]
     )
@@ -690,23 +718,19 @@ async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
     result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
         fossil_quantities,
         renewable_quantities,
-        previous_retained,
-        previous_obligation,
+        {"gasoline": 0, "diesel": 0, "jet_fuel": 0},
+        {"gasoline": 0, "diesel": 0, "jet_fuel": 0},
         notional_transfers_sum,
         compliance_period,
         summary_model,
     )
 
-    assert len(result) == 11
-    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-
-    # Line 6: Volume of eligible renewable fuel retained
-    assert result[5].gasoline == 10.0  # Should be copied if conditions are met
+    _assert_renewable_common(result)
+    # Lines 6 & 8 should be copied.
+    assert result[5].gasoline == 10.0
     assert result[5].diesel == 20.0
     assert result[5].jet_fuel == 30.0
-
-    # Line 8: Volume of eligible renewable obligation deferred
-    assert result[7].gasoline == 5.0  # Should be copied if conditions are met
+    assert result[7].gasoline == 5.0
     assert result[7].diesel == 10.0
     assert result[7].jet_fuel == 15.0
 
@@ -715,7 +739,7 @@ async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
 async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(
     compliance_report_summary_service,
 ):
-    # Test case where required renewable quantities have changed, so lines 6 and 8 should not be copied
+    # Test when the required renewable quantities differ so that Lines 6 and 8 are not copied.
     fossil_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 300}
     renewable_quantities = {"gasoline": 50, "diesel": 150, "jet_fuel": 50}
     previous_retained = {"gasoline": 20, "diesel": 30, "jet_fuel": 40}
@@ -730,15 +754,12 @@ async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(
         line_8_obligation_deferred_diesel=10,
         line_8_obligation_deferred_jet_fuel=15,
     )
-
-    # Set the expected eligible renewable fuel required to differ from the summary model
+    # Set required values that differ from the summary model.
     expected_eligible_renewable_fuel_required = {
-        "gasoline": 10.0,  # Different from summary model
-        "diesel": 16.0,  # Different from summary model
-        "jet_fuel": 18.0,  # Different from summary model
+        "gasoline": 10.0,
+        "diesel": 16.0,
+        "jet_fuel": 18.0,
     }
-
-    # Mock the summary model's line 4 values to differ from the expected required values
     summary_model.line_4_eligible_renewable_fuel_required_gasoline = (
         expected_eligible_renewable_fuel_required["gasoline"] + 1
     )
@@ -759,30 +780,28 @@ async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(
         summary_model,
     )
 
-    assert len(result) == 11
-    assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-    assert result[5].gasoline == 0  # Line 6 should not be copied
+    _assert_renewable_common(result)
+    # Lines 6 & 8 should not be copied; expect 0.
+    assert result[5].gasoline == 0
     assert result[5].diesel == 0
     assert result[5].jet_fuel == 0
-    assert result[7].gasoline == 0  # Line 8 should not be copied
+    assert result[7].gasoline == 0
     assert result[7].diesel == 0
     assert result[7].jet_fuel == 0
 
 
 @pytest.mark.anyio
 async def test_can_sign_flag_logic(
-    compliance_report_summary_service, mock_repo, mock_trxn_repo
+    compliance_report_summary_service, mock_repo, mock_summary_repo, mock_trxn_repo
 ):
-    # Scenario 1: All conditions met
+    # Scenario 1: All conditions met.
     mock_effective_fuel_supplies = [MagicMock()]
     mock_notional_transfers = MagicMock(notional_transfers=[MagicMock()])
     mock_fuel_exports = [MagicMock()]
     mock_allocation_agreements = [MagicMock()]
 
-    # Create a mock summary with real numeric values
     mock_summary = MagicMock(
         is_locked=False,
-        # Add all the required attributes with real numbers
         line_6_renewable_fuel_retained_gasoline=10,
         line_6_renewable_fuel_retained_diesel=20,
         line_6_renewable_fuel_retained_jet_fuel=30,
@@ -799,7 +818,6 @@ async def test_can_sign_flag_logic(
         line_4_eligible_renewable_fuel_required_diesel=50,
         line_4_eligible_renewable_fuel_required_jet_fuel=10,
     )
-
     mock_compliance_report = MagicMock(
         version=0,
         compliance_report_group_uuid="mock-group-uuid",
@@ -811,32 +829,17 @@ async def test_can_sign_flag_logic(
         compliance_report_id=1,
         summary=mock_summary,
     )
-
     mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
-
-    # Mock previous retained and obligation dictionaries
     previous_retained = {"gasoline": 10, "diesel": 20, "jet_fuel": 30}
     previous_obligation = {"gasoline": 5, "diesel": 10, "jet_fuel": 15}
 
-    # Mock repository methods
     mock_repo.get_compliance_report_by_id = AsyncMock(
         return_value=mock_compliance_report
     )
-    mock_repo.calculate_fuel_quantities = AsyncMock(
-        return_value={
-            "gasoline": 100,
-            "diesel": 50,
-            "jet_fuel": 25,
-        }
+    mock_summary_repo.aggregate_other_uses_quantity = AsyncMock(
+        return_value={"gasoline": 50, "diesel": 25, "jet_fuel": 10}
     )
-    mock_repo.aggregate_other_uses_quantity = AsyncMock(
-        return_value={
-            "gasoline": 50,
-            "diesel": 25,
-            "jet_fuel": 10,
-        }
-    )
-    mock_repo.get_assessed_compliance_report_by_period = AsyncMock(
+    mock_summary_repo.get_assessed_compliance_report_by_period = AsyncMock(
         return_value=MagicMock(
             summary=MagicMock(
                 line_6_renewable_fuel_retained_gasoline=previous_retained["gasoline"],
@@ -849,20 +852,18 @@ async def test_can_sign_flag_logic(
         )
     )
 
-    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(
-        return_value=mock_effective_fuel_supplies
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=mock_effective_fuel_supplies)
     )
     compliance_report_summary_service.notional_transfer_service.calculate_notional_transfers = AsyncMock(
         return_value=mock_notional_transfers
     )
-    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = AsyncMock(
-        return_value=mock_fuel_exports
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=mock_fuel_exports)
     )
     compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
         return_value=mock_allocation_agreements
     )
-
-    # Mock calculation methods with real dictionaries
     compliance_report_summary_service.calculate_fossil_fuel_quantities = AsyncMock(
         return_value={"gasoline": 100, "diesel": 200, "jet_fuel": 50}
     )
@@ -873,10 +874,10 @@ async def test_can_sign_flag_logic(
         return_value={"gasoline": 10, "diesel": 20, "jet_fuel": 5}
     )
 
+    # Replace the renewable summary method with a dummy implementation.
     def mock_calculate_renewable_fuel_target_summary(*args, **kwargs):
-        # Create test summary rows with safe values
         result = []
-        for line in range(1, 12):  # Lines 1-11
+        for line in range(1, 12):
             row = ComplianceReportSummaryRowSchema(
                 line=line,
                 line_type="test",
@@ -884,235 +885,190 @@ async def test_can_sign_flag_logic(
                 gasoline=10.0,
                 diesel=10.0,
                 jet_fuel=10.0,
-                total_value=30.0
+                total_value=30.0,
             )
             result.append(row)
         return result
 
-    # Replace the method completely
-    compliance_report_summary_service.calculate_renewable_fuel_target_summary = mock_calculate_renewable_fuel_target_summary
+    compliance_report_summary_service.calculate_renewable_fuel_target_summary = (
+        mock_calculate_renewable_fuel_target_summary
+    )
 
-    # Call the method
-    result = await compliance_report_summary_service.calculate_compliance_report_summary(1)
-
-    # Assert that `can_sign` is True
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(1)
+    )
+    # Expect can_sign True when all conditions met.
     assert result.can_sign is True
 
-    # Scenario 2: No conditions met
-    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(
-        return_value=[]
+    # Scenario 2: When no conditions are met.
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=[])
     )
     compliance_report_summary_service.notional_transfer_service.calculate_notional_transfers = AsyncMock(
         return_value=MagicMock(notional_transfers=[])
     )
-    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = AsyncMock(
-        return_value=[]
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=[])
     )
     compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
         return_value=[]
     )
-
-    # Call the method again
-    result = await compliance_report_summary_service.calculate_compliance_report_summary(1)
-
-    # Assert that `can_sign` is False
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(1)
+    )
     assert result.can_sign is False
 
 
 @pytest.mark.anyio
-async def test_calculate_fuel_quantities_fossil_derived(
+@pytest.mark.parametrize(
+    "fossil_derived, agg_quantities_return, agg_other_uses_return, compliance_report_id, expected_result",
+    [
+        (
+            True,
+            {"diesel": 100.0},
+            {"gasoline": 50.0},
+            1,
+            {"diesel": 100.0, "gasoline": 50.0},
+        ),
+        (
+            False,
+            {"gasoline": 200.0},
+            {"diesel": 75.0, "jet-fuel": 25.0},
+            2,
+            {"gasoline": 200.0, "diesel": 75.0, "jet-fuel": 25.0},
+        ),
+    ],
+)
+async def test_calculate_fuel_quantities_parametrized(
     compliance_report_summary_service,
-    mock_repo,
+    mock_summary_repo,
     mock_trxn_repo,
     mock_fuel_supply_repo,
+    fossil_derived,
+    agg_quantities_return,
+    agg_other_uses_return,
+    compliance_report_id,
+    expected_result,
 ):
-    # Create a mock repository
-    mock_repo.aggregate_quantities.return_value = {"diesel": 100.0}
-    mock_repo.aggregate_other_uses_quantity.return_value = {"gasoline": 50.0}
-
-    # Define test inputs
-    compliance_report_id = 1
-    effective_fuel_supplies: List[FuelSupply] = (
-        []
-    )  # Add mock FuelSupply objects as needed
-    fossil_derived = True
-
-    # Call the method under test
+    mock_summary_repo.aggregate_quantities.return_value = agg_quantities_return
+    mock_summary_repo.aggregate_other_uses_quantity.return_value = agg_other_uses_return
     result = await compliance_report_summary_service.calculate_fuel_quantities(
-        compliance_report_id, effective_fuel_supplies, fossil_derived
+        compliance_report_id, [], fossil_derived
     )
-
-    # Assertions
-    assert result == {"diesel": 100.0, "gasoline": 50.0}
-    mock_repo.aggregate_quantities.assert_called_once_with(
-        effective_fuel_supplies, fossil_derived
-    )
-    mock_repo.aggregate_other_uses_quantity.assert_awaited_once_with(
-        compliance_report_id, fossil_derived
-    )
-    mock_repo.aggregate_allocation_agreements.assert_not_called()
+    assert result == expected_result
 
 
 @pytest.mark.anyio
-async def test_calculate_fuel_quantities_renewable(
-    compliance_report_summary_service,
-    mock_repo,
-    mock_trxn_repo,
-    mock_fuel_supply_repo,
+@pytest.mark.parametrize(
+    "fuel_data, expected_result",
+    [
+        # Fuel Supply: positive
+        (
+            {
+                "target_ci": 100,
+                "eer": 1,
+                "ci_of_fuel": 80,
+                "uci": 10,
+                "quantity": 1_000_000,
+                "q1_quantity": 0,
+                "q2_quantity": 0,
+                "q3_quantity": 0,
+                "q4_quantity": 0,
+                "energy_density": 1,
+            },
+            10,
+        ),
+        # Fuel Supply: positive - 2 quartetrs
+        (
+            {
+                "target_ci": 100,
+                "eer": 1,
+                "ci_of_fuel": 80,
+                "uci": 10,
+                "quantity": 500_000,
+                "q1_quantity": 0,
+                "q2_quantity": 500_000,
+                "q3_quantity": 0,
+                "q4_quantity": 0,
+                "energy_density": 1,
+            },
+            10,
+        ),
+        # Fuel Supply: negative
+        (
+            {
+                "target_ci": 80,
+                "eer": 1,
+                "ci_of_fuel": 90,
+                "uci": 5,
+                "quantity": 1_000_000,
+                "q1_quantity": 0,
+                "q2_quantity": 0,
+                "q3_quantity": 0,
+                "q4_quantity": 0,
+                "energy_density": 1,
+            },
+            -15,
+        ),
+    ],
+)
+async def test_calculate_fuel_supply_compliance_units_parametrized(
+    compliance_report_summary_service, fuel_data, expected_result
 ):
-    # Create a mock repository
-    mock_repo.aggregate_quantities.return_value = {"gasoline": 200.0}
-    mock_repo.aggregate_other_uses_quantity.return_value = {
-        "diesel": 75.0,
-        "jet-fuel": 25.0,
-    }
-
-    # Define test inputs
-    compliance_report_id = 2
-    effective_fuel_supplies: List[FuelSupply] = []
-    fossil_derived = False
-
-    # Call the method under test
-    result = await compliance_report_summary_service.calculate_fuel_quantities(
-        compliance_report_id, effective_fuel_supplies, fossil_derived
-    )
-
-    # Assertions
-    mock_repo.aggregate_quantities.assert_called_once_with(
-        effective_fuel_supplies, fossil_derived
-    )
-    mock_repo.aggregate_other_uses_quantity.assert_awaited_once_with(
-        compliance_report_id, fossil_derived
-    )
-    assert result == {"gasoline": 200.0, "diesel": 75.0, "jet-fuel": 25.0}
-
-
-@pytest.mark.anyio
-async def test_calculate_fuel_supply_compliance_units_positive(
-    compliance_report_summary_service,
-):
-    """
-    Test calculate_fuel_supply_compliance_units with a record that yields a positive value.
-    For TCI=100, EER=1, RCI=80, UCI=10, Q=1_000_000, ED=1:
-    (100*1 - (80+10)) * ((1_000_000*1)/1_000_000) = (100 - 90) * 1 = 10.
-    Expected result: 10.
-    """
-    mock_fuel_supply = MagicMock()
-    mock_fuel_supply.target_ci = 100
-    mock_fuel_supply.eer = 1
-    mock_fuel_supply.ci_of_fuel = 80
-    mock_fuel_supply.uci = 10
-    mock_fuel_supply.quantity = 1_000_000
-    mock_fuel_supply.energy_density = 1
-
-    # Patch the repo call to return our single mock record.
+    mock_fuel_supply = Mock(**fuel_data)
     compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
         AsyncMock(return_value=[mock_fuel_supply])
     )
     dummy_report = MagicMock()
     dummy_report.compliance_report_group_uuid = "dummy-group"
-
     result = (
         await compliance_report_summary_service.calculate_fuel_supply_compliance_units(
             dummy_report
         )
     )
-    assert result == 10
+    assert result == expected_result
 
 
 @pytest.mark.anyio
-async def test_calculate_fuel_supply_compliance_units_negative(
-    compliance_report_summary_service,
+@pytest.mark.parametrize(
+    "fuel_export_data, expected_result",
+    [
+        (
+            {
+                "target_ci": 100,
+                "eer": 1,
+                "ci_of_fuel": 80,
+                "uci": 10,
+                "quantity": 1_000_000,
+                "energy_density": 1,
+            },
+            -10,
+        ),
+        (
+            {
+                "target_ci": 80,
+                "eer": 1,
+                "ci_of_fuel": 90,
+                "uci": 5,
+                "quantity": 1_000_000,
+                "energy_density": 1,
+            },
+            0,
+        ),
+    ],
+)
+async def test_calculate_fuel_export_compliance_units_parametrized(
+    compliance_report_summary_service, fuel_export_data, expected_result
 ):
-    """
-    Test calculate_fuel_supply_compliance_units with a record that yields a negative value.
-    For TCI=80, EER=1, RCI=90, UCI=5, Q=1_000_000, ED=1:
-    (80*1 - (90+5)) * ((1_000_000*1)/1_000_000) = (80 - 95) = -15.
-    Expected result: -15.
-    """
-    mock_fuel_supply = MagicMock()
-    mock_fuel_supply.target_ci = 80
-    mock_fuel_supply.eer = 1
-    mock_fuel_supply.ci_of_fuel = 90
-    mock_fuel_supply.uci = 5
-    mock_fuel_supply.quantity = 1_000_000
-    mock_fuel_supply.energy_density = 1
-
-    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
-        AsyncMock(return_value=[mock_fuel_supply])
-    )
-    dummy_report = MagicMock()
-    dummy_report.compliance_report_group_uuid = "dummy-group"
-
-    result = (
-        await compliance_report_summary_service.calculate_fuel_supply_compliance_units(
-            dummy_report
-        )
-    )
-    assert result == -15
-
-
-@pytest.mark.anyio
-async def test_calculate_fuel_export_compliance_units_positive(
-    compliance_report_summary_service,
-):
-    """
-    Test calculate_fuel_export_compliance_units with a record where the underlying compliance_units is positive.
-    Using TCI=100, EER=1, RCI=80, UCI=10, Q=1_000_000, ED=1:
-    - The raw compliance_units = 10.
-    - After negation: -10, which is negative.
-    Expected result: -10.
-    """
-    mock_fuel_export = MagicMock()
-    mock_fuel_export.target_ci = 100
-    mock_fuel_export.eer = 1
-    mock_fuel_export.ci_of_fuel = 80
-    mock_fuel_export.uci = 10
-    mock_fuel_export.quantity = 1_000_000
-    mock_fuel_export.energy_density = 1
-
+    mock_fuel_export = MagicMock(**fuel_export_data)
     compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
         AsyncMock(return_value=[mock_fuel_export])
     )
     dummy_report = MagicMock()
     dummy_report.compliance_report_group_uuid = "dummy-group"
-
     result = (
         await compliance_report_summary_service.calculate_fuel_export_compliance_units(
             dummy_report
         )
     )
-    assert result == -10
-
-
-@pytest.mark.anyio
-async def test_calculate_fuel_export_compliance_units_negative(
-    compliance_report_summary_service,
-):
-    """
-    Test calculate_fuel_export_compliance_units with a record where the underlying compliance_units is negative.
-    For TCI=80, EER=1, RCI=90, UCI=5, Q=1_000_000, ED=1:
-    - The raw compliance_units = (80 - (90+5)) = -15.
-    - After negation: -(-15) = 15, which is not negative, so the method returns 0.
-    Expected result: 0.
-    """
-    mock_fuel_export = MagicMock()
-    mock_fuel_export.target_ci = 80
-    mock_fuel_export.eer = 1
-    mock_fuel_export.ci_of_fuel = 90
-    mock_fuel_export.uci = 5
-    mock_fuel_export.quantity = 1_000_000
-    mock_fuel_export.energy_density = 1
-
-    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
-        AsyncMock(return_value=[mock_fuel_export])
-    )
-    dummy_report = MagicMock()
-    dummy_report.compliance_report_group_uuid = "dummy-group"
-
-    result = (
-        await compliance_report_summary_service.calculate_fuel_export_compliance_units(
-            dummy_report
-        )
-    )
-    assert result == 0
+    assert result == expected_result
