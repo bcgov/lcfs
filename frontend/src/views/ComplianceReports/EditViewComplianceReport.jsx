@@ -32,7 +32,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import colors from '@/themes/base/colors.js'
 import ROUTES from '@/routes/routes.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
-import { FILTER_KEYS } from '@/constants/common.js'
+import { FILTER_KEYS, REPORT_SCHEDULES } from '@/constants/common.js'
+import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
+import ComplianceReportEarlyIssuanceSummary from '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx'
 
 const iconStyle = {
   width: '2rem',
@@ -212,6 +214,11 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     )
   }
 
+  const isEarlyIssuance =
+    reportData.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+  const showEarlyIssuanceSummary =
+    isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
+
   return (
     <>
       <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
@@ -267,17 +274,22 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                 currentStatus={currentStatus}
                 userRoles={currentUser?.userRoles}
               />
-              <ComplianceReportSummary
-                enableCompareMode={reportData.chain.length > 1}
-                canEdit={canEdit}
-                reportID={complianceReportId}
-                currentStatus={currentStatus}
-                compliancePeriodYear={compliancePeriod}
-                setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
-                buttonClusterConfig={buttonClusterConfig}
-                methods={methods}
-                alertRef={alertRef}
-              />
+              {!showEarlyIssuanceSummary && (
+                <ComplianceReportSummary
+                  reportID={complianceReportId}
+                  enableCompareMode={reportData.chain.length > 1}
+                  canEdit={canEdit}
+                  currentStatus={currentStatus}
+                  compliancePeriodYear={compliancePeriod}
+                  setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
+                  buttonClusterConfig={buttonClusterConfig}
+                  methods={methods}
+                  alertRef={alertRef}
+                />
+              )}
+              {showEarlyIssuanceSummary && (
+                <ComplianceReportEarlyIssuanceSummary reportData={reportData} />
+              )}
             </>
           )}
           {!isGovernmentUser && (
