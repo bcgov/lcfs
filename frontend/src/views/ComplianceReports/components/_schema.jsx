@@ -308,6 +308,26 @@ export const nonComplianceColumns = (t) => [
   }
 ]
 
+export const earlyIssuanceColumns = (t) => [
+  {
+    id: 'line',
+    label: t('report:summaryLabels.line'),
+    maxWidth: '150px',
+    align: 'center'
+  },
+  {
+    id: 'description',
+    label: t('report:summaryLabels.earlyIssuanceSummary'),
+    width: '300px'
+  },
+  {
+    id: 'value',
+    label: t('report:summaryLabels.value'),
+    maxWidth: '150px',
+    align: 'right'
+  }
+]
+
 export const defaultSortModel = [
   { field: 'compliancePeriod', direction: 'desc' }
 ]
