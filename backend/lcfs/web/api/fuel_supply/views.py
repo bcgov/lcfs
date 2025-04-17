@@ -1,5 +1,3 @@
-from typing import Union
-
 import structlog
 from fastapi import APIRouter, Body, Depends, Request, Response, status, HTTPException
 from starlette.responses import JSONResponse
@@ -9,7 +7,6 @@ from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.api.fuel_supply.schema import (
-    DeleteFuelSupplyResponseSchema,
     FuelSuppliesSchema,
     FuelSupplyCreateUpdateSchema,
     FuelSupplyResponseSchema,
@@ -95,7 +92,7 @@ async def get_fuel_supply(
 
 @router.post(
     "/save",
-    response_model=Union[FuelSupplyResponseSchema, DeleteFuelSupplyResponseSchema],
+    response_model=FuelSupplyResponseSchema,
     status_code=status.HTTP_201_CREATED,
 )
 @view_handler(

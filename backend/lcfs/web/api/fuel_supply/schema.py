@@ -181,11 +181,6 @@ class FuelSupplyResponseSchema(FuelSupplyCreateUpdateSchema):
         return value
 
 
-class DeleteFuelSupplyResponseSchema(BaseSchema):
-    success: bool
-    message: str
-
-
 class FuelSuppliesSchema(BaseSchema):
     fuel_supplies: Optional[List[FuelSupplyResponseSchema]] = []
     pagination: Optional[PaginationResponseSchema] = {}

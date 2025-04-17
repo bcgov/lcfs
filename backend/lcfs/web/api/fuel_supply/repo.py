@@ -408,8 +408,7 @@ class FuelSupplyRepository:
         self, group_uuid: str, version: int
     ) -> Optional[FuelSupply]:
         """
-        Retrieve a specific FuelSupply record by group UUID, version, and user_type.
-        This method explicitly requires user_type to avoid ambiguity.
+        Retrieve a specific FuelSupply record by group UUID, version.
         """
         query = select(FuelSupply).where(
             FuelSupply.group_uuid == group_uuid,
@@ -429,6 +428,13 @@ class FuelSupplyRepository:
         """
         query = (
             select(FuelSupply)
+            .options(
+                joinedload(FuelSupply.fuel_code),
+                joinedload(FuelSupply.fuel_category),
+                joinedload(FuelSupply.fuel_type),
+                joinedload(FuelSupply.provision_of_the_act),
+                joinedload(FuelSupply.end_use_type),
+            )
             .where(FuelSupply.group_uuid == group_uuid)
             .order_by(
                 FuelSupply.version.desc(),

@@ -12,6 +12,7 @@ from lcfs.db.models import (
 )
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.tests.fuel_supply.conftest import create_sample_fs_data
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
@@ -286,7 +287,7 @@ async def test_update_fuel_supply_success(fuel_supply_action_service, mock_fuel_
 
 
 @pytest.mark.anyio
-async def test_delete_fuel_supply(fuel_supply_action_service):
+async def test_delete_fuel_supply(fuel_supply_action_service, mock_fuel_supply):
     service, mock_repo, mock_fuel_code_repo = fuel_supply_action_service
     fs_data = FuelSupplyCreateUpdateSchema(
         compliance_report_id=1,
@@ -298,28 +299,20 @@ async def test_delete_fuel_supply(fuel_supply_action_service):
         quantity=1000,
         units="L",
     )
-    existing_fuel_supply = FuelSupply(
-        compliance_report_id=1,
-        fuel_supply_id=1,
-        group_uuid="some-uuid",
-        version=0,
-        action_type=ActionTypeEnum.CREATE,
-    )
     mock_repo.get_latest_fuel_supply_by_group_uuid = AsyncMock(
-        return_value=existing_fuel_supply
+        return_value=mock_fuel_supply
     )
-    mock_repo.create_fuel_supply = AsyncMock()
-
     response = await service.delete_fuel_supply(fs_data)
 
-    assert response.success is True
-    assert response.message == "Marked as deleted."
+    assert isinstance(response, FuelSupplyResponseSchema)
     mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with("some-uuid")
     mock_repo.delete_fuel_supply.assert_awaited_once()
 
 
 @pytest.mark.anyio
-async def test_delete_fuel_supply_changelog(fuel_supply_action_service):
+async def test_delete_fuel_supply_changelog(
+    fuel_supply_action_service, mock_fuel_supply
+):
     service, mock_repo, mock_fuel_code_repo = fuel_supply_action_service
     fs_data = FuelSupplyCreateUpdateSchema(
         compliance_report_id=2,
@@ -331,21 +324,11 @@ async def test_delete_fuel_supply_changelog(fuel_supply_action_service):
         quantity=1000,
         units="L",
     )
-    existing_fuel_supply = FuelSupply(
-        compliance_report_id=1,
-        fuel_supply_id=1,
-        group_uuid="some-uuid",
-        version=0,
-        action_type=ActionTypeEnum.CREATE,
-    )
-    mock_repo.get_latest_fuel_supply_by_group_uuid = AsyncMock(
-        return_value=existing_fuel_supply
-    )
-    mock_repo.create_fuel_supply = AsyncMock()
+    mock_repo.get_latest_fuel_supply_by_group_uuid.return_value = mock_fuel_supply
+    mock_repo.create_fuel_supply.return_value = mock_fuel_supply
 
     response = await service.delete_fuel_supply(fs_data)
 
-    assert response.success is True
-    assert response.message == "Marked as deleted."
+    assert isinstance(response, FuelSupplyResponseSchema)
     mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with("some-uuid")
     mock_repo.create_fuel_supply.assert_awaited_once()

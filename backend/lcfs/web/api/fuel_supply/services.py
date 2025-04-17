@@ -70,7 +70,9 @@ class FuelSupplyServices:
         )
         eer = EnergyEffectivenessRatioSchema(
             eer_id=row_data["eer_id"],
-            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"]  or 1, 2),
+            energy_effectiveness_ratio=round(
+                row_data["energy_effectiveness_ratio"] or 1, 2
+            ),
             fuel_category=fuel_category,
             end_use_type=end_use_type,
         )

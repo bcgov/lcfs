@@ -1,6 +1,6 @@
 import copy
 import pytest
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 from lcfs.db.base import ActionTypeEnum
@@ -13,11 +13,11 @@ from lcfs.tests.fuel_supply.conftest import (
     FUEL_SUPPLY_EXCLUDE_FIELDS,
 )
 from lcfs.web.api.fuel_code.repo import CarbonIntensityResult
+from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyCreateUpdateSchema,
-    DeleteFuelSupplyResponseSchema,
+    FuelSupplyResponseSchema,
 )
-from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 from lcfs.web.utils.calculations import calculate_compliance_units
 
 # Example test cases dataset (unchanged)
@@ -127,7 +127,13 @@ def mock_fuel_supply_service():
 
     def map_entity_to_schema_side_effect(fuel_supply):
         # Create a schema that preserves the important attributes from the fuel supply
-        schema = AsyncMock()
+        schema = FuelSupplyResponseSchema(
+            **create_sample_fs_data().model_dump(),
+            action_type=ActionTypeEnum.DELETE.value,
+            fuel_type="Gasoline",
+            fuel_category="Petroleum Products",
+            end_use_type="End Use Type",
+        )
         # Round compliance units to match the expected values
         schema.compliance_units = round(fuel_supply.compliance_units)
         schema.fuel_type = FUEL_TYPE_MOCK
@@ -135,9 +141,7 @@ def mock_fuel_supply_service():
         schema.units = fuel_supply.units
         return schema
 
-    service.map_entity_to_schema = AsyncMock(
-        side_effect=map_entity_to_schema_side_effect
-    )
+    service.map_entity_to_schema = Mock(side_effect=map_entity_to_schema_side_effect)
     return service
 
 
@@ -363,6 +367,7 @@ async def test_delete_fuel_supply_success(
     fuel_supply_action_service_with_mocks,
     mock_repo,
     mock_fuel_code_repo,
+    mock_fuel_supply_service,
     sample_fs_data,
 ):
     fe_data = sample_fs_data
@@ -392,9 +397,7 @@ async def test_delete_fuel_supply_success(
     result = await fuel_supply_action_service_with_mocks.delete_fuel_supply(fe_data)
 
     # Assertions
-    assert isinstance(result, DeleteFuelSupplyResponseSchema)
-    assert result.success is True
-    assert result.message == "Marked as deleted."
+    assert isinstance(result, FuelSupplyResponseSchema)
     mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with(
         fe_data.group_uuid
     )
@@ -441,9 +444,8 @@ async def test_delete_fuel_supply_changelog(
     mock_repo.create_fuel_supply.return_value = deleted_supply
 
     result = await fuel_supply_action_service_with_mocks.delete_fuel_supply(fe_data)
-    assert isinstance(result, DeleteFuelSupplyResponseSchema)
-    assert result.success is True
-    assert result.message == "Marked as deleted."
+    assert isinstance(result, FuelSupplyResponseSchema)
+    assert result.fuel_category == FUEL_CATEGORY_MOCK
     mock_repo.get_latest_fuel_supply_by_group_uuid.assert_awaited_once_with(
         fe_data.group_uuid
     )

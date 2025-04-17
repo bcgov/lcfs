@@ -1,10 +1,14 @@
 import pytest
 from fastapi import FastAPI, status
 from httpx import AsyncClient
+from mypy.types import DeletedType
 from unittest.mock import MagicMock, AsyncMock, patch
 
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.tests.fuel_supply.conftest import create_sample_fs_data
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.fuel_supply.schema import FuelSupplyResponseSchema
 from lcfs.web.api.fuel_supply.validation import FuelSupplyValidation
 from lcfs.web.api.fuel_supply.actions_service import FuelSupplyActionService
 
@@ -177,16 +181,16 @@ async def test_save_fuel_supply_row_delete(
         "deleted": True,
     }
 
+    schema = FuelSupplyResponseSchema(
+        **create_sample_fs_data().model_dump(),
+        action_type=ActionTypeEnum.DELETE.value,
+        fuel_type="Gasoline",
+        fuel_category="Petroleum Products",
+        end_use_type="End Use Type",
+    )
+
     # Mock the delete method with all required fields
-    mock_fuel_supply_action_service.delete_fuel_supply.return_value = {
-        "success": True,
-        "message": "Fuel supply row deleted successfully",
-        "groupUuid": "some-uuid",
-        "quantity": 1000,
-        "version": 1,
-        "userType": "SUPPLIER",
-        "actionType": "DELETE",
-    }
+    mock_fuel_supply_action_service.delete_fuel_supply.return_value = schema
 
     # Override dependencies
     fastapi_app.dependency_overrides[ComplianceReportValidation] = (
@@ -202,8 +206,7 @@ async def test_save_fuel_supply_row_delete(
     response = await client.post(url, json=payload)
 
     assert response.status_code == status.HTTP_201_CREATED
-    data = response.json()
-    assert data == {"success": True, "message": "Fuel supply row deleted successfully"}
+    assert response.json()["actionType"] == ActionTypeEnum.DELETE.value
 
 
 @pytest.mark.anyio

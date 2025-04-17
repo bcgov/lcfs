@@ -1,6 +1,4 @@
-import uuid
 import structlog
-
 import uuid
 from fastapi import Depends, HTTPException
 
@@ -10,7 +8,6 @@ from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.fuel_supply.schema import (
-    DeleteFuelSupplyResponseSchema,
     FuelSupplyCreateUpdateSchema,
     FuelSupplyResponseSchema,
 )
@@ -245,7 +242,7 @@ class FuelSupplyActionService:
     @service_handler
     async def delete_fuel_supply(
         self, fs_data: FuelSupplyCreateUpdateSchema
-    ) -> DeleteFuelSupplyResponseSchema:
+    ) -> FuelSupplyResponseSchema:
         """
         Delete a fuel supply record by creating a new version marked as deleted.
 
@@ -265,9 +262,7 @@ class FuelSupplyActionService:
 
         if existing_fuel_supply.compliance_report_id == fs_data.compliance_report_id:
             await self.repo.delete_fuel_supply(fuel_supply_id=fs_data.fuel_supply_id)
-            return DeleteFuelSupplyResponseSchema(
-                success=True, message="Marked as deleted."
-            )
+            return self.fuel_supply_service.map_entity_to_schema(existing_fuel_supply)
         else:
             # Create a new version with action_type DELETE
             delete_supply = FuelSupply(
@@ -287,7 +282,5 @@ class FuelSupplyActionService:
             delete_supply.units = QuantityUnitsEnum(fs_data.units)
 
             # Save the deletion record
-            await self.repo.create_fuel_supply(delete_supply)
-            return DeleteFuelSupplyResponseSchema(
-                success=True, message="Marked as deleted."
-            )
+            saved_supply = await self.repo.create_fuel_supply(delete_supply)
+            return self.fuel_supply_service.map_entity_to_schema(saved_supply)
