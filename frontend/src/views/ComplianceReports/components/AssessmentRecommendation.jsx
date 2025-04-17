@@ -76,7 +76,7 @@ export const AssessmentRecommendation = ({
             it is known to be incorrect, click to put the report in edit mode:
             <br />
             <BCButton
-              onClick={openDialog}
+              onClick={openAdjustmentDialog}
               sx={{ mt: 2 }}
               color="primary"
               variant="outlined"
@@ -88,18 +88,15 @@ export const AssessmentRecommendation = ({
       {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
         currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
           <BCButton
-            onClick={openAdjustmentDialog}
+            onClick={openReassessmentDialog}
             sx={{ mt: 2 }}
             color="primary"
             startIcon={<Assignment />}
-            sx={{ mt: 2 }}
             disabled={isLoading}
           >
             {t('report:createReassessmentBtn')}
           </BCButton>
         )}
-        </BCTypography>
-      )}
       {currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
         <Tooltip
           title={
