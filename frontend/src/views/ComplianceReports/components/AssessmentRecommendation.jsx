@@ -8,15 +8,20 @@ import BCBox from '@/components/BCBox/index.jsx'
 import BCModal from '@/components/BCModal.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { Assignment } from '@mui/icons-material'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
+import { Tooltip } from '@mui/material'
 
 export const AssessmentRecommendation = ({
+  reportData,
   currentStatus,
   complianceReportId
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
 
-  const [isOpen, setIsOpen] = useState(false)
+  const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false)
+  const [isReassessmentDialogOpen, setIsReassessmentDialogOpen] =
+    useState(false)
 
   const { mutate: createAnalystAdjustment, isLoading } =
     useCreateAnalystAdjustment(complianceReportId, {
@@ -36,10 +41,17 @@ export const AssessmentRecommendation = ({
       }
     })
 
-  const dialogContent = (
+  const governmentAdjustmentDialog = (
     <>
       This will put the report into edit mode to update schedule information, do
       you want to proceed?
+    </>
+  )
+
+  const reAssessmentDialog = (
+    <>
+      This will create a new version of the report for reassessment, do you want
+      to proceed?
     </>
   )
 
@@ -47,53 +59,90 @@ export const AssessmentRecommendation = ({
     createAnalystAdjustment(complianceReportId)
   }
 
-  const openDialog = () => {
-    setIsOpen(true)
+  const openReassessmentDialog = () => {
+    setIsReassessmentDialogOpen(true)
+  }
+
+  const openAdjustmentDialog = () => {
+    setIsAdjustmentDialogOpen(true)
   }
 
   return (
     <BCBox sx={{ mt: 2 }}>
-      {currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED && (
-        <BCTypography variant="body2">
-          The analyst can make changes to the reported activity information if
-          it is known to be incorrect, click to put the report in edit mode:
-          <br />
+      {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
+        currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED && (
+          <BCTypography variant="body2">
+            The analyst can make changes to the reported activity information if
+            it is known to be incorrect, click to put the report in edit mode:
+            <br />
+            <BCButton
+              onClick={openAdjustmentDialog}
+              sx={{ mt: 2 }}
+              color="primary"
+              variant="outlined"
+            >
+              Analyst adjustment
+            </BCButton>
+          </BCTypography>
+        )}
+      {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
+        currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
           <BCButton
-            onClick={openDialog}
+            onClick={openReassessmentDialog}
             sx={{ mt: 2 }}
             color="primary"
-            variant="outlined"
+            startIcon={<Assignment />}
+            disabled={isLoading}
           >
-            Analyst adjustment
+            {t('report:createReassessmentBtn')}
           </BCButton>
-        </BCTypography>
-      )}
+        )}
       {currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
-        <BCButton
-          data-test="create-supplemental"
-          size="small"
-          className="svg-icon-button"
-          variant="contained"
-          color="primary"
-          onClick={() => {
-            alert('TODO')
-          }}
-          startIcon={<Assignment />}
-          sx={{ mt: 2 }}
-          disabled={isLoading}
+        <Tooltip
+          title={
+            reportData.isNewest
+              ? ''
+              : 'Supplier has a supplemental report in progress.'
+          }
+          placement="right"
         >
-          {t('report:createReassessmentBtn')}
-        </BCButton>
+          <span>
+            <BCButton
+              data-test="create-supplemental"
+              size="small"
+              className="svg-icon-button"
+              variant="contained"
+              color="primary"
+              onClick={openReassessmentDialog}
+              startIcon={<Assignment />}
+              sx={{ mt: 2 }}
+              disabled={isLoading || !reportData.isNewest}
+            >
+              {t('report:createReassessmentBtn')}
+            </BCButton>
+          </span>
+        </Tooltip>
       )}
       <BCModal
-        open={isOpen}
-        onClose={() => setIsOpen(false)}
+        open={isReassessmentDialogOpen}
+        onClose={() => setIsReassessmentDialogOpen(false)}
+        data={{
+          title: 'Create reassessment',
+          primaryButtonText: 'Create',
+          primaryButtonAction: onCreateAdjustment,
+          secondaryButtonText: 'Cancel',
+          content: reAssessmentDialog
+        }}
+      />
+      <BCModal
+        open={isAdjustmentDialogOpen}
+        onClose={() => setIsAdjustmentDialogOpen(false)}
         data={{
           title: 'Create analyst adjustment',
           primaryButtonText: 'Create',
           primaryButtonAction: onCreateAdjustment,
           secondaryButtonText: 'Cancel',
-          content: dialogContent
+          content: governmentAdjustmentDialog
         }}
       />
     </BCBox>

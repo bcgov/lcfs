@@ -156,6 +156,7 @@ class ComplianceReportViewSchema(BaseSchema):
 class ChainedComplianceReportSchema(BaseSchema):
     report: ComplianceReportBaseSchema
     chain: Optional[List[ComplianceReportBaseSchema]] = []
+    is_newest: bool
 
 
 class ComplianceReportCreateSchema(BaseSchema):
@@ -195,6 +196,7 @@ class ComplianceReportSummarySchema(BaseSchema):
     version: Optional[int] = None
     is_locked: Optional[bool] = False
     quarter: Optional[int] = None
+    early_issuance_summary: Optional[List[ComplianceReportSummaryRowSchema]] = None
 
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):

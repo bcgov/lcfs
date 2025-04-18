@@ -1,17 +1,19 @@
 import re
+import structlog
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Tuple, Dict, Optional, Union
-
-import structlog
 from fastapi import Depends
-from lcfs.utils.constants import LCFS_Constants
 from sqlalchemy import inspect
+from typing import List, Tuple, Dict, Optional, Union, Any
 
-from lcfs.db.models import FuelSupply, UserProfile
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models import FuelSupply
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    ReportingFrequency,
+)
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.db.models.compliance.OtherUses import OtherUses
+from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.compliance_report.constants import (
     PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
@@ -27,6 +29,9 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummarySchema,
     ComplianceReportSummaryUpdateSchema,
 )
+from lcfs.web.api.compliance_report.summary_repo import (
+    ComplianceReportSummaryRepository,
+)
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
@@ -35,7 +40,6 @@ from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.web.utils.calculations import calculate_compliance_units
-
 
 logger = structlog.get_logger(__name__)
 
@@ -76,7 +80,8 @@ def get_compliance_data_service():
 class ComplianceReportSummaryService:
     def __init__(
         self,
-        repo: ComplianceReportRepository = Depends(),
+        repo: ComplianceReportSummaryRepository = Depends(),
+        cr_repo: ComplianceReportRepository = Depends(),
         trxn_repo: TransactionRepository = Depends(),
         notional_transfer_service: NotionalTransferServices = Depends(
             NotionalTransferServices
@@ -92,6 +97,7 @@ class ComplianceReportSummaryService:
         ),
     ):
         self.repo = repo
+        self.cr_repo = cr_repo
         self.notional_transfer_service = notional_transfer_service
         self.trxn_repo = trxn_repo
         self.fuel_supply_repo = fuel_supply_repo
@@ -397,16 +403,14 @@ class ComplianceReportSummaryService:
     ) -> ComplianceReportSummarySchema:
         """Several fields on Report Summary are Transient until locked, this function will re-calculate fields as necessary"""
         # Fetch the compliance report details
-        compliance_report = await self.repo.get_compliance_report_by_id(
-            report_id, is_model=True
-        )
+        compliance_report = await self.cr_repo.get_compliance_report_by_id(report_id)
         if not compliance_report:
             raise DataNotFoundException("Compliance report not found.")
 
         prev_compliance_report = None
         if not compliance_report.supplemental_initiator:
             prev_compliance_report = (
-                await self.repo.get_assessed_compliance_report_by_period(
+                await self.cr_repo.get_assessed_compliance_report_by_period(
                     compliance_report.organization_id,
                     int(compliance_report.compliance_period.description) - 1,
                 )
@@ -553,6 +557,10 @@ class ComplianceReportSummaryService:
             or len(allocation_agreements) > 0
         )
 
+        early_issuance_summary = await self.calculate_early_issuance_summary(
+            compliance_report
+        )
+
         summary = self.map_to_schema(
             compliance_report,
             renewable_fuel_target_summary,
@@ -560,6 +568,7 @@ class ComplianceReportSummaryService:
             non_compliance_penalty_summary,
             summary_model,
             can_sign,
+            early_issuance_summary,
         )
 
         # Only save if summary has changed
@@ -572,6 +581,38 @@ class ComplianceReportSummaryService:
 
         return existing_summary
 
+    async def calculate_early_issuance_summary(self, compliance_report):
+        early_issuance_summary = None
+        if compliance_report.reporting_frequency == ReportingFrequency.QUARTERLY:
+            quarterly_fs_credits = (
+                await self.calculate_quarterly_fuel_supply_compliance_units(
+                    compliance_report
+                )
+            )
+            early_issuance_summary = [
+                ComplianceReportSummaryRowSchema(
+                    line="Q1",
+                    description="Compliance units being issued for the supply of fuel in quarter 1",
+                    value=quarterly_fs_credits[0],
+                ),
+                ComplianceReportSummaryRowSchema(
+                    line="Q2",
+                    description="Compliance units being issued for the supply of fuel in quarter 2",
+                    value=quarterly_fs_credits[1],
+                ),
+                ComplianceReportSummaryRowSchema(
+                    line="Q3",
+                    description="Compliance units being issued for the supply of fuel in quarter 3",
+                    value=quarterly_fs_credits[2],
+                ),
+                ComplianceReportSummaryRowSchema(
+                    line="Q4",
+                    description="Compliance units being issued for the supply of fuel in quarter 4",
+                    value=quarterly_fs_credits[3],
+                ),
+            ]
+        return early_issuance_summary
+
     def map_to_schema(
         self,
         compliance_report,
@@ -580,7 +621,8 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_summary,
         summary_model,
         can_sign,
-    ):
+        early_issuance_summary,
+    ) -> ComplianceReportSummarySchema:
         summary = ComplianceReportSummarySchema(
             summary_id=summary_model.summary_id,
             compliance_report_id=compliance_report.compliance_report_id,
@@ -590,6 +632,7 @@ class ComplianceReportSummaryService:
             low_carbon_fuel_target_summary=low_carbon_fuel_target_summary,
             non_compliance_penalty_summary=non_compliance_penalty_summary,
             can_sign=can_sign,
+            early_issuance_summary=early_issuance_summary,
         )
         return summary
 
@@ -993,6 +1036,53 @@ class ComplianceReportSummaryService:
             compliance_units_sum += compliance_units
 
         return round(compliance_units_sum)
+
+    @service_handler
+    async def calculate_quarterly_fuel_supply_compliance_units(
+        self, report: ComplianceReport
+    ) -> list[float | Any]:
+        """
+        Calculate the total compliance units for the early issuance Summary
+        """
+        # Fetch fuel supply records
+        fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
+            report.compliance_report_group_uuid, report.compliance_report_id
+        )
+
+        # Initialize compliance units sum
+        compliance_units_sum_q1 = 0.0
+        compliance_units_sum_q2 = 0.0
+        compliance_units_sum_q3 = 0.0
+        compliance_units_sum_q4 = 0.0
+
+        # Calculate compliance units for each fuel supply record
+        for fuel_supply in fuel_supply_records:
+            TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity
+            EER = fuel_supply.eer or 0  # Energy Effectiveness Ratio
+            RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity
+            UCI = fuel_supply.uci or 0  # Additional Carbon Intensity
+            ED = fuel_supply.energy_density or 0  # Energy Density
+
+            # Apply the compliance units formula
+            compliance_units_sum_q1 += calculate_compliance_units(
+                TCI, EER, RCI, UCI, fuel_supply.q1_quantity, ED
+            )
+            compliance_units_sum_q2 += calculate_compliance_units(
+                TCI, EER, RCI, UCI, fuel_supply.q2_quantity or 0, ED
+            )
+            compliance_units_sum_q3 += calculate_compliance_units(
+                TCI, EER, RCI, UCI, fuel_supply.q3_quantity or 0, ED
+            )
+            compliance_units_sum_q4 += calculate_compliance_units(
+                TCI, EER, RCI, UCI, fuel_supply.q4_quantity or 0, ED
+            )
+
+        return [
+            round(compliance_units_sum_q1),
+            round(compliance_units_sum_q2),
+            round(compliance_units_sum_q3),
+            round(compliance_units_sum_q4),
+        ]
 
     @service_handler
     async def calculate_fuel_export_compliance_units(

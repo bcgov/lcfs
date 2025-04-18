@@ -37,20 +37,12 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
 
   const isMenuOpen = Boolean(anchorEl)
 
-  // Temporarily disable future year compliance reports
-  // const filteredDates = () => {
-  //   const currentYear = new Date().getFullYear()
-  //   const yearAhead = currentYear + 1
-  //   return periods?.data.filter((item) => {
-  //     const effectiveYear = new Date(item.effectiveDate).getFullYear()
-  //     return effectiveYear <= yearAhead && effectiveYear >= 2024
-  //   })
-  // }
-
   const filteredDates = () => {
+    const currentYear = new Date().getFullYear()
+
     return periods?.data.filter((item) => {
       const effectiveYear = new Date(item.effectiveDate).getFullYear()
-      return effectiveYear >= 2018
+      return effectiveYear >= 2018 && effectiveYear <= currentYear
     })
   }
 

@@ -297,12 +297,17 @@ class FuelCodeRepository:
         self, fuel_type_id: int, compliance_period_id: int
     ) -> EnergyDensity:
         """Get the energy density for the specified fuel_type_id"""
-
-        stmt = select(EnergyDensity).where(
-            EnergyDensity.fuel_type_id == fuel_type_id,
-            EnergyDensity.compliance_period_id == compliance_period_id,
+        stmt = (
+            select(EnergyDensity)
+            .where(
+                and_(
+                    EnergyDensity.fuel_type_id == fuel_type_id,
+                    EnergyDensity.compliance_period_id <= compliance_period_id,
+                )
+            )
+            .order_by(desc(EnergyDensity.compliance_period_id))
+            .limit(1)
         )
-
         result = await self.db.execute(stmt)
         energy_density = result.scalars().first()
 

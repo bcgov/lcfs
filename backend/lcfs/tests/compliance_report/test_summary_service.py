@@ -40,7 +40,7 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "description, reporting_frequency, fuel_supply_data",
+    "description, reporting_frequency, fuel_supply_data, quarterly_quantities",
     [
         (
             "Annual report using 'quantity'",
@@ -68,6 +68,7 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
                     "energy_density": 8,
                 },
             ],
+            [0, 0, 0, 0],
         ),
         (
             "Quarterly report using Q1 quantities",
@@ -95,6 +96,7 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
                     "energy_density": 8,
                 },
             ],
+            [28, 0, 0, 0],
         ),
         (
             "Quarterly report with multiple quarter fields",
@@ -123,13 +125,16 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
                     "energy_density": 8,
                 },
             ],
+            [10, 10, 59, -50],
         ),
     ],
 )
 async def test_calculate_low_carbon_fuel_target_summary_parametrized(
     compliance_report_summary_service,
     mock_trxn_repo,
-    mock_repo,
+    mock_fuel_supply_repo,
+    quarterly_quantities,
+    mock_summary_repo,
     reporting_frequency,
     fuel_supply_data,
     description,
@@ -145,14 +150,14 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
 
     # Set up effective fuel supplies based on the parameterized fuel_supply_data.
     fuel_supplies = [MagicMock(**data) for data in fuel_supply_data]
-    compliance_report_summary_service.get_effective_fuel_supplies = AsyncMock(
+    mock_fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(
         return_value=fuel_supplies
     )
 
     # Setup repository responses and calculation method mocks.
-    mock_repo.get_transferred_out_compliance_units.return_value = 500
-    mock_repo.get_received_compliance_units.return_value = 300
-    mock_repo.get_issued_compliance_units.return_value = 200
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
+    mock_summary_repo.get_received_compliance_units.return_value = 300
+    mock_summary_repo.get_issued_compliance_units.return_value = 200
     mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
     compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
         AsyncMock(return_value=100)
@@ -186,8 +191,17 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
     assert line_values[21] == 0  # Not calculated yet
     assert line_values[22] == 1200  # Sum of above
 
+    quarterly_summary = await compliance_report_summary_service.calculate_quarterly_fuel_supply_compliance_units(
+        compliance_report
+    )
+
+    assert (quarterly_summary[0]) == quarterly_quantities[0]
+    assert (quarterly_summary[1]) == quarterly_quantities[1]
+    assert (quarterly_summary[2]) == quarterly_quantities[2]
+    assert (quarterly_summary[3]) == quarterly_quantities[3]
+
     _assert_repo_calls(
-        mock_repo,
+        mock_summary_repo,
         mock_trxn_repo,
         compliance_period_start,
         compliance_period_end,
@@ -197,7 +211,7 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
 
 @pytest.mark.anyio
 async def test_supplemental_low_carbon_fuel_target_summary(
-    compliance_report_summary_service, mock_trxn_repo, mock_repo
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
 ):
     # Input setup: supplemental version (version = 2)
     compliance_period_start = datetime(2024, 1, 1)
@@ -222,15 +236,15 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     )
 
     # Repository returns.
-    mock_repo.get_transferred_out_compliance_units.return_value = 500
-    mock_repo.get_received_compliance_units.return_value = 300
-    mock_repo.get_issued_compliance_units.return_value = 200
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
+    mock_summary_repo.get_received_compliance_units.return_value = 300
+    mock_summary_repo.get_issued_compliance_units.return_value = 200
     previous_summary = Mock()
     previous_summary.line_15_banked_units_used = 0
     previous_summary.line_16_banked_units_remaining = 0
     previous_summary.line_18_units_to_be_banked = 15
     previous_summary.line_19_units_to_be_exported = 15
-    mock_repo.get_previous_summary.return_value = previous_summary
+    mock_summary_repo.get_previous_summary.return_value = previous_summary
     mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
     compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
         AsyncMock(return_value=100)
@@ -264,7 +278,7 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     assert line_values[22] == 1170
 
     _assert_repo_calls(
-        mock_repo,
+        mock_summary_repo,
         mock_trxn_repo,
         compliance_period_start,
         compliance_period_end,
@@ -792,7 +806,7 @@ async def test_calculate_renewable_fuel_target_summary_no_copy_lines_6_and_8(
 
 @pytest.mark.anyio
 async def test_can_sign_flag_logic(
-    compliance_report_summary_service, mock_repo, mock_trxn_repo
+    compliance_report_summary_service, mock_repo, mock_summary_repo, mock_trxn_repo
 ):
     # Scenario 1: All conditions met.
     mock_effective_fuel_supplies = [MagicMock()]
@@ -836,13 +850,10 @@ async def test_can_sign_flag_logic(
     mock_repo.get_compliance_report_by_id = AsyncMock(
         return_value=mock_compliance_report
     )
-    mock_repo.calculate_fuel_quantities = AsyncMock(
-        return_value={"gasoline": 100, "diesel": 50, "jet_fuel": 25}
-    )
-    mock_repo.aggregate_other_uses_quantity = AsyncMock(
+    mock_summary_repo.aggregate_other_uses_quantity = AsyncMock(
         return_value={"gasoline": 50, "diesel": 25, "jet_fuel": 10}
     )
-    mock_repo.get_assessed_compliance_report_by_period = AsyncMock(
+    mock_summary_repo.get_assessed_compliance_report_by_period = AsyncMock(
         return_value=MagicMock(
             summary=MagicMock(
                 line_6_renewable_fuel_retained_gasoline=previous_retained["gasoline"],
@@ -944,7 +955,7 @@ async def test_can_sign_flag_logic(
 )
 async def test_calculate_fuel_quantities_parametrized(
     compliance_report_summary_service,
-    mock_repo,
+    mock_summary_repo,
     mock_trxn_repo,
     mock_fuel_supply_repo,
     fossil_derived,
@@ -953,13 +964,11 @@ async def test_calculate_fuel_quantities_parametrized(
     compliance_report_id,
     expected_result,
 ):
-    mock_repo.aggregate_quantities.return_value = agg_quantities_return
-    mock_repo.aggregate_other_uses_quantity.return_value = agg_other_uses_return
+    mock_summary_repo.aggregate_quantities.return_value = agg_quantities_return
+    mock_summary_repo.aggregate_other_uses_quantity.return_value = agg_other_uses_return
     result = await compliance_report_summary_service.calculate_fuel_quantities(
         compliance_report_id, [], fossil_derived
     )
-    if fossil_derived:
-        mock_repo.aggregate_allocation_agreements.assert_not_called()
     assert result == expected_result
 
 
