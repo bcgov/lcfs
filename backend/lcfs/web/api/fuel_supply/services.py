@@ -7,6 +7,7 @@ from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
+from lcfs.web.api.fuel_supply.legacy_repo import LegacyFuelSupplyRepository
 from lcfs.web.api.fuel_supply.schema import (
     EndUseTypeSchema,
     EnergyDensitySchema,
@@ -22,6 +23,8 @@ from lcfs.web.api.fuel_supply.schema import (
     UnitOfMeasureSchema,
 )
 from lcfs.web.core.decorators import service_handler
+from lcfs.db.dependencies import get_async_db_session
+from lcfs.utils.constants import LCFS_Constants
 
 logger = structlog.get_logger(__name__)
 
@@ -33,11 +36,13 @@ class FuelSupplyServices:
         repo: FuelSupplyRepository = Depends(),
         fuel_repo: FuelCodeRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
+        db: get_async_db_session = Depends(),
     ) -> None:
         self.request = request
         self.repo = repo
         self.fuel_repo = fuel_repo
         self.compliance_report_repo = compliance_report_repo
+        self.db = db
 
     def fuel_type_row_mapper(self, compliance_period, fuel_types, rows):
         fuel_type_dict = {}
@@ -192,8 +197,34 @@ class FuelSupplyServices:
     async def get_fuel_supply_options(
         self, compliance_period: str
     ) -> FuelTypeOptionsResponse:
-        """Get fuel supply table options"""
-        fs_options = await self.repo.get_fuel_supply_table_options(compliance_period)
+        """Get fuel supply table options based on compliance period year."""
+        try:
+            current_year = int(compliance_period)
+        except ValueError as e:
+            logger.error(
+                "Invalid compliance_period: not an integer",
+                compliance_period=compliance_period,
+                error=str(e),
+            )
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid compliance_period: '{compliance_period}' must be an integer.",
+            ) from e
+
+        is_legacy_year = current_year < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
+
+        if is_legacy_year:
+            # Instantiate legacy repo directly as it's not the default
+            legacy_repo = LegacyFuelSupplyRepository(self.db)
+            fs_options = await legacy_repo.get_fuel_supply_table_options(
+                compliance_period
+            )
+        else:
+            # Use the default repo (FuelSupplyRepository)
+            fs_options = await self.repo.get_fuel_supply_table_options(
+                compliance_period
+            )
+
         fuel_types = []
         self.fuel_type_row_mapper(
             compliance_period, fuel_types, fs_options["fuel_types"]

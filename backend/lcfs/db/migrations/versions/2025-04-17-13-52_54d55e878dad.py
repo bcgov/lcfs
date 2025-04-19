@@ -1,7 +1,7 @@
 """compliance summary historical update
 
 Revision ID: 54d55e878dad
-Revises: 2e2f6f7ff390
+Revises: a3290902296b
 Create Date: 2025-04-04 13:52:08.981318
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "54d55e878dad"
-down_revision = "2e2f6f7ff390"
+down_revision = "a3290902296b"
 branch_labels = None
 depends_on = None
 

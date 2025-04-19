@@ -42,22 +42,22 @@ export const scheduleBSummaryColDefs = (t) => [
   {
     headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'),
     field: 'fuelType',
-    valueGetter: (params) => params.data.fuelType?.fuelType
+    valueGetter: (params) => params.data.fuelType
   },
   {
     headerName: t('legacy:columnLabels.fuelClass'),
     field: 'fuelCategory',
-    valueGetter: (params) => params.data.fuelCategory?.category
+    valueGetter: (params) => params.data.fuelCategory
   },
   {
     headerName: t('fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'),
     field: 'determiningCarbonIntensity',
-    valueGetter: (params) => params.data.provisionOfTheAct?.name
+    valueGetter: (params) => params.data.provisionOfTheAct
   },
   {
     headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'),
     field: 'fuelCode',
-    valueGetter: (params) => params.data.fuelCode?.fuelCode
+    valueGetter: (params) => params.data.fuelCode
   },
   {
     headerName: t('fuelSupply:fuelSupplyColLabels.quantity'),

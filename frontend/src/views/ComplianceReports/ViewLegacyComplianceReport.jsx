@@ -12,7 +12,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { LegacyAssessmentCard } from '@/views/ComplianceReports/components/LegacyAssessmentCard.jsx'
 import LegacyReportDetails from '@/views/ComplianceReports/legacy/LegacyReportDetails.jsx'
-import LegacyReportSummary from './legacy/LegacyReportSummary'
+import ComplianceReportSummary from './components/ComplianceReportSummary'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 
@@ -119,9 +119,13 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
         {isFeatureEnabled(FEATURE_FLAGS.LEGACY_REPORT_DETAILS) && (
           <>
             <LegacyReportDetails currentStatus={currentStatus} />
-            <LegacyReportSummary
+            <ComplianceReportSummary
               reportID={complianceReportId}
               alertRef={alertRef}
+              compliancePeriodYear={compliancePeriod}
+              currentStatus={currentStatus}
+              canEdit={false}
+              enableCompareMode={false}
             />
           </>
         )}

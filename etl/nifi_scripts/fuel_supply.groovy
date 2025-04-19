@@ -57,6 +57,39 @@ try {
         throw new Exception("Table 'compliance_report_schedule_b_record' does not exist in source database")
     }
 
+    // --- Pre-fetch Base Versions for Action Type Determination ---
+    def groupBaseVersions = [:]
+    Connection baseVersionConn = null
+    try {
+        baseVersionConn = destinationDbcpService.getConnection()
+        if (baseVersionConn == null || baseVersionConn.isClosed()) {
+             throw new Exception("Failed to get DESTINATION connection for fetching base versions")
+        }
+        log.warn("Fetching base versions from compliance_report table...")
+        def baseVersionSql = '''
+            SELECT compliance_report_group_uuid, MIN(version) as base_version
+            FROM compliance_report
+            WHERE compliance_report_group_uuid IS NOT NULL
+            GROUP BY compliance_report_group_uuid
+        '''
+        def baseVersionStmt = baseVersionConn.prepareStatement(baseVersionSql)
+        def baseVersionRS = baseVersionStmt.executeQuery()
+        while (baseVersionRS.next()) {
+            groupBaseVersions[baseVersionRS.getString('compliance_report_group_uuid')] = baseVersionRS.getInt('base_version')
+        }
+        baseVersionRS.close()
+        baseVersionStmt.close()
+        log.warn("Finished fetching ${groupBaseVersions.size()} base versions.")
+    } catch (Exception e) {
+        log.error("Error fetching base versions: ${e.getMessage()}")
+        throw e // Re-throw to stop the script if base versions can't be fetched
+    } finally {
+        if (baseVersionConn != null) {
+            try { baseVersionConn.close() } catch (Exception e) { log.error("Error closing base version connection: ${e.getMessage()}") }
+        }
+    }
+    // --- End Pre-fetch Base Versions ---
+
     // Unit mapping dictionary
     def unitMapping = [
         'L': 'Litres',
@@ -135,16 +168,28 @@ try {
                             LIMIT 1) as ci_limit,
                             CASE
                                 WHEN dt.the_type = 'Alternative' THEN crsbr.intensity
-                                WHEN dt.the_type = 'GHGenius' THEN crsbr.intensity -- TODO fix intensity to extract from Schedule-D sheets
+                                WHEN dt.the_type = 'GHGenius' THEN (
+                                    -- Calculate sum of intensities from relevant Schedule D outputs
+                                    SELECT SUM(sdo.intensity)
+                                    FROM public.compliance_report_schedule_d crsd
+                                    JOIN public.compliance_report_schedule_d_sheet sds ON sds.schedule_id = crsd.id
+                                    JOIN public.compliance_report_schedule_d_sheet_output sdo ON sdo.sheet_id = sds.id
+                                    WHERE crsd.id = cr.schedule_d_id -- Join back to the main report's schedule D
+                                      AND sds.fuel_type_id = crsbr.fuel_type_id -- Filter sheet by fuel type
+                                      AND sds.fuel_class_id = crsbr.fuel_class_id -- Filter sheet by fuel class
+                                )
                                 WHEN dt.the_type = 'Fuel Code' THEN fc1.carbon_intensity
                                 WHEN dt.the_type IN ('Default Carbon Intensity', 'Carbon Intensity')
                                     THEN (SELECT dci.density
                                         FROM default_carbon_intensity dci
                                         JOIN default_carbon_intensity_category dcic
-                                            ON dcic.id = aft.default_carbon_intensity_category_id
-                                        WHERE dci.effective_date <= cp.effective_date
-                                            AND dci.expiration_date > cp.effective_date
-                                        ORDER BY dci.effective_date DESC, dci.update_timestamp DESC
+                                            ON dcic.id = dci.category_id -- Assuming category_id links dci to dcic
+                                        JOIN approved_fuel_type aft_sub -- Alias to avoid conflict with outer aft
+                                            ON aft_sub.default_carbon_intensity_category_id = dcic.id
+                                        WHERE aft_sub.id = aft.id -- Match the correct approved fuel type
+                                            AND dci.effective_date <= cp.effective_date
+                                            AND (dci.expiration_date > cp.effective_date OR dci.expiration_date IS NULL) -- Handle NULL expiration
+                                        ORDER BY dci.effective_date DESC, dci.update_timestamp DESC -- Keep ordering
                                         LIMIT 1)
                                 ELSE NULL
                             END as ci_of_fuel,
@@ -200,7 +245,10 @@ try {
                         // --- Process Each SQL Record --- 
                         // The 'record' object here is a GroovyRowResult, supports .get()
                         log.warn("Processing SQL fallback record for source CR ID ${legacyId}")
-                        processScheduleBRecord(record, useSnapshot, complianceReportId, legacyId, groupUuid, version, unitMapping, destinationConn, failedRecords, log)
+                        // Determine Action Type for SQL fallback
+                        def baseVersion = groupBaseVersions.get(groupUuid)
+                        def actionType = (baseVersion == null || version == baseVersion) ? 'CREATE' : 'UPDATE'
+                        processScheduleBRecord(record, useSnapshot, complianceReportId, legacyId, groupUuid, version, unitMapping, destinationConn, failedRecords, log, actionType)
                     } // end sql.eachRow
                 } finally {
                     sql.close() // Close the groovy.sql.Sql instance
@@ -213,12 +261,16 @@ try {
                  // Add validation to ensure we have valid records before iterating
                 if (scheduleBRecords == null || scheduleBRecords.isEmpty()) {
                     log.warn("Snapshot record list is null or empty for source CR ID ${legacyId} - skipping.")
-                    continue
+                    continue // Skip to the next report
                 }
+
+                // Determine Action Type for Snapshot processing
+                def baseVersion = groupBaseVersions.get(groupUuid)
+                def actionType = (baseVersion == null || version == baseVersion) ? 'CREATE' : 'UPDATE'
 
                 scheduleBRecords.each { record ->
                     // The 'record' object here is a LazyMap
-                    processScheduleBRecord(record, useSnapshot, complianceReportId, legacyId, groupUuid, version, unitMapping, destinationConn, failedRecords, log)
+                    processScheduleBRecord(record, useSnapshot, complianceReportId, legacyId, groupUuid, version, unitMapping, destinationConn, failedRecords, log, actionType)
                 }
             }
 
@@ -266,7 +318,7 @@ try {
 }
 
 // --- Helper Function to Process Schedule B Record (Snapshot Map or SQL GroovyRowResult) --- 
-def processScheduleBRecord(record, useSnapshot, complianceReportId, legacyId, groupUuid, version, unitMapping, destinationConn, failedRecords, log) {
+def processScheduleBRecord(record, useSnapshot, complianceReportId, legacyId, groupUuid, version, unitMapping, destinationConn, failedRecords, log, actionType) {
     try {
         // Skip null records (paranoid check)
         if (record == null) {
@@ -367,10 +419,17 @@ def processScheduleBRecord(record, useSnapshot, complianceReportId, legacyId, gr
         // --- Lookups using appropriate access method --- 
         // Unit of Measure
         def unitOfMeasure = null
+        def provisionActDescription = null // Variable to store provision description
         try {
-            unitOfMeasure = useSnapshot ? record.get('unit_of_measure') : record['unit_of_measure']
+            if (useSnapshot) {
+                unitOfMeasure = record.get('unit_of_measure')
+                provisionActDescription = record.get('provision_of_the_act_description') // Get description from snapshot
+            } else {
+                 unitOfMeasure = record['unit_of_measure']
+                 // Description not directly available in fallback SQL, would need join if required here
+            }
         } catch (Exception e) {
-             log.warn("Error accessing unit_of_measure for CR ID ${legacyId}: " + e.getMessage())
+             log.warn("Error accessing unit_of_measure or provision_description for CR ID ${legacyId}: " + e.getMessage())
         }
         def unitFullForm = unitOfMeasure != null ? unitMapping.get(unitOfMeasure, unitOfMeasure) : null
 
@@ -434,22 +493,44 @@ def processScheduleBRecord(record, useSnapshot, complianceReportId, legacyId, gr
         def fuelCodeId = null
         try {
             if (useSnapshot) {
-                def fullFuelCode = record.get('fuel_code')
-                if (fullFuelCode != null) {
-                    String fuelCodeStr = fullFuelCode.toString()
-                    fuelCodeLookupValue = fuelCodeStr.length() >= 4 ? fuelCodeStr.substring(0, 4) : fuelCodeStr
-                    fuelCodeSuffixValue = fuelCodeStr.length() > 4 ? fuelCodeStr.substring(4) : ""
-                } else { log.warn("Fuel code is null in snapshot for CR ID ${legacyId}") }
+                def fuelCodeDesc = record.get('fuel_code_description') // e.g., "BCLCF185.1"
+                if (fuelCodeDesc != null && fuelCodeDesc instanceof String && !fuelCodeDesc.isEmpty()) {
+                    // Find the index of the first digit to split prefix/suffix
+                    int firstDigitIndex = -1
+                    for (int i = 0; i < fuelCodeDesc.length(); i++) {
+                        if (Character.isDigit(fuelCodeDesc.charAt(i))) {
+                            firstDigitIndex = i
+                            break
+                        }
+                    }
+
+                    if (firstDigitIndex != -1) {
+                        fuelCodeLookupValue = fuelCodeDesc.substring(0, firstDigitIndex)
+                        fuelCodeSuffixValue = fuelCodeDesc.substring(firstDigitIndex)
+                        log.debug("Parsed snapshot fuel code: Prefix='${fuelCodeLookupValue}', Suffix='${fuelCodeSuffixValue}' from Desc='${fuelCodeDesc}'")
+                    } else {
+                        // Handle cases where description might only be a prefix or has unexpected format
+                        fuelCodeLookupValue = fuelCodeDesc // Assume whole string is prefix if no digits found
+                        fuelCodeSuffixValue = ""
+                        log.warn("Could not split fuel code description '${fuelCodeDesc}' into prefix/suffix based on first digit for CR ID ${legacyId}. Using full string as prefix.")
+                    }
+                } else {
+                    log.warn("Fuel code description is null or invalid in snapshot for CR ID ${legacyId}")
+                }
             } else {
+                // SQL fallback - assumes query provides correct columns
                 fuelCodeLookupValue = record["fuel_code_prefix"]
                 fuelCodeSuffixValue = record["fuel_code_suffix"]
             }
         } catch (Exception e) {
              log.warn("Error determining fuel code components for CR ID ${legacyId}: " + e.getMessage())
         }
+        
+        // --- Perform Destination Lookup ---
         if (fuelCodeLookupValue != null) {
             // Check connection before preparing statement
             if (destinationConn == null || destinationConn.isClosed()) { throw new Exception("Destination connection is null or closed before fuel code lookup!") }
+            // Ensure table/column names match LCFS schema EXACTLY
             def fuelCodeStmt = destinationConn.prepareStatement('''SELECT fuel_code_id FROM fuel_code fc JOIN fuel_code_prefix fcp ON fcp.fuel_code_prefix_id = fc.prefix_id WHERE fcp.prefix = ? AND fc.fuel_suffix = ?''')
             try {
                 fuelCodeStmt.setString(1, fuelCodeLookupValue)
@@ -491,16 +572,59 @@ def processScheduleBRecord(record, useSnapshot, complianceReportId, legacyId, gr
         // --- Get Numeric Values --- 
         def quantity = safeGetNumber("quantity")
         def complianceUnits = null
+        def ciOfFuel = null // Initialize ciOfFuel
+
         if (useSnapshot) {
+            // Prioritize snapshot values
             def credits = safeGetNumber("credits")
             def debits = safeGetNumber("debits")
             if (credits != null) { complianceUnits = credits.negate() }
             else if (debits != null) { complianceUnits = debits }
+
+            // --- Get ciOfFuel from Snapshot ---
+            // Check if it's a 'Prescribed' value first
+            if (provisionActDescription == "Prescribed carbon intensity") {
+                 log.warn("Using effective_carbon_intensity from snapshot for Prescribed CI (CR ID: ${legacyId})")
+                 ciOfFuel = safeGetNumber("effective_carbon_intensity") 
+                 if (ciOfFuel == null) {
+                      log.error("ERROR: effective_carbon_intensity is NULL in snapshot for Prescribed CI record (CR ID: ${legacyId})")
+                 }
+            } else if (provisionActDescription == "Approved fuel code") {
+                 log.warn("Using effective_carbon_intensity from snapshot for Approved Fuel Code (CR ID: ${legacyId})")
+                 ciOfFuel = safeGetNumber("effective_carbon_intensity")
+                 if (ciOfFuel == null) {
+                     log.error("ERROR: effective_carbon_intensity is NULL in snapshot for Approved fuel code record (CR ID: ${legacyId})")
+                 }
+            } else if (provisionActDescription == "Default Carbon Intensity Value") {
+                 log.warn("Using effective_carbon_intensity from snapshot for Default CI Value (CR ID: ${legacyId})")
+                 ciOfFuel = safeGetNumber("effective_carbon_intensity")
+                 if (ciOfFuel == null) {
+                     log.error("ERROR: effective_carbon_intensity is NULL in snapshot for Default CI Value record (CR ID: ${legacyId})")
+                 }
+            } else if (provisionActDescription == "GHGenius modelled") { // Handle GHGenius from snapshot
+                 log.warn("Using effective_carbon_intensity from snapshot for GHGenius modelled (CR ID: ${legacyId})")
+                 ciOfFuel = safeGetNumber("effective_carbon_intensity")
+                 if (ciOfFuel == null) {
+                     log.error("ERROR: effective_carbon_intensity is NULL in snapshot for GHGenius modelled record (CR ID: ${legacyId})")
+                 }
+            } else {
+                 // For non-prescribed, non-fuel-code types (e.g., Alternative, Default CI from snapshot), try the 'intensity' field
+                 ciOfFuel = safeGetNumber("intensity") 
+                 // If intensity is null in snapshot, we might need more complex logic here
+                 // based on determination type from snapshot, but ideally snapshot has final value.
+                 if (ciOfFuel == null) {
+                     log.warn("Snapshot field 'intensity' is NULL for non-prescribed/non-fuel-code record (CR ID: ${legacyId}, Provision: ${provisionActDescription}). ci_of_fuel will be null.")
+                 }
+            }
+            // --- End Get ciOfFuel from Snapshot ---
+
         } else {
+            // SQL Fallback logic
             complianceUnits = safeGetNumber("compliance_units")
+            ciOfFuel = safeGetNumber("ci_of_fuel") // Get value calculated by the SQL CASE statement
         }
+
         def ciLimit = safeGetNumber("ci_limit")
-        def ciOfFuel = safeGetNumber("ci_of_fuel")
         def energyDensity = safeGetNumber("energy_density")
         def eer = safeGetNumber("eer")
         def energyContent = safeGetNumber("energy_content") 
@@ -566,7 +690,7 @@ def processScheduleBRecord(record, useSnapshot, complianceReportId, legacyId, gr
             fuelSupplyInsertStmt.setString(19, 'ETL')
             fuelSupplyInsertStmt.setString(20, groupUuid)
             fuelSupplyInsertStmt.setInt(21, version)
-            fuelSupplyInsertStmt.setString(22, 'CREATE') // action_type
+            fuelSupplyInsertStmt.setString(22, actionType) // Use the passed actionType
 
             fuelSupplyInsertStmt.executeUpdate()
         } finally {

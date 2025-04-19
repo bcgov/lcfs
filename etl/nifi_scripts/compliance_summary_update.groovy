@@ -128,6 +128,7 @@ try {
             skipCount++
             continue
         }
+        log.warn("Processing source record with legacy_id: ${legacyComplianceReportId}")
         def snapshotJson = rs.getString("snapshot")
         def summaryJson = jsonSlurper.parseText(snapshotJson)
 
@@ -247,6 +248,7 @@ try {
             updateStmt.setInt(idx++, lcfsComplianceReportId)
 
             updateStmt.addBatch()
+            log.info("Successfully processed legacy id ${legacyComplianceReportId} (LCFS ID: ${lcfsComplianceReportId}), adding to batch.")
             updateCount++
         } catch (Exception e) {
             log.error("Error processing legacy compliance_report_id ${legacyComplianceReportId}", e)
