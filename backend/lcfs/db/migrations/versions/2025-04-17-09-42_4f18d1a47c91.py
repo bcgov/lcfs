@@ -55,7 +55,7 @@ def upgrade() -> None:
                     JOIN latest_with_status lws
                         ON cr.compliance_report_group_uuid = lws.compliance_report_group_uuid
                     WHERE cr.version < lws.version
-                        AND lws.status in ('Draft', 'Submitted')
+                        AND lws.status in ('Draft', 'Analyst_adjustment')
                     GROUP BY cr.compliance_report_group_uuid
                 ),
                 selected_reports AS (
