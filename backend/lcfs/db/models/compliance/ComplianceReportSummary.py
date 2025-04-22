@@ -114,6 +114,12 @@ class ComplianceReportSummary(BaseModel, Auditable):
     credits_offset_b = Column(Integer)
     credits_offset_c = Column(Integer)
 
+    # Early Issuance Columns
+    early_issuance_credits_q1 = Column(Integer)
+    early_issuance_credits_q2 = Column(Integer)
+    early_issuance_credits_q3 = Column(Integer)
+    early_issuance_credits_q4 = Column(Integer)
+
     compliance_report = relationship("ComplianceReport", back_populates="summary")
 
     def __repr__(self):

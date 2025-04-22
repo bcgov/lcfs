@@ -35,7 +35,8 @@ export const isFeatureEnabled = (featureFlag) => {
 export const FEATURE_FLAGS = {
   SUPPLEMENTAL_REPORTING: 'supplementalReporting',
   LEGACY_REPORT_DETAILS: 'fullLegacyReports',
-  FSE_IMPORT_EXPORT: 'fseImportExport'
+  FSE_IMPORT_EXPORT: 'fseImportExport',
+  GOVERNMENT_ADJUSTMENT: 'governmentAdjustment'
 }
 
 export const CONFIG = {
@@ -60,6 +61,8 @@ export const CONFIG = {
       window.lcfs_config.feature_flags.supplementalReporting ?? false,
     fullLegacyReports:
       window.lcfs_config.feature_flags.fullLegacyReports ?? false,
-    fseImportExport: window.lcfs_config.feature_flags.fseImportExport ?? false
+    fseImportExport: window.lcfs_config.feature_flags.fseImportExport ?? false,
+    governmentAdjustment:
+      window.lcfs_config.feature_flags.governmentAdjustment ?? false
   }
 }
