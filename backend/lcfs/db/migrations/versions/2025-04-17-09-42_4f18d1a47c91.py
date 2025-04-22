@@ -110,7 +110,7 @@ def upgrade() -> None:
             CREATE MATERIALIZED VIEW mv_compliance_report_count AS
             SELECT 
                 CAST(vcr.report_status AS VARCHAR) AS status,
-                COUNT(*) AS status_count
+                COUNT(*) AS count
             FROM v_compliance_report vcr
             WHERE
                 vcr.report_status_id NOT IN (1)
@@ -122,7 +122,7 @@ def upgrade() -> None:
                     AND cr.current_status_id NOT IN (1)
                 )
             GROUP BY CAST(vcr.report_status AS VARCHAR)
-            ORDER BY status_count DESC
+            ORDER BY status DESC
             """
         )
         op.execute(
