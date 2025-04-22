@@ -287,9 +287,7 @@ class ComplianceReportServices:
           status then allow Gov users to delete the report.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(
-            report_id, is_model=True
-        )
+        current_report = await self.repo.get_compliance_report_by_id(report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -325,7 +323,7 @@ class ComplianceReportServices:
         user: UserProfile,
     ):
         """Fetches all compliance reports"""
-        is_bceid_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        is_bceid_user = user_has_roles(user, [RoleEnum.SUPPLIER])
         if is_bceid_user:
             for filter in pagination.filters:
                 if (
