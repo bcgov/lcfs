@@ -139,7 +139,6 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
         quantity=100,
         units="L",
         export_date=date.today(),
-        compliance_period="2024",
     )
 
     # Changing energy_density from MagicMock to be a real number
@@ -176,7 +175,7 @@ async def test_action_create_fuel_export_success(fuel_export_action_service, moc
     )
     mock_repo.create_fuel_export = AsyncMock(return_value=mock_created_export)
 
-    result = await fuel_export_action_service.create_fuel_export(input_data)
+    result = await fuel_export_action_service.create_fuel_export(input_data, "2024")
 
     assert isinstance(result, FuelExportSchema)
     mock_repo.create_fuel_export.assert_awaited_once()
@@ -198,7 +197,6 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
         provisionOfTheAct="Test Provision",
         units="L",
         export_date=date.today(),
-        compliance_period="2024",
     )
 
     # Changing energy_density from MagicMock to be a real number
@@ -237,9 +235,7 @@ async def test_action_update_fuel_export_success(fuel_export_action_service, moc
     mock_repo.get_fuel_export_by_id = AsyncMock(return_value=mock_existing_export)
     mock_repo.update_fuel_export = AsyncMock(return_value=mock_existing_export)
 
-    result = await fuel_export_action_service.update_fuel_export(
-        input_data,
-    )
+    result = await fuel_export_action_service.update_fuel_export(input_data, "2024")
 
     assert isinstance(result, FuelExportSchema)
     mock_repo.get_fuel_export_by_id.assert_awaited_once()
@@ -260,7 +256,6 @@ async def test_action_delete_fuel_export(fuel_export_action_service, mock_repo):
         quantity=100,
         units="L",
         export_date=date.today(),
-        compliance_period="2024",
     )
 
     mock_latest_export = FuelExport(
@@ -354,7 +349,6 @@ async def test_action_create_fuel_export_energy_too_high(
         quantity=1000000000,
         units="L",
         export_date=date.today(),
-        compliance_period="2024",
     )
 
     # Mock fuel data with high energy density
@@ -375,7 +369,7 @@ async def test_action_create_fuel_export_energy_too_high(
 
     # Attempt to create the fuel export and expect a ValidationErrorException
     with pytest.raises(ValidationErrorException) as exc_info:
-        await fuel_export_action_service.create_fuel_export(input_data)
+        await fuel_export_action_service.create_fuel_export(input_data, "2024")
 
     # Verify exception contains the expected structure and message
     error_data = exc_info.value.errors

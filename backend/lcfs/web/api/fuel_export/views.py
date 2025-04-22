@@ -1,5 +1,4 @@
 import structlog
-from typing import Optional, Union
 from fastapi import (
     APIRouter,
     Body,
@@ -9,9 +8,15 @@ from fastapi import (
     Depends,
     HTTPException,
 )
-from lcfs.db import dependencies
+from typing import Union
 
+from lcfs.db import dependencies
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
+from lcfs.web.api.fuel_export.actions_service import (
+    FuelExportActionService,
+)
 from lcfs.web.api.fuel_export.schema import (
     DeleteFuelExportResponseSchema,
     FuelExportsSchema,
@@ -21,13 +26,7 @@ from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
 )
 from lcfs.web.api.fuel_export.services import FuelExportServices
-from lcfs.web.api.fuel_export.actions_service import (
-    FuelExportActionService,
-)
-from lcfs.web.api.fuel_export.validation import FuelExportValidation
 from lcfs.web.core.decorators import view_handler
-from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
-from lcfs.db.models.user.Role import RoleEnum
 
 router = APIRouter()
 logger = structlog.get_logger(__name__)
@@ -115,7 +114,6 @@ async def save_fuel_export_row(
     request_data: FuelExportCreateUpdateSchema = Body(...),
     action_service: FuelExportActionService = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
-    fs_validate: FuelExportValidation = Depends(),
 ):
     """Endpoint to save single fuel export row"""
     compliance_report_id = request_data.compliance_report_id
@@ -130,7 +128,11 @@ async def save_fuel_export_row(
     else:
         if request_data.fuel_export_id:
             # Use action service to handle update logic
-            return await action_service.update_fuel_export(request_data)
+            return await action_service.update_fuel_export(
+                request_data, compliance_report.compliance_period.description
+            )
         else:
             # Use action service to handle create logic
-            return await action_service.create_fuel_export(request_data)
+            return await action_service.create_fuel_export(
+                request_data, compliance_report.compliance_period.description
+            )

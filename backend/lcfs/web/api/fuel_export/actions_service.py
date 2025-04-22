@@ -1,4 +1,3 @@
-import uuid
 import structlog
 
 import uuid
@@ -52,7 +51,10 @@ class FuelExportActionService:
         self.fuel_repo = fuel_repo
 
     async def _populate_fuel_export_fields(
-        self, fuel_export: FuelExport, fe_data: FuelExportCreateUpdateSchema
+        self,
+        fuel_export: FuelExport,
+        fe_data: FuelExportCreateUpdateSchema,
+        compliance_period: str,
     ) -> FuelExport:
         """
         Populate additional calculated and referenced fields for a FuelExport instance.
@@ -63,7 +65,7 @@ class FuelExportActionService:
             fuel_category_id=fuel_export.fuel_category_id,
             end_use_id=fuel_export.end_use_id,
             fuel_code_id=fuel_export.fuel_code_id,
-            compliance_period=fe_data.compliance_period,
+            compliance_period=compliance_period,
             provision_of_the_act=fe_data.provision_of_the_act,
             export_date=fe_data.export_date,
         )
@@ -116,7 +118,9 @@ class FuelExportActionService:
 
     @service_handler
     async def create_fuel_export(
-        self, fe_data: FuelExportCreateUpdateSchema
+        self,
+        fe_data: FuelExportCreateUpdateSchema,
+        compliance_period: str,
     ) -> FuelExportSchema:
         """
         Create a new fuel export record.
@@ -137,7 +141,9 @@ class FuelExportActionService:
         )
 
         # Populate calculated and referenced fields
-        fuel_export = await self._populate_fuel_export_fields(fuel_export, fe_data)
+        fuel_export = await self._populate_fuel_export_fields(
+            fuel_export, fe_data, compliance_period
+        )
 
         # Save the populated fuel export record
         created_export = await self.repo.create_fuel_export(fuel_export)
@@ -145,7 +151,9 @@ class FuelExportActionService:
 
     @service_handler
     async def update_fuel_export(
-        self, fe_data: FuelExportCreateUpdateSchema
+        self,
+        fe_data: FuelExportCreateUpdateSchema,
+        compliance_period: str,
     ) -> FuelExportSchema:
         """
         Update an existing fuel export record or create a new version if necessary.
@@ -171,7 +179,7 @@ class FuelExportActionService:
 
             # Populate calculated fields
             existing_export = await self._populate_fuel_export_fields(
-                existing_export, fe_data
+                existing_export, fe_data, compliance_period
             )
 
             updated_export = await self.repo.update_fuel_export(existing_export)
@@ -197,7 +205,9 @@ class FuelExportActionService:
                 setattr(fuel_export, field, value)
 
             # Populate calculated fields
-            fuel_export = await self._populate_fuel_export_fields(fuel_export, fe_data)
+            fuel_export = await self._populate_fuel_export_fields(
+                fuel_export, fe_data, compliance_period
+            )
 
             # Save the new version
             new_export = await self.repo.create_fuel_export(fuel_export)
