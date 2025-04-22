@@ -235,6 +235,7 @@ def service_handler(func):
             DataNotFoundException,
             ValueError,
             ValidationErrorException,
+            RequestValidationError,
         ):
             raise
         # all other errors that occur in the service layer will log an error
