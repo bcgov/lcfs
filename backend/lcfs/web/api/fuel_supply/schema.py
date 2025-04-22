@@ -159,6 +159,8 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     @model_validator(mode="before")
     @classmethod
     def check_quantity_required(cls, values):
+        if isinstance(values, DeleteFuelSupplyResponseSchema):
+            return values
         return fuel_quantity_required(values)
 
 

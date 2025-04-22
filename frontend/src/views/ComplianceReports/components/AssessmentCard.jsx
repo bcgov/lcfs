@@ -26,7 +26,8 @@ export const AssessmentCard = ({
   currentStatus,
   complianceReportId,
   alertRef,
-  chain
+  chain,
+  isQuarterlyReport=false
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
