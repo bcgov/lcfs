@@ -112,7 +112,7 @@ def create_mock_response_schema(overrides: dict):
         allocation_agreement_id=1,
         allocation_transaction_type=AllocationTransactionTypeSchema(
             allocation_transaction_type_id=1, type="Allocated from"
-        ),
+        ).type,
         transaction_partner="LCFS Org 2",
         postal_address="789 Stellar Lane Floor 10",
         transaction_partner_email="tfrs@gov.bc.ca",
@@ -123,14 +123,16 @@ def create_mock_response_schema(overrides: dict):
             default_carbon_intensity=10.0,
             units="gCO2e/MJ",
             unrecognized=False,
-        ),
-        fuel_category=FuelCategorySchema(fuel_category_id=1, category="Diesel"),
+        ).fuel_type,
+        fuel_category=FuelCategorySchema(
+            fuel_category_id=1, category="Diesel"
+        ).category,
         fuel_type_other=None,
         ci_of_fuel=100.21,
         provision_of_the_act=ProvisionOfTheActSchema(
             provision_of_the_act_id=1,
             name="Default carbon intensity - section 19 (b) (ii)",
-        ),
+        ).name,
         quantity=100,
         units="L",
         fuel_code=None,
@@ -155,7 +157,7 @@ def create_mock_update_response_schema(overrides: dict):
         allocation_agreement_id=1,
         allocation_transaction_type=AllocationTransactionTypeSchema(
             allocation_transaction_type_id=1, type="Allocated from"
-        ),
+        ).type,
         transaction_partner="LCFS Org 2",
         postal_address="789 Stellar Lane Floor 10",
         transaction_partner_email="tfrs@gov.bc.ca",
@@ -166,14 +168,16 @@ def create_mock_update_response_schema(overrides: dict):
             default_carbon_intensity=10.0,
             units="gCO2e/MJ",
             unrecognized=False,
-        ),
-        fuel_category=FuelCategorySchema(fuel_category_id=1, category="Diesel"),
+        ).fuel_type,
+        fuel_category=FuelCategorySchema(
+            fuel_category_id=1, category="Diesel"
+        ).category,
         fuel_type_other=None,
         ci_of_fuel=100.21,
         provision_of_the_act=ProvisionOfTheActSchema(
             provision_of_the_act_id=1,
             name="Default carbon intensity - section 19 (b) (ii)",
-        ),
+        ).name,
         quantity=100,
         units="L",
         fuel_code=None,

@@ -185,7 +185,7 @@ def insertVersionRow(Connection destConn, Integer lcfsCRid, Map rowData, String 
         setInt(2, fuelTypeId)
         setInt(3, fuelCatId)
         setInt(4, 7)  // provision_of_the_act_id
-        setBigDecimal(5, ci_of_fuel)  // ci_of_fuel
+        setBigDecimal(5, ci_of_fuel)
         setBigDecimal(6, quantity)
         setString(7,units)
         setInt(8, expectedUseId)
@@ -281,7 +281,7 @@ try {
                     expected_use_id: scrRS.getInt("expected_use_id"),
                     rationale: scrRS.getString("rationale"),
                     unit_of_measure: scrRS.getString("unit_of_measure"),
-                    ci_of_fuel: scrRS.getBigDecimal("default_ci_of_fuel"),
+                    ci_of_fuel: scrRS.getBigDecimal("default_ci_of_fuel")
                 ]
             }
             scrRS.close()

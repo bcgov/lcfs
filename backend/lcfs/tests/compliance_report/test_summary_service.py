@@ -1033,8 +1033,13 @@ async def test_calculate_fuel_supply_compliance_units_parametrized(
     compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
         AsyncMock(return_value=[mock_fuel_supply])
     )
+    # Mock the compliance report and its period description
     dummy_report = MagicMock()
     dummy_report.compliance_report_group_uuid = "dummy-group"
+    # Ensure compliance_period and description are mocked for non-historical check
+    dummy_report.compliance_period = MagicMock()
+    dummy_report.compliance_period.description = "2024"  # Use a non-historical year
+
     result = (
         await compliance_report_summary_service.calculate_fuel_supply_compliance_units(
             dummy_report
@@ -1078,11 +1083,141 @@ async def test_calculate_fuel_export_compliance_units_parametrized(
     compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
         AsyncMock(return_value=[mock_fuel_export])
     )
+    # Mock the compliance report and its period description
     dummy_report = MagicMock()
     dummy_report.compliance_report_group_uuid = "dummy-group"
+    # Ensure compliance_period and description are mocked for non-historical check
+    dummy_report.compliance_period = MagicMock()
+    dummy_report.compliance_period.description = "2024"  # Use a non-historical year
+
     result = (
         await compliance_report_summary_service.calculate_fuel_export_compliance_units(
             dummy_report
         )
     )
     assert result == expected_result
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "fuel_data, expected_legacy_result",
+    [
+        # Test data based on previous failures, using legacy formula expectations
+        (
+            {
+                "target_ci": 100,
+                "eer": 1,
+                "ci_of_fuel": 80,
+                "uci": 10,  # uci ignored in legacy
+                "quantity": 1_000_000,
+                "q1_quantity": 0,
+                "q2_quantity": 0,
+                "q3_quantity": 0,
+                "q4_quantity": 0,
+                "energy_density": 1,
+            },
+            20,  # Was 10 in non-legacy
+        ),
+        (
+            {
+                "target_ci": 100,
+                "eer": 1,
+                "ci_of_fuel": 80,
+                "uci": 10,  # uci ignored in legacy
+                "quantity": 500_000,
+                "q1_quantity": 0,
+                "q2_quantity": 500_000,
+                "q3_quantity": 0,
+                "q4_quantity": 0,
+                "energy_density": 1,
+            },
+            20,  # Was 10 in non-legacy
+        ),
+        (
+            {
+                "target_ci": 80,
+                "eer": 1,
+                "ci_of_fuel": 90,
+                "uci": 5,  # uci ignored in legacy
+                "quantity": 1_000_000,
+                "q1_quantity": 0,
+                "q2_quantity": 0,
+                "q3_quantity": 0,
+                "q4_quantity": 0,
+                "energy_density": 1,
+            },
+            -10,  # Was -15 in non-legacy
+        ),
+    ],
+)
+async def test_calculate_fuel_supply_compliance_units_parametrized_legacy(
+    compliance_report_summary_service, fuel_data, expected_legacy_result
+):
+    """Test calculation for compliance periods before 2024 (legacy formula)"""
+    mock_fuel_supply = Mock(**fuel_data)
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=[mock_fuel_supply])
+    )
+    # Mock the compliance report and its period description for LEGACY check
+    dummy_report = MagicMock()
+    dummy_report.compliance_report_group_uuid = "dummy-group-legacy"
+    dummy_report.compliance_period = MagicMock()
+    dummy_report.compliance_period.description = "2023"  # Use a legacy year
+
+    result = (
+        await compliance_report_summary_service.calculate_fuel_supply_compliance_units(
+            dummy_report
+        )
+    )
+    assert result == expected_legacy_result
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "fuel_export_data, expected_legacy_result",
+    [
+        # Test data based on previous failures, using legacy formula expectations
+        (
+            {
+                "target_ci": 100,
+                "eer": 1,
+                "ci_of_fuel": 80,
+                "uci": 10,  # uci ignored in legacy
+                "quantity": 1_000_000,
+                "energy_density": 1,
+            },
+            -20,  # Was -10 in non-legacy
+        ),
+        (
+            {
+                "target_ci": 80,
+                "eer": 1,
+                "ci_of_fuel": 90,
+                "uci": 5,  # uci ignored in legacy
+                "quantity": 1_000_000,
+                "energy_density": 1,
+            },
+            0,  # Same as non-legacy because (-10) becomes 0 after export processing
+        ),
+    ],
+)
+async def test_calculate_fuel_export_compliance_units_parametrized_legacy(
+    compliance_report_summary_service, fuel_export_data, expected_legacy_result
+):
+    """Test calculation for compliance periods before 2024 (legacy formula)"""
+    mock_fuel_export = MagicMock(**fuel_export_data)
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=[mock_fuel_export])
+    )
+    # Mock the compliance report and its period description for LEGACY check
+    dummy_report = MagicMock()
+    dummy_report.compliance_report_group_uuid = "dummy-group-legacy"
+    dummy_report.compliance_period = MagicMock()
+    dummy_report.compliance_period.description = "2023"  # Use a legacy year
+
+    result = (
+        await compliance_report_summary_service.calculate_fuel_export_compliance_units(
+            dummy_report
+        )
+    )
+    assert result == expected_legacy_result
