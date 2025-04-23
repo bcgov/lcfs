@@ -196,6 +196,7 @@ class ComplianceReportSummarySchema(BaseSchema):
     version: Optional[int] = None
     is_locked: Optional[bool] = False
     quarter: Optional[int] = None
+    early_issuance_summary: Optional[List[ComplianceReportSummaryRowSchema]] = None
 
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):

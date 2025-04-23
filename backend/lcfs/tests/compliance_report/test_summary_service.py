@@ -40,7 +40,7 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize(
-    "description, reporting_frequency, fuel_supply_data",
+    "description, reporting_frequency, fuel_supply_data, quarterly_quantities",
     [
         (
             "Annual report using 'quantity'",
@@ -68,6 +68,7 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
                     "energy_density": 8,
                 },
             ],
+            [0, 0, 0, 0],
         ),
         (
             "Quarterly report using Q1 quantities",
@@ -95,6 +96,7 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
                     "energy_density": 8,
                 },
             ],
+            [28, 0, 0, 0],
         ),
         (
             "Quarterly report with multiple quarter fields",
@@ -123,12 +125,15 @@ def _assert_renewable_common(result: List[ComplianceReportSummaryRowSchema]):
                     "energy_density": 8,
                 },
             ],
+            [10, 10, 59, -50],
         ),
     ],
 )
 async def test_calculate_low_carbon_fuel_target_summary_parametrized(
     compliance_report_summary_service,
     mock_trxn_repo,
+    mock_fuel_supply_repo,
+    quarterly_quantities,
     mock_summary_repo,
     reporting_frequency,
     fuel_supply_data,
@@ -145,7 +150,7 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
 
     # Set up effective fuel supplies based on the parameterized fuel_supply_data.
     fuel_supplies = [MagicMock(**data) for data in fuel_supply_data]
-    compliance_report_summary_service.get_effective_fuel_supplies = AsyncMock(
+    mock_fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(
         return_value=fuel_supplies
     )
 
@@ -185,6 +190,15 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
     assert line_values[20] == 200
     assert line_values[21] == 0  # Not calculated yet
     assert line_values[22] == 1200  # Sum of above
+
+    quarterly_summary = await compliance_report_summary_service.calculate_quarterly_fuel_supply_compliance_units(
+        compliance_report
+    )
+
+    assert (quarterly_summary[0]) == quarterly_quantities[0]
+    assert (quarterly_summary[1]) == quarterly_quantities[1]
+    assert (quarterly_summary[2]) == quarterly_quantities[2]
+    assert (quarterly_summary[3]) == quarterly_quantities[3]
 
     _assert_repo_calls(
         mock_summary_repo,

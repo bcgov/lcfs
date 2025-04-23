@@ -279,6 +279,7 @@ class OtherUsesRepository:
                 joinedload(OtherUses.fuel_category),
                 joinedload(OtherUses.fuel_type),
                 joinedload(OtherUses.expected_use),
+                joinedload(OtherUses.provision_of_the_act),
             )
             .where(OtherUses.other_uses_id == other_uses_id)
         )

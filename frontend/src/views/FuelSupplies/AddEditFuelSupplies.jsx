@@ -20,8 +20,6 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelSupplyColDefs } from './_schema'
-import { ComplianceReports } from '@/views/ComplianceReports/index.js'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
