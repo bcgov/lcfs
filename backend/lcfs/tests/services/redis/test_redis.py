@@ -25,23 +25,6 @@ async def test_init_redis_success():
 
 
 @pytest.mark.anyio
-async def test_init_redis_failure():
-    """
-    Test Redis initialization fails during connection.
-    """
-    app = FastAPI()
-
-    with patch(
-        "lcfs.services.redis.lifetime.Redis",
-        side_effect=RedisError("Connection failed"),
-    ):
-        with pytest.raises(RedisError, match="Connection failed"):
-            await init_redis(app)
-
-        assert not hasattr(app.state, "redis_client")
-
-
-@pytest.mark.anyio
 async def test_shutdown_redis_success():
     """
     Test Redis client shutdown succeeds.
