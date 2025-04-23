@@ -276,6 +276,7 @@ export const allocationAgreementColDefs = (
       openOnFocus: true
     }),
     suppressKeyboardEvent,
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     minWidth: 150,
@@ -315,9 +316,7 @@ export const allocationAgreementColDefs = (
       freeSolo: false,
       openOnFocus: true
     }),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
@@ -357,6 +356,7 @@ export const allocationAgreementColDefs = (
         openOnFocus: true
       }
     },
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,

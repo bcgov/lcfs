@@ -22,7 +22,6 @@ export const handleScheduleSave = async ({
       validationStatus: 'success',
       modified: false
     }
-    console.log(JSON.stringify(finalData))
     alertRef.current?.triggerAlert({
       message: 'Row updated successfully.',
       severity: 'success'
