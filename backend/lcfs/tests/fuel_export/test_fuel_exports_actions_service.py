@@ -99,7 +99,6 @@ def create_sample_fe_data():
         fuel_category_id=1,
         end_use_id=1,
         fuel_code_id=1,
-        compliance_period="2024",  # Schema-only field
         quantity=1000.0,
         units="L",
         energy_density=35.0,
@@ -155,7 +154,7 @@ async def test_create_fuel_export_success(
     mock_repo.get_fuel_export_by_id = AsyncMock(return_value=created_export)
 
     # Call the method under test with compliance_period
-    result = await fuel_export_action_service.create_fuel_export(fe_data)
+    result = await fuel_export_action_service.create_fuel_export(fe_data, "2024")
     # Assertions
     assert result == FuelExportSchema.model_validate(created_export)
     mock_fuel_code_repo.get_standardized_fuel_data.assert_awaited_once_with(
@@ -163,9 +162,9 @@ async def test_create_fuel_export_success(
         fuel_category_id=fe_data.fuel_category_id,
         end_use_id=fe_data.end_use_id,
         fuel_code_id=fe_data.fuel_code_id,
-        compliance_period=fe_data.compliance_period,
         provision_of_the_act=ANY,
         export_date=ANY,
+        compliance_period="2024",
     )
     mock_repo.create_fuel_export.assert_awaited_once()
     # Ensure compliance units were calculated correctly
@@ -232,7 +231,7 @@ async def test_update_fuel_export_success_existing_report(
     mock_repo.update_fuel_export.return_value = updated_export
 
     # Call the method under test with compliance_period
-    result = await fuel_export_action_service.update_fuel_export(fe_data)
+    result = await fuel_export_action_service.update_fuel_export(fe_data, "2024")
 
     # Assertions
     assert result == FuelExportSchema.model_validate(updated_export)
@@ -307,7 +306,7 @@ async def test_update_fuel_export_create_new_version(
     mock_repo.create_fuel_export.return_value = new_export
 
     # Call the method under test with compliance_period
-    result = await fuel_export_action_service.update_fuel_export(fe_data)
+    result = await fuel_export_action_service.update_fuel_export(fe_data, "2024")
 
     # Assertions
     assert result == FuelExportSchema.model_validate(new_export)
@@ -423,7 +422,7 @@ async def test_populate_fuel_export_fields(
 
     # Call the method under test
     populated_export = await fuel_export_action_service._populate_fuel_export_fields(
-        fuel_export, fe_data
+        fuel_export, fe_data, "2024"
     )
 
     # Assertions
@@ -442,9 +441,9 @@ async def test_populate_fuel_export_fields(
         fuel_category_id=fuel_export.fuel_category_id,
         end_use_id=fuel_export.end_use_id,
         fuel_code_id=fuel_export.fuel_code_id,
-        compliance_period=fe_data.compliance_period,
         provision_of_the_act=ANY,
         export_date=ANY,
+        compliance_period="2024",
     )
 
 
@@ -464,7 +463,6 @@ async def test_compliance_units_calculation(
         fuel_category_id=2,
         end_use_id=1,
         fuel_code_id=1,
-        compliance_period="2024",
         quantity=case["input"]["quantity"],
         units=case["input"]["units"],
         energy_density=case["input"]["energy_density"],
@@ -485,7 +483,7 @@ async def test_compliance_units_calculation(
     )
 
     # Create a complete mock FuelExport instance
-    async def create_fuel_export_side_effect(fuel_export: FuelExport):
+    async def create_fuel_export_side_effect():
         """Simulate repository behavior with complete object"""
         mock_export = FuelExport(
             fuel_export_id=1,
@@ -526,11 +524,11 @@ async def test_compliance_units_calculation(
         return mock_export
 
     # Set up repository mocks
-    mock_created_export = await create_fuel_export_side_effect(FuelExport())
+    mock_created_export = await create_fuel_export_side_effect()
     mock_repo.create_fuel_export.return_value = mock_created_export
 
     # Call service method
-    result = await fuel_export_action_service.create_fuel_export(fe_data)
+    result = await fuel_export_action_service.create_fuel_export(fe_data, "2024")
 
     # Assertions
     assert result.compliance_units == case["expected_compliance_units"]
@@ -548,7 +546,7 @@ async def test_compliance_units_calculation(
         fuel_category_id=fe_data.fuel_category_id,
         end_use_id=fe_data.end_use_id,
         fuel_code_id=fe_data.fuel_code_id,
-        compliance_period=fe_data.compliance_period,
+        compliance_period="2024",
         provision_of_the_act=ANY,
         export_date=ANY,
     )
@@ -584,7 +582,7 @@ async def test_create_fuel_export_unknown_provision_no_ci_found(
     with pytest.raises(
         ValueError, match="No active fuel codes found within the last 12 months"
     ):
-        await fuel_export_action_service.create_fuel_export(fe_data)
+        await fuel_export_action_service.create_fuel_export(fe_data, "2024")
 
 
 @pytest.mark.anyio
@@ -653,7 +651,7 @@ async def test_create_fuel_export_unknown_provision_happy_path(
     }
     mock_repo.create_fuel_export.return_value = created_export
 
-    result = await fuel_export_action_service.create_fuel_export(fe_data)
+    result = await fuel_export_action_service.create_fuel_export(fe_data, "2024")
 
     assert isinstance(result, FuelExportSchema)
     assert result.ci_of_fuel == 42.0
@@ -664,9 +662,9 @@ async def test_create_fuel_export_unknown_provision_happy_path(
         fuel_category_id=fe_data.fuel_category_id,
         end_use_id=fe_data.end_use_id,
         fuel_code_id=None,
-        compliance_period=fe_data.compliance_period,
         provision_of_the_act="unknown",
         export_date=export_date,
+        compliance_period="2024",
     )
 
     mock_repo.create_fuel_export.assert_awaited_once()

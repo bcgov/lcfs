@@ -175,7 +175,6 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     group_uuid: Optional[str] = None
     version: Optional[int] = None
     action_type: Optional[str] = None
-    compliance_period: Optional[str] = None
     fuel_type_other: Optional[str] = None
     fuel_type_id: int
     fuel_category_id: int
