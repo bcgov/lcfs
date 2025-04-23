@@ -20,7 +20,6 @@
   "hoAddrLabel": "Head office (optional)",
   "hoAddrLabelView": "Head office address",
   "hoAddrLabelEdit": "Head office address (can be an international address)",
-  "bcRecordLabel": "Address in B.C. (where records are maintained)",
   "activityHdrLabel": "Did <b>{{name}}</b> engage in any of the following activities between January 1, {{period}}, and December 31, {{period}}?",
   "quarterlyActivityHdrLabel": "Report your quarter {{quarter}} fuel supply as well as any supporting documents.",
   "reportActivities": "Report activities",
