@@ -14,8 +14,7 @@
   "orgDetailsForm": {
     "serviceAddrLabelView": "Address for service in B.C.",
     "serviceAddrLabelEdit": "Address for service in B.C. (postal address)",
-    "bcRecordLabelView": "Address in B.C. where records are maintained",
-    "bcRecordLabelEdit": "Address in B.C. where records are maintained"
+    "bcRecordLabel": "Address in B.C. where records are maintained"
   },
   "hoAddrLabel": "Head office (optional)",
   "hoAddrLabelView": "Head office address",

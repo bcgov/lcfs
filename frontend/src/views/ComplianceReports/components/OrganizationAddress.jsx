@@ -239,9 +239,7 @@ export const OrganizationAddress = ({
     },
     {
       name: 'recordsAddress',
-      label: isEditing
-        ? t('report:orgDetailsForm.bcRecordLabelEdit')
-        : t('report:orgDetailsForm.bcRecordLabelView'),
+      label: t('report:orgDetailsForm.bcRecordLabel'),
       checkbox: true,
       checkboxLabel: 'same as address for service',
       onCheckboxChange: handleSameAddressChange,
