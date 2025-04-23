@@ -16,7 +16,7 @@ from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from fastapi import Depends
 from pydantic.v1 import ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, delete, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.services.s3.dependency import get_s3_client
 from lcfs.db.dependencies import get_async_db_session
@@ -212,18 +212,42 @@ class DocumentService:
         return presigned_url
 
     @repo_handler
-    async def delete_file(self, document_id: int):
+    async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
         document = await self.db.get_one(Document, document_id)
 
         if not document:
             raise Exception("Document not found")
 
-        # Delete the file from S3
-        self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
+        links = []
+        if parent_type == "compliance_report":
+            links = (
+                await self.db.execute(
+                    select(compliance_report_document_association).where(
+                        document_id
+                        == compliance_report_document_association.c.document_id
+                    )
+                )
+            ).all()
 
-        # Delete the entry from the database
-        await self.db.delete(document)
-        await self.db.flush()
+        # If last link, delete the whole document
+        if len(links) == 1:
+            # Delete the file from S3
+            self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
+
+            # Delete the entry from the database
+            await self.db.delete(document)
+            await self.db.flush()
+        else:  # Delete the association
+            await self.db.execute(
+                delete(compliance_report_document_association).where(
+                    and_(
+                        parent_id
+                        == compliance_report_document_association.c.compliance_report_id,
+                        document_id
+                        == compliance_report_document_association.c.document_id,
+                    )
+                )
+            )
 
     @repo_handler
     async def get_by_id_and_type(self, parent_id: int, parent_type="compliance_report"):
@@ -272,3 +296,18 @@ class DocumentService:
 
         response = self.s3_client.get_object(Bucket=BUCKET_NAME, Key=document.file_key)
         return response, document
+
+    async def copy_documents(self, copy_from_id: int, copy_to_id: int):
+        documents = await self.db.execute(
+            select(compliance_report_document_association).where(
+                copy_from_id
+                == compliance_report_document_association.c.compliance_report_id
+            )
+        )
+
+        for document in documents.all():
+            stmt = compliance_report_document_association.insert().values(
+                compliance_report_id=copy_to_id,
+                document_id=document.document_id,
+            )
+            await self.db.execute(stmt)

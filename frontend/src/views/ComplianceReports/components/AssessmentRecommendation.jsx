@@ -87,42 +87,29 @@ export const AssessmentRecommendation = ({
         )}
       {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
         currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
-          <BCButton
-            onClick={openReassessmentDialog}
-            sx={{ mt: 2 }}
-            color="primary"
-            startIcon={<Assignment />}
-            disabled={isLoading}
+          <Tooltip
+            title={
+              reportData.isNewest
+                ? ''
+                : 'Supplier has a supplemental report in progress.'
+            }
+            placement="right"
           >
-            {t('report:createReassessmentBtn')}
-          </BCButton>
+            <span>
+              <BCButton
+                data-test="create-reassesment"
+                variant="contained"
+                color="primary"
+                onClick={openReassessmentDialog}
+                startIcon={<Assignment />}
+                sx={{ mt: 2 }}
+                disabled={isLoading || !reportData.isNewest}
+              >
+                {t('report:createReassessmentBtn')}
+              </BCButton>
+            </span>
+          </Tooltip>
         )}
-      {currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
-        <Tooltip
-          title={
-            reportData.isNewest
-              ? ''
-              : 'Supplier has a supplemental report in progress.'
-          }
-          placement="right"
-        >
-          <span>
-            <BCButton
-              data-test="create-supplemental"
-              size="small"
-              className="svg-icon-button"
-              variant="contained"
-              color="primary"
-              onClick={openReassessmentDialog}
-              startIcon={<Assignment />}
-              sx={{ mt: 2 }}
-              disabled={isLoading || !reportData.isNewest}
-            >
-              {t('report:createReassessmentBtn')}
-            </BCButton>
-          </span>
-        </Tooltip>
-      )}
       <BCModal
         open={isReassessmentDialogOpen}
         onClose={() => setIsReassessmentDialogOpen(false)}
