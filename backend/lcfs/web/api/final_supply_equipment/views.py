@@ -148,7 +148,7 @@ async def save_final_supply_equipment_row(
         await fse_validate.check_equipment_uniqueness_and_overlap(data=request_data)
         # Create new final supply equipment row
         return await fse_service.create_final_supply_equipment(
-            request_data, compliance_report.organization.organization_code
+            request_data, compliance_report.organization.organization_id
         )
 
 

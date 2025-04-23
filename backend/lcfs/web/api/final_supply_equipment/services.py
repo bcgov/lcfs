@@ -1,3 +1,4 @@
+from sqlalchemy.orm import make_transient
 from typing import Any, Coroutine, Sequence
 
 import structlog
@@ -19,6 +20,7 @@ from lcfs.web.api.final_supply_equipment.schema import (
 )
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
+from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.core.decorators import service_handler
 
 logger = structlog.get_logger(__name__)
@@ -29,7 +31,9 @@ class FinalSupplyEquipmentServices:
         self,
         repo: FinalSupplyEquipmentRepository = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
+        organization_repo: OrganizationsRepository = Depends(),
     ) -> None:
+        self.organization_repo = organization_repo
         self.repo = repo
         self.compliance_report_repo = compliance_report_repo
 
@@ -214,12 +218,14 @@ class FinalSupplyEquipmentServices:
 
     @service_handler
     async def create_final_supply_equipment(
-        self, fse_data: FinalSupplyEquipmentCreateSchema, org_code: str
+        self, fse_data: FinalSupplyEquipmentCreateSchema, organization_id: int
     ) -> FinalSupplyEquipmentSchema:
         """Create a new final supply equipment"""
         # Generate the registration number
+
+        organization = await self.organization_repo.get_organization(organization_id)
         registration_nbr = await self.generate_registration_number(
-            org_code, fse_data.postal_code
+            organization.organization_code, fse_data.postal_code
         )
 
         final_supply_equipment = await self.convert_to_fse_model(fse_data)
@@ -231,7 +237,7 @@ class FinalSupplyEquipmentServices:
         # Increment the sequence number for the postal code if creation was successful
         if created_equipment:
             await self.repo.increment_seq_by_org_and_postal_code(
-                org_code, fse_data.postal_code
+                organization.organization_code, fse_data.postal_code
             )
 
         return FinalSupplyEquipmentSchema.model_validate(created_equipment)
@@ -314,3 +320,33 @@ class FinalSupplyEquipmentServices:
     @service_handler
     async def delete_all(self, compliance_report_id: int):
         return await self.repo.delete_all(compliance_report_id)
+
+    @service_handler
+    async def copy_to_report(
+        self, original_report_id: int, target_report_id: int, organization_id: int
+    ):
+        existing_list = await self.get_fse_list(original_report_id)
+
+        for old_fse in existing_list.final_supply_equipments:
+            payload = old_fse.model_dump(
+                exclude={
+                    "final_supply_equipment_id",
+                    "level_of_equipment",
+                    "compliance_report_id",
+                    "intended_uses",
+                    "intended_users",
+                }
+            )
+            new_fse = FinalSupplyEquipmentCreateSchema(
+                **payload,
+                level_of_equipment=old_fse.level_of_equipment.name,
+                intended_uses=[
+                    use_type.type for use_type in old_fse.intended_use_types
+                ],
+                intended_users=[
+                    user_type.type_name for user_type in old_fse.intended_user_types
+                ],
+                compliance_report_id=target_report_id,
+            )
+
+            await self.create_final_supply_equipment(new_fse, organization_id)
