@@ -20,12 +20,13 @@ import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+import BCButton from '@/components/BCButton'
+import { CalculateOutlined } from '@mui/icons-material'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [alertMessage, setAlertMessage] = useState('')
   const [isButtonLoading, setIsButtonLoading] = useState(false)
-  const [resetGridFn, setResetGridFn] = useState(null)
   const [alertSeverity, setAlertSeverity] = useState('info')
 
   const [paginationOptions, setPaginationOptions] = useState(
@@ -101,15 +102,13 @@ export const ComplianceReports = () => {
     []
   )
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
+  const handleClearFilters = () => {
+    setPaginationOptions(defaultInitialPagination)
+    sessionStorage.removeItem('compliance-reports-grid-filter')
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
     }
-  }, [resetGridFn])
+  }
 
   return (
     <>
@@ -157,6 +156,17 @@ export const ComplianceReports = () => {
             alignItems: 'center'
           }}
         />
+        <BCButton
+          data-test="credit-calculator"
+          sx={{ '& .MuiSvgIcon-root': { fontSize: '1.2rem !important' } }}
+          variant="outlined"
+          size="small"
+          color="primary"
+          onClick={() => navigate(ROUTES.REPORTS.CALCULATOR)}
+          startIcon={<CalculateOutlined />}
+        >
+          {t('report:calcTitle')}
+        </BCButton>
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
           <BCGridViewer
             gridRef={gridRef}
@@ -172,14 +182,10 @@ export const ComplianceReports = () => {
               defaultMaxWidth: 600
             }}
             defaultColDef={defaultColDef}
-            onSetResetGrid={handleSetResetGrid}
-            initialPaginationOptions={defaultInitialPagination}
-            onPaginationChange={(newPagination) =>
-              setPaginationOptions((prev) => ({
-                ...prev,
-                ...newPagination
-              }))
-            }
+            paginationOptions={paginationOptions}
+            onPaginationChange={(newPagination) => {
+              setPaginationOptions(newPagination)
+            }}
           />
         </BCBox>
       </Stack>

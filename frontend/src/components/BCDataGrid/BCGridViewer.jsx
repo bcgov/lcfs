@@ -7,70 +7,42 @@ import {
 } from '@/components/BCDataGrid/components'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
-import {
-  forwardRef,
-  useCallback,
-  useImperativeHandle,
-  useMemo,
-  useRef
-} from 'react'
+import { forwardRef, useCallback, useMemo } from 'react'
 
 export const BCGridViewer = forwardRef(
-  (
-    {
-      gridRef,
-      alertRef,
-      loading,
-      defaultColDef,
-      columnDefs,
-      gridOptions,
-      suppressPagination,
-      gridKey,
-      getRowId,
-      onRowClicked,
-      autoSizeStrategy,
+  ({
+    gridRef,
+    alertRef,
+    loading,
+    defaultColDef,
+    columnDefs,
+    gridOptions,
+    suppressPagination,
+    gridKey,
+    getRowId,
+    onRowClicked,
+    autoSizeStrategy,
 
-      initialPaginationOptions = {
-        page: 1,
-        size: 10,
-        sortOrders: [],
-        filters: []
-      },
-      paginationOptions,
-      onPaginationChange,
-
-      queryData,
-      dataKey = 'items',
-
-      enableExportButton = false,
-      enableCopyButton = false,
-      enableResetButton = false,
-      paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
-      exportName = 'ExportData',
-
-      ...props
+    paginationOptions = {
+      page: 1,
+      size: 10,
+      sortOrders: [],
+      filters: []
     },
-    forwardedRef
-  ) => {
+    onPaginationChange,
+
+    queryData,
+    dataKey = 'items',
+
+    enableExportButton = false,
+    enableCopyButton = false,
+    enableResetButton = false,
+    paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
+    exportName = 'ExportData',
+
+    ...props
+  }) => {
     const { data, error, isError, isLoading } = queryData
-
-    const ref = useRef(null)
-
-    useImperativeHandle(
-      forwardedRef,
-      () => ({
-        ...(ref.current || {}),
-        resetGrid: () => {
-          sessionStorage.removeItem(`${gridKey}-filter`)
-          sessionStorage.removeItem(`${gridKey}-column`)
-
-          if (ref.current?.api) {
-            ref.current.clearFilters()
-          }
-        }
-      }),
-      [gridKey]
-    )
 
     const onGridReady = useCallback(
       (params) => {
@@ -87,7 +59,7 @@ export const BCGridViewer = forwardRef(
               return { field, ...value }
             })
           ]
-          onPaginationChange({ filters: filterArr })
+          onPaginationChange({ ...paginationOptions, filters: filterArr })
         }
         if (columnState) {
           params.api.applyColumnState({
@@ -98,10 +70,10 @@ export const BCGridViewer = forwardRef(
           params.api.applyColumnState(() => {
             let state = []
             if (
-              initialPaginationOptions.sortOrders &&
-              initialPaginationOptions.sortOrders.length > 0
+              paginationOptions.sortOrders &&
+              paginationOptions.sortOrders.length > 0
             ) {
-              state = initialPaginationOptions.sortOrders.map((col) => ({
+              state = paginationOptions.sortOrders.map((col) => ({
                 colId: col.field,
                 sort: col.direction
               }))
@@ -113,7 +85,7 @@ export const BCGridViewer = forwardRef(
           })
         }
       },
-      [gridKey, initialPaginationOptions.sortOrders]
+      [gridKey, paginationOptions.sortOrders]
     )
 
     const onFirstDataRendered = useCallback((params) => {
@@ -121,11 +93,15 @@ export const BCGridViewer = forwardRef(
     }, [])
 
     const handleChangePage = (_, newPage) => {
-      onPaginationChange({ page: newPage + 1 })
+      onPaginationChange({ ...paginationOptions, page: newPage + 1 })
     }
 
     const handleChangeRowsPerPage = (event) => {
-      onPaginationChange({ size: parseInt(event.target.value, 10) })
+      onPaginationChange({
+        ...paginationOptions,
+        page: 1,
+        size: parseInt(event.target.value, 10)
+      })
     }
 
     const handleFilterChanged = useCallback(
@@ -134,18 +110,17 @@ export const BCGridViewer = forwardRef(
         const filterArr = [
           ...Object.entries(gridFilters).map(([field, value]) => {
             return { field, ...value }
-          }),
-          ...initialPaginationOptions.filters
+          })
         ]
 
-        onPaginationChange({ filters: filterArr })
+        onPaginationChange({ ...paginationOptions, page: 1, filters: filterArr })
         sessionStorage.setItem(`${gridKey}-filter`, JSON.stringify(gridFilters))
       },
-      [gridKey, onPaginationChange, initialPaginationOptions.filters]
+      [gridKey, onPaginationChange, paginationOptions.filters]
     )
 
     const handleSortChanged = useCallback(() => {
-      const sortTemp = ref.current?.api
+      const sortTemp = gridRef.current?.api
         .getColumnState()
         .filter((col) => col.sort)
         .sort((a, b) => a.sortIndex - b.sortIndex)
@@ -155,10 +130,10 @@ export const BCGridViewer = forwardRef(
             direction: col.sort
           }
         })
-      onPaginationChange({ sortOrders: sortTemp })
+      onPaginationChange({ ...paginationOptions, sortOrders: sortTemp })
       sessionStorage.setItem(
         `${gridKey}-column`,
-        JSON.stringify(ref.current?.api.getColumnState())
+        JSON.stringify(gridRef.current?.api.getColumnState())
       )
     }, [gridKey, onPaginationChange])
 
@@ -203,8 +178,8 @@ export const BCGridViewer = forwardRef(
       >
         <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
         <BCGridBase
-          ref={ref}
-          className={'ag-theme-material'}
+          ref={gridRef}
+          className="ag-theme-material"
           loading={isLoading || loading}
           defaultColDef={{ ...defaultColDefParams, ...defaultColDef }}
           columnDefs={columnDefs}
@@ -237,7 +212,7 @@ export const BCGridViewer = forwardRef(
               enableCopyButton={enableCopyButton}
               enableExportButton={enableExportButton}
               exportName={exportName}
-              gridRef={ref}
+              gridRef={gridRef}
               rowsPerPageOptions={paginationPageSizeSelector}
             />
           </BCBox>
@@ -247,4 +222,4 @@ export const BCGridViewer = forwardRef(
   }
 )
 
-BCGridViewer.displayName = 'BCGridViewer2'
+BCGridViewer.displayName = 'BCGridViewer'

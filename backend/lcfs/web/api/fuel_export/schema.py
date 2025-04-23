@@ -83,6 +83,7 @@ class FuelCodeSchema(BaseSchema):
     fuel_code: str
     fuel_code_carbon_intensity: float
     fuel_code_effective_date: Optional[date] = None
+    fuel_code_expiration_date: Optional[date] = None
 
 
 class FuelTypeOptionsSchema(BaseSchema):
@@ -130,24 +131,6 @@ class FuelCategoryResponseSchema(BaseSchema):
     category: str
 
 
-class FuelExportDiffSchema(BaseSchema):
-    compliance_units: Optional[bool] = None
-    export_date: Optional[bool] = None
-    fuel_type_id: Optional[bool] = None
-    fuel_category_id: Optional[bool] = None
-    end_use_id: Optional[bool] = None
-    provision_of_the_act_id: Optional[bool] = None
-    fuel_code_id: Optional[bool] = None
-    quantity: Optional[bool] = None
-    units: Optional[bool] = None
-    target_ci: Optional[bool] = None
-    ci_of_fuel: Optional[bool] = None
-    uci: Optional[bool] = None
-    energy_density: Optional[bool] = None
-    eer: Optional[bool] = None
-    energy: Optional[bool] = None
-
-
 class FuelExportSchema(BaseSchema):
     fuel_export_id: Optional[int] = None
     compliance_report_id: int
@@ -176,7 +159,6 @@ class FuelExportSchema(BaseSchema):
     energy: Optional[float] = None
     fuel_code_id: Optional[int] = None
     fuel_code: Optional[FuelCodeResponseSchema] = None
-    diff: Optional[FuelExportDiffSchema] = None
     updated: Optional[bool] = None
 
     @field_validator("compliance_units", mode="before")
@@ -223,7 +205,6 @@ class FuelExportCreateUpdateSchema(BaseSchema):
 
 
 class DeleteFuelExportResponseSchema(BaseSchema):
-    success: bool
     message: str
 
 

@@ -363,6 +363,7 @@ def mock_repo_full(mock_allocation_type):
     repo = MagicMock()
     repo.create_allocation_agreement = AsyncMock()
     repo.update_allocation_agreement = AsyncMock()
+    repo.delete_allocation_agreement = AsyncMock()
     repo.get_latest_allocation_agreement_by_group_uuid = AsyncMock()
     repo.get_effective_allocation_agreements = AsyncMock()
     repo.get_allocation_transaction_type_by_name = AsyncMock(

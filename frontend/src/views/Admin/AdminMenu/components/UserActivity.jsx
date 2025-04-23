@@ -12,7 +12,6 @@ import ROUTES, { buildPath } from '@/routes/routes.js'
 
 export const UserActivity = () => {
   const { t } = useTranslation(['common', 'admin'])
-  const [resetGridFn, setResetGridFn] = useState(null)
   const gridRef = useRef(null)
 
   const [paginationOptions, setPaginationOptions] = useState(
@@ -55,15 +54,12 @@ export const UserActivity = () => {
     []
   )
 
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
+  const handleClearFilters = () => {
+    setPaginationOptions(defaultInitialPagination)
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
     }
-  }, [resetGridFn])
+  }
 
   return (
     <BCBox>
@@ -88,8 +84,7 @@ export const UserActivity = () => {
             defaultMaxWidth: 600
           }}
           defaultColDef={defaultColDef}
-          onSetResetGrid={handleSetResetGrid}
-          initialPaginationOptions={defaultInitialPagination}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

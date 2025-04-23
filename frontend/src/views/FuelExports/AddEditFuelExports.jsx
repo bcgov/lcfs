@@ -17,7 +17,6 @@ import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelExportColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import colors from '@/themes/base/colors'
 import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 
 export const AddEditFuelExports = () => {
@@ -38,7 +37,8 @@ export const AddEditFuelExports = () => {
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
       currentUser?.organization?.organizationId,
-      complianceReportId
+      complianceReportId,
+      { enabled: !currentUserLoading }
     )
 
   const isSupplemental = complianceReport?.report?.version !== 0
@@ -246,6 +246,17 @@ export const AddEditFuelExports = () => {
         t,
         updatedData
       })
+
+      updatedData = {
+        ...updatedData,
+        fuelType: updatedData.fuelType?.fuelType ?? updatedData.fuelType,
+        fuelCategory:
+          updatedData.fuelCategory?.category ?? updatedData.fuelCategory,
+        provisionOfTheAct:
+          updatedData.provisionOfTheAct?.name ?? updatedData.provisionOfTheAct,
+        fuelCode: updatedData.fuelCode?.fuelCode ?? updatedData.fuelCode,
+        endUseType: updatedData.endUse?.type ?? updatedData.endUseType
+      }
 
       params.node.updateData(updatedData)
     },

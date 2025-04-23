@@ -28,9 +28,11 @@ async def mock_transactions(dbsession):
         declined_transfer_orm,
         rescinded_transfer_orm,
         initiative_agreement_orm,
+        edge_case_transfer_orm,
         admin_adjustment_orm,
         adjustment_transaction_orm,
         reserved_transaction_orm,
+        edge_case_transaction_orm,
     ]
     dbsession.add_all(transactions)
     await dbsession.flush()
@@ -41,7 +43,7 @@ async def mock_transactions(dbsession):
 @pytest.mark.anyio
 async def test_calculate_total_balance(dbsession, transaction_repo, mock_transactions):
     total_balance = await transaction_repo.calculate_total_balance(test_org_id)
-    assert total_balance == 100
+    assert total_balance == 233
 
 
 @pytest.mark.anyio
@@ -57,7 +59,28 @@ async def test_calculate_available_balance(
     dbsession, transaction_repo, mock_transactions
 ):
     available_balance = await transaction_repo.calculate_available_balance(test_org_id)
+    assert available_balance == 133
+
+
+@pytest.mark.anyio
+async def test_edge_case_transaction_in_proper_period(
+    dbsession, transaction_repo, mock_transactions
+):
+    """Transaction is right on the edge of the compliance period (March 31st), check it shows up in 2022 and after"""
+    available_balance = await transaction_repo.calculate_available_balance_for_period(
+        test_org_id, 2021
+    )
     assert available_balance == 0
+
+    available_balance = await transaction_repo.calculate_available_balance_for_period(
+        test_org_id, 2022
+    )
+    assert available_balance == 33
+
+    available_balance = await transaction_repo.calculate_available_balance_for_period(
+        test_org_id, 2023
+    )
+    assert available_balance == 33
 
 
 @pytest.mark.anyio
@@ -120,15 +143,15 @@ async def test_transactions_in_have_correct_visibilities(
         await transaction_repo.get_transactions_paginated(0, 10, [], sort_orders)
     )
 
-    assert len(transactions_transferor) == 8
-    assert total_count_transferor == 8
+    assert len(transactions_transferor) == 9
+    assert total_count_transferor == 9
 
-    assert len(transactions_transferee) == 7
-    assert total_count_transferee == 7
+    assert len(transactions_transferee) == 8
+    assert total_count_transferee == 8
 
     # No Rescinded transfer shown in the government transactions
-    assert len(transactions_gov) == 8
-    assert total_count_gov == 8
+    assert len(transactions_gov) == 9
+    assert total_count_gov == 9
 
 
 @pytest.mark.anyio

@@ -1,15 +1,18 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch, Mock
 
-from lcfs.db.models import UserProfile
-from lcfs.web.api.compliance_report.schema import ComplianceReportBaseSchema
+from lcfs.db.models import Organization
 from lcfs.db.models.compliance import ComplianceReport
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
 )
 from lcfs.db.models.user import UserProfile
+from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportBaseSchema,
+)
 from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
 
 
@@ -42,16 +45,17 @@ async def test_get_all_compliance_periods_unexpected_error(
     mock_repo.get_all_compliance_periods.assert_called_once()
 
 
-# create_compliance_report
 @pytest.mark.anyio
 async def test_create_compliance_report_success(
     compliance_report_service,
     mock_repo,
+    mock_org_repo,
     compliance_report_base_schema,
     compliance_report_create_schema,
     mock_snapshot_service,
 ):
     mock_user = MagicMock()
+    mock_org_repo.get_organization.return_value = Mock(has_early_issuance=False)
 
     # Mock the compliance period
     mock_compliance_period = CompliancePeriod(
@@ -84,6 +88,48 @@ async def test_create_compliance_report_success(
     )
     mock_repo.create_compliance_report.assert_called_once()
     mock_snapshot_service.create_organization_snapshot.assert_called_once()
+
+    saved_report = mock_repo.create_compliance_report.call_args[0][0]
+    assert saved_report.reporting_frequency == ReportingFrequency.ANNUAL
+
+
+# create_compliance_report
+@pytest.mark.anyio
+async def test_create_compliance_report_quarterly_success(
+    compliance_report_service,
+    mock_repo,
+    mock_org_repo,
+    compliance_report_base_schema,
+    compliance_report_create_schema,
+    mock_snapshot_service,
+):
+    mock_user = MagicMock()
+    mock_org_repo.get_organization.return_value = Mock(has_early_issuance=True)
+
+    # Mock the compliance period
+    mock_compliance_period = CompliancePeriod(
+        compliance_period_id=1,
+        description="2024",
+    )
+    mock_repo.get_compliance_period.return_value = mock_compliance_period
+
+    # Mock the compliance report status
+    mock_draft_status = ComplianceReportStatus(
+        compliance_report_status_id=1, status="Draft"
+    )
+    mock_repo.get_compliance_report_status_by_desc.return_value = mock_draft_status
+
+    # Mock the added compliance report
+    mock_compliance_report = compliance_report_base_schema()
+
+    mock_repo.create_compliance_report.return_value = mock_compliance_report
+
+    await compliance_report_service.create_compliance_report(
+        1, compliance_report_create_schema, mock_user
+    )
+
+    saved_report = mock_repo.create_compliance_report.call_args[0][0]
+    assert saved_report.reporting_frequency == ReportingFrequency.QUARTERLY
 
 
 @pytest.mark.anyio
@@ -233,6 +279,7 @@ async def test_get_all_org_reported_years_unexpected_error(
     with pytest.raises(ServiceException):
         await compliance_report_service.get_all_org_reported_years(1)
 
+
 @pytest.mark.anyio
 async def test_create_supplemental_report_includes_summary_lines(
     compliance_report_service, mock_repo
@@ -255,15 +302,15 @@ async def test_create_supplemental_report_includes_summary_lines(
 
     columns_mock = MagicMock()
     columns_mock.keys.return_value = [
-        'line_6_renewable_fuel_retained_gasoline',
-        'line_6_renewable_fuel_retained_diesel',
-        'line_6_renewable_fuel_retained_jet_fuel',
-        'line_8_obligation_deferred_gasoline',
-        'line_8_obligation_deferred_diesel',
-        'line_8_obligation_deferred_jet_fuel',
-        'line_9_obligation_added_gasoline',
-        'line_9_obligation_added_diesel',
-        'line_9_obligation_added_jet_fuel'
+        "line_6_renewable_fuel_retained_gasoline",
+        "line_6_renewable_fuel_retained_diesel",
+        "line_6_renewable_fuel_retained_jet_fuel",
+        "line_8_obligation_deferred_gasoline",
+        "line_8_obligation_deferred_diesel",
+        "line_8_obligation_deferred_jet_fuel",
+        "line_9_obligation_added_gasoline",
+        "line_9_obligation_added_diesel",
+        "line_9_obligation_added_jet_fuel",
     ]
     table_mock = MagicMock()
     table_mock.columns = columns_mock
@@ -290,7 +337,9 @@ async def test_create_supplemental_report_includes_summary_lines(
     # Set up mocks for repository calls
     mock_repo.get_compliance_report_by_id.return_value = mock_current_report
     mock_repo.get_compliance_report_status_by_desc.return_value = mock_draft_status
-    mock_repo.get_assessed_compliance_report_by_period.return_value = mock_assessed_report
+    mock_repo.get_assessed_compliance_report_by_period.return_value = (
+        mock_assessed_report
+    )
 
     mock_latest_report = MagicMock()
     mock_latest_report.version = 0
@@ -302,10 +351,14 @@ async def test_create_supplemental_report_includes_summary_lines(
 
     mock_schema = MagicMock()
 
-    with patch.object(ComplianceReportBaseSchema, 'model_validate', return_value=mock_schema):
+    with patch.object(
+        ComplianceReportBaseSchema, "model_validate", return_value=mock_schema
+    ):
         # Call the service
         mock_user = MagicMock(spec=UserProfile, organization_id=1)
-        result = await compliance_report_service.create_supplemental_report(1, mock_user)
+        result = await compliance_report_service.create_supplemental_report(
+            1, mock_user
+        )
         assert result is not None
 
         # Check that create_compliance_report was called
@@ -315,7 +368,7 @@ async def test_create_supplemental_report_includes_summary_lines(
         new_report = mock_repo.create_compliance_report.call_args[0][0]
 
         # Verify the summary values were copied correctly
-        assert hasattr(new_report, 'summary')
+        assert hasattr(new_report, "summary")
         new_summary = new_report.summary
 
         # Check the actual values
@@ -328,6 +381,7 @@ async def test_create_supplemental_report_includes_summary_lines(
         assert new_summary.line_9_obligation_added_gasoline == 2
         assert new_summary.line_9_obligation_added_diesel == 4
         assert new_summary.line_9_obligation_added_jet_fuel == 6
+
 
 @pytest.mark.anyio
 async def test_delete_supplemental_report_success(compliance_report_service, mock_repo):
@@ -346,14 +400,12 @@ async def test_delete_supplemental_report_success(compliance_report_service, moc
     result = await compliance_report_service.delete_compliance_report(996, mock_user)
 
     assert result is True
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_called_once_with(996)
 
 
 @pytest.mark.anyio
-async def test_delete_compliance_report_not_found(
-    compliance_report_service, mock_repo
-):
+async def test_delete_compliance_report_not_found(compliance_report_service, mock_repo):
     """Test deletion fails when compliance report does not exist"""
 
     mock_user = MagicMock(organization_id=998)
@@ -364,7 +416,7 @@ async def test_delete_compliance_report_not_found(
     with pytest.raises(DataNotFoundException, match="Compliance report not found."):
         await compliance_report_service.delete_compliance_report(1000, mock_user)
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(1000, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(1000)
     mock_repo.delete_compliance_report.assert_not_called()  # Ensure delete is not called
 
 
@@ -385,8 +437,9 @@ async def test_delete_compliance_report_supplier_no_permission(
         await compliance_report_service.delete_compliance_report(996, mock_user)
     assert exc.typename == "ServiceException"
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_not_called()
+
 
 @pytest.mark.anyio
 async def test_delete_compliance_report_idir_no_permission(
@@ -404,7 +457,7 @@ async def test_delete_compliance_report_idir_no_permission(
         await compliance_report_service.delete_compliance_report(996, mock_user)
     assert exc.typename == "ServiceException"
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_not_called()
 
 
@@ -426,5 +479,5 @@ async def test_delete_compliance_report_wrong_status(
 
     assert exc_info.typename == "ServiceException"
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_not_called()

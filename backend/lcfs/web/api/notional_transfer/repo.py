@@ -1,6 +1,6 @@
 import structlog
 from fastapi import Depends
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from typing import List, Optional, Tuple
@@ -59,7 +59,9 @@ class NotionalTransferRepository:
             return []
 
         result = await self.get_effective_notional_transfers(
-            group_uuid, compliance_report_id, changelog
+            compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
+            changelog=changelog
         )
         return result
 
@@ -164,7 +166,8 @@ class NotionalTransferRepository:
 
         # Retrieve effective notional transfers using the group UUID
         notional_transfers = await self.get_effective_notional_transfers(
-            group_uuid, compliance_report_id
+            compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
         )
 
         # Manually apply pagination
@@ -261,3 +264,30 @@ class NotionalTransferRepository:
 
         result = await self.db.execute(query)
         return result.scalars().first()
+
+    @repo_handler
+    async def get_notional_transfer_version_by_user(
+        self, group_uuid: str, version: int
+    ) -> Optional[NotionalTransfer]:
+        """
+        Retrieve a specific NotionalTransfer record by group UUID, version, and user_type.
+        """
+        query = (
+            select(NotionalTransfer)
+            .where(
+                NotionalTransfer.group_uuid == group_uuid,
+                NotionalTransfer.version == version,
+                NotionalTransfer.user_type == user_type,
+            )
+            .options(joinedload(NotionalTransfer.fuel_category))
+        )
+
+        result = await self.db.execute(query)
+        return result.scalars().first()
+
+    async def delete_notional_transfer(self, notional_transfer_id):
+        await self.db.execute(
+            delete(NotionalTransfer).where(
+                NotionalTransfer.notional_transfer_id == notional_transfer_id
+            )
+        )

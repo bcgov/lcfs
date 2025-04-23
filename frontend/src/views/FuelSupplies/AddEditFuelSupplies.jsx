@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { DEFAULT_CI_FUEL } from '@/constants/common'
+import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -38,10 +38,13 @@ export const AddEditFuelSupplies = () => {
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
       currentUser?.organization?.organizationId,
-      complianceReportId
+      complianceReportId,
+      { enabled: !currentUserLoading }
     )
 
   const isSupplemental = complianceReport?.report?.version !== 0
+  const isEarlyIssuance =
+    complianceReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   const {
     data: optionsData,
@@ -135,10 +138,12 @@ export const AddEditFuelSupplies = () => {
       optionsData,
       errors,
       warnings,
-      isSupplemental
+      compliancePeriod,
+      isSupplemental,
+      isEarlyIssuance
     )
     setColumnDefs(updatedColumnDefs)
-  }, [isSupplemental, errors, optionsData, warnings])
+  }, [isSupplemental, isEarlyIssuance, errors, optionsData, warnings])
 
   useEffect(() => {
     if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
@@ -147,14 +152,6 @@ export const AddEditFuelSupplies = () => {
           ...item,
           complianceReportId, // This takes current reportId, important for versioning
           compliancePeriod,
-          fuelCategory: item.fuelCategory?.category,
-          fuelType: item.fuelType?.fuelType,
-          fuelTypeOther:
-            item.fuelType?.fuelType === 'Other' ? item.fuelTypeOther : null,
-          provisionOfTheAct: item.provisionOfTheAct?.name,
-          provisionOfTheActId: item.provisionOfTheAct?.provisionOfTheActId,
-          fuelCode: item.fuelCode?.fuelCode,
-          endUse: item.endUse?.type,
           isNewSupplementalEntry:
             isSupplemental && item.complianceReportId === +complianceReportId,
           id: uuid()

@@ -57,7 +57,9 @@ export const useGetComplianceReport = (orgID, reportID, options) => {
   return useQuery({
     queryKey: ['compliance-report', reportID],
     queryFn: async () => {
-      return (await client.get(path)).data
+      const { data } = await client.get(path)
+
+      return data
     },
     ...options
   })
@@ -115,8 +117,8 @@ export const useUpdateComplianceReport = (reportID, options) => {
     mutationFn: async (data) => {
       return await client.put(path, data)
     },
-    onSettled: () => {
-      queryClient.invalidateQueries(['compliance-report', reportID])
+    onSettled: (data) => {
+      queryClient.setQueryData(['compliance-report', reportID], data.data)
     }
   })
 }
@@ -216,9 +218,10 @@ export const useGetComplianceReportList = (
   options
 ) => {
   const client = useApiService()
-  const { data: currentUser, hasRoles } = useCurrentUser()
+  const { data: currentUser, hasRoles, isLoading } = useCurrentUser()
 
   return useQuery({
+    enabled: !isLoading,
     queryKey: ['compliance-reports-list', page, size, sortOrders, filters],
     queryFn: async () => {
       if (hasRoles(roles.supplier)) {
@@ -255,7 +258,22 @@ export const useGetComplianceReportStatuses = (options) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['compliance-report-statuses'],
-    queryFn: async () => (await client.get(apiRoutes.getComplianceReportStatuses)).data,
+    queryFn: async () =>
+      (await client.get(apiRoutes.getComplianceReportStatuses)).data,
     ...options
+  })
+}
+
+export const useGetChangeLog = ({ complianceReportGroupUuid, dataType }) => {
+  const client = useApiService()
+  const path = apiRoutes.getChangelog
+    .replace(':complianceReportGroupUuid', complianceReportGroupUuid)
+    .replace(':dataType', dataType)
+  return useQuery({
+    queryKey: ['changelog', complianceReportGroupUuid, dataType],
+    queryFn: async () => {
+      const response = await client.get(path)
+      return response.data
+    }
   })
 }

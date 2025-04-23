@@ -1,8 +1,10 @@
 import React from 'react'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AuditLog } from '@/views/Admin/AdminMenu/index.js'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
+
+vi.mock('@/services/useApiService')
 
 // Mock i18n
 vi.mock('react-i18next', () => ({
@@ -20,11 +22,11 @@ vi.mock('react-router-dom', async () => {
 })
 
 // Mock BCDataGridServer so we can inspect props & simulate row clicks
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: ({ handleRowClicked, ...props }) => {
+vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+  BCGridViewer: ({ handleRowClicked, ...props }) => {
     // We'll return some basic UI with a button to simulate a row-click.
     return (
-      <div data-test="bc-datagrid-server">
+      <div data-test="bc-grid-container">
         <button
           onClick={() =>
             handleRowClicked && handleRowClicked({ data: { auditLogId: 123 } })
@@ -45,7 +47,7 @@ describe('AuditLog Component', () => {
   it('renders correctly', () => {
     render(<AuditLog />, { wrapper })
     expect(screen.getByText('admin:AuditLog')).toBeInTheDocument()
-    expect(screen.getByTestId('bc-datagrid-server')).toBeInTheDocument()
+    expect(screen.getByTestId('bc-grid-container')).toBeInTheDocument()
   })
 
   it('passes the correct props to BCDataGridServer', () => {

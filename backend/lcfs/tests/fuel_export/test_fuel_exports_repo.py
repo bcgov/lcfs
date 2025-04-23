@@ -2,7 +2,7 @@ import pytest
 from sqlalchemy.exc import SQLAlchemyError
 from unittest.mock import MagicMock, AsyncMock
 
-from lcfs.db.base import UserTypeEnum, ActionTypeEnum
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance import FuelExport
 from lcfs.web.exception.exceptions import DatabaseException
 

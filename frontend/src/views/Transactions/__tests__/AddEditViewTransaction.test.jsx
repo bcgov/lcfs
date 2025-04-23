@@ -155,8 +155,8 @@ vi.mock('@/hooks/useOrganization', () => ({
   })
 }))
 
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
+vi.mock('@/contexts/AuthorizationContext', () => ({
+  useAuthorization: () => ({
     setForbidden: vi.fn()
   })
 }))

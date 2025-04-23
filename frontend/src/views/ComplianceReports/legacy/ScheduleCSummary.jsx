@@ -76,7 +76,7 @@ export const ScheduleCSummary = ({ data, status }) => {
           queryData={queryData}
           dataKey="otherUses"
           suppressPagination={data?.length <= 10}
-          initialPaginationOptions={defaultInitialPagination}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

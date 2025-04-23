@@ -1,27 +1,27 @@
-import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import BCTypography from '@/components/BCTypography'
+import { actions, validation } from '@/components/BCDataGrid/columns'
 import {
-  AutocompleteCellEditor,
-  RequiredHeader,
   AsyncSuggestionEditor,
-  NumberEditor
+  AutocompleteCellEditor,
+  NumberEditor,
+  RequiredHeader
 } from '@/components/BCDataGrid/components'
+import BCTypography from '@/components/BCTypography'
+import { apiRoutes } from '@/constants/routes'
+import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
 import i18n from '@/i18n'
 import colors from '@/themes/base/colors'
 import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
-import { actions, validation } from '@/components/BCDataGrid/columns'
-import { apiRoutes } from '@/constants/routes'
+import {
+  fuelTypeOtherConditionalStyle,
+  isFuelTypeOther
+} from '@/utils/fuelTypeOther'
+import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
 import {
   StandardCellStyle,
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
-import {
-  isFuelTypeOther,
-  fuelTypeOtherConditionalStyle
-} from '@/utils/fuelTypeOther'
-import { SelectRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { ACTION_STATUS_MAP } from '@/constants/schemaConstants'
-import { changelogCellStyle } from '@/utils/grid/changelogCellStyle'
+import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -458,13 +458,17 @@ export const allocationAgreementColDefs = (
 
 export const allocationAgreementSummaryColDefs = [
   {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
+    ),
     field: 'allocationTransactionType',
     flex: 1,
     minWidth: 200
   },
   {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.transactionPartner'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartner'
+    ),
     field: 'transactionPartner',
     flex: 1,
     minWidth: 200
@@ -528,7 +532,9 @@ export const allocationAgreementSummaryColDefs = [
     field: 'ciOfFuel'
   },
   {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.quantity'
+    ),
     field: 'quantity',
     valueFormatter
   },
@@ -550,53 +556,30 @@ export const defaultColDef = {
   flex: 1
 }
 
-export const changelogNestedOverrides = {
-  'allocationTransactionType': {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
-    field: 'allocationTransactionType',
-    valueGetter: (params) => params.data?.allocationTransactionType?.type || '',
-    cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
-  },
-  'fuelType': {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelType'),
-    field: 'fuelType',
-    valueGetter: (params) => params.data?.fuelType?.fuelType || '',
-    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
-  },
-  'fuelCategory': {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.fuelCategory'),
-    field: 'fuelCategory',
-    valueGetter: (params) => params.data?.fuelCategory?.category || '',
-    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
-  },
-  'provisionOfTheAct': {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'),
-    field: 'provisionOfTheAct',
-    valueGetter: (params) => params.data?.provisionOfTheAct?.name || '',
-    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
-  }
-}
-
-export const changelogCommonColDefs = [
+export const changelogCommonColDefs = (highlight = true) => [
   {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.allocationTransactionType'),
-    field: 'allocationTransactionType',
-    valueGetter: (params) => params.data?.allocationTransactionType || '',
-    cellStyle: (params) => changelogCellStyle(params, 'allocationTransactionType')
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
+    ),
+    field: 'allocationTransactionType.type',
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'allocationTransactionType')
   },
   {
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.transactionPartner'
     ),
     field: 'transactionPartner',
-    cellStyle: (params) => changelogCellStyle(params, 'transactionPartner')
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'transactionPartner')
   },
   {
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.postalAddress'
     ),
     field: 'postalAddress',
-    cellStyle: (params) => changelogCellStyle(params, 'postalAddress')
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'postalAddress')
   },
   {
     headerName: i18n.t(
@@ -604,7 +587,7 @@ export const changelogCommonColDefs = [
     ),
     field: 'transactionPartnerEmail',
     cellStyle: (params) =>
-      changelogCellStyle(params, 'transactionPartnerEmail')
+      highlight && changelogCellStyle(params, 'transactionPartnerEmail')
   },
   {
     headerName: i18n.t(
@@ -612,68 +595,70 @@ export const changelogCommonColDefs = [
     ),
     field: 'transactionPartnerPhone',
     cellStyle: (params) =>
-      changelogCellStyle(params, 'transactionPartnerPhone')
+      highlight && changelogCellStyle(params, 'transactionPartnerPhone')
   },
   {
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelType'
     ),
-    field: 'fuelType',
-    valueGetter: (params) => params.data?.fuelType || '',
-    cellStyle: (params) => changelogCellStyle(params, 'fuelType')
+    field: 'fuelType.fuelType',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
   },
   {
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
     ),
     field: 'fuelTypeOther',
-    cellStyle: (params) => changelogCellStyle(params, 'fuelTypeOther')
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'fuelTypeOther')
   },
   {
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelCategory'
     ),
-    field: 'fuelCategory',
-    valueGetter: (params) => params.data?.fuelCategory || '',
-    cellStyle: (params) => changelogCellStyle(params, 'fuelCategory')
+    field: 'fuelCategory.category',
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'fuelCategory')
   },
   {
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
     ),
-    field: 'provisionOfTheAct',
-    valueGetter: (params) => params.data?.provisionOfTheAct || '',
-    cellStyle: (params) => changelogCellStyle(params, 'provisionOfTheAct')
+    field: 'provisionOfTheAct.name',
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'provisionOfTheAct')
   },
   {
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.fuelCode'
     ),
-    field: 'fuelCode',
-    cellStyle: (params) => changelogCellStyle(params, 'fuelCode')
+    field: 'fuelCode.fuel_code',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
     ),
     field: 'ciOfFuel',
-    cellStyle: (params) => changelogCellStyle(params, 'ciOfFuel')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'ciOfFuel')
   },
   {
-    headerName: i18n.t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    headerName: i18n.t(
+      'allocationAgreement:allocationAgreementColLabels.quantity'
+    ),
     field: 'quantity',
-    cellStyle: (params) => changelogCellStyle(params, 'quantity')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
   },
   {
     headerName: i18n.t(
       'allocationAgreement:allocationAgreementColLabels.units'
     ),
     field: 'units',
-    cellStyle: (params) => changelogCellStyle(params, 'units')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'units')
   }
 ]
 
-export const changelogColDefs = [
+export const changelogColDefs = (highlight = true) => [
   {
     field: 'groupUuid',
     hide: true,
@@ -699,13 +684,12 @@ export const changelogColDefs = [
       }
     },
     cellStyle: (params) => {
-      if (params.data.actionType === 'UPDATE') {
+      if (highlight && params.data.actionType === 'UPDATE') {
         return { backgroundColor: colors.alerts.warning.background }
       }
     }
   },
-  // Map through the common columns and replace specific ones with their nested versions
-  ...changelogCommonColDefs.map(col => changelogNestedOverrides[col.field] || col)
+  ...changelogCommonColDefs(highlight)
 ]
 
 export const changelogDefaultColDefs = {
@@ -714,7 +698,9 @@ export const changelogDefaultColDefs = {
 }
 
 export const changelogCommonGridOptions = {
-  overlayNoRowsTemplate: i18n.t('allocationAgreement:noAllocationAgreementsFound'),
+  overlayNoRowsTemplate: i18n.t(
+    'allocationAgreement:noAllocationAgreementsFound'
+  ),
   autoSizeStrategy: {
     type: 'fitCellContents',
     defaultMinWidth: 50,

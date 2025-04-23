@@ -27,6 +27,7 @@ import Loading from '@/components/Loading'
 import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { useGetTransactionList } from '@/hooks/useTransactions'
+import { defaultInitialPagination } from '@/constants/schedules.js'
 
 const initialPaginationOptions = {
   page: 1,
@@ -55,12 +56,15 @@ export const Transactions = () => {
   const [paginationOptions, setPaginationOptions] = useState(
     initialPaginationOptions
   )
-  const [selectedOrgId, setSelectedOrgId] = useState(null)
+  const [selectedOrg, setSelectedOrg] = useState({
+    id: null,
+    label: null
+  })
 
   const queryData = useGetTransactionList(
     {
       ...paginationOptions,
-      selectedOrgId
+      selectedOrgId: selectedOrg?.id
     },
     {
       cacheTime: 0,
@@ -160,14 +164,14 @@ export const Transactions = () => {
   const getExportApiEndpoint = useCallback(() => {
     if (hasRoles(roles.supplier)) {
       return apiRoutes.exportOrgTransactions
-    } else if (selectedOrgId) {
+    } else if (selectedOrg.id) {
       return apiRoutes.exportFilteredTransactionsByOrg.replace(
         ':orgID',
-        selectedOrgId
+        selectedOrg?.id
       )
     }
     return apiRoutes.exportTransactions
-  }, [selectedOrgId, currentUser, hasRoles])
+  }, [selectedOrg, currentUser, hasRoles])
 
   const handleDownloadTransactions = async () => {
     setIsDownloadingTransactions(true)
@@ -192,8 +196,11 @@ export const Transactions = () => {
   }, [location.state])
 
   const handleClearFilters = () => {
-    gridRef.current?.resetGrid()
-    setPaginationOptions(initialPaginationOptions)
+    setPaginationOptions(defaultInitialPagination)
+    setSelectedOrg({ organizationId: null, label: null })
+    if (gridRef && gridRef.current) {
+      gridRef.current.clearFilters()
+    }
   }
 
   if (!currentUser) {
@@ -288,7 +295,10 @@ export const Transactions = () => {
         >
           <Role roles={govRoles}>
             <OrganizationList
-              onOrgChange={setSelectedOrgId}
+              selectedOrg={selectedOrg}
+              onOrgChange={({ id, label }) => {
+                setSelectedOrg({ id, label })
+              }}
               onlyRegistered={false}
             />
           </Role>
@@ -296,7 +306,7 @@ export const Transactions = () => {
       </Grid>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          ref={gridRef}
+          gridRef={gridRef}
           gridKey="transactions-grid"
           columnDefs={transactionsColDefs(t)}
           getRowId={getRowId}
@@ -304,7 +314,7 @@ export const Transactions = () => {
           defaultColDef={defaultColDef}
           queryData={queryData}
           dataKey="transactions"
-          initialPaginationOptions={initialPaginationOptions}
+          paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({
               ...prev,

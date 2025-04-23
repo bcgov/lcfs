@@ -12,6 +12,9 @@ from typing import List, Union, Any
 
 from lcfs.db.models import ComplianceReportSummary
 from lcfs.utils.constants import FILE_MEDIA_TYPE
+from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
+from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import (
     SUMMARY_SHEET,
     FUEL_SUPPLY_SHEET,
@@ -33,9 +36,6 @@ from lcfs.web.api.compliance_report.schema import (
     SHOW_ROW_STRIPES,
     SHOW_COL_STRIPES,
 )
-from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
-from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
@@ -100,7 +100,7 @@ class ComplianceReportExporter:
 
         # Get report data
         report = await self.cr_repo.get_compliance_report_by_id(
-            report_id=compliance_report_id, is_model=True
+            report_id=compliance_report_id
         )
         uuid = report.compliance_report_group_uuid
         cid = report.compliance_report_id
@@ -443,6 +443,7 @@ class ComplianceReportExporter:
                     aa.transaction_partner_phone,
                     aa.fuel_type,
                     aa.fuel_type_other,
+                    aa.fuel_category,
                     aa.provision_of_the_act,
                     aa.fuel_code,
                     aa.ci_of_fuel,

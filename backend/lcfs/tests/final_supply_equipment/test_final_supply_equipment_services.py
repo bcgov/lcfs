@@ -320,10 +320,10 @@ async def test_get_compliance_report_by_id_success(service, mock_comp_report_rep
     """
     Test fetching existing compliance report.
     """
-    mock_comp_report_repo.get_compliance_report_by_id.return_value = MagicMock(id=123)
+    mock_comp_report_repo.get_compliance_report_schema_by_id.return_value = MagicMock(id=123)
     report = await service.get_compliance_report_by_id(123)
     assert report.id == 123
-    mock_comp_report_repo.get_compliance_report_by_id.assert_awaited_once_with(123)
+    mock_comp_report_repo.get_compliance_report_schema_by_id.assert_awaited_once_with(123)
 
 
 @pytest.mark.anyio
@@ -331,7 +331,7 @@ async def test_get_compliance_report_by_id_not_found(service, mock_comp_report_r
     """
     Test 404 is raised for missing compliance report.
     """
-    mock_comp_report_repo.get_compliance_report_by_id.return_value = None
+    mock_comp_report_repo.get_compliance_report_schema_by_id.return_value = None
     with pytest.raises(HTTPException, match="Compliance report not found") as exc:
         await service.get_compliance_report_by_id(99999)
     assert exc.value.status_code == 404

@@ -35,10 +35,10 @@ vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
   useLocation: () => mockUseLocation(),
   useNavigate: () => mockUseNavigate(),
-  useParams: () => mockUseParams()
+  useParams: () => mockUseParams(),
+  useSearchParams: () => [new URLSearchParams(''), vi.fn()]
 }))
 
-// Mock react-i18next
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -80,8 +80,8 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   )
 }))
 
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
+vi.mock('@/contexts/AuthorizationContext', () => ({
+  useAuthorization: () => ({
     setForbidden: vi.fn()
   })
 }))
@@ -104,6 +104,14 @@ describe('AddEditAllocationAgreements', () => {
     // Mock useGetAllocationAgreements hook to return empty data initially
     vi.mocked(
       useAllocationAgreementHook.useGetAllAllocationAgreements
+    ).mockReturnValue({
+      data: { allocationAgreements: [] },
+      isLoading: false
+    })
+
+    // Add this missing mock for useGetAllocationAgreementsList
+    vi.mocked(
+      useAllocationAgreementHook.useGetAllocationAgreementsList
     ).mockReturnValue({
       data: { allocationAgreements: [] },
       isLoading: false
@@ -150,16 +158,24 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   it('loads data when allocationAgreements are available', async () => {
-    // Update the mock to return allocation agreements
+    const mockData = {
+      allocationAgreements: [
+        { allocationAgreementId: 'testId1' },
+        { allocationAgreementId: 'testId2' }
+      ]
+    }
+
     vi.mocked(
       useAllocationAgreementHook.useGetAllAllocationAgreements
     ).mockReturnValue({
-      data: {
-        allocationAgreements: [
-          { allocationAgreementId: 'testId1' },
-          { allocationAgreementId: 'testId2' }
-        ]
-      },
+      data: mockData,
+      isLoading: false
+    })
+
+    vi.mocked(
+      useAllocationAgreementHook.useGetAllocationAgreementsList
+    ).mockReturnValue({
+      data: mockData,
       isLoading: false
     })
 

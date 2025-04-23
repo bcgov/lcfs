@@ -58,6 +58,11 @@ export const DEFAULT_CI_FUEL = {
   'Jet fuel': 88.83
 }
 
+export const REPORT_SCHEDULES = {
+  ANNUAL: 'Annual',
+  QUARTERLY: 'Quarterly'
+}
+
 export const PHONE_REGEX =
   /^((\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4})?$/
 
@@ -73,3 +78,6 @@ export const FILTER_KEYS = {
 }
 
 export const MAX_FILE_SIZE_BYTES = 52428800 // 50MB
+
+export const FUEL_CATEGORIES = ['Diesel', 'Gasoline', 'Jet fuel']
+export const LEGISLATION_TRANSITION_YEAR = 2024

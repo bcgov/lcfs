@@ -1,5 +1,7 @@
 # transactions/repo.py
+import zoneinfo
 
+import structlog
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
@@ -34,6 +36,9 @@ class EntityType(Enum):
     Government = "Government"
     Transferor = "Transferor"
     Transferee = "Transferee"
+
+
+logger = structlog.get_logger(__name__)
 
 
 class TransactionRepository:
@@ -317,8 +322,12 @@ class TransactionRepository:
         Returns:
             int: The available balance of compliance units for the specified organization and period. Returns 0 if no balance is calculated.
         """
+        vancouver_timezone = zoneinfo.ZoneInfo("America/Vancouver")
         compliance_period_end = datetime.strptime(
             f"{str(compliance_period + 1)}-03-31", "%Y-%m-%d"
+        )
+        compliance_period_end_local = compliance_period_end.replace(
+            hour=23, minute=59, second=59, microsecond=999999, tzinfo=vancouver_timezone
         )
         async with self.db.begin_nested():
             # Calculate the sum of all transactions up to the specified date
@@ -326,7 +335,7 @@ class TransactionRepository:
                 select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
                     and_(
                         Transaction.organization_id == organization_id,
-                        Transaction.create_date <= compliance_period_end,
+                        Transaction.create_date <= compliance_period_end_local,
                         Transaction.transaction_action
                         != TransactionActionEnum.Released,
                     )
@@ -338,7 +347,7 @@ class TransactionRepository:
                 select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
                     and_(
                         Transaction.organization_id == organization_id,
-                        Transaction.create_date > compliance_period_end,
+                        Transaction.create_date > compliance_period_end_local,
                         Transaction.compliance_units < 0,
                         Transaction.transaction_action
                         != TransactionActionEnum.Released,
@@ -434,7 +443,9 @@ class TransactionRepository:
         result = await self.db.execute(
             update(Transaction)
             .where(Transaction.transaction_id == transaction_id)
-            .values(transaction_action=TransactionActionEnum.Adjustment)
+            .values(
+                transaction_action=TransactionActionEnum.Adjustment,
+            )
         )
         # Commit the update to make it permanent
         # await self.db.commit()

@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import ClassVar, Optional, List, TypeVar, Generic, Union
+from typing import ClassVar, Optional, List, Union
 from datetime import datetime
 from typing import List, NamedTuple
 
@@ -12,6 +12,7 @@ from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 from lcfs.web.api.base import BaseSchema, FilterModel, SortOrder
 from lcfs.web.api.base import PaginationResponseSchema
 from pydantic import Field
+
 
 """
 Base - all shared attributes of a resource
@@ -155,6 +156,7 @@ class ComplianceReportViewSchema(BaseSchema):
 class ChainedComplianceReportSchema(BaseSchema):
     report: ComplianceReportBaseSchema
     chain: Optional[List[ComplianceReportBaseSchema]] = []
+    is_newest: bool
 
 
 class ComplianceReportCreateSchema(BaseSchema):
@@ -194,6 +196,7 @@ class ComplianceReportSummarySchema(BaseSchema):
     version: Optional[int] = None
     is_locked: Optional[bool] = False
     quarter: Optional[int] = None
+    early_issuance_summary: Optional[List[ComplianceReportSummaryRowSchema]] = None
 
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):
@@ -218,14 +221,6 @@ class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
     assessment_statement: Optional[str] = None
-
-
-T = TypeVar("T")
-
-
-class ComplianceReportChangelogSchema(BaseSchema, Generic[T]):
-    changelog: Optional[List[T]] = []
-    pagination: Optional[PaginationResponseSchema] = {}
 
 
 class ExportColumn(NamedTuple):
@@ -318,6 +313,7 @@ ALLOCATION_AGREEMENT_COLUMNS = [
     ExportColumn("Phone"),
     ExportColumn("Fuel type"),
     ExportColumn("Fuel type other"),
+    ExportColumn("Fuel category"),
     ExportColumn("Determining carbon intensity"),
     ExportColumn("Fuel code"),
     ExportColumn("RCI"),
