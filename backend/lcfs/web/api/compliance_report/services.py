@@ -1,6 +1,8 @@
 from collections import defaultdict
 
+from datetime import date
 import math
+from fastapi.exceptions import RequestValidationError
 import structlog
 import uuid
 from fastapi import Depends
@@ -85,6 +87,13 @@ class ComplianceReportServices:
 
         organization = await self.org_repo.get_organization(organization_id)
 
+        # Determine reporting frequency
+        reporting_frequency = (
+            ReportingFrequency.QUARTERLY
+            if organization.has_early_issuance
+            else ReportingFrequency.ANNUAL
+        )
+
         # Generate a new group_uuid for the new report series
         group_uuid = str(uuid.uuid4())
 
@@ -92,14 +101,10 @@ class ComplianceReportServices:
             compliance_period_id=period.compliance_period_id,
             organization_id=organization_id,
             current_status_id=draft_status.compliance_report_status_id,
-            reporting_frequency=(
-                ReportingFrequency.QUARTERLY
-                if organization.has_early_issuance
-                else ReportingFrequency.ANNUAL
-            ),
+            reporting_frequency=reporting_frequency,
             compliance_report_group_uuid=group_uuid,  # New group_uuid for the series
             version=0,  # Start with version 0
-            nickname=report_data.nickname or "Original Report",
+            nickname=report_data.nickname or "Original Report" if reporting_frequency == ReportingFrequency.ANNUAL else 'Early Issuance Report',
             summary=ComplianceReportSummary(),  # Create an empty summary object
             legacy_id=report_data.legacy_id,
             create_user=user.keycloak_username,
@@ -287,9 +292,7 @@ class ComplianceReportServices:
           status then allow Gov users to delete the report.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(
-            report_id, is_model=True
-        )
+        current_report = await self.repo.get_compliance_report_by_id(report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -325,7 +328,7 @@ class ComplianceReportServices:
         user: UserProfile,
     ):
         """Fetches all compliance reports"""
-        is_bceid_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        is_bceid_user = user_has_roles(user, [RoleEnum.SUPPLIER])
         if is_bceid_user:
             for filter in pagination.filters:
                 if (

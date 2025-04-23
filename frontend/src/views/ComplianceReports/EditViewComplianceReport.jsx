@@ -105,6 +105,55 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     reportData?.report.organizationId
   )
 
+  const qReport = useMemo(() => {
+    const isQuarterly =
+      reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+    let quarter = null
+
+    if (isQuarterly) {
+      const isDraft = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
+      const now = new Date()
+      const submittedDate =
+        new Date(
+          reportData?.report?.history.find(
+            (h) => h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+          )?.createDate
+        ) ||
+        new Date(reportData?.report?.updateDate) ||
+        now
+
+      // Get month (0-11) and calculate quarter
+      const month = submittedDate.getMonth()
+      const submittedYear = submittedDate.getFullYear()
+      const currentYear = now.getFullYear()
+      if (
+        (isDraft && currentYear > parseInt(compliancePeriod)) ||
+        submittedYear > parseInt(compliancePeriod)
+      ) {
+        quarter = 4
+      } else if (month >= 0 && month <= 2) {
+        quarter = 1 // Jan-Mar: Q1
+      } else if (month >= 3 && month <= 5) {
+        quarter = 2 // Apr-Jun: Q2
+      } else if (month >= 6 && month <= 8) {
+        quarter = 3 // Jul-Sep: Q3
+      } else {
+        quarter = 4 // Oct-Dec: Q4
+      }
+    }
+
+    return {
+      quarter,
+      isQuarterly
+    }
+  }, [
+    reportData?.report?.reportingFrequency,
+    reportData?.report?.history,
+    reportData?.report?.updateDate,
+    currentStatus,
+    compliancePeriod
+  ])
+
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
     {
@@ -234,8 +283,9 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             variant="h5"
             color="primary"
           >
-            {compliancePeriod + ' ' + t('report:complianceReport')} -{' '}
-            {reportData?.report.nickname}
+            {qReport?.isQuarterly
+              ? `${compliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${qReport?.quarter}`
+              : `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report.nickname}`}
           </BCTypography>
           <BCTypography
             variant="h6"
@@ -252,6 +302,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <ActivityListCard
                 name={orgData?.name}
                 period={compliancePeriod}
+                isQuarterlyReport={qReport?.isQuarterly}
+                quarter={qReport?.quarter}
                 reportID={complianceReportId}
                 currentStatus={currentStatus}
               />
@@ -265,6 +317,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               alertRef={alertRef}
               hasSupplemental={reportData?.report.hasSupplemental}
               chain={reportData.chain}
+              isQuarterlyReport={qReport?.isQuarterly}
             />
           </Stack>
           {!location.state?.newReport && (
@@ -298,8 +351,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
-          {isGovernmentUser && <AssessmentStatement />}
-          {hasRoles(roles.analyst) && (
+          {isGovernmentUser && !qReport?.isQuarterly && <AssessmentStatement />}
+          {hasRoles(roles.analyst) && !qReport?.isQuarterly && (
             <AssessmentRecommendation
               reportData={reportData}
               complianceReportId={complianceReportId}
