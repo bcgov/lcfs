@@ -248,6 +248,7 @@ def compliance_report_service(
     service.request = MagicMock()
     service.request.user = mock_user_profile
     service.snapshot_services = mock_snapshot_service
+    service.final_supply_equipment_service = AsyncMock()
     return service
 
 

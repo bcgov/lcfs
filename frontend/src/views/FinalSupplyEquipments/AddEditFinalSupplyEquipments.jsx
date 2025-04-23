@@ -156,14 +156,14 @@ export const AddEditFinalSupplyEquipments = () => {
       })
 
       // clean up any null or empty string values
-      let updatedData = Object.entries(params.node.data)
+      const updatedData = Object.entries(params.node.data)
         .filter(([, value]) => value !== null && value !== '')
         .reduce((acc, [key, value]) => {
           acc[key] = value
           return acc
         }, {})
 
-      updatedData = await handleScheduleSave({
+      const responseData = await handleScheduleSave({
         alertRef,
         idField: 'finalSupplyEquipmentId',
         labelPrefix: 'finalSupplyEquipment:finalSupplyEquipmentColLabels',
@@ -175,7 +175,11 @@ export const AddEditFinalSupplyEquipments = () => {
         updatedData
       })
 
-      params.node.updateData(updatedData)
+      alertRef.current?.clearAlert()
+      params.node.updateData({
+        ...responseData,
+        levelOfEquipment: responseData.levelOfEquipment?.name
+      })
     },
     [saveRow, t]
   )
