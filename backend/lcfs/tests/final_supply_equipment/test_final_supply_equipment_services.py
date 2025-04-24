@@ -10,6 +10,7 @@ from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.final_supply_equipment.schema import (
     LevelOfEquipmentSchema,
+    FinalSupplyEquipmentsSchema,
 )
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.fuel_code.schema import EndUserTypeSchema
@@ -160,15 +161,13 @@ async def test_convert_to_fse_model(
 
 
 @pytest.mark.anyio
-async def test_get_fse_list_success(
-    service, mock_repo, valid_final_supply_equipment_schema
-):
+async def test_get_fse_list_success(service, mock_repo, valid_final_supply_equipment):
     """
     Test get_fse_list returns the correct schema with FSE data.
     """
     mock_repo.get_fse_list.return_value = [
-        valid_final_supply_equipment_schema,
-        valid_final_supply_equipment_schema,
+        valid_final_supply_equipment,
+        valid_final_supply_equipment,
     ]
 
     result = await service.get_fse_list(compliance_report_id=999)
@@ -178,13 +177,13 @@ async def test_get_fse_list_success(
 
 @pytest.mark.anyio
 async def test_get_final_supply_equipments_paginated(
-    service, mock_repo, valid_final_supply_equipment_schema
+    service, mock_repo, valid_final_supply_equipment
 ):
     """
     Test that paginated retrieval returns expected data and pagination info.
     """
     mock_repo.get_fse_paginated.return_value = (
-        [valid_final_supply_equipment_schema, valid_final_supply_equipment_schema],
+        [valid_final_supply_equipment, valid_final_supply_equipment],
         10,
     )
 
@@ -206,6 +205,7 @@ async def test_update_final_supply_equipment_success(
     mock_repo,
     valid_final_supply_equipment_schema,
     valid_final_supply_equipment_create_schema,
+    valid_final_supply_equipment,
 ):
     """
     Test updating an existing FSE with valid data.
@@ -214,9 +214,7 @@ async def test_update_final_supply_equipment_success(
     existing_fse.level_of_equipment.name = "OldLevel"
     mock_repo.get_final_supply_equipment_by_id.return_value = existing_fse
     mock_repo.get_level_of_equipment_by_name.return_value = MagicMock(name="NewLevel")
-    mock_repo.update_final_supply_equipment.return_value = (
-        valid_final_supply_equipment_schema
-    )
+    mock_repo.update_final_supply_equipment.return_value = valid_final_supply_equipment
 
     updated_fse = await service.update_final_supply_equipment(
         valid_final_supply_equipment_create_schema
@@ -247,6 +245,7 @@ async def test_create_final_supply_equipment_success(
     mock_repo,
     mock_org_repo,
     mock_request,
+    valid_final_supply_equipment,
     valid_final_supply_equipment_schema,
     valid_final_supply_equipment_create_schema,
 ):
@@ -255,9 +254,7 @@ async def test_create_final_supply_equipment_success(
     """
     mock_repo.get_current_seq_by_org_and_postal_code.return_value = 0
     organization_id = 10
-    mock_repo.create_final_supply_equipment.return_value = (
-        valid_final_supply_equipment_schema
-    )
+    mock_repo.create_final_supply_equipment.return_value = valid_final_supply_equipment
     mock_repo.increment_seq_by_org_and_postal_code.return_value = None
     mock_org_repo.get_organization.return_value = MagicMock(spec=Organization)
 
@@ -358,33 +355,18 @@ async def test_get_compliance_report_by_id_not_found(service, mock_comp_report_r
 
 @pytest.mark.anyio
 async def test_copy_fse_between_reports(
-    service, mock_repo, mock_comp_report_repo, mock_org_repo
+    service,
+    mock_repo,
+    mock_comp_report_repo,
+    mock_org_repo,
+    valid_final_supply_equipment,
 ):
     """
     Tests copying FSE's from one report to another
     """
-    mock_existing_fse = FinalSupplyEquipment(
-        serial_nbr="SER123",
-        final_supply_equipment_id=1,
-        compliance_report_id=1,
-        supply_from_date=date(2022, 1, 1),
-        supply_to_date=date(2022, 1, 1),
-        registration_nbr="TESTORG-A1A1A1-001",
-        manufacturer="Manufacturer Inc",
-        level_of_equipment=LevelOfEquipment(
-            level_of_equipment_id=1, name="Name", display_order=1
-        ),
-        intended_use_types=[],
-        intended_user_types=[],
-        street_address="Street",
-        city="City",
-        postal_code="A1A 1A1",
-        latitude=90.0,
-        longitude=180.0,
-        organization_name="Organization Name",
-    )
-    mock_repo.get_fse_list.return_value = [mock_existing_fse]
-    mock_repo.create_final_supply_equipment.return_value = mock_existing_fse
+
+    mock_repo.get_fse_list.return_value = [valid_final_supply_equipment]
+    mock_repo.create_final_supply_equipment.return_value = valid_final_supply_equipment
     mock_repo.get_current_seq_by_org_and_postal_code.return_value = 1
     mock_org_repo.get_organization.return_value = MagicMock(spec=Organization)
 
