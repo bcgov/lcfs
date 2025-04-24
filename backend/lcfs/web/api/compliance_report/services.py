@@ -738,6 +738,8 @@ class ComplianceReportServices:
         for group_uuid, versions in group_map.items():
             latest_version = max(versions.keys())
             latest_item = versions[latest_version]
+            if hasattr(latest_item, "compliance_units"):
+                latest_item.compliance_units = round(latest_item.compliance_units)
 
             if latest_item.action_type == "DELETE":
                 continue
