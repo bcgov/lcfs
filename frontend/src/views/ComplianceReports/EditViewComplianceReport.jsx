@@ -32,7 +32,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import colors from '@/themes/base/colors.js'
 import ROUTES from '@/routes/routes.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
-import { FILTER_KEYS } from '@/constants/common.js'
+import { FILTER_KEYS, REPORT_SCHEDULES } from '@/constants/common.js'
+import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
+import ComplianceReportEarlyIssuanceSummary from '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx'
 
 const iconStyle = {
   width: '2rem',
@@ -102,6 +104,55 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report.organizationId
   )
+
+  const qReport = useMemo(() => {
+    const isQuarterly =
+      reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+    let quarter = null
+
+    if (isQuarterly) {
+      const isDraft = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
+      const now = new Date()
+      const submittedDate =
+        new Date(
+          reportData?.report?.history.find(
+            (h) => h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+          )?.createDate
+        ) ||
+        new Date(reportData?.report?.updateDate) ||
+        now
+
+      // Get month (0-11) and calculate quarter
+      const month = submittedDate.getMonth()
+      const submittedYear = submittedDate.getFullYear()
+      const currentYear = now.getFullYear()
+      if (
+        (isDraft && currentYear > parseInt(compliancePeriod)) ||
+        submittedYear > parseInt(compliancePeriod)
+      ) {
+        quarter = 4
+      } else if (month >= 0 && month <= 2) {
+        quarter = 1 // Jan-Mar: Q1
+      } else if (month >= 3 && month <= 5) {
+        quarter = 2 // Apr-Jun: Q2
+      } else if (month >= 6 && month <= 8) {
+        quarter = 3 // Jul-Sep: Q3
+      } else {
+        quarter = 4 // Oct-Dec: Q4
+      }
+    }
+
+    return {
+      quarter,
+      isQuarterly
+    }
+  }, [
+    reportData?.report?.reportingFrequency,
+    reportData?.report?.history,
+    reportData?.report?.updateDate,
+    currentStatus,
+    compliancePeriod
+  ])
 
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
@@ -212,6 +263,11 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     )
   }
 
+  const isEarlyIssuance =
+    reportData.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+  const showEarlyIssuanceSummary =
+    isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
+
   return (
     <>
       <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
@@ -227,8 +283,9 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             variant="h5"
             color="primary"
           >
-            {compliancePeriod + ' ' + t('report:complianceReport')} -{' '}
-            {reportData?.report.nickname}
+            {qReport?.isQuarterly
+              ? `${compliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${qReport?.quarter}`
+              : `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report.nickname}`}
           </BCTypography>
           <BCTypography
             variant="h6"
@@ -245,11 +302,14 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <ActivityListCard
                 name={orgData?.name}
                 period={compliancePeriod}
+                isQuarterlyReport={qReport?.isQuarterly}
+                quarter={qReport?.quarter}
                 reportID={complianceReportId}
                 currentStatus={currentStatus}
               />
             )}
             <AssessmentCard
+              reportData={reportData}
               orgData={orgData}
               isGovernmentUser={isGovernmentUser}
               currentStatus={currentStatus}
@@ -257,6 +317,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               alertRef={alertRef}
               hasSupplemental={reportData?.report.hasSupplemental}
               chain={reportData.chain}
+              isQuarterlyReport={qReport?.isQuarterly}
             />
           </Stack>
           {!location.state?.newReport && (
@@ -266,17 +327,22 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                 currentStatus={currentStatus}
                 userRoles={currentUser?.userRoles}
               />
-              <ComplianceReportSummary
-                enableCompareMode={reportData.chain.length > 1}
-                canEdit={canEdit}
-                reportID={complianceReportId}
-                currentStatus={currentStatus}
-                compliancePeriodYear={compliancePeriod}
-                setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
-                buttonClusterConfig={buttonClusterConfig}
-                methods={methods}
-                alertRef={alertRef}
-              />
+              {!showEarlyIssuanceSummary && (
+                <ComplianceReportSummary
+                  reportID={complianceReportId}
+                  enableCompareMode={reportData.chain.length > 1}
+                  canEdit={canEdit}
+                  currentStatus={currentStatus}
+                  compliancePeriodYear={compliancePeriod}
+                  setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
+                  buttonClusterConfig={buttonClusterConfig}
+                  methods={methods}
+                  alertRef={alertRef}
+                />
+              )}
+              {showEarlyIssuanceSummary && (
+                <ComplianceReportEarlyIssuanceSummary reportData={reportData} />
+              )}
             </>
           )}
           {!isGovernmentUser && (
@@ -285,9 +351,10 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               compliancePeriod={compliancePeriod}
             />
           )}
-          {isGovernmentUser && <AssessmentStatement />}
-          {hasRoles(roles.analyst) && (
+          {isGovernmentUser && !qReport?.isQuarterly && <AssessmentStatement />}
+          {hasRoles(roles.analyst) && !qReport?.isQuarterly && (
             <AssessmentRecommendation
+              reportData={reportData}
               complianceReportId={complianceReportId}
               currentStatus={currentStatus}
             />

@@ -1,11 +1,15 @@
+from collections import defaultdict
+
+from datetime import date
 import math
-import uuid
-from typing import List, Union, Literal
-
+from fastapi.exceptions import RequestValidationError
 import structlog
+import uuid
 from fastapi import Depends
+from typing import List, Literal
+from typing import Union
 
-
+from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.ComplianceReport import (
     ComplianceReport,
     SupplementalInitiatorType,
@@ -13,25 +17,14 @@ from lcfs.db.models.compliance.ComplianceReport import (
 )
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.compliance.FuelExport import FuelExport
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
+from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.db.models.user import UserProfile
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationResponseSchema
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
-from lcfs.web.api.compliance_report.schema import (
-    ComplianceReportBaseSchema,
-    ComplianceReportCreateSchema,
-    ComplianceReportListSchema,
-    ComplianceReportStatusSchema,
-    ComplianceReportViewSchema,
-)
-from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
-from lcfs.web.api.role.schema import user_has_roles
-from lcfs.web.core.decorators import service_handler
-from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
-from collections import defaultdict
-from typing import List
-
 from lcfs.web.api.compliance_report.dtos import (
     ChangelogFuelSuppliesDTO,
     ChangelogAllocationAgreementsDTO,
@@ -39,11 +32,21 @@ from lcfs.web.api.compliance_report.dtos import (
     ChangelogNotionalTransfersDTO,
     ChangelogOtherUsesDTO,
 )
-from lcfs.db.models.compliance.FuelExport import FuelExport
-from lcfs.db.models.compliance.FuelSupply import FuelSupply
-from lcfs.db.models.compliance.NotionalTransfer import NotionalTransfer
-from lcfs.db.models.compliance.OtherUses import OtherUses
-from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.compliance_report.schema import (
+    ComplianceReportBaseSchema,
+    ComplianceReportCreateSchema,
+    ComplianceReportListSchema,
+    ComplianceReportStatusSchema,
+    ComplianceReportViewSchema,
+    ChainedComplianceReportSchema,
+)
+from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
+from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
+from lcfs.web.api.organizations.repo import OrganizationsRepository
+from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.core.decorators import service_handler
+from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
 logger = structlog.get_logger(__name__)
 
@@ -52,8 +55,12 @@ class ComplianceReportServices:
     def __init__(
         self,
         repo: ComplianceReportRepository = Depends(),
+        org_repo: OrganizationsRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
+        final_supply_equipment_service: FinalSupplyEquipmentServices = Depends(),
     ) -> None:
+        self.final_supply_equipment_service = final_supply_equipment_service
+        self.org_repo = org_repo
         self.repo = repo
         self.snapshot_services = snapshot_services
 
@@ -81,6 +88,15 @@ class ComplianceReportServices:
         if not draft_status:
             raise DataNotFoundException(f"Status '{report_data.status}' not found.")
 
+        organization = await self.org_repo.get_organization(organization_id)
+
+        # Determine reporting frequency
+        reporting_frequency = (
+            ReportingFrequency.QUARTERLY
+            if organization.has_early_issuance
+            else ReportingFrequency.ANNUAL
+        )
+
         # Generate a new group_uuid for the new report series
         group_uuid = str(uuid.uuid4())
 
@@ -88,10 +104,10 @@ class ComplianceReportServices:
             compliance_period_id=period.compliance_period_id,
             organization_id=organization_id,
             current_status_id=draft_status.compliance_report_status_id,
-            reporting_frequency=ReportingFrequency.ANNUAL,
+            reporting_frequency=reporting_frequency,
             compliance_report_group_uuid=group_uuid,  # New group_uuid for the series
             version=0,  # Start with version 0
-            nickname=report_data.nickname or "Original Report",
+            nickname=report_data.nickname or "Original Report" if reporting_frequency == ReportingFrequency.ANNUAL else 'Early Issuance Report',
             summary=ComplianceReportSummary(),  # Create an empty summary object
             legacy_id=report_data.legacy_id,
             create_user=user.keycloak_username,
@@ -120,9 +136,7 @@ class ComplianceReportServices:
         Analyst adjustments are only allowed if the status of the current report is 'Submitted'.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(
-            existing_report_id, is_model=True
-        )
+        current_report = await self.repo.get_compliance_report_by_id(existing_report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -176,11 +190,18 @@ class ComplianceReportServices:
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
 
+        # Copy over FSE
+        await self.final_supply_equipment_service.copy_to_report(
+            existing_report_id,
+            new_report.compliance_report_id,
+            current_report.organization_id,
+        )
+
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
     async def create_supplemental_report(
-        self, report_id: int, user: UserProfile = None, legacy_id: int = None
+        self, original_report_id: int, user: UserProfile = None, legacy_id: int = None
     ) -> ComplianceReportBaseSchema:
         """
         Creates a new supplemental compliance report.
@@ -188,9 +209,7 @@ class ComplianceReportServices:
         Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(
-            report_id, is_model=True
-        )
+        current_report = await self.repo.get_compliance_report_by_id(original_report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -271,6 +290,13 @@ class ComplianceReportServices:
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
 
+        # Copy over FSE
+        await self.final_supply_equipment_service.copy_to_report(
+            original_report_id,
+            new_report.compliance_report_id,
+            current_report.organization_id,
+        )
+
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
@@ -283,9 +309,7 @@ class ComplianceReportServices:
           status then allow Gov users to delete the report.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(
-            report_id, is_model=True
-        )
+        current_report = await self.repo.get_compliance_report_by_id(report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -321,7 +345,7 @@ class ComplianceReportServices:
         user: UserProfile,
     ):
         """Fetches all compliance reports"""
-        is_bceid_user = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        is_bceid_user = user_has_roles(user, [RoleEnum.SUPPLIER])
         if is_bceid_user:
             for filter in pagination.filters:
                 if (
@@ -411,12 +435,44 @@ class ComplianceReportServices:
         return reports
 
     @service_handler
+    async def get_compliance_report_chain(
+        self,
+        report_id: int,
+        user: UserProfile,
+    ) -> ChainedComplianceReportSchema:
+        """
+        Fetches a specific compliance report by ID.
+        """
+        report = await self.get_compliance_report_by_id(report_id, user)
+
+        compliance_report_chain = await self.repo.get_compliance_report_chain(
+            report.compliance_report_group_uuid
+        )
+
+        is_newest = len(compliance_report_chain) - 1 == report.version
+        filtered_chain = [
+            chained_report
+            for chained_report in compliance_report_chain
+            if chained_report.version <= report.version
+        ]
+
+        # Apply masking to each report in the chain
+        masked_chain = self._mask_report_status(filtered_chain, user)
+        # Apply history masking to each report in the chain
+        masked_chain = [
+            self._mask_report_status_for_history(report, user)
+            for report in masked_chain
+        ]
+        return ChainedComplianceReportSchema(
+            report=report, chain=masked_chain, is_newest=is_newest
+        )
+
+    @service_handler
     async def get_compliance_report_by_id(
         self,
         report_id: int,
         user: UserProfile,
-        get_chain: bool = False,
-    ):
+    ) -> ComplianceReportBaseSchema:
         """
         Fetches a specific compliance report by ID.
         """
@@ -430,25 +486,6 @@ class ComplianceReportServices:
         history_masked_report = self._mask_report_status_for_history(
             masked_report, user
         )
-
-        if get_chain:
-            compliance_report_chain = await self.repo.get_compliance_report_chain(
-                report.compliance_report_group_uuid, report.version
-            )
-
-            # Apply masking to each report in the chain
-            masked_chain = self._mask_report_status(compliance_report_chain, user)
-            # Apply history masking to each report in the chain
-            masked_chain = [
-                self._mask_report_status_for_history(report, user)
-                for report in masked_chain
-            ]
-            compliance_report_chain = masked_chain
-
-            return {
-                "report": history_masked_report,
-                "chain": compliance_report_chain,
-            }
 
         return history_masked_report
 

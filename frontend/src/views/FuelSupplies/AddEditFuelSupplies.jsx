@@ -1,8 +1,8 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { DEFAULT_CI_FUEL } from '@/constants/common'
-import { ROUTES, buildPath } from '@/routes/routes'
+import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
+import { buildPath, ROUTES } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -38,10 +38,13 @@ export const AddEditFuelSupplies = () => {
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
       currentUser?.organization?.organizationId,
-      complianceReportId
+      complianceReportId,
+      { enabled: !currentUserLoading }
     )
 
   const isSupplemental = complianceReport?.report?.version !== 0
+  const isEarlyIssuance =
+    complianceReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   const {
     data: optionsData,
@@ -51,10 +54,14 @@ export const AddEditFuelSupplies = () => {
 
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
-  const { data, isLoading: fuelSuppliesLoading } = useGetFuelSuppliesList({
-    complianceReportId,
-    changelog: isSupplemental
-  })
+  const { data: fuelSupplyData, isLoading: fuelSuppliesLoading } =
+    useGetFuelSuppliesList(
+      {
+        complianceReportId,
+        changelog: isSupplemental
+      },
+      {}
+    )
 
   const gridOptions = useMemo(
     () => ({
@@ -104,8 +111,8 @@ export const AddEditFuelSupplies = () => {
   const onGridReady = useCallback(
     async (params) => {
       setGridApi(params.api)
-      if (!isArrayEmpty(data)) {
-        const updatedRowData = data.fuelSupplies.map((item) => {
+      if (!isArrayEmpty(fuelSupplyData)) {
+        const updatedRowData = fuelSupplyData.fuelSupplies.map((item) => {
           return {
             ...item,
             complianceReportId, // This takes current reportId, important for versioning
@@ -127,7 +134,7 @@ export const AddEditFuelSupplies = () => {
         })
       }, 100)
     },
-    [data, complianceReportId, compliancePeriod, isSupplemental]
+    [fuelSupplyData, complianceReportId, compliancePeriod, isSupplemental]
   )
 
   useEffect(() => {
@@ -135,14 +142,16 @@ export const AddEditFuelSupplies = () => {
       optionsData,
       errors,
       warnings,
-      isSupplemental
+      compliancePeriod,
+      isSupplemental,
+      isEarlyIssuance
     )
     setColumnDefs(updatedColumnDefs)
-  }, [isSupplemental, errors, optionsData, warnings])
+  }, [isSupplemental, isEarlyIssuance, errors, optionsData, warnings])
 
   useEffect(() => {
-    if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
-      const updatedRowData = data.fuelSupplies.map((item) => {
+    if (!fuelSuppliesLoading && !isArrayEmpty(fuelSupplyData)) {
+      const updatedRowData = fuelSupplyData.fuelSupplies.map((item) => {
         return {
           ...item,
           complianceReportId, // This takes current reportId, important for versioning
@@ -160,7 +169,7 @@ export const AddEditFuelSupplies = () => {
   }, [
     compliancePeriod,
     complianceReportId,
-    data,
+    fuelSupplyData,
     fuelSuppliesLoading,
     isSupplemental
   ])
@@ -291,6 +300,14 @@ export const AddEditFuelSupplies = () => {
           compliancePeriod
         }
       )
+
+      // Clear any existing errors / warnings
+      params.api.forEachNode((rowNode) => {
+        rowNode.updateData({
+          ...rowNode.data,
+          validationStatus: undefined
+        })
+      })
     }
   }
 

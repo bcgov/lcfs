@@ -96,8 +96,7 @@ async def get_compliance_report_by_id(
     compliance_report = await validate.validate_organization_access(report_id)
     await validate.validate_compliance_report_access(compliance_report)
 
-    result = await service.get_compliance_report_by_id(report_id, request.user, True)
-    return result
+    return await service.get_compliance_report_chain(report_id, request.user)
 
 
 @router.get(
@@ -165,14 +164,12 @@ async def update_compliance_report(
     service: ComplianceReportServices = Depends(),
     update_service: ComplianceReportUpdateService = Depends(),
     validate: ComplianceReportValidation = Depends(),
-) -> ComplianceReportBaseSchema:
+) -> ChainedComplianceReportSchema:
     """Update an existing compliance report."""
     await validate.validate_organization_access(report_id)
-    await update_service.update_compliance_report(
-        report_id, report_data, request.user
-    )
+    await update_service.update_compliance_report(report_id, report_data, request.user)
 
-    return await service.get_compliance_report_by_id(report_id, request.user, True)
+    return await service.get_compliance_report_chain(report_id, request.user)
 
 
 @router.post(

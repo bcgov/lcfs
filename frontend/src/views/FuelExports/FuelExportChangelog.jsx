@@ -14,13 +14,14 @@ import { changelogColDefs, changelogCommonColDefs } from './_schema'
 
 export const FuelExportChangelog = () => {
   const { complianceReportId } = useParams()
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, isLoading: isCurrentUserLoading } =
+    useCurrentUser()
   const { t } = useTranslation(['common', 'fuelExport', 'report'])
   const { data: currentReportData, isLoading } = useGetComplianceReport(
     currentUser?.organization?.organizationId,
     complianceReportId,
     {
-      enabled: !!complianceReportId
+      enabled: !!complianceReportId && !isCurrentUserLoading
     }
   )
 
