@@ -406,7 +406,7 @@ class ComplianceReportExporter:
         for ef in data:
             rows.append(
                 [
-                    round(ef.compliance_units) if ef.compliance_units else None,
+                    round(ef.compliance_units),
                     self._format_date(ef.export_date),
                     ef.fuel_type.fuel_type if ef.fuel_type else None,
                     ef.fuel_type_other,
