@@ -7,7 +7,7 @@
   "otherUsesDownloadFailMsg": "Failed to download other uses information.",
   "otherUsesLoadFailMsg": "Failed to load other uses information.",
   "newOtherUsesTitle": "Fuels for other use",
-  "newOtherUsesGuide": "Report fuel volumes that you supplied for heating or other prescribed uses other than transportation.",
+  "newOtherUsesGuide": "For the purposes of the renewable fuel target requirement, all base fuels and eligible renewable fuels that were marketed for use in applications other than a prescribed applicable purpose, including heating, industrial processes, stationary engines, etc., must be reported here.",
   "editOtherUsesTitle": "Edit other use entry",
   "approvedOtherUsesTitle": "Approved other use entry",
   "deletedOtherUsesTitle": "Deleted other use entry",
