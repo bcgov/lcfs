@@ -109,6 +109,7 @@
     "cross-env": "^7.0.3",
     "cypress": "^14.2.1",
     "cypress-axe": "^1.6.0",
+    "cypress-react-selector": "^3.0.0",
     "cypress-real-events": "^1.14.0",
     "cypress-vite": "^1.6.0",
     "eslint": "^8.57.1",

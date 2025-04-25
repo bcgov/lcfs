@@ -8,7 +8,7 @@ Feature: Director Transfer Flow
     When I transfer "<units>" units to organization "<orgId>" of value "<pricePerUnit>" with agreement date "<agreementDate>"
     And sign and send the transfer
     And I logout
-    And I login as recieving org and submit
+    And I login as receiving org and submit
     And I logout
     And I login as analyst and recommend
     And I logout

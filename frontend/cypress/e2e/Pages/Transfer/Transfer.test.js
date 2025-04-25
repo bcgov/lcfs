@@ -132,7 +132,7 @@ When('I logout', () => {
   cy.logout()
 })
 
-When('I login as recieving org and submit', () => {
+When('I login as receiving org and submit', () => {
   cy.visit('/')
   cy.getByDataTest('login-container').should('exist')
   // Login with the updated user
