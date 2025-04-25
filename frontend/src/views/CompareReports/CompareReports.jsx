@@ -169,14 +169,16 @@ export const CompareReports = () => {
               variant="outlined"
               onChange={onSelectReport1}
             >
-              {reportChain.map((report) => (
-                <MenuItem
-                  key={report.complianceReportId}
-                  value={report.complianceReportId}
-                >
-                  {report.nickname}
-                </MenuItem>
-              ))}
+              {reportChain
+                .filter((report) => report.complianceReportId !== report2ID)
+                .map((report) => (
+                  <MenuItem
+                    key={report.complianceReportId}
+                    value={report.complianceReportId}
+                  >
+                    {report.nickname}
+                  </MenuItem>
+                ))}
             </Select>
             <Icon sx={{ transform: 'scale(1.5)', marginTop: '4px', width: 1 }}>
               compare_arrows
@@ -192,14 +194,16 @@ export const CompareReports = () => {
               variant="outlined"
               onChange={onSelectReport2}
             >
-              {reportChain.map((report) => (
-                <MenuItem
-                  key={report.complianceReportId}
-                  value={report.complianceReportId}
-                >
-                  {report.nickname}
-                </MenuItem>
-              ))}
+              {reportChain
+                .filter((report) => report.complianceReportId !== report1ID)
+                .map((report) => (
+                  <MenuItem
+                    key={report.complianceReportId}
+                    value={report.complianceReportId}
+                  >
+                    {report.nickname}
+                  </MenuItem>
+                ))}
             </Select>
           </Box>
         </Box>
