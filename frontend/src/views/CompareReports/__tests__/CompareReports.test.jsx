@@ -27,17 +27,22 @@ describe('CompareReports Component', () => {
           {
             nickname: 'Supplemental Report 1',
             complianceReportId: 2
+          },
+          {
+            nickname: 'Government Adjustment 2',
+            complianceReportId: 3
           }
         ],
         report: {
           compliancePeriod: '2021',
-          complianceReportId: 1
+          complianceReportId: 3
         }
       }
     })
 
     const reportData1 = {
       data: {
+        complianceReportId: 1,
         renewableFuelTargetSummary: [
           {
             line: 1,
@@ -67,6 +72,37 @@ describe('CompareReports Component', () => {
 
     const reportData2 = {
       data: {
+        complianceReportId: 2,
+        renewableFuelTargetSummary: [
+          {
+            line: 1,
+            description: 'renewableFuelTargetSummary',
+            format: 'number',
+            gasoline: 250
+          }
+        ],
+        lowCarbonFuelTargetSummary: [
+          {
+            line: 1,
+            description: 'lowCarbonFuelTargetSummary',
+            format: 'number',
+            value: 70
+          }
+        ],
+        nonCompliancePenaltySummary: [
+          {
+            line: 1,
+            description: 'nonCompliancePenaltySummary',
+            format: 'number',
+            value: 99
+          }
+        ]
+      }
+    }
+
+    const reportData3 = {
+      data: {
+        complianceReportId: 3,
         renewableFuelTargetSummary: [
           {
             line: 1,
@@ -101,6 +137,9 @@ describe('CompareReports Component', () => {
       if (id === 2) {
         return reportData2
       }
+      if (id === 3) {
+        return reportData3
+      }
       return { data: null }
     })
   })
@@ -113,15 +152,33 @@ describe('CompareReports Component', () => {
 
     fireEvent.mouseDown(report1Select)
 
-    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
-
-    fireEvent.mouseDown(report2Select)
     fireEvent.click(
-      screen.getByRole('option', { name: 'Supplemental Report 1' })
+      screen.getByRole('option', { name: 'Government Adjustment 2' })
     )
 
-    expect(report1Select).toHaveTextContent('Original Report')
-    expect(report2Select).toHaveTextContent('Supplemental Report 1')
+    fireEvent.mouseDown(report2Select)
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
+
+    expect(report1Select).toHaveTextContent('Government Adjustment 2')
+    expect(report2Select).toHaveTextContent('Original Report')
+  })
+
+  it('should not allow comparing the same report to itself', async () => {
+    render(<CompareReports />, { wrapper })
+
+    const report1Select = screen.getAllByRole('combobox')[0]
+    const report2Select = screen.getAllByRole('combobox')[1]
+
+    fireEvent.mouseDown(report1Select)
+    const elements = screen.queryByRole('option', { name: 'Original Report' })
+    expect(elements).not.toBeInTheDocument()
+
+    fireEvent.mouseDown(report2Select)
+    const elements2 = screen.queryByRole('option', {
+      name: 'Supplemental report 1'
+    })
+    expect(report2Select).toHaveTextContent('Original Report')
+    expect(elements2).not.toBeInTheDocument()
   })
 
   it('displays correct data in CompareTable', async () => {
