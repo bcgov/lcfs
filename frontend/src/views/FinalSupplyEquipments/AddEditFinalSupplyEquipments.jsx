@@ -103,9 +103,6 @@ export const AddEditFinalSupplyEquipments = () => {
         setRowData([
           ...data.finalSupplyEquipments.map((item) => ({
             ...item,
-            levelOfEquipment: item.levelOfEquipment.name,
-            intendedUses: item.intendedUseTypes.map((i) => i.type),
-            intendedUsers: item.intendedUserTypes.map((i) => i.typeName),
             id: uuid()
           })),
           {
@@ -176,10 +173,7 @@ export const AddEditFinalSupplyEquipments = () => {
       })
 
       alertRef.current?.clearAlert()
-      params.node.updateData({
-        ...responseData,
-        levelOfEquipment: responseData.levelOfEquipment?.name
-      })
+      params.node.updateData(responseData)
     },
     [saveRow, t]
   )

@@ -63,10 +63,10 @@ class FinalSupplyEquipmentSchema(BaseSchema):
     serial_nbr: str
     manufacturer: str
     model: Optional[str] = None
-    level_of_equipment: LevelOfEquipmentSchema
+    level_of_equipment: str
     ports: Optional[PortsEnum] = None
-    intended_use_types: List[EndUseTypeSchema]
-    intended_user_types: List[EndUserTypeSchema]
+    intended_use_types: List[str]
+    intended_user_types: List[str]
     street_address: str
     city: str
     postal_code: str
