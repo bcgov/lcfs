@@ -104,9 +104,7 @@ class FinalSupplyEquipmentServices:
         Get the list of FSEs for a given report.
         """
         fse_models = await self.repo.get_fse_list(compliance_report_id)
-        fse_list = [
-            FinalSupplyEquipmentSchema.model_validate(fse) for fse in fse_models
-        ]
+        fse_list = [await self.map_to_schema(fse) for fse in fse_models]
         return FinalSupplyEquipmentsSchema(final_supply_equipments=fse_list)
 
     @service_handler
@@ -133,8 +131,7 @@ class FinalSupplyEquipmentServices:
                 total_pages=math.ceil(total_count / pagination.size),
             ),
             final_supply_equipments=[
-                FinalSupplyEquipmentSchema.model_validate(fse)
-                for fse in final_supply_equipments
+                await self.map_to_schema(fse) for fse in final_supply_equipments
             ],
         )
 
@@ -213,8 +210,8 @@ class FinalSupplyEquipmentServices:
         existing_fse.longitude = fse_data.longitude
         existing_fse.notes = fse_data.notes
 
-        updated_transfer = await self.repo.update_final_supply_equipment(existing_fse)
-        return FinalSupplyEquipmentSchema.model_validate(updated_transfer)
+        updated_equipment = await self.repo.update_final_supply_equipment(existing_fse)
+        return await self.map_to_schema(updated_equipment)
 
     @service_handler
     async def create_final_supply_equipment(
@@ -240,7 +237,7 @@ class FinalSupplyEquipmentServices:
                 organization.organization_code, fse_data.postal_code
             )
 
-        return FinalSupplyEquipmentSchema.model_validate(created_equipment)
+        return await self.map_to_schema(created_equipment)
 
     @service_handler
     async def delete_final_supply_equipment(
@@ -322,6 +319,35 @@ class FinalSupplyEquipmentServices:
         return await self.repo.delete_all(compliance_report_id)
 
     @service_handler
+    async def map_to_schema(
+        self, fse: FinalSupplyEquipment
+    ) -> FinalSupplyEquipmentSchema:
+        return FinalSupplyEquipmentSchema(
+            final_supply_equipment_id=fse.final_supply_equipment_id,
+            compliance_report_id=fse.compliance_report_id,
+            organization_name=fse.organization_name,
+            supply_from_date=fse.supply_from_date,
+            supply_to_date=fse.supply_to_date,
+            registration_nbr=fse.registration_nbr,
+            kwh_usage=fse.kwh_usage,
+            serial_nbr=fse.serial_nbr,
+            manufacturer=fse.manufacturer,
+            model=fse.model,
+            level_of_equipment=fse.level_of_equipment.name,
+            ports=fse.ports,
+            intended_use_types=[use_type.type for use_type in fse.intended_use_types],
+            intended_user_types=[
+                user_type.type_name for user_type in fse.intended_user_types
+            ],
+            street_address=fse.street_address,
+            city=fse.city,
+            postal_code=fse.postal_code,
+            latitude=fse.latitude,
+            longitude=fse.longitude,
+            notes=fse.notes,
+        )
+
+    @service_handler
     async def copy_to_report(
         self, original_report_id: int, target_report_id: int, organization_id: int
     ):
@@ -339,13 +365,9 @@ class FinalSupplyEquipmentServices:
             )
             new_fse = FinalSupplyEquipmentCreateSchema(
                 **payload,
-                level_of_equipment=old_fse.level_of_equipment.name,
-                intended_uses=[
-                    use_type.type for use_type in old_fse.intended_use_types
-                ],
-                intended_users=[
-                    user_type.type_name for user_type in old_fse.intended_user_types
-                ],
+                level_of_equipment=old_fse.level_of_equipment,
+                intended_uses=[use_type for use_type in old_fse.intended_use_types],
+                intended_users=[user_type for user_type in old_fse.intended_user_types],
                 compliance_report_id=target_report_id,
             )
 
