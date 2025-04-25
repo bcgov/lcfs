@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Controller } from 'react-hook-form'
-import { Box, InputLabel } from '@mui/material'
+import { Box, InputLabel, Stack } from '@mui/material'
 import { Info } from '@mui/icons-material'
 import BCTypography from '@/components/BCTypography'
 import PropTypes from 'prop-types'
@@ -29,8 +29,23 @@ export const BCFormAddressAutocomplete = ({
       render={({ field: { onChange, value }, fieldState: { error } }) => (
         <>
           <InputLabel htmlFor={name} component="label" className="form-label">
-            <Box display="flex" gap={2} flexWrap="wrap">
-              <BCTypography variant="label" component="span">
+            <Stack
+              direction="row"
+              gap={0}
+              spacing={1}
+              display="flex"
+              alignItems="center"
+              width="100%"
+              sx={{
+                minWidth: '800px',
+                overflow: 'visible'
+              }}
+            >
+              <BCTypography
+                variant="label"
+                component="span"
+                sx={{ flexShrink: 0 }}
+              >
                 {label}:&nbsp;
                 {optional && (
                   <span className="optional" style={{ fontWeight: 'normal' }}>
@@ -54,14 +69,19 @@ export const BCFormAddressAutocomplete = ({
                     />
                   }
                   label={
-                    <BCTypography variant="body4" component="span" color="text">
+                    <BCTypography
+                      variant="body4"
+                      component="span"
+                      color="text"
+                      sx={{ flexShrink: 0 }}
+                    >
                       {checkboxLabel}
                     </BCTypography>
                   }
-                  sx={{ ml: 2 }}
+                  sx={{ ml: 0 }}
                 />
               )}
-            </Box>
+            </Stack>
           </InputLabel>
           <Box position="relative">
             <AddressAutocomplete

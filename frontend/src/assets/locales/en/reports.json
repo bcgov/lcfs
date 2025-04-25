@@ -13,8 +13,12 @@
   "serviceAddrLabel": "Address for service",
   "hoAddrLabel": "Head office (optional)",
   "hoAddrLabelView": "Head office address",
-  "hoAddrLabelEdit": "Head office address (international)",
-  "bcRecordLabel": "Address in B.C. (where records are maintained)",
+  "hoAddrLabelEdit": "Head office address (can be an international address)",
+  "orgDetailsForm": {
+    "serviceAddrLabelView": "Address for service in B.C.",
+    "serviceAddrLabelEdit": "Address for service in B.C. (postal address)",
+    "bcRecordLabel": "Address in B.C. where records are maintained"
+  },
   "activityHdrLabel": "Did <b>{{name}}</b> engage in any of the following activities between January 1, {{period}}, and December 31, {{period}}?",
   "reportActivities": "Report activities",
   "orgDetails": "Organization details",
