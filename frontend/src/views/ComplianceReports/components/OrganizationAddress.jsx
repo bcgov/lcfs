@@ -25,8 +25,9 @@ export const OrganizationAddress = ({
 }) => {
   const { t } = useTranslation(['common', 'report', 'org'])
   const [modalData, setModalData] = useState(null)
-  const [sameAsService, setSameAsService] = useState(false)
-  const [selectedServiceAddress, setSelectedServiceAddress] = useState(null)
+  const [sameAsLegalName, setSameAsLegalName] = useState(false)
+  const [recordsSameAsService, setRecordsSameAsService] = useState(false)
+  const [headOfficeSameAsService, setHeadOfficeSameAsService] = useState(false)
 
   const validationSchema = Yup.object({
     name: Yup.string().required('Legal name is required.'),
@@ -37,7 +38,9 @@ export const OrganizationAddress = ({
     email: Yup.string()
       .required('Email address is required.')
       .email('Please enter a valid email address.'),
-    serviceAddress: Yup.string().required('Service Address is required.')
+    serviceAddress: Yup.string().required('Service Address is required.'),
+    recordsAddress: Yup.string().required('Records Address is required.'),
+    headOfficeAddress: Yup.string().required('Head Office Address is required.')
   })
 
   // Hook for updating the organization snapshot
@@ -53,13 +56,17 @@ export const OrganizationAddress = ({
   const { handleSubmit, control, setValue, watch, reset } = form
 
   const serviceAddress = watch('serviceAddress')
+  const legalName = watch('name')
 
   // If 'same as service address' is checked, automatically update records address
   useEffect(() => {
-    if (sameAsService && serviceAddress) {
+    if (recordsSameAsService && serviceAddress) {
       setValue('recordsAddress', serviceAddress)
     }
-  }, [sameAsService, serviceAddress, setValue])
+    if (headOfficeSameAsService && serviceAddress) {
+      setValue('headOfficeAddress', serviceAddress)
+    }
+  }, [recordsSameAsService, serviceAddress, setValue, headOfficeSameAsService])
 
   // Submission handlers
   const onSubmit = async (data) => {
@@ -95,26 +102,46 @@ export const OrganizationAddress = ({
 
   // Checkbox to keep records address synced with service address
   const handleSameAddressChange = (event) => {
-    setSameAsService(event.target.checked)
+    setRecordsSameAsService(event.target.checked)
     if (event.target.checked) {
       setValue('recordsAddress', serviceAddress)
+    }
+  }
+  const handleSameHeadOfficeAddressChange = (event) => {
+    setHeadOfficeSameAsService(event.target.checked)
+    if (event.target.checked) {
+      setValue('headOfficeAddress', serviceAddress)
+    }
+  }
+
+  // Checkbox to keep operating name synced with legal name
+  const handleSameNameChange = (event) => {
+    setSameAsLegalName(event.target.checked)
+    if (event.target.checked) {
+      setValue('operatingName', legalName)
     }
   }
 
   // Helpers to select addresses
   const handleSelectServiceAddress = (addressData) => {
-    setSelectedServiceAddress(addressData)
     if (typeof addressData === 'string') {
       setValue('serviceAddress', addressData)
     } else {
       setValue('serviceAddress', addressData.fullAddress)
     }
     // If 'same as service address' is checked, automatically update records too
-    if (sameAsService) {
+    if (recordsSameAsService) {
       if (typeof addressData === 'string') {
         setValue('recordsAddress', addressData)
       } else {
         setValue('recordsAddress', addressData.fullAddress)
+      }
+    }
+    if (headOfficeSameAsService) {
+      if (typeof addressData === 'string') {
+        setValue('headOfficeAddress', addressData)
+      } else {
+        setValue('headOfficeAddress', addressData.fullAddress)
       }
     }
   }
@@ -127,12 +154,23 @@ export const OrganizationAddress = ({
     }
   }
 
+  const handleSelectHeadOfficeAddress = (addressData) => {
+    if (typeof addressData === 'string') {
+      setValue('headOfficeAddress', addressData)
+    } else {
+      setValue('headOfficeAddress', addressData.fullAddress)
+    }
+  }
   // Sync state with snapshot data on load
   useEffect(() => {
     if (snapshotData) {
       reset(snapshotData)
-      setSameAsService(
+      setSameAsLegalName(snapshotData.name === snapshotData.operatingName)
+      setRecordsSameAsService(
         snapshotData.serviceAddress === snapshotData.recordsAddress
+      )
+      setHeadOfficeSameAsService(
+        snapshotData.serviceAddress === snapshotData.headOfficeAddress
       )
     }
   }, [reset, snapshotData])
@@ -154,7 +192,12 @@ export const OrganizationAddress = ({
     },
     {
       name: 'operatingName',
-      label: t('org:operatingNameLabel')
+      label: t('org:operatingNameLabel'),
+      checkbox: true,
+      checkboxLabel: 'same as legal name',
+      onCheckboxChange: handleSameNameChange,
+      isChecked: sameAsLegalName,
+      disabled: sameAsLegalName
     },
     {
       name: 'phone',
@@ -168,30 +211,43 @@ export const OrganizationAddress = ({
       name: 'headOfficeAddress',
       label: isEditing
         ? t('report:hoAddrLabelEdit')
-        : t('report:hoAddrLabelView')
+        : t('report:hoAddrLabelView'),
+      onSelectAddress: handleSelectHeadOfficeAddress,
+      onCheckboxChange: handleSameHeadOfficeAddressChange,
+      checkbox: true,
+      checkboxLabel: 'same as address for service',
+      isChecked: headOfficeSameAsService,
+      disabled: headOfficeSameAsService
     }
   ]
 
   const addressFormFields = [
     {
       name: 'serviceAddress',
-      label: t('report:serviceAddrLabel'),
+      label: isEditing
+        ? t('report:orgDetailsForm.serviceAddrLabelEdit')
+        : t('report:orgDetailsForm.serviceAddrLabelView'),
       onSelectAddress: handleSelectServiceAddress
     },
     {
       name: 'recordsAddress',
-      label: t('report:bcRecordLabel'),
+      label: t('report:orgDetailsForm.bcRecordLabel'),
       checkbox: true,
-      checkboxLabel: 'Same as address for service',
+      checkboxLabel: 'same as address for service',
       onCheckboxChange: handleSameAddressChange,
-      isChecked: sameAsService,
-      disabled: sameAsService,
+      isChecked: recordsSameAsService,
+      disabled: recordsSameAsService,
       onSelectAddress: handleSelectRecordsAddress
     }
   ]
 
   // Merge text + address fields for read-only view
-  const allFormFields = [...textFormFields, ...addressFormFields]
+  const allFormFields = [
+    ...textFormFields.slice(0, -1),
+    ...addressFormFields,
+    textFormFields.at(-1)
+  ]
+  const headOffice = textFormFields.at(-1)
 
   // Helper to show either the value or 'Required' in read-only mode
   const displayAddressValue = (value) => (value?.trim() ? value : '')
@@ -232,13 +288,18 @@ export const OrganizationAddress = ({
           <FormProvider {...{ control, setValue }}>
             <Stack spacing={1} mb={3}>
               {/* Regular text fields */}
-              {textFormFields.map((field) => (
+              {textFormFields.slice(0, -1).map((field) => (
                 <BCFormText
                   data-test={field.name}
                   key={field.name}
                   control={control}
                   label={field.label}
                   name={field.name}
+                  checkbox={field.checkbox}
+                  checkboxLabel={field.checkboxLabel}
+                  onCheckboxChange={field.onCheckboxChange}
+                  isChecked={field.isChecked}
+                  disabled={field.disabled}
                 />
               ))}
 
@@ -256,9 +317,21 @@ export const OrganizationAddress = ({
                   isChecked={field.isChecked}
                   disabled={field.disabled}
                   onSelectAddress={field.onSelectAddress}
-                  optional={field.name !== 'serviceAddress'}
                 />
               ))}
+              {/* Head office address */}
+              <BCFormText
+                data-test={headOffice.name}
+                key={headOffice.name}
+                control={control}
+                label={headOffice.label}
+                name={headOffice.name}
+                checkbox={headOffice.checkbox}
+                checkboxLabel={headOffice.checkboxLabel}
+                onCheckboxChange={headOffice.onCheckboxChange}
+                isChecked={headOffice.isChecked}
+                disabled={headOffice.disabled}
+              />
             </Stack>
             <Box display="flex">
               <BCButton
