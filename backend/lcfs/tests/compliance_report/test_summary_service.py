@@ -200,6 +200,9 @@ async def test_calculate_renewable_fuel_target_summary_2024(
         line_8_obligation_deferred_gasoline=100,
         line_8_obligation_deferred_diesel=100,
         line_8_obligation_deferred_jet_fuel=100,
+        line_4_eligible_renewable_fuel_required_gasoline=1,
+        line_4_eligible_renewable_fuel_required_diesel=1,
+        line_4_eligible_renewable_fuel_required_jet_fuel=1,
     )
 
     result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
@@ -576,8 +579,8 @@ async def test_calculate_non_compliance_penalty_summary_with_penalty_payable(
 async def test_calculate_renewable_fuel_target_summary_no_renewables(
     compliance_report_summary_service,
 ):
-    # Test case where there are no renewable quantities
-    fossil_quantities = {"gasoline": 1000, "diesel": 2000, "jet_fuel": 3000}
+    # Test case where there are no renewable quantities, resulting in penalties with decimals
+    fossil_quantities = {"gasoline": 1005, "diesel": 2005, "jet_fuel": 3005}
     renewable_quantities = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     previous_retained = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     previous_obligation = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
@@ -604,11 +607,11 @@ async def test_calculate_renewable_fuel_target_summary_no_renewables(
 
     assert len(result) == 11
     assert isinstance(result[0], ComplianceReportSummaryRowSchema)
-    # Penalty should be applied due to no renewables
-    assert result[10].gasoline == 15.0
-    assert result[10].diesel == 36.0
-    assert result[10].jet_fuel == 45.0
-    assert result[10].total_value == 96.0
+    # Penalty should be applied due to no renewables, checking for decimal values
+    assert result[10].gasoline == 15.08  # 50.25 L shortfall * $0.30/L = 15.075 rounded
+    assert result[10].diesel == 36.09  # 80.2 L shortfall * $0.45/L = 36.09
+    assert result[10].jet_fuel == 45.08  # 90.15 L shortfall * $0.50/L = 45.075 rounded
+    assert result[10].total_value == (15.08 + 36.09 + 45.08)  # 96.25
 
 
 @pytest.mark.anyio
@@ -849,14 +852,14 @@ async def test_can_sign_flag_logic(
         )
     )
 
-    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(
-        return_value=mock_effective_fuel_supplies
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=mock_effective_fuel_supplies)
     )
     compliance_report_summary_service.notional_transfer_service.calculate_notional_transfers = AsyncMock(
         return_value=mock_notional_transfers
     )
-    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = AsyncMock(
-        return_value=mock_fuel_exports
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=mock_fuel_exports)
     )
     compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
         return_value=mock_allocation_agreements
@@ -884,36 +887,42 @@ async def test_can_sign_flag_logic(
                 gasoline=10.0,
                 diesel=10.0,
                 jet_fuel=10.0,
-                total_value=30.0
+                total_value=30.0,
             )
             result.append(row)
         return result
 
     # Replace the method completely
-    compliance_report_summary_service.calculate_renewable_fuel_target_summary = mock_calculate_renewable_fuel_target_summary
+    compliance_report_summary_service.calculate_renewable_fuel_target_summary = (
+        mock_calculate_renewable_fuel_target_summary
+    )
 
     # Call the method
-    result = await compliance_report_summary_service.calculate_compliance_report_summary(1)
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(1)
+    )
 
     # Assert that `can_sign` is True
     assert result.can_sign is True
 
     # Scenario 2: No conditions met
-    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(
-        return_value=[]
+    compliance_report_summary_service.fuel_supply_repo.get_effective_fuel_supplies = (
+        AsyncMock(return_value=[])
     )
     compliance_report_summary_service.notional_transfer_service.calculate_notional_transfers = AsyncMock(
         return_value=MagicMock(notional_transfers=[])
     )
-    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = AsyncMock(
-        return_value=[]
+    compliance_report_summary_service.fuel_export_repo.get_effective_fuel_exports = (
+        AsyncMock(return_value=[])
     )
     compliance_report_summary_service.allocation_agreement_repo.get_allocation_agreements = AsyncMock(
         return_value=[]
     )
 
     # Call the method again
-    result = await compliance_report_summary_service.calculate_compliance_report_summary(1)
+    result = (
+        await compliance_report_summary_service.calculate_compliance_report_summary(1)
+    )
 
     # Assert that `can_sign` is False
     assert result.can_sign is False
