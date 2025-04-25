@@ -1,19 +1,23 @@
 /**
- * Organization Test Suite
+ * Organization Excel download Test Suite
  */
 
 describe('Organization Test Suite', () => {
-  beforeEach(() => {
+  before(() => {
+    cy.visit('/')
     // Login and visit the page
     cy.loginWith(
       'idir',
       Cypress.env('IDIR_TEST_USER'),
       Cypress.env('IDIR_TEST_PASS')
     )
-    cy.visit('/organizations')
+    cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
   })
-
-  afterEach(() => {
+  beforeEach(() => {
+    cy.get('a.NavLink[href="/organizations"]').click()
+    cy.get('.organizations-container', { timeout: 30000 }).should('be.visible')
+  })
+  after(() => {
     cy.logout()
   })
 
@@ -47,7 +51,7 @@ describe('Organization Test Suite', () => {
       cy.getByDataTest('download-org-button').click()
 
       // Wait for the failed file download request
-      cy.wait('@fileDownloadFail').then((interception) => {
+      cy.wait('@fileDownloadFail', { timeout: 30000 }).then((interception) => {
         expect(interception.response.statusCode).to.eq(500)
       })
 
@@ -67,27 +71,33 @@ describe('Organization Test Suite', () => {
       })
 
       // Intercept the download request and respond with the mock blob
-      cy.intercept('GET', '/api/users/export', mockBlob).as('fileDownload')
+      cy.intercept('GET', '/api/users/export?format=xlsx', mockBlob).as(
+        'fileDownload'
+      )
 
-      cy.getByDataTest('download-user-button').click()
+      cy.getByDataTest('download-user-button', { timeout: 30000 })
+        .should('be.visible')
+        .click()
 
       // Wait for the file download request to complete
-      cy.wait('@fileDownload').then((interception) => {
+      cy.wait('@fileDownload', { timeout: 30000 }).then((interception) => {
         expect(interception.response.statusCode).to.eq(200)
       })
     })
 
     it('shows an error message if the download fails', () => {
       // Intercept the download request and simulate a failure
-      cy.intercept('GET', '/api/users/export', {
+      cy.intercept('GET', '/api/users/export?format=xlsx', {
         statusCode: 500,
         body: 'Download failed'
       }).as('fileDownloadFail')
 
-      cy.getByDataTest('download-user-button').click()
+      cy.getByDataTest('download-user-button', { timeout: 30000 })
+        .should('be.visible')
+        .click()
 
       // Wait for the failed file download request
-      cy.wait('@fileDownloadFail').then((interception) => {
+      cy.wait('@fileDownloadFail', { timeout: 30000 }).then((interception) => {
         expect(interception.response.statusCode).to.eq(500)
       })
 

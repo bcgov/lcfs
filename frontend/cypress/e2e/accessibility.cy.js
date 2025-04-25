@@ -1,4 +1,10 @@
 // npm run cypress:run -- --spec cypress/e2e/accessibility.cy.js
+/*
+* - Accessibility checks:
+*   - Login page
+*   - Navigation bar
+*   - TODO: Add more tests for other pages
+*/
 
 import { terminalLog } from '../support/e2e.js'
 

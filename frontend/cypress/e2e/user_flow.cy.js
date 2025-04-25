@@ -26,7 +26,7 @@ describe('User Login Test Suite', () => {
         Cypress.env('IDIR_TEST_USER'),
         Cypress.env('IDIR_TEST_PASS')
       )
-      cy.getByDataTest('main-layout-navbar').should('be.visible')
+      cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
     })
 
     it('executes logout functionality for IDIR user', () => {

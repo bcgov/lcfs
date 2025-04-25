@@ -1,22 +1,24 @@
 {
   "finalSupplyEquipments": [
     {
-      "organization": "Organization 1",
-      "supplyFromDate": "2024-01-01",
-      "supplyToDate": "2024-03-31",
-      "kWhUsage": 1000,
+      "organizationName": "Organization 1",
+      "supplyFromDate": " 20240101",
+      "supplyToDate": " 20240331",
+      "kwhUsage": 123456,
       "serialNbr": "SN123456",
       "manufacturer": "Manufacturer A",
       "model": "Model X",
       "levelOfEquipment": "Level 2 - High voltage, operating above level 1",
       "ports": "Dual port",
-      "intendedUses": [
-        "Light duty motor vehicles",
-        "Battery bus"
+      "intendedUses": ["Light duty motor vehicles", "Battery bus"],
+      "intendedUsers": ["Public", "Employee"],
+      "intendedUseTypes": [
+        { "endUseTypeId": 1, "type": "Light duty motor vehicles", "subType": null },
+        { "endUseTypeId": 5, "type": "Battery truck", "subType": null }
       ],
-      "intendedUsers": [
-        "Public",
-        "Employee"
+      "intendedUserTypes": [
+        { "endUserTypeId": 1, "typeName": "Multi-unit residential building" },
+        { "endUserTypeId": 3, "typeName": "Public" }
       ],
       "streetAddress": "1150 Douglas St",
       "city": "Victoria",
@@ -25,10 +27,10 @@
       "longitude": -123.3656
     },
     {
-      "organization": "Organization 1",
-      "supplyFromDate": "2024-01-01",
-      "supplyToDate": "2024-01-01",
-      "kWhUsage": 1000,
+      "organizationName": "Organization 1",
+      "supplyFromDate": " 20240101",
+      "supplyToDate": " 20240101",
+      "kwhUsage": 123456,
       "serialNbr": "SN78910",
       "manufacturer": "Manufacturer B",
       "model": "Model Y",
@@ -36,6 +38,14 @@
       "ports": "Dual port",
       "intendedUses": ["Light duty motor vehicles", "Battery bus"],
       "intendedUsers": ["Public", "Employee"],
+      "intendedUseTypes": [
+        { "endUseTypeId": 1, "type": "Light duty motor vehicles", "subType": null },
+        { "endUseTypeId": 5, "type": "Battery truck", "subType": null }
+      ],
+      "intendedUserTypes": [
+        { "endUserTypeId": 1, "typeName": "Multi-unit residential building" },
+        { "endUserTypeId": 3, "typeName": "Public" }
+      ],
       "streetAddress": "1150 Douglas St",
       "city": "Victoria",
       "postalCode": "V8W 3E6",

@@ -9,6 +9,9 @@ const { Client } = pg
 
 export default defineConfig({
   e2e: {
+    supportFile: 'cypress/support/e2e.js',
+    testIsolation: false,
+    experimentalSessionAndOrigin: true,
     specPattern: ['**/*.feature', '**/*.cy.js'],
     screenshotsFolder: 'cypress/screenshots',
     videosFolder: 'cypress/videos',

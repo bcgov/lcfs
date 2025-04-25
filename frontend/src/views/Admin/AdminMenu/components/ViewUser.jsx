@@ -58,7 +58,7 @@ export const ViewUser = () => {
     if (hasRoles(roles.supplier)) {
       route = buildPath(ROUTES.ORGANIZATION.EDIT_USER, { userID })
     } else if (orgID) {
-      route = buildPath(ROUTES.ORGANIZATION.EDIT_USER, { orgID, userID })
+      route = buildPath(ROUTES.ORGANIZATIONS.EDIT_USER, { orgID, userID })
     } else {
       route = buildPath(ROUTES.ADMIN.USERS.EDIT, { userID })
     }

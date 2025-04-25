@@ -9,23 +9,18 @@ import {
 Given(
   'I am on home page logged in as {string} user having roles',
   (userType, roles) => {
-    // uncomment later.
     if (userType.includes('bceid')) {
       cy.setBCeIDRoles(userType, roles)
     }
-    cy.clearAllCookies()
-    cy.clearAllLocalStorage()
-    cy.clearAllSessionStorage()
     cy.visit('/')
     cy.getByDataTest('login-container').should('exist')
     // Login with the updated user
     cy.loginWith(
       'bceid',
-      Cypress.env(`${userType}_username`),
-      Cypress.env(`${userType}_password`)
+      Cypress.env(`${userType}_username`.toLocaleUpperCase()),
+      Cypress.env(`${userType}_password`.toLocaleUpperCase())
     )
-    cy.wait(5000)
-    cy.getByDataTest('dashboard-container').should('exist')
+    cy.getByDataTest('dashboard-container', { timeout: 30000 }).should('exist')
   }
 )
 
@@ -123,8 +118,7 @@ Then('I should be redirected to transactions page.', () => {
 Given('bceid transfer accounts are setup with roles', () => {
   cy.setBCeIDRoles('org1_bceid', ['Transfer', 'Signing authority'], 'idir1')
   cy.setBCeIDRoles('org2_bceid', ['Transfer', 'Signing authority'], 'idir2')
-  cy.visit('/')
-  cy.getByDataTest('login-container').should('exist')
+
   cy.loginWith(
     'bceid',
     Cypress.env('ORG1_BCEID_USERNAME'),

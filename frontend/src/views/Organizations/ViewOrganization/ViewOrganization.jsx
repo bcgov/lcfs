@@ -190,10 +190,10 @@ export const ViewOrganization = () => {
                     <strong>{t('org:bcAddrLabel')}:</strong>{' '}
                     {orgData && constructAddress(orgData?.orgAttorneyAddress)}
                   </BCTypography>
-                  {orgData.recordsAddress && (
+                  {orgData?.recordsAddress && (
                     <BCTypography variant="body4">
                       <strong>{t('org:bcRecordLabelShort')}:</strong>{' '}
-                      {orgData.recordsAddress}
+                      {orgData?.recordsAddress}
                     </BCTypography>
                   )}
 

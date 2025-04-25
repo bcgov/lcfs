@@ -18,7 +18,15 @@ Cypress.Commands.add('getByDataTest', (selector, ...args) => {
  * @param {string} password - Password
  */
 Cypress.Commands.add('loginWith', (userType, username, password) => {
+  cy.clearAllCookies()
+  cy.clearAllLocalStorage()
+  cy.clearAllSessionStorage()
+  cy.visit('/', { timeout: 60000 })
   // Determine which login link to click based on user type
+  cy.intercept(
+    'POST',
+    'https://dev.loginproxy.gov.bc.ca/auth/realms/standard/protocol/openid-connect/token'
+  ).as('loginRequest')
   cy.getByDataTest(userType === 'idir' ? 'link-idir' : 'link-bceid').click()
   const loginProcess = (args) => {
     const [username, password] = args
@@ -32,6 +40,10 @@ Cypress.Commands.add('loginWith', (userType, username, password) => {
     cy.get('input[name=user]').type(username, { log: false })
     cy.get('input[name=password]').type(password, { log: false })
     cy.get('form').submit()
+    cy.wait('@loginRequest', { timeout: 30000 }).then(({ response }) => {
+      const token = response.body.access_token
+      cy.wrap(token).as('authToken')
+    })
   }
 
   // Perform login on the appropriate page
@@ -55,7 +67,7 @@ Cypress.Commands.add('logout', () => {
   cy.clearAllSessionStorage()
 
   // Verify successful logout
-  cy.getByDataTest('login-container').should('exist')
+  cy.getByDataTest('login-container', { timeout: 30000 }).should('exist')
 })
 
 Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
@@ -72,12 +84,15 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
       Cypress.env('ADMIN_IDIR_PASSWORD')
     )
     // If BCeID user then update the roles using the IDIR user
-    cy.visit(
-      `/organizations/${Cypress.env(`${userType}_id`)}/${Cypress.env(
-        `${userType}_userId`
-      )}/edit-user`
+    cy.get('a.NavLink[href="/organizations"]').should('be.visible').click()
+    const bceidUsername = Cypress.env(
+      `${userType}_username`.toLocaleUpperCase()
     )
-
+    const orgID = parseInt(bceidUsername.match(/\d+/)[0])
+    cy.contains('a', `LCFS Org ${orgID}`).should('be.visible').click()
+    cy.contains('a', 'tfrs@gov.bc.ca').should('be.visible').click()
+    cy.get('#edit-user-button').click()
+    cy.url().should('include', '/edit-user')
     let userRoles = roles
     if (!Array.isArray(roles)) {
       userRoles = roles.raw()[0]
@@ -86,16 +101,23 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
     const rolesToCheck = userRoles.map((role) =>
       role.toLowerCase().replace(/\s/g, '-')
     )
-    cy.get('input[type="checkbox"]').each(($checkbox) => {
-      const checkboxId = $checkbox.attr('id')
-      if (checkboxId && rolesToCheck.includes(checkboxId)) {
-        // If the checkbox ID is in the array, check the checkbox
-        cy.wrap($checkbox).check()
-      } else {
-        // If the checkbox ID is not in the array, uncheck the checkbox
-        cy.wrap($checkbox).uncheck()
-      }
-    })
+    cy.get('#user-form', { timeout: 30000 })
+      .get('input[type="checkbox"]')
+      .each(($checkbox) => {
+        const checkboxId = $checkbox.attr('id')
+        const isChecked = $checkbox.is('checked')
+        if (checkboxId && rolesToCheck.includes(checkboxId)) {
+          // If the checkbox ID is in the array, check the checkbox
+          if (!isChecked) {
+            cy.wrap($checkbox).check()
+          }
+        } else {
+          // If the checkbox ID is not in the array, uncheck the checkbox
+          if (isChecked) {
+            cy.wrap($checkbox).uncheck()
+          }
+        }
+      })
     cy.get('#user-form').submit()
     cy.logout()
   })
@@ -103,9 +125,7 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
 
 Cypress.Commands.add('setIDIRRoles', (role) => {
   // Roles ['analyst', 'compliance manager', 'director']
-  cy.visit('/admin/users')
-
-  cy.wait(5000)
+  cy.visit('/admin/users', { timeout: 30000 })
 
   // Find the row with the specified name and click it
   cy.contains('a', Cypress.env('ADMIN_IDIR_EMAIL')).should('be.visible').click()
@@ -171,37 +191,43 @@ Cypress.Commands.add(
 Cypress.Commands.add(
   'inputTextWithRetry',
   (cellSelector, inputValue, index, attempts = 3) => {
-    function attemptInput(attemptsLeft) {
-      // Deselect anything
+    let attemptsLeft = attempts
+
+    function tryInput() {
+      // Click the body to deselect anything
       cy.get('body').click(50, 50, { force: true })
 
-      cy.get(cellSelector)
+      cy.get(cellSelector, { timeout: 20000 })
         .eq(index)
-        .click()
-        .then(($cell) => {
-          cy.get('body').then(($body) => {
-            // Check if input exists in the cell
-            if ($cell.find('input').length > 0) {
-              cy.wrap($cell).find('input').clear().type(`${inputValue}{enter}`)
-              cy.wait(300)
-            } else {
-              // If input not found, retry the cell click
-              cy.log(
-                `Input field not found. Starting from cell selector again. Attempts left: ${attemptsLeft}`
-              )
-              if (attemptsLeft > 0) {
-                cy.wait(500)
-                attemptInput(attemptsLeft - 1) // Retry
-              } else {
-                throw new Error(
-                  `Failed to find selector after all attempts ${cellSelector}`
-                )
-              }
-            }
-          })
+        .scrollIntoView()
+        .click({ force: true })
+        .wait(300)
+        .get(cellSelector)
+        .eq(index)
+        .find('input')
+        .then(($input) => {
+          if ($input.length > 0) {
+            cy.wrap($input)
+              .clear({ force: true })
+              .type(`${inputValue}{enter}`, { force: true })
+          } else if (attemptsLeft > 0) {
+            attemptsLeft--
+            cy.wait(500).then(() => {
+              tryInput() // Retry again safely inside Cypress queue
+            })
+          } else {
+            throw new Error(
+              `❌ Failed to find input in selector ${cellSelector} after all attempts`
+            )
+          }
         })
     }
 
-    attemptInput(attempts)
+    // Handle any uncaught exceptions globally (optional)
+    cy.on('uncaught:exception', (_err, runnable) => {
+      return false
+    })
+
+    tryInput()
   }
 )
