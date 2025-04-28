@@ -30,6 +30,10 @@ export const apiRoutes = {
   getOrgComplianceReportReportedYears:
     '/organization/:orgID/reports/reported-years',
 
+  // Credit‑ledger
+  creditLedger: '/credit-ledger/organization/:orgID',
+  exportCreditLedger: '/credit-ledger/organization/:orgID/export',
+
   // organizations
   organizationSearch: '/organizations/search?',
 
@@ -146,6 +150,7 @@ export const apiRoutes = {
   // calculator endpoints
   getCalculatorCompliancePeriods: '/calculator/compliance-periods',
   getCalculatorFuelTypes: '/calculator/:complianceYear/',
-  getCalculatorFuelTypeOptions: '/calculator/:complianceYear/fuel-type-options/',
-  getCalculatedComplianceUnits: '/calculator/:complianceYear/calculate/',
+  getCalculatorFuelTypeOptions:
+    '/calculator/:complianceYear/fuel-type-options/',
+  getCalculatedComplianceUnits: '/calculator/:complianceYear/calculate/'
 }
