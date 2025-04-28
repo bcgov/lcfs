@@ -1,17 +1,17 @@
-import React, { useState, useEffect } from 'react'
-import PropTypes from 'prop-types'
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  IconButton,
-  Divider,
-  Box
-} from '@mui/material'
-import { Close, Warning } from '@mui/icons-material'
-import BCButton from './BCButton'
 import colors from '@/themes/base/colors'
+import { Close, Warning } from '@mui/icons-material'
+import {
+  Box,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Divider,
+  IconButton
+} from '@mui/material'
+import PropTypes from 'prop-types'
+import { useEffect, useState } from 'react'
+import BCButton from './BCButton'
 
 const BCModal = ({ open, onClose, data = null }) => {
   const [isLoading, setIsLoading] = useState(false)
@@ -63,6 +63,7 @@ const BCModal = ({ open, onClose, data = null }) => {
           top: 8,
           color: (theme) => theme.palette.grey[500]
         }}
+        data-test="modal-btn-close"
       >
         <Close />
       </IconButton>
@@ -76,7 +77,10 @@ const BCModal = ({ open, onClose, data = null }) => {
             gap={1}
           >
             <Warning color="warning" fontSize={'medium'} />
-            <div dangerouslySetInnerHTML={{ __html: warningText }} />
+            <div
+              dangerouslySetInnerHTML={{ __html: warningText }}
+              data-test="text-warning"
+            />
           </Box>
         </DialogContent>
       )}
@@ -92,6 +96,7 @@ const BCModal = ({ open, onClose, data = null }) => {
             }
             color={secondaryButtonColor ?? 'dark'}
             onClick={secondaryButtonAction ?? onClose}
+            data-test="modal-btn-secondary"
           >
             {secondaryButtonText}
           </BCButton>
@@ -109,6 +114,7 @@ const BCModal = ({ open, onClose, data = null }) => {
             onClick={handlePrimaryButtonClick}
             isLoading={isLoading}
             disabled={primaryButtonDisabled}
+            data-test="modal-btn-primary"
           >
             {primaryButtonText}
           </BCButton>

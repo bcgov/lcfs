@@ -104,6 +104,7 @@ export const ComplianceReports = () => {
 
   const handleClearFilters = () => {
     setPaginationOptions(defaultInitialPagination)
+    sessionStorage.removeItem('compliance-reports-grid-filter')
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
     }

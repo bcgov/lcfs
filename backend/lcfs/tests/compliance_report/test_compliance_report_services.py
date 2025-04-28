@@ -282,7 +282,8 @@ async def test_get_all_org_reported_years_unexpected_error(
 
 @pytest.mark.anyio
 async def test_create_supplemental_report_includes_summary_lines(
-    compliance_report_service, mock_repo
+    compliance_report_service,
+    mock_repo,
 ):
     """
     Test that when creating a supplemental report, the summary lines from
@@ -381,6 +382,7 @@ async def test_create_supplemental_report_includes_summary_lines(
         assert new_summary.line_9_obligation_added_gasoline == 2
         assert new_summary.line_9_obligation_added_diesel == 4
         assert new_summary.line_9_obligation_added_jet_fuel == 6
+        compliance_report_service.final_supply_equipment_service.copy_to_report.assert_awaited_once()
 
 
 @pytest.mark.anyio
@@ -400,7 +402,7 @@ async def test_delete_supplemental_report_success(compliance_report_service, moc
     result = await compliance_report_service.delete_compliance_report(996, mock_user)
 
     assert result is True
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_called_once_with(996)
 
 
@@ -416,7 +418,7 @@ async def test_delete_compliance_report_not_found(compliance_report_service, moc
     with pytest.raises(DataNotFoundException, match="Compliance report not found."):
         await compliance_report_service.delete_compliance_report(1000, mock_user)
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(1000, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(1000)
     mock_repo.delete_compliance_report.assert_not_called()  # Ensure delete is not called
 
 
@@ -437,7 +439,7 @@ async def test_delete_compliance_report_supplier_no_permission(
         await compliance_report_service.delete_compliance_report(996, mock_user)
     assert exc.typename == "ServiceException"
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_not_called()
 
 
@@ -457,7 +459,7 @@ async def test_delete_compliance_report_idir_no_permission(
         await compliance_report_service.delete_compliance_report(996, mock_user)
     assert exc.typename == "ServiceException"
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_not_called()
 
 
@@ -479,5 +481,5 @@ async def test_delete_compliance_report_wrong_status(
 
     assert exc_info.typename == "ServiceException"
 
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(996, is_model=True)
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_not_called()

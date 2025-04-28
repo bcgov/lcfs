@@ -1,6 +1,7 @@
 {
   "title": "Compliance reporting",
   "complianceReport": "Compliance report",
+  "complianceReportEarlyIssuance": "Early issuance report - Quarter",
   "newReportBtn": "New compliance report",
   "reportColLabels": {
     "compliancePeriod": "Compliance period",
@@ -22,6 +23,7 @@
   "hoAddrLabelEdit": "Head office address (can be an international address, optional)",
   "bcRecordLabel": "Address in B.C. (where records are maintained)",
   "activityHdrLabel": "Did <b>{{name}}</b> engage in any of the following activities between January 1, {{period}}, and December 31, {{period}}?",
+  "quarterlyActivityHdrLabel": "Report your quarter {{quarter}} fuel supply as well as any supporting documents.",
   "reportActivities": "Report activities",
   "orgDetails": "Organization details",
   "supportingDocs": "Supporting documents",
@@ -179,7 +181,8 @@
     "AssessedBy": "Assessed {{createDate}} by the director under the <i>Low Carbon Fuels Act.</i>",
     "Reassessed": "Re-assessed",
     "renewableTarget": "Renewable fuel target",
-    "lowCarbonTarget": "Low carbon fuel target"
+    "lowCarbonTarget": "Low carbon fuel target",
+    "directorStatement": "Assessment statement from the director"
   },
   "internalComments": "Internal comments",
   "fuelLabels": {
@@ -191,7 +194,8 @@
     "line": "Line",
     "value": "Value",
     "totalValue": "Total Value",
-    "units": "Units"
+    "units": "Units",
+    "earlyIssuanceSummary": "Early Issuance Summary"
   },
   "summaryLoadingMsg": "Loading compliance report summary...",
   "noSigningAuthorityTooltip": "Cannot submit: Signing authority role required.",
@@ -202,8 +206,6 @@
   "reportAssessed": "Compliance report, Assessed",
   "changelog": "Change log",
   "documentLabel": "Add file attachments (maximum file size: 50 MB):",
-  "assessmentStatement": "Assessment statement from the director",
-  "assessmentStatementEdit": "(can be edited below)",
   "assessmentRecommendation": "Assessment recommendation",
   "directorStatement": "Director assessment statement to the organization (optional)",
   "assessmentStatementInstructions": "The analyst and/or compliance manager can draft an assessment statement to the organization. The director can edit or delete this statement. This is suggested when making analyst adjustments or reassessments.",

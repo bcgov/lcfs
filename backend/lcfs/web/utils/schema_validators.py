@@ -18,6 +18,16 @@ def fuel_quantity_required(values: dict) -> dict:
                 }
             ]
             raise RequestValidationError(errors)
+        compliance_units = values.get("compliance_units") or values.get("complianceUnits")
+        if compliance_units is not None and compliance_units < 0:
+            errors = [
+                {
+                    "loc": ("quantity",),
+                    "msg": "- For early issuance, any fuel generating negative compliance units is not permitted.",
+                    "type": "value_error",
+                }
+            ]
+            raise RequestValidationError(errors)
 
     return values
 

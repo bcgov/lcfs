@@ -45,7 +45,7 @@ const AccordionDetails = styled(MuiAccordionDetails)(() => ({
   paddingBottom: 0
 }))
 
-export const HistoryCard = ({ report }) => {
+export const HistoryCard = ({ report, defaultExpanded = false }) => {
   const { data: currentUser } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const { t } = useTranslation(['report'])
@@ -70,7 +70,7 @@ export const HistoryCard = ({ report }) => {
   }, [isGovernmentUser, report.history])
 
   return (
-    <Accordion>
+    <Accordion defaultExpanded={defaultExpanded}>
       <AccordionSummary
         expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
         aria-controls="panel1-content"
@@ -107,9 +107,11 @@ export const HistoryCard = ({ report }) => {
                     }}
                   />
                 </ListItemText>
-                {item.status.status === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
+                {[COMPLIANCE_REPORT_STATUSES.ASSESSED, 'AssessedBy'].includes(
+                  item.status.status
+                ) && (
                   <List sx={{ p: 0, m: 0 }}>
-                    <StyledListItem key={index} disablePadding>
+                    <StyledListItem disablePadding>
                       <ListItemText
                         primaryTypographyProps={{ variant: 'body4' }}
                       >
@@ -126,7 +128,7 @@ export const HistoryCard = ({ report }) => {
                         })}
                       </ListItemText>
                     </StyledListItem>
-                    <StyledListItem key={index} disablePadding>
+                    <StyledListItem disablePadding>
                       <ListItemText
                         primaryTypographyProps={{ variant: 'body4' }}
                       >
@@ -144,6 +146,21 @@ export const HistoryCard = ({ report }) => {
                         })}
                       </ListItemText>
                     </StyledListItem>
+                    {report.assessmentStatement && (
+                      <StyledListItem disablePadding>
+                        <ListItemText
+                          primaryTypographyProps={{ variant: 'body4' }}
+                        >
+                          <strong>
+                            {t(
+                              'report:complianceReportHistory.directorStatement'
+                            )}
+                            :&nbsp;
+                          </strong>
+                          {report.assessmentStatement}
+                        </ListItemText>
+                      </StyledListItem>
+                    )}
                   </List>
                 )}
               </StyledListItem>

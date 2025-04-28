@@ -175,7 +175,6 @@ class FuelExportCreateUpdateSchema(BaseSchema):
     group_uuid: Optional[str] = None
     version: Optional[int] = None
     action_type: Optional[str] = None
-    compliance_period: Optional[str] = None
     fuel_type_other: Optional[str] = None
     fuel_type_id: int
     fuel_category_id: int
@@ -202,20 +201,6 @@ class FuelExportCreateUpdateSchema(BaseSchema):
         values = quantity_must_be_positive(values)
         values = energy_must_be_within_range(values)
         return values
-
-    @model_validator(mode="before")
-    @classmethod
-    def check_fuel_code_required(cls, values):
-        return fuel_code_required(values)
-
-    @field_validator("energy")
-    def validate_energy_range(cls, value):
-        if value is not None and abs(value) >= 9999999999:
-            formatted_value = f"{value:,.2f}"
-            raise ValueError(
-                f"Energy value must be less than 99,999,999,999 but got {formatted_value}"
-            )
-        return value
 
 
 class DeleteFuelExportResponseSchema(BaseSchema):
