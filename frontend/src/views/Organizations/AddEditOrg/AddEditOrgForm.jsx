@@ -89,7 +89,8 @@ export const AddEditOrgForm = () => {
         orgAddressOther: data.orgAddress?.addressOther || '',
         orgCity: data.orgAddress?.city || '',
         orgPostalCodeZipCode: data.orgAddress?.postalcodeZipcode || '',
-        orgHeadOfficeStreetAddress: data.orgAttorneyAddress?.streetAddress || '',
+        orgHeadOfficeStreetAddress:
+          data.orgAttorneyAddress?.streetAddress || '',
         orgHeadOfficeAddressOther: data.orgAttorneyAddress?.addressOther || '',
         orgHeadOfficeCity: data.orgAttorneyAddress?.city || '',
         orgHeadOfficeProvince: data.orgAttorneyAddress?.provinceState || '',
@@ -115,7 +116,7 @@ export const AddEditOrgForm = () => {
     (fieldName, value) => {
       if (watch(fieldName) !== value) {
         setValue(fieldName, value)
-        if (value.trim().length > 0) {
+        if (value && value.trim().length > 0) {
           trigger(fieldName)
         }
       }
