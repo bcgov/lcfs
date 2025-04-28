@@ -1,57 +1,32 @@
-import { IconButton, Tooltip, Stack } from '@mui/material'
-import {
-  Edit,
-  Delete,
-  Save,
-  Cancel,
-  Queue,
-  Warning,
-  DoneAll
-} from '@mui/icons-material'
+import BCTypography from '@/components/BCTypography'
+import { Cancel, Delete, Edit, Queue, Replay } from '@mui/icons-material'
+import { Box, IconButton, Stack, Tooltip } from '@mui/material'
 
-export const ActionsRenderer = ({ onDuplicate, onDelete, ...props }) => {
+export const ActionsRenderer = (props) => {
   const isCurrentRowEditing = props.api
     .getEditingCells()
     .some((cell) => cell.rowIndex === props.node.rowIndex)
 
   return (
-    <Stack direction="row" spacing={0.1} m={0}>
+    <Stack direction="row" spacing={0.1} m={0} mt={0.2}>
       {props.enableDuplicate && (
         <Tooltip title="duplicate">
-          <IconButton
-            aria-label="copy the data to new row"
-            data-testid="duplicate-button"
-            color="primary"
-            onClick={() => {
-              onDuplicate(props)
-            }}
-          >
-            <Queue
-              sx={{
-                transform: 'scaleX(-1)'
-              }}
-            />
-          </IconButton>
-        </Tooltip>
-      )}
-      {!props.data.isValid && props.data.modified && (
-        <Tooltip title={props.data.validationMsg}>
-          <IconButton
-            aria-label="shows sign for validation"
-            data-testid="validation-sign"
-          >
-            <Warning color="error" />
-          </IconButton>
-        </Tooltip>
-      )}
-      {props.data.isValid && isCurrentRowEditing && props.data.modified && (
-        <Tooltip title={'validation success'}>
-          <IconButton
-            aria-label="shows sign for validation"
-            data-testid="validation-sign"
-          >
-            <DoneAll color="success" />
-          </IconButton>
+          <span>
+            <IconButton
+              aria-label="copy the data to new row"
+              data-testid="duplicate-button"
+              data-action="duplicate"
+              color="primary"
+              disabled={props.data.validationStatus === 'error'}
+            >
+              <Queue
+                style={{ pointerEvents: 'none' }}
+                sx={{
+                  transform: 'scaleX(-1)'
+                }}
+              />
+            </IconButton>
+          </span>
         </Tooltip>
       )}
       {props.enableEdit && !isCurrentRowEditing && (
@@ -71,31 +46,15 @@ export const ActionsRenderer = ({ onDuplicate, onDelete, ...props }) => {
           </IconButton>
         </Tooltip>
       )}
-      {props.enableDelete && !isCurrentRowEditing && (
+      {props.enableDelete && (
         <Tooltip title="Delete">
           <IconButton
             aria-label="delete row"
             data-testid="delete-button"
+            data-action="delete"
             color="error"
-            onClick={() => {
-              onDelete(props)
-            }}
           >
-            <Delete />
-          </IconButton>
-        </Tooltip>
-      )}
-      {props.enableEdit && isCurrentRowEditing && (
-        <Tooltip title="Save">
-          <IconButton
-            aria-label="save modified data"
-            data-testid="save-button"
-            color="success"
-            onClick={() => {
-              props.api.stopEditing(false)
-            }}
-          >
-            <Save />
+            <Delete style={{ pointerEvents: 'none' }} />
           </IconButton>
         </Tooltip>
       )}
@@ -113,7 +72,22 @@ export const ActionsRenderer = ({ onDuplicate, onDelete, ...props }) => {
           </IconButton>
         </Tooltip>
       )}
+      {props.enableUndo && (
+        <Tooltip title="Undo">
+          <IconButton
+            aria-label="undo row"
+            data-testid="undo-button"
+            data-action="undo"
+          >
+            <Replay style={{ pointerEvents: 'none' }} />
+          </IconButton>
+        </Tooltip>
+      )}
+      {props.enableStatus && (
+        <Box alignItems="center" justifyContent="center" display="flex" m={0}>
+          <BCTypography variant="body2">{props.enableStatus}</BCTypography>
+        </Box>
+      )}
     </Stack>
   )
 }
-ActionsRenderer.displayName = 'ActionsRenderer'

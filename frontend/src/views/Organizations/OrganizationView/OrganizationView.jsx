@@ -1,0 +1,94 @@
+import React, { useState, useEffect } from 'react'
+import { AppBar, Tab, Tabs } from '@mui/material'
+import BCBox from '@/components/BCBox'
+import { OrganizationDetailsCard } from './OrganizationDetailsCard'
+import { OrganizationUsers } from './OrganizationUsers'
+import { CreditLedger } from './CreditLedger'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { roles } from '@/constants/roles'
+import { useTranslation } from 'react-i18next'
+
+function TabPanel({ children, value, index }) {
+  return (
+    <BCBox
+      role="tabpanel"
+      hidden={value !== index}
+      id={`organization-tabpanel-${index}`}
+      aria-labelledby={`organization-tab-${index}`}
+      sx={{ p: 3 }}
+    >
+      {value === index && children}
+    </BCBox>
+  )
+}
+
+export const OrganizationView = () => {
+  const { t } = useTranslation(['org'])
+  const [tabIndex, setTabIndex] = useState(0)
+  const [tabsOrientation, setTabsOrientation] = useState('horizontal')
+
+  const { hasRoles } = useCurrentUser()
+  const isIdir = hasRoles(roles.government)
+
+  const tabs = [{ label: t('org:usersTab'), content: <OrganizationUsers /> }]
+  if (!isIdir) {
+    tabs.push({
+      label: t('org:creditLedgerTab'),
+      content: <CreditLedger />
+    })
+  }
+
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth < 500) {
+        setTabsOrientation('vertical')
+      } else {
+        setTabsOrientation('horizontal')
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    handleResize()
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const handleChangeTab = (event, newValue) => {
+    setTabIndex(newValue)
+  }
+
+  return (
+    <BCBox>
+      <OrganizationDetailsCard />
+
+      {tabs.length === 1 ? (
+        <BCBox mt={3}>
+          {tabs[0].content}
+        </BCBox>
+      ) : (
+        <BCBox sx={{ mt: 2, bgcolor: 'background.paper' }}>
+          <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
+            <Tabs
+              orientation={tabsOrientation}
+              value={tabIndex}
+              onChange={handleChangeTab}
+              aria-label="Organization tabs"
+              sx={{
+                backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                width: { xs: '100%', md: '50%', lg: '25%' }
+              }}
+            >
+              {tabs.map((tab, idx) => (
+                <Tab key={idx} label={tab.label} />
+              ))}
+            </Tabs>
+          </AppBar>
+
+          {tabs.map((tab, idx) => (
+            <TabPanel key={idx} value={tabIndex} index={idx}>
+              {tab.content}
+            </TabPanel>
+          ))}
+        </BCBox>
+      )}
+    </BCBox>
+  )
+}

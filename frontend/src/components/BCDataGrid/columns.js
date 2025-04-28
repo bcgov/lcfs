@@ -1,5 +1,5 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
-import { ActionsRenderer2, ValidationRenderer2 } from './components'
+import { ActionsRenderer, ValidationRenderer2 } from './components'
 
 export const validation = {
   colId: 'validation',
@@ -20,7 +20,7 @@ export const validation = {
 export const actions = (props) => ({
   colId: 'action',
   headerName: 'Action',
-  cellRenderer: ActionsRenderer2,
+  cellRenderer: ActionsRenderer,
   cellRendererParams: props,
   pinned: 'left',
   maxWidth: 200,
