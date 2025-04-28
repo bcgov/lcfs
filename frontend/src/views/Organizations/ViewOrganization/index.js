@@ -1,1 +1,0 @@
-export { ViewOrganization } from './ViewOrganization'
