@@ -1,7 +1,7 @@
 """credit ledger mv
 
 Revision ID: 7a1f5f52793c
-Revises: ddc2db9c2def
+Revises: 4f18d1a47c91
 Create Date: 2025-04-17 10:06:27.938689
 
 """
@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "7a1f5f52793c"
-down_revision = "ddc2db9c2def"
+down_revision = "4f18d1a47c91"
 branch_labels = None
 depends_on = None
 
