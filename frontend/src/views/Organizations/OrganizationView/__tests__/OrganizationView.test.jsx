@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ViewOrganization } from '../ViewOrganization'
+import { OrganizationView } from '../OrganizationView'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
@@ -113,7 +113,7 @@ const renderComponent = (props) => {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={theme}>
-        <ViewOrganization {...props} />
+        <OrganizationView {...props} />
       </ThemeProvider>
     </QueryClientProvider>
   )
@@ -130,7 +130,7 @@ const setupRoleTest = (roleName, passCheck) => {
   renderComponent()
 }
 
-describe('ViewOrganization Component Tests', () => {
+describe('OrganizationView Component Tests', () => {
   beforeEach(() => {
     renderComponent()
   })

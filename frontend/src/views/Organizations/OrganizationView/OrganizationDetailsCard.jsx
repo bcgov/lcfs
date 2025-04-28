@@ -1,50 +1,40 @@
 import BCBox from '@/components/BCBox'
-import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import BCAlert from '@/components/BCAlert'
-import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
-import Loading from '@/components/Loading'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
-import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import Loading from '@/components/Loading'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { apiRoutes } from '@/constants/routes'
-import { ROUTES, buildPath } from '@/routes/routes'
+import { useLocation, useParams } from 'react-router-dom'
+import { buildPath, ROUTES } from '@/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useOrganization,
   useOrganizationBalance
 } from '@/hooks/useOrganization'
-import { constructAddress } from '@/utils/constructAddress'
 import { phoneNumberFormatter } from '@/utils/formatters'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { defaultSortModel, getUserColumnDefs } from './_schema'
-import { Role } from '@/components/Role'
+import { constructAddress } from '@/utils/constructAddress'
 import { roles } from '@/constants/roles'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
-import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
+import { Role } from '@/components/Role'
 
-export const ViewOrganization = () => {
+export const OrganizationDetailsCard = () => {
   const { t } = useTranslation(['common', 'org'])
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
-  const [resetGridFn, setResetGridFn] = useState(null)
-  const newUserButtonRef = useRef(null)
-
-  const navigate = useNavigate()
   const location = useLocation()
   const { orgID } = useParams()
+
+  const [alertMessage, setAlertMessage] = useState('')
+  const [alertSeverity, setAlertSeverity] = useState('info')
+
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
     hasRoles
   } = useCurrentUser()
+
   const { data: orgData, isLoading } = useOrganization(
     orgID ?? currentUser?.organization?.organizationId
   )
-
   const { data: orgBalanceInfo } = useOrganizationBalance(
     orgID ?? currentUser?.organization?.organizationId
   )
@@ -56,57 +46,12 @@ export const ViewOrganization = () => {
       })
     : null
 
-  const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
-  const handleGridKey = useCallback(() => {
-    setGridKey(`users-grid-${orgID}`)
-  }, [orgID])
-
-  const gridOptions = {
-    overlayNoRowsTemplate: 'No users found',
-    includeHiddenColumnsInQuickFilter: true
-  }
-
-  const defaultColDef = useMemo(
-    () => ({
-      cellRenderer: LinkRenderer,
-      cellRendererParams: {
-        isAbsolute: true,
-        url: (
-          data // Based on the user Type (BCeID or IDIR) navigate to specific view
-        ) =>
-          hasRoles(roles.supplier)
-            ? buildPath(ROUTES.ORGANIZATION.VIEW_USER, {
-                userID: data.data.userProfileId
-              })
-            : buildPath(ROUTES.ORGANIZATIONS.VIEW_USER, {
-                orgID,
-                userID: data.data.userProfileId
-              })
-      }
-    }),
-    [hasRoles, orgID]
-  )
-
-  const getRowId = useCallback((params) => params.data.userProfileId, [])
-
-  const gridRef = useRef()
-
   useEffect(() => {
     if (location.state?.message) {
       setAlertMessage(location.state.message)
       setAlertSeverity(location.state.severity || 'info')
     }
   }, [location.state])
-
-  const handleSetResetGrid = useCallback((fn) => {
-    setResetGridFn(() => fn)
-  }, [])
-
-  const handleClearFilters = useCallback(() => {
-    if (resetGridFn) {
-      resetGridFn()
-    }
-  }, [resetGridFn])
 
   if (isLoading) {
     return <Loading />
@@ -115,15 +60,16 @@ export const ViewOrganization = () => {
   return (
     <>
       {alertMessage && (
-        <BCAlert data-test="alert-box" severity={alertSeverity} sx={{ mb: 4 }}>
+        <BCAlert severity={alertSeverity} sx={{ mb: 4 }}>
           {alertMessage}
         </BCAlert>
       )}
+
       <BCBox
         sx={{
           width: {
             md: '100%',
-            lg: '75%'
+            lg: '90%'
           }
         }}
       >
@@ -143,7 +89,7 @@ export const ViewOrganization = () => {
             <BCBox p={1}>
               <BCBox
                 display="grid"
-                gridTemplateColumns="1fr 1fr"
+                gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }}
                 columnGap={10}
                 rowGap={2}
               >
@@ -183,13 +129,14 @@ export const ViewOrganization = () => {
                 <BCBox display="flex" flexDirection="column" gap={2}>
                   <BCTypography variant="body4">
                     <strong>{t('org:serviceAddrLabel')}:</strong>{' '}
-                    {orgData && constructAddress(orgData?.orgAddress)}
+                    {orgData && constructAddress(orgData.orgAddress)}
                   </BCTypography>
 
                   <BCTypography variant="body4">
                     <strong>{t('org:bcAddrLabel')}:</strong>{' '}
-                    {orgData && constructAddress(orgData?.orgAttorneyAddress)}
+                    {orgData && constructAddress(orgData.orgAttorneyAddress)}
                   </BCTypography>
+
                   {orgData.recordsAddress && (
                     <BCTypography variant="body4">
                       <strong>{t('org:bcRecordLabelShort')}:</strong>{' '}
@@ -220,9 +167,9 @@ export const ViewOrganization = () => {
               {!isCurrentUserLoading && !hasRoles(roles.government) && (
                 <BCBox mt={2}>
                   <BCTypography variant="body4">
-                    Email{' '}
+                    {t('org:toUpdateMsgPrefix')}{' '}
                     <a href={`mailto:${t('lcfsEmail')}`}>{t('lcfsEmail')}</a>{' '}
-                    {t('org:toUpdateMsg')}
+                    {t('org:toUpdateMsgSuffix')}
                   </BCTypography>
                 </BCBox>
               )}
@@ -230,84 +177,6 @@ export const ViewOrganization = () => {
           }
         />
       </BCBox>
-      <BCBox
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          flexWrap: 'wrap',
-          justifyContent: 'flex-start',
-          alignItems: 'flex-start',
-          textTransform: 'none'
-        }}
-        my={2}
-      >
-        <BCBox component="div">
-          <Role roles={[roles.administrator, roles.manage_users]}>
-            <BCButton
-              ref={newUserButtonRef}
-              variant="contained"
-              size="small"
-              color="primary"
-              sx={{
-                textTransform: 'none',
-                marginRight: '8px',
-                marginBottom: '8px'
-              }}
-              startIcon={
-                <FontAwesomeIcon icon={faCirclePlus} className="small-icon" />
-              }
-              onClick={() =>
-                !isCurrentUserLoading && hasRoles(roles.government)
-                  ? navigate(
-                      buildPath(ROUTES.ORGANIZATIONS.ADD_USER, { orgID })
-                    )
-                  : navigate(buildPath(ROUTES.ORGANIZATION.ADD_USER))
-              }
-            >
-              <BCTypography variant="button">{t('org:newUsrBtn')}</BCTypography>
-            </BCButton>
-          </Role>
-          <ClearFiltersButton
-            data-test="clear-filters-button"
-            onClick={handleClearFilters}
-            sx={{
-              marginRight: '8px',
-              marginBottom: '8px',
-              minWidth: 'fit-content',
-              whiteSpace: 'nowrap'
-            }}
-          />
-        </BCBox>
-        <BCTypography
-          variant="h5"
-          mt={1}
-          color="primary"
-          data-test="active-users-heading"
-        >
-          {t('org:usersLabel')}
-        </BCTypography>
-      </BCBox>
-      <BCBox sx={{ height: '100%', width: '100%' }}>
-        <BCDataGridServer
-          gridRef={gridRef}
-          apiEndpoint={buildPath(apiRoutes.orgUsers, {
-            orgID: orgID || currentUser?.organization?.organizationId
-          })}
-          apiData="users"
-          columnDefs={getUserColumnDefs(t)}
-          gridKey={gridKey}
-          getRowId={getRowId}
-          gridOptions={gridOptions}
-          defaultSortModel={defaultSortModel}
-          handleGridKey={handleGridKey}
-          defaultColDef={defaultColDef}
-          enableCopyButton={false}
-          enableResetButton={false}
-          onSetResetGrid={handleSetResetGrid}
-        />
-      </BCBox>
     </>
   )
 }
-
-export default ViewOrganization
