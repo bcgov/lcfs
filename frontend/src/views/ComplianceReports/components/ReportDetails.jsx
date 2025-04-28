@@ -61,7 +61,8 @@ const chipStyles = {
   '& .MuiChip-icon': {
     color: colors.badgeColors.warning.text
   },
-  boxShadow: '0 4px 8px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.5)'
+  boxShadow:
+    '0 1px 2px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255,255,255,0.5)'
 }
 
 const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
@@ -362,6 +363,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                 aria-controls={`panel${index}-content`}
                 id={`panel${index}-header`}
                 data-test={`panel${index}-summary`}
+                sx={{
+                  '& .MuiAccordionSummary-content': { alignItems: 'center' }
+                }}
               >
                 <BCTypography
                   style={{ display: 'flex', alignItems: 'center' }}
@@ -406,7 +410,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     size="small"
                     sx={{
                       ...chipStyles,
-                      mt: 0.8,
                       color: colors.alerts.error.color,
                       '& .MuiChip-icon': {
                         color: colors.alerts.error.color
