@@ -137,6 +137,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('report:activityLists.supplyOfFuel'),
+        key: 'fuelSupplies',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL, {
@@ -163,6 +164,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('finalSupplyEquipment:fseTitle'),
+        key: 'finalSupplyEquipments',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS, {
@@ -178,6 +180,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('report:activityLists.allocationAgreements'),
+        key: 'allocationAgreements',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS, {
@@ -247,6 +250,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('fuelExport:fuelExportTitle'),
+        key: 'fuelExports',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.FUEL_EXPORTS, {
@@ -335,18 +339,20 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
             changelog: isSupplemental
           }
         )
+        const scheduleData =
+          (!isLoading && activity.key ? data[activity.key] : data) ?? []
 
         // Check if the accordion should be disabled
-        const hasNoData = isArrayEmpty(data)
+        const hasNoData = isArrayEmpty(scheduleData)
         const isDisabled = !canEdit && hasNoData
         // Check if all records are marked as DELETE
         const allRecordsDeleted =
-          Array.isArray(data) &&
-          data.length > 0 &&
-          data.every((item) => item.actionType === 'DELETE')
+          Array.isArray(scheduleData) &&
+          scheduleData.length > 0 &&
+          scheduleData.every((item) => item.actionType === 'DELETE')
 
         return (
-          ((data && !isArrayEmpty(data)) || hasVersions) && (
+          ((scheduleData && !isArrayEmpty(scheduleData)) || hasVersions) && (
             <Accordion
               key={index}
               expanded={
