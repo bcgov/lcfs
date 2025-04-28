@@ -263,7 +263,7 @@ jobs:
         uses: trstringer/manual-approval@v1.6.0
         with:
           secret: ${{ github.TOKEN }}
-          approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,dhaselhan,Grulin
+          approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,prv-proton,Grulin
           minimum-approvals: 2
           issue-title: "LCFS ${{env.VERSION }}-${{env.PRE_RELEASE }} Prod Deployment."
 

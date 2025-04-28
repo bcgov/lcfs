@@ -288,32 +288,6 @@ async def seed_user_profiles(session):
             "first_name": "LCFS_IDIR",
             "last_name": "TESTER",
         },
-        {
-            "user_profile_id": 22,
-            "keycloak_email": "daniel.haselhan@gov.bc.ca",
-            "keycloak_username": "DHASELHA",
-            "email": "daniel.haselhan@gov.bc.ca",
-            "title": "Developer",
-            "phone": "1234567890",
-            "mobile_phone": "1234567890",
-            "organization_id": None,
-            "is_active": True,
-            "first_name": "Daniel",
-            "last_name": "Haselhan",
-        },
-        {
-            "user_profile_id": 23,
-            "keycloak_email": "Arturo.Reyes-Lopez@gov.bc.ca",
-            "keycloak_username": "ARTREYES",
-            "email": "Arturo.Reyes-Lopez@gov.bc.ca",
-            "title": "Developer",
-            "phone": "1234567890",
-            "mobile_phone": "1234567890",
-            "organization_id": None,
-            "is_active": True,
-            "first_name": "Arturo",
-            "last_name": "Reyes",
-        },
     ]
 
     try:
