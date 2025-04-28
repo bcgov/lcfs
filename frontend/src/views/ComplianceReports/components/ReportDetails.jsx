@@ -7,7 +7,8 @@ import {
   AccordionSummary,
   CircularProgress,
   IconButton,
-  Link
+  Link,
+  Chip
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 
@@ -41,8 +42,27 @@ import { AllocationAgreementChangelog } from '@/views/AllocationAgreements/Alloc
 import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog.jsx'
 import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog.jsx'
 import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog.jsx'
-import { Edit, ExpandMore } from '@mui/icons-material'
+import {
+  DeleteOutline,
+  Edit,
+  ExpandMore,
+  InfoOutlined
+} from '@mui/icons-material'
 import { REPORT_SCHEDULES } from '@/constants/common.js'
+import BCAlert from '@/components/BCAlert'
+import colors from '@/themes/base/colors'
+
+const chipStyles = {
+  ml: 2,
+  color: colors.badgeColors.warning.text,
+  border: '1px solid rgba(108, 74, 0, 0.1)',
+  backgroundImage: `linear-gradient(195deg, ${colors.alerts.warning.border}, ${colors.alerts.warning.background})`,
+  fontWeight: 600,
+  '& .MuiChip-icon': {
+    color: colors.badgeColors.warning.text
+  },
+  boxShadow: '0 4px 8px rgba(0,0,0,0.15), inset 0 1px 1px rgba(255,255,255,0.5)'
+}
 
 const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
@@ -308,15 +328,32 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         </Link>
       </BCTypography>
       {activityList.map((activity, index) => {
-        const { data, error, isLoading } = activity.useFetch(complianceReportId, {
-                  changelog: isSupplemental})
+        const { data, error, isLoading } = activity.useFetch(
+          complianceReportId,
+          {
+            changelog: isSupplemental
+          }
+        )
+
+        // Check if the accordion should be disabled
+        const hasNoData = isArrayEmpty(data)
+        const isDisabled = !canEdit && hasNoData
+        // Check if all records are marked as DELETE
+        const allRecordsDeleted =
+          Array.isArray(data) &&
+          data.length > 0 &&
+          data.every((item) => item.actionType === 'DELETE')
+
         return (
-          (data &&
-            !isArrayEmpty(data) || hasVersions) && (
+          ((data && !isArrayEmpty(data)) || hasVersions) && (
             <Accordion
               key={index}
-              expanded={expanded.includes(`panel${index}`)}
+              expanded={
+                expanded.includes(`panel${index}`) &&
+                (!isDisabled || shouldShowEditIcon(activity.name))
+              }
               onChange={onExpand(`panel${index}`)}
+              disabled={!shouldShowEditIcon(activity.name) && isDisabled}
             >
               <AccordionSummary
                 expandIcon={
@@ -351,8 +388,45 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     </Role>
                   )}
                 </BCTypography>
+                {allRecordsDeleted && (
+                  <Chip
+                    aria-label="all previous records deleted"
+                    icon={<DeleteOutline fontSize="small" />}
+                    label={t('Deleted')}
+                    color="warning"
+                    size="small"
+                    sx={{ ...chipStyles }}
+                  />
+                )}
+                {isDisabled && (
+                  <Chip
+                    aria-label="no records"
+                    icon={<InfoOutlined fontSize="small" />}
+                    label={t('Empty')}
+                    size="small"
+                    sx={{
+                      ...chipStyles,
+                      mt: 0.8,
+                      color: colors.alerts.error.color,
+                      '& .MuiChip-icon': {
+                        color: colors.alerts.error.color
+                      },
+                      backgroundImage: `linear-gradient(195deg, ${colors.alerts.error.border},${colors.alerts.error.background})`
+                    }}
+                  />
+                )}
               </AccordionSummary>
               <AccordionDetails>
+                {allRecordsDeleted && (
+                  <BCAlert
+                    severity="warning"
+                    data-test="alert-box"
+                    noFade={true}
+                    dismissible={false}
+                  >
+                    {t('report:allRecordsDeleted')}
+                  </BCAlert>
+                )}
                 {isLoading ? (
                   <CircularProgress />
                 ) : error ? (
