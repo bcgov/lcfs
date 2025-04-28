@@ -13,7 +13,8 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 )
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
-from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from fastapi import Depends
 from pydantic.v1 import ValidationError
 from sqlalchemy import select, delete, and_
@@ -29,7 +30,7 @@ from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.core.decorators import repo_handler
-from lcfs.web.exception.exceptions import ServiceException
+from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
 
 BUCKET_NAME = settings.s3_bucket
 MAX_FILE_SIZE_MB = 50
@@ -42,7 +43,8 @@ class DocumentService:
         db: AsyncSession = Depends(get_async_db_session),
         clamav_service: ClamAVService = Depends(),
         s3_client=Depends(get_s3_client),
-        compliance_report_service: ComplianceReportServices = Depends(),
+        compliance_report_repo: ComplianceReportRepository = Depends(),
+        fuel_supply_repo: FuelSupplyRepository = Depends(),
         admin_adjustment_service: AdminAdjustmentServices = Depends(),
         initiative_agreement_service: InitiativeAgreementServices = Depends(),
     ):
@@ -51,7 +53,8 @@ class DocumentService:
         self.db = db
         self.clamav_service = clamav_service
         self.s3_client = s3_client
-        self.compliance_report_service = compliance_report_service
+        self.compliance_report_repo = compliance_report_repo
+        self.fuel_supply_repo = fuel_supply_repo
 
     @repo_handler
     async def upload_file(self, file, parent_id: int, parent_type, user=None):
@@ -71,8 +74,9 @@ class DocumentService:
         file_size = os.fstat(file.file.fileno()).st_size
 
         if file_size > MAX_FILE_SIZE_BYTES:
-            raise ValidationError(
-                f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB} MB."
+            raise HTTPException(
+                status_code=400,
+                detail=f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB} MB.",
             )
 
         if settings.clamav_enabled:
@@ -108,7 +112,9 @@ class DocumentService:
             )
             await self.db.execute(stmt)
         elif parent_type == "administrativeAdjustment":
-            admin_adjustment = await self.db.get(AdminAdjustment, parent_id)
+            admin_adjustment = await self.admin_adjustment_service.get_admin_adjustment(
+                parent_id
+            )
             if not admin_adjustment:
                 raise Exception("Administrative Adjustment not found")
 
@@ -122,9 +128,13 @@ class DocumentService:
             )
             await self.db.execute(stmt)
         elif parent_type == "initiativeAgreement":
-            initiative_agreement = await self.db.get(InitiativeAgreement, parent_id)
+            initiative_agreement = (
+                await self.initiative_agreement_service.get_initiative_agreement(
+                    parent_id
+                )
+            )
             if not initiative_agreement:
-                raise Exception("Administrative Adjustment not found")
+                raise Exception("Initiative Agreement not found")
 
             self.db.add(document)
             await self.db.flush()
@@ -145,10 +155,9 @@ class DocumentService:
 
     async def _verify_compliance_report_access(self, parent_id, user):
         compliance_report = (
-            await self.compliance_report_service.get_compliance_report_by_id(
-                parent_id, user
-            )
+            await self.compliance_report_repo.get_compliance_report_by_id(parent_id)
         )
+
         if not compliance_report:
             raise HTTPException(status_code=404, detail="Compliance report not found")
 
