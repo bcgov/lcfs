@@ -53,7 +53,19 @@ async def upload_file(
     parent_type: str,
     file: UploadFile = File(...),
     document_service: DocumentService = Depends(),
+    cr_validate: ComplianceReportValidation = Depends(),
+    ia_validate: InitiativeAgreementValidation = Depends(),
+    aa_validate: AdminAdjustmentValidation = Depends(),
 ) -> FileResponseSchema:
+    if parent_type == "compliance_report":
+        await cr_validate.validate_organization_access(parent_id)
+
+    if parent_type == "initiativeAgreement":
+        await ia_validate.validate_organization_access(parent_id)
+
+    if parent_type == "adminAdjustment":
+        await aa_validate.validate_organization_access(parent_id)
+
     document = await document_service.upload_file(
         file, parent_id, parent_type, request.user
     )
@@ -74,8 +86,6 @@ async def stream_document(
     ia_validate: InitiativeAgreementValidation = Depends(),
     aa_validate: AdminAdjustmentValidation = Depends(),
 ):
-    print("PARENT TYPE:", parent_type)
-
     if parent_type == "compliance_report":
         await cr_validate.validate_organization_access(parent_id)
 
@@ -119,5 +129,5 @@ async def delete_file(
     else:
         raise HTTPException(403, "Unable to verify authorization for document download")
 
-    await document_service.delete_file(document_id)
+    await document_service.delete_file(document_id, parent_id, parent_type)
     return {"message": "File and metadata deleted successfully"}
