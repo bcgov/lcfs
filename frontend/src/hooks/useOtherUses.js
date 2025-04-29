@@ -21,8 +21,9 @@ export const useGetAllOtherUses = (complianceReportId, pagination, options) => {
       return (
         await client.post(apiRoutes.getAllOtherUses, {
           complianceReportId,
-          ...pagination })
-      ).data.otherUses
+          ...pagination
+        })
+      ).data
     },
     ...options
   })

@@ -13,15 +13,7 @@ import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import BCButton from '@/components/BCButton/index.jsx'
 import { useApiService } from '@/services/useApiService.js'
 import { FileDownload } from '@mui/icons-material'
-
-export const StyledChip = styled(Chip)({
-  fontWeight: 'bold',
-  height: '26px',
-  margin: '6px 8px 6px 4px',
-  fontSize: '16px',
-  borderRadius: '8px',
-  backgroundColor: colors.nav.main
-})
+import { StyledChip } from '@/components/StyledChip'
 
 export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
   const { t } = useTranslation()

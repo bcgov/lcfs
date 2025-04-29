@@ -89,7 +89,8 @@ export const AddEditOrgForm = () => {
         orgAddressOther: data.orgAddress?.addressOther || '',
         orgCity: data.orgAddress?.city || '',
         orgPostalCodeZipCode: data.orgAddress?.postalcodeZipcode || '',
-        orgHeadOfficeStreetAddress: data.orgAttorneyAddress?.streetAddress || '',
+        orgHeadOfficeStreetAddress:
+          data.orgAttorneyAddress?.streetAddress || '',
         orgHeadOfficeAddressOther: data.orgAttorneyAddress?.addressOther || '',
         orgHeadOfficeCity: data.orgAttorneyAddress?.city || '',
         orgHeadOfficeProvince: data.orgAttorneyAddress?.provinceState || '',
@@ -115,7 +116,7 @@ export const AddEditOrgForm = () => {
     (fieldName, value) => {
       if (watch(fieldName) !== value) {
         setValue(fieldName, value)
-        if (value.trim().length > 0) {
+        if (value && value.trim().length > 0) {
           trigger(fieldName)
         }
       }
@@ -598,6 +599,7 @@ export const AddEditOrgForm = () => {
                   control={control}
                   render={({ field }) => (
                     <AddressAutocomplete
+                      className="orgStreetAddress"
                       {...field}
                       onSelectAddress={(address) => {
                         if (typeof address === 'string') {
@@ -706,7 +708,7 @@ export const AddEditOrgForm = () => {
                 <Controller
                   name="recordsAddress"
                   control={control}
-                  render={({ field }) => <AddressAutocomplete {...field} />}
+                  render={({ field }) => <AddressAutocomplete className='recordsAddress' {...field} />}
                 />
               </Box>
             </Box>

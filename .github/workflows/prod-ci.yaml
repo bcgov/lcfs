@@ -259,20 +259,20 @@ jobs:
       PRE_RELEASE: ${{ needs.set-pre-release.outputs.PRE_RELEASE }}
 
     steps:
+      - name: Ask for approval for LCFS ${{env.IMAGE_TAG }} Prod deployment
+        uses: trstringer/manual-approval@v1.6.0
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,prv-proton,Grulin
+          minimum-approvals: 2
+          issue-title: "LCFS ${{env.VERSION }}-${{env.PRE_RELEASE }} Prod Deployment."
+
       - name: Checkout Manifest repository
         uses: actions/checkout@v3
         with:
           repository: bcgov-c/tenant-gitops-d2bd59
           ref: main
           ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
-
-      - name: Ask for approval for LCFS ${{env.IMAGE_TAG }} Prod deployment
-        uses: trstringer/manual-approval@v1.6.0
-        with:
-          secret: ${{ github.TOKEN }}
-          approvers: AlexZorkin,kuanfandevops,hamed-valiollahi,airinggov,areyeslo,dhaselhan,Grulin
-          minimum-approvals: 2
-          issue-title: "LCFS ${{env.VERSION }}-${{env.PRE_RELEASE }} Prod Deployment."
 
       - name: Restore oc command from Cache
         uses: actions/cache@v4.2.0

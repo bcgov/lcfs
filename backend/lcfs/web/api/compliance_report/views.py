@@ -4,6 +4,7 @@ from starlette.responses import StreamingResponse
 from typing import List, Literal
 
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.export import ComplianceReportExporter
@@ -182,11 +183,14 @@ async def create_supplemental_report(
     request: Request,
     report_id: int,
     service: ComplianceReportServices = Depends(),
+    document_service: DocumentService = Depends(),
 ) -> ComplianceReportBaseSchema:
     """
     Create a supplemental compliance report.
     """
-    return await service.create_supplemental_report(report_id, request.user)
+    new_report = await service.create_supplemental_report(report_id, request.user)
+    await document_service.copy_documents(report_id, new_report.compliance_report_id)
+    return new_report
 
 
 @router.post(
@@ -199,11 +203,14 @@ async def create_government_adjustment(
     request: Request,
     report_id: int,
     service: ComplianceReportServices = Depends(),
+    document_service: DocumentService = Depends(),
 ) -> ComplianceReportBaseSchema:
     """
     Create a government adjustment.
     """
-    return await service.create_analyst_adjustment_report(report_id, request.user)
+    new_report = await service.create_analyst_adjustment_report(report_id, request.user)
+    await document_service.copy_documents(report_id, new_report.compliance_report_id)
+    return new_report
 
 
 @router.get(

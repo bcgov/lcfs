@@ -59,10 +59,14 @@ export const AddEditFuelSupplies = () => {
 
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
-  const { data, isLoading: fuelSuppliesLoading } = useGetFuelSuppliesList({
-    complianceReportId,
-    changelog: isSupplemental
-  })
+  const { data: fuelSupplyData, isLoading: fuelSuppliesLoading } =
+    useGetFuelSuppliesList(
+      {
+        complianceReportId,
+        changelog: isSupplemental
+      },
+      {}
+    )
 
   const gridOptions = useMemo(
     () => ({
@@ -112,8 +116,8 @@ export const AddEditFuelSupplies = () => {
   const onGridReady = useCallback(
     async (params) => {
       setGridApi(params.api)
-      if (!isArrayEmpty(data)) {
-        const updatedRowData = data.fuelSupplies.map((item) => {
+      if (!isArrayEmpty(fuelSupplyData)) {
+        const updatedRowData = fuelSupplyData.fuelSupplies.map((item) => {
           return {
             ...item,
             complianceReportId, // This takes current reportId, important for versioning
@@ -135,7 +139,7 @@ export const AddEditFuelSupplies = () => {
         })
       }, 100)
     },
-    [data, complianceReportId, compliancePeriod, isSupplemental]
+    [fuelSupplyData, complianceReportId, compliancePeriod, isSupplemental]
   )
 
   const getSchema = (compliancePeriod) => {
@@ -156,8 +160,8 @@ export const AddEditFuelSupplies = () => {
   }, [isSupplemental, isEarlyIssuance, errors, optionsData, warnings])
 
   useEffect(() => {
-    if (!fuelSuppliesLoading && !isArrayEmpty(data)) {
-      const updatedRowData = data.fuelSupplies.map((item) => {
+    if (!fuelSuppliesLoading && !isArrayEmpty(fuelSupplyData)) {
+      const updatedRowData = fuelSupplyData.fuelSupplies.map((item) => {
         return {
           ...item,
           complianceReportId, // This takes current reportId, important for versioning
@@ -175,7 +179,7 @@ export const AddEditFuelSupplies = () => {
   }, [
     compliancePeriod,
     complianceReportId,
-    data,
+    fuelSupplyData,
     fuelSuppliesLoading,
     isSupplemental
   ])
@@ -306,6 +310,14 @@ export const AddEditFuelSupplies = () => {
           compliancePeriod
         }
       )
+
+      // Clear any existing errors / warnings
+      params.api.forEachNode((rowNode) => {
+        rowNode.updateData({
+          ...rowNode.data,
+          validationStatus: undefined
+        })
+      })
     }
   }
 

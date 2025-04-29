@@ -62,6 +62,18 @@ class LCFS_Constants:
         "2024"  # First year that the new LCFS Legislation takes effect
     )
 
+    # Export credit ledger
+    CREDIT_LEDGER_EXPORT_MEDIA_TYPE = "application/vnd.ms-excel"
+    CREDIT_LEDGER_EXPORT_COLUMNS = [
+        SpreadsheetColumn("Compliance year", "int"),
+        SpreadsheetColumn("Available balance", "int"),
+        SpreadsheetColumn("Compliance units", "int"),
+        SpreadsheetColumn("Transaction type", "text"),
+        SpreadsheetColumn("Transaction date", "date"),
+    ]
+    CREDIT_LEDGER_EXPORT_SHEETNAME = "Credit ledger"
+    CREDIT_LEDGER_EXPORT_FILENAME = "Credit-ledger"
+
 
 class FILE_MEDIA_TYPE(Enum):
     PDF = "application/pdf"

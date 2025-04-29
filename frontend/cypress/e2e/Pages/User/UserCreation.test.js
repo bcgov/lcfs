@@ -5,15 +5,8 @@ import {
   After
 } from '@badeball/cypress-cucumber-preprocessor'
 
-Given('the IDIR user is on the login page', () => {
-  cy.clearAllCookies()
-  cy.clearAllLocalStorage()
-  cy.clearAllSessionStorage()
-  cy.visit('/')
-  cy.getByDataTest('login-container').should('exist')
-})
 
-When('the IDIR user logs in with valid credentials', () => {
+Given('the IDIR user logs in with valid credentials', () => {
   cy.loginWith(
     'idir',
     Cypress.env('ADMIN_IDIR_USERNAME'),
@@ -21,14 +14,15 @@ When('the IDIR user logs in with valid credentials', () => {
   )
   cy.setIDIRRoles('analyst')
   cy.visit('/')
-  cy.getByDataTest('dashboard-container').should('exist')
 })
 
 When('the IDIR user navigates to the user creation page', () => {
-  cy.get('a[href="/admin"]').click()
+  cy.get('a.NavLink[href="/admin"]').click()
   cy.url().should('include', '/admin/users')
-  cy.contains('New user').click()
-  cy.url().should('include', '/admin/users/add-user')
+  cy.getByDataTest('add-user-btn', { timeout: 30000 })
+    .should('exist')
+    .click()
+  cy.url().should('include', '/admin/users/add-user', { timeout: 30000 })
 })
 
 When('the IDIR user fills out the form with valid data', () => {

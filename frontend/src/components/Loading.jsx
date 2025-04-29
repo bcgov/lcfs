@@ -7,9 +7,9 @@ import borders from '@/themes/base/borders'
 
 const Loading = ({ message = 'Loading...', fixed = false }) => {
   return (
-    <Box
+    <div
       className="text-center"
-      sx={{
+      style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -23,8 +23,8 @@ const Loading = ({ message = 'Loading...', fixed = false }) => {
       }}
       data-test="loading"
     >
-      <Box
-        sx={{
+      <div
+        style={{
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
@@ -39,8 +39,8 @@ const Loading = ({ message = 'Loading...', fixed = false }) => {
         <BCTypography variant="subtitle1" sx={{ mt: 2 }} data-test="message">
           {message}
         </BCTypography>
-      </Box>
-    </Box>
+      </div>
+    </div>
   )
 }
 

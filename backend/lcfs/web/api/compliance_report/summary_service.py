@@ -1,7 +1,9 @@
 import re
 import structlog
 from datetime import datetime
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
+from typing import List, Tuple, Dict, Optional, Union
+
 from fastapi import Depends
 from sqlalchemy import inspect
 from typing import List, Tuple, Dict, Optional, Union, Any
@@ -179,7 +181,10 @@ class ComplianceReportSummaryService:
         )
 
         # Update gasoline/diesel/jet_fuel fields
-        value = int(getattr(summary_obj, column_key) or 0)
+        if line == 11:  # Line 11 is the penalty and needs decimals
+            value = float(getattr(summary_obj, column_key) or 0.0)
+        else:  # Other lines (1-10) are volumes and should be integers
+            value = int(getattr(summary_obj, column_key) or 0)
 
         self._assign_fuel_value(existing_element, column_key, value)
 
@@ -270,7 +275,10 @@ class ComplianceReportSummaryService:
         return new_element
 
     def _assign_fuel_value(
-        self, element: ComplianceReportSummaryRowSchema, column_key: str, value: int
+        self,
+        element: ComplianceReportSummaryRowSchema,
+        column_key: str,
+        value: Union[int, float],
     ) -> None:
         """Assign the correct field (gasoline/diesel/jet_fuel) on the row based on column_key suffix."""
         if column_key.endswith("_gasoline"):
@@ -583,138 +591,249 @@ class ComplianceReportSummaryService:
         compliance_period: int,
         prev_summary: ComplianceReportSummary,
     ) -> List[ComplianceReportSummaryRowSchema]:
-        # line 3
-        tracked_totals = {
-            category: fossil_quantities.get(category, 0)
-            + renewable_quantities.get(category, 0)
+        # Define constants as Decimal
+        DECIMAL_ZERO = Decimal("0")
+        GAS_PERC = Decimal("0.05")
+        DIESEL_PERC = Decimal("0.04")
+        GAS_RATE = Decimal(str(PRESCRIBED_PENALTY_RATE["gasoline"]))
+        DIESEL_RATE = Decimal(str(PRESCRIBED_PENALTY_RATE["diesel"]))
+        JET_RATE = Decimal(str(PRESCRIBED_PENALTY_RATE["jet_fuel"]))
+
+        # Convert input dicts to use Decimal values
+        def to_decimal_dict(d):
+            return {k: Decimal(str(v or 0)) for k, v in d.items()}
+
+        decimal_fossil_quantities = to_decimal_dict(fossil_quantities)
+        decimal_renewable_quantities = to_decimal_dict(renewable_quantities)
+        decimal_previous_retained = to_decimal_dict(previous_retained)
+        decimal_previous_obligation = to_decimal_dict(previous_obligation)
+        decimal_notional_transfers_sums = to_decimal_dict(notional_transfers_sums)
+
+        # line 3: Use Decimal
+        decimal_tracked_totals = {
+            category: decimal_fossil_quantities.get(category, DECIMAL_ZERO)
+            + decimal_renewable_quantities.get(category, DECIMAL_ZERO)
             for category in ["gasoline", "diesel", "jet_fuel"]
         }
 
-        # line 4
+        # line 4: Determine jet fuel percentage as Decimal
         if 2024 <= compliance_period <= 2027:
-            jet_fuel_percentage = 0
+            jet_fuel_perc = DECIMAL_ZERO
         elif compliance_period == 2028:
-            jet_fuel_percentage = 1 / 100
+            jet_fuel_perc = Decimal("0.01")
         elif compliance_period == 2029:
-            jet_fuel_percentage = 2 / 100
+            jet_fuel_perc = Decimal("0.02")
         else:
-            jet_fuel_percentage = 3 / 100
+            jet_fuel_perc = Decimal("0.03")
 
-        eligible_renewable_fuel_required = {
-            "gasoline": round(tracked_totals["gasoline"] * 0.05),
-            "diesel": round(tracked_totals["diesel"] * 0.04),
-            "jet_fuel": round(tracked_totals["jet_fuel"] * jet_fuel_percentage),
+        # Calculate required amounts using Decimal
+        decimal_eligible_renewable_fuel_required = {
+            "gasoline": decimal_tracked_totals.get("gasoline", DECIMAL_ZERO) * GAS_PERC,
+            "diesel": decimal_tracked_totals.get("diesel", DECIMAL_ZERO) * DIESEL_PERC,
+            "jet_fuel": decimal_tracked_totals.get("jet_fuel", DECIMAL_ZERO)
+            * jet_fuel_perc,
         }
 
-        # line 6
-        retained_renewables = {"gasoline": 0.0, "diesel": 0.0, "jet_fuel": 0.0}
-        # line 8
-        deferred_renewables = {"gasoline": 0.0, "diesel": 0.0, "jet_fuel": 0.0}
+        # line 6 & 8: Initialize with Decimal, compare with Decimal
+        decimal_retained_renewables = {
+            "gasoline": DECIMAL_ZERO,
+            "diesel": DECIMAL_ZERO,
+            "jet_fuel": DECIMAL_ZERO,
+        }
+        decimal_deferred_renewables = {
+            "gasoline": DECIMAL_ZERO,
+            "diesel": DECIMAL_ZERO,
+            "jet_fuel": DECIMAL_ZERO,
+        }
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
-            required_renewable_quantity = eligible_renewable_fuel_required.get(category)
-            previous_required_renewable_quantity = getattr(
-                prev_summary,
-                f"""line_4_eligible_renewable_fuel_required_{
-                    category}""",
+            # Get previous required amount as Decimal (assuming it was stored correctly or converting if needed)
+            # For simplicity, let's assume prev_summary values are floats/ints that need conversion
+            previous_required_renewable_quantity_dec = Decimal(
+                str(
+                    getattr(
+                        prev_summary,
+                        f"line_4_eligible_renewable_fuel_required_{category}",
+                        0,  # Default to 0 if attribute missing
+                    )
+                    or 0
+                )
+            )  # Ensure None becomes 0
+
+            current_required_quantity_dec = (
+                decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
             )
 
-            # only carry over line 6,8 if required quantities have not changed
-            if previous_required_renewable_quantity == required_renewable_quantity:
-                retained_renewables[category] = getattr(
-                    prev_summary,
-                    f"""line_6_renewable_fuel_retained_{
-                        category}""",
+            # Compare Decimals
+            if (
+                previous_required_renewable_quantity_dec
+                == current_required_quantity_dec
+            ):
+                # Convert previous retained/deferred to Decimal
+                decimal_retained_renewables[category] = Decimal(
+                    str(
+                        getattr(
+                            prev_summary,
+                            f"line_6_renewable_fuel_retained_{category}",
+                            0,
+                        )
+                        or 0
+                    )
                 )
-                deferred_renewables[category] = getattr(
-                    prev_summary, f"""line_8_obligation_deferred_{category}"""
+                decimal_deferred_renewables[category] = Decimal(
+                    str(
+                        getattr(
+                            prev_summary, f"line_8_obligation_deferred_{category}", 0
+                        )
+                        or 0
+                    )
                 )
 
-        # line 10
-        net_renewable_supplied = {
-            category:
-            # line 2
-            renewable_quantities.get(category, 0) +
-            # line 5
-            notional_transfers_sums.get(category, 0) -
-            # line 6
-            retained_renewables.get(category, 0) +
-            # line 7
-            previous_retained.get(category, 0) +
-            # line 8
-            deferred_renewables.get(category, 0) -
-            # line 9
-            previous_obligation.get(category, 0)
+        # line 10: Calculate net supplied using Decimal
+        decimal_net_renewable_supplied = {
+            category: decimal_renewable_quantities.get(category, DECIMAL_ZERO)
+            + decimal_notional_transfers_sums.get(category, DECIMAL_ZERO)
+            - decimal_retained_renewables.get(category, DECIMAL_ZERO)
+            + decimal_previous_retained.get(category, DECIMAL_ZERO)
+            + decimal_deferred_renewables.get(category, DECIMAL_ZERO)
+            - decimal_previous_obligation.get(category, DECIMAL_ZERO)
             for category in ["gasoline", "diesel", "jet_fuel"]
         }
 
-        # line 11
-        non_compliance_penalties = {
-            category: round(
-                max(
-                    0,
-                    eligible_renewable_fuel_required.get(category, 0)
-                    - net_renewable_supplied.get(category, 0),
-                )
-                * PRESCRIBED_PENALTY_RATE[category],
-                2,
-            )
-            for category in ["gasoline", "diesel", "jet_fuel"]
+        # line 11: Calculate penalties using Decimal and quantize
+        decimal_non_compliance_penalties = {}
+        penalty_rates = {
+            "gasoline": GAS_RATE,
+            "diesel": DIESEL_RATE,
+            "jet_fuel": JET_RATE,
         }
+        for category in ["gasoline", "diesel", "jet_fuel"]:
+            shortfall = max(
+                DECIMAL_ZERO,
+                decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
+                - decimal_net_renewable_supplied.get(category, DECIMAL_ZERO),
+            )
+            penalty = (shortfall * penalty_rates[category]).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+            decimal_non_compliance_penalties[category] = penalty
 
+        # Prepare summary_lines dictionary, converting Decimal back to float for schema compatibility
         summary_lines = {
             1: {
-                "gasoline": fossil_quantities.get("gasoline", 0),
-                "diesel": fossil_quantities.get("diesel", 0),
-                "jet_fuel": fossil_quantities.get("jet_fuel", 0),
+                "gasoline": float(
+                    decimal_fossil_quantities.get("gasoline", DECIMAL_ZERO)
+                ),
+                "diesel": float(decimal_fossil_quantities.get("diesel", DECIMAL_ZERO)),
+                "jet_fuel": float(
+                    decimal_fossil_quantities.get("jet_fuel", DECIMAL_ZERO)
+                ),
             },
             2: {
-                "gasoline": renewable_quantities.get("gasoline", 0),
-                "diesel": renewable_quantities.get("diesel", 0),
-                "jet_fuel": renewable_quantities.get("jet_fuel", 0),
+                "gasoline": float(
+                    decimal_renewable_quantities.get("gasoline", DECIMAL_ZERO)
+                ),
+                "diesel": float(
+                    decimal_renewable_quantities.get("diesel", DECIMAL_ZERO)
+                ),
+                "jet_fuel": float(
+                    decimal_renewable_quantities.get("jet_fuel", DECIMAL_ZERO)
+                ),
             },
             3: {
-                "gasoline": tracked_totals.get("gasoline", 0),
-                "diesel": tracked_totals.get("diesel", 0),
-                "jet_fuel": tracked_totals.get("jet_fuel", 0),
+                "gasoline": float(decimal_tracked_totals.get("gasoline", DECIMAL_ZERO)),
+                "diesel": float(decimal_tracked_totals.get("diesel", DECIMAL_ZERO)),
+                "jet_fuel": float(decimal_tracked_totals.get("jet_fuel", DECIMAL_ZERO)),
             },
             4: {
-                "gasoline": eligible_renewable_fuel_required.get("gasoline", 0),
-                "diesel": eligible_renewable_fuel_required.get("diesel", 0),
-                "jet_fuel": eligible_renewable_fuel_required.get("jet_fuel", 0),
+                "gasoline": float(
+                    decimal_eligible_renewable_fuel_required.get(
+                        "gasoline", DECIMAL_ZERO
+                    )
+                ),
+                "diesel": float(
+                    decimal_eligible_renewable_fuel_required.get("diesel", DECIMAL_ZERO)
+                ),
+                "jet_fuel": float(
+                    decimal_eligible_renewable_fuel_required.get(
+                        "jet_fuel", DECIMAL_ZERO
+                    )
+                ),
             },
-            # Notionally transferred value
-            5: notional_transfers_sums,
+            5: {
+                "gasoline": float(
+                    decimal_notional_transfers_sums.get("gasoline", DECIMAL_ZERO)
+                ),
+                "diesel": float(
+                    decimal_notional_transfers_sums.get("diesel", DECIMAL_ZERO)
+                ),
+                "jet_fuel": float(
+                    decimal_notional_transfers_sums.get("jet_fuel", DECIMAL_ZERO)
+                ),
+            },
             6: {
-                "gasoline": retained_renewables.get("gasoline", 0),
-                "diesel": retained_renewables.get("diesel", 0),
-                "jet_fuel": retained_renewables.get("jet_fuel", 0),
+                "gasoline": float(
+                    decimal_retained_renewables.get("gasoline", DECIMAL_ZERO)
+                ),
+                "diesel": float(
+                    decimal_retained_renewables.get("diesel", DECIMAL_ZERO)
+                ),
+                "jet_fuel": float(
+                    decimal_retained_renewables.get("jet_fuel", DECIMAL_ZERO)
+                ),
             },
             7: {
-                "gasoline": previous_retained.get("gasoline", 0),
-                "diesel": previous_retained.get("diesel", 0),
-                "jet_fuel": previous_retained.get("jet_fuel", 0),
+                "gasoline": float(
+                    decimal_previous_retained.get("gasoline", DECIMAL_ZERO)
+                ),
+                "diesel": float(decimal_previous_retained.get("diesel", DECIMAL_ZERO)),
+                "jet_fuel": float(
+                    decimal_previous_retained.get("jet_fuel", DECIMAL_ZERO)
+                ),
             },
             8: {
-                "gasoline": deferred_renewables.get("gasoline", 0),
-                "diesel": deferred_renewables.get("diesel", 0),
-                "jet_fuel": deferred_renewables.get("jet_fuel", 0),
+                "gasoline": float(
+                    decimal_deferred_renewables.get("gasoline", DECIMAL_ZERO)
+                ),
+                "diesel": float(
+                    decimal_deferred_renewables.get("diesel", DECIMAL_ZERO)
+                ),
+                "jet_fuel": float(
+                    decimal_deferred_renewables.get("jet_fuel", DECIMAL_ZERO)
+                ),
             },
-            # Renewable obligation added from previous period
             9: {
-                "gasoline": previous_obligation.get("gasoline", 0),
-                "diesel": previous_obligation.get("diesel", 0),
-                "jet_fuel": previous_obligation.get("jet_fuel", 0),
+                "gasoline": float(
+                    decimal_previous_obligation.get("gasoline", DECIMAL_ZERO)
+                ),
+                "diesel": float(
+                    decimal_previous_obligation.get("diesel", DECIMAL_ZERO)
+                ),
+                "jet_fuel": float(
+                    decimal_previous_obligation.get("jet_fuel", DECIMAL_ZERO)
+                ),
             },
             10: {
-                "gasoline": net_renewable_supplied.get("gasoline", 0),
-                "diesel": net_renewable_supplied.get("diesel", 0),
-                "jet_fuel": net_renewable_supplied.get("jet_fuel", 0),
+                "gasoline": float(
+                    decimal_net_renewable_supplied.get("gasoline", DECIMAL_ZERO)
+                ),
+                "diesel": float(
+                    decimal_net_renewable_supplied.get("diesel", DECIMAL_ZERO)
+                ),
+                "jet_fuel": float(
+                    decimal_net_renewable_supplied.get("jet_fuel", DECIMAL_ZERO)
+                ),
             },
             11: {
-                "gasoline": non_compliance_penalties.get("gasoline", 0),
-                "diesel": non_compliance_penalties.get("diesel", 0),
-                "jet_fuel": non_compliance_penalties.get("jet_fuel", 0),
+                "gasoline": float(
+                    decimal_non_compliance_penalties.get("gasoline", DECIMAL_ZERO)
+                ),
+                "diesel": float(
+                    decimal_non_compliance_penalties.get("diesel", DECIMAL_ZERO)
+                ),
+                "jet_fuel": float(
+                    decimal_non_compliance_penalties.get("jet_fuel", DECIMAL_ZERO)
+                ),
             },
         }
 
@@ -731,12 +850,14 @@ class ComplianceReportSummaryService:
                     else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
                 ),
                 field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
-                gasoline=values.get("gasoline", 0),
-                diesel=values.get("diesel", 0),
-                jet_fuel=values.get("jet_fuel", 0),
-                total_value=values.get("gasoline", 0)
-                + values.get("diesel", 0)
-                + values.get("jet_fuel", 0),
+                gasoline=float(values.get("gasoline", 0)),
+                diesel=float(values.get("diesel", 0)),
+                jet_fuel=float(values.get("jet_fuel", 0)),
+                total_value=float(
+                    values.get("gasoline", 0)
+                    + values.get("diesel", 0)
+                    + values.get("jet_fuel", 0)
+                ),
                 format=(FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER),
             )
             for line, values in summary_lines.items()
@@ -797,7 +918,12 @@ class ComplianceReportSummaryService:
             calculated_penalty_units if (calculated_penalty_units < 0) else 0
         )
         non_compliance_penalty_payable = (
-            int((non_compliance_penalty_payable_units * Decimal(-600.0)).max(0))
+            int(
+                (
+                    Decimal(str(non_compliance_penalty_payable_units))
+                    * Decimal("-600.0")
+                ).max(Decimal("0"))
+            )
             if non_compliance_penalty_payable_units < 0
             else 0
         )  # line 21
@@ -847,30 +973,19 @@ class ComplianceReportSummaryService:
         non_compliance_penalty_payable_units: int,
         renewable_fuel_target_summary: List[ComplianceReportSummaryRowSchema],
     ) -> List[ComplianceReportSummaryRowSchema]:
-        non_compliance_penalty_payable = int(
-            (non_compliance_penalty_payable_units * Decimal(-600.0)).max(0)
-        )
-
-        # Find line 11 (don't use legacy conversion)
-        line_11 = next(
-            (row for row in renewable_fuel_target_summary if str(row.line) == "11"),
-            None,
-        )
-
-        if line_11 is None:
-            # If line 11 is not found, create a default row with total_value of 0
-            line_11 = ComplianceReportSummaryRowSchema(
-                line=11,
-                format="number",
-                description="Non-compliance penalty",
-                field="total_value",
-                total_value=0,
-            )
+        non_compliance_penalty_payable = (
+            Decimal(str(non_compliance_penalty_payable_units)) * Decimal("-600.0")
+        ).max(Decimal("0"))
+        line_11 = next(row for row in renewable_fuel_target_summary if row.line == 11)
+        # Convert line 11 total value to Decimal for accurate addition
+        line_11_total_decimal = Decimal(str(line_11.total_value))
 
         non_compliance_summary_lines = {
-            11: {"total_value": line_11.total_value},
+            11: {"total_value": line_11_total_decimal},
             21: {"total_value": non_compliance_penalty_payable},
-            None: {"total_value": non_compliance_penalty_payable + line_11.total_value},
+            None: {
+                "total_value": non_compliance_penalty_payable + line_11_total_decimal
+            },
         }
 
         non_compliance_penalty_summary = [
@@ -882,10 +997,10 @@ class ComplianceReportSummaryService:
                     ].format(non_compliance_penalty_payable_units * -1)
                 ),
                 field=NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line]["field"],
-                gasoline=values.get("gasoline", 0),
-                diesel=values.get("diesel", 0),
-                jet_fuel=values.get("jet_fuel", 0),
-                total_value=values.get("total_value", 0),
+                gasoline=float(values.get("gasoline", 0)),
+                diesel=float(values.get("diesel", 0)),
+                jet_fuel=float(values.get("jet_fuel", 0)),
+                total_value=float(values.get("total_value", 0)),
                 format=FORMATS.CURRENCY,
             )
             for line, values in non_compliance_summary_lines.items()

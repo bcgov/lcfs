@@ -27,7 +27,7 @@ export const AssessmentCard = ({
   complianceReportId,
   alertRef,
   chain,
-  isQuarterlyReport=false
+  isQuarterlyReport = false
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
@@ -97,12 +97,13 @@ export const AssessmentCard = ({
           : t('report:orgDetails')
       }
       editButton={
-        !isEditing &&
-        currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && {
-          onClick: onEdit,
-          text: 'Edit',
-          id: 'edit'
-        }
+        (!isEditing &&
+          currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && {
+            onClick: onEdit,
+            text: 'Edit',
+            id: 'edit'
+          }) ||
+        null
       }
       content={
         <>

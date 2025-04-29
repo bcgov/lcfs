@@ -8,10 +8,10 @@ describe('Add Organization Test Suite', () => {
   beforeEach(() => {
     cy.loginWith(
       'idir',
-      Cypress.env('IDIR_TEST_USER'),
-      Cypress.env('IDIR_TEST_PASS')
+      Cypress.env('ADMIN_IDIR_USERNAME'),
+      Cypress.env('ADMIN_IDIR_PASSWORD')
     )
-    cy.visit('/organization/add')
+    cy.visit('/organizations/add-org')
   })
 
   afterEach(() => {
@@ -64,21 +64,25 @@ describe('Add Organization Test Suite', () => {
 
   context('Form Submission', () => {
     it('submits the form successfully with valid data', () => {
-      cy.getByDataTest('orgLegalName').type('Legal name')
-      cy.getByDataTest('orgOperatingName').type('Operating name')
-      cy.getByDataTest('orgEmailAddress').type('abc@domain.com')
-      cy.getByDataTest('orgPhoneNumber').type('12345678')
+      cy.get('#orgLegalName').type('Legal name')
+      cy.get('#orgOperatingName').type('Operating name')
+      cy.get('#orgEmailAddress').type('abc@domain.com')
+      cy.get('#orgPhoneNumber').type('12345678')
       cy.getByDataTest('orgSupplierType1').click()
       cy.getByDataTest('orgRegForTransfers2').click()
-      cy.getByDataTest('orgEDRMSRecord').type('12345')
-      cy.getByDataTest('orgStreetAddress').type('Street address')
-      cy.getByDataTest('orgAddressOther').type('Address other')
-      cy.getByDataTest('orgCity').type('City')
-      cy.getByDataTest('orgPostalCodeZipCode').type('V3B 0G2')
-      cy.getByDataTest('orgAttorneyStreetAddress').type('Street address')
-      cy.getByDataTest('orgAttorneyAddressOther').type('Address other')
-      cy.getByDataTest('orgAttorneyCity').type('City')
-      cy.getByDataTest('orgAttorneyPostalCodeZipCode').type('12345')
+      cy.getByDataTest('hasEarlyIssuanceNo').click()
+      cy.get('#orgEDRMSRecord').type('12345')
+      cy.get('.orgStreetAddress input').type('Street address')
+      cy.get('#orgAddressOther').type('Address other')
+      cy.get('#orgCity').type('City')
+      cy.get('#orgPostalCodeZipCode').type('V3B 0G2')
+      cy.get('.recordsAddress input').type('123 Street, BC')
+      cy.get('#orgHeadOfficeStreetAddress').type('Street address')
+      cy.get('#orgHeadOfficeAddressOther').type('Address other')
+      cy.get('#orgHeadOfficeCity').type('City')
+      cy.get('#orgHeadOfficeProvince').type('Province')
+      cy.get('#orgHeadOfficeCountry').type('Country')
+      cy.get('#orgHeadOfficePostalCodeZipCode').type('12345')
 
       cy.getByDataTest('saveOrganization').click()
       cy.getByDataTest('alert-box').should(

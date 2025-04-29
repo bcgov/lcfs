@@ -1,8 +1,6 @@
 from collections import defaultdict
 
-from datetime import date
 import math
-from fastapi.exceptions import RequestValidationError
 import structlog
 import uuid
 from fastapi import Depends
@@ -41,6 +39,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportViewSchema,
     ChainedComplianceReportSchema,
 )
+from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.role.schema import user_has_roles
@@ -56,7 +55,9 @@ class ComplianceReportServices:
         repo: ComplianceReportRepository = Depends(),
         org_repo: OrganizationsRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
+        final_supply_equipment_service: FinalSupplyEquipmentServices = Depends(),
     ) -> None:
+        self.final_supply_equipment_service = final_supply_equipment_service
         self.org_repo = org_repo
         self.repo = repo
         self.snapshot_services = snapshot_services
@@ -104,7 +105,11 @@ class ComplianceReportServices:
             reporting_frequency=reporting_frequency,
             compliance_report_group_uuid=group_uuid,  # New group_uuid for the series
             version=0,  # Start with version 0
-            nickname=report_data.nickname or "Original Report" if reporting_frequency == ReportingFrequency.ANNUAL else 'Early Issuance Report',
+            nickname=(
+                report_data.nickname or "Original Report"
+                if reporting_frequency == ReportingFrequency.ANNUAL
+                else "Early Issuance Report"
+            ),
             summary=ComplianceReportSummary(),  # Create an empty summary object
             legacy_id=report_data.legacy_id,
             create_user=user.keycloak_username,
@@ -187,11 +192,18 @@ class ComplianceReportServices:
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
 
+        # Copy over FSE
+        await self.final_supply_equipment_service.copy_to_report(
+            existing_report_id,
+            new_report.compliance_report_id,
+            current_report.organization_id,
+        )
+
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
     async def create_supplemental_report(
-        self, report_id: int, user: UserProfile = None, legacy_id: int = None
+        self, original_report_id: int, user: UserProfile = None, legacy_id: int = None
     ) -> ComplianceReportBaseSchema:
         """
         Creates a new supplemental compliance report.
@@ -199,7 +211,7 @@ class ComplianceReportServices:
         Supplemental reports are only allowed if the status of the current report is 'Assessed'.
         """
         # Fetch the current report using the provided report_id
-        current_report = await self.repo.get_compliance_report_by_id(report_id)
+        current_report = await self.repo.get_compliance_report_by_id(original_report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -279,6 +291,13 @@ class ComplianceReportServices:
 
         # Create the history record for the new supplemental report
         await self.repo.add_compliance_report_history(new_report, user)
+
+        # Copy over FSE
+        await self.final_supply_equipment_service.copy_to_report(
+            original_report_id,
+            new_report.compliance_report_id,
+            current_report.organization_id,
+        )
 
         return ComplianceReportBaseSchema.model_validate(new_report)
 
@@ -721,6 +740,8 @@ class ComplianceReportServices:
         for group_uuid, versions in group_map.items():
             latest_version = max(versions.keys())
             latest_item = versions[latest_version]
+            if hasattr(latest_item, "compliance_units"):
+                latest_item.compliance_units = round(latest_item.compliance_units)
 
             if latest_item.action_type == "DELETE":
                 continue

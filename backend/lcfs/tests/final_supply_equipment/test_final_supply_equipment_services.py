@@ -1,13 +1,16 @@
+from datetime import date
+
 from unittest.mock import MagicMock, AsyncMock
 
 import pytest
 from fastapi import HTTPException
 
-from lcfs.db.models import LevelOfEquipment
+from lcfs.db.models import LevelOfEquipment, Organization
 from lcfs.db.models.compliance import FinalSupplyEquipment
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.final_supply_equipment.schema import (
     LevelOfEquipmentSchema,
+    FinalSupplyEquipmentsSchema,
 )
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.fuel_code.schema import EndUserTypeSchema
@@ -45,13 +48,22 @@ def mock_comp_report_repo():
 
 
 @pytest.fixture
-def service(mock_request, mock_repo, mock_comp_report_repo):
+def mock_org_repo():
+    """
+    Return an AsyncMock for the OrganizationRepository.
+    """
+    return AsyncMock()
+
+
+@pytest.fixture
+def service(mock_request, mock_repo, mock_comp_report_repo, mock_org_repo):
     """
     Instantiate the service class with mocked dependencies.
     """
     return FinalSupplyEquipmentServices(
         repo=mock_repo,
         compliance_report_repo=mock_comp_report_repo,
+        organization_repo=mock_org_repo,
     )
 
 
@@ -149,15 +161,13 @@ async def test_convert_to_fse_model(
 
 
 @pytest.mark.anyio
-async def test_get_fse_list_success(
-    service, mock_repo, valid_final_supply_equipment_schema
-):
+async def test_get_fse_list_success(service, mock_repo, valid_final_supply_equipment):
     """
     Test get_fse_list returns the correct schema with FSE data.
     """
     mock_repo.get_fse_list.return_value = [
-        valid_final_supply_equipment_schema,
-        valid_final_supply_equipment_schema,
+        valid_final_supply_equipment,
+        valid_final_supply_equipment,
     ]
 
     result = await service.get_fse_list(compliance_report_id=999)
@@ -167,13 +177,13 @@ async def test_get_fse_list_success(
 
 @pytest.mark.anyio
 async def test_get_final_supply_equipments_paginated(
-    service, mock_repo, valid_final_supply_equipment_schema
+    service, mock_repo, valid_final_supply_equipment
 ):
     """
     Test that paginated retrieval returns expected data and pagination info.
     """
     mock_repo.get_fse_paginated.return_value = (
-        [valid_final_supply_equipment_schema, valid_final_supply_equipment_schema],
+        [valid_final_supply_equipment, valid_final_supply_equipment],
         10,
     )
 
@@ -195,6 +205,7 @@ async def test_update_final_supply_equipment_success(
     mock_repo,
     valid_final_supply_equipment_schema,
     valid_final_supply_equipment_create_schema,
+    valid_final_supply_equipment,
 ):
     """
     Test updating an existing FSE with valid data.
@@ -203,9 +214,7 @@ async def test_update_final_supply_equipment_success(
     existing_fse.level_of_equipment.name = "OldLevel"
     mock_repo.get_final_supply_equipment_by_id.return_value = existing_fse
     mock_repo.get_level_of_equipment_by_name.return_value = MagicMock(name="NewLevel")
-    mock_repo.update_final_supply_equipment.return_value = (
-        valid_final_supply_equipment_schema
-    )
+    mock_repo.update_final_supply_equipment.return_value = valid_final_supply_equipment
 
     updated_fse = await service.update_final_supply_equipment(
         valid_final_supply_equipment_create_schema
@@ -234,7 +243,9 @@ async def test_update_final_supply_equipment_not_found(
 async def test_create_final_supply_equipment_success(
     service,
     mock_repo,
+    mock_org_repo,
     mock_request,
+    valid_final_supply_equipment,
     valid_final_supply_equipment_schema,
     valid_final_supply_equipment_create_schema,
 ):
@@ -242,17 +253,18 @@ async def test_create_final_supply_equipment_success(
     Test creating a new FSE with valid data.
     """
     mock_repo.get_current_seq_by_org_and_postal_code.return_value = 0
-    mock_repo.create_final_supply_equipment.return_value = (
-        valid_final_supply_equipment_schema
-    )
+    organization_id = 10
+    mock_repo.create_final_supply_equipment.return_value = valid_final_supply_equipment
     mock_repo.increment_seq_by_org_and_postal_code.return_value = None
+    mock_org_repo.get_organization.return_value = MagicMock(spec=Organization)
 
     new_fse = await service.create_final_supply_equipment(
-        valid_final_supply_equipment_create_schema, mock_request.user
+        valid_final_supply_equipment_create_schema, organization_id
     )
     assert new_fse is not None
     mock_repo.create_final_supply_equipment.assert_awaited_once()
     mock_repo.increment_seq_by_org_and_postal_code.assert_awaited_once()
+    mock_org_repo.get_organization.assert_awaited_once_with(organization_id)
 
 
 @pytest.mark.anyio
@@ -320,10 +332,14 @@ async def test_get_compliance_report_by_id_success(service, mock_comp_report_rep
     """
     Test fetching existing compliance report.
     """
-    mock_comp_report_repo.get_compliance_report_schema_by_id.return_value = MagicMock(id=123)
+    mock_comp_report_repo.get_compliance_report_schema_by_id.return_value = MagicMock(
+        id=123
+    )
     report = await service.get_compliance_report_by_id(123)
     assert report.id == 123
-    mock_comp_report_repo.get_compliance_report_schema_by_id.assert_awaited_once_with(123)
+    mock_comp_report_repo.get_compliance_report_schema_by_id.assert_awaited_once_with(
+        123
+    )
 
 
 @pytest.mark.anyio
@@ -335,3 +351,28 @@ async def test_get_compliance_report_by_id_not_found(service, mock_comp_report_r
     with pytest.raises(HTTPException, match="Compliance report not found") as exc:
         await service.get_compliance_report_by_id(99999)
     assert exc.value.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_copy_fse_between_reports(
+    service,
+    mock_repo,
+    mock_comp_report_repo,
+    mock_org_repo,
+    valid_final_supply_equipment,
+):
+    """
+    Tests copying FSE's from one report to another
+    """
+
+    mock_repo.get_fse_list.return_value = [valid_final_supply_equipment]
+    mock_repo.create_final_supply_equipment.return_value = valid_final_supply_equipment
+    mock_repo.get_current_seq_by_org_and_postal_code.return_value = 1
+    mock_org_repo.get_organization.return_value = MagicMock(spec=Organization)
+
+    await service.copy_to_report(1, 2, 1)
+
+    mock_repo.get_fse_list.assert_awaited_once()
+    mock_repo.create_final_supply_equipment.assert_awaited_once()
+    mock_repo.increment_seq_by_org_and_postal_code.assert_awaited_once()
+    mock_org_repo.get_organization.assert_awaited_once_with(1)
