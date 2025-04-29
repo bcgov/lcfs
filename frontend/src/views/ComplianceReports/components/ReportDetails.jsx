@@ -3,14 +3,16 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
+  Chip,
   CircularProgress,
   IconButton,
   Link
 } from '@mui/material'
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
+import BCAlert from '@/components/BCAlert'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
 import { Role } from '@/components/Role'
 import { StyledChip } from '@/components/StyledChip'
@@ -30,6 +32,7 @@ import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses'
 import { ROUTES, buildPath } from '@/routes/routes'
+import colors from '@/themes/base/colors'
 import { isArrayEmpty } from '@/utils/array.js'
 import { AllocationAgreementChangelog } from '@/views/AllocationAgreements/AllocationAgreementChangelog.jsx'
 import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
@@ -43,7 +46,25 @@ import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTrans
 import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog.jsx'
 import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary'
 import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
-import { Edit, ExpandMore } from '@mui/icons-material'
+import {
+  DeleteOutline,
+  Edit,
+  ExpandMore,
+  InfoOutlined
+} from '@mui/icons-material'
+
+const chipStyles = {
+  ml: 2,
+  color: colors.badgeColors.warning.text,
+  border: '1px solid rgba(108, 74, 0, 0.1)',
+  backgroundImage: `linear-gradient(195deg, ${colors.alerts.warning.border}, ${colors.alerts.warning.background})`,
+  fontWeight: 600,
+  '& .MuiChip-icon': {
+    color: colors.badgeColors.warning.text
+  },
+  boxShadow:
+    '0 1px 2px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255,255,255,0.5)'
+}
 
 const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   const { t } = useTranslation()
@@ -126,7 +147,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('report:activityLists.supplyOfFuel'),
-        index: 'fuelSupplies',
+        key: 'fuelSupplies',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL, {
@@ -156,7 +177,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('finalSupplyEquipment:fseTitle'),
-        index: 'fse',
+        key: 'finalSupplyEquipments',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS, {
@@ -172,7 +193,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('report:activityLists.allocationAgreements'),
-        index: 'allocationAgreements',
+        key: 'allocationAgreements',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS, {
@@ -201,7 +222,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('report:activityLists.notionalTransfers'),
-        index: 'notionalTransfers',
+        key: 'notionalTransfers',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS, {
@@ -227,7 +248,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('otherUses:summaryTitle'),
-        index: 'otherUses',
+        key: 'otherUses',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.OTHER_USE_FUELS, {
@@ -252,7 +273,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('fuelExport:fuelExportTitle'),
-        index: 'fuelExports',
+        key: 'fuelExports',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.FUEL_EXPORTS, {
@@ -343,14 +364,28 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
             changelog: isSupplemental
           }
         )
+        const scheduleData =
+          (!isLoading && activity.key ? data[activity.key] : data) ?? []
+
+        // Check if the accordion should be disabled
+        const hasNoData = isArrayEmpty(scheduleData)
+        const isDisabled = !canEdit && hasNoData
+        // Check if all records are marked as DELETE
+        const allRecordsDeleted =
+          Array.isArray(scheduleData) &&
+          scheduleData.length > 0 &&
+          scheduleData.every((item) => item.actionType === 'DELETE')
 
         return (
-          data &&
-          (!isArrayEmpty(data) || hasVersions) && (
+          ((scheduleData && !isArrayEmpty(scheduleData)) || hasVersions) && (
             <Accordion
               key={index}
-              expanded={expanded.includes(`panel${index}`)}
+              expanded={
+                expanded.includes(`panel${index}`) &&
+                (!isDisabled || shouldShowEditIcon(activity.name))
+              }
               onChange={onExpand(`panel${index}`)}
+              disabled={!shouldShowEditIcon(activity.name) && isDisabled}
             >
               <AccordionSummary
                 expandIcon={
@@ -359,6 +394,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                 aria-controls={`panel${index}-content`}
                 id={`panel${index}-header`}
                 data-test={`panel${index}-summary`}
+                sx={{
+                  '& .MuiAccordionSummary-content': { alignItems: 'center' }
+                }}
               >
                 <BCTypography
                   style={{ display: 'flex', alignItems: 'center' }}
@@ -384,12 +422,48 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                       </IconButton>
                     </Role>
                   )}{' '}
-                  {wasEdited(data?.[activity.index]) && (
+                  {wasEdited(data?.[activity.key]) && (
                     <StyledChip color="primary" label="Edited" />
                   )}
                 </BCTypography>
+                {allRecordsDeleted && (
+                  <Chip
+                    aria-label="all previous records deleted"
+                    icon={<DeleteOutline fontSize="small" />}
+                    label={t('Deleted')}
+                    color="warning"
+                    size="small"
+                    sx={{ ...chipStyles }}
+                  />
+                )}
+                {isDisabled && (
+                  <Chip
+                    aria-label="no records"
+                    icon={<InfoOutlined fontSize="small" />}
+                    label={t('Empty')}
+                    size="small"
+                    sx={{
+                      ...chipStyles,
+                      color: colors.alerts.error.color,
+                      '& .MuiChip-icon': {
+                        color: colors.alerts.error.color
+                      },
+                      backgroundImage: `linear-gradient(195deg, ${colors.alerts.error.border},${colors.alerts.error.background})`
+                    }}
+                  />
+                )}
               </AccordionSummary>
               <AccordionDetails>
+                {allRecordsDeleted && (
+                  <BCAlert
+                    severity="warning"
+                    data-test="alert-box"
+                    noFade={true}
+                    dismissible={false}
+                  >
+                    {t('report:allRecordsDeleted')}
+                  </BCAlert>
+                )}
                 {isLoading ? (
                   <CircularProgress />
                 ) : error ? (

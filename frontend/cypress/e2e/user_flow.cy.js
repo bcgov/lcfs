@@ -23,17 +23,17 @@ describe('User Login Test Suite', () => {
     it('completes login with IDIR user credentials', () => {
       cy.loginWith(
         'idir',
-        Cypress.env('IDIR_TEST_USER'),
-        Cypress.env('IDIR_TEST_PASS')
+        Cypress.env('ADMIN_IDIR_USERNAME'),
+        Cypress.env('ADMIN_IDIR_PASSWORD')
       )
-      cy.getByDataTest('main-layout-navbar').should('be.visible')
+      cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
     })
 
     it('executes logout functionality for IDIR user', () => {
       cy.loginWith(
         'idir',
-        Cypress.env('IDIR_TEST_USER'),
-        Cypress.env('IDIR_TEST_PASS')
+        Cypress.env('ADMIN_IDIR_USERNAME'),
+        Cypress.env('ADMIN_IDIR_PASSWORD')
       )
       cy.logout()
     })
