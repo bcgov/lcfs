@@ -227,17 +227,16 @@ export const AddEditFinalSupplyEquipments = () => {
     try {
       handleCloseDownloadMenu()
       setIsDownloading(true)
-      await apiService.download(
-        includeData
-          ? apiRoutes.exportFinalSupplyEquipments.replace(
-              ':reportID',
-              complianceReportId
-            )
-          : apiRoutes.downloadFinalSupplyEquipmentsTemplate.replace(
-              ':reportID',
-              complianceReportId
-            )
-      )
+      const endpoint = includeData
+        ? apiRoutes.exportFinalSupplyEquipments.replace(
+            ':reportID',
+            complianceReportId
+          )
+        : apiRoutes.downloadFinalSupplyEquipmentsTemplate.replace(
+            ':reportID',
+            complianceReportId
+          )
+      await apiService.download({ url: endpoint })
     } catch (error) {
       console.error(
         'Error downloading final supply equipment information:',

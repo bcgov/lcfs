@@ -29,13 +29,15 @@ async def test_export_transactions_by_org(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
     set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
     organization_id = 1
     url = fastapi_app.url_path_for(
         "export_transactions_by_org", organization_id=organization_id
     )
-    response = await client.get(url, params={"format": "csv"})
+    response = await client.post(url, params={"format": "csv"})
+
     assert response.status_code == status.HTTP_200_OK
-    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+    assert response.headers["content-type"].startswith("text/csv")
     assert "attachment; filename=" in response.headers["content-disposition"]
 
 
@@ -61,9 +63,9 @@ async def test_export_transactions(
 ):
     set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     url = fastapi_app.url_path_for("export_transactions")
-    response = await client.get(url, params={"format": "csv"})
+    response = await client.post(url, params={"format": "csv"})
     assert response.status_code == status.HTTP_200_OK
-    assert response.headers["content-type"] == "text/csv; charset=utf-8"
+    assert response.headers["content-type"].startswith("text/csv")
     assert "attachment; filename=" in response.headers["content-disposition"]
 
 

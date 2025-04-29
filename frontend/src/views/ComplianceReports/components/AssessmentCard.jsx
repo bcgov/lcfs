@@ -27,7 +27,7 @@ export const AssessmentCard = ({
   complianceReportId,
   alertRef,
   chain,
-  isQuarterlyReport=false
+  isQuarterlyReport = false
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
@@ -46,12 +46,11 @@ export const AssessmentCard = ({
   const onDownloadReport = async () => {
     setIsDownloading(true)
     try {
-      await apiService.download(
-        apiRoutes.exportComplianceReport.replace(
-          ':reportID',
-          complianceReportId
-        )
+      const endpoint = apiRoutes.exportComplianceReport.replace(
+        ':reportID',
+        complianceReportId
       )
+      await apiService.download({ url: endpoint })
     } finally {
       setIsDownloading(false)
     }

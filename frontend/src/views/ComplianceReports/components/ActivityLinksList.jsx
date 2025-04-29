@@ -48,12 +48,11 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
   const onDownloadReport = async () => {
     setIsDownloading(true)
     try {
-      await apiService.download(
-        apiRoutes.exportComplianceReport.replace(
-          ':reportID',
-          complianceReportId
-        )
+      const endpoint = apiRoutes.exportComplianceReport.replace(
+        ':reportID',
+        complianceReportId
       )
+      await apiService.download({ url: endpoint })
     } finally {
       setIsDownloading(false)
     }

@@ -18,14 +18,14 @@ router = APIRouter()
 
 
 @router.post(
-    "/{organization_id}",
+    "/{organization_id:int}",
     response_model=TransactionListSchema,
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT])
 async def get_transactions_paginated_by_org(
     request: Request,
-    organization_id: int = None,
+    organization_id: int,
     pagination: PaginationRequestSchema = Body(..., embed=False),
     service: TransactionsService = Depends(),
 ):
@@ -35,22 +35,23 @@ async def get_transactions_paginated_by_org(
     return await service.get_transactions_paginated(pagination, organization_id)
 
 
-@router.get(
-    "/{organization_id}/export",
+@router.post(
+    "/{organization_id:int}/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_transactions_by_org(
     request: Request,
-    organization_id: int = None,
+    organization_id: int,
     format: str = Query(default="xlsx", description="File export format"),
+    pagination: PaginationRequestSchema | None = Body(None),
     service: TransactionsService = Depends(),
 ):
     """
     Endpoint to export information of all transactions for a specific organization
     """
-    return await service.export_transactions(format, organization_id)
+    return await service.export_transactions(format, pagination, organization_id)
 
 
 @router.post("/", response_model=TransactionListSchema, status_code=status.HTTP_200_OK)
@@ -66,17 +67,20 @@ async def get_transactions_paginated(
     return await service.get_transactions_paginated(pagination)
 
 
-@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_transactions(
     request: Request,
     format: str = Query(default="xlsx", description="File export format"),
+    pagination: PaginationRequestSchema | None = Body(None),
     service: TransactionsService = Depends(),
 ):
     """
     Endpoint to export information of all transactions
     """
-    return await service.export_transactions(format)
+    return await service.export_transactions(format, pagination)
 
 
 @router.get(
