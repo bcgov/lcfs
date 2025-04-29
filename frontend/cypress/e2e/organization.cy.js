@@ -8,8 +8,8 @@ describe('Organization Test Suite', () => {
     // Login and visit the page
     cy.loginWith(
       'idir',
-      Cypress.env('IDIR_TEST_USER'),
-      Cypress.env('IDIR_TEST_PASS')
+      Cypress.env('ADMIN_IDIR_USERNAME'),
+      Cypress.env('ADMIN_IDIR_PASSWORD')
     )
     cy.get('.main-layout-navbar', { timeout: 30000 }).should('be.visible')
   })

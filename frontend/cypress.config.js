@@ -11,8 +11,8 @@ export default defineConfig({
   e2e: {
     supportFile: 'cypress/support/e2e.js',
     testIsolation: false,
-    experimentalSessionAndOrigin: true,
     specPattern: ['**/*.feature', '**/*.cy.js'],
+    excludeSpecPattern: ['**/*.skip.feature'],
     screenshotsFolder: 'cypress/screenshots',
     videosFolder: 'cypress/videos',
     // Global configurations

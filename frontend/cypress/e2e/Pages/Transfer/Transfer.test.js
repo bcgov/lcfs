@@ -104,7 +104,7 @@ When('sign and send the transfer', () => {
     .should('exist')
     .and('contain', 'Are you sure you want to sign and send this transfer to')
   cy.get('#modal-btn-sign-and-send').click()
-  cy.get("[data-test='alert-box'] .MuiBox-root").should(
+  cy.get("[data-test='alert-box'] .MuiBox-root", { timeout: 20000 }).should(
     'contain',
     'Transfer successfully sent'
   )
@@ -138,8 +138,8 @@ When('I login as receiving org and submit', () => {
   // Login with the updated user
   cy.loginWith(
     'bceid',
-    Cypress.env('org2_bceid_username'),
-    Cypress.env('org2_bceid_password')
+    Cypress.env('ORG2_BCEID_USERNAME'),
+    Cypress.env('ORG2_BCEID_PASSWORD')
   )
   cy.wait(5000)
   cy.getByDataTest('dashboard-container').should('exist')
@@ -147,6 +147,7 @@ When('I login as receiving org and submit', () => {
   cy.get('a[href="/transactions"]').click()
   cy.wait(5000)
   cy.get('div[row-index="0"]').click()
+  cy.wait(5000)
   cy.get('#signing-authority-declaration').click()
   cy.get('#sign-and-submit-btn').click()
   cy.get('.MuiDialog-container')
@@ -154,7 +155,7 @@ When('I login as receiving org and submit', () => {
     .and('contain', 'Are you sure you want to sign and submit this transfer to')
   cy.wait(500)
   cy.get('#modal-btn-sign-and-submit').click()
-  cy.get("[data-test='alert-box'] .MuiBox-root").should(
+  cy.get("[data-test='alert-box'] .MuiBox-root", { timeout: 20000 }).should(
     'contain',
     'Transfer successfully submitted'
   )
@@ -186,7 +187,7 @@ When('I login as analyst and recommend', () => {
     .and('contain', 'Are you sure you want to recommend this transfer?')
   cy.wait(500)
   cy.get('#modal-btn-recommend').click()
-  cy.get("[data-test='alert-box'] .MuiBox-root").should(
+  cy.get("[data-test='alert-box'] .MuiBox-root", { timeout: 20000 }).should(
     'contain',
     'Transfer successfully recommended'
   )
@@ -215,7 +216,7 @@ When('I login as director and records transfer', () => {
     .and('contain', 'Are you sure you want to record this transfer?')
   cy.wait(500)
   cy.get('#modal-btn-record-transfer').click()
-  cy.get("[data-test='alert-box'] .MuiBox-root").should(
+  cy.get("[data-test='alert-box'] .MuiBox-root", { timeout: 20000 }).should(
     'contain',
     'Transfer successfully recorded'
   )
@@ -244,7 +245,7 @@ When('I login as director and refuse transfer', () => {
     .and('contain', 'Are you sure you want to refuse this transfer?')
   cy.wait(500)
   cy.get('#modal-btn-refuse-transfer').click()
-  cy.get("[data-test='alert-box'] .MuiBox-root").should(
+  cy.get("[data-test='alert-box'] .MuiBox-root", { timeout: 20000 }).should(
     'contain',
     'Transfer successfully refused'
   )

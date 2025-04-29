@@ -26,8 +26,8 @@ describe('Disclaimer Banner Visibility Test Suite', () => {
     it('shows only the privacy disclaimer for IDIR users', () => {
       cy.loginWith(
         'idir',
-        Cypress.env('IDIR_TEST_USER'),
-        Cypress.env('IDIR_TEST_PASS')
+        Cypress.env('ADMIN_IDIR_USERNAME'),
+        Cypress.env('ADMIN_IDIR_PASSWORD')
       )
       cy.contains(
         'This information does not replace or constitute legal advice. Users are responsible for ensuring compliance with the Low Carbon Fuels Act and Regulations.'

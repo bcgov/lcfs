@@ -287,9 +287,14 @@ function enterFuelSupplyData(data, asTestCase = false) {
       // Validate read-only fields after data entry
       validateFuelSupplyReadOnlyFields(row, index)
     }
-
-    // Add new row
-    cy.get(SELECTORS.addRowButton).click()
+    // refresh page after entering 4 records, so that token won't expire.
+    if ((index + 1) % 4 === 0) {
+      cy.refreshPageAndWait()
+    } else {
+      cy.wait(5000)
+      // Add new row
+      cy.get(SELECTORS.addRowButton).click()
+    }
   })
 }
 
@@ -971,7 +976,7 @@ When('the compliance manager logs in with valid IDIR credentials', () => {
   cy.get(SELECTORS.dashboard).should('exist')
 })
 
-When('the director logs in with valid credentials', () => {
+When('the director logs in with valid IDIR credentials', () => {
   cy.loginWith(
     'idir',
     Cypress.env('ADMIN_IDIR_USERNAME'),

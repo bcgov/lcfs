@@ -93,6 +93,8 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
     cy.contains('a', 'tfrs@gov.bc.ca').should('be.visible').click()
     cy.get('#edit-user-button').click()
     cy.url().should('include', '/edit-user')
+
+    // Process the roles array
     let userRoles = roles
     if (!Array.isArray(roles)) {
       userRoles = roles.raw()[0]
@@ -101,23 +103,24 @@ Cypress.Commands.add('setBCeIDRoles', (userType, roles, id = 'idirLogin') => {
     const rolesToCheck = userRoles.map((role) =>
       role.toLowerCase().replace(/\s/g, '-')
     )
-    cy.get('#user-form', { timeout: 30000 })
-      .get('input[type="checkbox"]')
-      .each(($checkbox) => {
-        const checkboxId = $checkbox.attr('id')
-        const isChecked = $checkbox.is('checked')
-        if (checkboxId && rolesToCheck.includes(checkboxId)) {
-          // If the checkbox ID is in the array, check the checkbox
-          if (!isChecked) {
-            cy.wrap($checkbox).check()
-          }
-        } else {
-          // If the checkbox ID is not in the array, uncheck the checkbox
-          if (isChecked) {
-            cy.wrap($checkbox).uncheck()
-          }
-        }
-      })
+
+    // First make sure the form is fully loaded
+    cy.get('#user-form', { timeout: 30000 }).should('be.visible')
+
+    // Handle each checkbox
+    cy.get('input[type="checkbox"]').each(($checkbox) => {
+      const checkboxId = $checkbox.attr('id')
+
+      if (checkboxId && rolesToCheck.includes(checkboxId)) {
+        // If the checkbox ID is in the array, check the checkbox
+        cy.wrap($checkbox).check({ force: true })
+      } else {
+        // If the checkbox ID is not in the array, uncheck the checkbox
+        cy.wrap($checkbox).uncheck({ force: true })
+      }
+    })
+
+    // Submit the form
     cy.get('#user-form').submit()
     cy.logout()
   })

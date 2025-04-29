@@ -18,8 +18,8 @@ describe('Accessibility Tests for LCFS', () => {
     it('Should have no accessibility violations on load', () => {
       cy.loginWith(
         'idir',
-        Cypress.env('IDIR_TEST_USER'),
-        Cypress.env('IDIR_TEST_PASS')
+        Cypress.env('ADMIN_IDIR_USERNAME'),
+        Cypress.env('ADMIN_IDIR_PASSWORD')
       )
       cy.wait(5000)
       cy.injectAxe() // Injects the axe-core library
@@ -33,8 +33,8 @@ describe('Accessibility Tests for LCFS', () => {
       cy.visit('/')
       cy.loginWith(
         'idir',
-        Cypress.env('IDIR_TEST_USER'),
-        Cypress.env('IDIR_TEST_PASS')
+        Cypress.env('ADMIN_IDIR_USERNAME'),
+        Cypress.env('ADMIN_IDIR_PASSWORD')
       )
       cy.wait(5000)
       cy.injectAxe() // Injects the axe-core library
