@@ -101,16 +101,24 @@ vi.mock('@/hooks/useAllocationAgreement', () => ({
 }))
 vi.mock('@/hooks/useNotionalTransfer', () => ({
   useGetAllNotionalTransfers: () => ({
-    data: [],
+    data: { notionalTransfers: [] },
     isLoading: false,
     error: null
   })
 }))
 vi.mock('@/hooks/useOtherUses', () => ({
-  useGetAllOtherUses: () => ({ data: [], isLoading: false, error: null })
+  useGetAllOtherUses: () => ({
+    data: { otherUses: [] },
+    isLoading: false,
+    error: null
+  })
 }))
 vi.mock('@/hooks/useFuelExport', () => ({
-  useGetFuelExports: () => ({ data: [], isLoading: false, error: null })
+  useGetFuelExports: () => ({
+    data: { fuelExports: [] },
+    isLoading: false,
+    error: null
+  })
 }))
 
 describe('ReportDetails', () => {
