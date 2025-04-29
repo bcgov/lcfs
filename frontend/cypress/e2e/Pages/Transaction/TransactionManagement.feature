@@ -1,8 +1,7 @@
 Feature: Transaction Management
 
   Scenario: Government Analyst saves a draft initiative agreement
-    Given the analyst is on the login page
-    When the analyst logs in with valid credentials
+    Given the analyst logs in with valid credentials
     And the analyst navigates to the transactions page
     And the analyst starts a new initiative agreement transaction
     And the analyst enters "<units>" units to organization "<orgId>" with effective date "<effectiveDate>" and comment "<comment>"
@@ -15,9 +14,8 @@ Feature: Transaction Management
       |   100 |     1 |    2024-04-06 | test comment |
 
   Scenario: Analyst recommends the draft initiative agreement
-    Given the analyst is on the login page
-    When the analyst logs in with valid credentials
-    And the analyst navigates to the transactions page
+    Given the analyst logs in with valid credentials
+    When the analyst navigates to the transactions page
     And the analyst selects a transaction
     And the analyst recommends the transaction
     Then a success message for recommendation is displayed
