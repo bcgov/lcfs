@@ -74,7 +74,7 @@
     "react-leaflet-custom-control": "^1.4.0",
     "react-number-format": "^5.4.3",
     "react-quill": "^2.0.0",
-    "react-router-dom": "^7.4.0",
+    "react-router-dom": "^7.5.2",
     "react-snowfall": "^2.2.0",
     "swagger-ui-react": "^5.20.2",
     "uuid": "^11.1.0",

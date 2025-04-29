@@ -6,7 +6,7 @@ import concurrent.futures
 from lcfs.web.api.final_supply_equipment.importer import FinalSupplyEquipmentImporter
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
-from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.services.clamav.client import ClamAVService
 from redis.asyncio import Redis
 
@@ -24,9 +24,10 @@ def mock_fse_service() -> FinalSupplyEquipmentServices:
 
 
 @pytest.fixture
-def mock_compliance_service() -> ComplianceReportServices:
-    service = MagicMock(spec=ComplianceReportServices)
-    return service
+def mock_compliance_repo() -> ComplianceReportRepository:
+    repo = MagicMock(spec=ComplianceReportRepository)
+    repo.get_compliance_report_by_id = AsyncMock(return_value=MagicMock())
+    return repo
 
 
 @pytest.fixture
@@ -54,7 +55,7 @@ def mock_executor():
 def importer_instance(
     mock_repo,
     mock_fse_service,
-    mock_compliance_service,
+    mock_compliance_repo,
     mock_clamav,
     mock_redis,
     mock_executor,
@@ -65,7 +66,7 @@ def importer_instance(
     return FinalSupplyEquipmentImporter(
         repo=mock_repo,
         fse_service=mock_fse_service,
-        compliance_report_services=mock_compliance_service,
+        compliance_report_repo=mock_compliance_repo,
         clamav_service=mock_clamav,
         redis_client=mock_redis,
         executor=mock_executor,

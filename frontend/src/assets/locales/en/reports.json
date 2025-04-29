@@ -234,5 +234,6 @@
     "Low carbon fuel requirement only"
   ],
   "changeInUnits": "Projected change in compliance units balance",
-  "generatedLabel": "Credits generated"
+  "generatedLabel": "Credits generated",
+  "allRecordsDeleted": "All previous records deleted."
 }

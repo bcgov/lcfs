@@ -113,14 +113,17 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     if (isQuarterly) {
       const isDraft = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
       const now = new Date()
-      const submittedDate =
-        new Date(
-          reportData?.report?.history.find(
-            (h) => h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
-          )?.createDate
-        ) ||
-        new Date(reportData?.report?.updateDate) ||
-        now
+      const submittedHistory = reportData?.report?.history.find(
+        (h) => h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      )
+      const createDateFromHistory = submittedHistory?.createDate
+      const updateDate = reportData?.report?.updateDate
+
+      const submittedDate = createDateFromHistory
+        ? new Date(createDateFromHistory)
+        : updateDate
+          ? new Date(updateDate)
+          : now
 
       // Get month (0-11) and calculate quarter
       const month = submittedDate.getMonth()

@@ -1,8 +1,6 @@
 from collections import defaultdict
 
-from datetime import date
 import math
-from fastapi.exceptions import RequestValidationError
 import structlog
 import uuid
 from fastapi import Depends
@@ -107,7 +105,11 @@ class ComplianceReportServices:
             reporting_frequency=reporting_frequency,
             compliance_report_group_uuid=group_uuid,  # New group_uuid for the series
             version=0,  # Start with version 0
-            nickname=report_data.nickname or "Original Report" if reporting_frequency == ReportingFrequency.ANNUAL else 'Early Issuance Report',
+            nickname=(
+                report_data.nickname or "Original Report"
+                if reporting_frequency == ReportingFrequency.ANNUAL
+                else "Early Issuance Report"
+            ),
             summary=ComplianceReportSummary(),  # Create an empty summary object
             legacy_id=report_data.legacy_id,
             create_user=user.keycloak_username,
@@ -738,6 +740,8 @@ class ComplianceReportServices:
         for group_uuid, versions in group_map.items():
             latest_version = max(versions.keys())
             latest_item = versions[latest_version]
+            if hasattr(latest_item, "compliance_units"):
+                latest_item.compliance_units = round(latest_item.compliance_units)
 
             if latest_item.action_type == "DELETE":
                 continue

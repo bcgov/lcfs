@@ -48,7 +48,7 @@ class FakeDocumentService:
         document = DummyDocument("document.pdf", document_id=10, file_size=789)
         return file, document
 
-    async def delete_file(self, document_id: int):
+    async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
         return
 
 
