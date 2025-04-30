@@ -45,4 +45,5 @@ RUN chmod +x /app/wait-for-it.sh /app/lcfs/prestart.sh /app/lcfs/start.sh
 # Set the APP_ENVIRONMENT variable to 'production'
 ENV APP_ENVIRONMENT=prod
 
-CMD ["/app/lcfs/start.sh"]
+# CMD ["/app/lcfs/start.sh"] replaced with the following to allow for config file to be sourced
+CMD ["/bin/sh", "-c", "if [ -f /vault/secrets/config ]; then . /vault/secrets/config; fi; /app/lcfs/start.sh"]
