@@ -151,7 +151,7 @@ LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
 
 NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS = {
     11: {
-        "legacy": "Renewable fuel target non-compliance penalty total (Line 11|22, Gasoline + Diesel)",
+        "legacy": "Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel)",
         "description": "Renewable fuel target non-compliance penalty total (Line 11, Gasoline + Diesel + Jet fuel)",
         "field": "fossil_derived_base_fuel",
     },

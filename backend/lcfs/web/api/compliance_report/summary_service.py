@@ -292,7 +292,11 @@ class ComplianceReportSummaryService:
         """
         Builds a description string from the dictionary.
         """
-        return descriptions_dict[line]["description"]
+        is_legacy_year = compliance_data_service.is_legacy_year()
+        if is_legacy_year and line == 11:
+            return descriptions_dict[line]["legacy"]
+        else:
+            return descriptions_dict[line]["description"]
 
     def _renewable_special_description(self, line, summary_obj, descriptions_dict):
         """

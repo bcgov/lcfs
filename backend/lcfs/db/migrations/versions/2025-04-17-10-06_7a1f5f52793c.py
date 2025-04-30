@@ -17,7 +17,7 @@ depends_on = None
 MV_NAME = "mv_credit_ledger"
 
 CREATE_VIEW_SQL = f"""
-CREATE MATERIALIZED VIEW {MV_NAME} AS
+CREATE MATERIALIZED VIEW IF NOT EXISTS {MV_NAME} AS
 WITH base AS (
     SELECT
         t.transaction_id,
@@ -110,11 +110,12 @@ IDX_ORG_YEAR = f"{MV_NAME}_org_year_idx"
 IDX_ORG_DATE = f"{MV_NAME}_org_date_idx"
 
 CREATE_IDX_ORG_YEAR = (
-    f"CREATE INDEX {IDX_ORG_YEAR} "
+    f"CREATE INDEX IF NOT EXISTS {IDX_ORG_YEAR} "
     f"ON {MV_NAME} (organization_id, compliance_period);"
 )
 CREATE_IDX_ORG_DATE = (
-    f"CREATE INDEX {IDX_ORG_DATE} " f"ON {MV_NAME} (organization_id, update_date DESC);"
+    f"CREATE INDEX IF NOT EXISTS {IDX_ORG_DATE} "
+    f"ON {MV_NAME} (organization_id, update_date DESC);"
 )
 
 
