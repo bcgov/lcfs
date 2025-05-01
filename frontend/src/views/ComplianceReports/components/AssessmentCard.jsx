@@ -92,7 +92,7 @@ export const AssessmentCard = ({
       !isEditing &&
       (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT ||
         (hasRoles(roles.analyst) &&
-          currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED)
+          currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED))
     )
   }, [isEditing, currentStatus, hasRoles])
 
