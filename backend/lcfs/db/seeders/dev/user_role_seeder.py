@@ -38,7 +38,11 @@ async def seed_user_roles(session):
         {"user_profile_id": 9, "role_id": 9},
         {"user_profile_id": 9, "role_id": 10},
         {"user_profile_id": 10, "role_id": 2},
+        {"user_profile_id": 10, "role_id": 8},
+        {"user_profile_id": 10, "role_id": 10},
         {"user_profile_id": 11, "role_id": 2},
+        {"user_profile_id": 11, "role_id": 8},
+        {"user_profile_id": 11, "role_id": 10},
         {"user_profile_id": 12, "role_id": 2},
         {"user_profile_id": 13, "role_id": 2},
         {"user_profile_id": 14, "role_id": 2},
@@ -55,10 +59,6 @@ async def seed_user_roles(session):
         {"user_profile_id": 21, "role_id": 1},
         {"user_profile_id": 21, "role_id": 3},
         {"user_profile_id": 21, "role_id": 4},
-        {"user_profile_id": 22, "role_id": 1},
-        {"user_profile_id": 22, "role_id": 3},
-        {"user_profile_id": 23, "role_id": 1},
-        {"user_profile_id": 23, "role_id": 3},
     ]
 
     try:

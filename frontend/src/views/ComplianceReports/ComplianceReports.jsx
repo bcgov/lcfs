@@ -20,6 +20,8 @@ import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+import BCButton from '@/components/BCButton'
+import { CalculateOutlined } from '@mui/icons-material'
 
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
@@ -102,6 +104,7 @@ export const ComplianceReports = () => {
 
   const handleClearFilters = () => {
     setPaginationOptions(defaultInitialPagination)
+    sessionStorage.removeItem('compliance-reports-grid-filter')
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
     }
@@ -153,6 +156,17 @@ export const ComplianceReports = () => {
             alignItems: 'center'
           }}
         />
+        <BCButton
+          data-test="credit-calculator"
+          sx={{ '& .MuiSvgIcon-root': { fontSize: '1.2rem !important' } }}
+          variant="outlined"
+          size="small"
+          color="primary"
+          onClick={() => navigate(ROUTES.REPORTS.CALCULATOR)}
+          startIcon={<CalculateOutlined />}
+        >
+          {t('report:calcTitle')}
+        </BCButton>
         <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
           <BCGridViewer
             gridRef={gridRef}

@@ -23,6 +23,7 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationAgreementCreateSchema,
     AllocationAgreementOptionsSchema,
     AllocationAgreementListSchema,
+    AllocationAgreementRequestSchema,
     DeleteAllocationAgreementResponseSchema,
     PaginatedAllocationAgreementRequestSchema,
     AllocationAgreementAllSchema,
@@ -70,7 +71,7 @@ async def get_table_options(
 )
 async def get_allocation_agreements(
     request: Request,
-    request_data: ComplianceReportRequestSchema = Body(...),
+    request_data: AllocationAgreementRequestSchema = Body(...),
     response: Response = None,
     service: AllocationAgreementServices = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
@@ -90,7 +91,7 @@ async def get_allocation_agreements(
 
         await report_validate.validate_compliance_report_access(compliance_report)
         return await service.get_allocation_agreements(
-            request_data.compliance_report_id
+            request_data.compliance_report_id, request_data.changelog
         )
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message

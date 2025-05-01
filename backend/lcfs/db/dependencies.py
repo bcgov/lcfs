@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from lcfs.db.base import current_user_var, get_current_user
 from lcfs.settings import settings
+from lcfs.utils.query_analyzer import register_query_analyzer
 
 if settings.environment == "dev":
     pass
@@ -15,6 +16,7 @@ if settings.environment == "dev":
 db_url = make_url(str(settings.db_url.with_path(f"/{settings.db_base}")))
 async_engine = create_async_engine(db_url, future=True)
 logger = structlog.get_logger("sqlalchemy.engine")
+register_query_analyzer(async_engine.sync_engine)
 
 
 async def set_user_context(session: AsyncSession, username: str):
@@ -26,7 +28,8 @@ async def set_user_context(session: AsyncSession, username: str):
 
     except Exception as e:
         structlog.get_logger().error(
-            f"Failed to execute SET LOCAL app.user_id = '{username}': {e}")
+            f"Failed to execute SET LOCAL app.user_id = '{username}': {e}"
+        )
         raise e
 
 

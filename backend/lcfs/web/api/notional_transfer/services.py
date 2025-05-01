@@ -216,13 +216,15 @@ class NotionalTransferServices:
             notional_transfer_data.group_uuid
         )
 
-        if notional_transfer_data.is_new_supplemental_entry:
+        if (
+            existing_transfer.compliance_report_id
+            == notional_transfer_data.compliance_report_id
+        ):
             await self.repo.delete_notional_transfer(
                 notional_transfer_id=notional_transfer_data.notional_transfer_id
             )
             return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")
         else:
-
             deleted_entity = NotionalTransfer(
                 compliance_report_id=notional_transfer_data.compliance_report_id,
                 group_uuid=notional_transfer_data.group_uuid,
@@ -235,18 +237,18 @@ class NotionalTransferServices:
                 if field not in NOTIONAL_TRANSFER_EXCLUDE_FIELDS:
                     setattr(deleted_entity, field, getattr(existing_transfer, field))
 
-        deleted_entity.compliance_report_id = (
-            notional_transfer_data.compliance_report_id
-        )
+            deleted_entity.compliance_report_id = (
+                notional_transfer_data.compliance_report_id
+            )
 
-        await self.repo.create_notional_transfer(deleted_entity)
+            await self.repo.create_notional_transfer(deleted_entity)
         return DeleteNotionalTransferResponseSchema(message="Marked as deleted.")
 
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
         compliance_report = (
-            await self.compliance_report_repo.get_compliance_report_by_id(
+            await self.compliance_report_repo.get_compliance_report_schema_by_id(
                 compliance_report_id,
             )
         )

@@ -8,6 +8,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
 import * as configModule from '@/constants/config'
 
+// Mock react-router-dom hooks
 const mockUseLocation = vi.fn()
 const mockUseNavigate = vi.fn()
 const mockUseParams = vi.fn()
@@ -33,23 +34,27 @@ vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
   useLocation: () => mockUseLocation(),
   useNavigate: () => mockUseNavigate(),
-  useParams: () => mockUseParams()
+  useParams: () => mockUseParams(),
+  useSearchParams: () => [new URLSearchParams(''), vi.fn()]
 }))
 
+// Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: vi.fn((key, options = {}) => {
+      // Handle specific keys with returnObjects
       if (
         key === 'allocationAgreement:allocationAgreementGuides' &&
         options.returnObjects
       ) {
-        return ['Guide 1', 'Guide 2', 'Guide 3']
+        return ['Guide 1', 'Guide 2', 'Guide 3'] // Mocked guide objects
       }
       return key
     })
   })
 }))
 
+// Mock hooks related to allocation agreements
 vi.mock('@/hooks/useAllocationAgreement')
 
 vi.mock('@/constants/config', () => ({
@@ -65,6 +70,7 @@ vi.mock('@/services/useApiService', () => ({
   })
 }))
 
+// Mock BCGridEditor component
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
     gridRef,
@@ -96,8 +102,8 @@ vi.mock('@/components/ImportDialog', () => ({
   )
 }))
 
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
+vi.mock('@/contexts/AuthorizationContext', () => ({
+  useAuthorization: () => ({
     setForbidden: vi.fn()
   })
 }))
@@ -106,8 +112,9 @@ describe('AddEditAllocationAgreements', () => {
   beforeEach(() => {
     vi.resetAllMocks()
 
+    // Mock react-router-dom hooks with complete location object
     mockUseLocation.mockReturnValue({
-      pathname: '/test-path',
+      pathname: '/test-path', // Include pathname to prevent undefined errors
       state: {}
     })
     mockUseNavigate.mockReturnValue(vi.fn())
@@ -116,6 +123,7 @@ describe('AddEditAllocationAgreements', () => {
       compliancePeriod: '2024'
     })
 
+    // Mock useGetAllocationAgreements hook to return empty data initially
     vi.mocked(
       useAllocationAgreementHook.useGetAllAllocationAgreements
     ).mockReturnValue({
@@ -124,6 +132,15 @@ describe('AddEditAllocationAgreements', () => {
       refetch: vi.fn()
     })
 
+    // Add this missing mock for useGetAllocationAgreementsList
+    vi.mocked(
+      useAllocationAgreementHook.useGetAllocationAgreementsList
+    ).mockReturnValue({
+      data: { allocationAgreements: [] },
+      isLoading: false
+    })
+
+    // Mock useAllocationAgreementOptions hook
     vi.mocked(
       useAllocationAgreementHook.useAllocationAgreementOptions
     ).mockReturnValue({
@@ -132,6 +149,7 @@ describe('AddEditAllocationAgreements', () => {
       isFetched: true
     })
 
+    // Mock useSaveAllocationAgreement hook
     vi.mocked(
       useAllocationAgreementHook.useSaveAllocationAgreement
     ).mockReturnValue({
@@ -154,15 +172,11 @@ describe('AddEditAllocationAgreements', () => {
     useCurrentUser.mockReturnValue({
       data: {
         organization: { organizationId: 1, name: 'Test Org' }
-      },
-      isLoading: false
+      }
     })
 
-    useGetComplianceReport.mockImplementation(() => {
-      return {
-        data: { report: { version: 0 } },
-        isLoading: false
-      }
+    useGetComplianceReport.mockImplementation((id) => {
+      return { data: { report: { version: 0 } }, isLoading: false }
     })
 
     vi.mocked(configModule.isFeatureEnabled).mockReturnValue(false)
@@ -178,27 +192,37 @@ describe('AddEditAllocationAgreements', () => {
   it('initializes with at least one row in the empty state', () => {
     render(<AddEditAllocationAgreements />, { wrapper })
     const rows = screen.getAllByTestId('grid-row')
-    expect(rows.length).toBe(1)
+    expect(rows.length).toBe(1) // Ensure at least one row exists
   })
 
   it('loads data when allocationAgreements are available', async () => {
+    const mockData = {
+      allocationAgreements: [
+        { allocationAgreementId: 'testId1' },
+        { allocationAgreementId: 'testId2' }
+      ]
+    }
+
     vi.mocked(
       useAllocationAgreementHook.useGetAllAllocationAgreements
     ).mockReturnValue({
-      data: {
-        allocationAgreements: [
-          { allocationAgreementId: 'testId1' },
-          { allocationAgreementId: 'testId2' }
-        ]
-      },
-      isLoading: false,
-      refetch: vi.fn()
+      data: mockData,
+      isLoading: false
+    })
+
+    vi.mocked(
+      useAllocationAgreementHook.useGetAllocationAgreementsList
+    ).mockReturnValue({
+      data: mockData,
+      isLoading: false
     })
 
     render(<AddEditAllocationAgreements />, { wrapper })
 
+    // Use findAllByTestId for asynchronous elements
     const rows = await screen.findAllByTestId('grid-row')
     expect(rows.length).toBe(2)
+    // Check that each row's textContent matches UUID format
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     rows.forEach((row) => {

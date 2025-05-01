@@ -19,7 +19,6 @@ from starlette.responses import StreamingResponse, JSONResponse
 from lcfs.db import dependencies
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
@@ -150,7 +149,7 @@ async def save_final_supply_equipment_row(
         await fse_validate.check_equipment_uniqueness_and_overlap(data=request_data)
         # Create new final supply equipment row
         return await fse_service.create_final_supply_equipment(
-            request_data, compliance_report.organization.organization_code
+            request_data, compliance_report.organization.organization_id
         )
 
 
@@ -184,7 +183,6 @@ async def export(
     report_id: str,
     report_validate: ComplianceReportValidation = Depends(),
     exporter: FinalSupplyEquipmentExporter = Depends(),
-    compliance_report_services: ComplianceReportServices = Depends(),
 ):
     """
     Endpoint to export information of all FSE
@@ -198,7 +196,11 @@ async def export(
 
     await report_validate.validate_organization_access(compliance_report_id)
 
-    compliance_report = await compliance_report_services.get_compliance_report_by_id(
+    CRS = __import__(
+        "lcfs.web.api.compliance_report.services",
+        fromlist=["ComplianceReportServices"],
+    ).ComplianceReportServices
+    compliance_report = await CRS().get_compliance_report_by_id(
         report_id=compliance_report_id,
         user=request.user,
     )
@@ -221,7 +223,6 @@ async def import_fse(
     report_id: str,
     file: UploadFile = File(...),
     report_validate: ComplianceReportValidation = Depends(),
-    compliance_report_services: ComplianceReportServices = Depends(),
     fse_repo: FinalSupplyEquipmentRepository = Depends(),
     importer: FinalSupplyEquipmentImporter = Depends(),
     overwrite: bool = Form(...),
@@ -261,7 +262,11 @@ async def import_fse(
     )
 
     # Check if overwrite is allowed
-    compliance_report = await compliance_report_services.get_compliance_report_by_id(
+    CRS = __import__(
+        "lcfs.web.api.compliance_report.services",
+        fromlist=["ComplianceReportServices"],
+    ).ComplianceReportServices
+    compliance_report = await CRS().get_compliance_report_by_id(
         report_id=compliance_report_id,
         user=request.user,
     )
@@ -299,7 +304,6 @@ async def get_template(
     request: Request,
     report_id: str,
     report_validate: ComplianceReportValidation = Depends(),
-    compliance_report_services: ComplianceReportServices = Depends(),
     exporter: FinalSupplyEquipmentExporter = Depends(),
 ):
     """
@@ -314,7 +318,11 @@ async def get_template(
 
     await report_validate.validate_organization_access(compliance_report_id)
 
-    compliance_report = await compliance_report_services.get_compliance_report_by_id(
+    CRS = __import__(
+        "lcfs.web.api.compliance_report.services",
+        fromlist=["ComplianceReportServices"],
+    ).ComplianceReportServices
+    compliance_report = await CRS().get_compliance_report_by_id(
         report_id=compliance_report_id, user=request.user
     )
 

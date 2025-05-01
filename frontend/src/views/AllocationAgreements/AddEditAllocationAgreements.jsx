@@ -12,7 +12,7 @@ import {
 } from './_schema'
 import {
   useAllocationAgreementOptions,
-  useGetAllAllocationAgreements,
+  useGetAllocationAgreementsList,
   useSaveAllocationAgreement
 } from '@/hooks/useAllocationAgreement'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
@@ -67,7 +67,8 @@ export const AddEditAllocationAgreements = () => {
   const { data: complianceReport, isLoading: complianceReportLoading } =
     useGetComplianceReport(
       currentUser?.organization?.organizationId,
-      complianceReportId
+      complianceReportId,
+      { enabled: !currentUserLoading }
     )
 
   const version = complianceReport?.report?.version ?? 0
@@ -87,7 +88,10 @@ export const AddEditAllocationAgreements = () => {
     data,
     isLoading: allocationAgreementsLoading,
     refetch
-  } = useGetAllAllocationAgreements(complianceReportId)
+  } = useGetAllocationAgreementsList({
+    complianceReportId,
+    changelog: isSupplemental
+  })
 
   // Decide when to hide or show Overwrite based on isOriginalReport + existing data
   useEffect(() => {
@@ -154,7 +158,7 @@ export const AddEditAllocationAgreements = () => {
       ) {
         const updatedRowData = data.allocationAgreements.map((item) => ({
           ...item,
-          complianceReportId, // This takes current reportId, important for versioning
+          complianceReportId,
           compliancePeriod,
           isNewSupplementalEntry:
             isSupplemental && item.complianceReportId === +complianceReportId,
@@ -176,7 +180,7 @@ export const AddEditAllocationAgreements = () => {
         })
       }, 100)
     },
-    [data]
+    [data, complianceReportId, compliancePeriod, isSupplemental]
   )
 
   useEffect(() => {
@@ -195,20 +199,16 @@ export const AddEditAllocationAgreements = () => {
       !allocationAgreementsLoading &&
       data?.allocationAgreements?.length > 0
     ) {
-      const ensureRowIds = (rows) =>
-        rows.map((row) => ({
-          ...row,
-          id: uuid(),
-          isValid: true,
-          isNewSupplementalEntry:
-            isSupplemental && row.complianceReportId === +complianceReportId,
-          actionType: isSupplemental
-            ? row.complianceReportId === +complianceReportId
-              ? 'CREATE'
-              : 'EXISTING'
-            : undefined
-        }))
-      setRowData(ensureRowIds(data.allocationAgreements))
+      const updatedRowData = data.allocationAgreements.map((item) => ({
+        ...item,
+        complianceReportId,
+        compliancePeriod,
+        isNewSupplementalEntry:
+          isSupplemental && item.complianceReportId === +complianceReportId,
+        id: uuid()
+      }))
+
+      setRowData(updatedRowData)
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
@@ -398,7 +398,10 @@ export const AddEditAllocationAgreements = () => {
         saveRow,
         alertRef,
         setRowData,
-        { id: uuid() }
+        {
+          complianceReportId,
+          compliancePeriod
+        }
       )
     }
   }

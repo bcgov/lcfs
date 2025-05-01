@@ -31,6 +31,10 @@ export const apiRoutes = {
   getOrgComplianceReportReportedYears:
     '/organization/:orgID/reports/reported-years',
 
+  // Credit‑ledger
+  creditLedger: '/credit-ledger/organization/:orgID',
+  exportCreditLedger: '/credit-ledger/organization/:orgID/export',
+
   // organizations
   organizationSearch: '/organizations/search?',
 
@@ -74,7 +78,7 @@ export const apiRoutes = {
   exportComplianceReport: '/reports/:reportID/export',
   createSupplementalReport: '/reports/:reportID/supplemental',
   createAnalystAdjustment: '/reports/:reportID/adjustment',
-  getChangelog: '/reports/:selection/changelog',
+  getChangelog: '/reports/:complianceReportGroupUuid/changelog/:dataType',
 
   // notional-transfers
   notionalTransferOptions: '/notional-transfers/table-options',
@@ -148,5 +152,11 @@ export const apiRoutes = {
   getNotifications: '/notifications/list',
   getNotificationsCount: '/notifications/count',
   getNotificationSubscriptions: '/notifications/subscriptions',
-  saveNotificationSubscriptions: '/notifications/subscriptions/save'
+  saveNotificationSubscriptions: '/notifications/subscriptions/save',
+  // calculator endpoints
+  getCalculatorCompliancePeriods: '/calculator/compliance-periods',
+  getCalculatorFuelTypes: '/calculator/:complianceYear/',
+  getCalculatorFuelTypeOptions:
+    '/calculator/:complianceYear/fuel-type-options/',
+  getCalculatedComplianceUnits: '/calculator/:complianceYear/calculate/'
 }

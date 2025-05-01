@@ -20,7 +20,6 @@ from lcfs.services.redis.dependency import get_redis_client
 from lcfs.settings import settings
 from lcfs.utils.constants import POSTAL_REGEX
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentCreateSchema,
@@ -39,14 +38,14 @@ class FinalSupplyEquipmentImporter:
         self,
         repo: FinalSupplyEquipmentRepository = Depends(),
         fse_service: FinalSupplyEquipmentServices = Depends(),
-        compliance_report_services: ComplianceReportServices = Depends(),
+        compliance_report_repo: ComplianceReportRepository = Depends(),
         clamav_service: ClamAVService = Depends(),
         redis_client: Redis = Depends(get_redis_client),
         executor: concurrent.futures.ThreadPoolExecutor = Depends(),
     ) -> None:
         self.repo = repo
         self.fse_service = fse_service
-        self.compliance_report_services = compliance_report_services
+        self.compliance_report_repo = compliance_report_repo
         self.clamav_service = clamav_service
         self.redis_client = redis_client
         self.executor = executor
@@ -64,6 +63,14 @@ class FinalSupplyEquipmentImporter:
         Initiates the import job in a separate thread executor.
         Returns a job_id that can be used to track progress via get_status.
         """
+        compliance_report = (
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id
+            )
+        )
+        if not compliance_report:
+            raise DataNotFoundException("Compliance report not found.")
+
         job_id = str(uuid.uuid4())
 
         # Initialize job status in Redis

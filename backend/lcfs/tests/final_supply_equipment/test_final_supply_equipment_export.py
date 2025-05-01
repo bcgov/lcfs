@@ -13,9 +13,9 @@ from lcfs.web.exception.exceptions import DataNotFoundException
 
 
 @pytest.fixture
-def exporter(repo_mock, compliance_report_services_mock):
+def exporter(repo_mock, compliance_report_repo_mock):
     return FinalSupplyEquipmentExporter(
-        repo=repo_mock, compliance_report_services=compliance_report_services_mock
+        repo=repo_mock, compliance_report_repo=compliance_report_repo_mock
     )
 
 
@@ -39,9 +39,9 @@ def repo_mock():
 
 
 @pytest.fixture
-def compliance_report_services_mock():
+def compliance_report_repo_mock():
     with patch(
-        "lcfs.web.api.final_supply_equipment.export.ComplianceReportServices"
+        "lcfs.web.api.final_supply_equipment.export.ComplianceReportRepository"
     ) as mock:
         mock_instance = mock.return_value
         mock_instance.get_compliance_report_by_id = AsyncMock(
@@ -58,7 +58,7 @@ def compliance_report_services_mock():
 
 @pytest.mark.anyio
 async def test_export_success(
-    exporter, fastapi_app, client, set_mock_user, compliance_report_services_mock
+    exporter, fastapi_app, client, set_mock_user, compliance_report_repo_mock
 ):
     user = set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     response = await exporter.export(
@@ -78,7 +78,7 @@ async def test_export_success(
 
 @pytest.mark.anyio
 async def test_export_no_data(
-    exporter, fastapi_app, client, set_mock_user, compliance_report_services_mock
+    exporter, fastapi_app, client, set_mock_user, compliance_report_repo_mock
 ):
     exporter.repo.get_fse_paginated = AsyncMock(return_value=([],))
     user = set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
@@ -112,4 +112,4 @@ async def test_export_invalid_compliance_report_id(
             organization=Organization(name="TestOrg"),
             include_data=True,
         )
-    assert str(exc_info.value) == "Report not found"
+    assert "Compliance report not found" in str(exc_info.value)

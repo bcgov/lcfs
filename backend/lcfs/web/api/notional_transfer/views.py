@@ -31,7 +31,6 @@ from lcfs.web.api.notional_transfer.schema import (
 )
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.notional_transfer.validation import NotionalTransferValidation
-from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()

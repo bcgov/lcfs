@@ -1,9 +1,9 @@
 from datetime import datetime
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, func
+from sqlalchemy import and_, or_, select, func, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, subqueryload
 from typing import List, Optional, Tuple
 
 from lcfs.db.base import ActionTypeEnum
@@ -40,24 +40,24 @@ class FuelExportRepository:
     def __init__(self, db: AsyncSession = Depends(get_async_db_session)):
         self.db = db
         self.query = select(FuelExport).options(
-            joinedload(FuelExport.fuel_code).options(
-                joinedload(FuelCode.fuel_code_status),
-                joinedload(FuelCode.fuel_code_prefix),
+            subqueryload(FuelExport.fuel_code).options(
+                subqueryload(FuelCode.fuel_code_status),
+                subqueryload(FuelCode.fuel_code_prefix),
             ),
-            joinedload(FuelExport.fuel_category).options(
-                joinedload(FuelCategory.target_carbon_intensities),
-                joinedload(FuelCategory.energy_effectiveness_ratio),
+            subqueryload(FuelExport.fuel_category).options(
+                subqueryload(FuelCategory.target_carbon_intensities),
+                subqueryload(FuelCategory.energy_effectiveness_ratio),
             ),
-            joinedload(FuelExport.fuel_type).options(
-                joinedload(FuelType.energy_density),
-                joinedload(FuelType.additional_carbon_intensity),
-                joinedload(FuelType.energy_effectiveness_ratio),
-                joinedload(FuelType.default_carbon_intensities).options(
-                    selectinload(DefaultCarbonIntensity.compliance_period)
+            subqueryload(FuelExport.fuel_type).options(
+                subqueryload(FuelType.energy_density),
+                subqueryload(FuelType.additional_carbon_intensity),
+                subqueryload(FuelType.energy_effectiveness_ratio),
+                subqueryload(FuelType.default_carbon_intensities).options(
+                    subqueryload(DefaultCarbonIntensity.compliance_period)
                 ),
             ),
-            joinedload(FuelExport.provision_of_the_act),
-            joinedload(FuelExport.end_use_type),
+            subqueryload(FuelExport.provision_of_the_act),
+            subqueryload(FuelExport.end_use_type),
         )
 
     @repo_handler
@@ -132,6 +132,7 @@ class FuelExportRepository:
                 ),
                 FuelCode.carbon_intensity.label("fuel_code_carbon_intensity"),
                 FuelCode.effective_date.label("fuel_code_effective_date"),
+                FuelCode.expiration_date.label("fuel_code_expiration_date"),
             )
             .join(FuelInstance, FuelInstance.fuel_type_id == FuelType.fuel_type_id)
             .join(
@@ -359,10 +360,10 @@ class FuelExportRepository:
         changelog: Optional[bool] = False,
     ) -> List[FuelExport]:
         """
-        Retrieve effective FuelExport records associated with the given compliance_report_group_uuid.
-        Excludes groups with any DELETE action and selects the highest version and priority.
+        Queries fuel exports from the database for a specific compliance report.
+        If changelog=True, includes deleted records to show history.
         """
-        # Step 1: Select to get all compliance_report_ids in the specified group
+        # Get all compliance report IDs in the group up to the specified report
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
             and_(
                 ComplianceReport.compliance_report_group_uuid
@@ -371,23 +372,34 @@ class FuelExportRepository:
             )
         )
 
-        conditions = [FuelExport.compliance_report_id.in_(compliance_reports_select)]
-        if not changelog:
-            delete_group_select = (
-                select(FuelExport.group_uuid)
-                .where(
-                    FuelExport.compliance_report_id.in_(compliance_reports_select),
-                    FuelExport.action_type == ActionTypeEnum.DELETE,
-                )
-                .distinct()
+        # Get groups that have any deleted records
+        deleted_groups = (
+            select(FuelExport.group_uuid)
+            .where(
+                FuelExport.compliance_report_id.in_(compliance_reports_select),
+                FuelExport.action_type == ActionTypeEnum.DELETE,
             )
+            .distinct()
+        )
+
+        # Build query conditions
+        conditions = [FuelExport.compliance_report_id.in_(compliance_reports_select)]
+
+        if changelog:
+            # In changelog view, include all groups (both active and deleted)
             conditions.extend(
                 [
-                    FuelExport.action_type != ActionTypeEnum.DELETE,
-                    ~FuelExport.group_uuid.in_(delete_group_select),
+                    or_(
+                        ~FuelExport.group_uuid.in_(deleted_groups),
+                        FuelExport.group_uuid.in_(deleted_groups),
+                    )
                 ]
             )
+        else:
+            # In regular view, exclude any groups that have deleted records
+            conditions.extend([~FuelExport.group_uuid.in_(deleted_groups)])
 
+        # Get the latest version of each record
         valid_fuel_exports_select = (
             select(
                 FuelExport.group_uuid,
@@ -397,14 +409,12 @@ class FuelExportRepository:
             .group_by(FuelExport.group_uuid)
         )
 
-        # Now create a subquery for use in the JOIN
         valid_fuel_exports_subq = valid_fuel_exports_select.subquery()
 
-        # Step 4: Main query to retrieve effective FuelExport records
+        # Get the actual records with their related data
         query = (
             select(FuelExport)
             .options(
-                # Load necessary related data
                 joinedload(FuelExport.fuel_code),
                 joinedload(FuelExport.fuel_category),
                 joinedload(FuelExport.fuel_type),
@@ -425,3 +435,8 @@ class FuelExportRepository:
         fuel_exports = result.unique().scalars().all()
 
         return fuel_exports
+
+    async def delete_fuel_export(self, fuel_export_id):
+        await self.db.execute(
+            delete(FuelExport).where(FuelExport.fuel_export_id == fuel_export_id)
+        )

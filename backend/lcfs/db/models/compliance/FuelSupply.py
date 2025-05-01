@@ -24,7 +24,29 @@ class FuelSupply(BaseModel, Auditable, Versioning):
     )
 
     # Data columns
-    quantity = Column(Integer, nullable=False, comment="Quantity of fuel supplied")
+    quantity = Column(
+        Integer, nullable=True, comment="Quantity of fuel supplied (no early issuance)"
+    )
+    q1_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel supplied in Q1 (early issuance only)",
+    )
+    q2_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel supplied in Q2 (early issuance only)",
+    )
+    q3_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel supplied in Q3 (early issuance only)",
+    )
+    q4_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel supplied in Q4 (early issuance only)",
+    )
     units = Column(
         Enum(QuantityUnitsEnum), nullable=False, comment="Units of fuel quantity"
     )

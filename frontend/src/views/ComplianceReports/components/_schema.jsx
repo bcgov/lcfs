@@ -7,7 +7,7 @@ import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
 import { useGetComplianceReportStatuses } from '@/hooks/useComplianceReports'
 
-export const reportsColDefs = (t, bceidRole) => [
+export const reportsColDefs = (t, isSupplier) => [
   {
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
@@ -21,7 +21,7 @@ export const reportsColDefs = (t, bceidRole) => [
     field: 'organization',
     headerName: t('report:reportColLabels.organization'),
     flex: 2,
-    hide: bceidRole,
+    hide: isSupplier,
     valueGetter: ({ data }) => data.organizationName || ''
   },
   {
@@ -29,15 +29,22 @@ export const reportsColDefs = (t, bceidRole) => [
     headerName: t('report:reportColLabels.type'),
     flex: 2,
     valueGetter: ({ data }) => data.reportType,
-    filter: 'agTextColumnFilter', // Enable text filtering
-    filterParams: {
-      textFormatter: (value) => value.replace(/\s+/g, '').toLowerCase(),
-      textCustomComparator: (filter, value, filterText) => {
-        const cleanFilterText = filterText.replace(/\s+/g, '').toLowerCase()
-        const cleanValue = value.replace(/\s+/g, '').toLowerCase()
-        return cleanValue.includes(cleanFilterText)
-      },
-      buttons: ['clear']
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      optionsQuery: () => ({
+        data: [
+          { id: 1, name: 'Original Report' },
+          { id: 2, name: 'Supplemental Report' },
+          {
+            id: 3,
+            name: 'Government adjustment'
+          }
+        ],
+        isLoading: false
+      }),
+      initialFilterType: 'contains',
+      valueKey: 'name',
+      labelKey: 'name'
     }
   },
   {
@@ -305,6 +312,26 @@ export const nonComplianceColumns = (t) => [
     label: t('report:summaryLabels.totalValue'),
     align: 'center',
     width: '150px'
+  }
+]
+
+export const earlyIssuanceColumns = (t) => [
+  {
+    id: 'line',
+    label: t('report:summaryLabels.line'),
+    maxWidth: '150px',
+    align: 'center'
+  },
+  {
+    id: 'description',
+    label: t('report:summaryLabels.earlyIssuanceSummary'),
+    width: '300px'
+  },
+  {
+    id: 'value',
+    label: t('report:summaryLabels.value'),
+    maxWidth: '150px',
+    align: 'right'
   }
 ]
 

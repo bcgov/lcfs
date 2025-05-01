@@ -12,16 +12,21 @@ export const useNotionalTransferOptions = (params, options) => {
   })
 }
 
-export const useGetAllNotionalTransfers = (complianceReportId, options) => {
+export const useGetAllNotionalTransfers = (
+  complianceReportId,
+  pagination,
+  options
+) => {
   const client = useApiService()
   return useQuery({
     queryKey: ['notional-transfers', complianceReportId],
     queryFn: async () => {
       return (
         await client.post(apiRoutes.getAllNotionalTransfers, {
-          complianceReportId
+          complianceReportId,
+          ...pagination
         })
-      ).data.notionalTransfers
+      ).data
     },
     ...options
   })

@@ -297,12 +297,17 @@ class FuelCodeRepository:
         self, fuel_type_id: int, compliance_period_id: int
     ) -> EnergyDensity:
         """Get the energy density for the specified fuel_type_id"""
-
-        stmt = select(EnergyDensity).where(
-            EnergyDensity.fuel_type_id == fuel_type_id,
-            EnergyDensity.compliance_period_id == compliance_period_id,
+        stmt = (
+            select(EnergyDensity)
+            .where(
+                and_(
+                    EnergyDensity.fuel_type_id == fuel_type_id,
+                    EnergyDensity.compliance_period_id <= compliance_period_id,
+                )
+            )
+            .order_by(desc(EnergyDensity.compliance_period_id))
+            .limit(1)
         )
-
         result = await self.db.execute(stmt)
         energy_density = result.scalars().first()
 
@@ -1041,11 +1046,12 @@ class FuelCodeRepository:
             lowest_ci = (await self.db.execute(stmt)).scalar_one_or_none()
 
             if lowest_ci is None:
-                raise ValueError(
-                    "No active fuel codes found within the last 12 months for 'unknown' provision_of_the_act."
+                # If we can't find any active fuel codes, just revert to the default carbon intensity
+                effective_carbon_intensity = await self.get_default_carbon_intensity(
+                    fuel_type_id, compliance_period
                 )
-
-            effective_carbon_intensity = lowest_ci
+            else:
+                effective_carbon_intensity = lowest_ci
 
         else:
             if fuel_code_id:

@@ -4,12 +4,13 @@ from typing import List
 from fastapi import Depends
 from openpyxl.worksheet.datavalidation import DataValidation
 from starlette.responses import StreamingResponse
+from lcfs.web.exception.exceptions import DataNotFoundException
 
 from lcfs.db.models import Organization, UserProfile
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.utils.spreadsheet_builder import SpreadsheetBuilder, SpreadsheetColumn
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.core.decorators import service_handler
 
@@ -41,11 +42,9 @@ class FinalSupplyEquipmentExporter:
     def __init__(
         self,
         repo: FinalSupplyEquipmentRepository = Depends(FinalSupplyEquipmentRepository),
-        compliance_report_services: ComplianceReportServices = Depends(
-            ComplianceReportServices
-        ),
+        compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
-        self.compliance_report_services = compliance_report_services
+        self.compliance_report_repo = compliance_report_repo
         self.repo = repo
 
     @service_handler
@@ -68,8 +67,9 @@ class FinalSupplyEquipmentExporter:
                 user=user,
             )
         )
+        if not compliance_report:
+            raise DataNotFoundException("Compliance report not found.")
 
-        # Create a spreadsheet
         builder = SpreadsheetBuilder(file_format=export_format)
 
         validators = await self._create_validators(

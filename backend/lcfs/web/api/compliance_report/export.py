@@ -100,7 +100,7 @@ class ComplianceReportExporter:
 
         # Get report data
         report = await self.cr_repo.get_compliance_report_by_id(
-            report_id=compliance_report_id, is_model=True
+            report_id=compliance_report_id
         )
         uuid = report.compliance_report_group_uuid
         cid = report.compliance_report_id
@@ -406,7 +406,7 @@ class ComplianceReportExporter:
         for ef in data:
             rows.append(
                 [
-                    round(ef.compliance_units) if ef.compliance_units else None,
+                    round(ef.compliance_units),
                     self._format_date(ef.export_date),
                     ef.fuel_type.fuel_type if ef.fuel_type else None,
                     ef.fuel_type_other,

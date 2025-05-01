@@ -10,8 +10,8 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
+vi.mock('@/contexts/AuthorizationContext', () => ({
+  useAuthorization: () => ({
     setForbidden: vi.fn()
   })
 }))
@@ -101,16 +101,24 @@ vi.mock('@/hooks/useAllocationAgreement', () => ({
 }))
 vi.mock('@/hooks/useNotionalTransfer', () => ({
   useGetAllNotionalTransfers: () => ({
-    data: [],
+    data: { notionalTransfers: [] },
     isLoading: false,
     error: null
   })
 }))
 vi.mock('@/hooks/useOtherUses', () => ({
-  useGetAllOtherUses: () => ({ data: [], isLoading: false, error: null })
+  useGetAllOtherUses: () => ({
+    data: { otherUses: [] },
+    isLoading: false,
+    error: null
+  })
 }))
 vi.mock('@/hooks/useFuelExport', () => ({
-  useGetFuelExports: () => ({ data: [], isLoading: false, error: null })
+  useGetFuelExports: () => ({
+    data: { fuelExports: [] },
+    isLoading: false,
+    error: null
+  })
 }))
 
 describe('ReportDetails', () => {
@@ -143,7 +151,8 @@ describe('ReportDetails', () => {
     fireEvent.click(screen.getByText('report:expandAll'))
 
     await waitFor(() => {
-      expect(screen.getAllByTestId(/panel\d+-summary/)).toHaveLength(2)
+      // Update this line to expect all activity panels to be expanded instead of 2
+      expect(screen.getAllByTestId(/panel\d+-summary/)).toHaveLength(7)
     })
   })
 

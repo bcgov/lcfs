@@ -18,7 +18,7 @@ class ComplianceReportValidation:
         self.repo = repo
 
     async def validate_organization_access(self, compliance_report_id: int):
-        compliance_report = await self.repo.check_compliance_report(
+        compliance_report = await self.repo.get_compliance_report_schema_by_id(
             compliance_report_id
         )
         if not compliance_report:

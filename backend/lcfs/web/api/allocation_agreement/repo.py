@@ -1,6 +1,6 @@
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, select, delete, func
+from sqlalchemy import and_, select, delete, func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 from typing import List, Optional
@@ -75,7 +75,7 @@ class AllocationAgreementRepository:
 
     @repo_handler
     async def get_allocation_agreements(
-        self, compliance_report_id: int
+        self, compliance_report_id: int, changelog: bool = False
     ) -> List[AllocationAgreementSchema]:
         """
         Queries allocation agreements from the database for a specific compliance report.
@@ -91,18 +91,22 @@ class AllocationAgreementRepository:
             return []
 
         return await self.get_effective_allocation_agreements(
-            group_uuid, compliance_report_id
+            compliance_report_group_uuid=group_uuid,
+            compliance_report_id=compliance_report_id,
+            changelog=changelog,
         )
 
     async def get_effective_allocation_agreements(
         self,
         compliance_report_group_uuid: str,
         compliance_report_id: int,
+        changelog: bool = False,
     ) -> List[AllocationAgreementSchema]:
         """
         Queries allocation agreements from the database for a specific compliance report.
+        If changelog=True, includes deleted records to show history.
         """
-        # Step 1: Get all compliance_report_ids in the specified group
+        # Get all compliance report IDs in the group up to the specified report
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
             and_(
                 ComplianceReport.compliance_report_group_uuid
@@ -111,7 +115,8 @@ class AllocationAgreementRepository:
             )
         )
 
-        delete_group_select = (
+        # Get groups that have any deleted records
+        deleted_groups = (
             select(AllocationAgreement.group_uuid)
             .where(
                 AllocationAgreement.compliance_report_id.in_(compliance_reports_select),
@@ -120,21 +125,38 @@ class AllocationAgreementRepository:
             .distinct()
         )
 
+        # Build query conditions
+        conditions = [
+            AllocationAgreement.compliance_report_id.in_(compliance_reports_select)
+        ]
+
+        if changelog:
+            # In changelog view, include all groups (both active and deleted)
+            conditions.extend(
+                [
+                    or_(
+                        ~AllocationAgreement.group_uuid.in_(deleted_groups),
+                        AllocationAgreement.group_uuid.in_(deleted_groups),
+                    )
+                ]
+            )
+        else:
+            # In regular view, exclude any groups that have deleted records
+            conditions.extend([~AllocationAgreement.group_uuid.in_(deleted_groups)])
+
+        # Get the latest version of each record
         valid_agreements_select = (
             select(
                 AllocationAgreement.group_uuid,
                 func.max(AllocationAgreement.version).label("max_version"),
             )
-            .where(
-                AllocationAgreement.compliance_report_id.in_(compliance_reports_select),
-                AllocationAgreement.action_type != ActionTypeEnum.DELETE,
-                ~AllocationAgreement.group_uuid.in_(delete_group_select),
-            )
+            .where(*conditions)
             .group_by(AllocationAgreement.group_uuid)
         )
+
         valid_agreements_subq = valid_agreements_select.subquery()
 
-        # Step 4: Get the effective records
+        # Get the actual records with their related data
         allocation_agreements_select = (
             select(AllocationAgreement)
             .options(

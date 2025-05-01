@@ -3,22 +3,17 @@ import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading.jsx'
 import { Role } from '@/components/Role'
-import { StyledListItem } from '@/components/StyledListItem'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 import { roles } from '@/constants/roles'
 import { apiRoutes } from '@/constants/routes/index.js'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import {
-  useCreateSupplementalReport,
-  useGetComplianceReport
-} from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { useApiService } from '@/services/useApiService.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
 import { OrganizationAddress } from '@/views/ComplianceReports/components/OrganizationAddress.jsx'
 import { Assignment, FileDownload } from '@mui/icons-material'
-import { List, ListItemText, Stack } from '@mui/material'
+import { Stack } from '@mui/material'
 import Box from '@mui/material/Box'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -31,24 +26,14 @@ export const AssessmentCard = ({
   currentStatus,
   complianceReportId,
   alertRef,
-  chain
+  chain,
+  isQuarterlyReport = false
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
-  const {
-    data: currentUser,
-    isLoading: isCurrentUserLoading,
-    hasRoles
-  } = useCurrentUser()
 
   const [isEditing, setIsEditing] = useState(false)
-
-  const { data: reportData, isLoading: isReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId
-    )
 
   const onEdit = () => {
     setIsEditing(true)
@@ -100,10 +85,6 @@ export const AssessmentCard = ({
     return chain.filter((report) => report.history && report.history.length > 0)
   }, [chain])
 
-  if (isCurrentUserLoading || isReportLoading) {
-    return <Loading />
-  }
-
   return (
     <BCWidgetCard
       component="div"
@@ -116,12 +97,13 @@ export const AssessmentCard = ({
           : t('report:orgDetails')
       }
       editButton={
-        !isEditing &&
-        currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && {
-          onClick: onEdit,
-          text: 'Edit',
-          id: 'edit'
-        }
+        (!isEditing &&
+          currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && {
+            onClick: onEdit,
+            text: 'Edit',
+            id: 'edit'
+          }) ||
+        null
       }
       content={
         <>
@@ -139,39 +121,6 @@ export const AssessmentCard = ({
                 setIsEditing={setIsEditing}
               />
             )}
-            {((!isGovernmentUser &&
-              ['Assessed', 'Reassessed', 'Rejected'].includes(
-                reportData.report.currentStatus?.status
-              )) ||
-              isGovernmentUser) && (
-              <>
-                <BCTypography
-                  sx={{ paddingTop: '16px' }}
-                  component="div"
-                  variant="h6"
-                  color="primary"
-                >
-                  {t('report:assessmentStatement')}
-                  {((hasRoles('Analyst') && currentStatus === 'Submitted') ||
-                    (hasRoles('Compliance Manager') &&
-                      currentStatus === 'Recommended by analyst') ||
-                    (hasRoles('Director') &&
-                      currentStatus === 'Recommended by manager')) && (
-                    <span style={{ color: 'red' }}>
-                      {' '}
-                      {t('report:assessmentStatementEdit')}
-                    </span>
-                  )}
-                </BCTypography>
-                <List sx={{ padding: 0 }}>
-                  <StyledListItem>
-                    <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
-                      {reportData.report.assessmentStatement || 'N/A'}
-                    </ListItemText>
-                  </StyledListItem>
-                </List>
-              </>
-            )}
             {filteredChain.length > 0 &&
               currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
                 <>
@@ -183,43 +132,50 @@ export const AssessmentCard = ({
                   >
                     {t('report:reportHistory')}
                   </BCTypography>
-                  {filteredChain.map((report) => (
-                    <HistoryCard key={report.version} report={report} />
+                  {filteredChain.map((report, index) => (
+                    <HistoryCard
+                      defaultExpanded={index === 0}
+                      key={report.version}
+                      report={report}
+                    />
                   ))}
                 </>
               )}
             <Role roles={[roles.supplier]}>
               {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
                 currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
-                  <>
-                    <BCTypography
-                      sx={{ paddingTop: '16px' }}
-                      component="div"
-                      variant="body4"
-                    >
-                      {t('report:supplementalWarning')}
-                    </BCTypography>
-                    <Box>
-                      <BCButton
-                        data-test="create-supplemental"
-                        size="small"
-                        variant="contained"
-                        color="primary"
-                        onClick={() => {
-                          createSupplementalReport()
-                        }}
-                        startIcon={<Assignment />}
-                        sx={{ mt: 2 }}
-                        disabled={isLoading}
-                      >
-                        {t('report:createSupplementalRptBtn')}
-                      </BCButton>
-                    </Box>
-                  </>
+                  <BCTypography
+                    sx={{ paddingTop: '16px' }}
+                    component="div"
+                    variant="body4"
+                  >
+                    {t('report:supplementalWarning')}
+                  </BCTypography>
                 )}
             </Role>
             {currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
-              <Box>
+              <Box display={'flex'} gap={2}>
+                <Role roles={[roles.supplier]}>
+                  {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
+                    currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
+                      <Box>
+                        <BCButton
+                          data-test="create-supplemental"
+                          size="small"
+                          variant="contained"
+                          color="primary"
+                          onClick={() => {
+                            createSupplementalReport()
+                          }}
+                          startIcon={<Assignment />}
+                          sx={{ mt: 3 }}
+                          disabled={isLoading}
+                        >
+                          {t('report:createSupplementalRptBtn')}
+                        </BCButton>
+                      </Box>
+                    )}
+                </Role>
                 <BCButton
                   data-test="download-report"
                   size="small"

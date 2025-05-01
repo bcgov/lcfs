@@ -382,6 +382,7 @@ async def test_get_compliance_report_by_id_success(
     fastapi_app: FastAPI,
     set_mock_user,
     mock_compliance_report_services,
+    compliance_report_base_schema,
 ):
     # Mock user setup
     set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
@@ -443,8 +444,8 @@ async def test_get_compliance_report_by_id_success(
 
     # Assertions
     assert response.status_code == 200
-    mock_compliance_report_services.get_compliance_report_by_id.assert_awaited_once_with(
-        1, mock.ANY, True
+    mock_compliance_report_services.get_compliance_report_chain.assert_awaited_once_with(
+        1, mock.ANY
     )
     mock_compliance_report_validation.validate_organization_access.assert_awaited_once_with(
         1

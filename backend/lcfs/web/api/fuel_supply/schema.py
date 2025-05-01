@@ -8,9 +8,8 @@ from lcfs.web.api.base import (
     PaginationResponseSchema,
     SortOrder,
 )
-from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
-from lcfs.web.utils.schema_validators import fuel_code_required
+from lcfs.web.utils.schema_validators import fuel_code_required, fuel_quantity_required
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -133,7 +132,11 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     fuel_category_id: int
     end_use_id: int
     provision_of_the_act_id: int
-    quantity: int
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     units: str
     fuel_type_other: Optional[str] = None
     fuel_code_id: Optional[int] = None
@@ -153,23 +156,12 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     def check_fuel_code_required(cls, values):
         return fuel_code_required(values)
 
-
-class FuelSupplyDiffSchema(BaseSchema):
-    compliance_units: Optional[bool] = None
-    fuel_type_id: Optional[bool] = None
-    fuel_category_id: Optional[bool] = None
-    end_use_id: Optional[bool] = None
-    provision_of_the_act_id: Optional[bool] = None
-    fuel_code_id: Optional[bool] = None
-    quantity: Optional[bool] = None
-    fuel_type_other: Optional[bool] = None
-    units: Optional[bool] = None
-    target_ci: Optional[bool] = None
-    ci_of_fuel: Optional[bool] = None
-    uci: Optional[bool] = None
-    energy_density: Optional[bool] = None
-    eer: Optional[bool] = None
-    energy: Optional[bool] = None
+    @model_validator(mode="before")
+    @classmethod
+    def check_quantity_required(cls, values):
+        if isinstance(values, DeleteFuelSupplyResponseSchema):
+            return values
+        return fuel_quantity_required(values)
 
 
 class FuelSupplyResponseSchema(FuelSupplyCreateUpdateSchema):
@@ -183,7 +175,6 @@ class FuelSupplyResponseSchema(FuelSupplyCreateUpdateSchema):
     fuel_code: Optional[str]
     uci: Optional[float] = None
     fuel_code: Optional[str] = None
-    diff: Optional[FuelSupplyDiffSchema] = None
 
     @field_validator("compliance_units", mode="before")
     def round_compliance_units(cls, value):

@@ -6,7 +6,7 @@ import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { Stack } from '@mui/material'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { organizationsColDefs } from './ViewOrganization/_schema'
+import { organizationsColDefs } from './OrganizationView/_schema'
 import { apiRoutes } from '@/constants/routes'
 import { ROUTES } from '@/routes/routes'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -118,7 +118,7 @@ export const Organizations = () => {
   )
 
   return (
-    <>
+    <BCBox className="organizations-container" aria-label="Organizations">
       {alertMessage && (
         <BCAlert data-test="alert-box" severity={alertSeverity}>
           {alertMessage}
@@ -187,6 +187,6 @@ export const Organizations = () => {
           onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
-    </>
+    </BCBox>
   )
 }

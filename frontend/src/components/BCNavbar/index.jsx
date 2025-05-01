@@ -20,7 +20,7 @@ function BCNavbar({
   const isMobileView = useMediaQuery(theme.breakpoints.down('xl'))
 
   return (
-    <BCBox py={0}>
+    <BCBox py={0} className="main-layout-navbar">
       <PopupState variant="popover" popupId="demo-popup-menu">
         {(popupState) => (
           <AppBar

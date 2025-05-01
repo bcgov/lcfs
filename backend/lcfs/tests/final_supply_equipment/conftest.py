@@ -1,5 +1,7 @@
 import pytest
 from datetime import date
+
+from lcfs.db.models import FinalSupplyEquipment, LevelOfEquipment
 from lcfs.web.api.fuel_code.schema import EndUseTypeSchema, EndUserTypeSchema
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentSchema,
@@ -7,6 +9,30 @@ from lcfs.web.api.final_supply_equipment.schema import (
     PortsEnum,
     FinalSupplyEquipmentCreateSchema,
 )
+
+
+@pytest.fixture
+def valid_final_supply_equipment() -> FinalSupplyEquipment:
+    return FinalSupplyEquipment(
+        serial_nbr="SER123",
+        final_supply_equipment_id=1,
+        compliance_report_id=1,
+        supply_from_date=date(2022, 1, 1),
+        supply_to_date=date(2022, 1, 1),
+        registration_nbr="TESTORG-A1A1A1-001",
+        manufacturer="Manufacturer Inc",
+        level_of_equipment=LevelOfEquipment(
+            level_of_equipment_id=1, name="Name", display_order=1
+        ),
+        intended_use_types=[],
+        intended_user_types=[],
+        street_address="Street",
+        city="City",
+        postal_code="A1A 1A1",
+        latitude=90.0,
+        longitude=180.0,
+        organization_name="Organization Name",
+    )
 
 
 @pytest.fixture
@@ -22,17 +48,10 @@ def valid_final_supply_equipment_schema() -> FinalSupplyEquipmentSchema:
         serial_nbr="SER123",
         manufacturer="Manufacturer Inc",
         model="ModelX",
-        level_of_equipment=LevelOfEquipmentSchema(
-            level_of_equipment_id=1,
-            name="Level1",
-            description="Test description",
-            display_order=1,
-        ),
+        level_of_equipment="Level 1",
         ports=PortsEnum.SINGLE,
-        intended_use_types=[EndUseTypeSchema(type="Public", end_use_type_id=1)],
-        intended_user_types=[
-            EndUserTypeSchema(type_name="General", end_user_type_id=1)
-        ],
+        intended_use_types=["Public"],
+        intended_user_types=["General"],
         street_address="123 Test St",
         city="Test City",
         postal_code="A1A 1A1",
