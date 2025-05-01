@@ -165,7 +165,7 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report1ID}
+              // value={report1ID}
               variant="outlined"
               onChange={onSelectReport1}
             >
@@ -230,8 +230,8 @@ export const CompareReports = () => {
         title={t('report:nonCompliancePenaltySummary')}
         columns={nonCompliancePenaltyColumns(
           t,
-          report1ID ? `CR${report1ID.compliancePeriod}` : '',
-          report2ID ? `CR${report2ID.compliancePeriod}` : ''
+          selectedReportName1 ? `CR ${selectedReportName1}` : '',
+          selectedReportName2 ? `CR ${selectedReportName2}` : ''
         )}
         data={nonCompliancePenaltySummary}
       />
