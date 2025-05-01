@@ -383,7 +383,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
               sx={{
                 '& .Mui-disabled': {
                   backgroundColor: colors.light.main,
-                  opacity: 0.8,
+                  opacity: '0.8 !important',
                   '& .MuiTypography-root': {
                     color: 'initial !important',
                   }
