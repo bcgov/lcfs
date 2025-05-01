@@ -8,6 +8,7 @@ import { roles } from '@/constants/roles'
 import { apiRoutes } from '@/constants/routes/index.js'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { useApiService } from '@/services/useApiService.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
@@ -32,6 +33,7 @@ export const AssessmentCard = ({
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
+  const { hasRoles } = useCurrentUser()
 
   const [isEditing, setIsEditing] = useState(false)
 
@@ -85,6 +87,18 @@ export const AssessmentCard = ({
     return chain.filter((report) => report.history && report.history.length > 0)
   }, [chain])
 
+  const isAddressEditable = useMemo(() => {
+    return (
+      !isEditing &&
+      (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT ||
+        (hasRoles(roles.analyst) &&
+          ![
+            COMPLIANCE_REPORT_STATUSES.DRAFT,
+            COMPLIANCE_REPORT_STATUSES.ASSESSED
+          ].includes(currentStatus)))
+    )
+  }, [isEditing, currentStatus, hasRoles])
+
   return (
     <BCWidgetCard
       component="div"
@@ -97,12 +111,11 @@ export const AssessmentCard = ({
           : t('report:orgDetails')
       }
       editButton={
-        (!isEditing &&
-          currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && {
-            onClick: onEdit,
-            text: 'Edit',
-            id: 'edit'
-          }) ||
+        (isAddressEditable && {
+          onClick: onEdit,
+          text: 'Edit',
+          id: 'edit'
+        }) ||
         null
       }
       content={
@@ -167,7 +180,7 @@ export const AssessmentCard = ({
                           onClick={() => {
                             createSupplementalReport()
                           }}
-                          startIcon={<Assignment />}
+                          startIcon={<Assignment fontSize="1rem !important" />}
                           sx={{ mt: 3 }}
                           disabled={isLoading}
                         >

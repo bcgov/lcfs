@@ -50,7 +50,8 @@ import {
   DeleteOutline,
   Edit,
   ExpandMore,
-  InfoOutlined
+  InfoOutlined,
+  NewReleasesOutlined
 } from '@mui/icons-material'
 
 const chipStyles = {
@@ -379,6 +380,15 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         return (
           ((scheduleData && !isArrayEmpty(scheduleData)) || hasVersions) && (
             <Accordion
+              sx={{
+                '& .Mui-disabled': {
+                  backgroundColor: colors.light.main,
+                  opacity: 0.8,
+                  '& .MuiTypography-root': {
+                    color: 'initial !important',
+                  }
+                }
+              }}
               key={index}
               expanded={
                 expanded.includes(`panel${index}`) &&
@@ -423,7 +433,20 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     </Role>
                   )}{' '}
                   {wasEdited(data?.[activity.key]) && (
-                    <StyledChip color="primary" label="Edited" />
+                    <Chip
+                      aria-label="changes were made since original report"
+                      icon={<NewReleasesOutlined fontSize="small" />}
+                      label={t('Edited')}
+                      size="small"
+                      sx={{
+                        ...chipStyles,
+                        color: colors.alerts.success.color,
+                        '& .MuiChip-icon': {
+                          color: colors.alerts.success.color
+                        },
+                        backgroundImage: `linear-gradient(195deg, ${colors.alerts.success.border},${colors.alerts.success.background})`
+                      }}
+                    />
                   )}
                 </BCTypography>
                 {allRecordsDeleted && (
