@@ -52,5 +52,5 @@ CMD ["/bin/sh", "-c", "\
       . /vault/secrets/$cfg; \
     fi; \
   done; \
-  exec /app/lcfs/start.sh\
+  /app/lcfs/start.sh\
 "]
