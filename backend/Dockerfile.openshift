@@ -47,3 +47,12 @@ ENV APP_ENVIRONMENT=prod
 
 # CMD ["/app/lcfs/start.sh"] replaced with the following to allow for config file to be sourced
 CMD ["/bin/sh", "-c", "if [ -f /vault/secrets/config ]; then . /vault/secrets/config; fi; /app/lcfs/start.sh"]
+
+CMD ["/bin/sh", "-c", "\
+  for cfg in database redis objectstorage email rabbitmq; do \
+    if [ -f /vault/secrets/$cfg ]; then \
+      . /vault/secrets/$cfg; \
+    fi; \
+  done; \
+  exec /app/lcfs/start.sh\
+"]
