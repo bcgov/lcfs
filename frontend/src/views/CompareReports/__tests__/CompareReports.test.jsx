@@ -3,8 +3,7 @@ import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useGetComplianceReport,
-  useGetComplianceReportSummary,
-  useListComplianceReports
+  useGetComplianceReportSummary
 } from '@/hooks/useComplianceReports'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -17,7 +16,8 @@ describe('CompareReports Component', () => {
   beforeEach(() => {
     useCurrentUser.mockReturnValue({
       hasRoles: true,
-      data: { organization: { organizationId: 1 } }
+      data: { organization: { organizationId: 1 } },
+      isLoading: false
     })
 
     useGetComplianceReport.mockReturnValue({
@@ -144,46 +144,91 @@ describe('CompareReports Component', () => {
     })
   })
 
+  it('starts with empty dropdowns', () => {
+    render(<CompareReports />, { wrapper })
+
+    const report1Select = screen.getAllByRole('combobox')[0]
+    const report2Select = screen.getAllByRole('combobox')[1]
+
+    // Initial state should be empty
+    expect(report1Select).not.toHaveTextContent('Original Report')
+    expect(report1Select).not.toHaveTextContent('Supplemental Report 1')
+    expect(report1Select).not.toHaveTextContent('Government Adjustment 2')
+
+    expect(report2Select).not.toHaveTextContent('Original Report')
+    expect(report2Select).not.toHaveTextContent('Supplemental Report 1')
+    expect(report2Select).not.toHaveTextContent('Government Adjustment 2')
+  })
+
   it('allows selecting different reports', async () => {
     render(<CompareReports />, { wrapper })
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
 
+    // Open first dropdown and select an option
     fireEvent.mouseDown(report1Select)
-
     fireEvent.click(
       screen.getByRole('option', { name: 'Government Adjustment 2' })
     )
 
+    // Verify first selection was made
+    expect(report1Select).toHaveTextContent('Government Adjustment 2')
+
+    // Open second dropdown and select an option
     fireEvent.mouseDown(report2Select)
     fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
 
+    // Verify both selections
     expect(report1Select).toHaveTextContent('Government Adjustment 2')
     expect(report2Select).toHaveTextContent('Original Report')
   })
 
-  it('should not allow comparing the same report to itself', async () => {
+  it('should not allow selecting the same report in both dropdowns', async () => {
     render(<CompareReports />, { wrapper })
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
 
+    // Select Government Adjustment 2 in first dropdown
     fireEvent.mouseDown(report1Select)
-    const elements = screen.queryByRole('option', { name: 'Original Report' })
-    expect(elements).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole('option', { name: 'Government Adjustment 2' })
+    )
 
+    // Open first dropdown again to check options
+    fireEvent.mouseDown(report1Select)
+
+    // All options except the one selected in second dropdown should be available
+    expect(
+      screen.getByRole('option', { name: 'Original Report' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'Supplemental Report 1' })
+    ).toBeInTheDocument()
+
+    // Select Original Report in second dropdown
     fireEvent.mouseDown(report2Select)
-    const elements2 = screen.queryByRole('option', {
-      name: 'Supplemental report 1'
-    })
-    expect(report2Select).toHaveTextContent('Original Report')
-    expect(elements2).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
+
+    // Open second dropdown again to check options
+    fireEvent.mouseDown(report2Select)
+
+    // Government Adjustment 2 should not be an option in second dropdown
+    expect(
+      screen.queryByRole('option', { name: 'Government Adjustment 2' })
+    ).not.toBeInTheDocument()
+
+    // Supplemental Report 1 should be an option
+    expect(
+      screen.getByRole('option', { name: 'Supplemental Report 1' })
+    ).toBeInTheDocument()
   })
 
-  it('displays correct data in CompareTable', async () => {
+  it('displays no data in CompareTable when no reports are selected', async () => {
     render(<CompareReports />, { wrapper })
 
+    // Initially, the tables should be empty as no reports are selected
     expect(
       screen.getByText(/renewable fuel target summary/i)
     ).toBeInTheDocument()
@@ -191,7 +236,29 @@ describe('CompareReports Component', () => {
       screen.getByText(/low carbon fuel target summary/i)
     ).toBeInTheDocument()
 
-    // Check if the data rows are rendered correctly
+    // The specific data values should not be present initially
+    expect(screen.queryByText('100')).not.toBeInTheDocument()
+    expect(screen.queryByText('250')).not.toBeInTheDocument()
+    expect(screen.queryByText('50')).not.toBeInTheDocument()
+    expect(screen.queryByText('70')).not.toBeInTheDocument()
+  })
+
+  it('displays correct data in CompareTable after selecting reports', async () => {
+    render(<CompareReports />, { wrapper })
+
+    const report1Select = screen.getAllByRole('combobox')[0]
+    const report2Select = screen.getAllByRole('combobox')[1]
+
+    // Select reports
+    fireEvent.mouseDown(report1Select)
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
+
+    fireEvent.mouseDown(report2Select)
+    fireEvent.click(
+      screen.getByRole('option', { name: 'Supplemental Report 1' })
+    )
+
+    // Check if the data rows are rendered correctly after selection
     expect(screen.getByText(/renewableFuelTargetSummary/i)).toBeInTheDocument()
     expect(screen.getByText(/lowCarbonFuelTargetSummary/i)).toBeInTheDocument()
     expect(screen.getByText('100')).toBeInTheDocument()

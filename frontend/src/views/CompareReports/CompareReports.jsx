@@ -44,8 +44,6 @@ export const CompareReports = () => {
   useEffect(() => {
     if (complianceReport) {
       const { chain } = complianceReport
-      // Don't set any default selected reports
-      // Let both lists start with empty selections
       setReportChain(chain)
       setIsLoading(false)
     }
@@ -125,9 +123,7 @@ export const CompareReports = () => {
     const newReport1ID = event.target.value
     setReport1ID(newReport1ID)
 
-    // If the newly selected report1 is the same as current report2, we need to change report2
     if (newReport1ID === report2ID && reportChain.length > 1) {
-      // Find a new valid report to assign to report2
       const availableReports = reportChain.filter(
         (report) => report.complianceReportId !== newReport1ID
       )
@@ -135,7 +131,6 @@ export const CompareReports = () => {
       if (availableReports.length > 0) {
         setReport2ID(availableReports[0].complianceReportId)
       } else {
-        // If no other reports are available, reset report2
         setReport2ID(null)
       }
     }
@@ -145,9 +140,7 @@ export const CompareReports = () => {
     const newReport2ID = event.target.value
     setReport2ID(newReport2ID)
 
-    // If the newly selected report2 is the same as current report1, we need to change report1
     if (newReport2ID === report1ID && reportChain.length > 1) {
-      // Find a new valid report to assign to report1
       const availableReports = reportChain.filter(
         (report) => report.complianceReportId !== newReport2ID
       )
@@ -155,7 +148,6 @@ export const CompareReports = () => {
       if (availableReports.length > 0) {
         setReport1ID(availableReports[0].complianceReportId)
       } else {
-        // If no other reports are available, reset report1
         setReport1ID(null)
       }
     }
