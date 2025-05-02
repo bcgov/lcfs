@@ -278,8 +278,7 @@ async def import_allocation_agreements(
         report_id=compliance_report_id,
         user=request.user,
     )
-    version = compliance_report.version
-    is_original = version == 0
+    is_original = compliance_report.version == 0
 
     if overwrite:
         existing_aa = await aa_repo.get_allocation_agreements(compliance_report_id)

@@ -420,9 +420,14 @@ async def test_get_compliance_report_by_id_success(
             "has_supplemental": False,
         },
         chain=[],
+        isNewest=True,
     )
 
-    # Create a mock for the validation service
+    # Make the chain call return the same serialisable object
+    mock_compliance_report_services.get_compliance_report_chain.return_value = (
+        mock_compliance_report_services.get_compliance_report_by_id.return_value
+    )
+
     mock_compliance_report_validation = AsyncMock()
     mock_compliance_report_validation.validate_organization_access.return_value = (
         ComplianceReport()

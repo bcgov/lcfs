@@ -285,11 +285,17 @@ class AllocationAgreementServices:
             existing_allocation_agreement.postal_address = (
                 allocation_agreement_data.postal_address
             )
-            existing_allocation_agreement.ci_of_fuel = (
-                allocation_agreement_data.ci_of_fuel
+            recalculated_ci = await self.calculate_ci_of_fuel(
+                fuel_type=existing_allocation_agreement.fuel_type,
+                fuel_category=existing_allocation_agreement.fuel_category,
+                provision_of_the_act=existing_allocation_agreement.provision_of_the_act.name,
+                fuel_code=existing_allocation_agreement.fuel_code,
+            )
+            existing_allocation_agreement.ci_of_fuel = recalculated_ci
+            existing_allocation_agreement.units = self.calculate_units(
+                existing_allocation_agreement.fuel_type
             )
             existing_allocation_agreement.quantity = allocation_agreement_data.quantity
-            existing_allocation_agreement.units = allocation_agreement_data.units
             existing_allocation_agreement.fuel_type_other = (
                 allocation_agreement_data.fuel_type_other
             )
@@ -453,9 +459,17 @@ class AllocationAgreementServices:
             None
         """
 
-        # todo: check if version 0
+        # Allow bulk delete only when the target compliance report is version 0
+        compliance_report = await self.get_compliance_report_by_id(compliance_report_id)
+        if compliance_report.version != 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Bulk delete is permitted only on original reports (version 0). "
+                ),
+            )
 
-        await self.repo.delete_all_for_report(compliance_report_id, current_user)
+        await self.repo.delete_all_for_report(compliance_report_id)
 
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):

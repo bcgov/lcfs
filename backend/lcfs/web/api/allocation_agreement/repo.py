@@ -346,79 +346,13 @@ class AllocationAgreementRepository:
         result = await self.db.execute(query)
         return result.unique().scalars().first()
 
-    async def delete_all_for_report(
-        self, compliance_report_id: int, current_username: str
-    ):
+    async def delete_all_for_report(self, compliance_report_id: int):
         """
-        Performs bulk versioned deletion of allocation agreements for a compliance report.
-
-        Creates new versioned records with 'DELETE' action type for all active agreements
-        in a single SQL statement for performance.
-
-        Args:
-            compliance_report_id (int): Target compliance report ID
-            current_username (str): Username of the user performing the deletion
+        Delete every AllocationAgreement linked to a compliance report
         """
-        # Gather the table columns from the model
-        cols = AllocationAgreement.__table__.columns
-
-        # Build lists for the INSERT columns & SELECT expressions
-        insert_cols = []
-        select_exprs = []
-
-        for col in cols:
-            col_name = col.name
-
-            # Skip excluded fields
-            if col_name in ALLOCATION_AGREEMENT_BULK_DELETE_EXCLUDE_FIELDS:
-                continue
-
-            if col_name == "version":
-                # We'll do version + 1
-                insert_cols.append(col_name)
-                select_exprs.append("version + 1 AS version")
-
-            elif col_name == "action_type":
-                # Force 'DELETE'
-                insert_cols.append(col_name)
-                select_exprs.append(f"'{ActionTypeEnum.DELETE.value}' AS action_type")
-
-            elif col_name in ("create_user", "update_user"):
-                # override these with the user performing the delete
-                insert_cols.append(col_name)
-                select_exprs.append(f":current_user AS {col_name}")
-
-            elif col_name in ("create_date", "update_date"):
-                insert_cols.append(col_name)
-                select_exprs.append(f"now() AS {col_name}")
-
-            else:
-                # Normal copy
-                insert_cols.append(col_name)
-                select_exprs.append(col_name)
-
-        # Join them up into comma-delimited strings
-        insert_col_str = ", ".join(insert_cols)
-        select_expr_str = ", ".join(select_exprs)
-
-        # 3) Single INSERT..SELECT statement
-        sql = text(
-            f"""
-            INSERT INTO allocation_agreement
-            ({insert_col_str})
-            SELECT
-                {select_expr_str}
-            FROM allocation_agreement
-            WHERE compliance_report_id = :report_id
-              AND action_type != '{ActionTypeEnum.DELETE.value}';
-        """
-        )
-
         await self.db.execute(
-            sql,
-            {
-                "report_id": compliance_report_id,
-                "current_user": current_username,
-            },
+            delete(AllocationAgreement).where(
+                AllocationAgreement.compliance_report_id == compliance_report_id
+            )
         )
         await self.db.flush()

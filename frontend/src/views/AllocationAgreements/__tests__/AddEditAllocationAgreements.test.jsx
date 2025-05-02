@@ -264,14 +264,16 @@ describe('AddEditAllocationAgreements', () => {
       }
     })
 
+    // Mock data to simulate “existing allocation agreement rows”
+    const mockExistingData = {
+      allocationAgreements: [{ allocationAgreementId: 'testId1' }]
+    }
+
     vi.mocked(
-      useAllocationAgreementHook.useGetAllAllocationAgreements
+      useAllocationAgreementHook.useGetAllocationAgreementsList
     ).mockReturnValue({
-      data: {
-        allocationAgreements: [{ allocationAgreementId: 'testId1' }]
-      },
-      isLoading: false,
-      refetch: vi.fn()
+      data: mockExistingData,
+      isLoading: false
     })
 
     vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
