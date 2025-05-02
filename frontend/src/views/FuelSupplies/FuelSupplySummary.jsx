@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 
-export const FuelSupplySummary = ({ data, status }) => {
+export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const [gridKey, setGridKey] = useState(`fuel-supplies-grid`)
@@ -83,7 +83,7 @@ export const FuelSupplySummary = ({ data, status }) => {
           apiEndpoint={apiRoutes.getAllFuelSupplies}
           apiData={'fuelSupplies'}
           apiParams={{ complianceReportId }}
-          columnDefs={fuelSupplySummaryColDef}
+          columnDefs={fuelSupplySummaryColDef(isEarlyIssuance)}
           gridKey={gridKey}
           getRowId={getRowId}
           gridOptions={gridOptions}

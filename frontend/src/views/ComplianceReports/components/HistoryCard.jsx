@@ -1,17 +1,17 @@
-import React, { useMemo } from 'react'
+import BCTypography from '@/components/BCTypography/index.jsx'
+import { StyledListItem } from '@/components/StyledListItem.jsx'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { useCurrentUser } from '@/hooks/useCurrentUser.js'
+import { timezoneFormatter } from '@/utils/formatters.js'
+import { ExpandMore } from '@mui/icons-material'
 import { List, ListItemText, styled } from '@mui/material'
 import MuiAccordion from '@mui/material/Accordion'
+import MuiAccordionDetails from '@mui/material/AccordionDetails'
 import MuiAccordionSummary, {
   accordionSummaryClasses
 } from '@mui/material/AccordionSummary'
-import MuiAccordionDetails from '@mui/material/AccordionDetails'
-import { useCurrentUser } from '@/hooks/useCurrentUser.js'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import BCTypography from '@/components/BCTypography/index.jsx'
-import { StyledListItem } from '@/components/StyledListItem.jsx'
-import { timezoneFormatter } from '@/utils/formatters.js'
-import { ExpandMore } from '@mui/icons-material'
 
 const Accordion = styled((props) => (
   <MuiAccordion disableGutters elevation={0} square {...props} />
@@ -45,7 +45,7 @@ const AccordionDetails = styled(MuiAccordionDetails)(() => ({
   paddingBottom: 0
 }))
 
-export const HistoryCard = ({ report }) => {
+export const HistoryCard = ({ report, defaultExpanded = false }) => {
   const { data: currentUser } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const { t } = useTranslation(['report'])
@@ -70,7 +70,7 @@ export const HistoryCard = ({ report }) => {
   }, [isGovernmentUser, report.history])
 
   return (
-    <Accordion>
+    <Accordion defaultExpanded={defaultExpanded}>
       <AccordionSummary
         expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
         aria-controls="panel1-content"
@@ -85,6 +85,22 @@ export const HistoryCard = ({ report }) => {
       {filteredHistory.length > 0 && (
         <AccordionDetails>
           <List>
+            {report.assessmentStatement &&
+              ((!isGovernmentUser &&
+                report.currentStatus.status === 'Assessed') ||
+                isGovernmentUser) && (
+                <StyledListItem disablePadding>
+                  <ListItemText
+                    data-test="list-item"
+                    primaryTypographyProps={{ variant: 'body4' }}
+                  >
+                    <strong>
+                      {t('report:complianceReportHistory.directorStatement')}:
+                    </strong>{' '}
+                    {report.assessmentStatement}
+                  </ListItemText>
+                </StyledListItem>
+              )}
             {filteredHistory.map((item, index) => (
               <StyledListItem key={index} disablePadding>
                 <ListItemText
@@ -107,9 +123,11 @@ export const HistoryCard = ({ report }) => {
                     }}
                   />
                 </ListItemText>
-                {item.status.status === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
+                {[COMPLIANCE_REPORT_STATUSES.ASSESSED, 'AssessedBy'].includes(
+                  item.status.status
+                ) && (
                   <List sx={{ p: 0, m: 0 }}>
-                    <StyledListItem key={index} disablePadding>
+                    <StyledListItem disablePadding>
                       <ListItemText
                         primaryTypographyProps={{ variant: 'body4' }}
                       >
@@ -126,7 +144,7 @@ export const HistoryCard = ({ report }) => {
                         })}
                       </ListItemText>
                     </StyledListItem>
-                    <StyledListItem key={index} disablePadding>
+                    <StyledListItem disablePadding>
                       <ListItemText
                         primaryTypographyProps={{ variant: 'body4' }}
                       >

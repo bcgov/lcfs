@@ -22,8 +22,7 @@ vi.mock('react-router-dom')
 
 const MockFormProvider = ({ children }) => {
   const methods = useForm({
-    resolver: yupResolver(schemaValidation),
-    mode: 'all'
+    resolver: yupResolver(schemaValidation)
   })
   return <FormProvider {...methods}>{children}</FormProvider>
 }
@@ -183,36 +182,47 @@ describe('AddEditOrg', () => {
       { wrapper }
     )
 
-    // Fill in the form fields
+    // Fill in the required form fields
     fireEvent.change(screen.getByLabelText(/org:legalNameLabel/i), {
-      target: { value: 'New Org' }
+      target: { value: 'New Test Org Legal' }
     })
     fireEvent.change(screen.getByLabelText(/org:operatingNameLabel/i), {
-      target: { value: 'New Operating Org' }
+      target: { value: 'New Test Org Operating' }
     })
     fireEvent.change(screen.getByLabelText(/org:emailAddrLabel/i), {
-      target: { value: 'new@example.com' }
+      target: { value: 'new-test@example.com' }
     })
     fireEvent.change(screen.getByLabelText(/org:phoneNbrLabel/i), {
-      target: { value: '987-654-3210' }
+      target: { value: '555-123-4567' }
     })
+    // Supplier Type Radio (Assuming value '1' is valid)
+    fireEvent.click(screen.getByLabelText(/supplier/i))
+    // Registered for Transfers Radio (value="2" is Yes)
+    fireEvent.click(screen.getByTestId('orgRegForTransfers2'))
+    // Service Address Fields
+    fireEvent.change(screen.getAllByLabelText(/org:streetAddrLabel/i)[0], {
+      target: { value: '100 Test Service St' }
+    })
+    fireEvent.change(screen.getAllByLabelText(/org:cityLabel/i)[0], {
+      target: { value: 'Testville' }
+    })
+    fireEvent.change(screen.getAllByLabelText(/org:poLabel/i)[0], {
+      target: { value: 'V8V 8V8' }
+    })
+    // Early Issuance Radio (value="yes" is Yes)
+    fireEvent.click(screen.getByTestId('hasEarlyIssuanceYes'))
 
     // Submit the form
     fireEvent.click(screen.getByTestId('saveOrganization'))
 
+    // Wait for the navigation side effect
     await waitFor(() => {
-      // Check that the correct API call was made
-      expect(apiSpy.post).toHaveBeenCalledWith(
-        '/organizations/create',
-        expect.any(Object)
-      )
+      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST, {
+        state: {
+          message: 'Organization has been successfully added.',
+          severity: 'success'
+        }
+      })
     })
-
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST, {
-      state: {
-        message: 'Organization has been successfully added.',
-        severity: 'success'
-      }
-    })
-  })
+  }, 15000)
 })

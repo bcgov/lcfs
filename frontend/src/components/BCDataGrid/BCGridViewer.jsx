@@ -59,7 +59,7 @@ export const BCGridViewer = forwardRef(
               return { field, ...value }
             })
           ]
-          onPaginationChange({ filters: filterArr })
+          onPaginationChange({ ...paginationOptions, filters: filterArr })
         }
         if (columnState) {
           params.api.applyColumnState({
@@ -93,11 +93,15 @@ export const BCGridViewer = forwardRef(
     }, [])
 
     const handleChangePage = (_, newPage) => {
-      onPaginationChange({ page: newPage + 1 })
+      onPaginationChange({ ...paginationOptions, page: newPage + 1 })
     }
 
     const handleChangeRowsPerPage = (event) => {
-      onPaginationChange({ size: parseInt(event.target.value, 10) })
+      onPaginationChange({
+        ...paginationOptions,
+        page: 1,
+        size: parseInt(event.target.value, 10)
+      })
     }
 
     const handleFilterChanged = useCallback(
@@ -106,11 +110,14 @@ export const BCGridViewer = forwardRef(
         const filterArr = [
           ...Object.entries(gridFilters).map(([field, value]) => {
             return { field, ...value }
-          }),
-          ...paginationOptions.filters
+          })
         ]
 
-        onPaginationChange({ filters: filterArr })
+        onPaginationChange({
+          ...paginationOptions,
+          page: 1,
+          filters: filterArr
+        })
         sessionStorage.setItem(`${gridKey}-filter`, JSON.stringify(gridFilters))
       },
       [gridKey, onPaginationChange, paginationOptions.filters]
@@ -127,7 +134,7 @@ export const BCGridViewer = forwardRef(
             direction: col.sort
           }
         })
-      onPaginationChange({ sortOrders: sortTemp })
+      onPaginationChange({ ...paginationOptions, sortOrders: sortTemp })
       sessionStorage.setItem(
         `${gridKey}-column`,
         JSON.stringify(gridRef.current?.api.getColumnState())
@@ -181,7 +188,7 @@ export const BCGridViewer = forwardRef(
           defaultColDef={{ ...defaultColDefParams, ...defaultColDef }}
           columnDefs={columnDefs}
           gridOptions={gridOptions}
-          rowData={!isLoading && data[dataKey]}
+          rowData={!isLoading && (data[dataKey] || [])}
           onGridReady={onGridReady}
           onSortChanged={handleSortChanged}
           onFilterChanged={handleFilterChanged}

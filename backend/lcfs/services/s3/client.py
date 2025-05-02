@@ -13,10 +13,11 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
 )
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.admin_adjustment.services import AdminAdjustmentServices
-from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from fastapi import Depends
 from pydantic.v1 import ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, delete, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from lcfs.services.s3.dependency import get_s3_client
 from lcfs.db.dependencies import get_async_db_session
@@ -29,7 +30,7 @@ from lcfs.services.clamav.client import ClamAVService
 from lcfs.settings import settings
 from lcfs.web.api.initiative_agreement.services import InitiativeAgreementServices
 from lcfs.web.core.decorators import repo_handler
-from lcfs.web.exception.exceptions import ServiceException
+from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
 
 BUCKET_NAME = settings.s3_bucket
 MAX_FILE_SIZE_MB = 50
@@ -42,7 +43,8 @@ class DocumentService:
         db: AsyncSession = Depends(get_async_db_session),
         clamav_service: ClamAVService = Depends(),
         s3_client=Depends(get_s3_client),
-        compliance_report_service: ComplianceReportServices = Depends(),
+        compliance_report_repo: ComplianceReportRepository = Depends(),
+        fuel_supply_repo: FuelSupplyRepository = Depends(),
         admin_adjustment_service: AdminAdjustmentServices = Depends(),
         initiative_agreement_service: InitiativeAgreementServices = Depends(),
     ):
@@ -51,7 +53,8 @@ class DocumentService:
         self.db = db
         self.clamav_service = clamav_service
         self.s3_client = s3_client
-        self.compliance_report_service = compliance_report_service
+        self.compliance_report_repo = compliance_report_repo
+        self.fuel_supply_repo = fuel_supply_repo
 
     @repo_handler
     async def upload_file(self, file, parent_id: int, parent_type, user=None):
@@ -71,8 +74,9 @@ class DocumentService:
         file_size = os.fstat(file.file.fileno()).st_size
 
         if file_size > MAX_FILE_SIZE_BYTES:
-            raise ValidationError(
-                f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB} MB."
+            raise HTTPException(
+                status_code=400,
+                detail=f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB} MB.",
             )
 
         if settings.clamav_enabled:
@@ -108,7 +112,9 @@ class DocumentService:
             )
             await self.db.execute(stmt)
         elif parent_type == "administrativeAdjustment":
-            admin_adjustment = await self.db.get(AdminAdjustment, parent_id)
+            admin_adjustment = await self.admin_adjustment_service.get_admin_adjustment(
+                parent_id
+            )
             if not admin_adjustment:
                 raise Exception("Administrative Adjustment not found")
 
@@ -122,9 +128,13 @@ class DocumentService:
             )
             await self.db.execute(stmt)
         elif parent_type == "initiativeAgreement":
-            initiative_agreement = await self.db.get(InitiativeAgreement, parent_id)
+            initiative_agreement = (
+                await self.initiative_agreement_service.get_initiative_agreement(
+                    parent_id
+                )
+            )
             if not initiative_agreement:
-                raise Exception("Administrative Adjustment not found")
+                raise Exception("Initiative Agreement not found")
 
             self.db.add(document)
             await self.db.flush()
@@ -145,10 +155,9 @@ class DocumentService:
 
     async def _verify_compliance_report_access(self, parent_id, user):
         compliance_report = (
-            await self.compliance_report_service.get_compliance_report_by_id(
-                parent_id, user
-            )
+            await self.compliance_report_repo.get_compliance_report_by_id(parent_id)
         )
+
         if not compliance_report:
             raise HTTPException(status_code=404, detail="Compliance report not found")
 
@@ -212,18 +221,42 @@ class DocumentService:
         return presigned_url
 
     @repo_handler
-    async def delete_file(self, document_id: int):
+    async def delete_file(self, document_id: int, parent_id: int, parent_type: str):
         document = await self.db.get_one(Document, document_id)
 
         if not document:
             raise Exception("Document not found")
 
-        # Delete the file from S3
-        self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
+        links = []
+        if parent_type == "compliance_report":
+            links = (
+                await self.db.execute(
+                    select(compliance_report_document_association).where(
+                        document_id
+                        == compliance_report_document_association.c.document_id
+                    )
+                )
+            ).all()
 
-        # Delete the entry from the database
-        await self.db.delete(document)
-        await self.db.flush()
+        # If last link, delete the whole document
+        if len(links) == 1:
+            # Delete the file from S3
+            self.s3_client.delete_object(Bucket=BUCKET_NAME, Key=document.file_key)
+
+            # Delete the entry from the database
+            await self.db.delete(document)
+            await self.db.flush()
+        else:  # Delete the association
+            await self.db.execute(
+                delete(compliance_report_document_association).where(
+                    and_(
+                        parent_id
+                        == compliance_report_document_association.c.compliance_report_id,
+                        document_id
+                        == compliance_report_document_association.c.document_id,
+                    )
+                )
+            )
 
     @repo_handler
     async def get_by_id_and_type(self, parent_id: int, parent_type="compliance_report"):
@@ -272,3 +305,18 @@ class DocumentService:
 
         response = self.s3_client.get_object(Bucket=BUCKET_NAME, Key=document.file_key)
         return response, document
+
+    async def copy_documents(self, copy_from_id: int, copy_to_id: int):
+        documents = await self.db.execute(
+            select(compliance_report_document_association).where(
+                copy_from_id
+                == compliance_report_document_association.c.compliance_report_id
+            )
+        )
+
+        for document in documents.all():
+            stmt = compliance_report_document_association.insert().values(
+                compliance_report_id=copy_to_id,
+                document_id=document.document_id,
+            )
+            await self.db.execute(stmt)

@@ -4,6 +4,7 @@ from starlette.responses import StreamingResponse
 from typing import List, Literal
 
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.services.s3.client import DocumentService
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
 from lcfs.web.api.compliance_report.export import ComplianceReportExporter
@@ -96,8 +97,7 @@ async def get_compliance_report_by_id(
     compliance_report = await validate.validate_organization_access(report_id)
     await validate.validate_compliance_report_access(compliance_report)
 
-    result = await service.get_compliance_report_by_id(report_id, request.user, True)
-    return result
+    return await service.get_compliance_report_chain(report_id, request.user)
 
 
 @router.get(
@@ -165,14 +165,12 @@ async def update_compliance_report(
     service: ComplianceReportServices = Depends(),
     update_service: ComplianceReportUpdateService = Depends(),
     validate: ComplianceReportValidation = Depends(),
-) -> ComplianceReportBaseSchema:
+) -> ChainedComplianceReportSchema:
     """Update an existing compliance report."""
     await validate.validate_organization_access(report_id)
-    await update_service.update_compliance_report(
-        report_id, report_data, request.user
-    )
+    await update_service.update_compliance_report(report_id, report_data, request.user)
 
-    return await service.get_compliance_report_by_id(report_id, request.user, True)
+    return await service.get_compliance_report_chain(report_id, request.user)
 
 
 @router.post(
@@ -185,11 +183,14 @@ async def create_supplemental_report(
     request: Request,
     report_id: int,
     service: ComplianceReportServices = Depends(),
+    document_service: DocumentService = Depends(),
 ) -> ComplianceReportBaseSchema:
     """
     Create a supplemental compliance report.
     """
-    return await service.create_supplemental_report(report_id, request.user)
+    new_report = await service.create_supplemental_report(report_id, request.user)
+    await document_service.copy_documents(report_id, new_report.compliance_report_id)
+    return new_report
 
 
 @router.post(
@@ -202,11 +203,14 @@ async def create_government_adjustment(
     request: Request,
     report_id: int,
     service: ComplianceReportServices = Depends(),
+    document_service: DocumentService = Depends(),
 ) -> ComplianceReportBaseSchema:
     """
     Create a government adjustment.
     """
-    return await service.create_analyst_adjustment_report(report_id, request.user)
+    new_report = await service.create_analyst_adjustment_report(report_id, request.user)
+    await document_service.copy_documents(report_id, new_report.compliance_report_id)
+    return new_report
 
 
 @router.get(

@@ -1,6 +1,7 @@
 from fastapi.routing import APIRouter
 
 from lcfs.web.api import (
+    calculator,
     echo,
     fuel_supply,
     monitoring,
@@ -27,10 +28,12 @@ from lcfs.web.api import (
     audit_log,
     email,
     organization_snapshot,
+    credit_ledger,
 )
 
 api_router = APIRouter()
 api_router.include_router(monitoring.router)
+api_router.include_router(calculator.router, prefix="/calculator", tags=["public"])
 api_router.include_router(
     allocation_agreement.router,
     prefix="/allocation-agreement",
@@ -91,4 +94,9 @@ api_router.include_router(
     organization_snapshot.router,
     prefix="/organization_snapshot",
     tags=["organization_snapshot"],
+)
+api_router.include_router(
+    credit_ledger.router,
+    prefix="/credit-ledger",
+    tags=["credit_ledger"],
 )

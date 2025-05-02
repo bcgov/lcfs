@@ -11,8 +11,8 @@ import {
 } from '@testing-library/react'
 import { describe, vi } from 'vitest'
 
-vi.mock('@/contexts/AuthContext', () => ({
-  useAuth: () => ({
+vi.mock('@/contexts/AuthorizationContext', () => ({
+  useAuthorization: () => ({
     setForbidden: vi.fn()
   })
 }))

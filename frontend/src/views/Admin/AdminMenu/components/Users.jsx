@@ -84,12 +84,13 @@ export const Users = () => {
           {alertMessage}
         </BCAlert>
       )}
-      <BCBox component="div">
+      <BCBox component="div" className="users-container">
         <BCTypography variant="h5" my={1} color="primary">
           {t('admin:Users')}
         </BCTypography>
         <BCBox display="flex" alignItems="center" gap={2} mt={1}>
           <BCButton
+            data-test="add-user-btn"
             ref={newUserButtonRef}
             variant="contained"
             size="small"

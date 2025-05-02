@@ -14,6 +14,8 @@
 // ***********************************************************
 
 import 'cypress-axe'
+import 'cypress-real-events/support'
+import 'cypress-react-selector'
 import './commands'
 
 cy.on('fail', (error, runnable) => {

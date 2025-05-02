@@ -1,14 +1,6 @@
 import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
 
-Given('the analyst is on the login page', () => {
-  cy.clearAllCookies()
-  cy.clearAllLocalStorage()
-  cy.clearAllSessionStorage()
-  cy.visit('/')
-  cy.getByDataTest('login-container').should('exist')
-})
-
-When('the analyst logs in with valid credentials', () => {
+Given('the analyst logs in with valid credentials', () => {
   cy.loginWith(
     'idir',
     Cypress.env('ADMIN_IDIR_USERNAME'),

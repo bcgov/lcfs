@@ -225,6 +225,13 @@ export const finalSupplyEquipmentColDefs = (
     cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     minWidth: 430,
+    valueGetter: (params) => {
+      return (
+        params.data?.levelOfEquipment?.name ||
+        params.data?.levelOfEquipment ||
+        ''
+      )
+    },
     cellEditorParams: {
       options: optionsData?.levelsOfEquipment.map((obj) => obj.name),
       multiple: false,

@@ -23,7 +23,6 @@ from lcfs.web.api.fuel_export.schema import (
     TargetCarbonIntensitySchema,
     UnitOfMeasureSchema,
 )
-from lcfs.web.api.fuel_export.validation import FuelExportValidation
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.db.models.user.Role import RoleEnum
@@ -36,7 +35,6 @@ class FuelExportServices:
         self,
         request: Request = None,
         repo: FuelExportRepository = Depends(),
-        validate: FuelExportValidation = Depends(),
         compliance_report_repo: ComplianceReportRepository = Depends(),
     ) -> None:
         self.request = request
@@ -272,7 +270,7 @@ class FuelExportServices:
     async def get_compliance_report_by_id(self, compliance_report_id: int):
         """Get compliance report by period with status"""
         compliance_report = (
-            await self.compliance_report_repo.get_compliance_report_by_id(
+            await self.compliance_report_repo.get_compliance_report_schema_by_id(
                 compliance_report_id,
             )
         )

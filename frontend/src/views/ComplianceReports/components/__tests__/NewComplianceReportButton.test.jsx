@@ -93,9 +93,10 @@ describe('NewComplianceReportButton', () => {
     // Wait for the menu to appear.
     const menu = await screen.findByRole('menu')
     const menuItems = within(menu).getAllByRole('menuitem')
-    // The filtering function should return only the period with effectiveDate in 2024.
-    expect(menuItems).toHaveLength(1)
+    // The filtering function should return only the period with effectiveDate in 2024 and 2025.
+    expect(menuItems).toHaveLength(2)
     expect(menuItems[0]).toHaveTextContent('2024 Compliance Period')
+    expect(menuItems[1]).toHaveTextContent('2025 Compliance Period')
   })
 
   it('disables already reported periods', async () => {

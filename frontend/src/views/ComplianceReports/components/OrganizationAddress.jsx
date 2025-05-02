@@ -68,6 +68,13 @@ export const OrganizationAddress = ({
     }
   }, [recordsSameAsService, serviceAddress, setValue, headOfficeSameAsService])
 
+  // If 'same as legal name' is checked, automatically update operating name
+  useEffect(() => {
+    if (sameAsLegalName && legalName) {
+      setValue('operatingName', legalName)
+    }
+  }, [sameAsLegalName, legalName, setValue])
+
   // Submission handlers
   const onSubmit = async (data) => {
     await updateComplianceReport(data)

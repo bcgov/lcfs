@@ -276,6 +276,7 @@ export const allocationAgreementColDefs = (
       openOnFocus: true
     }),
     suppressKeyboardEvent,
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     minWidth: 150,
@@ -315,9 +316,7 @@ export const allocationAgreementColDefs = (
       freeSolo: false,
       openOnFocus: true
     }),
-    cellRenderer: (params) =>
-      params.value ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
@@ -357,6 +356,7 @@ export const allocationAgreementColDefs = (
         openOnFocus: true
       }
     },
+    cellRenderer: SelectRenderer,
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
@@ -453,96 +453,6 @@ export const allocationAgreementColDefs = (
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     editable: false,
     minWidth: 80
-  }
-]
-
-export const allocationAgreementSummaryColDefs = [
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
-    ),
-    field: 'allocationTransactionType',
-    flex: 1,
-    minWidth: 200
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.transactionPartner'
-    ),
-    field: 'transactionPartner',
-    flex: 1,
-    minWidth: 200
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.postalAddress'
-    ),
-    field: 'postalAddress',
-    flex: 1,
-    minWidth: 200
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
-    ),
-    field: 'transactionPartnerEmail',
-    flex: 1
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
-    ),
-    field: 'transactionPartnerPhone',
-    flex: 1
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.fuelType'
-    ),
-    field: 'fuelType'
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.fuelTypeOther'
-    ),
-    field: 'fuelTypeOther'
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
-    ),
-    field: 'fuelCategory'
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.provisionOfTheAct'
-    ),
-    field: 'provisionOfTheAct'
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.fuelCode'
-    ),
-    field: 'fuelCode'
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
-    ),
-    field: 'ciOfFuel'
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.quantity'
-    ),
-    field: 'quantity',
-    valueFormatter
-  },
-  {
-    headerName: i18n.t(
-      'allocationAgreement:allocationAgreementColLabels.units'
-    ),
-    field: 'units'
   }
 ]
 

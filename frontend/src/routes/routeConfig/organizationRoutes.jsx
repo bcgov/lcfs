@@ -1,7 +1,7 @@
 import {
   Organizations,
   AddEditOrg,
-  ViewOrganization
+  OrganizationView
 } from '@/views/Organizations'
 import { AddEditUser } from '@/views/Users'
 import ROUTES from '../routes'
@@ -21,7 +21,7 @@ export const organizationRoutes = [
   },
   {
     path: ROUTES.ORGANIZATIONS.VIEW,
-    element: <ViewOrganization />,
+    element: <OrganizationView />,
     handle: { title: 'View organization' }
   },
   {
@@ -53,7 +53,7 @@ export const organizationRoutes = [
   // BCeID Routes
   {
     path: ROUTES.ORGANIZATION.ORG,
-    element: <ViewOrganization />,
+    element: <OrganizationView />,
     handle: { title: 'Organization' }
   },
   {

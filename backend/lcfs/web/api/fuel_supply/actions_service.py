@@ -98,9 +98,17 @@ class FuelSupplyActionService:
             else fs_data.energy_density
         )
 
+        total_quantity = (
+            (fuel_supply.quantity or 0)
+            + (fuel_supply.q1_quantity or 0)
+            + (fuel_supply.q2_quantity or 0)
+            + (fuel_supply.q3_quantity or 0)
+            + (fuel_supply.q4_quantity or 0)
+        )
+
         # Calculate total energy if energy density is available
         fuel_supply.energy = (
-            int(fuel_supply.energy_density * fuel_supply.quantity)
+            int(fuel_supply.energy_density * total_quantity)
             if fuel_supply.energy_density
             else 0
         )
@@ -111,7 +119,7 @@ class FuelSupplyActionService:
             EER=fuel_supply.eer or 1,
             RCI=fuel_supply.ci_of_fuel or 0,
             UCI=fuel_supply.uci or 0,
-            Q=fuel_supply.quantity or 0,
+            Q=total_quantity,
             ED=fuel_supply.energy_density or 0,
         )
 
@@ -139,6 +147,7 @@ class FuelSupplyActionService:
         """
         # Assign a unique group UUID for the new fuel supply
         new_group_uuid = str(uuid.uuid4())
+        print(fs_data)
         fuel_supply = FuelSupply(
             **fs_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS),
             group_uuid=new_group_uuid,
@@ -183,6 +192,9 @@ class FuelSupplyActionService:
             fs_data.group_uuid, fs_data.version
         )
 
+        if not existing_fuel_supply:
+            raise HTTPException(status_code=404, detail="Fuel supply record not found.")
+
         if (
             existing_fuel_supply
             and existing_fuel_supply.compliance_report_id
@@ -202,7 +214,7 @@ class FuelSupplyActionService:
             updated_supply = await self.repo.update_fuel_supply(existing_fuel_supply)
             return self.fuel_supply_service.map_entity_to_schema(updated_supply)
 
-        elif existing_fuel_supply:
+        else:
             # Create a new version if compliance report ID differs
             fuel_supply = FuelSupply(
                 compliance_report_id=fs_data.compliance_report_id,
@@ -230,9 +242,6 @@ class FuelSupplyActionService:
             new_supply = await self.repo.create_fuel_supply(fuel_supply)
             return self.fuel_supply_service.map_entity_to_schema(new_supply)
 
-        # Raise an exception if no existing record is found
-        raise HTTPException(status_code=404, detail="Fuel supply record not found.")
-
     @service_handler
     async def delete_fuel_supply(
         self, fs_data: FuelSupplyCreateUpdateSchema
@@ -253,6 +262,9 @@ class FuelSupplyActionService:
         existing_fuel_supply = await self.repo.get_latest_fuel_supply_by_group_uuid(
             fs_data.group_uuid
         )
+
+        if not existing_fuel_supply:
+            raise HTTPException(status_code=404, detail="Fuel supply record not found.")
 
         if existing_fuel_supply.compliance_report_id == fs_data.compliance_report_id:
             await self.repo.delete_fuel_supply(fuel_supply_id=fs_data.fuel_supply_id)
