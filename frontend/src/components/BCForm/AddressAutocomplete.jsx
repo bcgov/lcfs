@@ -7,7 +7,7 @@ import BCTypography from '../BCTypography'
 import { ADDRESS_SEARCH_URL } from '@/constants/common'
 
 export const AddressAutocomplete = forwardRef(
-  ({ value, onChange, onSelectAddress, disabled }, ref) => {
+  ({ className, value, onChange, onSelectAddress, disabled }, ref) => {
     const [inputValue, setInputValue] = useState(value || '')
     const [options, setOptions] = useState([])
     const [loading, setLoading] = useState(false)
@@ -70,6 +70,7 @@ export const AddressAutocomplete = forwardRef(
 
     return (
       <Autocomplete
+        className={className}
         sx={{
           '& .MuiOutlinedInput-root': {
             padding: '7.5px 4px 7.5px 5px',
@@ -175,11 +176,7 @@ export const AddressAutocomplete = forwardRef(
                       {part.text}
                     </Box>
                   ))}
-                  <BCTypography
-                    variant="body2"
-                    color="text"
-                    fontSize="0.75rem"
-                  >
+                  <BCTypography variant="body2" color="text" fontSize="0.75rem">
                     Select and add postal code
                   </BCTypography>
                 </Grid>

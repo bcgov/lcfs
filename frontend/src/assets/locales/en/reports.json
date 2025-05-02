@@ -12,15 +12,14 @@
   },
   "noReportsFound": "No compliance reports found",
   "serviceAddrLabel": "Address for service",
+  "hoAddrLabel": "Head office (optional)",
+  "hoAddrLabelView": "Head office address",
+  "hoAddrLabelEdit": "Head office address (can be an international address)",
   "orgDetailsForm": {
     "serviceAddrLabelView": "Address for service in B.C.",
     "serviceAddrLabelEdit": "Address for service in B.C. (postal address)",
-    "bcRecordLabelView": "Address in B.C. (where records are maintained)",
-    "bcRecordLabelEdit": "Address in B.C. (where records are maintained, optional)"
+    "bcRecordLabel": "Address in B.C. where records are maintained"
   },
-  "hoAddrLabel": "Head office (optional)",
-  "hoAddrLabelView": "Head office address",
-  "hoAddrLabelEdit": "Head office address (can be an international address, optional)",
   "bcRecordLabel": "Address in B.C. (where records are maintained)",
   "activityHdrLabel": "Did <b>{{name}}</b> engage in any of the following activities between January 1, {{period}}, and December 31, {{period}}?",
   "quarterlyActivityHdrLabel": "Report your quarter {{quarter}} fuel supply as well as any supporting documents.",
@@ -234,5 +233,6 @@
     "Low carbon fuel requirement only"
   ],
   "changeInUnits": "Projected change in compliance units balance",
-  "generatedLabel": "Credits generated"
+  "generatedLabel": "Credits generated",
+  "allRecordsDeleted": "All previous records deleted."
 }
