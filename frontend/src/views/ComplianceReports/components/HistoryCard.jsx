@@ -1,17 +1,17 @@
-import React, { useMemo } from 'react'
+import BCTypography from '@/components/BCTypography/index.jsx'
+import { StyledListItem } from '@/components/StyledListItem.jsx'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import { useCurrentUser } from '@/hooks/useCurrentUser.js'
+import { timezoneFormatter } from '@/utils/formatters.js'
+import { ExpandMore } from '@mui/icons-material'
 import { List, ListItemText, styled } from '@mui/material'
 import MuiAccordion from '@mui/material/Accordion'
+import MuiAccordionDetails from '@mui/material/AccordionDetails'
 import MuiAccordionSummary, {
   accordionSummaryClasses
 } from '@mui/material/AccordionSummary'
-import MuiAccordionDetails from '@mui/material/AccordionDetails'
-import { useCurrentUser } from '@/hooks/useCurrentUser.js'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import BCTypography from '@/components/BCTypography/index.jsx'
-import { StyledListItem } from '@/components/StyledListItem.jsx'
-import { timezoneFormatter } from '@/utils/formatters.js'
-import { ExpandMore } from '@mui/icons-material'
 
 const Accordion = styled((props) => (
   <MuiAccordion disableGutters elevation={0} square {...props} />
@@ -85,6 +85,22 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
       {filteredHistory.length > 0 && (
         <AccordionDetails>
           <List>
+            {report.assessmentStatement &&
+              ((!isGovernmentUser &&
+                report.currentStatus.status === 'Assessed') ||
+                isGovernmentUser) && (
+                <StyledListItem disablePadding>
+                  <ListItemText
+                    data-test="list-item"
+                    primaryTypographyProps={{ variant: 'body4' }}
+                  >
+                    <strong>
+                      {t('report:complianceReportHistory.directorStatement')}:
+                    </strong>{' '}
+                    {report.assessmentStatement}
+                  </ListItemText>
+                </StyledListItem>
+              )}
             {filteredHistory.map((item, index) => (
               <StyledListItem key={index} disablePadding>
                 <ListItemText
@@ -146,21 +162,6 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
                         })}
                       </ListItemText>
                     </StyledListItem>
-                    {report.assessmentStatement && (
-                      <StyledListItem disablePadding>
-                        <ListItemText
-                          primaryTypographyProps={{ variant: 'body4' }}
-                        >
-                          <strong>
-                            {t(
-                              'report:complianceReportHistory.directorStatement'
-                            )}
-                            :&nbsp;
-                          </strong>
-                          {report.assessmentStatement}
-                        </ListItemText>
-                      </StyledListItem>
-                    )}
                   </List>
                 )}
               </StyledListItem>
