@@ -83,6 +83,7 @@ export const AddEditFuelExports = () => {
       if (!isArrayEmpty(data)) {
         const updatedRowData = data.fuelExports.map((item) => ({
           ...item,
+          ciOfFuel: item.ciOfFuel,
           complianceReportId,
           compliancePeriod,
           fuelCategory: item.fuelCategory?.category,
@@ -206,6 +207,25 @@ export const AddEditFuelExports = () => {
           params.node.setDataValue('endUseType', endUseValue)
           params.node.setDataValue('provisionOfTheAct', provisionValue)
         }
+      }
+
+      const recalcFields = [
+        'fuelTypeId',
+        'fuelCategory',
+        'provisionOfTheAct',
+        'fuelCode',
+        'exportDate'
+      ]
+
+      if (recalcFields.includes(params.column.colId)) {
+        // remove the stored value so the getter recalculates
+        params.node.setDataValue('ciOfFuel', null)
+
+        // refresh the CI columns for immediate feedback
+        params.api.refreshCells({
+          rowNodes: [params.node],
+          columns: ['ciOfFuel', 'targetCi', 'uci', 'complianceUnits']
+        })
       }
     },
     [optionsData]
