@@ -578,6 +578,38 @@ class ComplianceReportRepository:
         )
         return result.scalars().first()
 
+    @repo_handler
+    async def get_draft_report_by_group_uuid(
+        self, group_uuid: str
+    ) -> Optional[ComplianceReport]:
+        """
+        Retrieve a draft compliance report for a given group_uuid if one exists.
+        This is used to check if a draft already exists before creating a new one.
+        """
+        # Get the Draft status ID
+        draft_status = await self.get_compliance_report_status_by_desc(
+            ComplianceReportStatusEnum.Draft.value
+        )
+        if not draft_status:
+            return None
+
+        # Query for a draft report in the group
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+            )
+            .where(
+                ComplianceReport.compliance_report_group_uuid == group_uuid,
+                ComplianceReport.current_status_id
+                == draft_status.compliance_report_status_id,
+            )
+        )
+        return result.scalars().first()
+
     async def get_compliance_report_by_legacy_id(self, legacy_id):
         """
         Retrieve a compliance report from the database by ID

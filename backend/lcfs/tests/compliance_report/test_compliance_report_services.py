@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch, Mock
+from datetime import datetime
 
 from lcfs.db.models import Organization
 from lcfs.db.models.compliance import ComplianceReport
@@ -14,6 +15,10 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
 )
 from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
+
+from lcfs.db.models.user.Role import Role, RoleEnum
+from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
 
 
 # get_all_compliance_periods
@@ -483,3 +488,220 @@ async def test_delete_compliance_report_wrong_status(
 
     mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_government_initiated_supplemental_report_success(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,  # Assume a fixture for an analyst user
+    mock_compliance_report_submitted: MagicMock,  # Assume fixture for submitted report
+    mock_repo: AsyncMock,
+    mock_snapshot_service: AsyncMock,
+    mock_fse_services: AsyncMock,
+    mock_document_service: AsyncMock,
+):
+    """Test successful creation of a government-initiated supplemental report."""
+    # Patch user_has_roles for this specific test
+    with patch(
+        "lcfs.web.api.compliance_report.services.user_has_roles", return_value=True
+    ):
+        # Arrange
+        # Ensure the report status is correctly set for this test
+        mock_compliance_report_submitted.current_status.status = (
+            ComplianceReportStatusEnum.Submitted
+        )
+        existing_report_id = mock_compliance_report_submitted.compliance_report_id
+        group_uuid = mock_compliance_report_submitted.compliance_report_group_uuid
+        current_version = mock_compliance_report_submitted.version
+        new_version = current_version + 1
+
+        mock_repo.get_compliance_report_by_id = AsyncMock(
+            return_value=mock_compliance_report_submitted
+        )
+        mock_repo.get_draft_report_by_group_uuid = AsyncMock(
+            return_value=None  # No existing draft
+        )
+        mock_repo.get_latest_report_by_group_uuid = AsyncMock(
+            return_value=mock_compliance_report_submitted  # Simplification, could be another report
+        )
+        # Mock status retrieval
+        mock_draft_status = MagicMock()
+        mock_draft_status.compliance_report_status_id = 2  # Example ID for Draft
+        mock_draft_status.status = ComplianceReportStatusEnum.Draft
+        # Ensure mock_draft_status looks like the schema for validation
+        mock_draft_status.compliance_report_status_id = 2
+        mock_draft_status.status = (
+            ComplianceReportStatusEnum.Draft.value
+        )  # Use enum value for schema
+        mock_repo.get_compliance_report_status_by_desc = AsyncMock(
+            return_value=mock_draft_status
+        )
+
+        # Mock the report object *returned* by create_compliance_report
+        # Ensure it has attributes needed for ComplianceReportBaseSchema validation
+        mock_new_report = MagicMock(spec=ComplianceReport)  # Use spec
+        mock_new_report.compliance_report_id = 999
+        mock_new_report.version = new_version
+        mock_new_report.compliance_report_group_uuid = group_uuid
+        mock_new_report.compliance_period = (
+            mock_compliance_report_submitted.compliance_period
+        )  # Pydantic schema
+        mock_new_report.organization = (
+            mock_compliance_report_submitted.organization
+        )  # Pydantic schema
+        mock_new_report.current_status = (
+            mock_draft_status  # Mock configured like schema
+        )
+        mock_new_report.nickname = f"Supplemental Report {new_version}"
+        mock_new_report.supplemental_initiator = (
+            SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL.value
+        )  # Enum value
+        mock_new_report.reporting_frequency = (
+            mock_compliance_report_submitted.reporting_frequency
+        )  # Use value from mock
+        mock_new_report.supplemental_note = None
+        mock_new_report.assessment_statement = None
+        mock_new_report.transaction_id = None
+        # Set dummy create/update dates needed by BaseSchema
+        mock_new_report.create_date = datetime.now()
+        mock_new_report.update_date = datetime.now()
+        mock_repo.create_compliance_report = AsyncMock(return_value=mock_new_report)
+
+        # Act
+        created_report_schema = await compliance_report_service.create_government_initiated_supplemental_report(
+            existing_report_id, mock_user_profile_analyst
+        )
+
+        # Assert
+        # Check repository calls
+        mock_repo.get_compliance_report_by_id.assert_called_once_with(
+            existing_report_id
+        )
+        mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(group_uuid)
+        mock_repo.get_latest_report_by_group_uuid.assert_called_once_with(group_uuid)
+        mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
+            ComplianceReportStatusEnum.Draft.value
+        )
+        mock_repo.create_compliance_report.assert_called_once()
+        # Assert history was called with the object *after* ID was assigned
+        # History uses the object *returned* by create_compliance_report
+        mock_repo.add_compliance_report_history.assert_called_once_with(
+            mock_new_report, mock_user_profile_analyst
+        )
+
+        # Check dependency service calls
+        mock_snapshot_service.create_organization_snapshot.assert_called_once()
+        mock_fse_services.copy_to_report.assert_called_once()
+        # Assert copy_documents was called with the correct IDs
+        # Copy docs uses the object *returned* by create_compliance_report
+        mock_document_service.copy_documents.assert_called_once_with(
+            existing_report_id, mock_new_report.compliance_report_id
+        )
+
+        # Check returned schema
+        assert (
+            created_report_schema.compliance_report_id
+            == mock_new_report.compliance_report_id
+        )
+        assert created_report_schema.version == new_version
+        assert created_report_schema.nickname == f"Supplemental Report {new_version}"
+        # Check the create_compliance_report call arguments (more detailed)
+        call_args = mock_repo.create_compliance_report.call_args[0][0]
+        assert call_args.version == new_version
+        assert (
+            call_args.current_status_id == mock_draft_status.compliance_report_status_id
+        )
+        assert call_args.nickname == f"Supplemental Report {new_version}"
+        assert (
+            call_args.supplemental_initiator
+            == SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+        )
+
+
+@pytest.mark.anyio
+async def test_create_gov_initiated_supplemental_fail_not_analyst(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_supplier: MagicMock,  # Assume a fixture for supplier user
+    mock_compliance_report_submitted: MagicMock,
+    mock_repo: AsyncMock,
+):
+    """Test failure when user is not an Analyst."""
+    # Patch user_has_roles to simulate a non-analyst
+    with patch(
+        "lcfs.web.api.compliance_report.services.user_has_roles",
+        return_value=False,
+    ):
+        with pytest.raises(ServiceException) as excinfo:
+            await compliance_report_service.create_government_initiated_supplemental_report(
+                mock_compliance_report_submitted.compliance_report_id,
+                mock_user_profile_supplier,
+            )
+
+    mock_repo.create_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_gov_initiated_supplemental_fail_not_submitted(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,
+    mock_compliance_report_draft: MagicMock,  # Assume fixture for draft report
+    mock_repo: AsyncMock,
+):
+    """Test failure when the source report is not Submitted."""
+    # Patch user_has_roles to ensure role check passes
+    with patch(
+        "lcfs.web.api.compliance_report.services.user_has_roles",
+        return_value=True,
+    ):
+        # Arrange
+        existing_report_id = mock_compliance_report_draft.compliance_report_id
+        mock_repo.get_compliance_report_by_id = AsyncMock(
+            return_value=mock_compliance_report_draft  # Use a draft report
+        )
+
+        # Act & Assert
+        with pytest.raises(ServiceException) as excinfo:  # Check type only first
+            # Run inside the patch context
+            await compliance_report_service.create_government_initiated_supplemental_report(
+                existing_report_id, mock_user_profile_analyst
+            )
+
+    mock_repo.create_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_gov_initiated_supplemental_fail_draft_exists(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,
+    mock_compliance_report_submitted: MagicMock,
+    mock_compliance_report_draft: MagicMock,  # Existing draft
+    mock_repo: AsyncMock,
+):
+    """Test failure when a draft report already exists for the group."""
+    # Patch user_has_roles to ensure role check passes
+    with patch(
+        "lcfs.web.api.compliance_report.services.user_has_roles", return_value=True
+    ):
+        # Arrange
+        # Ensure the report status is correctly set for this test
+        mock_compliance_report_submitted.current_status.status = (
+            ComplianceReportStatusEnum.Submitted
+        )
+        existing_report_id = mock_compliance_report_submitted.compliance_report_id
+        group_uuid = mock_compliance_report_submitted.compliance_report_group_uuid
+
+        mock_repo.get_compliance_report_by_id = AsyncMock(
+            return_value=mock_compliance_report_submitted
+        )
+        mock_repo.get_draft_report_by_group_uuid = AsyncMock(
+            return_value=mock_compliance_report_draft  # Simulate existing draft
+        )
+
+        # Act & Assert
+        with pytest.raises(ServiceException) as excinfo:  # Check type only first
+            # Run inside the patch context
+            await compliance_report_service.create_government_initiated_supplemental_report(
+                existing_report_id, mock_user_profile_analyst
+            )
+
+    mock_repo.create_compliance_report.assert_not_called()

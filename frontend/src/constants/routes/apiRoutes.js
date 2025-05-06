@@ -77,6 +77,7 @@ export const apiRoutes = {
   exportComplianceReport: '/reports/:reportID/export',
   createSupplementalReport: '/reports/:reportID/supplemental',
   createAnalystAdjustment: '/reports/:reportID/adjustment',
+  createIdirSupplementalReport: '/reports/:reportID/idir-supplemental',
   getChangelog: '/reports/:complianceReportGroupUuid/changelog/:dataType',
 
   // notional-transfers

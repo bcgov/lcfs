@@ -69,12 +69,14 @@
     "assessReportBtn": "Issue assessment",
     "reAssessReportBtn": "Re-assess report",
     "deleteSupplementalReportBtn": "Delete supplemental report",
-    "deleteAnalystAdjustmentBtn": "Delete analyst adjustment"
+    "deleteAnalystAdjustmentBtn": "Delete analyst adjustment",
+    "createSupplementalReportBtn": "Create Supplemental Report"
   },
   "savedSuccessText": "Compliance report successfully {{status}}",
   "reportDeleteSuccessText": "Draft compliance report successfully deleted",
   "submitConfirmText": "Are you sure you want to sign and submit this compliance report?",
   "deleteConfirmText": "Are you sure you want to delete this draft report? This action cannot be undone, and all changes will be lost.",
+  "createIdirSupplementalConfirmText": "This will create a draft supplemental report for the supplier, further processing will be disabled for government users.",
   "recommendConfirmText": "Are you sure you want to recommend this compliance report?",
   "returnToAnalystConfirmText": "Are you sure you want to return this compliance report back to analyst?",
   "returnToManagerConfirmText": "Are you sure you want to return this compliance report back to compliance manager?",
