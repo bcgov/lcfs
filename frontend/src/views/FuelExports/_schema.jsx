@@ -304,6 +304,9 @@ export const fuelExportColDefs = (
           params.data.fuelCode = null
           params.data.fuelCodeId = null
         }
+
+        // Clear export date whenever CI option changes
+        params.data.exportDate = null
       }
       return true
     },
@@ -490,6 +493,15 @@ export const fuelExportColDefs = (
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
 
     valueGetter: (params) => {
+      // Show the value we received from the API if it exists
+      if (
+        params.data?.ciOfFuel !== undefined &&
+        params.data?.ciOfFuel !== null
+      ) {
+        return params.data.ciOfFuel
+      }
+
+      // Otherwise fall back to the existing calculation logic
       const provision = params.data.provisionOfTheAct
 
       // 1) If provision is “Unknown”
