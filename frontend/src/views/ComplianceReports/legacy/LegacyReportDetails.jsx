@@ -38,7 +38,7 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
           ),
         useFetch: useGetAllNotionalTransfers,
         component: (data) =>
-          data.length > 0 && (
+          data.notionalTransfers.length > 0 && (
             <ScheduleASummary status={currentStatus} data={data} />
           )
       },
@@ -68,7 +68,7 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
           ),
         useFetch: useGetAllOtherUses,
         component: (data) =>
-          data.length > 0 && (
+          data.otherUses.length > 0 && (
             <ScheduleCSummary status={currentStatus} data={data} />
           )
       }

@@ -118,7 +118,7 @@ export const Organizations = () => {
   )
 
   return (
-    <>
+    <BCBox className="organizations-container" aria-label="Organizations">
       {alertMessage && (
         <BCAlert data-test="alert-box" severity={alertSeverity}>
           {alertMessage}
@@ -187,6 +187,6 @@ export const Organizations = () => {
           onSetResetGrid={handleSetResetGrid}
         />
       </BCBox>
-    </>
+    </BCBox>
   )
 }

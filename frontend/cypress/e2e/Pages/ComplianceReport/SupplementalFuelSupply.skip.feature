@@ -25,7 +25,7 @@ Feature: Supplemental Report with Fuel Supply
 
   Scenario: Compliance manager logs in to review a compliance report
     Given the user is on the login page, while retaining previous data
-    And the compliance manager logs in with valid credentials
+    And the compliance manager logs in with valid IDIR credentials
     And they navigate to the compliance reports page
     And they see the previously submitted report
     And they click the report to view it

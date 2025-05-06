@@ -9,7 +9,7 @@
       "fuelType": "Ethanol",
       "ciOfFuel": 93.67,
       "provisionOfTheAct": "Default carbon intensity - section 19 (b) (ii)",
-      "quantity": 100000,
+      "quantity": 123456,
       "units": "L",
       "fuelCategory": "Gasoline"
     },
@@ -22,7 +22,7 @@
       "fuelType": "Biodiesel",
       "ciOfFuel": 100.21,
       "provisionOfTheAct": "Default carbon intensity - section 19 (b) (ii)",
-      "quantity": 100000,
+      "quantity": 123456,
       "units": "L",
       "fuelCategory": "Diesel"
     }

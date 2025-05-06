@@ -11,7 +11,7 @@ function BCWidgetCard({
   title = 'Title',
   content,
   style,
-  editButton
+  editButton = null
 }) {
   const navigate = useNavigate()
 
@@ -104,7 +104,7 @@ BCWidgetCard.propTypes = {
   title: PropTypes.oneOfType([PropTypes.string, PropTypes.node]).isRequired,
   content: PropTypes.node.isRequired,
   subHeader: PropTypes.node,
-  editButton: PropTypes.oneOf([PropTypes.object, PropTypes.bool])
+  editButton: PropTypes.oneOfType([PropTypes.object, PropTypes.bool])
 }
 
 export default BCWidgetCard

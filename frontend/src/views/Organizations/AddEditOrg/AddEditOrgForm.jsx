@@ -599,6 +599,7 @@ export const AddEditOrgForm = () => {
                   control={control}
                   render={({ field }) => (
                     <AddressAutocomplete
+                      className="orgStreetAddress"
                       {...field}
                       onSelectAddress={(address) => {
                         if (typeof address === 'string') {
@@ -707,7 +708,7 @@ export const AddEditOrgForm = () => {
                 <Controller
                   name="recordsAddress"
                   control={control}
-                  render={({ field }) => <AddressAutocomplete {...field} />}
+                  render={({ field }) => <AddressAutocomplete className='recordsAddress' {...field} />}
                 />
               </Box>
             </Box>

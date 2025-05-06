@@ -1,56 +1,58 @@
-import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import BCTypography from '@/components/BCTypography'
 import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
+  Chip,
   CircularProgress,
   IconButton,
-  Link,
-  Chip
+  Link
 } from '@mui/material'
-import BCTypography from '@/components/BCTypography'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
 
-import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'
-import { ROUTES, buildPath } from '@/routes/routes'
-import { roles } from '@/constants/roles'
-import { Role } from '@/components/Role'
-import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary'
-import { useGetFinalSupplyEquipments } from '@/hooks/useFinalSupplyEquipment'
-import { FinalSupplyEquipmentSummary } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentSummary'
-import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
-import { useGetAllOtherUses } from '@/hooks/useOtherUses'
-import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
-import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
-import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
-import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
-import { useGetFuelExports } from '@/hooks/useFuelExport'
-import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
-import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
+import BCAlert from '@/components/BCAlert'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
+import { Role } from '@/components/Role'
+import { StyledChip } from '@/components/StyledChip'
+import { TogglePanel } from '@/components/TogglePanel.jsx'
+import { REPORT_SCHEDULES } from '@/constants/common.js'
+import { roles } from '@/constants/roles'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import {
   useComplianceReportDocuments,
   useGetComplianceReport
 } from '@/hooks/useComplianceReports'
-import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useGetFinalSupplyEquipments } from '@/hooks/useFinalSupplyEquipment'
+import { useGetFuelExports } from '@/hooks/useFuelExport'
+import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
+import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
+import { useGetAllOtherUses } from '@/hooks/useOtherUses'
+import { ROUTES, buildPath } from '@/routes/routes'
+import colors from '@/themes/base/colors'
 import { isArrayEmpty } from '@/utils/array.js'
-import { TogglePanel } from '@/components/TogglePanel.jsx'
-import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog.jsx'
 import { AllocationAgreementChangelog } from '@/views/AllocationAgreements/AllocationAgreementChangelog.jsx'
-import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog.jsx'
-import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog.jsx'
+import { AllocationAgreementSummary } from '@/views/AllocationAgreements/AllocationAgreementSummary'
+import { FinalSupplyEquipmentSummary } from '@/views/FinalSupplyEquipments/FinalSupplyEquipmentSummary'
 import { FuelExportChangelog } from '@/views/FuelExports/FuelExportChangelog.jsx'
+import { FuelExportSummary } from '@/views/FuelExports/FuelExportSummary'
+import { FuelSupplyChangelog } from '@/views/FuelSupplies/FuelSupplyChangelog.jsx'
+import { FuelSupplySummary } from '@/views/FuelSupplies/FuelSupplySummary'
+import { NotionalTransferChangelog } from '@/views/NotionalTransfers/NotionalTransferChangelog.jsx'
+import { NotionalTransferSummary } from '@/views/NotionalTransfers/NotionalTransferSummary'
+import { OtherUsesChangelog } from '@/views/OtherUses/OtherUsesChangelog.jsx'
+import { OtherUsesSummary } from '@/views/OtherUses/OtherUsesSummary'
+import { SupportingDocumentSummary } from '@/views/SupportingDocuments/SupportingDocumentSummary'
 import {
   DeleteOutline,
   Edit,
   ExpandMore,
-  InfoOutlined
+  InfoOutlined,
+  NewReleasesOutlined
 } from '@mui/icons-material'
-import { REPORT_SCHEDULES } from '@/constants/common.js'
-import BCAlert from '@/components/BCAlert'
-import colors from '@/themes/base/colors'
 
 const chipStyles = {
   ml: 2,
@@ -107,6 +109,15 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     return canEdit
   }
 
+  const wasEdited = (data) => {
+    const crMap = {}
+    complianceReportData.chain.forEach((complianceReport) => {
+      crMap[complianceReport.complianceReportId] = complianceReport.version
+    })
+
+    return data?.some((row) => crMap[row.complianceReportId] !== 0)
+  }
+
   const activityList = useMemo(
     () => [
       {
@@ -150,7 +161,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           data.fuelSupplies.length > 0 && (
             <TogglePanel
               label="Change log"
-              disabled={!(hasVersions || isSupplemental)}
+              disabled={
+                !(hasVersions || isSupplemental) ||
+                !wasEdited(data.fuelSupplies)
+              }
               onComponent={<FuelSupplyChangelog canEdit={canEdit} />}
               offComponent={
                 <FuelSupplySummary
@@ -193,7 +207,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           data.allocationAgreements.length > 0 && (
             <TogglePanel
               label="Change log"
-              disabled={!(hasVersions || isSupplemental)}
+              disabled={
+                !(hasVersions || isSupplemental) ||
+                !wasEdited(data.allocationAgreements)
+              }
               onComponent={<AllocationAgreementChangelog canEdit={canEdit} />}
               offComponent={
                 <AllocationAgreementSummary
@@ -206,6 +223,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('report:activityLists.notionalTransfers'),
+        key: 'notionalTransfers',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS, {
@@ -215,10 +233,13 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           ),
         useFetch: useGetAllNotionalTransfers,
         component: (data) =>
-          data.length > 0 && (
+          data.notionalTransfers.length > 0 && (
             <TogglePanel
               label="Change log"
-              disabled={!(hasVersions || isSupplemental)}
+              disabled={
+                !(hasVersions || isSupplemental) ||
+                !wasEdited(data.notionalTransfers)
+              }
               onComponent={<NotionalTransferChangelog canEdit={canEdit} />}
               offComponent={
                 <NotionalTransferSummary status={currentStatus} data={data} />
@@ -228,6 +249,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       },
       {
         name: t('otherUses:summaryTitle'),
+        key: 'otherUses',
         action: () =>
           navigate(
             buildPath(ROUTES.REPORTS.ADD.OTHER_USE_FUELS, {
@@ -237,10 +259,12 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           ),
         useFetch: useGetAllOtherUses,
         component: (data) =>
-          data.length > 0 && (
+          data.otherUses.length > 0 && (
             <TogglePanel
               label="Change log"
-              disabled={!(hasVersions || isSupplemental)}
+              disabled={
+                !(hasVersions || isSupplemental) || !wasEdited(data.otherUses)
+              }
               onComponent={<OtherUsesChangelog canEdit={canEdit} />}
               offComponent={
                 <OtherUsesSummary status={currentStatus} data={data} />
@@ -263,7 +287,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           !isArrayEmpty(data) && (
             <TogglePanel
               label="Change log"
-              disabled={!(hasVersions || isSupplemental)}
+              disabled={
+                !(hasVersions || isSupplemental) || !wasEdited(data.fuelExports)
+              }
               onComponent={<FuelExportChangelog canEdit={canEdit} />}
               offComponent={
                 <FuelExportSummary status={currentStatus} data={data} />
@@ -354,6 +380,15 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         return (
           ((scheduleData && !isArrayEmpty(scheduleData)) || hasVersions) && (
             <Accordion
+              sx={{
+                '& .Mui-disabled': {
+                  backgroundColor: colors.light.main,
+                  opacity: '0.8 !important',
+                  '& .MuiTypography-root': {
+                    color: 'initial !important',
+                  }
+                }
+              }}
               key={index}
               expanded={
                 expanded.includes(`panel${index}`) &&
@@ -396,6 +431,22 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                         <Edit />
                       </IconButton>
                     </Role>
+                  )}{' '}
+                  {wasEdited(data?.[activity.key]) && (
+                    <Chip
+                      aria-label="changes were made since original report"
+                      icon={<NewReleasesOutlined fontSize="small" />}
+                      label={t('Edited')}
+                      size="small"
+                      sx={{
+                        ...chipStyles,
+                        color: colors.alerts.success.color,
+                        '& .MuiChip-icon': {
+                          color: colors.alerts.success.color
+                        },
+                        backgroundImage: `linear-gradient(195deg, ${colors.alerts.success.border},${colors.alerts.success.background})`
+                      }}
+                    />
                   )}
                 </BCTypography>
                 {allRecordsDeleted && (
