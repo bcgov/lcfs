@@ -11,18 +11,25 @@ import {
   useGetFinalSupplyEquipments,
   useSaveFinalSupplyEquipment
 } from '@/hooks/useFinalSupplyEquipment'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { v4 as uuid } from 'uuid'
 import { ROUTES, buildPath } from '@/routes/routes'
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
-import { isArrayEmpty } from '@/utils/array.js'
-import { useApiService } from '@/services/useApiService.js'
-import { apiRoutes } from '@/constants/routes/index.js'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
+import { isArrayEmpty } from '@/utils/array'
+import { useApiService } from '@/services/useApiService'
+import { apiRoutes } from '@/constants/routes/index'
 import BCButton from '@/components/BCButton/index.jsx'
 import { Menu, MenuItem } from '@mui/material'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import ImportFuelSupplyEquipmentDialog from '@/views/FinalSupplyEquipments/ImportFuelSupplyEquipmentDialog.jsx'
-import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
+import ImportDialog from '@/components/ImportDialog'
+import {
+  useImportFinalSupplyEquipment,
+  useGetFinalSupplyEquipmentImportJobStatus
+} from '@/hooks/useFinalSupplyEquipment'
+
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -34,6 +41,7 @@ export const AddEditFinalSupplyEquipments = () => {
   const [isDownloading, setIsDownloading] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
   const [isOverwrite, setIsOverwrite] = useState(false)
+  const [hideOverwrite, setHideOverwrite] = useState(false)
   const apiService = useApiService()
 
   const alertRef = useRef()
@@ -43,14 +51,25 @@ export const AddEditFinalSupplyEquipments = () => {
     returnObjects: true
   })
   const params = useParams()
+
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
+
+  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+  const { data: complianceReport, isLoading: complianceReportLoading } =
+    useGetComplianceReport(
+      currentUser?.organization?.organizationId,
+      complianceReportId
+    )
 
   const {
     data: optionsData,
     isLoading: optionsLoading,
     isFetched
   } = useFinalSupplyEquipmentOptions()
+
+  const version = complianceReport?.report?.version ?? 0
+  const isOriginalReport = version === 0
 
   const { mutateAsync: saveRow } =
     useSaveFinalSupplyEquipment(complianceReportId)
@@ -59,6 +78,16 @@ export const AddEditFinalSupplyEquipments = () => {
     isLoading: equipmentsLoading,
     refetch
   } = useGetFinalSupplyEquipments(complianceReportId)
+
+  // Decide when to hide or show Overwrite based on isOriginalReport + existing data
+  useEffect(() => {
+    const hasData = data?.finalSupplyEquipments?.length > 0
+    if (!isOriginalReport && hasData) {
+      setHideOverwrite(true)
+    } else {
+      setHideOverwrite(false)
+    }
+  }, [data, isOriginalReport])
 
   const gridOptions = useMemo(
     () => ({
@@ -316,8 +345,8 @@ export const AddEditFinalSupplyEquipments = () => {
             ))}
           </BCBox>
         </div>
-        <BCBox>
-          {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && (
+        {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && (
+          <BCBox>
             <BCButton
               color="primary"
               variant="outlined"
@@ -328,41 +357,39 @@ export const AddEditFinalSupplyEquipments = () => {
               endIcon={<FontAwesomeIcon icon={faCaretDown} />}
               isLoading={isDownloading}
             >
-              {t('finalSupplyEquipment:downloadBtn')}
+              {t('common:importExport.export.btn')}
             </BCButton>
-          )}
-          <Menu
-            id="download-menu"
-            anchorEl={downloadAnchorEl}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right'
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right'
-            }}
-            open={isDownloadOpen}
-            onClose={handleCloseDownloadMenu}
-          >
-            <MenuItem
-              disabled={isDownloading}
-              onClick={() => {
-                handleDownload(true)
+            <Menu
+              id="download-menu"
+              anchorEl={downloadAnchorEl}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right'
               }}
-            >
-              {t('finalSupplyEquipment:downloadWithDataBtn')}
-            </MenuItem>
-            <MenuItem
-              disabled={isDownloading}
-              onClick={() => {
-                handleDownload(false)
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right'
               }}
+              open={isDownloadOpen}
+              onClose={handleCloseDownloadMenu}
             >
-              {t('finalSupplyEquipment:downloadWithoutDataBtn')}
-            </MenuItem>
-          </Menu>
-          {isFeatureEnabled(FEATURE_FLAGS.FSE_IMPORT_EXPORT) && (
+              <MenuItem
+                disabled={isDownloading}
+                onClick={() => {
+                  handleDownload(true)
+                }}
+              >
+                {t('common:importExport.export.withDataBtn')}
+              </MenuItem>
+              <MenuItem
+                disabled={isDownloading}
+                onClick={() => {
+                  handleDownload(false)
+                }}
+              >
+                {t('common:importExport.export.withoutDataBtn')}
+              </MenuItem>
+            </Menu>
             <BCButton
               style={{ marginLeft: '12px' }}
               color="primary"
@@ -373,48 +400,52 @@ export const AddEditFinalSupplyEquipments = () => {
               onClick={handleImportClick}
               endIcon={<FontAwesomeIcon icon={faCaretDown} />}
             >
-              {t('finalSupplyEquipment:importBtn')}
+              {t('common:importExport.import.btn')}
             </BCButton>
-          )}
-          <Menu
-            id="import-menu"
-            slotProps={{
-              paper: {
-                style: {
-                  maxWidth: 240
+
+            <Menu
+              id="import-menu"
+              slotProps={{
+                paper: {
+                  style: {
+                    maxWidth: 240
+                  }
                 }
-              }
-            }}
-            anchorEl={importAnchorEl}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right'
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right'
-            }}
-            open={isImportOpen}
-            onClose={handleCloseImportMenu}
-          >
-            <MenuItem
-              onClick={() => {
-                openFileImportDialog(true)
-                handleCloseImportMenu()
               }}
-            >
-              {t('finalSupplyEquipment:importOverwriteBtn')}
-            </MenuItem>
-            <MenuItem
-              onClick={() => {
-                openFileImportDialog(false)
-                handleCloseImportMenu()
+              anchorEl={importAnchorEl}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right'
               }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right'
+              }}
+              open={isImportOpen}
+              onClose={handleCloseImportMenu}
             >
-              {t('finalSupplyEquipment:importAppendBtn')}
-            </MenuItem>
-          </Menu>
-        </BCBox>
+              {' '}
+              {!hideOverwrite && (
+                <MenuItem
+                  onClick={() => {
+                    openFileImportDialog(true)
+                    handleCloseImportMenu()
+                  }}
+                >
+                  {t('common:importExport.import.dialog.buttons.overwrite')}
+                </MenuItem>
+              )}
+              <MenuItem
+                onClick={() => {
+                  openFileImportDialog(false)
+                  handleCloseImportMenu()
+                }}
+              >
+                {t('common:importExport.import.dialog.buttons.append')}
+              </MenuItem>
+            </Menu>
+          </BCBox>
+        )}
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
@@ -438,15 +469,16 @@ export const AddEditFinalSupplyEquipments = () => {
             }}
           />
         </BCBox>
-        <ImportFuelSupplyEquipmentDialog
+        <ImportDialog
           open={isImportDialogOpen}
-          isOverwrite={isOverwrite}
           close={() => {
             setIsImportDialogOpen(false)
             refetch()
           }}
-          parentType="report"
           complianceReportId={complianceReportId}
+          isOverwrite={isOverwrite}
+          importHook={useImportFinalSupplyEquipment}
+          getJobStatusHook={useGetFinalSupplyEquipmentImportJobStatus}
         />
       </Grid2>
     )

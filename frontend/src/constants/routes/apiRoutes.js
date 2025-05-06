@@ -18,6 +18,7 @@ export const apiRoutes = {
   trackUserLogin: '/users/logged-in',
   getUserLoginHistories: '/users/login-history',
   updateNotificationsEmail: '/users/update-email',
+  deleteUser: '/users/:userID',
 
   // organization
   orgUsers: '/organization/:orgID/users/list',
@@ -122,6 +123,11 @@ export const apiRoutes = {
   allocationAgreementOptions: '/allocation-agreement/table-options?',
   saveAllocationAgreements: '/allocation-agreement/save',
   allocationAgreementSearch: '/allocation-agreement/search?',
+  exportAllocationAgreements: '/allocation-agreement/export/:reportID',
+  importAllocationAgreements: '/allocation-agreement/import/:reportID',
+  getImportAllocationAgreementsJobStatus: '/allocation-agreement/status/:jobID',
+  downloadAllocationAgreementsTemplate:
+    '/allocation-agreement/template/:reportID',
 
   // documents
   getDocuments: '/documents/:parentType/:parentID',

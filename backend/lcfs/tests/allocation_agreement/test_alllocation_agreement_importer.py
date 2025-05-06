@@ -3,31 +3,30 @@ import asyncio
 from unittest.mock import MagicMock, AsyncMock, patch
 import concurrent.futures
 
-from lcfs.web.api.final_supply_equipment.importer import FinalSupplyEquipmentImporter
-from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
-from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.allocation_agreement.importer import AllocationAgreementImporter
+from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
+from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
+from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.services.clamav.client import ClamAVService
 from redis.asyncio import Redis
 
 
 @pytest.fixture
-def mock_repo() -> FinalSupplyEquipmentRepository:
-    repo = MagicMock(spec=FinalSupplyEquipmentRepository)
+def mock_repo() -> AllocationAgreementRepository:
+    repo = MagicMock(spec=AllocationAgreementRepository)
     return repo
 
 
 @pytest.fixture
-def mock_fse_service() -> FinalSupplyEquipmentServices:
-    service = MagicMock(spec=FinalSupplyEquipmentServices)
+def mock_allocation_services() -> AllocationAgreementServices:
+    service = MagicMock(spec=AllocationAgreementServices)
     return service
 
 
 @pytest.fixture
-def mock_compliance_repo() -> ComplianceReportRepository:
-    repo = MagicMock(spec=ComplianceReportRepository)
-    repo.get_compliance_report_by_id = AsyncMock(return_value=MagicMock())
-    return repo
+def mock_compliance_service() -> ComplianceReportServices:
+    service = MagicMock(spec=ComplianceReportServices)
+    return service
 
 
 @pytest.fixture
@@ -54,19 +53,19 @@ def mock_executor():
 @pytest.fixture
 def importer_instance(
     mock_repo,
-    mock_fse_service,
-    mock_compliance_repo,
+    mock_allocation_services,
+    mock_compliance_service,
     mock_clamav,
     mock_redis,
     mock_executor,
 ):
     """
-    Creates a FinalSupplyEquipmentImporter with mocked dependencies.
+    Creates an AllocationAgreementImporter with mocked dependencies.
     """
-    return FinalSupplyEquipmentImporter(
+    return AllocationAgreementImporter(
         repo=mock_repo,
-        fse_service=mock_fse_service,
-        compliance_report_repo=mock_compliance_repo,
+        fuel_code_repo=mock_allocation_services,
+        compliance_report_services=mock_compliance_service,
         clamav_service=mock_clamav,
         redis_client=mock_redis,
         executor=mock_executor,
@@ -84,14 +83,13 @@ async def test_import_data_success(importer_instance, mock_redis):
     org_code = "TEST-ORG"
 
     with patch(
-        "lcfs.web.api.final_supply_equipment.importer.import_async",
+        "lcfs.web.api.allocation_agreement.importer.import_async",
         new=AsyncMock(return_value=None),
     ) as mock_import_task:
 
         job_id = await importer_instance.import_data(
             compliance_report_id=123,
             user=user_mock,
-            org_code=org_code,
             file=file_mock,
             overwrite=False,
         )
@@ -115,12 +113,11 @@ async def test_import_data_with_clamav(importer_instance, mock_clamav, mock_redi
         org_code = "TEST-ORG"
 
         with patch(
-            "lcfs.web.api.final_supply_equipment.importer.import_async", new=AsyncMock()
+            "lcfs.web.api.allocation_agreement.importer.import_async", new=AsyncMock()
         ) as mock_import_task:
             job_id = await importer_instance.import_data(
                 compliance_report_id=999,
                 user=user_mock,
-                org_code=org_code,
                 file=file_mock,
                 overwrite=True,
             )
@@ -152,3 +149,20 @@ async def test_get_status_invalid_json(importer_instance, mock_redis):
     result = await importer_instance.get_status("corrupt-id")
     assert result["progress"] == 0
     assert "Invalid status data found." in result["status"]
+
+
+@pytest.mark.anyio
+async def test_get_status_success(importer_instance, mock_redis):
+    """
+    Tests that get_status successfully returns job status data.
+    """
+    mock_redis.get = AsyncMock(
+        return_value='{"progress": 75, "status": "Importing row 15", "created": 10, "rejected": 5, "errors": ["Error 1", "Error 2"]}'
+    )
+
+    result = await importer_instance.get_status("valid-job-id")
+    assert result["progress"] == 75
+    assert result["status"] == "Importing row 15"
+    assert result["created"] == 10
+    assert result["rejected"] == 5
+    assert len(result["errors"]) == 2
