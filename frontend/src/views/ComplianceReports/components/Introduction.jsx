@@ -1,18 +1,15 @@
 import { Accordion, AccordionDetails, AccordionSummary } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { GlobalStyles } from '@mui/system'
-import { useTranslation } from 'react-i18next'
+import { useTranslation, Trans } from 'react-i18next'
 import { ExpandMore } from '@mui/icons-material'
 
 // Reusable Section Component
 const Section = ({ header, content }) => (
   <>
-    <BCTypography
-      variant="h6"
-      color="primary"
-      sx={{ marginY: '16px' }}
-      dangerouslySetInnerHTML={{ __html: header }}
-    ></BCTypography>
+    <BCTypography variant="h6" color="primary" sx={{ marginY: '16px' }}>
+      {header}
+    </BCTypography>
     {content.map((paragraph, index) => (
       <BCTypography
         key={index}
@@ -25,20 +22,39 @@ const Section = ({ header, content }) => (
             marginBottom: '8px'
           }
         }}
-        dangerouslySetInnerHTML={{ __html: paragraph }}
-      ></BCTypography>
+      >
+        <Trans
+          i18nKey={paragraph}
+          components={{
+            p: <p />,
+            strong: <strong />,
+            ul: <ul />,
+            li: <li />,
+            br: <br />,
+            a: <a />
+          }}
+        />
+      </BCTypography>
     ))}
   </>
 )
 
-export const Introduction = ({ expanded, compliancePeriod }) => {
+export const Introduction = ({
+  expanded,
+  compliancePeriod,
+  isEarlyIssuance
+}) => {
   const { t } = useTranslation(['report'])
+
   // Get sections from the translation file
-  const sections = t('report:sections', {
-    returnObjects: true,
-    complianceYear: compliancePeriod,
-    nextYear: parseInt(compliancePeriod) + 1
-  })
+  const sections = t(
+    isEarlyIssuance ? 'report:earlyIssuanceIntroSections' : 'report:sections',
+    {
+      returnObjects: true,
+      complianceYear: compliancePeriod,
+      nextYear: parseInt(compliancePeriod) + 1
+    }
+  )
 
   return (
     <>
@@ -86,8 +102,17 @@ export const Introduction = ({ expanded, compliancePeriod }) => {
             marginBottom: '0'
           }
         }}
-        dangerouslySetInnerHTML={{ __html: t('report:contact') }}
-      ></BCTypography>
+      >
+        <Trans
+          i18nKey="report:contact"
+          components={{
+            p: <p />,
+            strong: <strong />,
+            a: <a />,
+            br: <br />
+          }}
+        />
+      </BCTypography>
     </>
   )
 }

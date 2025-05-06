@@ -1,10 +1,9 @@
 import structlog
 from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, delete
-from sqlalchemy import func
+from sqlalchemy import and_, or_, select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, aliased
 from typing import List, Optional, Sequence, Any
 
 from lcfs.db.base import ActionTypeEnum
@@ -382,25 +381,44 @@ class FuelSupplyRepository:
             .distinct()
         )
 
+        CurrentReport = aliased(ComplianceReport)
+
+        # Get all compliance report IDs that belong to the same group in a subquery
+        related_reports_subquery = (
+            select(ComplianceReport.compliance_report_id)
+            .join(
+                CurrentReport,
+                CurrentReport.compliance_report_id == fuel_supply.compliance_report_id,
+            )
+            .where(
+                ComplianceReport.compliance_report_group_uuid
+                == CurrentReport.compliance_report_group_uuid
+            )
+        )
         # Type, Category, and Determine CI/Fuel codes are included
-        query = select(FuelSupply.fuel_supply_id).where(
-            FuelSupply.compliance_report_id == fuel_supply.compliance_report_id,
+        duplicate_query = select(FuelSupply.fuel_supply_id).where(
+            FuelSupply.compliance_report_id.in_(related_reports_subquery),
             FuelSupply.fuel_type_id == fuel_supply.fuel_type_id,
             FuelSupply.fuel_category_id == fuel_supply.fuel_category_id,
             FuelSupply.provision_of_the_act_id == fuel_supply.provision_of_the_act_id,
             FuelSupply.fuel_code_id == fuel_supply.fuel_code_id,
-            FuelSupply.group_uuid != fuel_supply.group_uuid,
             FuelSupply.end_use_id == fuel_supply.end_use_id,
-            FuelSupply.action_type == ActionTypeEnum.CREATE,
-            ~FuelSupply.group_uuid.in_(delete_group_subquery),
-            (
-                FuelSupply.fuel_supply_id != fuel_supply.fuel_supply_id
-                if fuel_supply.fuel_supply_id is not None
-                else True
-            ),
+            FuelSupply.action_type.in_([ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]),
+            FuelSupply.group_uuid != fuel_supply.group_uuid,
         )
 
-        result = await self.db.execute(query)
+        # Add conditional filter for fuel_supply_id if it exists
+        if fuel_supply.fuel_supply_id is not None:
+            duplicate_query = duplicate_query.where(
+                FuelSupply.fuel_supply_id != fuel_supply.fuel_supply_id
+            )
+
+        # Add ordering to get the most recent record
+        duplicate_query = duplicate_query.order_by(
+            FuelSupply.create_date.desc(), FuelSupply.version.desc()
+        )
+
+        result = await self.db.execute(duplicate_query)
         return result.scalars().first()
 
     @repo_handler

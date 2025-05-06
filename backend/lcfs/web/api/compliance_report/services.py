@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+import copy
+from datetime import datetime
 import math
 import structlog
 import uuid
@@ -691,11 +693,38 @@ class ComplianceReportServices:
             return []
 
         group_map = defaultdict(dict)
+        create_date_map = {}
+        original_order = []
+
+        # Function to create a deep copy of an object
+        def make_deep_copy(obj):
+            if hasattr(obj, "model_dump") and callable(obj.model_dump):
+                # For Pydantic models
+                data = obj.model_dump()
+                return type(obj)(**data)
+            else:
+                # Fallback to create a copy by serializing/deserializing
+                return copy.deepcopy(obj)
 
         for report in reports:
             for data in getattr(report, data_type) or []:
+                if (
+                    hasattr(data, "compliance_units")
+                    and data.compliance_units is not None
+                ):
+                    data.compliance_units = round(data.compliance_units)
                 group_map[data.group_uuid][data.version] = data
+                # Store the create_date for sorting purposes (only for the first time we see this group_uuid)
+                if data.group_uuid not in create_date_map:
+                    create_date_map[data.group_uuid] = data.create_date
+                    # Track the original order of items based on creation
+                    if data.action_type == "CREATE":
+                        original_order.append(data.group_uuid)
 
+        if not original_order:
+            original_order = sorted(
+                create_date_map.keys(), key=lambda uuid: create_date_map[uuid]
+            )
         grouped_fs_reports = []
 
         for report in reports:
@@ -703,14 +732,17 @@ class ComplianceReportServices:
             items = []
 
             for data in getattr(report, data_type) or []:
-                items.append(data)
-                seen_ids.add(getattr(data, id_field))
+                data_copy = make_deep_copy(data)
+                items.append(data_copy)
+                seen_ids.add(getattr(data_copy, id_field))
 
-                if data.action_type == "UPDATE":
-                    prev = group_map[data.group_uuid].get(data.version - 1)
+                if data_copy.action_type == "UPDATE":
+                    prev = make_deep_copy(
+                        group_map[data_copy.group_uuid].get(data_copy.version - 1)
+                    )
                     if prev and getattr(prev, id_field) not in seen_ids:
                         diff = []
-                        for key, value in data.__dict__.items():
+                        for key, value in data_copy.__dict__.items():
                             prev_value = getattr(prev, key, None)
                             if prev_value != value:
                                 camel_case_key = key.split("_")[0] + "".join(
@@ -721,11 +753,13 @@ class ComplianceReportServices:
                         prev.diff = diff
                         prev.updated = True
                         prev.action_type = "UPDATE"
-                        data.diff = diff
+                        data_copy.diff = diff
 
                         items.append(prev)
                         seen_ids.add(getattr(prev, id_field))
 
+            # Sort items by their original create_date to maintain initial entry order
+            items.sort(key=lambda x: create_date_map.get(x.group_uuid, datetime.max))
             grouped_fs_reports.append(
                 dto(
                     nickname=report.nickname,
@@ -749,6 +783,10 @@ class ComplianceReportServices:
             latest_entries[group_uuid] = latest_item
 
         latest_entries_list = list(latest_entries.values())
+        # Convert to list and sort by original create_date
+        latest_entries_list.sort(
+            key=lambda x: create_date_map.get(x.group_uuid, datetime.max)
+        )
 
         grouped_fs_reports.insert(
             0,
