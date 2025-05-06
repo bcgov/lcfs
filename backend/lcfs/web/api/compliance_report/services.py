@@ -400,12 +400,18 @@ class ComplianceReportServices:
         if is_supplier:
             for report in reports:
                 if isinstance(report, ComplianceReportViewSchema):
-                    if is_supplier and report.report_status in becid_only_statuses:
+                    if (
+                        is_supplier
+                        and report.report_status in becid_only_statuses_regular
+                    ):
                         report.report_status, report.report_status_id = (
                             ComplianceReportStatusEnum.Submitted.value,
                             None,
                         )
-                    if not is_analyst and report.report_status in analyst_only_statuses:
+                    if (
+                        not is_analyst
+                        and report.report_status in analyst_only_statuses_regular
+                    ):
                         report.report_status, report.report_status_id = (
                             ComplianceReportStatusEnum.Submitted.value,
                             None,
