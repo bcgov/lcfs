@@ -88,7 +88,7 @@ export const Organizations = () => {
     setIsDownloadingOrgs(true)
     setAlertMessage('')
     try {
-      await apiService.download('/organizations/export')
+      await apiService.download({ url: apiRoutes.organizationExport })
     } catch (error) {
       console.error('Error downloading organization information:', error)
       setAlertMessage(t('org:orgDownloadFailMsg'))
@@ -101,7 +101,7 @@ export const Organizations = () => {
   const handleDownloadUsers = async () => {
     setIsDownloadingUsers(true)
     try {
-      await apiService.download(apiRoutes.exportUsers)
+      await apiService.download({ url: apiRoutes.exportUsers })
     } catch (error) {
       console.error('Error downloading user information:', error)
       setAlertMessage(t('org:userDownloadFailMsg'))
