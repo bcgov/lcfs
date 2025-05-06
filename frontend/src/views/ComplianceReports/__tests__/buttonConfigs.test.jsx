@@ -59,7 +59,8 @@ describe('buttonClusterConfigFn', () => {
       ...baseProps,
       isGovernmentUser: true,
       hasRoles: (role) => role === roles.analyst,
-      hasDraftSupplemental: false // No draft
+      hasDraftSupplemental: false, // No draft
+      reportVersion: 0 // Add reportVersion=0 to include Return to Supplier button
     }
     const config = buttonClusterConfigFn(props)
     const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
@@ -85,7 +86,8 @@ describe('buttonClusterConfigFn', () => {
       ...baseProps,
       isGovernmentUser: true,
       hasRoles: (role) => role === roles.analyst,
-      hasDraftSupplemental: false
+      hasDraftSupplemental: false,
+      reportVersion: 0 // Add reportVersion=0 to include Return to Supplier button
     }
     const config = buttonClusterConfigFn(props)
     const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
@@ -102,7 +104,8 @@ describe('buttonClusterConfigFn', () => {
       ...baseProps,
       isGovernmentUser: true,
       hasRoles: (role) => role === roles.analyst,
-      hasDraftSupplemental: true // Draft exists
+      hasDraftSupplemental: true, // Draft exists
+      reportVersion: 0 // Add reportVersion=0 to include Return to Supplier button
     }
     const config = buttonClusterConfigFn(props)
     const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
@@ -132,5 +135,29 @@ describe('buttonClusterConfigFn', () => {
     buttons = config[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]
     expect(buttons[0].disabled).toBe(true) // Assess disabled
     expect(buttons[1].disabled).toBe(true) // Return Manager disabled
+  })
+
+  it('should not include Return to Supplier button for supplemental reports (reportVersion > 0)', () => {
+    const props = {
+      ...baseProps,
+      isGovernmentUser: true,
+      hasRoles: (role) => role === roles.analyst,
+      hasDraftSupplemental: false,
+      reportVersion: 1 // Supplemental report
+    }
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+    expect(buttons).toBeDefined()
+    expect(buttons.length).toBe(2) // Only recommend and create supplemental
+    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
+    expect(buttons[1].label).toBe(
+      'report:actionBtns.createSupplementalReportBtn'
+    )
+
+    // Verify no Return to Supplier button
+    const returnButton = buttons.find(
+      (b) => b.id === 'return-report-supplier-btn'
+    )
+    expect(returnButton).toBeUndefined()
   })
 })
