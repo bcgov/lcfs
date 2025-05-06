@@ -55,13 +55,20 @@ export const useApiService = (opts = {}) => {
     )
 
     // Download method
-    instance.download = async (url, params = {}) => {
+    instance.download = async ({
+      url,
+      method = 'get',
+      params = {},
+      data = {}
+    }) => {
       try {
-        const response = await instance.get(url, {
-          responseType: 'blob',
-          params
+        const response = await instance.request({
+          url,
+          method,
+          params,
+          data,
+          responseType: 'blob'
         })
-
         const filename =
           extractFilename(response) || generateDefaultFilename(url)
         const objectURL = window.URL.createObjectURL(new Blob([response.data]))

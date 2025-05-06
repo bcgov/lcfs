@@ -181,7 +181,10 @@ class TransactionsService:
 
     @service_handler
     async def export_transactions(
-        self, export_format, organization_id=None
+        self,
+        export_format: str,
+        pagination: PaginationRequestSchema | None = None,
+        organization_id: int | None = None,
     ) -> StreamingResponse:
         """
         Prepares a list of transactions in a file that is downloadable
@@ -189,10 +192,28 @@ class TransactionsService:
         if not export_format in ["xls", "xlsx", "csv"]:
             raise DataNotFoundException("Export format not supported")
 
+        pagination = pagination or PaginationRequestSchema(
+            page=1, size=10000, filters=[], sort_orders=[]
+        )
+
+        # Always exclude “Deleted”
+        pagination.filters.append(
+            FilterModel(
+                field="status",
+                filter="Deleted",
+                type="notEqual",
+                filter_type="text",
+            )
+        )
+
+        conditions: list = []
+        if pagination.filters:
+            self.apply_transaction_filters(pagination, conditions)
+
         results = await self.repo.get_transactions_paginated(
             0,
             None,
-            [TransactionView.status != "Deleted"],
+            conditions,
             [SortOrder(field="update_date", direction="desc")],
             organization_id,
         )

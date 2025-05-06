@@ -37,6 +37,7 @@ export const apiRoutes = {
 
   // organizations
   organizationSearch: '/organizations/search?',
+  organizationExport: '/organizations/export',
 
   // transactions
   transactions: '/transactions/',
@@ -65,6 +66,7 @@ export const apiRoutes = {
   fuelCodeOptions: '/fuel-codes/table-options',
   fuelCodeSearch: '/fuel-codes/search?',
   getFuelCodes: '/fuel-codes/list',
+  exportFuelCodes: '/fuel-codes/export',
 
   // reports
   getCompliancePeriods: '/reports/compliance-periods',

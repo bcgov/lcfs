@@ -1,5 +1,5 @@
 import { useApiService } from '@/services/useApiService'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCurrentUser } from './useCurrentUser'
 import { roles } from '@/constants/roles'
 import { TRANSFER_STATUSES } from '@/constants/statuses'
@@ -97,5 +97,20 @@ export const useTransactionDocuments = (parentID, parentType, options) => {
       return res.data
     },
     ...options
+  })
+}
+
+export const useDownloadTransactions = (options) => {
+  const client = useApiService()
+  return useMutation({
+    ...options,
+    mutationFn: async ({ format, body, endpoint }) => {
+      return await client.download({
+        url: endpoint,
+        method: 'post',
+        params: { format },
+        data: body
+      })
+    }
   })
 }
