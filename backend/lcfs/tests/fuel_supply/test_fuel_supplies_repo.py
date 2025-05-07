@@ -1,11 +1,11 @@
 import math
 import pytest
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import MagicMock, AsyncMock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.models.compliance import FuelSupply
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
+from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema, ModeEnum
 from lcfs.web.api.fuel_supply.schema import (
     FuelSuppliesSchema,
     PaginationResponseSchema,
@@ -256,3 +256,341 @@ async def test_get_fuel_supply_table_options_ghgenius_provision(
     # Test invalid compliance period
     with pytest.raises(DatabaseException):
         await fuel_supply_repo.get_fuel_supply_table_options("invalid")
+
+
+@pytest.mark.anyio
+async def test_get_fuel_supply_list_with_valid_group_uuid(fuel_supply_repo, mock_db_session):
+    """Test get_fuel_supply_list when the compliance report has a valid group UUID."""
+    compliance_report_id = 123
+    group_uuid = "test-group-uuid"
+    expected_fuel_supplies = [MagicMock(spec=FuelSupply), MagicMock(spec=FuelSupply)]
+    
+    # Create a mock for the scalar result
+    scalar_result = MagicMock()
+    scalar_result.scalar.return_value = group_uuid
+    
+    # Create a mock for the get_effective_fuel_supplies result
+    fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(return_value=expected_fuel_supplies)
+    
+    # Override the execute method to return our custom scalar result
+    mock_db_session.execute = AsyncMock(return_value=scalar_result)
+    
+    # Call the method
+    result = await fuel_supply_repo.get_fuel_supply_list(compliance_report_id, mode=ModeEnum.VIEW)
+    
+    # Verify results
+    assert result == expected_fuel_supplies
+    
+    # Verify the correct query was executed
+    mock_db_session.execute.assert_called_once()
+    # Verify get_effective_fuel_supplies was called with correct parameters
+    fuel_supply_repo.get_effective_fuel_supplies.assert_called_once_with(
+        compliance_report_group_uuid=group_uuid,
+        compliance_report_id=compliance_report_id,
+        mode=ModeEnum.VIEW
+    )
+
+
+@pytest.mark.anyio
+async def test_get_fuel_supply_list_without_group_uuid(fuel_supply_repo, mock_db_session):
+    """Test get_fuel_supply_list when the compliance report has no group UUID."""
+    compliance_report_id = 123
+    
+    # Create a mock for the scalar result
+    scalar_result = MagicMock()
+    scalar_result.scalar.return_value = None
+    
+    # Create a mock for the get_effective_fuel_supplies result
+    fuel_supply_repo.get_effective_fuel_supplies = AsyncMock()
+    
+    # Override the execute method to return our custom scalar result
+    mock_db_session.execute = AsyncMock(return_value=scalar_result)
+    
+    # Call the method
+    result = await fuel_supply_repo.get_fuel_supply_list(compliance_report_id)
+    
+    # Verify results
+    assert result == []
+    
+    # Verify the correct query was executed
+    mock_db_session.execute.assert_called_once()
+    # Verify get_effective_fuel_supplies was not called
+    fuel_supply_repo.get_effective_fuel_supplies.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_get_fuel_supply_list_with_edit_mode(fuel_supply_repo, mock_db_session):
+    """Test get_fuel_supply_list with EDIT mode."""
+    compliance_report_id = 123
+    group_uuid = "test-group-uuid"
+    expected_fuel_supplies = [MagicMock(spec=FuelSupply)]
+    
+    # Create a mock for the scalar result
+    scalar_result = MagicMock()
+    scalar_result.scalar.return_value = group_uuid
+    
+    # Create a mock for the get_effective_fuel_supplies result
+    fuel_supply_repo.get_effective_fuel_supplies = AsyncMock(return_value=expected_fuel_supplies)
+    
+    # Override the execute method to return our custom scalar result
+    mock_db_session.execute = AsyncMock(return_value=scalar_result)
+    
+    # Call the method with EDIT mode
+    result = await fuel_supply_repo.get_fuel_supply_list(compliance_report_id, mode=ModeEnum.EDIT)
+    
+    # Verify results
+    assert result == expected_fuel_supplies
+    
+    # Verify the correct query was executed
+    mock_db_session.execute.assert_called_once()
+    # Verify get_effective_fuel_supplies was called with correct parameters
+    fuel_supply_repo.get_effective_fuel_supplies.assert_called_once_with(
+        compliance_report_group_uuid=group_uuid,
+        compliance_report_id=compliance_report_id,
+        mode=ModeEnum.EDIT
+    )
+
+
+@pytest.mark.anyio
+async def test_check_duplicate_with_existing_duplicate(fuel_supply_repo, mock_db_session):
+    """Test check_duplicate when there is an existing duplicate."""
+    # Create test data
+    fuel_supply_data = FuelSupplyCreateUpdateSchema(
+        compliance_report_id=123,
+        fuel_type_id=1,
+        fuel_category_id=2,
+        provision_of_the_act_id=3,
+        fuel_code_id=4,
+        end_use_id=5,
+        quantity=100,
+        units="litres",
+        group_uuid="test-group-uuid"
+    )
+    
+    # Create a mock for the scalar result with a duplicate ID
+    scalar_result = MagicMock()
+    scalar_first = MagicMock()
+    scalar_first.first.return_value = 456  # Existing duplicate ID
+    scalar_result.scalars.return_value = scalar_first
+    
+    # Override the execute method to return our custom scalar result
+    mock_db_session.execute = AsyncMock(return_value=scalar_result)
+    
+    # Call the method
+    result = await fuel_supply_repo.check_duplicate(fuel_supply_data)
+    
+    # Verify results
+    assert result == 456
+    
+    # Verify the method was called once
+    mock_db_session.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_check_duplicate_with_no_duplicate(fuel_supply_repo, mock_db_session):
+    """Test check_duplicate when there is no existing duplicate."""
+    # Create test data
+    fuel_supply_data = FuelSupplyCreateUpdateSchema(
+        compliance_report_id=123,
+        fuel_type_id=1,
+        fuel_category_id=2,
+        provision_of_the_act_id=3,
+        fuel_code_id=4,
+        end_use_id=5,
+        quantity=100,
+        units="litres",
+        group_uuid="test-group-uuid"
+    )
+    
+    # Create a mock for the scalar result with no duplicate
+    scalar_result = MagicMock()
+    scalar_first = MagicMock()
+    scalar_first.first.return_value = None  # No duplicate
+    scalar_result.scalars.return_value = scalar_first
+    
+    # Override the execute method to return our custom scalar result
+    mock_db_session.execute = AsyncMock(return_value=scalar_result)
+    
+    # Call the method
+    result = await fuel_supply_repo.check_duplicate(fuel_supply_data)
+    
+    # Verify results
+    assert result is None
+    
+    # Verify the method was called once
+    mock_db_session.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_check_duplicate_with_existing_id(fuel_supply_repo, mock_db_session):
+    """Test check_duplicate with an existing fuel_supply_id."""
+    # Create test data with an existing ID
+    fuel_supply_data = FuelSupplyCreateUpdateSchema(
+        fuel_supply_id=789,  # Existing ID
+        compliance_report_id=123,
+        fuel_type_id=1,
+        fuel_category_id=2,
+        provision_of_the_act_id=3,
+        fuel_code_id=4,
+        end_use_id=5,
+        quantity=100,
+        units="litres",
+        group_uuid="test-group-uuid"
+    )
+    
+    # Create a mock for the scalar result
+    scalar_result = MagicMock()
+    scalar_first = MagicMock()
+    scalar_first.first.return_value = None  # No duplicate
+    scalar_result.scalars.return_value = scalar_first
+    
+    # Override the execute method to return our custom scalar result
+    mock_db_session.execute = AsyncMock(return_value=scalar_result)
+    
+    # Call the method
+    result = await fuel_supply_repo.check_duplicate(fuel_supply_data)
+    
+    # Verify results
+    assert result is None
+    
+    # Verify the query included the fuel_supply_id filter
+    mock_db_session.execute.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_get_effective_fuel_supplies_view_mode(fuel_supply_repo, mock_db_session):
+    """Test get_effective_fuel_supplies with VIEW mode."""
+    # Test parameters
+    compliance_report_group_uuid = "test-group-uuid"
+    compliance_report_id = 123
+    mode = ModeEnum.VIEW
+    
+    # Expected results
+    expected_supplies = [MagicMock(spec=FuelSupply), MagicMock(spec=FuelSupply)]
+    
+    # Create mock for the final query result
+    final_result = MagicMock()
+    unique_result = MagicMock()
+    scalar_result = MagicMock()
+    scalar_result.all.return_value = expected_supplies
+    unique_result.scalars.return_value = scalar_result
+    final_result.unique.return_value = unique_result
+    
+    # Set up mock to return different results based on the query
+    mock_db_session.execute = AsyncMock(return_value=final_result)
+    
+    # Call the method
+    result = await fuel_supply_repo.get_effective_fuel_supplies(
+        compliance_report_group_uuid=compliance_report_group_uuid,
+        compliance_report_id=compliance_report_id,
+        mode=mode
+    )
+    
+    # Verify results
+    assert result == expected_supplies
+    
+    # Verify mock was called
+    assert mock_db_session.execute.call_count > 0
+
+
+@pytest.mark.anyio
+async def test_get_effective_fuel_supplies_edit_mode(fuel_supply_repo, mock_db_session):
+    """Test get_effective_fuel_supplies with EDIT mode."""
+    # Test parameters
+    compliance_report_group_uuid = "test-group-uuid"
+    compliance_report_id = 123
+    mode = ModeEnum.EDIT
+    
+    # Expected results
+    expected_supplies = [MagicMock(spec=FuelSupply)]
+    
+    # Create mock for the final query result
+    final_result = MagicMock()
+    unique_result = MagicMock()
+    scalar_result = MagicMock()
+    scalar_result.all.return_value = expected_supplies
+    unique_result.scalars.return_value = scalar_result
+    final_result.unique.return_value = unique_result
+    
+    # Set up mock to return different results based on the query
+    mock_db_session.execute = AsyncMock(return_value=final_result)
+    
+    # Call the method
+    result = await fuel_supply_repo.get_effective_fuel_supplies(
+        compliance_report_group_uuid=compliance_report_group_uuid,
+        compliance_report_id=compliance_report_id,
+        mode=mode
+    )
+    
+    # Verify results
+    assert result == expected_supplies
+    
+    # Verify mock was called
+    assert mock_db_session.execute.call_count > 0
+
+
+@pytest.mark.anyio
+async def test_get_effective_fuel_supplies_changelog_mode(fuel_supply_repo, mock_db_session):
+    """Test get_effective_fuel_supplies with CHANGELOG mode."""
+    # Test parameters
+    compliance_report_group_uuid = "test-group-uuid"
+    compliance_report_id = 123
+    mode = ModeEnum.CHANGELOG
+    
+    # Expected results
+    expected_supplies = [MagicMock(spec=FuelSupply), MagicMock(spec=FuelSupply), MagicMock(spec=FuelSupply)]
+    
+    # Create mock for the final query result
+    final_result = MagicMock()
+    unique_result = MagicMock()
+    scalar_result = MagicMock()
+    scalar_result.all.return_value = expected_supplies
+    unique_result.scalars.return_value = scalar_result
+    final_result.unique.return_value = unique_result
+    
+    # Set up mock to return different results based on the query
+    mock_db_session.execute = AsyncMock(return_value=final_result)
+    
+    # Call the method
+    result = await fuel_supply_repo.get_effective_fuel_supplies(
+        compliance_report_group_uuid=compliance_report_group_uuid,
+        compliance_report_id=compliance_report_id,
+        mode=mode
+    )
+    
+    # Verify results
+    assert result == expected_supplies
+    
+    # Verify mock was called
+    assert mock_db_session.execute.call_count > 0
+
+
+@pytest.mark.anyio
+async def test_get_effective_fuel_supplies_empty_result(fuel_supply_repo, mock_db_session):
+    """Test get_effective_fuel_supplies with empty results."""
+    # Test parameters
+    compliance_report_group_uuid = "test-group-uuid"
+    compliance_report_id = 123
+    
+    # Create mock for the final query result with empty list
+    final_result = MagicMock()
+    unique_result = MagicMock()
+    scalar_result = MagicMock()
+    scalar_result.all.return_value = []
+    unique_result.scalars.return_value = scalar_result
+    final_result.unique.return_value = unique_result
+    
+    # Set up mock to return empty results
+    mock_db_session.execute = AsyncMock(return_value=final_result)
+    
+    # Call the method
+    result = await fuel_supply_repo.get_effective_fuel_supplies(
+        compliance_report_group_uuid=compliance_report_group_uuid,
+        compliance_report_id=compliance_report_id
+    )
+    
+    # Verify results
+    assert result == []
+    
+    # Verify mock was called
+    assert mock_db_session.execute.call_count > 0
