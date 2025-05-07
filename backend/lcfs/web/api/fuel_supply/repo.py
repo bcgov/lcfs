@@ -247,13 +247,18 @@ class FuelSupplyRepository:
         """
         Retrieve the list of effective fuel supplies for a given compliance report.
         """
-        # Retrieve the compliance report's group UUID
-        report_group_query = await self.db.execute(
-            select(ComplianceReport.compliance_report_group_uuid).where(
-                ComplianceReport.compliance_report_id == compliance_report_id
-            )
+        # Retrieve the compliance report's group UUID and version
+        report_query = await self.db.execute(
+            select(
+                ComplianceReport.compliance_report_group_uuid, ComplianceReport.version
+            ).where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
-        group_uuid = report_group_query.scalar()
+        result = report_query.first()
+
+        if not result:
+            return [], 0
+
+        group_uuid, version = result
         if not group_uuid:
             return []
 
@@ -261,6 +266,7 @@ class FuelSupplyRepository:
         effective_fuel_supplies = await self.get_effective_fuel_supplies(
             compliance_report_group_uuid=group_uuid,
             compliance_report_id=compliance_report_id,
+            version=version,
             mode=mode,
         )
 
@@ -276,21 +282,25 @@ class FuelSupplyRepository:
         """
         Retrieve a paginated list of effective fuel supplies for a given compliance report.
         """
-        # Retrieve the compliance report's group UUID
-        report_group_query = await self.db.execute(
-            select(ComplianceReport.compliance_report_group_uuid).where(
-                ComplianceReport.compliance_report_id == compliance_report_id
-            )
+        # Retrieve the compliance report's group UUID and version
+        report_query = await self.db.execute(
+            select(
+                ComplianceReport.compliance_report_group_uuid, ComplianceReport.version
+            ).where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
-        group_uuid = report_group_query.scalar()
+        result = report_query.first()
+
+        if not result:
+            return [], 0
+
+        group_uuid, version = result
         if not group_uuid:
             return [], 0
 
         if effective:
             # Retrieve effective fuel supplies using the group UUID
             fuel_supplies = await self.get_effective_fuel_supplies(
-                group_uuid,
-                compliance_report_id,
+                group_uuid, compliance_report_id, version
             )
         else:
             fuel_supplies = await self.get_fuel_supplies(compliance_report_id)
@@ -452,6 +462,7 @@ class FuelSupplyRepository:
         self,
         compliance_report_group_uuid: str,
         compliance_report_id: int,
+        version: int,
         mode: Optional[ModeEnum] = ModeEnum.VIEW,
     ) -> Sequence[FuelSupply]:
         """
@@ -464,7 +475,8 @@ class FuelSupplyRepository:
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
             and_(
                 ComplianceReport.compliance_report_group_uuid
-                == compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                ComplianceReport.version <= version,
             )
         )
 
