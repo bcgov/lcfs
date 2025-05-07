@@ -63,10 +63,7 @@ export const Notifications = () => {
   // Consolidated mutation handler
   const handleMutation = useCallback(
     (mutation, selectedNotifications, successMessage, errorMessage) => {
-      const ids = Array.isArray(selectedNotifications)
-        ? selectedNotifications
-        : selectedNotifications.notification_ids || []
-      if (ids.length === 0) {
+      if (selectedNotifications.length === 0) {
         alertRef.current?.triggerAlert({
           message: t('notifications:noNotificationsSelectedText'),
           severity: 'warning'

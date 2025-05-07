@@ -1,6 +1,6 @@
 import pytest
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from lcfs.db.models import Organization, CompliancePeriod, ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency

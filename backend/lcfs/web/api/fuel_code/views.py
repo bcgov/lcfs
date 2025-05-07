@@ -140,11 +140,12 @@ async def get_fuel_codes(
     return await service.search_fuel_codes(pagination)
 
 
-@router.get("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@router.post("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.GOVERNMENT])
-async def export_users(
+async def export_fuel_codes(
     request: Request,
     format: str = Query(default="xlsx", description="File export format"),
+    pagination: PaginationRequestSchema | None = Body(None),
     exporter: FuelCodeExporter = Depends(),
 ):
     """
@@ -165,7 +166,7 @@ async def export_users(
     Note: Only the first sheet data is used for the CSV format,
         as CSV files do not support multiple sheets.
     """
-    return await exporter.export(format)
+    return await exporter.export(format, pagination)
 
 
 @router.get(

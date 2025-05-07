@@ -122,3 +122,18 @@ export const useGetFuelCodes = (
     }
   })
 }
+
+export const useDownloadFuelCodes = (options) => {
+  const client = useApiService()
+  return useMutation({
+    ...options,
+    mutationFn: async ({ format, body }) => {
+      return await client.download({
+        url: apiRoutes.exportFuelCodes,
+        method: 'post',
+        params: { format },
+        data: body
+      })
+    }
+  })
+}

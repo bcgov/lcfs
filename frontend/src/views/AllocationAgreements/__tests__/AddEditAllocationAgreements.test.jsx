@@ -1,13 +1,12 @@
-// src/views/AllocationAgreements/__tests__/AddEditAllocationAgreements.test.jsx
-
 import React from 'react'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { AddEditAllocationAgreements } from '../AddEditAllocationAgreements'
 import * as useAllocationAgreementHook from '@/hooks/useAllocationAgreement'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
+import * as configModule from '@/constants/config'
 
 // Mock react-router-dom hooks
 const mockUseLocation = vi.fn()
@@ -58,6 +57,19 @@ vi.mock('react-i18next', () => ({
 // Mock hooks related to allocation agreements
 vi.mock('@/hooks/useAllocationAgreement')
 
+vi.mock('@/constants/config', () => ({
+  FEATURE_FLAGS: {
+    ALLOCATION_AGREEMENT_IMPORT_EXPORT: 'ALLOCATION_AGREEMENT_IMPORT_EXPORT'
+  },
+  isFeatureEnabled: vi.fn()
+}))
+
+vi.mock('@/services/useApiService', () => ({
+  useApiService: () => ({
+    download: vi.fn()
+  })
+}))
+
 // Mock BCGridEditor component
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
@@ -76,6 +88,16 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
           </div>
         ))}
       </div>
+    </div>
+  )
+}))
+
+vi.mock('@/components/ImportDialog', () => ({
+  default: ({ open, close }) => (
+    <div data-testid="import-dialog" aria-hidden={!open}>
+      <button onClick={close} data-testid="close-dialog">
+        Close
+      </button>
     </div>
   )
 }))
@@ -106,7 +128,8 @@ describe('AddEditAllocationAgreements', () => {
       useAllocationAgreementHook.useGetAllAllocationAgreements
     ).mockReturnValue({
       data: { allocationAgreements: [] },
-      isLoading: false
+      isLoading: false,
+      refetch: vi.fn()
     })
 
     // Add this missing mock for useGetAllocationAgreementsList
@@ -133,15 +156,30 @@ describe('AddEditAllocationAgreements', () => {
       mutateAsync: vi.fn()
     })
 
+    vi.mocked(
+      useAllocationAgreementHook.useImportAllocationAgreement
+    ).mockReturnValue({
+      mutateAsync: vi.fn()
+    })
+
+    vi.mocked(
+      useAllocationAgreementHook.useGetAllocationAgreementImportJobStatus
+    ).mockReturnValue({
+      data: null,
+      isLoading: false
+    })
+
     useCurrentUser.mockReturnValue({
       data: {
-        organization: { organizationId: 1 }
+        organization: { organizationId: 1, name: 'Test Org' }
       }
     })
 
     useGetComplianceReport.mockImplementation((id) => {
-      return { data: { report: { version: 0 } } }
+      return { data: { report: { version: 0 } }, isLoading: false }
     })
+
+    vi.mocked(configModule.isFeatureEnabled).mockReturnValue(false)
   })
 
   it('renders the component', () => {
@@ -190,5 +228,87 @@ describe('AddEditAllocationAgreements', () => {
     rows.forEach((row) => {
       expect(uuidRegex.test(row.textContent)).toBe(true)
     })
+  })
+
+  it('does not show import/export buttons when feature flag is disabled', () => {
+    vi.mocked(configModule.isFeatureEnabled).mockReturnValue(false)
+
+    render(<AddEditAllocationAgreements />, { wrapper })
+
+    expect(
+      screen.queryByText('common:importExport.export.btn')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('common:importExport.import.btn')
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows import/export buttons when feature flag is enabled', () => {
+    vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
+
+    render(<AddEditAllocationAgreements />, { wrapper })
+
+    expect(
+      screen.getByText('common:importExport.export.btn')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('common:importExport.import.btn')
+    ).toBeInTheDocument()
+  })
+
+  it('hides overwrite option for supplemental reports with existing data', () => {
+    useGetComplianceReport.mockImplementation(() => {
+      return {
+        data: { report: { version: 1 } },
+        isLoading: false
+      }
+    })
+
+    // Mock data to simulate “existing allocation agreement rows”
+    const mockExistingData = {
+      allocationAgreements: [{ allocationAgreementId: 'testId1' }]
+    }
+
+    vi.mocked(
+      useAllocationAgreementHook.useGetAllocationAgreementsList
+    ).mockReturnValue({
+      data: mockExistingData,
+      isLoading: false
+    })
+
+    vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
+
+    render(<AddEditAllocationAgreements />, { wrapper })
+
+    fireEvent.click(screen.getByText('common:importExport.import.btn'))
+
+    expect(
+      screen.queryByText('common:importExport.import.dialog.buttons.overwrite')
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByText('common:importExport.import.dialog.buttons.append')
+    ).toBeInTheDocument()
+  })
+
+  it('shows both import options for original reports', () => {
+    useGetComplianceReport.mockImplementation(() => {
+      return {
+        data: { report: { version: 0 } },
+        isLoading: false
+      }
+    })
+
+    vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
+
+    render(<AddEditAllocationAgreements />, { wrapper })
+
+    fireEvent.click(screen.getByText('common:importExport.import.btn'))
+
+    expect(
+      screen.getByText('common:importExport.import.dialog.buttons.overwrite')
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('common:importExport.import.dialog.buttons.append')
+    ).toBeInTheDocument()
   })
 })
