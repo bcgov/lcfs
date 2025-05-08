@@ -1,7 +1,7 @@
 """Fix v_compliance_report to keep original Submitted version when a Government Adjustment exists.
 
 Revision ID: 3365d6360912
-Revises: 7a1f5f52793c
+Revises: 7ffd44ecf360
 Create Date: 2025-05-05 22:42:00.728566
 """
 
@@ -10,7 +10,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "3365d6360912"
-down_revision = "7a1f5f52793c"
+down_revision = "7ffd44ecf360"
 branch_labels = None
 depends_on = None
 
