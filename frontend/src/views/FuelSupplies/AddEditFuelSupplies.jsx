@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelSupplyColDefs } from './_schema'
+import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -58,7 +59,7 @@ export const AddEditFuelSupplies = () => {
     useGetFuelSuppliesList(
       {
         complianceReportId,
-        changelog: isSupplemental
+        mode: isSupplemental ? REPORT_SCHEDULES_VIEW.EDIT : REPORT_SCHEDULES_VIEW.VIEW
       },
       {}
     )

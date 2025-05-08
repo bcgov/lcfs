@@ -212,7 +212,8 @@ export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.legalName'),
     field: 'legalName',
-
+    flex: 1,
+    minWidth: 200,
     cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
   },
   {
@@ -220,7 +221,8 @@ export const changelogCommonColDefs = (highlight = true) => [
       'notionalTransfer:notionalTransferColLabels.addressForService'
     ),
     field: 'addressForService',
-
+    flex: 1,
+    minWidth: 200,
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'fuelCategory')
   },
