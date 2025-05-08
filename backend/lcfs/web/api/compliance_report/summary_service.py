@@ -149,40 +149,14 @@ class ComplianceReportSummaryService:
             if column.key == "total_non_compliance_penalty_payable":
                 self._handle_summary_lines(summary, summary_obj, column.key, line)
 
-        # DB Columns are not in the same order as display, so sort them
-        summary.low_carbon_fuel_target_summary.sort(
-            key=lambda row: int(
-                re.match(r"(\d+)", row.line).group(1)
-                if compliance_data_service.is_legacy_year()
-                else row.line
-            )
-        )
+        # Simply sort by line number
+        summary.low_carbon_fuel_target_summary.sort(key=lambda row: int(row.line))
 
         return summary
 
     def _get_line_value(self, line: int, is_legacy: bool = False) -> Union[str, int]:
-        """Helper method to format line values based on legacy year status"""
-        if not is_legacy:
-            return line
-
-        if line is None:
-            return line
-        elif 1 <= line <= 11:
-            return f"{line} | {line + 11}"
-        elif 12 <= line <= 22:
-            mapping = {
-                12: "23",
-                13: "24",
-                14: "25",
-                15: "26",
-                16: "26a",
-                17: "26b",
-                18: "26c",
-                19: "27",
-                20: "28",
-            }
-            return mapping.get(line, str(line))
-        return str(line)
+        """Helper method to return the line number directly"""
+        return line
 
     def _extract_line_number(self, column_key: str) -> Optional[int]:
         """Extract the line number (1..N) from a column key like 'line_4_...' using regex."""
@@ -218,45 +192,27 @@ class ComplianceReportSummaryService:
         self, summary, summary_obj, column_key, line: int
     ) -> None:
         """Populate the low_carbon_fuel_target_summary section"""
-        is_legacy = compliance_data_service.is_legacy_year()
-        if is_legacy and line > 20:
-            return
-        description = self._format_description(
-            line=line,
-            descriptions_dict=(
-                PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
-                if is_legacy
-                else LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
-            ),
-        )
-        desc = None
+        # No early returns for any line numbers
+
+        description = LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["description"]
+
+        # Special description handling
         if line == 21:
             desc = self._non_compliance_special_description(
                 line, summary_obj, LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
             )
-        elif line in [17, 18] and is_legacy:
-            desc = self._part3_special_description(
-                line, PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
-            )
         else:
             desc = description
+
         summary.low_carbon_fuel_target_summary.append(
             ComplianceReportSummaryRowSchema(
-                line=self._get_line_value(line, is_legacy),
-                format=(
-                    FORMATS.CURRENCY.value
-                    if (line == 21 or (line == 20 and is_legacy))
-                    else FORMATS.NUMBER.value
-                ),
+                line=self._get_line_value(line),
+                format=(FORMATS.CURRENCY.value if line == 21 else FORMATS.NUMBER.value),
                 description=desc,
                 field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["field"],
                 value=int(getattr(summary_obj, column_key) or 0),
-                units=(
-                    PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["units"]
-                    if is_legacy
-                    else ""
-                ),
-                bold=True if (is_legacy and line > 18) else False,
+                units="",
+                bold=False,
             )
         )
 
@@ -294,12 +250,7 @@ class ComplianceReportSummaryService:
         The 'line' is stored as a string internally.
         """
         existing_element = next(
-            (
-                el
-                for el in target_list
-                if el.line
-                == self._get_line_value(line, compliance_data_service.is_legacy_year())
-            ),
+            (el for el in target_list if el.line == self._get_line_value(line)),
             None,
         )
         if existing_element:
@@ -315,7 +266,7 @@ class ComplianceReportSummaryService:
 
         # Create and append the new row
         new_element = ComplianceReportSummaryRowSchema(
-            line=self._get_line_value(line, compliance_data_service.is_legacy_year()),
+            line=self._get_line_value(line),
             format=default_format,
             description=description,
             field=default_descriptions[line]["field"],
@@ -340,23 +291,19 @@ class ComplianceReportSummaryService:
     def _format_description(self, line, descriptions_dict):
         """
         Builds a description string from the dictionary.
-        Optionally handle a special line with dynamic formatting.
         """
-        base_desc = descriptions_dict[line].get(
-            ("legacy" if compliance_data_service.is_legacy_year() else "description"),
-            descriptions_dict[line].get("description"),
-        )
-        return base_desc  # By default, no fancy placeholders used here.
+        is_legacy_year = compliance_data_service.is_legacy_year()
+        if is_legacy_year and line == 11:
+            return descriptions_dict[line]["legacy"]
+        else:
+            return descriptions_dict[line]["description"]
 
     def _renewable_special_description(self, line, summary_obj, descriptions_dict):
         """
-        For lines 6 and 8, your original code does some .format() with three placeholders
+        For lines 6 and 8, format the description with placeholders
         (line_4_eligible_renewable_fuel_required_* * 0.05).
         """
-        base_desc = descriptions_dict[line].get(
-            ("legacy" if compliance_data_service.is_legacy_year() else "description"),
-            descriptions_dict[line].get("description"),
-        )
+        base_desc = descriptions_dict[line]["description"]
         return base_desc.format(
             "{:,}".format(
                 int(summary_obj.line_4_eligible_renewable_fuel_required_gasoline * 0.05)
@@ -371,24 +318,18 @@ class ComplianceReportSummaryService:
 
     def _non_compliance_special_description(self, line, summary_obj, descriptions_dict):
         """
-        For line 21, your original code does .format(...) with summary_obj.line_21_non_compliance_penalty_payable / 600
+        For line 21, format with summary_obj.line_21_non_compliance_penalty_payable / 600
         """
-        base_desc = descriptions_dict[line].get(
-            ("legacy" if compliance_data_service.is_legacy_year() else "description"),
-            descriptions_dict[line].get("description"),
-        )
+        base_desc = descriptions_dict[line]["description"]
         return base_desc.format(
             "{:,}".format(int(summary_obj.line_21_non_compliance_penalty_payable / 600))
         )
 
     def _part3_special_description(self, line, descriptions_dict):
         """
-        For line 26a and 26b, your original code does .format(...) with compliance report nick name
+        For special line formatting with nickname
         """
-        base_desc = descriptions_dict[line].get(
-            ("legacy" if compliance_data_service.is_legacy_year() else "description"),
-            descriptions_dict[line].get("description"),
-        )
+        base_desc = descriptions_dict[line]["description"]
         return base_desc.format("{:}".format(compliance_data_service.get_nickname()))
 
     @service_handler
@@ -902,9 +843,7 @@ class ComplianceReportSummaryService:
 
         summary = [
             ComplianceReportSummaryRowSchema(
-                line=self._get_line_value(
-                    line, compliance_data_service.is_legacy_year()
-                ),
+                line=self._get_line_value(line),
                 description=(
                     RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
                         "{:,}".format(round(summary_lines[4]["gasoline"] * 0.05)),
@@ -1016,9 +955,7 @@ class ComplianceReportSummaryService:
 
         low_carbon_fuel_target_summary = [
             ComplianceReportSummaryRowSchema(
-                line=self._get_line_value(
-                    line, compliance_data_service.is_legacy_year()
-                ),
+                line=self._get_line_value(line),
                 description=(
                     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["description"].format(
                         "{:,}".format(non_compliance_penalty_payable_units * -1)
@@ -1057,9 +994,7 @@ class ComplianceReportSummaryService:
 
         non_compliance_penalty_summary = [
             ComplianceReportSummaryRowSchema(
-                line=self._get_line_value(
-                    line, compliance_data_service.is_legacy_year()
-                ),
+                line=self._get_line_value(line),
                 description=(
                     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS[line][
                         "description"
@@ -1113,9 +1048,11 @@ class ComplianceReportSummaryService:
         # Initialize compliance units sum
         compliance_units_sum = 0.0
 
+        # Check if this is a historical report (pre-2024)
+        is_historical = int(report.compliance_period.description) < 2024
+
         # Calculate compliance units for each fuel supply record
         for fuel_supply in fuel_supply_records:
-
             TCI = fuel_supply.target_ci or 0  # Target Carbon Intensity
             EER = fuel_supply.eer or 0  # Energy Effectiveness Ratio
             RCI = fuel_supply.ci_of_fuel or 0  # Recorded Carbon Intensity
@@ -1129,8 +1066,16 @@ class ComplianceReportSummaryService:
             )
             ED = fuel_supply.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
-            compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
+            # Apply the appropriate compliance units formula
+            compliance_units = calculate_compliance_units(
+                TCI=TCI,
+                EER=EER,
+                RCI=RCI,
+                UCI=UCI,
+                Q=Q,
+                ED=ED,
+                is_historical=is_historical,
+            )
             compliance_units_sum += compliance_units
 
         return round(compliance_units_sum)
@@ -1194,19 +1139,32 @@ class ComplianceReportSummaryService:
             report.compliance_report_group_uuid, report.compliance_report_id
         )
 
+        # Check if this is a historical report (pre-2024)
+        is_historical = int(report.compliance_period.description) < 2024
+
         # Initialize compliance units sum
         compliance_units_sum = 0.0
         # Calculate compliance units for each fuel export record
         for fuel_export in fuel_export_records:
-            TCI = fuel_export.target_ci or 0  # Target Carbon Intensity
+            TCI = fuel_export.target_ci or 0  # Target Carbon Intensity / CI class
             EER = fuel_export.eer or 0  # Energy Effectiveness Ratio
-            RCI = fuel_export.ci_of_fuel or 0  # Recorded Carbon Intensity
-            UCI = fuel_export.uci or 0  # Additional Carbon Intensity
+            RCI = fuel_export.ci_of_fuel or 0  # Recorded Carbon Intensity / CI fuel
+            UCI = (
+                fuel_export.uci or 0
+            )  # Additional Carbon Intensity (only used in new calculation)
             Q = fuel_export.quantity or 0  # Quantity of Fuel Supplied
             ED = fuel_export.energy_density or 0  # Energy Density
 
-            # Apply the compliance units formula
-            compliance_units = calculate_compliance_units(TCI, EER, RCI, UCI, Q, ED)
+            # Apply the appropriate compliance units formula
+            compliance_units = calculate_compliance_units(
+                TCI=TCI,
+                EER=EER,
+                RCI=RCI,
+                UCI=UCI,
+                Q=Q,
+                ED=ED,
+                is_historical=is_historical,
+            )
             compliance_units = -compliance_units
             compliance_units = compliance_units if compliance_units < 0 else 0
 

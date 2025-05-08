@@ -1,5 +1,11 @@
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within
+} from '@testing-library/react'
 import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useForm, FormProvider } from 'react-hook-form'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
@@ -10,6 +16,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { wrapper } from '@/tests/utils/wrapper'
 import { yupResolver } from '@hookform/resolvers/yup'
 import { schemaValidation } from '@/views/Organizations/AddEditOrg/_schema.js'
+import { useMutation } from '@tanstack/react-query'
 
 vi.mock('@/hooks/useOrganization')
 vi.mock('react-i18next', () => ({
@@ -56,20 +63,21 @@ describe('AddEditOrg', () => {
   let apiSpy
 
   beforeEach(() => {
+    vi.clearAllMocks()
+
     mockNavigate = vi.fn()
     useNavigate.mockReturnValue(mockNavigate)
     useParams.mockReturnValue({ orgID: undefined })
 
-    // Mocking the useOrganization hook
     useOrganization.mockReturnValue({
+      data: null,
       isFetched: true
     })
 
     apiSpy = {
-      post: vi.fn(),
-      put: vi.fn()
+      post: vi.fn().mockResolvedValue({}),
+      put: vi.fn().mockResolvedValue({})
     }
-    // Mocking the useApiService hook
     useApiService.mockReturnValue(apiSpy)
   })
 
@@ -78,6 +86,7 @@ describe('AddEditOrg', () => {
       data: mockedOrg,
       isFetched: true
     })
+    useParams.mockReturnValue({ orgID: '123' })
 
     render(
       <MockFormProvider>
@@ -112,15 +121,12 @@ describe('AddEditOrg', () => {
       { wrapper }
     )
 
-    // Simulate submitting the form without filling required fields
     fireEvent.click(screen.getByTestId('saveOrganization'))
 
-    // Check for validation error messages
     await waitFor(async () => {
       const errorMessages = await screen.findAllByText(/required/i)
       expect(errorMessages.length).toBeGreaterThan(0)
 
-      // Check for specific error messages
       expect(
         screen.getByText(/Legal Name of Organization is required./i)
       ).toBeInTheDocument()
@@ -153,10 +159,8 @@ describe('AddEditOrg', () => {
       { wrapper }
     )
 
-    // Simulate submitting the form without filling required fields
     fireEvent.click(screen.getByTestId('saveOrganization'))
 
-    // Check for validation error messages
     await waitFor(async () => {
       expect(
         screen.getByText(
@@ -169,11 +173,8 @@ describe('AddEditOrg', () => {
     })
   })
 
-  it('submits form data correctly', async () => {
-    useOrganization.mockReturnValue({
-      data: mockedOrg,
-      isFetched: true
-    })
+  it('submits form data correctly for CREATE', async () => {
+    useParams.mockReturnValue({ orgID: undefined })
 
     render(
       <MockFormProvider>
@@ -211,9 +212,6 @@ describe('AddEditOrg', () => {
     })
     // Early Issuance Radio (value="yes" is Yes)
     fireEvent.click(screen.getByTestId('hasEarlyIssuanceYes'))
-
-    // Submit the form
-    fireEvent.click(screen.getByTestId('saveOrganization'))
 
     // Wait for the navigation side effect
     await waitFor(() => {

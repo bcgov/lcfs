@@ -88,21 +88,20 @@ class AllocationAgreementChangelogFuelTypeSchema(BaseSchema):
 class AllocationAgreementResponseSchema(BaseSchema):
     compliance_report_id: int
     allocation_agreement_id: int
-    allocation_transaction_type: AllocationTransactionTypeSchema
-    transaction_partner: str
-    postal_address: str
-    transaction_partner_email: str
-    transaction_partner_phone: str
-    fuel_type: FuelTypeChangelogSchema
+    allocation_transaction_type: str
+    transaction_partner: Optional[str] = None
+    postal_address: Optional[str] = None
+    transaction_partner_email: Optional[str] = None
+    transaction_partner_phone: Optional[str] = None
+    fuel_type: str
     fuel_category_id: Optional[int] = None
-    fuel_category: FuelCategoryResponseSchema
+    fuel_category: Optional[str] = None
     fuel_type_other: Optional[str] = None
     ci_of_fuel: Optional[float] = None
-    provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
+    provision_of_the_act: Optional[str] = None
     quantity: int
     units: str
-    fuel_category: FuelCategoryResponseSchema
-    fuel_code: Optional[FuelCodeResponseSchema] = None
+    fuel_code: Optional[str] = None
     group_uuid: str
     version: int
     action_type: str
@@ -169,12 +168,12 @@ class AllocationAgreementSchema(AllocationAgreementCreateSchema):
 
 
 class AllocationAgreementAllSchema(BaseSchema):
-    allocation_agreements: List[AllocationAgreementSchema]
+    allocation_agreements: List[AllocationAgreementResponseSchema]
     pagination: Optional[PaginationResponseSchema] = {}
 
 
 class AllocationAgreementListSchema(BaseSchema):
-    allocation_agreements: List[AllocationAgreementSchema]
+    allocation_agreements: List[AllocationAgreementResponseSchema]
     pagination: PaginationResponseSchema
 
 
@@ -185,8 +184,10 @@ class PaginatedAllocationAgreementRequestSchema(BaseSchema):
     size: int
     sort_orders: List[SortOrder]
 
+
 class AllocationAgreementRequestSchema(ComplianceReportRequestSchema):
     changelog: Optional[bool] = None
+
 
 class DeleteAllocationAgreementsSchema(BaseSchema):
     allocation_agreement_id: int

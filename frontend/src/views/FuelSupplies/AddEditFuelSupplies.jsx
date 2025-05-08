@@ -1,8 +1,12 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
-import { buildPath, ROUTES } from '@/routes/routes'
+import {
+  DEFAULT_CI_FUEL,
+  REPORT_SCHEDULES,
+  isLegacyCompliancePeriod
+} from '@/constants/common'
+import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
@@ -19,7 +23,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { defaultColDef, fuelSupplyColDefs } from './_schema'
+import * as schema from './_schema'
+import * as legacySchema from './_legacySchema'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -137,8 +142,13 @@ export const AddEditFuelSupplies = () => {
     [fuelSupplyData, complianceReportId, compliancePeriod, isSupplemental]
   )
 
+  const getSchema = (compliancePeriod) => {
+    return isLegacyCompliancePeriod(compliancePeriod) ? legacySchema : schema
+  }
+
   useEffect(() => {
-    const updatedColumnDefs = fuelSupplyColDefs(
+    const currentSchema = getSchema(compliancePeriod)
+    const updatedColumnDefs = currentSchema.fuelSupplyColDefs(
       optionsData,
       errors,
       warnings,
@@ -339,7 +349,7 @@ export const AddEditFuelSupplies = () => {
             gridRef={gridRef}
             alertRef={alertRef}
             columnDefs={columnDefs}
-            defaultColDef={defaultColDef}
+            defaultColDef={schema.defaultColDef}
             onGridReady={onGridReady}
             rowData={rowData}
             gridOptions={gridOptions}

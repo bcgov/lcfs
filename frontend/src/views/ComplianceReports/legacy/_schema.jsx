@@ -42,22 +42,22 @@ export const scheduleBSummaryColDefs = (t) => [
   {
     headerName: t('fuelSupply:fuelSupplyColLabels.fuelType'),
     field: 'fuelType',
-    valueGetter: (params) => params.data.fuelType?.fuelType
+    valueGetter: (params) => params.data.fuelType
   },
   {
     headerName: t('legacy:columnLabels.fuelClass'),
     field: 'fuelCategory',
-    valueGetter: (params) => params.data.fuelCategory?.category
+    valueGetter: (params) => params.data.fuelCategory
   },
   {
     headerName: t('fuelSupply:fuelSupplyColLabels.determiningCarbonIntensity'),
     field: 'determiningCarbonIntensity',
-    valueGetter: (params) => params.data.provisionOfTheAct?.name
+    valueGetter: (params) => params.data.provisionOfTheAct
   },
   {
     headerName: t('fuelSupply:fuelSupplyColLabels.fuelCode'),
     field: 'fuelCode',
-    valueGetter: (params) => params.data.fuelCode?.fuelCode
+    valueGetter: (params) => params.data.fuelCode
   },
   {
     headerName: t('fuelSupply:fuelSupplyColLabels.quantity'),
@@ -121,6 +121,72 @@ export const scheduleCSummaryColDefs = (t) => [
     floatingFilter: false,
     flex: 1,
     minWidth: 200
+  }
+]
+
+export const exclusionSummaryColDefs = (t) => [
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
+    ),
+    field: 'allocationTransactionType'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartner'
+    ),
+    field: 'transactionPartner'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.postalAddress'
+    ),
+    field: 'postalAddress'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+    ),
+    field: 'transactionPartnerEmail'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+    ),
+    field: 'transactionPartnerPhone'
+  },
+  {
+    headerName: t('allocationAgreement:allocationAgreementColLabels.fuelType'),
+    field: 'fuelType'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+    ),
+    field: 'fuelCategory'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.carbonIntensity'
+    ),
+    field: 'provisionOfTheAct'
+  },
+  {
+    headerName: t('allocationAgreement:allocationAgreementColLabels.fuelCode'),
+    field: 'fuelCode'
+  },
+  {
+    headerName: t('allocationAgreement:allocationAgreementColLabels.ciOfFuel'),
+    field: 'ciOfFuel'
+  },
+  {
+    headerName: t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  },
+  {
+    headerName: t('allocationAgreement:allocationAgreementColLabels.units'),
+    field: 'units'
   }
 ]
 
