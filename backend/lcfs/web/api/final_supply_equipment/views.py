@@ -19,6 +19,7 @@ from starlette.responses import StreamingResponse, JSONResponse
 from lcfs.db import dependencies
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
 )
@@ -174,7 +175,9 @@ async def search_table_options(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def export(
     request: Request,
     report_id: str,
@@ -193,8 +196,18 @@ async def export(
 
     await report_validate.validate_organization_access(compliance_report_id)
 
-    organization = request.user.organization
-    return await exporter.export(compliance_report_id, request.user, organization, True)
+    CRS = __import__(
+        "lcfs.web.api.compliance_report.services",
+        fromlist=["ComplianceReportServices"],
+    ).ComplianceReportServices
+    compliance_report = await CRS().get_compliance_report_by_id(
+        report_id=compliance_report_id,
+        user=request.user,
+    )
+
+    return await exporter.export(
+        compliance_report_id, request.user, compliance_report.organization, True
+    )
 
 
 @router.post(
@@ -202,12 +215,15 @@ async def export(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def import_fse(
     request: Request,
     report_id: str,
     file: UploadFile = File(...),
     report_validate: ComplianceReportValidation = Depends(),
+    fse_repo: FinalSupplyEquipmentRepository = Depends(),
     importer: FinalSupplyEquipmentImporter = Depends(),
     overwrite: bool = Form(...),
 ):
@@ -241,10 +257,37 @@ async def import_fse(
             status_code=400, detail="Invalid report id. Must be an integer."
         )
 
-    await report_validate.validate_organization_access(compliance_report_id)
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
 
+    # Check if overwrite is allowed
+    CRS = __import__(
+        "lcfs.web.api.compliance_report.services",
+        fromlist=["ComplianceReportServices"],
+    ).ComplianceReportServices
+    compliance_report = await CRS().get_compliance_report_by_id(
+        report_id=compliance_report_id,
+        user=request.user,
+    )
+    version = compliance_report.version
+    is_original = version == 0
+
+    if overwrite:
+        existing_fse = await fse_repo.get_fse_list(compliance_report_id)
+        if not is_original and len(existing_fse) > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Overwrite not allowed: this is a non-initial report with existing data",
+            )
+
+    # Import data
     job_id = await importer.import_data(
-        compliance_report_id, request.user, file, overwrite
+        compliance_report_id,
+        request.user,
+        compliance_report.organization.organization_code,
+        file,
+        overwrite,
     )
     return JSONResponse(content={"jobId": job_id})
 
@@ -254,7 +297,9 @@ async def import_fse(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_template(
     request: Request,
     report_id: str,
@@ -273,7 +318,15 @@ async def get_template(
 
     await report_validate.validate_organization_access(compliance_report_id)
 
-    organization = request.user.organization
+    CRS = __import__(
+        "lcfs.web.api.compliance_report.services",
+        fromlist=["ComplianceReportServices"],
+    ).ComplianceReportServices
+    compliance_report = await CRS().get_compliance_report_by_id(
+        report_id=compliance_report_id, user=request.user
+    )
+
+    organization = compliance_report.organization
     return await exporter.export(
         compliance_report_id, request.user, organization, False
     )
@@ -284,7 +337,9 @@ async def get_template(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_job_status(
     request: Request,
     job_id: str,

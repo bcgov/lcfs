@@ -98,7 +98,7 @@ def compliance_period_schema():
 @pytest.fixture
 def compliance_report_organization_schema():
     return ComplianceReportOrganizationSchema(
-        organization_id=1, name="Acme Corporation"
+        organization_id=1, organization_code="ACME123", name="Acme Corporation"
     )
 
 

@@ -408,7 +408,10 @@ class ComplianceReportServices:
                             ComplianceReportStatusEnum.Submitted.value,
                             None,
                         )
-                    if not is_analyst and report.report_status in analyst_only_statuses:
+                    if (
+                        not is_analyst
+                        and report.report_status in analyst_only_statuses_regular
+                    ):
                         report.report_status, report.report_status_id = (
                             ComplianceReportStatusEnum.Submitted.value,
                             None,

@@ -86,7 +86,7 @@ export const allocationAgreementColDefs = (
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
     suppressKeyboardEvent,
-    minWidth: 120,
+    minWidth: 175,
     editable: true,
     tooltipValueGetter: (p) =>
       'Select whether the fuel was purchased or sold under the allocation agreement'

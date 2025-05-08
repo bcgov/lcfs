@@ -1,9 +1,7 @@
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
-import BCAlert from '@/components/BCAlert'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { buildPath, ROUTES } from '@/routes/routes'
@@ -22,9 +20,6 @@ export const OrganizationDetailsCard = () => {
   const { t } = useTranslation(['common', 'org'])
   const location = useLocation()
   const { orgID } = useParams()
-
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
 
   const {
     data: currentUser,
@@ -46,25 +41,12 @@ export const OrganizationDetailsCard = () => {
       })
     : null
 
-  useEffect(() => {
-    if (location.state?.message) {
-      setAlertMessage(location.state.message)
-      setAlertSeverity(location.state.severity || 'info')
-    }
-  }, [location.state])
-
   if (isLoading) {
     return <Loading />
   }
 
   return (
     <>
-      {alertMessage && (
-        <BCAlert severity={alertSeverity} sx={{ mb: 4 }}>
-          {alertMessage}
-        </BCAlert>
-      )}
-
       <BCBox
         sx={{
           width: {
