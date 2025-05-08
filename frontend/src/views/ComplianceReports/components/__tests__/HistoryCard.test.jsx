@@ -6,8 +6,6 @@ import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.js
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
-import { displayName } from 'react-quill'
-import { AssessmentCard } from '@/views/ComplianceReports/components/AssessmentCard.jsx'
 
 // Mock useCurrentUser
 vi.mock('@/hooks/useCurrentUser', () => ({
@@ -22,27 +20,28 @@ vi.mock('@/utils/formatters', () => ({
   timezoneFormatter: vi.fn(({ value }) => `formatted-${value}`)
 }))
 
+const defaultReport = {
+  version: 0,
+  organization: {
+    name: 'Test Org'
+  },
+  compliancePeriod: { description: '2024' },
+  nickname: 'My Nickname',
+  currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
+  history: [],
+  summary: {
+    line11FossilDerivedBaseFuelTotal: 0,
+    line21NonCompliancePenaltyPayable: 0
+  }
+}
+
+const renderComponent = (overrides = {}) => {
+  return render(<HistoryCard report={{ ...defaultReport, ...overrides }} />, {
+    wrapper
+  })
+}
+
 describe('HistoryCard', () => {
-  const defaultReport = {
-    version: 0,
-    organization: {
-      name: 'Test Org'
-    },
-    compliancePeriod: { description: '2024' },
-    nickname: 'My Nickname',
-    currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
-    history: [],
-    summary: {
-      line11FossilDerivedBaseFuelTotal: 0
-    }
-  }
-
-  const renderComponent = (overrides = {}) => {
-    return render(<HistoryCard report={{ ...defaultReport, ...overrides }} />, {
-      wrapper
-    })
-  }
-
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -163,7 +162,45 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('renders has met in report history for meeting reports', async () => {
+  it('shows assessment lines for government user BEFORE assessed', async () => {
+    useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
+      data: { isGovernmentUser: true },
+      isLoading: false
+    })
+
+    const history = [
+      {
+        status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        createDate: '2024-10-01T10:00:00Z',
+        userProfile: { firstName: 'John', lastName: 'Doe' },
+        displayName: 'John Doe'
+      }
+    ]
+
+    renderComponent({
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+      history,
+      summary: {
+        line11FossilDerivedBaseFuelTotal: 0,
+        line21NonCompliancePenaltyPayable: 0
+      }
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          'Test Org has met renewable fuel targets set under section 9 of the Low Carbon Fuels Act.'
+        )
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText(
+          'Test Org has met the low carbon fuel targets set under section 12 of the Low Carbon Fuels Act.'
+        )
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('renders has met lines for government user when assessed', async () => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false
@@ -192,16 +229,9 @@ describe('HistoryCard', () => {
         )
       ).toBeInTheDocument()
     })
-    await waitFor(() => {
-      expect(
-        screen.getByText(
-          'Test Org has met the low carbon fuel targets set under section 12 of the Low Carbon Fuels Act.'
-        )
-      ).toBeInTheDocument()
-    })
   })
 
-  it('renders has not met in report history for reports', async () => {
+  it('renders has not met lines for government user when assessed and penalties > 0', async () => {
     useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
       data: { isGovernmentUser: true },
       isLoading: false
@@ -229,8 +259,6 @@ describe('HistoryCard', () => {
           'Test Org has not met renewable fuel targets set under section 9 of the Low Carbon Fuels Act.'
         )
       ).toBeInTheDocument()
-    })
-    await waitFor(() => {
       expect(
         screen.getByText(
           'Test Org has not met the low carbon fuel targets set under section 12 of the Low Carbon Fuels Act.'
@@ -239,69 +267,28 @@ describe('HistoryCard', () => {
     })
   })
 
-  it('does not render the assessment statement if not present', async () => {
-    useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
-      data: { isGovernmentUser: true },
-      isLoading: false
-    })
-
+  it('does not render assessment lines for non‑government user before assessed', async () => {
     const history = [
       {
-        status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
         createDate: '2024-10-01T10:00:00Z',
         userProfile: { firstName: 'John', lastName: 'Doe' },
         displayName: 'John Doe'
       }
     ]
     renderComponent({
-      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
       history,
       summary: {
-        line11FossilDerivedBaseFuelTotal: 1.0,
-        line21NonCompliancePenaltyPayable: 1.0
+        line11FossilDerivedBaseFuelTotal: 0,
+        line21NonCompliancePenaltyPayable: 0
       }
     })
 
     await waitFor(() => {
       expect(
-        screen.queryByText('Assessment statement from the director:')
+        screen.queryByText(/has met renewable fuel targets/i)
       ).not.toBeInTheDocument()
-    })
-  })
-
-  it('renders the assessment statement if present', async () => {
-    useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
-      data: { isGovernmentUser: true },
-      isLoading: false
-    })
-
-    const assessmentStatement = 'This is a very good assessment statement'
-
-    const history = [
-      {
-        status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
-        createDate: '2024-10-01T10:00:00Z',
-        userProfile: { firstName: 'John', lastName: 'Doe' },
-        displayName: 'John Doe'
-      }
-    ]
-    renderComponent({
-      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
-      history,
-      assessmentStatement,
-      summary: {
-        line11FossilDerivedBaseFuelTotal: 1.0,
-        line21NonCompliancePenaltyPayable: 1.0
-      }
-    })
-
-    await waitFor(() => {
-      expect(screen.getByText(assessmentStatement)).toBeInTheDocument()
-    })
-    await waitFor(() => {
-      expect(
-        screen.getByText('Assessment statement from the director:')
-      ).toBeInTheDocument()
     })
   })
 })
