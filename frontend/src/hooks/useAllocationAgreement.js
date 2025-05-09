@@ -98,3 +98,65 @@ export const useSaveAllocationAgreement = (params, options) => {
     }
   })
 }
+
+export const useImportAllocationAgreement = (complianceReportId, options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const path = apiRoutes.importAllocationAgreements.replace(
+    ':reportID',
+    complianceReportId
+  )
+
+  return useMutation({
+    ...options,
+    mutationFn: async ({ file, isOverwrite }) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('filename', file.name)
+      formData.append('overwrite', isOverwrite)
+
+      return await client.post(path, formData, {
+        accept: 'application/json',
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries([
+        'allocation-agreements',
+        complianceReportId
+      ])
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          return (
+            query.queryKey[0] === 'allocation-agreements' &&
+            query.queryKey[1] === complianceReportId
+          )
+        }
+      })
+      if (options.onSuccess) {
+        options.onSuccess(data)
+      }
+    }
+  })
+}
+
+export const useGetAllocationAgreementImportJobStatus = (jobID, options) => {
+  const client = useApiService()
+  return useQuery({
+    queryFn: async () => {
+      const response = await client.get(
+        apiRoutes.getImportAllocationAgreementsJobStatus.replace(
+          ':jobID',
+          jobID
+        )
+      )
+      return response.data
+    },
+    queryKey: ['importJob', jobID],
+    staleTime: 0,
+    enabled: !!jobID,
+    ...options
+  })
+}

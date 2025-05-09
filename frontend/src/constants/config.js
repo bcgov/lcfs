@@ -36,6 +36,7 @@ export const FEATURE_FLAGS = {
   SUPPLEMENTAL_REPORTING: 'supplementalReporting',
   LEGACY_REPORT_DETAILS: 'fullLegacyReports',
   FSE_IMPORT_EXPORT: 'fseImportExport',
+  ALLOCATION_AGREEMENT_IMPORT_EXPORT: 'allocationAgreementImportExport',
   GOVERNMENT_ADJUSTMENT: 'governmentAdjustment'
 }
 
@@ -62,6 +63,8 @@ export const CONFIG = {
     fullLegacyReports:
       window.lcfs_config.feature_flags.fullLegacyReports ?? false,
     fseImportExport: window.lcfs_config.feature_flags.fseImportExport ?? false,
+    allocationAgreementImportExport:
+      window.lcfs_config.feature_flags.allocationAgreementImportExport ?? false,
     governmentAdjustment:
       window.lcfs_config.feature_flags.governmentAdjustment ?? false
   }

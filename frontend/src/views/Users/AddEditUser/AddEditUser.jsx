@@ -32,7 +32,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
   Tooltip
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
@@ -76,6 +75,8 @@ export const AddEditUser = ({ userType }) => {
 
   // Determine if user is safe to remove
   const safeToDelete = data?.isSafeToRemove
+  const isEditingGovernmentUser = data?.isGovernmentUser || false
+  const isCurrentUserGovernment = currentUser?.isGovernmentUser || false
 
   // User form hook and form validation
   const form = useForm({
@@ -243,12 +244,17 @@ export const AddEditUser = ({ userType }) => {
   const handleConfirmDelete = () => {
     deleteUser(userID, {
       onSuccess: () => {
-        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
-          state: {
-            message: t('admin:deleteUser.success'),
-            severity: 'success'
+        navigate(
+          buildPath(ROUTES.ORGANIZATIONS.VIEW, {
+            orgID: data?.organization?.organizationId
+          }),
+          {
+            state: {
+              message: t('admin:deleteUser.success'),
+              severity: 'success'
+            }
           }
-        })
+        )
       },
       onError: (error) => {
         console.error('Error deleting user:', error)
@@ -264,8 +270,7 @@ export const AddEditUser = ({ userType }) => {
 
   // Handler for delete button click – opens confirmation dialog
   const handleDelete = () => {
-    // Only allow deletion for BCeID users
-    if (userType === 'bceid' && safeToDelete) {
+    if (!isEditingGovernmentUser && isCurrentUserGovernment && safeToDelete) {
       setOpenConfirm(true)
     }
   }
@@ -296,7 +301,8 @@ export const AddEditUser = ({ userType }) => {
             <Grid2
               size={{
                 xs: 12,
-                md: 5
+                md: 5,
+                lg: 4
               }}
             >
               <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
@@ -315,7 +321,8 @@ export const AddEditUser = ({ userType }) => {
             <Grid2
               size={{
                 xs: 12,
-                md: 7
+                md: 7,
+                lg: 6
               }}
             >
               <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
@@ -345,7 +352,8 @@ export const AddEditUser = ({ userType }) => {
             <Grid2
               size={{
                 xs: 12,
-                md: 5
+                md: 5,
+                lg: 4
               }}
             >
               <Box
@@ -384,7 +392,8 @@ export const AddEditUser = ({ userType }) => {
                 </BCButton>
                 {/* Only render delete button for BCeID users */}
                 {userID &&
-                  userType === 'bceid' &&
+                  !isEditingGovernmentUser &&
+                  isCurrentUserGovernment &&
                   (safeToDelete ? (
                     <BCButton
                       variant="outlined"

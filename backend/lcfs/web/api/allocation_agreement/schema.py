@@ -150,7 +150,7 @@ class AllocationAgreementCreateSchema(BaseSchema):
     ci_of_fuel: Optional[float] = 0
     provision_of_the_act: str
     quantity: int = Field(..., gt=0, description="Quantity must be greater than 0")
-    units: str
+    units: Optional[str] = None
     fuel_category: str
     fuel_code: Optional[str] = None
     deleted: Optional[bool] = None

@@ -51,6 +51,7 @@ class FinalSupplyEquipmentExporter:
     async def export(
         self,
         compliance_report_id: int,
+        user: UserProfile,
         organization: Organization,
         include_data=True,
     ) -> StreamingResponse:
@@ -61,8 +62,9 @@ class FinalSupplyEquipmentExporter:
             "xlsx"  # Uses Advanced Excel features, so only use modern format
         )
         compliance_report = (
-            await self.compliance_report_repo.get_compliance_report_by_id(
-                compliance_report_id
+            await self.compliance_report_services.get_compliance_report_by_id(
+                report_id=compliance_report_id,
+                user=user,
             )
         )
         if not compliance_report:

@@ -33,11 +33,16 @@ export const reportsColDefs = (t, isSupplier) => [
     floatingFilterComponentParams: {
       optionsQuery: () => ({
         data: [
-          { id: 1, name: 'Original Report' },
-          { id: 2, name: 'Supplemental Report' },
+          { id: 1, name: 'Early issuance' },
+          { id: 2, name: 'Original report' },
+          { id: 3, name: 'Supplemental report' },
           {
-            id: 3,
+            id: 4,
             name: 'Government adjustment'
+          },
+          {
+            id: 5,
+            name: 'Reassessment'
           }
         ],
         isLoading: false

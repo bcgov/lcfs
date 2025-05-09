@@ -1,6 +1,5 @@
 import asyncio
 import concurrent.futures
-import datetime
 import io
 import json
 import re
@@ -13,39 +12,41 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from typing import List
 
+from lcfs.db.base import current_user_var
 from lcfs.db.dependencies import db_url, set_user_context
 from lcfs.db.models import UserProfile
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.services.redis.dependency import get_redis_client
 from lcfs.settings import settings
 from lcfs.utils.constants import POSTAL_REGEX
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
-from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
-from lcfs.web.api.final_supply_equipment.schema import (
-    FinalSupplyEquipmentCreateSchema,
-    PortsEnum,
-)
-from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
-from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
+from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
+from lcfs.web.api.allocation_agreement.schema import AllocationAgreementCreateSchema
+from lcfs.web.api.allocation_agreement.services import AllocationAgreementServices
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.fuel_supply.services import FuelSupplyServices
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 
 logger = structlog.get_logger(__name__)
 
 
-class FinalSupplyEquipmentImporter:
+class AllocationAgreementImporter:
+
     def __init__(
         self,
-        repo: FinalSupplyEquipmentRepository = Depends(),
-        fse_service: FinalSupplyEquipmentServices = Depends(),
-        compliance_report_repo: ComplianceReportRepository = Depends(),
+        repo: AllocationAgreementRepository = Depends(),
+        fuel_code_repo: FuelCodeRepository = Depends(),
+        compliance_report_services: ComplianceReportServices = Depends(),
         clamav_service: ClamAVService = Depends(),
         redis_client: Redis = Depends(get_redis_client),
         executor: concurrent.futures.ThreadPoolExecutor = Depends(),
     ) -> None:
         self.repo = repo
-        self.fse_service = fse_service
-        self.compliance_report_repo = compliance_report_repo
+        self.fuel_code_repo = fuel_code_repo
+        self.compliance_report_services = compliance_report_services
         self.clamav_service = clamav_service
         self.redis_client = redis_client
         self.executor = executor
@@ -55,7 +56,6 @@ class FinalSupplyEquipmentImporter:
         self,
         compliance_report_id: int,
         user: UserProfile,
-        org_code: str,
         file: UploadFile,
         overwrite: bool,
     ) -> str:
@@ -63,14 +63,6 @@ class FinalSupplyEquipmentImporter:
         Initiates the import job in a separate thread executor.
         Returns a job_id that can be used to track progress via get_status.
         """
-        compliance_report = (
-            await self.compliance_report_repo.get_compliance_report_by_id(
-                compliance_report_id
-            )
-        )
-        if not compliance_report:
-            raise DataNotFoundException("Compliance report not found.")
-
         job_id = str(uuid.uuid4())
 
         # Initialize job status in Redis
@@ -93,7 +85,6 @@ class FinalSupplyEquipmentImporter:
                 import_async(
                     compliance_report_id,
                     user,
-                    org_code,
                     copied_file,
                     job_id,
                     overwrite,
@@ -127,16 +118,15 @@ class FinalSupplyEquipmentImporter:
 async def import_async(
     compliance_report_id: int,
     user: UserProfile,
-    org_code: str,
     file: UploadFile,
     job_id: str,
     overwrite: bool,
 ):
     """
-    Performs the actual import in an async context.
+    Performs the actual allocation agreement import in an async context.
     This is offloaded to a thread pool to avoid blocking.
     """
-    logger.debug("Importing FSE Data...")
+    logger.debug("Importing Allocation Agreement Data...")
 
     engine = create_async_engine(db_url, future=True)
     try:
@@ -144,11 +134,25 @@ async def import_async(
             async with session.begin():
                 await set_user_context(session, user.keycloak_username)
 
-                fs_repo = FuelSupplyRepository(session)
-                fse_repo = FinalSupplyEquipmentRepository(session)
-                cr_repo = ComplianceReportRepository(session, fs_repo)
-                fse_service = FinalSupplyEquipmentServices(fse_repo, cr_repo)
-                clamav_service = ClamAVService()
+                current_user_var.set(user)
+
+                fuel_code_repo = FuelCodeRepository(session)
+                compliance_report_repo = ComplianceReportRepository(session)
+                aa_repo = AllocationAgreementRepository(
+                    db=session, fuel_repo=fuel_code_repo
+                )
+
+                aa_service = AllocationAgreementServices(
+                    repo=aa_repo,
+                    fuel_repo=fuel_code_repo,
+                    fuel_supply_service=FuelSupplyServices(
+                        repo=FuelSupplyRepository(session),
+                        fuel_repo=fuel_code_repo,
+                        compliance_report_repo=compliance_report_repo,
+                    ),
+                    compliance_report_repo=compliance_report_repo,
+                )
+
                 redis_client = Redis(
                     host=settings.redis_host,
                     port=settings.redis_port,
@@ -159,6 +163,7 @@ async def import_async(
                     socket_timeout=5,
                     socket_connect_timeout=5,
                 )
+                clamav_service = ClamAVService()
 
                 await _update_progress(
                     redis_client, job_id, 5, "Initializing services..."
@@ -168,8 +173,9 @@ async def import_async(
                     await _update_progress(
                         redis_client, job_id, 10, "Deleting old data..."
                     )
-                    await fse_service.delete_all(compliance_report_id)
-                    await fse_repo.reset_seq_by_org(org_code)
+                    await aa_service.delete_all(
+                        compliance_report_id, user.keycloak_username
+                    )
 
                 # Optional: Scan the file with ClamAV if enabled
                 if settings.clamav_enabled:
@@ -183,6 +189,27 @@ async def import_async(
                 )
 
                 try:
+                    table_options = await aa_repo.get_table_options(
+                        # Use the actual compliance period from DB or a param
+                        (
+                            await compliance_report_repo.get_compliance_report_by_id(
+                                compliance_report_id
+                            )
+                        ).compliance_period.description
+                    )
+
+                    # Build sets for validation
+                    valid_fuel_types = {
+                        obj["fuel_type"] for obj in table_options.get("fuel_types", [])
+                    }
+                    valid_fuel_categories = {
+                        obj.category for obj in table_options.get("fuel_categories", [])
+                    }
+                    valid_provisions = {
+                        obj.name
+                        for obj in table_options.get("provisions_of_the_act", [])
+                    }
+
                     sheet = _load_sheet(file)
                     row_count = sheet.max_row
 
@@ -200,14 +227,7 @@ async def import_async(
                         errors=errors,
                     )
 
-                    valid_intended_users = await fse_repo.get_intended_user_types()
-                    valid_use_types = await fse_repo.get_intended_use_types()
-                    valid_use_type_names = {obj.type for obj in valid_use_types}
-                    valid_user_type_names = {
-                        obj.type_name for obj in valid_intended_users
-                    }
-
-                    # Iterate through all data rows, skipping the header
+                    # Iterate through data rows, skipping the header.
                     for row_idx, row in enumerate(
                         sheet.iter_rows(min_row=2, values_only=True), start=2
                     ):
@@ -233,7 +253,11 @@ async def import_async(
 
                         # Validate row
                         error = _validate_row(
-                            row, row_idx, valid_use_type_names, valid_user_type_names
+                            row,
+                            row_idx,
+                            valid_fuel_types,
+                            valid_fuel_categories,
+                            valid_provisions,
                         )
                         if error:
                             errors.append(error)
@@ -242,10 +266,8 @@ async def import_async(
 
                         # Parse row data and insert into DB
                         try:
-                            fse_data = _parse_row(row, compliance_report_id)
-                            await fse_service.create_final_supply_equipment(
-                                fse_data, org_code
-                            )
+                            aa_data = _parse_row(row, compliance_report_id)
+                            await aa_service.create_allocation_agreement(aa_data)
                             created += 1
                         except Exception as ex:
                             logger.error(str(ex))
@@ -263,9 +285,8 @@ async def import_async(
                         errors=errors,
                     )
                     logger.debug(
-                        f"Completed importing FSE data, {created} rows created"
+                        f"Completed importing Allocation Agreement data, {created} rows created"
                     )
-
                     return {
                         "success": True,
                         "created": created,
@@ -286,7 +307,7 @@ async def import_async(
                     )
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Could not import FSE data: {str(e)}",
+                        detail=f"Could not import allocation agreement data: {str(e)}",
                     )
     finally:
         await engine.dispose()
@@ -294,161 +315,137 @@ async def import_async(
 
 def _load_sheet(file: UploadFile) -> Worksheet:
     """
-    Loads and returns the 'FSE' worksheet from the provided Excel file.
+    Loads and returns the 'Allocation Agreement' worksheet from the provided Excel file.
     Raises an exception if the sheet does not exist.
     """
     workbook = load_workbook(data_only=True, filename=file.file)
-    if "FSE" not in workbook.sheetnames:
-        raise Exception("Uploaded Excel does not contain a 'FSE' sheet.")
-    return workbook["FSE"]
+    sheet_name = "Allocation Agreements"
+    if sheet_name not in workbook.sheetnames:
+        raise Exception(f"Uploaded Excel does not contain a '{sheet_name}' sheet.")
+    return workbook[sheet_name]
 
 
 def _validate_row(
     row: tuple,
     row_idx: int,
-    valid_use_types: set[str],
-    valid_user_types: set[str],
+    valid_fuel_types: set,
+    valid_fuel_categories: set,
+    valid_provisions: set,
 ) -> str | None:
     """
-    Validates a single row of data and returns an error string if invalid.
-    Returns None if the row is valid.
+    Validates a single row for allocation agreement import.
+    Expected columns:
+      0: Responsibility
+      1: Legal name of transaction partner
+      2: Address for service
+      3: Email
+      4: Phone
+      5: Fuel type
+      6: Fuel type other
+      7: Fuel category
+      8: Determining Carbon Intensity
+      9: Fuel code
+      10: Quantity
+      11: Units
     """
     (
-        org_name,
-        supply_from_date,
-        supply_to_date,
-        kwh_usage,
-        serial_number,
-        manufacturer,
-        model,
-        level_of_equipment,
-        ports,
-        intended_use_str,
-        intended_users_str,
-        street_address,
-        city,
-        postal_code,
-        latitude,
-        longitude,
-        notes,
+        responsibility,
+        transaction_partner,
+        postal_address,
+        email,
+        phone,
+        fuel_type,
+        fuel_type_other,
+        fuel_category,
+        provision,
+        fuel_code,
+        quantity,
     ) = row
 
     missing_fields = []
-    if supply_from_date is None:
-        missing_fields.append("Supply from date")
-    if supply_to_date is None:
-        missing_fields.append("Supply to date")
-    if serial_number is None:
-        missing_fields.append("Serial #")
-    if manufacturer is None:
-        missing_fields.append("Manufacturer")
-    if level_of_equipment is None:
-        missing_fields.append("Level of equipment")
-    if street_address is None:
-        missing_fields.append("Street address")
-    if city is None:
-        missing_fields.append("City")
-    if postal_code is None:
-        missing_fields.append("Postal code")
-    if latitude is None:
-        missing_fields.append("Latitude")
-    if longitude is None:
-        missing_fields.append("Longitude")
-    if not intended_use_str or len(intended_use_str) < 4:
-        missing_fields.append("Intended use")
-    if not intended_users_str or len(intended_users_str) < 4:
-        missing_fields.append("Intended users")
+    if responsibility is None:
+        missing_fields.append("Responsibility")
+    if transaction_partner is None:
+        missing_fields.append("Legal name of transaction partner")
+    if postal_address is None:
+        missing_fields.append("Address for service")
+    if email is None:
+        missing_fields.append("Email")
+    if phone is None:
+        missing_fields.append("Phone")
+    if fuel_type is None:
+        missing_fields.append("Fuel type")
+    if fuel_category is None:
+        missing_fields.append("Fuel category")
+    if provision is None:
+        missing_fields.append("Determining Carbon Intensity")
+    if quantity is None:
+        missing_fields.append("Quantity")
 
     if missing_fields:
         return f"Row {row_idx}: Missing required fields: {', '.join(missing_fields)}"
 
-    # Validate postal code
-    postal_code_pattern = re.compile(POSTAL_REGEX)
-    if not postal_code_pattern.match(postal_code):
-        return f"Row {row_idx}: Invalid postal code"
+    # Validate email address.
+    email_pattern = re.compile(r"^[\w\.-]+@[\w\.-]+\.\w+$")
+    if not email_pattern.match(email):
+        return f"Row {row_idx}: Invalid email address"
 
-    # Validate intended uses
-    intended_uses = [u.strip() for u in intended_use_str.split(",")]
-    invalid_uses = [use for use in intended_uses if use not in valid_use_types]
-    if invalid_uses:
-        return f"Row {row_idx}: Invalid intended use(s): {', '.join(invalid_uses)}"
+    # Validate quantity (must be integer > 0).
+    try:
+        if int(quantity) <= 0:
+            return f"Row {row_idx}: Quantity must be greater than 0"
+    except Exception:
+        return f"Row {row_idx}: Quantity must be a number"
 
-    # Validate intended users
-    intended_users = [u.strip() for u in intended_users_str.split(",")]
-    invalid_users = [user for user in intended_users if user not in valid_user_types]
-    if invalid_users:
-        return f"Row {row_idx}: Invalid intended user(s): {', '.join(invalid_users)}"
+    # Validate lookups for fuel type, fuel category, and provision.
+    if fuel_type not in valid_fuel_types:
+        return f"Row {row_idx}: Invalid fuel type: {fuel_type}"
+
+    if fuel_category not in valid_fuel_categories:
+        return f"Row {row_idx}: Invalid fuel category: {fuel_category}"
+
+    if provision not in valid_provisions:
+        return f"Row {row_idx}: Invalid determining carbon intensity: {provision}"
 
     return None
 
 
 def _parse_row(
     row: tuple, compliance_report_id: int
-) -> FinalSupplyEquipmentCreateSchema:
+) -> AllocationAgreementCreateSchema:
     """
-    Parses a valid row into a FinalSupplyEquipmentCreateSchema object.
+    Parses a valid row into an AllocationAgreementCreateSchema object.
     """
     (
-        org_name,
-        supply_from_date,
-        supply_to_date,
-        kwh_usage,
-        serial_number,
-        manufacturer,
-        model,
-        level_of_equipment,
-        ports,
-        intended_use_str,
-        intended_users_str,
-        street_address,
-        city,
-        postal_code,
-        latitude,
-        longitude,
-        notes,
+        responsibility,
+        transaction_partner,
+        postal_address,
+        email,
+        phone,
+        fuel_type,
+        fuel_type_other,
+        fuel_category,
+        provision,
+        fuel_code,
+        quantity_raw,
     ) = row
 
-    supply_from_date = _parse_date(supply_from_date)
-    supply_to_date = _parse_date(supply_to_date)
-    kwh_usage = int(kwh_usage) if kwh_usage else 0
-    latitude = float(latitude) if latitude else 0.0
-    longitude = float(longitude) if longitude else 0.0
-    intended_uses = (
-        [u.strip() for u in intended_use_str.split(",")] if intended_use_str else []
-    )
-    intended_users = (
-        [u.strip() for u in intended_users_str.split(",")] if intended_users_str else []
-    )
+    quantity = int(quantity_raw) if quantity_raw is not None else 0
 
-    return FinalSupplyEquipmentCreateSchema(
+    return AllocationAgreementCreateSchema(
         compliance_report_id=compliance_report_id,
-        organization_name=org_name or "",
-        supply_from_date=supply_from_date,
-        supply_to_date=supply_to_date,
-        kwh_usage=kwh_usage,
-        serial_nbr=str(serial_number) or "",
-        manufacturer=str(manufacturer) or "",
-        model=str(model) or "",
-        level_of_equipment=level_of_equipment or "",
-        ports=PortsEnum(ports) if ports else None,
-        intended_uses=intended_uses,
-        intended_users=intended_users,
-        street_address=str(street_address) or "",
-        city=str(city) or "",
-        postal_code=postal_code or "",
-        latitude=latitude,
-        longitude=longitude,
-        notes=notes or "",
+        allocation_transaction_type=responsibility,
+        transaction_partner=transaction_partner,
+        postal_address=postal_address,
+        transaction_partner_email=email,
+        transaction_partner_phone=phone,
+        fuel_type=fuel_type,
+        fuel_type_other=fuel_type_other or None,
+        fuel_category=fuel_category,
+        provision_of_the_act=provision,
+        fuel_code=fuel_code or None,
+        quantity=quantity,
     )
-
-
-def _parse_date(date_value) -> datetime.datetime:
-    """
-    Safely parses various date formats into a datetime object.
-    """
-    if isinstance(date_value, (datetime.date, datetime.datetime)):
-        return date_value
-    return datetime.datetime.strptime(str(date_value), "%Y-%m-%d")
 
 
 async def _update_progress(
