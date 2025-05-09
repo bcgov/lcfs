@@ -75,3 +75,9 @@ export const TRANSACTION_TYPES = {
   COMPLIANCE_REPORT: 'ComplianceReport',
   ADMINISTRATIVE_ADJUSTMENT: 'AdminAdjustment'
 }
+
+export const REPORT_SCHEDULES_VIEW = {
+  EDIT: 'edit',
+  VIEW: 'view',
+  CHANGELOG: 'changelog'
+}

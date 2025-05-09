@@ -3,10 +3,9 @@ import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import BCDataGridServer from '@/components/BCDataGrid/BCDataGridServer'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import BCAlert from '@/components/BCAlert'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import { defaultSortModel, getUserColumnDefs } from './_schema'
@@ -29,18 +28,9 @@ export const OrganizationUsers = () => {
   } = useCurrentUser()
 
   const [gridKey, setGridKey] = useState(`users-grid-${orgID}-active`)
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
   const [resetGridFn, setResetGridFn] = useState(null)
 
   const gridRef = useRef()
-
-  useEffect(() => {
-    if (location.state?.message) {
-      setAlertMessage(location.state.message)
-      setAlertSeverity(location.state.severity || 'info')
-    }
-  }, [location.state])
 
   const handleGridKey = useCallback(() => {
     setGridKey(`users-grid-${orgID}`)
@@ -103,12 +93,6 @@ export const OrganizationUsers = () => {
 
   return (
     <BCBox mt={3}>
-      {alertMessage && (
-        <BCAlert data-test="alert-box" severity={alertSeverity} sx={{ mb: 2 }}>
-          {alertMessage}
-        </BCAlert>
-      )}
-
       {/* Title + buttons */}
       <BCBox my={2}>
         <BCTypography

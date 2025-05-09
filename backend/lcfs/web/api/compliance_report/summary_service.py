@@ -487,6 +487,7 @@ class ComplianceReportSummaryService:
             await self.fuel_supply_repo.get_effective_fuel_supplies(
                 compliance_report.compliance_report_group_uuid,
                 compliance_report.compliance_report_id,
+                compliance_report.version
             )
         )
 
@@ -1107,7 +1108,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid, report.compliance_report_id
+            report.compliance_report_group_uuid, report.compliance_report_id, report.version
         )
 
         # Initialize compliance units sum
@@ -1144,7 +1145,7 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid, report.compliance_report_id
+            report.compliance_report_group_uuid, report.compliance_report_id, report.version
         )
 
         # Initialize compliance units sum
