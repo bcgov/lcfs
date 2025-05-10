@@ -1,46 +1,63 @@
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useKeycloak } from '@react-keycloak/web'
-import { Navigate } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+import { Navigate, useLocation } from 'react-router-dom'
 
 const REDIRECT_TIMER = 60 * 1000 // 1 minute
 
 export const RequireAuth = ({ children, redirectTo }) => {
-  const { keycloak } = useKeycloak()
-  const { isError, error } = useCurrentUser()
+  const auth = useAuth()
+  const location = useLocation()
+  const { isError, error: currentUserError } = useCurrentUser()
 
-  if (isError) {
+  if (auth.isLoading) {
+    return null
+  }
+
+  if (currentUserError) {
     const state = {
-      message: error?.response?.data?.detail,
+      message:
+        currentUserError?.response?.data?.detail || 'Error loading user data',
       severity: 'error'
     }
-
-    // console.error('Query Error:', error)
     return <Navigate to={redirectTo} state={state} />
   }
 
-  if (!keycloak.authenticated) {
-    const pathname = window.location.pathname
-    if (!pathname.endsWith('login') && pathname !== '/') {
+  if (!auth.isAuthenticated) {
+    if (location.pathname !== redirectTo && location.pathname !== '/') {
       sessionStorage.setItem(
         'redirect',
         JSON.stringify({
-          pathname,
+          pathname: location.pathname,
+          search: location.search,
           timestamp: Date.now()
         })
       )
     }
-
-    return <Navigate to={redirectTo} />
+    return <Navigate to={redirectTo} state={location.state} replace />
   }
 
   const redirectTarget = sessionStorage.getItem('redirect')
-  if (keycloak.authenticated && redirectTarget) {
-    const parsedRedirect = JSON.parse(redirectTarget)
-    const { timestamp, pathname } = parsedRedirect
-    sessionStorage.removeItem('redirect')
+  if (redirectTarget) {
+    try {
+      const parsedRedirect = JSON.parse(redirectTarget)
+      const {
+        timestamp,
+        pathname: targetPathname,
+        search: targetSearch
+      } = parsedRedirect
 
-    if (timestamp + REDIRECT_TIMER > Date.now()) {
-      return <Navigate to={pathname} />
+      if (timestamp + REDIRECT_TIMER > Date.now()) {
+        sessionStorage.removeItem('redirect')
+        return (
+          <Navigate
+            to={{ pathname: targetPathname, search: targetSearch }}
+            replace
+          />
+        )
+      }
+    } catch (e) {
+      console.error('Error parsing redirect target from session storage', e)
+      sessionStorage.removeItem('redirect')
     }
   }
 

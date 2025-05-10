@@ -18,9 +18,9 @@ import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
 import { IDENTITY_PROVIDERS } from '@/constants/auth'
+import { useAuth } from '@/hooks/useAuth'
 import { Alert, Card } from '@mui/material'
 import Grid from '@mui/material/Grid'
-import { useKeycloak } from '@react-keycloak/web'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
@@ -104,9 +104,8 @@ const image = seasonImages[season].image
 
 export const Login = () => {
   const { t } = useTranslation()
-  const { keycloak } = useKeycloak()
+  const auth = useAuth()
   const location = useLocation()
-  const redirectUri = window.location.origin
   const { message, severity } = location.state || {}
   const styles = useMemo(() => ({
     loginBackground: {
@@ -190,9 +189,10 @@ export const Login = () => {
                       color="primary"
                       aria-label="Login with BCeID"
                       onClick={() => {
-                        keycloak.login({
-                          idpHint: IDENTITY_PROVIDERS.BCEID_BUSINESS,
-                          redirectUri
+                        auth.signinRedirect({
+                          extraQueryParams: {
+                            kc_idp_hint: IDENTITY_PROVIDERS.BCEID_BUSINESS
+                          }
                         })
                       }}
                       id="link-bceid"
@@ -224,9 +224,10 @@ export const Login = () => {
                       color="white"
                       aria-label="Login with IDIR"
                       onClick={() => {
-                        keycloak.login({
-                          idpHint: IDENTITY_PROVIDERS.IDIR,
-                          redirectUri
+                        auth.signinRedirect({
+                          extraQueryParams: {
+                            kc_idp_hint: IDENTITY_PROVIDERS.IDIR
+                          }
                         })
                       }}
                       id="link-idir"

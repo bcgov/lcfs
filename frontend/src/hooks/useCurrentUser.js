@@ -1,22 +1,22 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useUserStore } from '@/stores/useUserStore'
-import { useKeycloak } from '@react-keycloak/web'
+import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 
 export const useCurrentUser = () => {
   const client = useApiService()
-  const { keycloak, initialized } = useKeycloak()
+  const auth = useAuth()
   const setUser = useUserStore((state) => state.setUser)
 
   // Fetching current user data
   const query = useQuery({
-    queryKey: ['currentUser', keycloak.token],
+    queryKey: ['currentUser', auth.user?.access_token],
     queryFn: async () => {
       const response = await client.get(apiRoutes.currentUser)
       return response.data
     },
-    enabled: !!keycloak.authenticated && initialized,
+    enabled: !auth.isLoading && auth.isAuthenticated && !!auth.user?.access_token,
     retry: false,
     onSuccess: setUser,
     onError: (error) => {
