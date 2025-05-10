@@ -293,9 +293,17 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     useCreateIdirSupplementalReport(complianceReportId, {
       onSuccess: (res) => {
         setModalData(null)
-        navigate(
-          `${ROUTES.REPORTS.LIST}/${res.data.compliancePeriod.description}/${res.data.complianceReportId}`
-        )
+        // Clear Filters before navigating to ensure they can see the report
+        sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
+        navigate(ROUTES.REPORTS.LIST, {
+          state: {
+            message: t(
+              'report:supplementalCreatedSuccessText',
+              'Supplemental report created successfully.'
+            ),
+            severity: 'success'
+          }
+        })
       },
       onError: (error) => {
         setModalData(null)
