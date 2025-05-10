@@ -622,7 +622,10 @@ async def test_create_government_initiated_supplemental_report_success(
         assert (
             call_args.supplemental_initiator
             == SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+        )
 
+
+@pytest.mark.anyio
 async def test_get_changelog_data_fuel_supplies_success(
     compliance_report_service, mock_repo
 ):
@@ -978,6 +981,8 @@ async def test_create_gov_initiated_supplemental_fail_draft_exists(
 
     mock_repo.create_compliance_report.assert_not_called()
 
+
+@pytest.mark.anyio
 async def test_get_changelog_data_fuel_supplies_delete(
     compliance_report_service, mock_repo
 ):
