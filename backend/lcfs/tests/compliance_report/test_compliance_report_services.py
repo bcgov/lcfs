@@ -593,6 +593,8 @@ async def test_create_supplemental_report_uses_current_balance(
         == 2000
     )
 
+
+@pytest.mark.anyio
 async def test_get_changelog_data_fuel_supplies_success(
     compliance_report_service, mock_repo
 ):
