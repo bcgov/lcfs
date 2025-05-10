@@ -1,19 +1,18 @@
-import { useKeycloak } from '@react-keycloak/web'
+import { useAuth } from '@/hooks/useAuth'
 import BCButton from '@/components/BCButton'
-import { logout } from '@/utils/keycloak'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 export const Logout = () => {
-  const { keycloak } = useKeycloak()
+  const auth = useAuth()
   const { fullName } = useCurrentUser()
-  if (keycloak.authenticated) {
+  if (auth.isAuthenticated) {
     return (
       <div className="logout" data-test="logout">
-        <span>{`Logged in as: ${fullName()} |`}</span>
+        <span>{`Logged in as: ${auth.user?.profile?.name || fullName() || 'User'} |`}</span>
         <BCButton
           data-test="logout-button"
           onClick={() => {
-            logout()
+            auth.signoutRedirect()
           }}
           color="light"
           size="small"

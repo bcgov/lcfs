@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
 import axios from 'axios'
-import { useKeycloak } from '@react-keycloak/web'
+import { useAuth } from '@/hooks/useAuth'
 import { CONFIG } from '@/constants/config'
 import { useSnackbar } from 'notistack'
 import { useAuthorization } from '@/contexts/AuthorizationContext'
 
 export const useApiService = (opts = {}) => {
-  const { keycloak } = useKeycloak()
+  const auth = useAuth()
   const { enqueueSnackbar } = useSnackbar()
   const { setForbidden } = useAuthorization()
 
@@ -19,8 +19,8 @@ export const useApiService = (opts = {}) => {
 
     instance.interceptors.request.use(
       (config) => {
-        if (keycloak.authenticated) {
-          config.headers.Authorization = `Bearer ${keycloak.token}`
+        if (auth.isAuthenticated && auth.user?.access_token) {
+          config.headers.Authorization = `Bearer ${auth.user.access_token}`
         }
         return config
       },
@@ -80,7 +80,7 @@ export const useApiService = (opts = {}) => {
     }
 
     return instance
-  }, [keycloak.authenticated, keycloak.token, opts]) // Dependencies array
+  }, [auth.isAuthenticated, auth.user?.access_token, opts]) // Updated dependencies
 
   return apiService
 }

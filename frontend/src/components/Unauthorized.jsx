@@ -4,27 +4,30 @@ import BCTypography from '@/components/BCTypography'
 import BCButton from '@/components/BCButton'
 import { faRightToBracket } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { useKeycloak } from '@react-keycloak/web'
-import { useNavigate } from 'react-router-dom'
-import { logout } from '@/utils/keycloak'
+import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
 
 export const Unauthorized = () => {
   const { t } = useTranslation('common')
-  const { keycloak } = useKeycloak()
-  const navigate = useNavigate()
+  const auth = useAuth()
 
   const handleLoginClick = async (e) => {
     e.preventDefault()
 
-    if (keycloak.authenticated) {
-      logout()
-    }
-
     sessionStorage.clear()
     localStorage.clear()
 
-    navigate('/login')
+    if (auth.isAuthenticated) {
+      await auth.signoutRedirect({
+        post_logout_redirect_uri: window.location.href
+      })
+    } else {
+      auth.signinRedirect()
+    }
+  }
+
+  if (auth.isLoading) {
+    return <div>Loading...</div>
   }
 
   return (
