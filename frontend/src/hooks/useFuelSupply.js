@@ -1,6 +1,7 @@
 import { apiRoutes } from '@/constants/routes'
 import { useApiService } from '@/services/useApiService'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
 
 export const useFuelSupplyOptions = (params, options) => {
   const client = useApiService()
@@ -29,17 +30,17 @@ export const useGetFuelSupplies = (complianceReportId, pagination, options) => {
 }
 
 export const useGetFuelSuppliesList = (
-  { complianceReportId, changelog = false },
+  { complianceReportId, mode = REPORT_SCHEDULES_VIEW.VIEW },
   pagination,
   options = {}
 ) => {
   const client = useApiService()
   return useQuery({
-    queryKey: ['fuel-supplies', complianceReportId, changelog],
+    queryKey: ['fuel-supplies', complianceReportId, mode],
     queryFn: async () => {
       const response = await client.post(apiRoutes.getAllFuelSupplies, {
         complianceReportId,
-        changelog,
+        mode,
         ...pagination
       })
       return response.data

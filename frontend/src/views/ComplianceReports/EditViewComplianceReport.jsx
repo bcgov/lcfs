@@ -352,6 +352,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             <Introduction
               expanded={location.state?.newReport}
               compliancePeriod={compliancePeriod}
+              isEarlyIssuance={showEarlyIssuanceSummary}
             />
           )}
           {isGovernmentUser && !qReport?.isQuarterly && <AssessmentStatement />}
