@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 import pytest
+from unittest.mock import MagicMock
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema, FilterModel, SortOrder
@@ -260,3 +261,9 @@ def compliance_report_base_schema(
         )
 
     return _create_compliance_report_base_schema
+
+
+@pytest.fixture
+def mock_transaction_repo():
+    """Fixture to provide a mock transaction repository."""
+    return MagicMock()

@@ -45,6 +45,7 @@ from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentSer
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
@@ -58,11 +59,13 @@ class ComplianceReportServices:
         org_repo: OrganizationsRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
         final_supply_equipment_service: FinalSupplyEquipmentServices = Depends(),
+        transaction_repo: TransactionRepository = Depends(),
     ) -> None:
         self.final_supply_equipment_service = final_supply_equipment_service
         self.org_repo = org_repo
         self.repo = repo
         self.snapshot_services = snapshot_services
+        self.transaction_repo = transaction_repo
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
@@ -259,12 +262,22 @@ class ComplianceReportServices:
                 "Assessed report summary not found for the same period"
             )
 
-        # Copy over the summary lines from the assessed report.
+        # Copy over the summary lines from the assessed report, but get current available balance for line 17
         summary_data = {
             column: getattr(assessed_report.summary, column)
             for column in assessed_report.summary.__table__.columns.keys()
             if any(column.startswith(f"line_{i}") for i in range(6, 10))
         }
+
+        # Get the current available balance for line 17
+        current_available_balance = (
+            await self.transaction_repo.calculate_available_balance_for_period(
+                current_report.organization_id,
+                int(current_report.compliance_period.description),
+            )
+        )
+        summary_data["line_17_non_banked_units_used"] = current_available_balance
+
         new_summary = ComplianceReportSummary(**summary_data)
 
         # Create the new supplemental compliance report
