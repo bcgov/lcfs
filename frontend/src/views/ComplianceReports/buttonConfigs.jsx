@@ -41,11 +41,14 @@ export const buttonClusterConfigFn = ({
   t,
   setModalData,
   updateComplianceReport,
+  createIdirSupplementalReport = () => {},
   deleteComplianceReport = () => {},
   compliancePeriod,
   isGovernmentUser,
   isSigningAuthorityDeclared,
-  supplementalInitiator
+  supplementalInitiator,
+  hasDraftSupplemental,
+  reportVersion
 }) => {
   const reportButtons = {
     submitReport: {
@@ -64,6 +67,22 @@ export const buttonClusterConfigFn = ({
           secondaryButtonText: t('cancelBtn'),
           title: t('confirmation'),
           content: t('report:submitConfirmText')
+        })
+      }
+    },
+    createIdirSupplementalReport: {
+      ...outlinedButton(t('report:actionBtns.createSupplementalReportBtn')),
+      id: 'create-idir-supplemental-report-btn',
+      handler: (formData) => {
+        setModalData({
+          primaryButtonAction: () =>
+            createIdirSupplementalReport({
+              complianceReportId: formData.complianceReportId
+            }),
+          primaryButtonText: t('report:actionBtns.createSupplementalReportBtn'),
+          secondaryButtonText: t('cancelBtn'),
+          title: t('confirmation'),
+          content: t('report:createIdirSupplementalConfirmText')
         })
       }
     },
@@ -219,12 +238,14 @@ export const buttonClusterConfigFn = ({
     }
   }
 
-  const canReturnToSupplier = () => {
-    const compliancePeriodYear = parseInt(compliancePeriod)
-    const deadlineDate = new Date(compliancePeriodYear + 1, 2, 31) // Month is 0-based, so 2 = March
-    const currentDate = new Date()
-    return currentDate <= deadlineDate
-  }
+  // Calculate Return to Supplier deadline
+  const compliancePeriodYear = parseInt(compliancePeriod)
+  const returnDeadline = DateTime.fromObject({
+    year: compliancePeriodYear + 1,
+    month: 3,
+    day: 31
+  })
+  const isPastReturnDeadline = DateTime.now() > returnDeadline
 
   return {
     [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
@@ -233,7 +254,24 @@ export const buttonClusterConfigFn = ({
     ],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
       ...(isGovernmentUser && hasRoles('Analyst')
-        ? [reportButtons.recommendByAnalyst, reportButtons.returnToSupplier]
+        ? [
+            {
+              ...reportButtons.recommendByAnalyst,
+              disabled: hasDraftSupplemental
+            },
+            ...(reportVersion === 0
+              ? [
+                  {
+                    ...reportButtons.returnToSupplier,
+                    disabled: isPastReturnDeadline || hasDraftSupplemental
+                  }
+                ]
+              : []),
+            {
+              ...reportButtons.createIdirSupplementalReport,
+              disabled: hasDraftSupplemental
+            }
+          ]
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: [
@@ -246,12 +284,21 @@ export const buttonClusterConfigFn = ({
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: [
       ...(isGovernmentUser && hasRoles('Compliance Manager')
-        ? [reportButtons.recommendByManager, reportButtons.returnToAnalyst]
+        ? [
+            {
+              ...reportButtons.recommendByManager,
+              disabled: hasDraftSupplemental
+            },
+            { ...reportButtons.returnToAnalyst, disabled: hasDraftSupplemental }
+          ]
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: [
       ...(isGovernmentUser && hasRoles('Director')
-        ? [reportButtons.assessReport, reportButtons.returnToManager]
+        ? [
+            { ...reportButtons.assessReport, disabled: hasDraftSupplemental },
+            { ...reportButtons.returnToManager, disabled: hasDraftSupplemental }
+          ]
         : [])
     ]
   }

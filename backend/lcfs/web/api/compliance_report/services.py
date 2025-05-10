@@ -48,6 +48,7 @@ from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
+from lcfs.services.s3.client import DocumentService
 
 logger = structlog.get_logger(__name__)
 
@@ -59,12 +60,14 @@ class ComplianceReportServices:
         org_repo: OrganizationsRepository = Depends(),
         snapshot_services: OrganizationSnapshotService = Depends(),
         final_supply_equipment_service: FinalSupplyEquipmentServices = Depends(),
+        document_service: DocumentService = Depends(),
         transaction_repo: TransactionRepository = Depends(),
     ) -> None:
         self.final_supply_equipment_service = final_supply_equipment_service
         self.org_repo = org_repo
         self.repo = repo
         self.snapshot_services = snapshot_services
+        self.document_service = document_service
         self.transaction_repo = transaction_repo
 
     @service_handler
@@ -204,6 +207,11 @@ class ComplianceReportServices:
             current_report.organization_id,
         )
 
+        # Copy documents from the original report
+        await self.document_service.copy_documents(
+            existing_report_id, new_report.compliance_report_id
+        )
+
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
@@ -314,6 +322,103 @@ class ComplianceReportServices:
             current_report.organization_id,
         )
 
+        # Copy documents from the original report
+        await self.document_service.copy_documents(
+            original_report_id, new_report.compliance_report_id
+        )
+
+        return ComplianceReportBaseSchema.model_validate(new_report)
+
+    @service_handler
+    async def create_government_initiated_supplemental_report(
+        self, existing_report_id: int, user: UserProfile
+    ) -> ComplianceReportBaseSchema:
+        """
+        Creates a new supplemental compliance report initiated by a government user (Analyst).
+        The existing_report_id refers to the report the Analyst is viewing (typically Submitted status).
+        This new report starts in 'Draft' status for the supplier to edit.
+        """
+        # 1. Fetch the current report the Analyst is viewing
+        current_report = await self.repo.get_compliance_report_by_id(existing_report_id)
+        if not current_report:
+            raise DataNotFoundException("Compliance report not found.")
+
+        # 2. Validate User Role and Report Status
+        if not user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST]):
+            raise ServiceException("User must be an Analyst to perform this action.")
+
+        if current_report.current_status.status != ComplianceReportStatusEnum.Submitted:
+            raise ServiceException(
+                "A government-initiated supplemental report can only be created from a 'Submitted' report."
+            )
+
+        # Check if a draft already exists for this group
+        existing_draft = await self.repo.get_draft_report_by_group_uuid(
+            current_report.compliance_report_group_uuid
+        )
+        if existing_draft:
+            raise ServiceException(
+                "A draft report already exists for this compliance period. Cannot create another."
+            )
+
+        # 3. Get 'Draft' status
+        draft_status = await self.repo.get_compliance_report_status_by_desc(
+            ComplianceReportStatusEnum.Draft.value
+        )
+        if not draft_status:
+            raise DataNotFoundException("'Draft' status not found.")
+
+        # 4. Determine new version
+        latest_report = await self.repo.get_latest_report_by_group_uuid(
+            current_report.compliance_report_group_uuid
+        )
+        if not latest_report:
+            # Should not happen if current_report exists, but good practice to check
+            raise DataNotFoundException("Latest compliance report not found for group.")
+        new_version = latest_report.version + 1
+
+        # 5. Create the new supplemental report object
+        new_report = ComplianceReport(
+            compliance_period_id=current_report.compliance_period_id,
+            organization_id=current_report.organization_id,
+            current_status_id=draft_status.compliance_report_status_id,
+            reporting_frequency=current_report.reporting_frequency,
+            compliance_report_group_uuid=current_report.compliance_report_group_uuid,  # Same group
+            version=new_version,
+            supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,  # Supplier edits it
+            nickname=f"Supplemental Report {new_version}",  # Automatic nickname
+            summary=ComplianceReportSummary(),  # Start with an empty summary
+            create_user=user.keycloak_username,  # Log who created it
+            update_user=user.keycloak_username,
+        )
+
+        # 6. Add the new report to the database
+        new_report = await self.repo.create_compliance_report(new_report)
+
+        # 7. Snapshot the Organization Details (copy from the one being supplemented)
+        await self.snapshot_services.create_organization_snapshot(
+            new_report.compliance_report_id,
+            current_report.organization_id,
+            existing_report_id,  # Copy snapshot data from the existing report
+        )
+
+        # 8. Create the history record for the *new* supplemental report
+        # The user here is the government analyst who initiated the creation
+        await self.repo.add_compliance_report_history(new_report, user)
+
+        # 9. Copy over Final Supply Equipment (FSE) from the current report
+        await self.final_supply_equipment_service.copy_to_report(
+            existing_report_id,
+            new_report.compliance_report_id,
+            current_report.organization_id,
+        )
+
+        # Copy documents from the original report
+        await self.document_service.copy_documents(
+            existing_report_id, new_report.compliance_report_id
+        )
+
+        # 10. Return the validated base schema
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
@@ -515,38 +620,68 @@ class ComplianceReportServices:
     def _mask_report_status_for_history(
         self, report: ComplianceReportBaseSchema, user: UserProfile
     ) -> ComplianceReportBaseSchema:
-        is_bceid = user_has_roles(user, [RoleEnum.GOVERNMENT])
-        is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
-        bceid_only_status = {
+        is_requesting_user_idir = user_has_roles(user, [RoleEnum.GOVERNMENT])
+        is_requesting_user_analyst = user_has_roles(user, [RoleEnum.ANALYST])
+
+        filtered_history = []
+
+        # Statuses to hide from BCeID
+        bceid_hidden_statuses = {
             ComplianceReportStatusEnum.Recommended_by_analyst.value,
             ComplianceReportStatusEnum.Recommended_by_manager.value,
         }
-        if (
-            not is_bceid
-            or report.current_status.status
-            == ComplianceReportStatusEnum.Submitted.value
-        ):
-            report.history = [
-                h for h in report.history if h.status.status not in bceid_only_status
-            ]
 
-        if (
-            not is_analyst
-            and report.current_status.status
-            == ComplianceReportStatusEnum.Analyst_adjustment.value
-        ):
-            report.history = [
-                h
-                for h in report.history
-                if h.status.status
-                != ComplianceReportStatusEnum.Analyst_adjustment.value
-            ]
-        report.history = [
-            h
-            for h in report.history
-            if h.status.status != ComplianceReportStatusEnum.Draft.value
-        ]
+        # Statuses to hide from non-Analysts
+        non_analyst_hidden_statuses = {
+            ComplianceReportStatusEnum.Analyst_adjustment.value,
+        }
 
+        # Always hide Draft status from history view
+        always_hidden_statuses = {ComplianceReportStatusEnum.Draft.value}
+
+        for h in report.history:
+            # Filter statuses based on requesting user's role
+            if h.status.status in always_hidden_statuses:
+                continue
+            if not is_requesting_user_idir and h.status.status in bceid_hidden_statuses:
+                continue
+            if (
+                not is_requesting_user_analyst
+                and h.status.status in non_analyst_hidden_statuses
+            ):
+                continue
+
+            # Mask creator name if requesting user is BCeID and creator is IDIR
+            if not is_requesting_user_idir and h.user_profile:
+                # Instead of checking roles which don't exist in ComplianceReportUserSchema,
+                # assume users without an organization are government users
+                # Or use status-based heuristics to identify government actions
+                is_creator_idir = False
+
+                # Check if the history entry is for a status typically set by IDIR users
+                government_statuses = {
+                    ComplianceReportStatusEnum.Recommended_by_analyst.value,
+                    ComplianceReportStatusEnum.Recommended_by_manager.value,
+                    ComplianceReportStatusEnum.Assessed.value,
+                    ComplianceReportStatusEnum.Analyst_adjustment.value,
+                }
+
+                if h.status.status in government_statuses:
+                    is_creator_idir = True
+
+                # If there's evidence this is a government user, mask their identity
+                if is_creator_idir:
+                    # Create a copy or modify if mutable to avoid side effects
+                    # Assuming ComplianceReportHistorySchema allows modification or we create a new one
+                    # Let's assume we can modify display_name; adjust if schema is immutable
+                    h.user_profile.display_name = "Government of British Columbia"
+                    # We might also need to clear other PII like username/email if they exist on the schema
+                    # h.user_profile.username = None
+                    # h.user_profile.email = None
+
+            filtered_history.append(h)
+
+        report.history = filtered_history
         return report
 
     @service_handler

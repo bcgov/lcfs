@@ -213,6 +213,29 @@ export const useCreateAnalystAdjustment = (reportID, options) => {
   })
 }
 
+export const useCreateIdirSupplementalReport = (reportID, options) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const path = apiRoutes.createIdirSupplementalReport.replace(':reportID', reportID)
+
+  return useMutation({
+    mutationFn: () => client.post(path),
+    onSuccess: (data) => {
+      // Invalidate list and specific report to refetch chain/status
+      queryClient.invalidateQueries(['compliance-reports-list'])
+      queryClient.invalidateQueries(['compliance-report', reportID]) 
+      if (options && options.onSuccess) {
+        options.onSuccess(data)
+      }
+    },
+    onError: (error) => {
+      if (options && options.onError) {
+        options.onError(error)
+      }
+    }
+  })
+}
+
 export const useGetComplianceReportList = (
   { page = 1, size = 10, sortOrders = [], filters = [] } = {},
   options

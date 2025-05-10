@@ -1,5 +1,5 @@
 import React from 'react'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, act } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { EditViewComplianceReport } from '../EditViewComplianceReport'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
@@ -7,6 +7,14 @@ import * as useOrganizationHook from '@/hooks/useOrganization'
 import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { wrapper } from '@/tests/utils/wrapper'
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useParams
+} from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 vi.mock('@react-keycloak/web', () => ({
   ReactKeycloakProvider: ({ children }) => children,
@@ -56,7 +64,19 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-vi.mock('@/hooks/useComplianceReports')
+vi.mock('@/hooks/useComplianceReports', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useGetComplianceReport: vi.fn(),
+    useUpdateComplianceReport: vi.fn(() => ({ mutate: vi.fn() })),
+    useDeleteComplianceReport: vi.fn(() => ({ mutate: vi.fn() })),
+    useCreateSupplementalReport: vi.fn(() => ({ mutate: vi.fn() })),
+    useCreateAnalystAdjustment: vi.fn(() => ({ mutate: vi.fn() })),
+    useCreateIdirSupplementalReport: vi.fn(() => ({ mutate: vi.fn() }))
+  }
+})
+
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganization')
 
@@ -93,6 +113,48 @@ vi.mock('../components/Introduction', () => ({
 vi.mock('../components/AssessmentStatement', () => ({
   AssessmentStatement: () => <div>Assessment Statement</div>
 }))
+
+// Basic mock data structure
+const mockReportBase = {
+  complianceReportId: 102,
+  compliancePeriod: { description: '2023' },
+  organization: { organizationId: 1, name: 'Test Org' },
+  nickname: 'Test Report 2023',
+  version: 0,
+  supplementalInitiator: null,
+  hasSupplemental: false,
+  history: [],
+  currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
+  reportingFrequency: 'Annual',
+  complianceReportGroupUuid: 'some-uuid',
+  createTimestamp: new Date().toISOString(),
+  updateTimestamp: new Date().toISOString()
+}
+
+const defaultMockReportData = {
+  report: mockReportBase,
+  chain: [mockReportBase],
+  isNewest: true
+}
+
+const queryClient = new QueryClient()
+
+const renderComponent = (
+  component,
+  initialEntries = ['/compliance-reports/2023/102']
+) => {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <Routes>
+        <Route
+          path="/compliance-reports/:compliancePeriod/:complianceReportId"
+          element={component}
+        />
+      </Routes>
+    </MemoryRouter>,
+    { wrapper }
+  )
+}
 
 describe('EditViewComplianceReport', () => {
   const setupMocks = (overrides = {}) => {
@@ -169,7 +231,50 @@ describe('EditViewComplianceReport', () => {
   }
 
   beforeEach(() => {
-    vi.resetAllMocks()
+    vi.clearAllMocks()
+
+    // Default mock implementations
+    vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
+      data: { isGovernmentUser: false },
+      hasRoles: () => false,
+      hasAnyRole: () => true,
+      isLoading: false
+    })
+    vi.mocked(useOrganizationHook.useOrganization).mockReturnValue({
+      data: { name: 'Test Org' },
+      isLoading: false
+    })
+    mockUseLocation.mockReturnValue({ state: null })
+    mockUseParams.mockReturnValue({
+      compliancePeriod: '2023',
+      complianceReportId: '102'
+    })
+
+    // --- Key Fix: Ensure useGetComplianceReport returns the correct structure ---
+    vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
+      data: defaultMockReportData, // Provide mock data
+      isLoading: false,
+      isError: false,
+      error: null
+    })
+
+    // Reset mutation mocks if needed (example)
+    const mockMutate = vi.fn()
+    vi.mocked(
+      useComplianceReportsHook.useUpdateComplianceReport
+    ).mockReturnValue({ mutate: mockMutate })
+    vi.mocked(
+      useComplianceReportsHook.useDeleteComplianceReport
+    ).mockReturnValue({ mutate: mockMutate })
+    vi.mocked(
+      useComplianceReportsHook.useCreateSupplementalReport
+    ).mockReturnValue({ mutate: mockMutate })
+    vi.mocked(
+      useComplianceReportsHook.useCreateAnalystAdjustment
+    ).mockReturnValue({ mutate: mockMutate })
+    vi.mocked(
+      useComplianceReportsHook.useCreateIdirSupplementalReport
+    ).mockReturnValue({ mutate: mockMutate })
   })
 
   it('renders the component', async () => {
