@@ -277,6 +277,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
     ),
+    valueGetter: (params) => params.data?.intendedUseTypes,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData?.intendedUseTypes.map((obj) => obj.type) || [],
@@ -296,6 +297,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
     ),
+    valueGetter: (params) => params.data?.intendedUserTypes,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData?.intendedUserTypes.map((obj) => obj.typeName) || [],
@@ -519,8 +521,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
     ),
     field: 'intendedUsers',
-    valueGetter: (params) =>
-      params.data.intendedUserTypes,
+    valueGetter: (params) => params.data.intendedUserTypes,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams: { marginTop: '0.7em' }
   },
