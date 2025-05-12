@@ -499,7 +499,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
     ),
     field: 'levelOfEquipment',
-    valueGetter: (params) => params.data.levelOfEquipment.name
+    valueGetter: (params) => params.data.levelOfEquipment
   },
   {
     headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'),
@@ -510,8 +510,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
     ),
     field: 'intendedUses',
-    valueGetter: (params) =>
-      params.data.intendedUseTypes.map((use) => use.type).join(', '),
+    valueGetter: (params) => params.data.intendedUseTypes,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams: { marginTop: '0.7em' }
   },
@@ -521,7 +520,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
     ),
     field: 'intendedUsers',
     valueGetter: (params) =>
-      params.data.intendedUserTypes.map((use) => use.typeName).join(', '),
+      params.data.intendedUserTypes,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams: { marginTop: '0.7em' }
   },
