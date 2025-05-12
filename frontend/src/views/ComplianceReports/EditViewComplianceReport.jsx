@@ -10,7 +10,11 @@ import { govRoles, roles } from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useDeleteComplianceReport,
-  useUpdateComplianceReport
+  useUpdateComplianceReport,
+  useCreateSupplementalReport,
+  useCreateAnalystAdjustment,
+  useCreateIdirSupplementalReport,
+  useGetComplianceReport
 } from '@/hooks/useComplianceReports'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -26,7 +30,7 @@ import { AssessmentStatement } from '@/views/ComplianceReports/components/Assess
 import { useOrganization } from '@/hooks/useOrganization.js'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
-import { Fab, Stack, Tooltip } from '@mui/material'
+import { Fab, Stack, Tooltip, Alert, AlertTitle } from '@mui/material'
 import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import colors from '@/themes/base/colors.js'
@@ -35,6 +39,7 @@ import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 import { FILTER_KEYS, REPORT_SCHEDULES } from '@/constants/common.js'
 import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
 import ComplianceReportEarlyIssuanceSummary from '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx'
+import { DateTime } from 'luxon'
 
 const iconStyle = {
   width: '2rem',
@@ -157,6 +162,43 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     compliancePeriod
   ])
 
+  const {
+    data: complianceReportData,
+    isLoading: isLoadingReport,
+    isError: isErrorReport
+  } = useGetComplianceReport(
+    currentUser?.organization?.organizationId,
+    complianceReportId,
+    { enabled: !!complianceReportId }
+  )
+
+  // Derive hasDraftSupplemental state
+  const [hasDraftSupplemental, setHasDraftSupplemental] = useState(false)
+  useEffect(() => {
+    if (complianceReportData) {
+      // Simply use the isNewest flag from the backend
+      // If isNewest is false, there's a newer version (which would be a draft)
+      setHasDraftSupplemental(!complianceReportData.isNewest)
+    } else {
+      setHasDraftSupplemental(false)
+    }
+  }, [complianceReportData])
+
+  // Determine if the current report is a draft supplemental for the 30-day notice
+  const isDraftSupplemental =
+    complianceReportData?.report?.currentStatus.status ===
+      COMPLIANCE_REPORT_STATUSES.DRAFT &&
+    complianceReportData?.report?.version > 0
+  let submissionDeadline = null
+  let daysRemaining = null
+  if (isDraftSupplemental && complianceReportData?.report?.createTimestamp) {
+    const creationDate = DateTime.fromISO(
+      complianceReportData.report.createTimestamp
+    )
+    submissionDeadline = creationDate.plus({ days: 30 })
+    daysRemaining = Math.ceil(submissionDeadline.diffNow('days').days)
+  }
+
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
     {
@@ -187,7 +229,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   )
 
   const { mutate: deleteComplianceReport } = useDeleteComplianceReport(
-    reportData?.report.organizationId,
+    currentUser?.organization?.organizationId,
     complianceReportId,
     {
       onSuccess: () => {
@@ -208,6 +250,70 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       }
     }
   )
+
+  const { mutate: createSupplementalReport } = useCreateSupplementalReport(
+    complianceReportId,
+    {
+      onSuccess: (res) => {
+        setModalData(null)
+        navigate(
+          `${ROUTES.REPORTS.LIST}/${res.data.compliancePeriod.description}/${res.data.complianceReportId}`
+        )
+      },
+      onError: (error) => {
+        setModalData(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    }
+  )
+
+  const { mutate: createAnalystAdjustment } = useCreateAnalystAdjustment(
+    complianceReportId,
+    {
+      onSuccess: (res) => {
+        setModalData(null)
+        navigate(
+          `${ROUTES.REPORTS.LIST}/${res.data.compliancePeriod.description}/${res.data.complianceReportId}`
+        )
+      },
+      onError: (error) => {
+        setModalData(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    }
+  )
+
+  const { mutate: createIdirSupplementalReport } =
+    useCreateIdirSupplementalReport(complianceReportId, {
+      onSuccess: (res) => {
+        setModalData(null)
+        // Clear Filters before navigating to ensure they can see the report
+        sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
+        navigate(ROUTES.REPORTS.LIST, {
+          state: {
+            message: t(
+              'report:supplementalCreatedSuccessText',
+              'Supplemental report created successfully.'
+            ),
+            severity: 'success'
+          }
+        })
+      },
+      onError: (error) => {
+        setModalData(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    })
+
   const methods = useForm() // TODO we will need this for summary line inputs
 
   const buttonClusterConfig = useMemo(
@@ -219,10 +325,14 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         setModalData,
         updateComplianceReport,
         deleteComplianceReport,
+        createSupplementalReport,
+        createAnalystAdjustment,
+        createIdirSupplementalReport,
         compliancePeriod,
         isGovernmentUser,
         isSigningAuthorityDeclared,
-        supplementalInitiator: reportData?.report?.supplementalInitiator
+        hasDraftSupplemental,
+        reportVersion: reportData?.report?.version
       }),
     [
       hasRoles,
@@ -231,10 +341,14 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       setModalData,
       updateComplianceReport,
       deleteComplianceReport,
+      createSupplementalReport,
+      createAnalystAdjustment,
+      createIdirSupplementalReport,
       compliancePeriod,
       isGovernmentUser,
       isSigningAuthorityDeclared,
-      reportData?.report
+      hasDraftSupplemental,
+      reportData?.report?.version
     ]
   )
 
@@ -270,6 +384,9 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     reportData.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
   const showEarlyIssuanceSummary =
     isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
+
+  const report = complianceReportData?.report
+  const isReadOnly = isGovernmentUser && hasDraftSupplemental
 
   return (
     <>
@@ -410,6 +527,22 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                 )}
               </Stack>
             </BCBox>
+          )}
+          {/* 30-Day Submission Notice for BCeID on Draft Supplementals */}
+          {!isGovernmentUser && isDraftSupplemental && submissionDeadline && (
+            <Alert
+              severity={daysRemaining < 0 ? 'error' : 'info'}
+              sx={{ mb: 2 }}
+            >
+              <AlertTitle>
+                {daysRemaining < 0
+                  ? 'Submission Period Overdue'
+                  : 'Supplemental Report Submission'}
+              </AlertTitle>
+              {daysRemaining >= 0
+                ? `Please submit this supplemental report by ${submissionDeadline.toLocaleString(DateTime.DATE_FULL)} (${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining).`
+                : 'The suggested 30-day submission period for this supplemental report has passed.'}
+            </Alert>
           )}
         </Stack>
         <Tooltip

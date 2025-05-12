@@ -75,14 +75,26 @@ export const AssessmentRecommendation = ({
             The analyst can make changes to the reported activity information if
             it is known to be incorrect, click to put the report in edit mode:
             <br />
-            <BCButton
-              onClick={openAdjustmentDialog}
-              sx={{ mt: 2 }}
-              color="primary"
-              variant="outlined"
+            <Tooltip
+              title={
+                reportData.isNewest
+                  ? ''
+                  : 'Supplier has a supplemental report in progress.'
+              }
+              placement="right"
             >
-              Analyst adjustment
-            </BCButton>
+              <span>
+                <BCButton
+                  onClick={openAdjustmentDialog}
+                  sx={{ mt: 2 }}
+                  color="primary"
+                  variant="outlined"
+                  disabled={!reportData.isNewest}
+                >
+                  Analyst adjustment
+                </BCButton>
+              </span>
+            </Tooltip>
           </BCTypography>
         )}
       {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&

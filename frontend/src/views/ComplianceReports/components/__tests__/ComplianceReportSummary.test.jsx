@@ -144,6 +144,7 @@ describe('ComplianceReportSummary', () => {
           updateComplianceReport: vi.fn(),
           isGovernmentUser: true,
           isSigningAuthorityDeclared: true,
+          compliancePeriod: '2023',
           label: 'Button'
         })}
       />,

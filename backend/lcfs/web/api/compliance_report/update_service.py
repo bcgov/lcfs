@@ -217,6 +217,16 @@ class ComplianceReportUpdateService:
         self, report: ComplianceReport, user: UserProfile
     ):
         """Handle actions when a report is Recommended by analyst."""
+        # Check if a newer draft exists, preventing further action on this report
+        existing_draft = await self.repo.get_draft_report_by_group_uuid(
+            report.compliance_report_group_uuid
+        )
+        if existing_draft and existing_draft.version > report.version:
+            raise HTTPException(
+                status_code=409,
+                detail="This report has been superseded by a draft supplemental report and cannot be processed further.",
+            )
+
         # Implement logic for Recommended by analyst status
         has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
         if not has_analyst_role:
@@ -236,6 +246,16 @@ class ComplianceReportUpdateService:
         self, report: ComplianceReport, user: UserProfile
     ):
         """Handle actions when a report is Recommended by manager."""
+        # Check if a newer draft exists, preventing further action on this report
+        existing_draft = await self.repo.get_draft_report_by_group_uuid(
+            report.compliance_report_group_uuid
+        )
+        if existing_draft and existing_draft.version > report.version:
+            raise HTTPException(
+                status_code=409,
+                detail="This report has been superseded by a draft supplemental report and cannot be processed further.",
+            )
+
         # Implement logic for Recommended by manager status
         has_compliance_manager_role = user_has_roles(
             user, [RoleEnum.GOVERNMENT, RoleEnum.COMPLIANCE_MANAGER]
@@ -245,6 +265,16 @@ class ComplianceReportUpdateService:
 
     async def handle_assessed_status(self, report: ComplianceReport, user: UserProfile):
         """Handle actions when a report is Assessed."""
+        # Check if a newer draft exists, preventing further action on this report
+        existing_draft = await self.repo.get_draft_report_by_group_uuid(
+            report.compliance_report_group_uuid
+        )
+        if existing_draft and existing_draft.version > report.version:
+            raise HTTPException(
+                status_code=409,
+                detail="This report has been superseded by a draft supplemental report and cannot be assessed.",
+            )
+
         has_director_role = user_has_roles(
             user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
         )
@@ -352,67 +382,6 @@ class ComplianceReportUpdateService:
             )
             report.summary = new_summary
         return report.summary
-
-        credit_change = report.summary.line_20_surplus_deficit_units
-        if credit_change != 0:
-            if report.transaction is not None:
-                # Update existing transaction
-                report.transaction.compliance_units = credit_change
-            else:
-                available_balance = await self.org_service.calculate_available_balance(
-                    report.organization_id
-                )
-                # Only need a Transaction if they have credits
-                if available_balance > 0:
-                    units_to_reserve = credit_change
-
-                    # If not enough credits, reserve what is left
-                    if credit_change < 0 and abs(credit_change) > available_balance:
-                        units_to_reserve = available_balance * -1
-
-                    report.transaction = await self.org_service.adjust_balance(
-                        transaction_action=TransactionActionEnum.Reserved,
-                        compliance_units=units_to_reserve,
-                        organization_id=report.organization_id,
-                    )
-
-        await self.repo.update_compliance_report(report)
-
-        return calculated_summary
-
-    async def handle_recommended_by_analyst_status(
-        self, report: ComplianceReport, user: UserProfile
-    ):
-        """Handle actions when a report is Recommended by analyst."""
-        # Implement logic for Recommended by analyst status
-        has_analyst_role = user_has_roles(user, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
-        if not has_analyst_role:
-            raise HTTPException(status_code=403, detail="Forbidden.")
-
-    async def handle_recommended_by_manager_status(
-        self, report: ComplianceReport, user: UserProfile
-    ):
-        """Handle actions when a report is Recommended by manager."""
-        # Implement logic for Recommended by manager status
-        has_compliance_manager_role = user_has_roles(
-            user, [RoleEnum.GOVERNMENT, RoleEnum.COMPLIANCE_MANAGER]
-        )
-        if not has_compliance_manager_role:
-            raise HTTPException(status_code=403, detail="Forbidden.")
-
-    async def handle_assessed_status(self, report: ComplianceReport, user: UserProfile):
-        """Handle actions when a report is Assessed."""
-        has_director_role = user_has_roles(
-            user, [RoleEnum.GOVERNMENT, RoleEnum.DIRECTOR]
-        )
-        if not has_director_role:
-            raise HTTPException(status_code=403, detail="Forbidden.")
-
-        if report.transaction:
-            # Update the transaction to assessed
-            report.transaction.transaction_action = TransactionActionEnum.Adjustment
-            report.transaction.update_user = user.keycloak_username
-        await self.repo.update_compliance_report(report)
 
     async def handle_reassessed_status(self, report: ComplianceReport):
         """Handle actions when a report is Reassessed."""
