@@ -6,6 +6,7 @@ import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
+import { getCode } from 'country-list'
 
 export const fuelCodeColDefs = (t) => [
   {
@@ -25,6 +26,25 @@ export const fuelCodeColDefs = (t) => [
     field: 'prefix',
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
     suppressFloatingFilterButton: true,
+    cellRenderer: (params) => {
+      const prefix = params.data.fuelCodePrefix.prefix
+      const countryName = params.data.fuelProductionFacilityCountry
+      const countryCode = countryName ? getCode(countryName) : null
+
+      if (!countryCode) return prefix
+
+      // Use country flags API
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <img
+            src={`https://flagcdn.com/${countryCode.toLowerCase()}.svg`}
+            style={{ width: '18px', height: '14px' }}
+            alt={countryName}
+          />
+          <span>{prefix}</span>
+        </div>
+      )
+    },
     valueGetter: (params) => params.data.fuelCodePrefix.prefix
   },
   {
