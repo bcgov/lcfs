@@ -410,17 +410,18 @@ export const AddEditAllocationAgreements = () => {
     try {
       handleCloseDownloadMenu()
       setIsDownloading(true)
-      await apiService.download(
-        includeData
-          ? apiRoutes.exportAllocationAgreements.replace(
-              ':reportID',
-              complianceReportId
-            )
-          : apiRoutes.downloadAllocationAgreementsTemplate.replace(
-              ':reportID',
-              complianceReportId
-            )
-      )
+
+      const url = includeData
+        ? apiRoutes.exportAllocationAgreements.replace(
+            ':reportID',
+            complianceReportId
+          )
+        : apiRoutes.downloadAllocationAgreementsTemplate.replace(
+            ':reportID',
+            complianceReportId
+          )
+
+      await apiService.download({ url })
     } catch (error) {
       console.error(
         'Error downloading allocation agreement information:',
