@@ -59,7 +59,7 @@ jobs:
           echo "Syncing complete."
           echo "--- Target Wiki Clone (wiki-repo/) After Sync ---"
           ls -R wiki-repo/
-          echo "-------------------------------------\"
+          echo "-------------------------------------"
 
       - name: Commit and Push Wiki Changes
         working-directory: ./wiki-repo # All git commands for wiki MUST run here
