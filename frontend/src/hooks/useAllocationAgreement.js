@@ -54,7 +54,7 @@ export const useGetAllAllocationAgreements = (
 }
 
 export const useGetAllocationAgreementsList = (
-  {complianceReportId, changelog = false},
+  { complianceReportId, changelog = false },
   pagination,
   options
 ) => {
