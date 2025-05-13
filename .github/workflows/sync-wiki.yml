@@ -6,6 +6,7 @@ on:
       - develop # Add develop branch to the trigger
     paths:
       - 'wiki/**' # Trigger workflow only if files in the 'wiki/' directory change
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   deploy-wiki-content:
