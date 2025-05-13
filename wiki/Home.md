@@ -4,6 +4,8 @@ This wiki serves as the central knowledge base for the Low Carbon Fuel Standard 
 
 ## Project Purpose
 
+The Low Carbon Fuel Standard (LCFS) in British Columbia is a regulatory initiative designed to reduce the carbon intensity of transportation fuels used in the province. It aims to decrease greenhouse gas emissions by encouraging the use of renewable and low-carbon fuels, offering incentives for their supply, and setting progressively stricter carbon intensity targets for conventional fuels. This program plays a key role in B.C.'s strategy to transition towards cleaner energy options in the transportation sector and support the growth of the clean fuels industry.
+
 *(This section can be expanded with a more detailed description of the LCFS project's goals and objectives, if available.)*
 
 To provide up-to-date technical documentation that reflects the current state of the system, making it easier for team members to understand and work with the codebase, and to ensure all team members have access to current and accurate information about development processes, reducing onboarding time and maintaining consistency.
