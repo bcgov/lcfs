@@ -55,7 +55,7 @@ jobs:
           echo "--------------------------------------"
           echo "Syncing files from main-repo/wiki/ to wiki-repo/..."
           # The paths main-repo/wiki/ and wiki-repo/ are relative to the GITHUB_WORKSPACE root
-          rsync -av --delete --checksum main-repo/wiki/ wiki-repo/
+          rsync -av --delete --checksum --exclude='.git' main-repo/wiki/ wiki-repo/
           echo "Syncing complete."
           echo "--- Target Wiki Clone (wiki-repo/) After Sync ---"
           ls -R wiki-repo/
