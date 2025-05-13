@@ -11,8 +11,9 @@ export const DateEditor = ({
   api,
   autoOpenLastRow
 }) => {
+  // Handle initial value properly - use null if value is falsy
   const [selectedDate, setSelectedDate] = useState(
-    value ? parseISO(value) : null
+    value && value !== 'YYYY-MM-DD' ? parseISO(value) : null
   )
   const [isOpen, setIsOpen] = useState(() => {
     if (!autoOpenLastRow) return false
@@ -31,18 +32,32 @@ export const DateEditor = ({
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside)
+    // Use the more cross-browser compatible approach
+    document.addEventListener('mousedown', handleClickOutside, {
+      passive: true
+    })
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [])
 
+  // Fixed updateValue function to handle null values properly
   const updateValue = (val) => {
-    if (val) {
-      val = new Date(val.getFullYear(), val.getMonth(), val.getDate())
+    // If val is null or undefined, set it as null explicitly
+    if (val === null || val === undefined) {
+      setSelectedDate(null)
+      onValueChange(null)
+      return
     }
-    setSelectedDate(val)
-    onValueChange(val === null ? null : format(val, 'yyyy-MM-dd'))
+
+    // Normalize the date to avoid timezone issues (common cross-browser problem)
+    const normalizedDate = new Date(
+      val.getFullYear(),
+      val.  getMonth(),
+      val.getDate()
+    )
+    setSelectedDate(normalizedDate)
+    onValueChange(format(normalizedDate, 'yyyy-MM-dd'))
   }
 
   const handleDatePickerOpen = () => {
@@ -53,15 +68,27 @@ export const DateEditor = ({
     setIsOpen(false)
   }
 
+  // Improved event handlers for better cross-browser support
   const stopPropagation = (e) => {
-    e.stopPropagation()
+    if (e && e.stopPropagation) {
+      e.stopPropagation()
+    }
+    if (e && e.preventDefault) {
+      e.preventDefault()
+    }
+    return false
   }
 
   // Handler for the icon click that forces the calendar to open
   const handleIconClick = (e) => {
-    e.stopPropagation()
-    e.preventDefault()
+    stopPropagation(e)
     setIsOpen(true)
+  }
+
+  // Explicit handler for clearing the date
+  const handleClear = () => {
+    setSelectedDate(null)
+    onValueChange(null)
   }
 
   return (
@@ -77,7 +104,8 @@ export const DateEditor = ({
         top: 0,
         left: 0,
         right: 0,
-        bottom: 0
+        bottom: 0,
+        zIndex: isOpen ? 1000 : 'auto'
       }}
     >
       <DatePicker
@@ -89,6 +117,7 @@ export const DateEditor = ({
         slotProps={{
           field: {
             clearable: true,
+            onClear: handleClear,
             sx: {
               width: '100%',
               '& .MuiInputBase-root': {
@@ -97,12 +126,28 @@ export const DateEditor = ({
               },
               '& .MuiOutlinedInput-notchedOutline': {
                 border: 'none'
+              },
+              '& .MuiIconButton-root': {
+                padding: '2px',
+                touchAction: 'manipulation'
               }
             }
           },
-          popper: { placement: 'bottom-start' },
+          popper: {
+            placement: 'bottom-start',
+            modifiers: [
+              {
+                name: 'preventOverflow',
+                options: {
+                  boundary: document.body
+                }
+              }
+            ]
+          },
           // Handle icon click specifically to open the calendar
-          openPickerButton: { onClick: handleIconClick }
+          openPickerButton: { onClick: handleIconClick },
+          // Explicitly handle the clear button
+          clearButton: { onClick: handleClear }
         }}
         value={selectedDate}
         onChange={updateValue}
@@ -119,6 +164,14 @@ export const DateEditor = ({
           '& .MuiInputBase-root': {
             padding: '0 5px',
             width: '100%'
+          },
+          '& .MuiButtonBase-root': {
+            WebkitTouchCallout: 'none',
+            WebkitUserSelect: 'none',
+            KhtmlUserSelect: 'none',
+            MozUserSelect: 'none',
+            msUserSelect: 'none',
+            userSelect: 'none'
           }
         }}
       />
