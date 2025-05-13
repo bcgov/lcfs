@@ -38,7 +38,7 @@ export const fuelCodeColDefs = (t) => [
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <img
             src={`https://flagcdn.com/${countryCode.toLowerCase()}.svg`}
-            style={{ width: '18px', height: '14px' }}
+            style={{ width: '28px', height: '24px' }}
             alt={countryName}
           />
           <span>{prefix}</span>
