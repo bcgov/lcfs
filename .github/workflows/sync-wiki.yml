@@ -1,0 +1,63 @@
+name: Sync Wiki to GitHub Wiki
+
+on:
+  push:
+    branches:
+      - develop # On merge to develop
+    paths:
+      - 'wiki/**' # Only run if files in the wiki/ directory change
+
+jobs:
+  sync-wiki-content:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Main Repository
+        uses: actions/checkout@v4
+        with:
+          path: main-repo # Checkout main repo into a specific directory
+
+      - name: Checkout Wiki Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki # bcgov/lcfs.wiki
+          path: wiki-repo # Checkout wiki repo into a specific directory
+          token: ${{ secrets.GITHUB_TOKEN }} # Use the default GITHUB_TOKEN
+
+      - name: Sync files to Wiki Repo
+        run: |
+          echo "Source (main-repo/wiki):"
+          ls -R ../main-repo/wiki
+          echo "Destination (wiki-repo) before sync:"
+          ls -R ../wiki-repo
+
+          # The wiki repo root is where the files should go.
+          # Clean the wiki-repo root, except for .git and specific preserved files/dirs like Home.md or _Sidebar.md if managed manually there
+          cd wiki-repo
+          find . -maxdepth 1 -type f ! -name 'Home.md' ! -name '_Sidebar.md' ! -name '_Footer.md' -delete
+          # Remove all directories except .git and images. Add other preserved dirs as needed.
+          find . -maxdepth 1 -mindepth 1 -type d ! -name '.git' ! -name 'images' -exec rm -rf {} + 
+          cd ..
+
+          # Copy content from main-repo/wiki to wiki-repo, effectively mirroring it
+          # The `.` after main-repo/wiki/ means copy the *contents* of the directory
+          rsync -av --delete --checksum main-repo/wiki/. wiki-repo/
+          
+          echo "Destination (wiki-repo) after sync:"
+          ls -R wiki-repo
+
+      - name: Commit and Push to Wiki
+        run: |
+          cd wiki-repo
+          git status # For debugging
+          if ! git diff --quiet || ! git diff --staged --quiet; then
+            git config user.name "GitHub Actions Bot"
+            git config user.email "actions@github.com"
+            git add .
+            git commit -m "Sync wiki content from main repository (Commit: ${{ github.sha }}) [skip ci]"
+            # The git push command will use the credentials context of the GITHUB_TOKEN
+            git push
+          else
+            echo "No changes to sync to the wiki."
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Ensure git push uses the GITHUB_TOKEN 
