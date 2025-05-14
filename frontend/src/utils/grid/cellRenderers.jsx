@@ -12,6 +12,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import colors from '@/themes/base/colors'
 import { ArrowDropDown } from '@mui/icons-material'
+import { getCode } from 'country-list'
 
 export const TextRenderer = (props) => {
   return (
@@ -240,6 +241,32 @@ export const FuelCodeStatusRenderer = (props) => {
           />
         </BCBox>
       </BCBox>
+    </Link>
+  )
+}
+
+export const FuelCodePrefixRenderer = (params) => {
+  const location = useLocation()
+  const prefix = params.data.fuelCodePrefix.prefix
+  const countryName = params.data.fuelProductionFacilityCountry
+  const countryCode = countryName ? getCode(countryName) : null
+
+  if (!countryCode) return prefix
+
+  // Use country flags API
+  return (
+    <Link
+      to={params.node?.id && location.pathname + '/' + params?.node?.id}
+      style={{ color: '#000' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <img
+          src={`https://flagcdn.com/${countryCode.toLowerCase()}.svg`}
+          style={{ width: '1.6rem', height: '1.4rem' }}
+          alt={countryName}
+        />
+        <span>{prefix}</span>
+      </div>
     </Link>
   )
 }
