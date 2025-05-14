@@ -22,7 +22,17 @@ def upgrade() -> None:
 
     # Start a transaction
     transaction = connection.begin_nested()
-
+    # Insert the prefix with specific ID
+    insert_prefix_sql = text("""
+        INSERT INTO fuel_code_prefix (fuel_code_prefix_id, prefix) 
+        VALUES (:prefix_id, :prefix)
+        ON CONFLICT (fuel_code_prefix_id) DO NOTHING
+    """)
+        
+    connection.execute(insert_prefix_sql, {
+        'prefix_id': 3,
+        'prefix': 'C-BCLCF'
+    })
     # Create a list of suffixes for each update operation
     canada_suffixes = ['110.0', '110.1', '110.2', '111.0', '111.1', '111.2', '112.0', '113.0', '114.0', '114.1', '115.0', '115.1', '116.0', '117.0',
     '118.0', '119.0', '136.0', '137.0', '138.0', '138.1', '138.2', '138.3', '138.4', '138.5', '139.0', '152.0', '162.0', '162.1', '162.2', '163.0',
@@ -68,11 +78,9 @@ def upgrade() -> None:
         update_canada_sql = sa.text(
             f"""
             UPDATE fuel_code
-            SET fuel_production_facility_country = 'Canada',
-                prefix_id = 3
+            SET fuel_production_facility_country = 'Canada'
             WHERE fuel_suffix IN ({values_str})
-        """
-        )
+        """)
 
         connection.execute(update_canada_sql)
     usa_suffixes = ['120.0','121.0','121.1','121.2','121.3','121.4','122.0','122.1','122.2','122.3','122.4','123.0','123.1','123.2','123.3','123.4',
@@ -124,8 +132,7 @@ def upgrade() -> None:
             UPDATE fuel_code
             SET fuel_production_facility_country = 'United States of America'
             WHERE fuel_suffix IN ({values_str})
-        """
-        )
+        """)
 
         connection.execute(update_usa_sql)
     # Update British Columbia records
@@ -139,8 +146,15 @@ def upgrade() -> None:
         WHERE fuel_suffix IN ({values_str})
     """
     )
-
     connection.execute(update_bc_sql)
+    update_canada_prefix_sql = sa.text(
+        f"""
+        UPDATE fuel_code
+        SET prefix_id = 3
+        WHERE fuel_production_facility_country = 'Canada'
+    """
+    )
+    connection.execute(update_canada_prefix_sql)
 
     # Commit the transaction
     transaction.commit()
