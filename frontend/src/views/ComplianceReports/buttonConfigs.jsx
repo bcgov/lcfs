@@ -259,18 +259,30 @@ export const buttonClusterConfigFn = ({
               ...reportButtons.recommendByAnalyst,
               disabled: hasDraftSupplemental
             },
-            ...(reportVersion === 0
+            ...(reportVersion === 0 && !isPastReturnDeadline
               ? [
                   {
                     ...reportButtons.returnToSupplier,
-                    disabled: isPastReturnDeadline || hasDraftSupplemental
+                    disabled: hasDraftSupplemental
                   }
                 ]
               : []),
-            {
-              ...reportButtons.createIdirSupplementalReport,
-              disabled: hasDraftSupplemental
-            }
+            ...(reportVersion === 0 && isPastReturnDeadline
+              ? [
+                  {
+                    ...reportButtons.createIdirSupplementalReport,
+                    disabled: hasDraftSupplemental
+                  }
+                ]
+              : []),
+            ...(reportVersion !== 0
+              ? [
+                  {
+                    ...reportButtons.createIdirSupplementalReport,
+                    disabled: hasDraftSupplemental
+                  }
+                ]
+              : [])
           ]
         : [])
     ],
