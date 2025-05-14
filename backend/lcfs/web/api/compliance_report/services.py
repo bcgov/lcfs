@@ -674,7 +674,7 @@ class ComplianceReportServices:
                     # Create a copy or modify if mutable to avoid side effects
                     # Assuming ComplianceReportHistorySchema allows modification or we create a new one
                     # Let's assume we can modify display_name; adjust if schema is immutable
-                    h.user_profile.display_name = "Government of British Columbia"
+                    h.display_name = "Government of British Columbia"
                     # We might also need to clear other PII like username/email if they exist on the schema
                     # h.user_profile.username = None
                     # h.user_profile.email = None
