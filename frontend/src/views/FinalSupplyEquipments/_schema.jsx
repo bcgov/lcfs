@@ -225,13 +225,6 @@ export const finalSupplyEquipmentColDefs = (
     cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
     minWidth: 430,
-    valueGetter: (params) => {
-      return (
-        params.data?.levelOfEquipment?.name ||
-        params.data?.levelOfEquipment ||
-        ''
-      )
-    },
     cellEditorParams: {
       options: optionsData?.levelsOfEquipment.map((obj) => obj.name),
       multiple: false,
@@ -241,7 +234,22 @@ export const finalSupplyEquipmentColDefs = (
     },
     cellStyle: (params) =>
       StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: SelectRenderer
+    cellRenderer: SelectRenderer,
+    valueGetter: (params) => {
+      if (params.data?.levelOfEquipment) {
+        return typeof params.data.levelOfEquipment === 'object'
+          ? params.data.levelOfEquipment.name
+          : params.data.levelOfEquipment
+      }
+      return ''
+    },
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.levelOfEquipment = params.newValue
+        return true
+      }
+      return false
+    }
   },
   {
     field: 'ports',
@@ -269,6 +277,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
     ),
+    valueGetter: (params) => params.data?.intendedUseTypes,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData?.intendedUseTypes.map((obj) => obj.type) || [],
@@ -288,6 +297,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
     ),
+    valueGetter: (params) => params.data?.intendedUserTypes,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData?.intendedUserTypes.map((obj) => obj.typeName) || [],
@@ -491,7 +501,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
     ),
     field: 'levelOfEquipment',
-    valueGetter: (params) => params.data.levelOfEquipment.name
+    valueGetter: (params) => params.data.levelOfEquipment
   },
   {
     headerName: t('finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'),
@@ -502,8 +512,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
     ),
     field: 'intendedUses',
-    valueGetter: (params) =>
-      params.data.intendedUseTypes.map((use) => use.type).join(', '),
+    valueGetter: (params) => params.data.intendedUseTypes,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams: { marginTop: '0.7em' }
   },
@@ -512,8 +521,7 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
     ),
     field: 'intendedUsers',
-    valueGetter: (params) =>
-      params.data.intendedUserTypes.map((use) => use.typeName).join(', '),
+    valueGetter: (params) => params.data.intendedUserTypes,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams: { marginTop: '0.7em' }
   },
