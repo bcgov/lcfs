@@ -1,5 +1,6 @@
 import {
   CommonArrayRenderer,
+  FuelCodePrefixRenderer,
   FuelCodeStatusRenderer
 } from '@/utils/grid/cellRenderers'
 import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
@@ -25,6 +26,7 @@ export const fuelCodeColDefs = (t) => [
     field: 'prefix',
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
     suppressFloatingFilterButton: true,
+    // cellRenderer: FuelCodePrefixRenderer,
     valueGetter: (params) => params.data.fuelCodePrefix.prefix
   },
   {
