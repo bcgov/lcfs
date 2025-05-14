@@ -116,7 +116,7 @@ class AllocationAgreementExporter:
         fuel_category_options = [obj.category for obj in fuel_categories]
 
         provisions_of_the_act = table_options.get("provisions_of_the_act", [])
-        provisions_of_the_act_options = [obj.name for obj in provisions_of_the_act]
+        provisions_of_the_act_options = [obj.name for obj in provisions_of_the_act if not obj.is_legacy]
 
         # Prepare data for the "VALUES" sheet:
         data = [
