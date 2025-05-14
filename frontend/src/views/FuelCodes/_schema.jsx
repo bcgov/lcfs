@@ -26,7 +26,7 @@ export const fuelCodeColDefs = (t) => [
     field: 'prefix',
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
     suppressFloatingFilterButton: true,
-    cellRenderer: FuelCodePrefixRenderer,
+    // cellRenderer: FuelCodePrefixRenderer,
     valueGetter: (params) => params.data.fuelCodePrefix.prefix
   },
   {

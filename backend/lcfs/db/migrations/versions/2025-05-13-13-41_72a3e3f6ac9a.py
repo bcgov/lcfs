@@ -23,7 +23,7 @@ def upgrade() -> None:
     # Start a transaction
     transaction = connection.begin_nested()
     # Insert the prefix with specific ID
-    insert_prefix_sql = text("""
+    insert_prefix_sql = sa.text("""
         INSERT INTO fuel_code_prefix (fuel_code_prefix_id, prefix) 
         VALUES (:prefix_id, :prefix)
         ON CONFLICT (fuel_code_prefix_id) DO NOTHING
