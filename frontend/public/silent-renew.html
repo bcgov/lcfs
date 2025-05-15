@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>OIDC Silent Renew</title>
+    <!-- You might need to adjust the path to oidc-client-ts.min.js if you host it yourself -->
+    <!-- Or ensure your Keycloak server provides a compatible oidc client script if you reference it from there -->
+    <!-- Using a CDN for oidc-client-ts for simplicity here -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/oidc-client-ts/2.2.2/oidc-client-ts.min.js"></script>
+</head>
+<body>
+    <script>
+        // Default oidc-client-ts processing for silent renew
+        new Oidc.UserManager().signinSilentCallback()
+            .catch((error) => {
+                console.error("Silent renew failed from silent-renew.html:", error);
+            });
+    </script>
+</body>
+</html>
