@@ -92,10 +92,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     REPORT_SCHEDULES.QUARTERLY
 
   const editSupportingDocs = useMemo(() => {
+    // Allow BCeID users to edit in Draft status
     if (hasSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) {
       return true
     }
-
+    // Allow analysts to edit in Submitted/Assessed/Analyst Adjustment statuses
     if (hasAnalystRole) {
       const editableAnalystStatuses = [
         COMPLIANCE_REPORT_STATUSES.SUBMITTED,
