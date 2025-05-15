@@ -165,7 +165,7 @@ class DocumentService:
         if (
             RoleEnum.SUPPLIER in user.role_names
             and compliance_report.current_status.status
-            != ComplianceReportStatusEnum.Draft.value
+            != ComplianceReportStatusEnum.Draft
         ):
             raise HTTPException(
                 status_code=400,
