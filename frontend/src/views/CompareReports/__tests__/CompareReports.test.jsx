@@ -23,14 +23,20 @@ describe('CompareReports Component', () => {
     useGetComplianceReport.mockReturnValue({
       data: {
         chain: [
-          { nickname: 'Original Report', complianceReportId: 1 },
+          {
+            nickname: 'Original Report',
+            complianceReportId: 1,
+            timestamp: '2021-01-01'
+          },
           {
             nickname: 'Supplemental Report 1',
-            complianceReportId: 2
+            complianceReportId: 2,
+            timestamp: '2021-02-01'
           },
           {
             nickname: 'Government Adjustment 2',
-            complianceReportId: 3
+            complianceReportId: 3,
+            timestamp: '2021-03-01'
           }
         ],
         report: {
@@ -144,20 +150,15 @@ describe('CompareReports Component', () => {
     })
   })
 
-  it('starts with empty dropdowns', () => {
+  it('initializes with default report selections', () => {
     render(<CompareReports />, { wrapper })
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
 
-    // Initial state should be empty
-    expect(report1Select).not.toHaveTextContent('Original Report')
-    expect(report1Select).not.toHaveTextContent('Supplemental Report 1')
-    expect(report1Select).not.toHaveTextContent('Government Adjustment 2')
-
-    expect(report2Select).not.toHaveTextContent('Original Report')
-    expect(report2Select).not.toHaveTextContent('Supplemental Report 1')
-    expect(report2Select).not.toHaveTextContent('Government Adjustment 2')
+    // Since the component sorts by timestamp and selects the two most recent reports
+    expect(report1Select).toHaveTextContent('Government Adjustment 2')
+    expect(report2Select).toHaveTextContent('Supplemental Report 1')
   })
 
   it('allows selecting different reports', async () => {
@@ -166,22 +167,23 @@ describe('CompareReports Component', () => {
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
 
-    // Open first dropdown and select an option
+    // Open first dropdown and select a different option
     fireEvent.mouseDown(report1Select)
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
+
+    // Verify selection was made
+    expect(report1Select).toHaveTextContent('Original Report')
+    expect(report2Select).toHaveTextContent('Supplemental Report 1')
+
+    // Open second dropdown and select a different option
+    fireEvent.mouseDown(report2Select)
     fireEvent.click(
       screen.getByRole('option', { name: 'Government Adjustment 2' })
     )
 
-    // Verify first selection was made
-    expect(report1Select).toHaveTextContent('Government Adjustment 2')
-
-    // Open second dropdown and select an option
-    fireEvent.mouseDown(report2Select)
-    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
-
     // Verify both selections
-    expect(report1Select).toHaveTextContent('Government Adjustment 2')
-    expect(report2Select).toHaveTextContent('Original Report')
+    expect(report1Select).toHaveTextContent('Original Report')
+    expect(report2Select).toHaveTextContent('Government Adjustment 2')
   })
 
   it('should not allow selecting the same report in both dropdowns', async () => {
@@ -190,80 +192,73 @@ describe('CompareReports Component', () => {
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
 
-    // Select Government Adjustment 2 in first dropdown
+    // Initially Government Adjustment 2 and Supplemental Report 1 are selected
+
+    // Select Original Report in first dropdown
     fireEvent.mouseDown(report1Select)
-    fireEvent.click(
-      screen.getByRole('option', { name: 'Government Adjustment 2' })
-    )
-
-    // Open first dropdown again to check options
-    fireEvent.mouseDown(report1Select)
-
-    // All options except the one selected in second dropdown should be available
-    expect(
-      screen.getByRole('option', { name: 'Original Report' })
-    ).toBeInTheDocument()
-    expect(
-      screen.getByRole('option', { name: 'Supplemental Report 1' })
-    ).toBeInTheDocument()
-
-    // Select Original Report in second dropdown
-    fireEvent.mouseDown(report2Select)
     fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
 
-    // Open second dropdown again to check options
+    // Open second dropdown to check options
     fireEvent.mouseDown(report2Select)
 
-    // Government Adjustment 2 should not be an option in second dropdown
+    // Original Report should not be an option in second dropdown
     expect(
-      screen.queryByRole('option', { name: 'Government Adjustment 2' })
+      screen.queryByRole('option', { name: 'Original Report' })
     ).not.toBeInTheDocument()
 
-    // Supplemental Report 1 should be an option
+    // Government Adjustment 2 and Supplemental Report 1 should be options
+    expect(
+      screen.getByRole('option', { name: 'Government Adjustment 2' })
+    ).toBeInTheDocument()
     expect(
       screen.getByRole('option', { name: 'Supplemental Report 1' })
     ).toBeInTheDocument()
   })
 
-  it('displays no data in CompareTable when no reports are selected', async () => {
+  it('displays data in CompareTable when reports are selected by default', async () => {
     render(<CompareReports />, { wrapper })
 
-    // Initially, the tables should be empty as no reports are selected
-    expect(
-      screen.getByText(/renewable fuel target summary/i)
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/low carbon fuel target summary/i)
-    ).toBeInTheDocument()
+    // The component automatically selects the two most recent reports,
+    // so we should see data in the tables immediately
+    expect(screen.getByText(/renewableFuelTargetSummary/i)).toBeInTheDocument()
+    expect(screen.getByText(/lowCarbonFuelTargetSummary/i)).toBeInTheDocument()
 
-    // The specific data values should not be present initially
-    expect(screen.queryByText('100')).not.toBeInTheDocument()
-    expect(screen.queryByText('250')).not.toBeInTheDocument()
-    expect(screen.queryByText('50')).not.toBeInTheDocument()
-    expect(screen.queryByText('70')).not.toBeInTheDocument()
+    // Data values should be present with default selections
+    const value250Elements = screen.getAllByText('250')
+    const value70Elements = screen.getAllByText('70')
+
+    expect(value250Elements.length).toBeGreaterThan(0)
+    expect(value70Elements.length).toBeGreaterThan(0)
   })
 
-  it('displays correct data in CompareTable after selecting reports', async () => {
+  it('displays correct data in CompareTable after changing report selections', async () => {
     render(<CompareReports />, { wrapper })
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
 
-    // Select reports
+    // Change selections
     fireEvent.mouseDown(report1Select)
     fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
 
     fireEvent.mouseDown(report2Select)
     fireEvent.click(
-      screen.getByRole('option', { name: 'Supplemental Report 1' })
+      screen.getByRole('option', { name: 'Government Adjustment 2' })
     )
 
     // Check if the data rows are rendered correctly after selection
     expect(screen.getByText(/renewableFuelTargetSummary/i)).toBeInTheDocument()
     expect(screen.getByText(/lowCarbonFuelTargetSummary/i)).toBeInTheDocument()
-    expect(screen.getByText('100')).toBeInTheDocument()
-    expect(screen.getByText('250')).toBeInTheDocument()
-    expect(screen.getByText('50')).toBeInTheDocument()
-    expect(screen.getByText('70')).toBeInTheDocument()
+
+    // Check that values are present after selection
+    const value100Elements = screen.getAllByText('100')
+    const value250Elements = screen.getAllByText('250')
+    const value50Elements = screen.getAllByText('50')
+    const value70Elements = screen.getAllByText('70')
+
+    expect(value100Elements.length).toBeGreaterThan(0)
+    expect(value250Elements.length).toBeGreaterThan(0)
+    expect(value50Elements.length).toBeGreaterThan(0)
+    expect(value70Elements.length).toBeGreaterThan(0)
   })
 })

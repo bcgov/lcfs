@@ -45,6 +45,16 @@ export const CompareReports = () => {
     if (complianceReport) {
       const { chain } = complianceReport
       setReportChain(chain)
+
+      // Set default selections to the two most recent reports
+      if (chain.length >= 2) {
+        const sortedChain = [...chain].sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        )
+        setReport1ID(sortedChain[0].complianceReportId)
+        setReport2ID(sortedChain[1].complianceReportId)
+      }
+
       setIsLoading(false)
     }
   }, [complianceReport])
@@ -254,8 +264,8 @@ export const CompareReports = () => {
         title={t('report:nonCompliancePenaltySummary')}
         columns={nonCompliancePenaltyColumns(
           t,
-          selectedReportName1 ? `CR ${selectedReportName1}` : '',
-          selectedReportName2 ? `CR ${selectedReportName2}` : ''
+          selectedReportName1 || '',
+          selectedReportName2 || ''
         )}
         data={nonCompliancePenaltySummary}
       />

@@ -69,6 +69,11 @@ export const AuditLog = () => {
         enableCopyButton={false}
         enableExportButton={true}
         exportName="AuditLog"
+        autoSizeStrategy={{
+          type: 'fitGridWidth',
+          defaultMinWidth: 50,
+          defaultMaxWidth: 600
+        }}
         defaultColDef={defaultColDef}
         paginationOptions={paginationOptions}
         onPaginationChange={(newPagination) =>
