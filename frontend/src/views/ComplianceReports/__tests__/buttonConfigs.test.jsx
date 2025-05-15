@@ -51,69 +51,128 @@ describe('buttonClusterConfigFn', () => {
   })
 
   // Add tests for IDIR supplemental logic here
-  it('should return correct buttons for Submitted status (Analyst, no draft, before deadline)', () => {
+  it('shows recommend and returnToSupplier for Submitted (Analyst, no draft, reportVersion 0, before deadline)', () => {
     // Set date to before March 31st of next year
-    vi.setSystemTime(new Date(2024, 1, 15)) // Feb 15, 2024
-
-    const props = {
-      ...baseProps,
-      isGovernmentUser: true,
-      hasRoles: (role) => role === roles.analyst,
-      hasDraftSupplemental: false, // No draft
-      reportVersion: 0 // Add reportVersion=0 to include Return to Supplier button
-    }
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    expect(buttons).toBeDefined()
-    expect(buttons.length).toBe(3)
-    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
-    expect(buttons[0].disabled).toBe(false)
-    expect(buttons[1].label).toBe('report:actionBtns.returnToSupplier')
-    expect(buttons[1].disabled).toBe(false) // Not past deadline, no draft
-    expect(buttons[2].label).toBe(
-      'report:actionBtns.createSupplementalReportBtn'
-    )
-    expect(buttons[2].disabled).toBe(false) // No draft
-
-    vi.useRealTimers() // Reset time
-  })
-
-  it('should disable Return to Supplier button after deadline', () => {
-    // Set date to after March 31st of next year
-    vi.setSystemTime(new Date(2024, 3, 15)) // April 15, 2024
+    vi.setSystemTime(new Date(2024, 1, 15)) // Feb 15, 2024 for compliancePeriod 2023
 
     const props = {
       ...baseProps,
       isGovernmentUser: true,
       hasRoles: (role) => role === roles.analyst,
       hasDraftSupplemental: false,
-      reportVersion: 0 // Add reportVersion=0 to include Return to Supplier button
+      reportVersion: 0
     }
     const config = buttonClusterConfigFn(props)
     const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    const returnButton = buttons.find(
-      (b) => b.id === 'return-report-supplier-btn'
+    expect(buttons).toBeDefined()
+    expect(buttons.length).toBe(2)
+    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
+    expect(buttons[0].disabled).toBe(false)
+    expect(buttons[1].label).toBe('report:actionBtns.returnToSupplier')
+    expect(buttons[1].disabled).toBe(false)
+
+    const createSupplementalButton = buttons.find(
+      (b) => b.id === 'create-idir-supplemental-report-btn'
     )
-    expect(returnButton.disabled).toBe(true) // Past deadline
+    expect(createSupplementalButton).toBeUndefined()
 
     vi.useRealTimers() // Reset time
   })
 
-  it('should disable Analyst actions on Submitted status when draft supplemental exists', () => {
+  it('shows recommend and createIdirSupplemental for Submitted (Analyst, no draft, reportVersion 0, after deadline)', () => {
+    // Set date to after March 31st of next year
+    vi.setSystemTime(new Date(2024, 3, 15)) // April 15, 2024 for compliancePeriod 2023
+
+    const props = {
+      ...baseProps,
+      isGovernmentUser: true,
+      hasRoles: (role) => role === roles.analyst,
+      hasDraftSupplemental: false,
+      reportVersion: 0
+    }
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+    expect(buttons).toBeDefined()
+    expect(buttons.length).toBe(2)
+    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
+    expect(buttons[0].disabled).toBe(false)
+    expect(buttons[1].label).toBe(
+      'report:actionBtns.createSupplementalReportBtn'
+    )
+    expect(buttons[1].disabled).toBe(false)
+
+    const returnButton = buttons.find(
+      (b) => b.id === 'return-report-supplier-btn'
+    )
+    expect(returnButton).toBeUndefined()
+
+    vi.useRealTimers() // Reset time
+  })
+
+  it('disables Analyst actions for Submitted (reportVersion 0, before deadline) if draft exists', () => {
+    vi.setSystemTime(new Date(2024, 1, 15)) // Feb 15, 2024
+
     const props = {
       ...baseProps,
       isGovernmentUser: true,
       hasRoles: (role) => role === roles.analyst,
       hasDraftSupplemental: true, // Draft exists
-      reportVersion: 0 // Add reportVersion=0 to include Return to Supplier button
+      reportVersion: 0
     }
     const config = buttonClusterConfigFn(props)
     const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
     expect(buttons).toBeDefined()
-    expect(buttons.length).toBe(3)
-    expect(buttons[0].disabled).toBe(true) // Recommend disabled
-    expect(buttons[1].disabled).toBe(true) // Return disabled
-    expect(buttons[2].disabled).toBe(true) // Create disabled
+    expect(buttons.length).toBe(2)
+    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
+    expect(buttons[0].disabled).toBe(true)
+    expect(buttons[1].label).toBe('report:actionBtns.returnToSupplier')
+    expect(buttons[1].disabled).toBe(true)
+
+    vi.useRealTimers()
+  })
+
+  it('disables Analyst actions for Submitted (reportVersion 0, after deadline) if draft exists', () => {
+    vi.setSystemTime(new Date(2024, 3, 15)) // April 15, 2024
+
+    const props = {
+      ...baseProps,
+      isGovernmentUser: true,
+      hasRoles: (role) => role === roles.analyst,
+      hasDraftSupplemental: true, // Draft exists
+      reportVersion: 0
+    }
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+    expect(buttons).toBeDefined()
+    expect(buttons.length).toBe(2)
+    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
+    expect(buttons[0].disabled).toBe(true)
+    expect(buttons[1].label).toBe(
+      'report:actionBtns.createSupplementalReportBtn'
+    )
+    expect(buttons[1].disabled).toBe(true)
+
+    vi.useRealTimers()
+  })
+
+  it('disables Analyst actions for Submitted (reportVersion > 0) if draft exists', () => {
+    const props = {
+      ...baseProps,
+      isGovernmentUser: true,
+      hasRoles: (role) => role === roles.analyst,
+      hasDraftSupplemental: true, // Draft exists
+      reportVersion: 1 // Is a supplemental report
+    }
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+    expect(buttons).toBeDefined()
+    expect(buttons.length).toBe(2)
+    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
+    expect(buttons[0].disabled).toBe(true)
+    expect(buttons[1].label).toBe(
+      'report:actionBtns.createSupplementalReportBtn'
+    )
+    expect(buttons[1].disabled).toBe(true)
   })
 
   it('should disable Manager/Director actions when draft supplemental exists', () => {
@@ -135,24 +194,6 @@ describe('buttonClusterConfigFn', () => {
     buttons = config[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]
     expect(buttons[0].disabled).toBe(true) // Assess disabled
     expect(buttons[1].disabled).toBe(true) // Return Manager disabled
-  })
-
-  it('should not include Return to Supplier button for supplemental reports (reportVersion > 0)', () => {
-    const props = {
-      ...baseProps,
-      isGovernmentUser: true,
-      hasRoles: (role) => role === roles.analyst,
-      hasDraftSupplemental: false,
-      reportVersion: 1 // Supplemental report
-    }
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    expect(buttons).toBeDefined()
-    expect(buttons.length).toBe(2) // Only recommend and create supplemental
-    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
-    expect(buttons[1].label).toBe(
-      'report:actionBtns.createSupplementalReportBtn'
-    )
 
     // Verify no Return to Supplier button
     const returnButton = buttons.find(

@@ -633,6 +633,7 @@ async def test_create_government_initiated_supplemental_report_success(
             == SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
         )
 
+
 @pytest.mark.anyio
 async def test_create_supplemental_report_uses_current_balance(
     compliance_report_service,
@@ -1441,3 +1442,444 @@ async def test_get_changelog_data_unexpected_error(
         await compliance_report_service.get_changelog_data(
             "test-group-uuid", "fuel_supplies"
         )
+
+
+class TestMaskReportStatusForHistory:
+    """
+    Tests for the _mask_report_status_for_history method in ComplianceReportServices.
+    """
+
+    @pytest.fixture
+    def service(self) -> ComplianceReportServices:
+        """Provides a simple instance of ComplianceReportServices for testing this method."""
+        # The _mask_report_status_for_history method is pure Python logic on its inputs,
+        # so it doesn't need real dependencies for these tests.
+        return ComplianceReportServices(
+            repo=MagicMock(),
+            org_repo=MagicMock(),
+            snapshot_services=MagicMock(),
+            final_supply_equipment_service=MagicMock(),
+            document_service=MagicMock(),
+            transaction_repo=MagicMock(),
+        )
+
+    def _create_mock_history_item(
+        self,
+        status_enum: ComplianceReportStatusEnum,
+        creator_is_idir: bool,
+        original_display_name: str = "Test User",
+        creator_has_organization_explicitly: bool = None,  # True if creator has org, False if no org, None for default creator_is_idir logic
+    ):
+        item = MagicMock()
+        item.status = MagicMock()
+        item.status.status = status_enum.value
+
+        item.user_profile = MagicMock()
+        if creator_has_organization_explicitly is None:  # Default behavior
+            item.user_profile.organization = None if creator_is_idir else "Supplier Org"
+        else:
+            item.user_profile.organization = (
+                "Supplier Org" if creator_has_organization_explicitly else None
+            )
+
+        item.user_profile.display_name = original_display_name
+        item.display_name = original_display_name  # This is what gets directly modified
+        return item
+
+    def _create_mock_report(self, history_items: list) -> MagicMock:
+        report = MagicMock(spec=ComplianceReportBaseSchema)
+        report.history = history_items
+        return report
+
+    def _configure_user_roles(
+        self,
+        mock_user_has_roles_patch: MagicMock,
+        requesting_user: UserProfile,
+        is_government: bool = False,
+        is_analyst: bool = False,
+    ):
+        def side_effect(user_obj, roles_to_check):
+            if user_obj == requesting_user:
+                if RoleEnum.GOVERNMENT in roles_to_check:
+                    return is_government
+                if RoleEnum.ANALYST in roles_to_check:
+                    return is_analyst
+            # Fallback for any other user object or role check not configured for this test
+            # This helps avoid TypeErrors if user_has_roles is called unexpectedly.
+            # For strict tests, one might raise an error here.
+            return False
+
+        mock_user_has_roles_patch.side_effect = side_effect
+
+    # --- Tests for Draft Status ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_draft_by_idir_viewed_by_idir_is_visible(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft,
+            creator_is_idir=True,
+            original_display_name="IDIR Creator",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "IDIR Creator"  # No masking
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_draft_by_idir_viewed_by_supplier_is_visible_and_masked(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False  # Supplier
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft,
+            creator_is_idir=True,
+            original_display_name="IDIR Creator",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Government of British Columbia"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_draft_by_supplier_viewed_by_idir_is_hidden(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft, creator_is_idir=False
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_draft_by_supplier_viewed_by_supplier_is_hidden(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False  # Supplier
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft, creator_is_idir=False
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0
+
+    # --- Tests for BCeID Hidden Statuses ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_bceid_hidden_status_viewed_by_idir_is_visible(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Recommended_by_analyst,
+            creator_is_idir=True,
+            original_display_name="Analyst",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Analyst"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_bceid_hidden_status_viewed_by_supplier_is_hidden(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False  # Supplier
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Recommended_by_manager, creator_is_idir=True
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0
+
+    # --- Tests for Non-Analyst Hidden Statuses ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_non_analyst_hidden_status_viewed_by_analyst_is_visible(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True, is_analyst=True
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Analyst_adjustment,
+            creator_is_idir=True,
+            original_display_name="Analyst",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Analyst"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_non_analyst_hidden_status_viewed_by_idir_director_is_hidden(
+        self, mock_user_has_roles, service
+    ):  # Director is IDIR but not Analyst
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True, is_analyst=False
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Analyst_adjustment, creator_is_idir=True
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_non_analyst_hidden_status_viewed_by_supplier_is_hidden(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles,
+            requesting_user,
+            is_government=False,
+            is_analyst=False,  # Supplier
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Analyst_adjustment, creator_is_idir=True
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0  # Hidden due to non-analyst rule
+
+    # --- Tests for Standard Visible Statuses & Masking ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_assessed_by_idir_viewed_by_idir_visible_not_masked(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Assessed,
+            creator_is_idir=True,
+            original_display_name="Gov Assessor",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Gov Assessor"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_assessed_by_idir_viewed_by_supplier_visible_and_masked(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False  # Supplier
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Assessed,
+            creator_is_idir=True,
+            original_display_name="Gov Assessor",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Government of British Columbia"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_submitted_by_supplier_viewed_by_idir_visible_not_masked(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Submitted,
+            creator_is_idir=False,
+            original_display_name="Supplier User",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Supplier User"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_submitted_by_supplier_viewed_by_supplier_visible_not_masked(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False  # Supplier
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Submitted,
+            creator_is_idir=False,
+            original_display_name="Supplier User",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Supplier User"
+
+    # --- Test for Masking Fallback Logic ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_masking_fallback_idir_status_creator_with_org_viewed_by_supplier(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False
+        )  # Supplier viewer
+
+        # Creator has an org (so primary is_idir check is false), but status is a gov status
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Assessed,
+            creator_is_idir=False,  # This will set org to "Supplier Org"
+            original_display_name="User With Org Performing Gov Action",
+            creator_has_organization_explicitly=True,  # Explicitly give them an org
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Government of British Columbia"
+
+    # --- Edge Cases ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_empty_history(self, mock_user_has_roles, service):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+        report = self._create_mock_report([])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_history_item_no_user_profile_draft_is_hidden(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft, creator_is_idir=False
+        )
+        history_item.user_profile = None  # No user profile
+
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        # history_creator_is_idir will be false, so draft by non-idir is hidden
+        assert len(result_report.history) == 0
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_history_item_no_user_profile_assessed_is_visible_no_masking(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)  # Supplier viewer
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Assessed,
+            creator_is_idir=False,
+            original_display_name="Unknown User",
+        )
+        history_item.user_profile = None  # No user profile
+
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 1
+        assert (
+            result_report.history[0].display_name == "Unknown User"
+        )  # No masking possible
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_multiple_history_items_mixed_scenarios(self, mock_user_has_roles, service):
+        requesting_user = MagicMock(spec=UserProfile)  # Supplier viewer
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False, is_analyst=False
+        )
+
+        item1_draft_by_idir = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft,
+            creator_is_idir=True,
+            original_display_name="Gov Draft",
+        )  # Visible, Masked
+        item2_draft_by_supplier = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft, creator_is_idir=False
+        )  # Hidden
+        item3_recommended_by_analyst = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Recommended_by_analyst, creator_is_idir=True
+        )  # Hidden for supplier
+        item4_submitted_by_supplier = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Submitted,
+            creator_is_idir=False,
+            original_display_name="Supplier Submit",
+        )  # Visible, Not Masked
+        item5_assessed_by_idir = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Assessed,
+            creator_is_idir=True,
+            original_display_name="Gov Assess",
+        )  # Visible, Masked
+
+        history_items = [
+            item1_draft_by_idir,
+            item2_draft_by_supplier,
+            item3_recommended_by_analyst,
+            item4_submitted_by_supplier,
+            item5_assessed_by_idir,
+        ]
+        report = self._create_mock_report(history_items)
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 3
+
+        # Check item1 (Gov Draft, viewed by supplier)
+        assert (
+            result_report.history[0].status.status
+            == ComplianceReportStatusEnum.Draft.value
+        )
+        assert result_report.history[0].display_name == "Government of British Columbia"
+
+        # Check item4 (Supplier Submit, viewed by supplier)
+        assert (
+            result_report.history[1].status.status
+            == ComplianceReportStatusEnum.Submitted.value
+        )
+        assert result_report.history[1].display_name == "Supplier Submit"
+
+        # Check item5 (Gov Assess, viewed by supplier)
+        assert (
+            result_report.history[2].status.status
+            == ComplianceReportStatusEnum.Assessed.value
+        )
+        assert result_report.history[2].display_name == "Government of British Columbia"
