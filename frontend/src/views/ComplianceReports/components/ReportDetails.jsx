@@ -92,15 +92,23 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     REPORT_SCHEDULES.QUARTERLY
 
   const editSupportingDocs = useMemo(() => {
-    return (
-      // Allow BCeID users to edit in Draft status
-      (hasSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) ||
-      // Allow analysts to edit in Submitted or Assessed status
-      (hasAnalystRole &&
-        (currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ||
-          currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED))
-    )
+    if (hasSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) {
+      return true
+    }
+
+    if (hasAnalystRole) {
+      const editableAnalystStatuses = [
+        COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+        COMPLIANCE_REPORT_STATUSES.ASSESSED,
+        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      ]
+
+      return editableAnalystStatuses.includes(currentStatus)
+    }
+
+    return false
   }, [hasAnalystRole, hasSupplierRole, currentStatus])
+
   const shouldShowEditIcon = (activityName) => {
     if (activityName === t('report:supportingDocs')) {
       return editSupportingDocs
@@ -384,7 +392,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                   backgroundColor: colors.light.main,
                   opacity: '0.8 !important',
                   '& .MuiTypography-root': {
-                    color: 'initial !important',
+                    color: 'initial !important'
                   }
                 }
               }}
