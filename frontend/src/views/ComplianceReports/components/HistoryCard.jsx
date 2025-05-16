@@ -124,6 +124,10 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
       {sortedHistory.length > 0 && (
         <AccordionDetails>
           <List>
+            {/* GOV users – show assessment lines immediately (top‑level) until Assessed */}
+            {isGovernmentUser && !isCurrentAssessed && <AssessmentLines />}
+
+            {/* Director statement – show to government users and non-government users if assessed */}
             {report.assessmentStatement &&
               ((!isGovernmentUser && isCurrentAssessed) ||
                 isGovernmentUser) && (
@@ -133,15 +137,18 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
                     primaryTypographyProps={{ variant: 'body4' }}
                   >
                     <strong>
-                      {t('report:complianceReportHistory.directorStatement')}:
-                    </strong>{' '}
-                    {report.assessmentStatement}
+                      {t('report:complianceReportHistory.directorStatement')}
+                    </strong>
+                    {isGovernmentUser && (
+                      <span style={{ color: '#d8292f' }}>
+                        {' '}
+                        {t('report:complianceReportHistory.canBeEdited')}
+                      </span>
+                    )}
+                    : {report.assessmentStatement}
                   </ListItemText>
                 </StyledListItem>
               )}
-
-            {/* GOV users – show assessment lines immediately (top‑level) until Assessed */}
-            {isGovernmentUser && !isCurrentAssessed && <AssessmentLines />}
 
             {/* History timeline */}
             {sortedHistory.map((item, index) => {
