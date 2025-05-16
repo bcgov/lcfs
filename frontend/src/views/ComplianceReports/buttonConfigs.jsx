@@ -305,6 +305,12 @@ export const buttonClusterConfigFn = ({
             },
             { ...reportButtons.returnToAnalyst, disabled: hasDraftSupplemental }
           ]
+        : []),
+      ...(isGovernmentUser && hasRoles('Director')
+        ? [
+            { ...reportButtons.assessReport, disabled: hasDraftSupplemental },
+            { ...reportButtons.returnToAnalyst, disabled: hasDraftSupplemental }
+          ]
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: [
