@@ -978,6 +978,7 @@ async def test_handle_assessed_status_not_superseded(
     mock_report_model.transaction = MagicMock()
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(return_value=MagicMock(line_20_surplus_deficit_units=100))
 
     # Patch roles check to ensure it passes
     with patch(
@@ -1002,7 +1003,88 @@ async def test_handle_assessed_status_not_superseded(
         mock_report_model.transaction.update_user
         == mock_user_profile_director.keycloak_username
     )
+    # Verify compliance units were set to the calculated value
+    assert mock_report_model.transaction.compliance_units == 100
     mock_repo.update_compliance_report.assert_called_once_with(mock_report_model)
+
+
+@pytest.mark.anyio
+async def test_handle_assessed_status_government_adjustment_no_transaction(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+    mock_summary_repo: AsyncMock,
+    mock_summary_service: AsyncMock,
+    mock_org_service: AsyncMock,
+):
+    """
+    Test that a transaction is created when assessing a government adjustment report
+    that doesn't already have a transaction.
+    This verifies the fix for the bug where government adjustment reports weren't 
+    creating transactions when assessed.
+    """
+    # Arrange
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 123
+    mock_report.compliance_report_group_uuid = "test-uuid"
+    mock_report.organization_id = 456
+    mock_report.version = 1
+    mock_report.transaction = None  # No existing transaction - the key bug case
+    
+    # Set up supplemental initiator to indicate it's a government adjustment
+    from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
+    mock_report.supplemental_initiator = SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    
+    # Mock the summary that will be calculated during assessment
+    mock_summary = MagicMock()
+    mock_summary.line_20_surplus_deficit_units = 500  # Credit change amount
+    
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(return_value=mock_summary)
+    
+    # Mock the new transaction that will be created
+    mock_transaction = MagicMock()
+    compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock()
+    
+    # This is needed to simulate the transaction being created
+    def side_effect_create_transaction(credit_change, report):
+        report.transaction = mock_transaction
+        return mock_transaction
+    
+    compliance_report_update_service._create_or_update_reserve_transaction.side_effect = side_effect_create_transaction
+    
+    # Patch roles check to ensure it passes
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_assessed_status(
+            mock_report, mock_user_profile_director
+        )
+    
+    # Assert
+    # Verify we called necessary preliminary checks
+    mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(
+        mock_report.compliance_report_group_uuid
+    )
+    
+    # Verify we calculated the summary
+    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
+        mock_report, mock_user_profile_director
+    )
+    
+    # Verify we attempted to create a transaction with the correct credit change
+    compliance_report_update_service._create_or_update_reserve_transaction.assert_called_once_with(
+        500, mock_report
+    )
+    
+    # Verify the transaction was marked as an adjustment and attributed to the director
+    assert mock_report.transaction.transaction_action == TransactionActionEnum.Adjustment
+    assert mock_report.transaction.update_user == mock_user_profile_director.keycloak_username
+    
+    # Verify the report was updated
+    mock_repo.update_compliance_report.assert_called_once_with(mock_report)
 
 
 @pytest.mark.anyio
