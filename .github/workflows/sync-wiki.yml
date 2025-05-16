@@ -1,0 +1,75 @@
+name: Deploy Wiki to GitHub Wiki
+
+on:
+  push:
+    branches:
+      - develop # Add develop branch to the trigger
+    paths:
+      - 'wiki/**' # Trigger workflow only if files in the 'wiki/' directory change
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  deploy-wiki-content:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Allow action to write to the wiki repository
+
+    steps:
+      - name: Checkout Main Repository (lcfs)
+        uses: actions/checkout@v4
+        with:
+          path: main-repo # Checks out lcfs into a directory named 'main-repo'
+
+      - name: Checkout Wiki Repository (lcfs.wiki.git)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki # e.g., bcgov/lcfs.wiki
+          path: wiki-repo # Checks out the wiki into 'wiki-repo'
+
+      - name: Set up Git User for Wiki Commits
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor_id }}+${{ github.actor }}@users.noreply.github.com"
+        working-directory: ./wiki-repo
+
+      - name: Clean Wiki Repository
+        working-directory: ./wiki-repo # Operations happen inside the wiki-repo checkout
+        run: |
+          echo "--- Target Wiki Clone (./) Before Sync ---"
+          ls -R . # List contents before cleaning (relative to wiki-repo)
+          echo "--------------------------------------"
+          echo "Cleaning target wiki directory (preserving .git, Home.md, _Sidebar.md, _Footer.md, images/)..."
+          # Delete files at root, preserving specified ones
+          find . -maxdepth 1 -type f ! -name 'Home.md' ! -name '_Sidebar.md' ! -name '_Footer.md' -delete
+          # Delete directories at root, preserving .git and images
+          find . -maxdepth 1 -mindepth 1 -type d ! -name '.git' ! -name 'images' -exec rm -rf {} +
+          echo "Cleaning complete."
+          echo "--- Target Wiki Clone (./) After Cleaning, Before Rsync ---"
+          ls -R .
+          echo "--------------------------------------"
+
+      - name: Sync Content to Wiki Repository
+        run: |
+          echo "--- Source Content (main-repo/wiki/) ---"
+          ls -R main-repo/wiki/
+          echo "--------------------------------------"
+          echo "Syncing files from main-repo/wiki/ to wiki-repo/..."
+          # The paths main-repo/wiki/ and wiki-repo/ are relative to the GITHUB_WORKSPACE root
+          rsync -av --delete --checksum --exclude='.git' main-repo/wiki/ wiki-repo/
+          echo "Syncing complete."
+          echo "--- Target Wiki Clone (wiki-repo/) After Sync ---"
+          ls -R wiki-repo/
+          echo "-------------------------------------"
+
+      - name: Commit and Push Wiki Changes
+        working-directory: ./wiki-repo # All git commands for wiki MUST run here
+        run: |
+          # Check if there are any changes to commit
+          if ! git diff --quiet || ! git diff --staged --quiet; then
+            echo "Changes detected in wiki. Committing and pushing..."
+            git add .
+            git commit -m "Automated wiki update from main repository [skip ci]"
+            git push origin HEAD # Pushes to the default branch of the wiki repo
+          else
+            echo "No changes to push to the wiki."
+          fi 

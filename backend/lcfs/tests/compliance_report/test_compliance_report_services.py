@@ -1,7 +1,15 @@
+from datetime import datetime
+import copy
+from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+from lcfs.web.api.compliance_report.dtos import (
+    ChangelogAllocationAgreementsDTO,
+    ChangelogFuelSuppliesDTO,
+)
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch, Mock
+from datetime import datetime
 
-from lcfs.db.models import Organization
 from lcfs.db.models.compliance import ComplianceReport
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
@@ -14,6 +22,10 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
 )
 from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
+
+from lcfs.db.models.user.Role import Role, RoleEnum
+from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
 
 
 # get_all_compliance_periods
@@ -284,11 +296,15 @@ async def test_get_all_org_reported_years_unexpected_error(
 async def test_create_supplemental_report_includes_summary_lines(
     compliance_report_service,
     mock_repo,
+    mock_transaction_repo,
 ):
     """
     Test that when creating a supplemental report, the summary lines from
     the assessed report are properly included in the new report's summary.
     """
+    # Inject the mock transaction repo into the service
+    compliance_report_service.transaction_repo = mock_transaction_repo
+
     # Mock an existing compliance report with specific summary values
     mock_summary = MagicMock()
     mock_summary.line_6_renewable_fuel_retained_gasoline = 10
@@ -345,6 +361,11 @@ async def test_create_supplemental_report_includes_summary_lines(
     mock_latest_report = MagicMock()
     mock_latest_report.version = 0
     mock_repo.get_latest_report_by_group_uuid.return_value = mock_latest_report
+
+    # Mock the transaction repo to return a balance as an async method
+    mock_transaction_repo.calculate_available_balance_for_period = AsyncMock(
+        return_value=2000
+    )
 
     # This is the key part - create a mock for the created report that will capture the summary
     created_report = MagicMock(compliance_report_id=2)
@@ -483,3 +504,1382 @@ async def test_delete_compliance_report_wrong_status(
 
     mock_repo.get_compliance_report_by_id.assert_called_once_with(996)
     mock_repo.delete_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_government_initiated_supplemental_report_success(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,  # Assume a fixture for an analyst user
+    mock_compliance_report_submitted: MagicMock,  # Assume fixture for submitted report
+    mock_repo: AsyncMock,
+    mock_snapshot_service: AsyncMock,
+    mock_fse_services: AsyncMock,
+    mock_document_service: AsyncMock,
+):
+    """Test successful creation of a government-initiated supplemental report."""
+    # Patch user_has_roles for this specific test
+    with patch(
+        "lcfs.web.api.compliance_report.services.user_has_roles", return_value=True
+    ):
+        # Arrange
+        # Ensure the report status is correctly set for this test
+        mock_compliance_report_submitted.current_status.status = (
+            ComplianceReportStatusEnum.Submitted
+        )
+        existing_report_id = mock_compliance_report_submitted.compliance_report_id
+        group_uuid = mock_compliance_report_submitted.compliance_report_group_uuid
+        current_version = mock_compliance_report_submitted.version
+        new_version = current_version + 1
+
+        mock_repo.get_compliance_report_by_id = AsyncMock(
+            return_value=mock_compliance_report_submitted
+        )
+        mock_repo.get_draft_report_by_group_uuid = AsyncMock(
+            return_value=None  # No existing draft
+        )
+        mock_repo.get_latest_report_by_group_uuid = AsyncMock(
+            return_value=mock_compliance_report_submitted  # Simplification, could be another report
+        )
+        # Mock status retrieval
+        mock_draft_status = MagicMock()
+        mock_draft_status.compliance_report_status_id = 2  # Example ID for Draft
+        mock_draft_status.status = ComplianceReportStatusEnum.Draft
+        # Ensure mock_draft_status looks like the schema for validation
+        mock_draft_status.compliance_report_status_id = 2
+        mock_draft_status.status = (
+            ComplianceReportStatusEnum.Draft.value
+        )  # Use enum value for schema
+        mock_repo.get_compliance_report_status_by_desc = AsyncMock(
+            return_value=mock_draft_status
+        )
+
+        # Mock the report object *returned* by create_compliance_report
+        # Ensure it has attributes needed for ComplianceReportBaseSchema validation
+        mock_new_report = MagicMock(spec=ComplianceReport)  # Use spec
+        mock_new_report.compliance_report_id = 999
+        mock_new_report.version = new_version
+        mock_new_report.compliance_report_group_uuid = group_uuid
+        mock_new_report.compliance_period = (
+            mock_compliance_report_submitted.compliance_period
+        )  # Pydantic schema
+        mock_new_report.organization = (
+            mock_compliance_report_submitted.organization
+        )  # Pydantic schema
+        mock_new_report.current_status = (
+            mock_draft_status  # Mock configured like schema
+        )
+        mock_new_report.nickname = f"Supplemental Report {new_version}"
+        mock_new_report.supplemental_initiator = (
+            SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL.value
+        )  # Enum value
+        mock_new_report.reporting_frequency = (
+            mock_compliance_report_submitted.reporting_frequency
+        )  # Use value from mock
+        mock_new_report.supplemental_note = None
+        mock_new_report.assessment_statement = None
+        mock_new_report.transaction_id = None
+        # Set dummy create/update dates needed by BaseSchema
+        mock_new_report.create_date = datetime.now()
+        mock_new_report.update_date = datetime.now()
+        mock_repo.create_compliance_report = AsyncMock(return_value=mock_new_report)
+
+        # Act
+        created_report_schema = await compliance_report_service.create_government_initiated_supplemental_report(
+            existing_report_id, mock_user_profile_analyst
+        )
+
+        # Assert
+        # Check repository calls
+        mock_repo.get_compliance_report_by_id.assert_called_once_with(
+            existing_report_id
+        )
+        mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(group_uuid)
+        mock_repo.get_latest_report_by_group_uuid.assert_called_once_with(group_uuid)
+        mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
+            ComplianceReportStatusEnum.Draft.value
+        )
+        mock_repo.create_compliance_report.assert_called_once()
+        # Assert history was called with the object *after* ID was assigned
+        # History uses the object *returned* by create_compliance_report
+        mock_repo.add_compliance_report_history.assert_called_once_with(
+            mock_new_report, mock_user_profile_analyst
+        )
+
+        # Check dependency service calls
+        mock_snapshot_service.create_organization_snapshot.assert_called_once()
+        mock_fse_services.copy_to_report.assert_called_once()
+        # Assert copy_documents was called with the correct IDs
+        # Copy docs uses the object *returned* by create_compliance_report
+        mock_document_service.copy_documents.assert_called_once_with(
+            existing_report_id, mock_new_report.compliance_report_id
+        )
+
+        # Check returned schema
+        assert (
+            created_report_schema.compliance_report_id
+            == mock_new_report.compliance_report_id
+        )
+        assert created_report_schema.version == new_version
+        assert created_report_schema.nickname == f"Supplemental Report {new_version}"
+        # Check the create_compliance_report call arguments (more detailed)
+        call_args = mock_repo.create_compliance_report.call_args[0][0]
+        assert call_args.version == new_version
+        assert (
+            call_args.current_status_id == mock_draft_status.compliance_report_status_id
+        )
+        assert call_args.nickname == f"Supplemental Report {new_version}"
+        assert (
+            call_args.supplemental_initiator
+            == SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+        )
+
+
+@pytest.mark.anyio
+async def test_create_supplemental_report_uses_current_balance(
+    compliance_report_service,
+    mock_repo,
+    mock_transaction_repo,
+    compliance_report_base_schema,
+):
+    """
+    Test that when creating a supplemental report, line 17 uses the current available balance
+    instead of copying the value from the previous report.
+    """
+    # Inject the mock transaction repo into the service
+    compliance_report_service.transaction_repo = mock_transaction_repo
+
+    # Mock the current report and its summary
+    current_report = MagicMock()
+    current_report.organization_id = 1
+    current_report.compliance_period = MagicMock()
+    current_report.compliance_period.description = "2024"
+    current_report.summary = MagicMock()
+    current_report.summary.line_17_non_banked_units_used = 1000  # Old balance
+    current_report.compliance_report_group_uuid = "test-group-uuid"
+    current_report.reporting_frequency = "Annual"
+
+    # Mock the assessed report
+    assessed_report = MagicMock()
+    mock_summary = MagicMock()
+    mock_columns = MagicMock()
+    mock_columns.keys.return_value = [
+        "line_6_renewable_fuel_retained_gasoline",
+        "line_6_renewable_fuel_retained_diesel",
+        "line_6_renewable_fuel_retained_jet_fuel",
+        "line_7_previously_retained_gasoline",
+        "line_7_previously_retained_diesel",
+        "line_7_previously_retained_jet_fuel",
+        "line_8_obligation_deferred_gasoline",
+        "line_8_obligation_deferred_diesel",
+        "line_8_obligation_deferred_jet_fuel",
+        "line_9_obligation_added_gasoline",
+        "line_9_obligation_added_diesel",
+        "line_9_obligation_added_jet_fuel",
+    ]
+    mock_table = MagicMock()
+    mock_table.columns = mock_columns
+    mock_summary.__table__ = mock_table
+    assessed_report.summary = mock_summary
+
+    # Mock the transaction repo to return a different balance
+    mock_transaction_repo.calculate_available_balance_for_period = AsyncMock(
+        return_value=2000  # New balance
+    )
+
+    # Mock the repo methods
+    compliance_report_service.repo.get_compliance_report_by_id.return_value = (
+        current_report
+    )
+    compliance_report_service.repo.get_assessed_compliance_report_by_period.return_value = (
+        assessed_report
+    )
+    compliance_report_service.repo.get_latest_report_by_group_uuid.return_value = (
+        current_report
+    )
+
+    # Mock the draft status
+    mock_draft_status = MagicMock()
+    mock_draft_status.status = "Draft"
+    compliance_report_service.repo.get_compliance_report_status_by_desc.return_value = (
+        mock_draft_status
+    )
+
+    # Mock the created report using the base schema
+    mock_repo.create_compliance_report.return_value = compliance_report_base_schema()
+
+    # Create a mock user with the same organization ID as the report
+    mock_user = MagicMock(spec=UserProfile, organization_id=1)
+
+    # Create the supplemental report
+    await compliance_report_service.create_supplemental_report(1, mock_user)
+
+    # Verify that calculate_available_balance_for_period was called with correct parameters
+    mock_transaction_repo.calculate_available_balance_for_period.assert_called_once_with(
+        1, 2024
+    )
+
+    # Verify that the new summary was created with the current balance
+    assert (
+        compliance_report_service.repo.create_compliance_report.call_args[0][
+            0
+        ].summary.line_17_non_banked_units_used
+        == 2000
+    )
+
+
+@pytest.mark.anyio
+async def test_get_changelog_data_fuel_supplies_success(
+    compliance_report_service, mock_repo
+):
+    """Test successful retrieval of fuel supplies changelog data"""
+
+    # Create a simple data class to use instead of MagicMock
+    class MockFuelSupply:
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+    # Create the mock report
+    mock_report = MagicMock()
+    mock_report.nickname = "Report 1"
+    mock_report.version = 1
+    mock_report.compliance_report_id = 1
+
+    # Create the fuel supply with all required attributes
+    mock_fuel_supply = MockFuelSupply(
+        fuel_supply_id=1,
+        group_uuid="group-1",
+        version=1,
+        action_type="CREATE",
+        create_date=datetime(2024, 1, 1),
+        compliance_units=100.56,
+        create_user="test_user",
+        update_user="test_user",
+        units="litres",
+        fuel_type_other="",
+        quantity=500.0,  # Adding the required quantity field
+        compliance_report_id=1,  # Adding compliance_report_id (as complianceReportId in DTO)
+        # Related objects
+        fuel_category=MockFuelSupply(category="Gasoline"),
+        fuel_code=MockFuelSupply(fuelCode="BCLCF100"),
+        fuel_type=MockFuelSupply(fuelType="Ethanol"),
+        provision_of_the_act=MockFuelSupply(name="Section 6(1)"),
+        end_use_type=MockFuelSupply(type="Transportation"),
+    )
+
+    # Add any additional fields that might be required by the DTO
+    for field in [
+        "carbon_intensity",
+        "carbon_intensity_limit",
+        "carbon_intensity_difference",
+        "energy_content",
+        "energy_effectiveness_ratio",
+        "effective_carbon_intensity",
+        "effective_carbon_intensity_limit",
+        "effective_carbon_intensity_difference",
+    ]:
+        setattr(mock_fuel_supply, field, 0.0)
+
+    # Assign the fuel supplies list to the report
+    mock_report.fuel_supplies = [mock_fuel_supply]
+
+    # Mock repository to return the reports
+    mock_repo.get_changelog_data.return_value = [mock_report]
+
+    # Create a simpler mock for deepcopy that handles our custom objects
+    def mock_deepcopy(obj):
+        if isinstance(obj, MockFuelSupply):
+            new_obj = MockFuelSupply()
+            for key, value in obj.__dict__.items():
+                if isinstance(value, MockFuelSupply):
+                    setattr(new_obj, key, mock_deepcopy(value))
+                else:
+                    setattr(new_obj, key, value)
+            return new_obj
+        elif isinstance(obj, (int, float, str, bool)) or obj is None:
+            return obj
+        elif isinstance(obj, list):
+            return [mock_deepcopy(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {mock_deepcopy(k): mock_deepcopy(v) for k, v in obj.items()}
+        else:
+            # For other types, try to create a simple copy
+            try:
+                return type(obj)(obj)
+            except:
+                return obj  # Fall back to returning the original if copying fails
+
+    # Patch the make_deep_copy function in the module
+    with patch("copy.deepcopy", side_effect=mock_deepcopy):
+        # Call the service method
+        result = await compliance_report_service.get_changelog_data(
+            "test-group-uuid", "fuel_supplies"
+        )
+
+    # Assertions
+    assert len(result) == 2  # Should have 2 DTOs: Current State and Report 1
+    assert result[0].nickname == "Current State"
+    assert len(result[0].fuel_supplies) == 1
+    assert result[0].fuel_supplies[0].fuel_supply_id == 1
+    assert result[0].fuel_supplies[0].compliance_units == 101  # Rounded
+
+    assert result[1].nickname == "Report 1"
+    assert len(result[1].fuel_supplies) == 1
+
+    # Verify repo was called with correct parameters
+    mock_repo.get_changelog_data.assert_called_once()
+    args = mock_repo.get_changelog_data.call_args[0]
+    assert args[0] == "test-group-uuid"
+    assert args[1]["model"] == FuelSupply
+    assert args[1]["dto"] == ChangelogFuelSuppliesDTO
+    assert args[1]["id_field"] == "fuel_supply_id"
+
+
+@pytest.mark.anyio
+async def test_get_changelog_data_fuel_supplies_update(
+    compliance_report_service, mock_repo
+):
+    """Test changelog data with updates to fuel supplies"""
+
+    # Create a simple data class to use instead of MagicMock
+    class MockFuelSupply:
+        def __init__(self, **kwargs):
+            for key, value in kwargs.items():
+                setattr(self, key, value)
+
+    # Create the first report
+    mock_report1 = MagicMock()
+    mock_report1.nickname = "Report 1"
+    mock_report1.version = 1
+    mock_report1.compliance_report_id = 1
+
+    # Create the original fuel supply record
+    mock_fuel_supply1_v1 = MockFuelSupply(
+        fuel_supply_id=1,
+        group_uuid="group-1",
+        version=1,
+        action_type="CREATE",
+        create_date=datetime(2024, 1, 1),
+        compliance_units=100,
+        quantity=50,
+        compliance_report_id=1,
+        create_user="test_user",
+        update_user="test_user",
+        units="litres",
+        fuel_type_other="",
+        # Required related objects
+        fuel_category=MockFuelSupply(category="Gasoline"),
+        fuel_code=MockFuelSupply(fuelCode="BCLCF100"),
+        fuel_type=MockFuelSupply(fuelType="Ethanol"),
+        provision_of_the_act=MockFuelSupply(name="Section 6(1)"),
+        end_use_type=MockFuelSupply(type="Transportation"),
+    )
+
+    # Add required fields for DTO validation
+    for field in [
+        "carbon_intensity",
+        "carbon_intensity_limit",
+        "carbon_intensity_difference",
+        "energy_content",
+        "energy_effectiveness_ratio",
+        "effective_carbon_intensity",
+        "effective_carbon_intensity_limit",
+        "effective_carbon_intensity_difference",
+    ]:
+        setattr(mock_fuel_supply1_v1, field, 0.0)
+
+    mock_report1.fuel_supplies = [mock_fuel_supply1_v1]
+
+    # Create the second report with updated fuel supply
+    mock_report2 = MagicMock()
+    mock_report2.nickname = "Report 2"
+    mock_report2.version = 2
+    mock_report2.compliance_report_id = 2
+
+    # Create the updated fuel supply record with a different compliance_units value
+    mock_fuel_supply1_v2 = MockFuelSupply(
+        fuel_supply_id=1,
+        group_uuid="group-1",
+        version=2,
+        action_type="UPDATE",
+        create_date=datetime(2024, 1, 2),
+        compliance_units=150,  # Changed value
+        quantity=50,  # Same as before
+        compliance_report_id=2,
+        create_user="test_user",
+        update_user="test_user",
+        units="litres",
+        fuel_type_other="",
+        # Required related objects
+        fuel_category=MockFuelSupply(category="Gasoline"),
+        fuel_code=MockFuelSupply(fuelCode="BCLCF100"),
+        fuel_type=MockFuelSupply(fuelType="Ethanol"),
+        provision_of_the_act=MockFuelSupply(name="Section 6(1)"),
+        end_use_type=MockFuelSupply(type="Transportation"),
+    )
+
+    # Add required fields for DTO validation
+    for field in [
+        "carbon_intensity",
+        "carbon_intensity_limit",
+        "carbon_intensity_difference",
+        "energy_content",
+        "energy_effectiveness_ratio",
+        "effective_carbon_intensity",
+        "effective_carbon_intensity_limit",
+        "effective_carbon_intensity_difference",
+    ]:
+        setattr(mock_fuel_supply1_v2, field, 0.0)
+
+    mock_report2.fuel_supplies = [mock_fuel_supply1_v2]
+
+    # Mock repository to return the reports
+    mock_repo.get_changelog_data.return_value = [mock_report2, mock_report1]
+
+    # Create a custom deep copy function to handle our mock objects
+    def mock_deepcopy(obj):
+        if isinstance(obj, MockFuelSupply):
+            new_obj = MockFuelSupply()
+            for key, value in obj.__dict__.items():
+                if isinstance(value, MockFuelSupply):
+                    setattr(new_obj, key, mock_deepcopy(value))
+                else:
+                    setattr(new_obj, key, value)
+            return new_obj
+        elif isinstance(obj, (int, float, str, bool)) or obj is None:
+            return obj
+        elif isinstance(obj, list):
+            return [mock_deepcopy(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {mock_deepcopy(k): mock_deepcopy(v) for k, v in obj.items()}
+        else:
+            try:
+                return type(obj)(obj)
+            except:
+                return obj
+
+    # Patch the deep copy function
+    with patch("copy.deepcopy", side_effect=mock_deepcopy):
+        # Call the service method
+        result = await compliance_report_service.get_changelog_data(
+            "test-group-uuid", "fuel_supplies"
+        )
+
+    # Assertions
+    assert len(result) == 3  # Should have 3 DTOs: Current State, Report 2, Report 1
+
+    # Check current state
+    assert result[0].nickname == "Current State"
+    assert len(result[0].fuel_supplies) == 1
+    assert result[0].fuel_supplies[0].compliance_units == 150
+
+    # Check Report 2 (with update)
+    assert result[1].nickname == "Report 2"
+    assert len(result[1].fuel_supplies) >= 1  # Should have at least the current version
+
+    # Find items with diff attribute
+    diff_items = [fs for fs in result[1].fuel_supplies if hasattr(fs, "diff")]
+    assert len(diff_items) > 0
+
+    # Find items marked as updated
+    updated_items = [
+        fs for fs in result[1].fuel_supplies if hasattr(fs, "updated") and fs.updated
+    ]
+
+    # If we found updated items, check the diff contains the changed field
+    if updated_items:
+        assert any(
+            "complianceUnits" in item.diff
+            for item in updated_items
+            if hasattr(item, "diff")
+        )
+
+
+@pytest.mark.anyio
+async def test_create_gov_initiated_supplemental_fail_not_analyst(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_supplier: MagicMock,  # Assume a fixture for supplier user
+    mock_compliance_report_submitted: MagicMock,
+    mock_repo: AsyncMock,
+):
+    """Test failure when user is not an Analyst."""
+    # Patch user_has_roles to simulate a non-analyst
+    with patch(
+        "lcfs.web.api.compliance_report.services.user_has_roles",
+        return_value=False,
+    ):
+        with pytest.raises(ServiceException) as excinfo:
+            await compliance_report_service.create_government_initiated_supplemental_report(
+                mock_compliance_report_submitted.compliance_report_id,
+                mock_user_profile_supplier,
+            )
+
+    mock_repo.create_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_gov_initiated_supplemental_fail_not_submitted(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,
+    mock_compliance_report_draft: MagicMock,  # Assume fixture for draft report
+    mock_repo: AsyncMock,
+):
+    """Test failure when the source report is not Submitted."""
+    # Patch user_has_roles to ensure role check passes
+    with patch(
+        "lcfs.web.api.compliance_report.services.user_has_roles",
+        return_value=True,
+    ):
+        # Arrange
+        existing_report_id = mock_compliance_report_draft.compliance_report_id
+        mock_repo.get_compliance_report_by_id = AsyncMock(
+            return_value=mock_compliance_report_draft  # Use a draft report
+        )
+
+        # Act & Assert
+        with pytest.raises(ServiceException) as excinfo:  # Check type only first
+            # Run inside the patch context
+            await compliance_report_service.create_government_initiated_supplemental_report(
+                existing_report_id, mock_user_profile_analyst
+            )
+
+    mock_repo.create_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_gov_initiated_supplemental_fail_draft_exists(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,
+    mock_compliance_report_submitted: MagicMock,
+    mock_compliance_report_draft: MagicMock,  # Existing draft
+    mock_repo: AsyncMock,
+):
+    """Test failure when a draft report already exists for the group."""
+    # Patch user_has_roles to ensure role check passes
+    with patch(
+        "lcfs.web.api.compliance_report.services.user_has_roles", return_value=True
+    ):
+        # Arrange
+        # Ensure the report status is correctly set for this test
+        mock_compliance_report_submitted.current_status.status = (
+            ComplianceReportStatusEnum.Submitted
+        )
+        existing_report_id = mock_compliance_report_submitted.compliance_report_id
+        group_uuid = mock_compliance_report_submitted.compliance_report_group_uuid
+
+        mock_repo.get_compliance_report_by_id = AsyncMock(
+            return_value=mock_compliance_report_submitted
+        )
+        mock_repo.get_draft_report_by_group_uuid = AsyncMock(
+            return_value=mock_compliance_report_draft  # Simulate existing draft
+        )
+
+        # Act & Assert
+        with pytest.raises(ServiceException) as excinfo:  # Check type only first
+            # Run inside the patch context
+            await compliance_report_service.create_government_initiated_supplemental_report(
+                existing_report_id, mock_user_profile_analyst
+            )
+
+    mock_repo.create_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_get_changelog_data_fuel_supplies_delete(
+    compliance_report_service, mock_repo
+):
+    """Test changelog data with deleted fuel supplies"""
+
+    # Create a simple class that actually holds attributes instead of using MagicMock
+    class SimpleObject:
+        pass
+
+    # Create the first report with CREATE action
+    mock_report1 = SimpleObject()
+    mock_report1.nickname = "Report 1"
+    mock_report1.version = 1
+    mock_report1.compliance_report_id = 1
+
+    # Create the first fuel supply
+    mock_fuel_supply1 = SimpleObject()
+    mock_fuel_supply1.fuel_supply_id = 1
+    mock_fuel_supply1.group_uuid = "group-1"
+    mock_fuel_supply1.version = 1
+    mock_fuel_supply1.action_type = "CREATE"
+    mock_fuel_supply1.create_date = datetime(2024, 1, 1)
+    mock_fuel_supply1.compliance_units = 100
+    mock_fuel_supply1.quantity = 50
+    mock_fuel_supply1.compliance_report_id = 1
+    mock_fuel_supply1.create_user = "test_user"
+    mock_fuel_supply1.update_user = "test_user"
+    mock_fuel_supply1.units = "litres"
+    mock_fuel_supply1.fuel_type_other = ""
+
+    # Add related objects
+    mock_fuel_supply1.fuel_category = SimpleObject()
+    mock_fuel_supply1.fuel_category.category = "Gasoline"
+
+    mock_fuel_supply1.fuel_code = SimpleObject()
+    mock_fuel_supply1.fuel_code.fuelCode = "BCLCF100"
+
+    mock_fuel_supply1.fuel_type = SimpleObject()
+    mock_fuel_supply1.fuel_type.fuelType = "Ethanol"
+
+    mock_fuel_supply1.provision_of_the_act = SimpleObject()
+    mock_fuel_supply1.provision_of_the_act.name = "Section 6(1)"
+
+    mock_fuel_supply1.end_use_type = SimpleObject()
+    mock_fuel_supply1.end_use_type.type = "Transportation"
+
+    # Add required fields for DTO validation
+    for field in [
+        "carbon_intensity",
+        "carbon_intensity_limit",
+        "carbon_intensity_difference",
+        "energy_content",
+        "energy_effectiveness_ratio",
+        "effective_carbon_intensity",
+        "effective_carbon_intensity_limit",
+        "effective_carbon_intensity_difference",
+    ]:
+        setattr(mock_fuel_supply1, field, 0.0)
+
+    # Assign fuel supplies to report
+    mock_report1.fuel_supplies = [mock_fuel_supply1]
+
+    # Create the second report with DELETE action
+    mock_report2 = SimpleObject()
+    mock_report2.nickname = "Report 2"
+    mock_report2.version = 2
+    mock_report2.compliance_report_id = 2
+
+    # Create the deleted fuel supply
+    mock_fuel_supply2 = SimpleObject()
+    mock_fuel_supply2.fuel_supply_id = 1
+    mock_fuel_supply2.group_uuid = "group-1"
+    mock_fuel_supply2.version = 2
+    mock_fuel_supply2.action_type = "DELETE"
+    mock_fuel_supply2.create_date = datetime(2024, 1, 2)
+    mock_fuel_supply2.compliance_units = 100
+    mock_fuel_supply2.quantity = 50
+    mock_fuel_supply2.compliance_report_id = 2
+    mock_fuel_supply2.create_user = "test_user"
+    mock_fuel_supply2.update_user = "test_user"
+    mock_fuel_supply2.units = "litres"
+    mock_fuel_supply2.fuel_type_other = ""
+
+    # Add related objects
+    mock_fuel_supply2.fuel_category = SimpleObject()
+    mock_fuel_supply2.fuel_category.category = "Gasoline"
+
+    mock_fuel_supply2.fuel_code = SimpleObject()
+    mock_fuel_supply2.fuel_code.fuelCode = "BCLCF100"
+
+    mock_fuel_supply2.fuel_type = SimpleObject()
+    mock_fuel_supply2.fuel_type.fuelType = "Ethanol"
+
+    mock_fuel_supply2.provision_of_the_act = SimpleObject()
+    mock_fuel_supply2.provision_of_the_act.name = "Section 6(1)"
+
+    mock_fuel_supply2.end_use_type = SimpleObject()
+    mock_fuel_supply2.end_use_type.type = "Transportation"
+
+    # Add required fields for DTO validation
+    for field in [
+        "carbon_intensity",
+        "carbon_intensity_limit",
+        "carbon_intensity_difference",
+        "energy_content",
+        "energy_effectiveness_ratio",
+        "effective_carbon_intensity",
+        "effective_carbon_intensity_limit",
+        "effective_carbon_intensity_difference",
+    ]:
+        setattr(mock_fuel_supply2, field, 0.0)
+
+    # Assign fuel supplies to report
+    mock_report2.fuel_supplies = [mock_fuel_supply2]
+
+    # Mock repository to return the reports
+    mock_repo.get_changelog_data.return_value = [mock_report2, mock_report1]
+
+    # Call the service method
+    result = await compliance_report_service.get_changelog_data(
+        "test-group-uuid", "fuel_supplies"
+    )
+
+    # Assertions
+    assert len(result) == 3  # Should have 3 DTOs: Current State, Report 2, Report 1
+
+    # Current state should be empty since the item was deleted
+    assert result[0].nickname == "Current State"
+    assert len(result[0].fuel_supplies) == 0
+
+    # Check Report 2 (with delete)
+    assert result[1].nickname == "Report 2"
+    assert len(result[1].fuel_supplies) == 1
+    assert result[1].fuel_supplies[0].action_type == "DELETE"
+
+
+@pytest.mark.anyio
+async def test_get_changelog_data_with_multiple_items(
+    compliance_report_service, mock_repo
+):
+    """Test changelog with multiple fuel supplies"""
+
+    # Create a simple class that actually holds attributes
+    class SimpleObject:
+        pass
+
+    # Create the mock report
+    mock_report = SimpleObject()
+    mock_report.nickname = "Report 1"
+    mock_report.version = 1
+    mock_report.compliance_report_id = 1
+
+    # Helper function to create a fuel supply with all required attributes
+    def create_fuel_supply(fuel_id, group_id, create_date, compliance_units):
+        fs = SimpleObject()
+        fs.fuel_supply_id = fuel_id
+        fs.group_uuid = group_id
+        fs.version = 1
+        fs.action_type = "CREATE"
+        fs.create_date = create_date
+        fs.compliance_units = compliance_units
+        fs.quantity = 50
+        fs.compliance_report_id = 1
+        fs.create_user = "test_user"
+        fs.update_user = "test_user"
+        fs.units = "litres"
+        fs.fuel_type_other = ""
+
+        # Add related objects
+        fs.fuel_category = SimpleObject()
+        fs.fuel_category.category = "Gasoline"
+
+        fs.fuel_code = SimpleObject()
+        fs.fuel_code.fuelCode = "BCLCF100"
+
+        fs.fuel_type = SimpleObject()
+        fs.fuel_type.fuelType = "Ethanol"
+
+        fs.provision_of_the_act = SimpleObject()
+        fs.provision_of_the_act.name = "Section 6(1)"
+
+        fs.end_use_type = SimpleObject()
+        fs.end_use_type.type = "Transportation"
+
+        # Add required fields for DTO validation
+        for field in [
+            "carbon_intensity",
+            "carbon_intensity_limit",
+            "carbon_intensity_difference",
+            "energy_content",
+            "energy_effectiveness_ratio",
+            "effective_carbon_intensity",
+            "effective_carbon_intensity_limit",
+            "effective_carbon_intensity_difference",
+        ]:
+            setattr(fs, field, 0.0)
+
+        return fs
+
+    # Create two fuel supply entries
+    mock_fuel_supply1 = create_fuel_supply(1, "group-1", datetime(2024, 1, 1), 100)
+    mock_fuel_supply2 = create_fuel_supply(2, "group-2", datetime(2024, 1, 2), 200)
+
+    # Assign fuel supplies to report
+    mock_report.fuel_supplies = [mock_fuel_supply1, mock_fuel_supply2]
+
+    # Mock repository to return the reports
+    mock_repo.get_changelog_data.return_value = [mock_report]
+
+    # Call the service method
+    result = await compliance_report_service.get_changelog_data(
+        "test-group-uuid", "fuel_supplies"
+    )
+
+    # Assertions
+    assert len(result) == 2  # Should have 2 DTOs: Current State and Report 1
+
+    # Check current state has both items
+    assert result[0].nickname == "Current State"
+    assert len(result[0].fuel_supplies) == 2
+
+    # Items should be sorted by create_date
+    fuel_supplies = result[0].fuel_supplies
+    # Sort by fuel_supply_id to ensure consistent order
+    fuel_supplies_sorted = sorted(fuel_supplies, key=lambda x: x.fuel_supply_id)
+    assert fuel_supplies_sorted[0].fuel_supply_id == 1
+    assert fuel_supplies_sorted[1].fuel_supply_id == 2
+
+
+@pytest.mark.anyio
+async def test_get_changelog_data_other_types(compliance_report_service, mock_repo):
+    """Test changelog for other data types (allocation agreements, fuel exports, etc.)"""
+
+    # Create a simple class that actually holds attributes
+    class SimpleObject:
+        pass
+
+    # Create the mock report
+    mock_report = SimpleObject()
+    mock_report.nickname = "Report 1"
+    mock_report.version = 1
+    mock_report.compliance_report_id = 1
+
+    # Create a mock allocation agreement with all required fields
+    mock_agreement = SimpleObject()
+    mock_agreement.allocation_agreement_id = 1
+    mock_agreement.group_uuid = "group-1"
+    mock_agreement.version = 1
+    mock_agreement.action_type = "CREATE"
+    mock_agreement.create_date = datetime(2024, 1, 1)
+
+    # Add the additional required fields based on validation errors
+    mock_agreement.create_user = "test_user"
+    mock_agreement.update_user = "test_user"
+    mock_agreement.compliance_report_id = 1
+    mock_agreement.transaction_partner = "Partner Company"
+    mock_agreement.postal_address = "123 Test St, Test City"
+    mock_agreement.quantity = 100
+    mock_agreement.units = "litres"
+
+    # Add related objects
+    mock_agreement.allocation_transaction_type = SimpleObject()
+    mock_agreement.allocation_transaction_type.type = "Transfer"
+
+    mock_agreement.fuel_category = SimpleObject()
+    mock_agreement.fuel_category.category = "Gasoline"
+
+    mock_agreement.fuel_code = SimpleObject()
+    mock_agreement.fuel_code.fuelCode = "BCLCF100"
+
+    mock_agreement.fuel_type = SimpleObject()
+    mock_agreement.fuel_type.fuelType = "Ethanol"
+
+    mock_agreement.provision_of_the_act = SimpleObject()
+    mock_agreement.provision_of_the_act.name = "Section 6(1)"
+
+    # Assign allocation agreements to report
+    mock_report.allocation_agreements = [mock_agreement]
+
+    # Mock repository to return the reports
+    mock_repo.get_changelog_data.return_value = [mock_report]
+
+    # Call the service method for allocation_agreements
+    result = await compliance_report_service.get_changelog_data(
+        "test-group-uuid", "allocation_agreements"
+    )
+
+    # Assertions
+    assert len(result) == 2  # Should have 2 DTOs: Current State and Report 1
+    assert result[0].nickname == "Current State"
+    assert len(result[0].allocation_agreements) == 1
+
+    # Verify correct DTO type was used
+    assert isinstance(result[0], ChangelogAllocationAgreementsDTO)
+
+    # Check repository was called with correct parameters
+    mock_repo.get_changelog_data.assert_called_with(
+        "test-group-uuid",
+        {
+            "model": AllocationAgreement,
+            "dto": ChangelogAllocationAgreementsDTO,
+            "id_field": "allocation_agreement_id",
+            "relationships": [
+                ("allocation_agreements", "allocation_transaction_type"),
+                ("allocation_agreements", "fuel_type"),
+                ("allocation_agreements", "fuel_category"),
+                ("allocation_agreements", "fuel_code"),
+                ("allocation_agreements", "provision_of_the_act"),
+            ],
+        },
+    )
+
+
+@pytest.mark.anyio
+async def test_get_changelog_data_empty_results(compliance_report_service, mock_repo):
+    """Test handling of empty changelog data"""
+
+    # Mock repository to return empty list
+    mock_repo.get_changelog_data.return_value = []
+
+    # Call the service method
+    result = await compliance_report_service.get_changelog_data(
+        "test-group-uuid", "fuel_supplies"
+    )
+
+    # Assertions
+    assert result == []
+    mock_repo.get_changelog_data.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_get_changelog_data_invalid_type(compliance_report_service):
+    """Test error handling for invalid data type"""
+
+    # Call the service method with invalid data type
+    with pytest.raises(ValueError) as exc:
+        await compliance_report_service.get_changelog_data(
+            "test-group-uuid", "invalid_type"
+        )
+
+    assert "Invalid data_type: invalid_type" in str(exc.value)
+
+
+@pytest.mark.anyio
+async def test_get_changelog_data_unexpected_error(
+    compliance_report_service, mock_repo
+):
+    """Test handling of unexpected errors"""
+
+    # Mock repository to raise exception
+    mock_repo.get_changelog_data.side_effect = Exception("Unexpected error")
+
+    # Call the service method
+    with pytest.raises(ServiceException):
+        await compliance_report_service.get_changelog_data(
+            "test-group-uuid", "fuel_supplies"
+        )
+
+
+class TestMaskReportStatusForHistory:
+    """
+    Tests for the _mask_report_status_for_history method in ComplianceReportServices.
+    """
+
+    @pytest.fixture
+    def service(self) -> ComplianceReportServices:
+        """Provides a simple instance of ComplianceReportServices for testing this method."""
+        # The _mask_report_status_for_history method is pure Python logic on its inputs,
+        # so it doesn't need real dependencies for these tests.
+        return ComplianceReportServices(
+            repo=MagicMock(),
+            org_repo=MagicMock(),
+            snapshot_services=MagicMock(),
+            final_supply_equipment_service=MagicMock(),
+            document_service=MagicMock(),
+            transaction_repo=MagicMock(),
+        )
+
+    def _create_mock_history_item(
+        self,
+        status_enum: ComplianceReportStatusEnum,
+        creator_is_idir: bool,
+        original_display_name: str = "Test User",
+        creator_has_organization_explicitly: bool = None,  # True if creator has org, False if no org, None for default creator_is_idir logic
+    ):
+        item = MagicMock()
+        item.status = MagicMock()
+        item.status.status = status_enum.value
+
+        item.user_profile = MagicMock()
+        if creator_has_organization_explicitly is None:  # Default behavior
+            item.user_profile.organization = None if creator_is_idir else "Supplier Org"
+        else:
+            item.user_profile.organization = (
+                "Supplier Org" if creator_has_organization_explicitly else None
+            )
+
+        item.user_profile.display_name = original_display_name
+        item.display_name = original_display_name  # This is what gets directly modified
+        return item
+
+    def _create_mock_report(self, history_items: list) -> MagicMock:
+        report = MagicMock(spec=ComplianceReportBaseSchema)
+        report.history = history_items
+        return report
+
+    def _configure_user_roles(
+        self,
+        mock_user_has_roles_patch: MagicMock,
+        requesting_user: UserProfile,
+        is_government: bool = False,
+        is_analyst: bool = False,
+    ):
+        def side_effect(user_obj, roles_to_check):
+            if user_obj == requesting_user:
+                if RoleEnum.GOVERNMENT in roles_to_check:
+                    return is_government
+                if RoleEnum.ANALYST in roles_to_check:
+                    return is_analyst
+            # Fallback for any other user object or role check not configured for this test
+            # This helps avoid TypeErrors if user_has_roles is called unexpectedly.
+            # For strict tests, one might raise an error here.
+            return False
+
+        mock_user_has_roles_patch.side_effect = side_effect
+
+    # --- Tests for Draft Status ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_draft_by_idir_viewed_by_idir_is_visible(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft,
+            creator_is_idir=True,
+            original_display_name="IDIR Creator",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "IDIR Creator"  # No masking
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_draft_by_idir_viewed_by_supplier_is_visible_and_masked(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False  # Supplier
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft,
+            creator_is_idir=True,
+            original_display_name="IDIR Creator",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Government of British Columbia"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_draft_by_supplier_viewed_by_idir_is_hidden(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft, creator_is_idir=False
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_draft_by_supplier_viewed_by_supplier_is_hidden(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False  # Supplier
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft, creator_is_idir=False
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0
+
+    # --- Tests for BCeID Hidden Statuses ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_bceid_hidden_status_viewed_by_idir_is_visible(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Recommended_by_analyst,
+            creator_is_idir=True,
+            original_display_name="Analyst",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Analyst"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_bceid_hidden_status_viewed_by_supplier_is_hidden(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False  # Supplier
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Recommended_by_manager, creator_is_idir=True
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0
+
+    # --- Tests for Non-Analyst Hidden Statuses ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_non_analyst_hidden_status_viewed_by_analyst_is_visible(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True, is_analyst=True
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Analyst_adjustment,
+            creator_is_idir=True,
+            original_display_name="Analyst",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Analyst"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_non_analyst_hidden_status_viewed_by_idir_director_is_hidden(
+        self, mock_user_has_roles, service
+    ):  # Director is IDIR but not Analyst
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True, is_analyst=False
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Analyst_adjustment, creator_is_idir=True
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_non_analyst_hidden_status_viewed_by_supplier_is_hidden(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles,
+            requesting_user,
+            is_government=False,
+            is_analyst=False,  # Supplier
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Analyst_adjustment, creator_is_idir=True
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0  # Hidden due to non-analyst rule
+
+    # --- Tests for Standard Visible Statuses & Masking ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_assessed_by_idir_viewed_by_idir_visible_not_masked(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Assessed,
+            creator_is_idir=True,
+            original_display_name="Gov Assessor",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Gov Assessor"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_assessed_by_idir_viewed_by_supplier_visible_and_masked(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False  # Supplier
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Assessed,
+            creator_is_idir=True,
+            original_display_name="Gov Assessor",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Government of British Columbia"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_submitted_by_supplier_viewed_by_idir_visible_not_masked(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Submitted,
+            creator_is_idir=False,
+            original_display_name="Supplier User",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Supplier User"
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_submitted_by_supplier_viewed_by_supplier_visible_not_masked(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False  # Supplier
+        )
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Submitted,
+            creator_is_idir=False,
+            original_display_name="Supplier User",
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Supplier User"
+
+    # --- Test for Masking Fallback Logic ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_masking_fallback_idir_status_creator_with_org_viewed_by_supplier(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False
+        )  # Supplier viewer
+
+        # Creator has an org (so primary is_idir check is false), but status is a gov status
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Assessed,
+            creator_is_idir=False,  # This will set org to "Supplier Org"
+            original_display_name="User With Org Performing Gov Action",
+            creator_has_organization_explicitly=True,  # Explicitly give them an org
+        )
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 1
+        assert result_report.history[0].display_name == "Government of British Columbia"
+
+    # --- Edge Cases ---
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_empty_history(self, mock_user_has_roles, service):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+        report = self._create_mock_report([])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        assert len(result_report.history) == 0
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_history_item_no_user_profile_draft_is_hidden(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=True
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft, creator_is_idir=False
+        )
+        history_item.user_profile = None  # No user profile
+
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+        # history_creator_is_idir will be false, so draft by non-idir is hidden
+        assert len(result_report.history) == 0
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_history_item_no_user_profile_assessed_is_visible_no_masking(
+        self, mock_user_has_roles, service
+    ):
+        requesting_user = MagicMock(spec=UserProfile)  # Supplier viewer
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False
+        )
+
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Assessed,
+            creator_is_idir=False,
+            original_display_name="Unknown User",
+        )
+        history_item.user_profile = None  # No user profile
+
+        report = self._create_mock_report([history_item])
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 1
+        assert (
+            result_report.history[0].display_name == "Unknown User"
+        )  # No masking possible
+
+    @patch("lcfs.web.api.compliance_report.services.user_has_roles")
+    def test_multiple_history_items_mixed_scenarios(self, mock_user_has_roles, service):
+        requesting_user = MagicMock(spec=UserProfile)  # Supplier viewer
+        self._configure_user_roles(
+            mock_user_has_roles, requesting_user, is_government=False, is_analyst=False
+        )
+
+        item1_draft_by_idir = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft,
+            creator_is_idir=True,
+            original_display_name="Gov Draft",
+        )  # Visible, Masked
+        item2_draft_by_supplier = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft, creator_is_idir=False
+        )  # Hidden
+        item3_recommended_by_analyst = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Recommended_by_analyst, creator_is_idir=True
+        )  # Hidden for supplier
+        item4_submitted_by_supplier = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Submitted,
+            creator_is_idir=False,
+            original_display_name="Supplier Submit",
+        )  # Visible, Not Masked
+        item5_assessed_by_idir = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Assessed,
+            creator_is_idir=True,
+            original_display_name="Gov Assess",
+        )  # Visible, Masked
+
+        history_items = [
+            item1_draft_by_idir,
+            item2_draft_by_supplier,
+            item3_recommended_by_analyst,
+            item4_submitted_by_supplier,
+            item5_assessed_by_idir,
+        ]
+        report = self._create_mock_report(history_items)
+        result_report = service._mask_report_status_for_history(report, requesting_user)
+
+        assert len(result_report.history) == 3
+
+        # Check item1 (Gov Draft, viewed by supplier)
+        assert (
+            result_report.history[0].status.status
+            == ComplianceReportStatusEnum.Draft.value
+        )
+        assert result_report.history[0].display_name == "Government of British Columbia"
+
+        # Check item4 (Supplier Submit, viewed by supplier)
+        assert (
+            result_report.history[1].status.status
+            == ComplianceReportStatusEnum.Submitted.value
+        )
+        assert result_report.history[1].display_name == "Supplier Submit"
+
+        # Check item5 (Gov Assess, viewed by supplier)
+        assert (
+            result_report.history[2].status.status
+            == ComplianceReportStatusEnum.Assessed.value
+        )
+        assert result_report.history[2].display_name == "Government of British Columbia"

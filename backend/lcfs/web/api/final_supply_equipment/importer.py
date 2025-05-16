@@ -55,6 +55,7 @@ class FinalSupplyEquipmentImporter:
         self,
         compliance_report_id: int,
         user: UserProfile,
+        org_code: str,
         file: UploadFile,
         overwrite: bool,
     ) -> str:
@@ -71,6 +72,7 @@ class FinalSupplyEquipmentImporter:
             raise DataNotFoundException("Compliance report not found.")
 
         job_id = str(uuid.uuid4())
+
         # Initialize job status in Redis
         await _update_progress(
             self.redis_client, job_id, 0, "Starting import job...", 0, 0, []
@@ -91,6 +93,7 @@ class FinalSupplyEquipmentImporter:
                 import_async(
                     compliance_report_id,
                     user,
+                    org_code,
                     copied_file,
                     job_id,
                     overwrite,
@@ -124,6 +127,7 @@ class FinalSupplyEquipmentImporter:
 async def import_async(
     compliance_report_id: int,
     user: UserProfile,
+    org_code: str,
     file: UploadFile,
     job_id: str,
     overwrite: bool,
@@ -165,7 +169,6 @@ async def import_async(
                         redis_client, job_id, 10, "Deleting old data..."
                     )
                     await fse_service.delete_all(compliance_report_id)
-                    org_code = user.organization.organization_code
                     await fse_repo.reset_seq_by_org(org_code)
 
                 # Optional: Scan the file with ClamAV if enabled

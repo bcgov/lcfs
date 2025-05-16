@@ -183,13 +183,11 @@ async def create_supplemental_report(
     request: Request,
     report_id: int,
     service: ComplianceReportServices = Depends(),
-    document_service: DocumentService = Depends(),
 ) -> ComplianceReportBaseSchema:
     """
     Create a supplemental compliance report.
     """
     new_report = await service.create_supplemental_report(report_id, request.user)
-    await document_service.copy_documents(report_id, new_report.compliance_report_id)
     return new_report
 
 
@@ -198,18 +196,37 @@ async def create_supplemental_report(
     response_model=ComplianceReportBaseSchema,
     status_code=status.HTTP_201_CREATED,
 )
-@view_handler([RoleEnum.GOVERNMENT])
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
 async def create_government_adjustment(
     request: Request,
     report_id: int,
     service: ComplianceReportServices = Depends(),
-    document_service: DocumentService = Depends(),
 ) -> ComplianceReportBaseSchema:
     """
     Create a government adjustment.
     """
     new_report = await service.create_analyst_adjustment_report(report_id, request.user)
-    await document_service.copy_documents(report_id, new_report.compliance_report_id)
+    return new_report
+
+
+@router.post(
+    "/{report_id}/idir-supplemental",
+    response_model=ComplianceReportBaseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+async def create_government_initiated_supplemental_report(
+    request: Request,
+    report_id: int,
+    service: ComplianceReportServices = Depends(),
+) -> ComplianceReportBaseSchema:
+    """
+    Create a government-initiated supplemental compliance report (Analyst action).
+    Results in a new Draft report for the supplier.
+    """
+    new_report = await service.create_government_initiated_supplemental_report(
+        report_id, request.user
+    )
     return new_report
 
 

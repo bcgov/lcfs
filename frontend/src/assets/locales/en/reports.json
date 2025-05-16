@@ -69,12 +69,15 @@
     "assessReportBtn": "Issue assessment",
     "reAssessReportBtn": "Re-assess report",
     "deleteSupplementalReportBtn": "Delete supplemental report",
-    "deleteAnalystAdjustmentBtn": "Delete analyst adjustment"
+    "deleteAnalystAdjustmentBtn": "Delete analyst adjustment",
+    "createSupplementalReportBtn": "Create Supplemental Report"
   },
   "savedSuccessText": "Compliance report successfully {{status}}",
+  "supplementalCreatedSuccessText": "Supplemental report created successfully",
   "reportDeleteSuccessText": "Draft compliance report successfully deleted",
   "submitConfirmText": "Are you sure you want to sign and submit this compliance report?",
   "deleteConfirmText": "Are you sure you want to delete this draft report? This action cannot be undone, and all changes will be lost.",
+  "createIdirSupplementalConfirmText": "This will create a draft supplemental report for the supplier, further processing will be disabled for government users.",
   "recommendConfirmText": "Are you sure you want to recommend this compliance report?",
   "returnToAnalystConfirmText": "Are you sure you want to return this compliance report back to analyst?",
   "returnToManagerConfirmText": "Are you sure you want to return this compliance report back to compliance manager?",
@@ -135,6 +138,46 @@
       "header": "About this form",
       "content": [
         "<p>Due to administrative and legislative changes, the values and calculations presented in this report before submission are for informational purposes only and are subject to change without prior notice. The Declaration & Summary section of this Compliance Report consolidates information from the other schedules of this report. Please refer to the User Guide provided for navigation instructions. The Low Carbon Fuels Act, Low Carbon Fuels (General) Regulation, and Low Carbon Fuels (Technical) Regulation are available online at <a href='http://www.bclaws.ca'>http://www.bclaws.ca</a>.</p>"
+      ]
+    }
+  ],
+  "earlyIssuanceIntroSections": [
+    {
+      "header": "Early Issuance Reporting",
+      "content": [
+        "<p>Under the Low Carbon Fuels Act, early issuance reporting is an opportunity for organizations to receive compliance units for eligible low carbon fuel supplied before the annual compliance report is due. This reporting is optional and must follow specific requirements set out by the director and described in the Low Carbon Fuels (Technical) Regulation.</p>"
+      ]
+    },
+    {
+      "header": "Who is eligible?",
+      "content": [
+        "<p>Under section 20 (1) of the Low Carbon Fuels (Technical) Regulation, organizations may apply for early issuance if they:</p>",
+        "<ul><li>Have not marketed, and do not intend to market, fuel within the compliance period that has generated negative compliance units upon reporting.</li><li>Have not exported, and do not intend to export, fuel within a compliance period.</li></ul>"
+      ]
+    },
+    {
+      "header": "Purpose of early issuance",
+      "content": [
+        "<p>Early issuance enables the issuance of <strong>positive compliance units (credits)</strong> before the March 31 annual report deadline.</p>",
+        "<p>Credits received through early issuance are <strong>subject to verification</strong>. Any inaccuracies may result in reassessment, and potential penalties if discrepancies are found.</p>"
+      ]
+    },
+    {
+      "header": "Important notes",
+      "content": [
+        "<ul><li>Credits issued under early reporting are <strong>preliminary</strong> and may be adjusted during full compliance assessment.</li><li>Organizations that receive early issuance <strong>credits must still submit a complete annual compliance report.</strong></li></ul>"
+      ]
+    },
+    {
+      "header": "Audits of reports",
+      "content": [
+        "<p>Responsible parties must keep sufficient records to verify and evaluate any reports and information submitted to the director. Under section 34 of the Low Carbon Fuels Act, the director can require an organization that submits a report to have the report audited to verify compliance with the legislation. Any inconsistencies noted during the audit may be contraventions under the Low Carbon Fuels Act and may be subject to penalty after substantiation.</p>"
+      ]
+    },
+    {
+      "header": "About this form",
+      "content": [
+        "<p>Due to administrative and legislative changes, the values and calculations presented in this report before submission are for informational purposes only and are subject to change without prior notice. The Declaration & Summary section of this Early Issuance Report consolidates information from early issuance reporting only. Please refer to the User Guide provided for navigation instructions. The Low Carbon Fuels Act, Low Carbon Fuels (General) Regulation, and Low Carbon Fuels (Technical) Regulation are available online at <a href='http://www.bclaws.ca'>http://www.bclaws.ca</a>.</p>"
       ]
     }
   ],

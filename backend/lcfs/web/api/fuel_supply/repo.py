@@ -1,10 +1,9 @@
 import structlog
 from datetime import datetime
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, delete
-from sqlalchemy import func
+from sqlalchemy import and_, or_, select, delete, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload, aliased
 from typing import List, Optional, Sequence, Any
 
 from lcfs.db.base import ActionTypeEnum
@@ -32,7 +31,7 @@ from lcfs.db.models.fuel import (
 )
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
-from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema
+from lcfs.web.api.fuel_supply.schema import FuelSupplyCreateUpdateSchema, ModeEnum
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -243,18 +242,23 @@ class FuelSupplyRepository:
     async def get_fuel_supply_list(
         self,
         compliance_report_id: int,
-        changelog: Optional[bool] = False,
+        mode: Optional[ModeEnum] = ModeEnum.VIEW,
     ) -> List[FuelSupply]:
         """
         Retrieve the list of effective fuel supplies for a given compliance report.
         """
-        # Retrieve the compliance report's group UUID
-        report_group_query = await self.db.execute(
-            select(ComplianceReport.compliance_report_group_uuid).where(
-                ComplianceReport.compliance_report_id == compliance_report_id
-            )
+        # Retrieve the compliance report's group UUID and version
+        report_query = await self.db.execute(
+            select(
+                ComplianceReport.compliance_report_group_uuid, ComplianceReport.version
+            ).where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
-        group_uuid = report_group_query.scalar()
+        result = report_query.first()
+
+        if not result:
+            return [], 0
+
+        group_uuid, version = result
         if not group_uuid:
             return []
 
@@ -262,7 +266,8 @@ class FuelSupplyRepository:
         effective_fuel_supplies = await self.get_effective_fuel_supplies(
             compliance_report_group_uuid=group_uuid,
             compliance_report_id=compliance_report_id,
-            changelog=changelog,
+            version=version,
+            mode=mode,
         )
 
         return effective_fuel_supplies
@@ -277,21 +282,25 @@ class FuelSupplyRepository:
         """
         Retrieve a paginated list of effective fuel supplies for a given compliance report.
         """
-        # Retrieve the compliance report's group UUID
-        report_group_query = await self.db.execute(
-            select(ComplianceReport.compliance_report_group_uuid).where(
-                ComplianceReport.compliance_report_id == compliance_report_id
-            )
+        # Retrieve the compliance report's group UUID and version
+        report_query = await self.db.execute(
+            select(
+                ComplianceReport.compliance_report_group_uuid, ComplianceReport.version
+            ).where(ComplianceReport.compliance_report_id == compliance_report_id)
         )
-        group_uuid = report_group_query.scalar()
+        result = report_query.first()
+
+        if not result:
+            return [], 0
+
+        group_uuid, version = result
         if not group_uuid:
             return [], 0
 
         if effective:
             # Retrieve effective fuel supplies using the group UUID
             fuel_supplies = await self.get_effective_fuel_supplies(
-                group_uuid,
-                compliance_report_id,
+                group_uuid, compliance_report_id, version
             )
         else:
             fuel_supplies = await self.get_fuel_supplies(compliance_report_id)
@@ -373,34 +382,44 @@ class FuelSupplyRepository:
     async def check_duplicate(self, fuel_supply: FuelSupplyCreateUpdateSchema):
         """Check if this would duplicate an existing row"""
 
-        delete_group_subquery = (
-            select(FuelSupply.group_uuid)
-            .where(
-                FuelSupply.compliance_report_id == fuel_supply.compliance_report_id,
-                FuelSupply.action_type == ActionTypeEnum.DELETE,
-            )
-            .distinct()
-        )
+        CurrentReport = aliased(ComplianceReport)
 
+        # Get all compliance report IDs that belong to the same group in a subquery
+        related_reports_subquery = (
+            select(ComplianceReport.compliance_report_id)
+            .join(
+                CurrentReport,
+                CurrentReport.compliance_report_id == fuel_supply.compliance_report_id,
+            )
+            .where(
+                ComplianceReport.compliance_report_group_uuid
+                == CurrentReport.compliance_report_group_uuid
+            )
+        )
         # Type, Category, and Determine CI/Fuel codes are included
-        query = select(FuelSupply.fuel_supply_id).where(
-            FuelSupply.compliance_report_id == fuel_supply.compliance_report_id,
+        duplicate_query = select(FuelSupply.fuel_supply_id).where(
+            FuelSupply.compliance_report_id.in_(related_reports_subquery),
             FuelSupply.fuel_type_id == fuel_supply.fuel_type_id,
             FuelSupply.fuel_category_id == fuel_supply.fuel_category_id,
             FuelSupply.provision_of_the_act_id == fuel_supply.provision_of_the_act_id,
             FuelSupply.fuel_code_id == fuel_supply.fuel_code_id,
-            FuelSupply.group_uuid != fuel_supply.group_uuid,
             FuelSupply.end_use_id == fuel_supply.end_use_id,
-            FuelSupply.action_type == ActionTypeEnum.CREATE,
-            ~FuelSupply.group_uuid.in_(delete_group_subquery),
-            (
-                FuelSupply.fuel_supply_id != fuel_supply.fuel_supply_id
-                if fuel_supply.fuel_supply_id is not None
-                else True
-            ),
+            FuelSupply.action_type.in_([ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]),
+            FuelSupply.group_uuid != fuel_supply.group_uuid,
         )
 
-        result = await self.db.execute(query)
+        # Add conditional filter for fuel_supply_id if it exists
+        if fuel_supply.fuel_supply_id is not None:
+            duplicate_query = duplicate_query.where(
+                FuelSupply.fuel_supply_id != fuel_supply.fuel_supply_id
+            )
+
+        # Add ordering to get the most recent record
+        duplicate_query = duplicate_query.order_by(
+            FuelSupply.create_date.desc(), FuelSupply.version.desc()
+        )
+
+        result = await self.db.execute(duplicate_query)
         return result.scalars().first()
 
     @repo_handler
@@ -443,18 +462,21 @@ class FuelSupplyRepository:
         self,
         compliance_report_group_uuid: str,
         compliance_report_id: int,
-        changelog: Optional[bool] = False,
+        version: int,
+        mode: Optional[ModeEnum] = ModeEnum.VIEW,
     ) -> Sequence[FuelSupply]:
         """
         Queries fuel supplies from the database for a specific compliance report.
-        If changelog=True, includes deleted records to show history.
+        If mode=VIEW: Shows only active records (excludes deleted ones)
+        If mode=EDIT: Shows records for the current compliance report only including deletes in case of supplemental records
+        If mode=CHANGELOG: Shows all history including deleted records.
         """
         # Get all compliance report IDs in the group up to the specified report
         compliance_reports_select = select(ComplianceReport.compliance_report_id).where(
             and_(
                 ComplianceReport.compliance_report_group_uuid
                 == compliance_report_group_uuid,
-                ComplianceReport.compliance_report_id <= compliance_report_id,
+                ComplianceReport.version <= version,
             )
         )
 
@@ -471,7 +493,7 @@ class FuelSupplyRepository:
         # Build query conditions
         conditions = [FuelSupply.compliance_report_id.in_(compliance_reports_select)]
 
-        if changelog:
+        if mode == ModeEnum.CHANGELOG:
             # In changelog view, include all groups (both active and deleted)
             conditions.extend(
                 [
@@ -481,7 +503,7 @@ class FuelSupplyRepository:
                     )
                 ]
             )
-        else:
+        elif mode == ModeEnum.VIEW:
             # In regular view, exclude any groups that have deleted records
             conditions.extend([~FuelSupply.group_uuid.in_(deleted_groups)])
 
@@ -527,7 +549,18 @@ class FuelSupplyRepository:
             )
             .order_by(FuelSupply.create_date.asc())
         )
-
+        if mode == ModeEnum.EDIT:
+            query = query.where(
+                or_(
+                    and_(
+                        FuelSupply.compliance_report_id == compliance_report_id,
+                        FuelSupply.action_type == ActionTypeEnum.DELETE,
+                    ),
+                    FuelSupply.action_type.in_(
+                        [ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]
+                    ),
+                )
+            )
         result = await self.db.execute(query)
         fuel_supplies = result.unique().scalars().all()
 

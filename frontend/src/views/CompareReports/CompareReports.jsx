@@ -40,16 +40,21 @@ export const CompareReports = () => {
   const [report1ID, setReport1ID] = useState(null)
   const [report2ID, setReport2ID] = useState(null)
   const [fuelType, setFuelType] = useState('gasoline')
+
   useEffect(() => {
     if (complianceReport) {
       const { chain } = complianceReport
-      if (chain?.length > 0) {
-        setReport2ID(chain[0].complianceReportId)
-      }
-      if (chain?.length > 1) {
-        setReport1ID(chain[1].complianceReportId)
-      }
       setReportChain(chain)
+
+      // Set default selections to the two most recent reports
+      if (chain.length >= 2) {
+        const sortedChain = [...chain].sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        )
+        setReport1ID(sortedChain[0].complianceReportId)
+        setReport2ID(sortedChain[1].complianceReportId)
+      }
+
       setIsLoading(false)
     }
   }, [complianceReport])
@@ -65,6 +70,7 @@ export const CompareReports = () => {
   const [lowCarbonSummary, setLowCarbonSummary] = useState([])
   const [nonCompliancePenaltySummary, setNonCompliancePenaltySummary] =
     useState([])
+
   useEffect(() => {
     const renewableSummary = []
     const lowCarbonSummary = []
@@ -124,11 +130,37 @@ export const CompareReports = () => {
   }, [report1Summary, report2Summary, fuelType])
 
   function onSelectReport1(event) {
-    setReport1ID(event.target.value)
+    const newReport1ID = event.target.value
+    setReport1ID(newReport1ID)
+
+    if (newReport1ID === report2ID && reportChain.length > 1) {
+      const availableReports = reportChain.filter(
+        (report) => report.complianceReportId !== newReport1ID
+      )
+
+      if (availableReports.length > 0) {
+        setReport2ID(availableReports[0].complianceReportId)
+      } else {
+        setReport2ID(null)
+      }
+    }
   }
 
   function onSelectReport2(event) {
-    setReport2ID(event.target.value)
+    const newReport2ID = event.target.value
+    setReport2ID(newReport2ID)
+
+    if (newReport2ID === report1ID && reportChain.length > 1) {
+      const availableReports = reportChain.filter(
+        (report) => report.complianceReportId !== newReport2ID
+      )
+
+      if (availableReports.length > 0) {
+        setReport1ID(availableReports[0].complianceReportId)
+      } else {
+        setReport1ID(null)
+      }
+    }
   }
 
   if (isLoading) {
@@ -137,12 +169,12 @@ export const CompareReports = () => {
 
   const selectedReportName1 = report1ID
     ? reportChain.find((report) => report.complianceReportId === report1ID)
-        .nickname
+        ?.nickname || ''
     : ''
 
   const selectedReportName2 = report2ID
     ? reportChain.find((report) => report.complianceReportId === report2ID)
-        .nickname
+        ?.nickname || ''
     : ''
 
   return (
@@ -165,9 +197,10 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report1ID}
+              value={report1ID || ''}
               variant="outlined"
               onChange={onSelectReport1}
+              displayEmpty
             >
               {reportChain
                 .filter((report) => report.complianceReportId !== report2ID)
@@ -190,9 +223,10 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report2ID}
+              value={report2ID || ''}
               variant="outlined"
               onChange={onSelectReport2}
+              displayEmpty
             >
               {reportChain
                 .filter((report) => report.complianceReportId !== report1ID)
@@ -230,8 +264,8 @@ export const CompareReports = () => {
         title={t('report:nonCompliancePenaltySummary')}
         columns={nonCompliancePenaltyColumns(
           t,
-          report1ID ? `CR${report1ID.compliancePeriod}` : '',
-          report2ID ? `CR${report2ID.compliancePeriod}` : ''
+          selectedReportName1 || '',
+          selectedReportName2 || ''
         )}
         data={nonCompliancePenaltySummary}
       />

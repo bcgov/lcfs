@@ -3,16 +3,12 @@ import { Box, Card, CardContent, IconButton } from '@mui/material'
 import LinearProgress from '@mui/material/LinearProgress'
 import { useTranslation } from 'react-i18next'
 import BCTypography from '@/components/BCTypography'
-import {
-  useGetFinalSupplyEquipmentImportJobStatus,
-  useImportFinalSupplyEquipment
-} from '@/hooks/useFinalSupplyEquipment.js'
 import { styled } from '@mui/system'
 import { CloudUpload } from '@mui/icons-material'
 import { useEffect, useRef, useState } from 'react'
 import { MAX_FILE_SIZE_BYTES } from '@/constants/common.js'
-import BCAlert from '@/components/BCAlert/index.jsx'
-import BCBox from '@/components/BCBox/index.jsx'
+import BCAlert from '@/components/BCAlert'
+import BCBox from '@/components/BCBox'
 
 function LinearProgressWithLabel(props) {
   return (
@@ -21,9 +17,7 @@ function LinearProgressWithLabel(props) {
         <LinearProgress variant="determinate" {...props} />
       </Box>
       <Box sx={{ minWidth: 35 }}>
-        <BCTypography variant="body2">{`${Math.round(
-          props.value
-        )}%`}</BCTypography>
+        <BCTypography variant="body2">{`${Math.round(props.value)}%`}</BCTypography>
       </Box>
     </Box>
   )
@@ -54,20 +48,35 @@ const DIALOG_STATES = {
   COMPLETED: 'COMPLETED'
 }
 
-function ImportFuelSupplyEquipmentDialog({
+/**
+ * Generic ImportDialog component.
+ *
+ * Props:
+ * - open: Boolean, whether the dialog is open.
+ * - close: Function, to call when closing the dialog.
+ * - complianceReportId: The report id used for the import.
+ * - isOverwrite: Boolean, whether the import mode is “overwrite.”
+ * - importHook: A hook that returns the import mutation (e.g. useImportAllocationAgreement or useImportFinalSupplyEquipment).
+ * - getJobStatusHook: A hook to check the import job status.
+ */
+function ImportDialog({
   open,
   close,
   complianceReportId,
-  isOverwrite
+  isOverwrite,
+  importHook,
+  getJobStatusHook
 }) {
-  const { t } = useTranslation(['report', 'finalSupplyEquipment'])
+  const { t } = useTranslation(['common'])
   const fileInputRef = useRef(null)
   const [uploadedFile, setUploadedFile] = useState(null)
   const [dialogState, setDialogState] = useState(DIALOG_STATES.SELECT_FILE)
 
   // Upload progress and status
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadStatus, setUploadStatus] = useState('Starting Import...')
+  const [uploadStatus, setUploadStatus] = useState(
+    t(`common:importExport.import.dialog.uploadStatusStarting`)
+  )
   const [errorMsg, setErrorMsg] = useState(null)
   const [errorMsgs, setErrorMsgs] = useState([])
 
@@ -79,29 +88,29 @@ function ImportFuelSupplyEquipmentDialog({
   const [createdCount, setCreatedCount] = useState(0)
   const [rejectedCount, setRejectedCount] = useState(0)
 
-  const { mutate: importFile } = useImportFinalSupplyEquipment(
-    complianceReportId,
-    {
-      onSuccess: (data) => {
-        setJobID(data.data.jobId)
-      },
-      onError: (error) => {
-        setDialogState(DIALOG_STATES.COMPLETED)
-        if (error.response?.status === 422) {
-          setUploadedFile(null)
-          setErrorMsg('Virus detected, please choose another file')
-        } else {
-          setErrorMsg('Failed to upload file.')
-        }
+  const { mutate: importFile } = importHook(complianceReportId, {
+    onSuccess: (data) => {
+      setJobID(data.data.jobId)
+    },
+    onError: (error) => {
+      setDialogState(DIALOG_STATES.COMPLETED)
+      if (error.response?.status === 422) {
+        setUploadedFile(null)
+        setErrorMsg(
+          t(`common:importExport.import.dialog.fileError.virusDetected`)
+        )
+      } else {
+        setErrorMsg(
+          t(`common:importExport.import.dialog.fileError.uploadFailed`)
+        )
       }
     }
-  )
+  })
 
-  const { data, refetch } = useGetFinalSupplyEquipmentImportJobStatus(jobID)
+  const { data, refetch } = getJobStatusHook(jobID)
 
   useEffect(() => {
     let intervalId
-
     if (jobID && open) {
       intervalId = setInterval(async () => {
         try {
@@ -111,7 +120,6 @@ function ImportFuelSupplyEquipmentDialog({
             setUploadStatus(data.status)
             setCreatedCount(data.created)
             setRejectedCount(data.rejected)
-
             if (data.progress >= 100) {
               setDialogState(DIALOG_STATES.COMPLETED)
               setErrorMsgs(data.errors)
@@ -151,7 +159,7 @@ function ImportFuelSupplyEquipmentDialog({
     setCreatedCount(0)
     setRejectedCount(0)
     setErrorMsgs([])
-    setUploadStatus('Starting Import...')
+    setUploadStatus(t(`common:importExport.import.dialog.uploadStatusStarting`))
 
     if (intervalID) {
       clearInterval(intervalID)
@@ -194,7 +202,7 @@ function ImportFuelSupplyEquipmentDialog({
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setUploadedFile(null)
-      setErrorMsg('File larger than 50MB')
+      setErrorMsg(t(`common:importExport.import.dialog.fileError.tooLarge`))
       return
     }
 
@@ -222,7 +230,7 @@ function ImportFuelSupplyEquipmentDialog({
                 <CloudUpload style={{ fontSize: '40px', color: '#999' }} />
               </IconButton>
               <BCTypography variant="body2">
-                {t('finalSupplyEquipment:importSelectorText')}
+                {t(`common:importExport.import.dialog.selectorText`)}
               </BCTypography>
             </CardContent>
           </DragDropCard>
@@ -236,13 +244,13 @@ function ImportFuelSupplyEquipmentDialog({
               <LinearProgressWithLabel value={uploadProgress} />
               <Box>
                 <BCTypography variant="body2">
-                  Imported:{' '}
+                  {t(`common:importExport.import.dialog.uploadStatus.imported`)}{' '}
                   <BCTypography color="success" component="span">
                     {createdCount}
                   </BCTypography>
                 </BCTypography>
                 <BCTypography variant="body2">
-                  Rejected:{' '}
+                  {t(`common:importExport.import.dialog.uploadStatus.rejected`)}{' '}
                   <BCTypography color="error" component="span">
                     {rejectedCount}
                   </BCTypography>
@@ -260,12 +268,17 @@ function ImportFuelSupplyEquipmentDialog({
               {uploadedFile ? (
                 <>
                   <BCTypography variant="body">
-                    Completed Importing {uploadedFile.fileName}
+                    {t(`common:importExport.import.dialog.completed.success`, {
+                      fileName: uploadedFile.fileName
+                    })}
                   </BCTypography>
                   <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                     <Box sx={{ display: 'flex' }}>
                       <BCTypography variant="body2">
-                        Imported:&nbsp;
+                        {t(
+                          `common:importExport.import.dialog.uploadStatus.imported`
+                        )}
+                        &nbsp;
                       </BCTypography>
                       <BCTypography variant="body2" color="success">
                         {createdCount}
@@ -273,7 +286,10 @@ function ImportFuelSupplyEquipmentDialog({
                     </Box>
                     <Box sx={{ display: 'flex', ml: 2 }}>
                       <BCTypography variant="body2">
-                        Rejected:&nbsp;
+                        {t(
+                          `common:importExport.import.dialog.uploadStatus.rejected`
+                        )}
+                        &nbsp;
                       </BCTypography>
                       <BCTypography variant="body2" color="error">
                         {rejectedCount}
@@ -283,7 +299,7 @@ function ImportFuelSupplyEquipmentDialog({
                 </>
               ) : (
                 <BCTypography color="error" variant="h4">
-                  Failed to import
+                  {t(`common:importExport.import.dialog.completed.failure`)}
                 </BCTypography>
               )}
             </CardContent>
@@ -297,10 +313,16 @@ function ImportFuelSupplyEquipmentDialog({
       onClose={handleClose}
       open={open}
       data={{
-        title: `Upload Excel File - ${isOverwrite ? 'Overwrite' : 'Append'}`,
+        title: t(`common:importExport.import.dialog.title`, {
+          mode: isOverwrite
+            ? t(`common:importExport.import.dialog.uploadMode.overwrite`)
+            : t(`common:importExport.import.dialog.uploadMode.append`)
+        }),
         secondaryButtonAction: handleClose,
         secondaryButtonText:
-          dialogState === DIALOG_STATES.COMPLETED ? 'Close' : 'Cancel',
+          dialogState === DIALOG_STATES.COMPLETED
+            ? t(`common:importExport.import.dialog.buttons.close`)
+            : t(`common:importExport.import.dialog.buttons.cancel`),
         content: (
           <Box
             sx={{
@@ -310,7 +332,7 @@ function ImportFuelSupplyEquipmentDialog({
             }}
           >
             <BCTypography variant="body2" sx={{ mt: 1 }}>
-              {t('finalSupplyEquipment:importDialogHeader')}
+              {t(`common:importExport.import.dialog.header`)}
             </BCTypography>
 
             {/* Hidden file input for manual file selection */}
@@ -330,7 +352,7 @@ function ImportFuelSupplyEquipmentDialog({
             {!!errorMsgs.length && (
               <BCBox sx={{ width: '100%', ml: 2 }}>
                 <BCTypography color="error" variant="body">
-                  Rejected
+                  {t(`common:importExport.import.dialog.uploadStatus.rejected`)}
                 </BCTypography>
                 {errorMsgs.map((msg, idx) => (
                   <BCTypography key={idx} variant="body2">
@@ -341,7 +363,7 @@ function ImportFuelSupplyEquipmentDialog({
             )}
 
             {!!errorMsg && (
-              <BCAlert style={{ marginTop: '12px' }} severity="error">
+              <BCAlert sx={{ mt: 1 }} severity="error">
                 {errorMsg}
               </BCAlert>
             )}
@@ -352,4 +374,4 @@ function ImportFuelSupplyEquipmentDialog({
   )
 }
 
-export default ImportFuelSupplyEquipmentDialog
+export default ImportDialog

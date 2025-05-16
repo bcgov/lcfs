@@ -21,14 +21,34 @@ import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { v4 as uuid } from 'uuid'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { DEFAULT_CI_FUEL } from '@/constants/common'
-import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
+import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
+import { useApiService } from '@/services/useApiService'
+import { apiRoutes } from '@/constants/routes/apiRoutes'
+import ImportDialog from '@/components/ImportDialog'
+import {
+  useImportAllocationAgreement,
+  useGetAllocationAgreementImportJobStatus
+} from '@/hooks/useAllocationAgreement'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
+import { Menu, MenuItem } from '@mui/material'
+import BCButton from '@/components/BCButton'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 
 export const AddEditAllocationAgreements = () => {
   const [rowData, setRowData] = useState([])
   const gridRef = useRef(null)
   const [errors, setErrors] = useState({})
   const [warnings, setWarnings] = useState({})
-
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isOverwrite, setIsOverwrite] = useState(false)
+  const [hideOverwrite, setHideOverwrite] = useState(false)
+  const [downloadAnchorEl, setDownloadAnchorEl] = useState(null)
+  const [importAnchorEl, setImportAnchorEl] = useState(null)
+  const isDownloadOpen = Boolean(downloadAnchorEl)
+  const isImportOpen = Boolean(importAnchorEl)
+  const apiService = useApiService()
   const [columnDefs, setColumnDefs] = useState([])
   const alertRef = useRef()
   const location = useLocation()
@@ -50,7 +70,10 @@ export const AddEditAllocationAgreements = () => {
       complianceReportId,
       { enabled: !currentUserLoading }
     )
-  const isSupplemental = complianceReport?.report?.version !== 0
+
+  const version = complianceReport?.report?.version ?? 0
+  const isOriginalReport = version === 0
+  const isSupplemental = version !== 0
 
   const {
     data: optionsData,
@@ -61,8 +84,24 @@ export const AddEditAllocationAgreements = () => {
     complianceReportId
   })
 
-  const { data, isLoading: allocationAgreementsLoading } =
-  useGetAllocationAgreementsList({complianceReportId, changelog: isSupplemental})
+  const {
+    data,
+    isLoading: allocationAgreementsLoading,
+    refetch
+  } = useGetAllocationAgreementsList({
+    complianceReportId,
+    changelog: isSupplemental
+  })
+
+  // Decide when to hide or show Overwrite based on isOriginalReport + existing data
+  useEffect(() => {
+    const hasData = data?.allocationAgreements?.length > 0
+    if (!isOriginalReport && hasData) {
+      setHideOverwrite(true)
+    } else {
+      setHideOverwrite(false)
+    }
+  }, [data, isOriginalReport])
 
   const gridOptions = useMemo(
     () => ({
@@ -156,21 +195,30 @@ export const AddEditAllocationAgreements = () => {
   }, [optionsData, currentUser, errors, warnings, isSupplemental])
 
   useEffect(() => {
-    if (!allocationAgreementsLoading && data?.allocationAgreements?.length > 0) {
+    if (
+      !allocationAgreementsLoading &&
+      data?.allocationAgreements?.length > 0
+    ) {
       const updatedRowData = data.allocationAgreements.map((item) => ({
         ...item,
         complianceReportId,
         compliancePeriod,
-        isNewSupplementalEntry: isSupplemental &&
-          item.complianceReportId === +complianceReportId,
+        isNewSupplementalEntry:
+          isSupplemental && item.complianceReportId === +complianceReportId,
         id: uuid()
-      }));
+      }))
 
-      setRowData(updatedRowData);
+      setRowData(updatedRowData)
     } else {
-      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }]);
+      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
-  }, [data, allocationAgreementsLoading, isSupplemental, complianceReportId, compliancePeriod]);
+  }, [
+    data,
+    allocationAgreementsLoading,
+    isSupplemental,
+    complianceReportId,
+    compliancePeriod
+  ])
 
   const onCellValueChanged = useCallback(
     async (params) => {
@@ -348,15 +396,60 @@ export const AddEditAllocationAgreements = () => {
         params,
         'allocationAgreementId',
         saveRow,
-      alertRef,
-      setRowData,
-      {
-        complianceReportId,
-        compliancePeriod
-      }
-    );
+        alertRef,
+        setRowData,
+        {
+          complianceReportId,
+          compliancePeriod
+        }
+      )
+    }
   }
-};
+
+  const handleDownload = async (includeData) => {
+    try {
+      handleCloseDownloadMenu()
+      setIsDownloading(true)
+
+      const url = includeData
+        ? apiRoutes.exportAllocationAgreements.replace(
+            ':reportID',
+            complianceReportId
+          )
+        : apiRoutes.downloadAllocationAgreementsTemplate.replace(
+            ':reportID',
+            complianceReportId
+          )
+
+      await apiService.download({ url })
+    } catch (error) {
+      console.error(
+        'Error downloading allocation agreement information:',
+        error
+      )
+    } finally {
+      setIsDownloading(false)
+    }
+  }
+
+  const openFileImportDialog = (isOverwrite) => {
+    setIsImportDialogOpen(true)
+    setIsOverwrite(isOverwrite)
+    handleCloseDownloadMenu()
+  }
+
+  const handleDownloadClick = (event) => {
+    setDownloadAnchorEl(event.currentTarget)
+  }
+  const handleCloseDownloadMenu = () => {
+    setDownloadAnchorEl(null)
+  }
+  const handleImportClick = (event) => {
+    setImportAnchorEl(event.currentTarget)
+  }
+  const handleCloseImportMenu = () => {
+    setImportAnchorEl(null)
+  }
 
   const handleNavigateBack = useCallback(() => {
     navigate(
@@ -388,6 +481,105 @@ export const AddEditAllocationAgreements = () => {
             ))}
           </BCBox>
         </div>
+        {isFeatureEnabled(FEATURE_FLAGS.ALLOCATION_AGREEMENT_IMPORT_EXPORT) && (
+          <BCBox>
+            <BCButton
+              color="primary"
+              variant="outlined"
+              aria-controls={isDownloadOpen ? 'download-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={isDownloadOpen ? 'true' : undefined}
+              onClick={handleDownloadClick}
+              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+              isLoading={isDownloading}
+            >
+              {t('common:importExport.export.btn')}
+            </BCButton>
+            <Menu
+              id="download-menu"
+              anchorEl={downloadAnchorEl}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right'
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right'
+              }}
+              open={isDownloadOpen}
+              onClose={handleCloseDownloadMenu}
+            >
+              <MenuItem
+                disabled={isDownloading}
+                onClick={() => {
+                  handleDownload(true)
+                }}
+              >
+                {t('common:importExport.export.withDataBtn')}
+              </MenuItem>
+              <MenuItem
+                disabled={isDownloading}
+                onClick={() => {
+                  handleDownload(false)
+                }}
+              >
+                {t('common:importExport.export.withoutDataBtn')}
+              </MenuItem>
+            </Menu>
+            <BCButton
+              style={{ marginLeft: '12px' }}
+              color="primary"
+              variant="outlined"
+              aria-controls={isImportOpen ? 'import-menu' : undefined}
+              aria-haspopup="true"
+              aria-expanded={isImportOpen ? 'true' : undefined}
+              onClick={handleImportClick}
+              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+            >
+              {t('common:importExport.import.btn')}
+            </BCButton>
+            <Menu
+              id="import-menu"
+              slotProps={{
+                paper: {
+                  style: {
+                    maxWidth: 240
+                  }
+                }
+              }}
+              anchorEl={importAnchorEl}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'right'
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right'
+              }}
+              open={isImportOpen}
+              onClose={handleCloseImportMenu}
+            >
+              {!hideOverwrite && (
+                <MenuItem
+                  onClick={() => {
+                    openFileImportDialog(true)
+                    handleCloseImportMenu()
+                  }}
+                >
+                  {t('common:importExport.import.dialog.buttons.overwrite')}
+                </MenuItem>
+              )}
+              <MenuItem
+                onClick={() => {
+                  openFileImportDialog(false)
+                  handleCloseImportMenu()
+                }}
+              >
+                {t('common:importExport.import.dialog.buttons.append')}
+              </MenuItem>
+            </Menu>
+          </BCBox>
+        )}
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}
@@ -412,6 +604,17 @@ export const AddEditAllocationAgreements = () => {
             }}
           />
         </BCBox>
+        <ImportDialog
+          open={isImportDialogOpen}
+          close={() => {
+            setIsImportDialogOpen(false)
+            refetch()
+          }}
+          complianceReportId={complianceReportId}
+          isOverwrite={isOverwrite}
+          importHook={useImportAllocationAgreement}
+          getJobStatusHook={useGetAllocationAgreementImportJobStatus}
+        />
       </Grid2>
     )
   )

@@ -36,6 +36,8 @@ class ExpectedUseDTO(BaseSchema):
 class ChangelogItemsBaseDTO(BaseModel):
     updated: Optional[bool] = None
     diff: Optional[List[str]] = None
+    update_date: Optional[datetime] = None
+    create_date: Optional[datetime] = None
 
 
 class FuelSupplyDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseDTO):
