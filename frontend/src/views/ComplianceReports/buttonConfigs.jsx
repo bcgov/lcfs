@@ -48,7 +48,8 @@ export const buttonClusterConfigFn = ({
   isSigningAuthorityDeclared,
   supplementalInitiator,
   hasDraftSupplemental,
-  reportVersion
+  reportVersion,
+  isSupplemental
 }) => {
   const reportButtons = {
     submitReport: {
@@ -259,7 +260,8 @@ export const buttonClusterConfigFn = ({
               ...reportButtons.recommendByAnalyst,
               disabled: hasDraftSupplemental
             },
-            ...(reportVersion === 0 && !isPastReturnDeadline
+            ...((reportVersion === 0 && !isPastReturnDeadline) ||
+            (reportVersion !== 0 && isSupplemental)
               ? [
                   {
                     ...reportButtons.returnToSupplier,
@@ -301,6 +303,12 @@ export const buttonClusterConfigFn = ({
               ...reportButtons.recommendByManager,
               disabled: hasDraftSupplemental
             },
+            { ...reportButtons.returnToAnalyst, disabled: hasDraftSupplemental }
+          ]
+        : []),
+      ...(isGovernmentUser && hasRoles('Director')
+        ? [
+            { ...reportButtons.assessReport, disabled: hasDraftSupplemental },
             { ...reportButtons.returnToAnalyst, disabled: hasDraftSupplemental }
           ]
         : [])
