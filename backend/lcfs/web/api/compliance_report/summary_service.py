@@ -959,9 +959,16 @@ class ComplianceReportSummaryService:
         compliance_units_prev_issued_for_fuel_export = (
             previous_summary.line_19_units_to_be_exported if previous_summary else 0
         )  # line 16
-        available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(
-            organization_id, compliance_period_start.year
-        )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
+        
+        # For supplemental reports with a summary already, use the stored line_17 value
+        # This preserves the available balance from when the supplemental report was created
+        if compliance_report.version > 0 and compliance_report.summary and compliance_report.summary.line_17_non_banked_units_used is not None:
+            available_balance_for_period = compliance_report.summary.line_17_non_banked_units_used
+        else:
+            # For original reports or new supplemental reports, calculate the current available balance
+            available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(
+                organization_id, compliance_period_start.year
+            )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
         compliance_units_curr_issued_for_fuel_supply = (
             await self.calculate_fuel_supply_compliance_units(compliance_report)
         )  # line 18 fuel supply compliance units total
