@@ -810,15 +810,15 @@ class ComplianceReportSummaryService:
                 "jet_fuel": float(decimal_tracked_totals.get("jet_fuel", DECIMAL_ZERO)),
             },
             4: {
-                "gasoline": float(
+                "gasoline": int(
                     decimal_eligible_renewable_fuel_required.get(
                         "gasoline", DECIMAL_ZERO
                     )
                 ),
-                "diesel": float(
+                "diesel": int(
                     decimal_eligible_renewable_fuel_required.get("diesel", DECIMAL_ZERO)
                 ),
-                "jet_fuel": float(
+                "jet_fuel": int(
                     decimal_eligible_renewable_fuel_required.get(
                         "jet_fuel", DECIMAL_ZERO
                     )
