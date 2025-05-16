@@ -361,3 +361,19 @@ class OrganizationsRepository:
 
         # Return exact matches first, followed by partial matches
         return exact_matches + partial_matches
+
+    @repo_handler
+    async def get_organization_by_code(self, org_code: str) -> Organization:
+        """
+        Fetch a single organization by organization code from the database
+        """
+        query = (
+            select(Organization)
+            .options(
+                joinedload(Organization.org_status),
+                joinedload(Organization.org_address),
+                joinedload(Organization.org_attorney_address),
+            )
+            .where(Organization.organization_code == org_code)
+        )
+        return await self.db.scalar(query)

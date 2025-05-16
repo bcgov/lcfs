@@ -62,9 +62,8 @@ class FinalSupplyEquipmentExporter:
             "xlsx"  # Uses Advanced Excel features, so only use modern format
         )
         compliance_report = (
-            await self.compliance_report_services.get_compliance_report_by_id(
-                report_id=compliance_report_id,
-                user=user,
+            await self.compliance_report_repo.get_compliance_report_by_id(
+                compliance_report_id
             )
         )
         if not compliance_report:

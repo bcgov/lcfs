@@ -19,12 +19,12 @@ def _build_compliance_period(year: str = "2023"):
     )
 
 
-def _build_services_mock():
-    svc = MagicMock()
-    svc.get_compliance_report_by_id = AsyncMock(
+def _build_compliance_repo_mock():
+    repo = MagicMock()
+    repo.get_compliance_report_by_id = AsyncMock(
         return_value=MagicMock(compliance_period=_build_compliance_period())
     )
-    return svc
+    return repo
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ def repo_mock():
 @pytest.fixture
 def exporter(repo_mock):
     exp = FinalSupplyEquipmentExporter(repo=repo_mock)
-    exp.compliance_report_services = _build_services_mock()
+    exp.compliance_report_repo = _build_compliance_repo_mock()
     return exp
 
 
@@ -96,8 +96,8 @@ async def test_export_invalid_compliance_report_id(
 ):
     user = set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
-    # Simulate “not found”
-    exporter.compliance_report_services.get_compliance_report_by_id = AsyncMock(
+    # Simulate "not found"
+    exporter.compliance_report_repo.get_compliance_report_by_id = AsyncMock(
         side_effect=DataNotFoundException("Report not found")
     )
 
