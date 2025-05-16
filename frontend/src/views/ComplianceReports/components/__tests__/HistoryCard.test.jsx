@@ -35,10 +35,16 @@ const defaultReport = {
   }
 }
 
-const renderComponent = (overrides = {}) => {
-  return render(<HistoryCard report={{ ...defaultReport, ...overrides }} />, {
-    wrapper
-  })
+const renderComponent = (overrides = {}, options = {}) => {
+  return render(
+    <HistoryCard
+      report={{ ...defaultReport, ...overrides }}
+      defaultExpanded={options.defaultExpanded}
+    />,
+    {
+      wrapper
+    }
+  )
 }
 
 describe('HistoryCard', () => {
@@ -289,6 +295,130 @@ describe('HistoryCard', () => {
       expect(
         screen.queryByText(/has met renewable fuel targets/i)
       ).not.toBeInTheDocument()
+    })
+  })
+})
+
+describe('Director Statement', () => {
+  it('shows assessment statement to government user', async () => {
+    useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
+      data: { isGovernmentUser: true },
+      isLoading: false
+    })
+
+    renderComponent(
+      {
+        assessmentStatement: 'This is a director statement',
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            createDate: '2024-05-01T10:00:00Z',
+            userProfile: { firstName: 'Test', lastName: 'User' },
+            displayName: 'Test User'
+          }
+        ]
+      },
+      { defaultExpanded: true }
+    )
+
+    await waitFor(() => {
+      const listItems = screen.getAllByRole('listitem')
+      const directorStatementItem = listItems.find((item) =>
+        item.textContent.includes('Assessment statement from the director')
+      )
+      expect(directorStatementItem).toBeTruthy()
+      expect(directorStatementItem.textContent).toContain(
+        'This is a director statement'
+      )
+      expect(directorStatementItem.textContent).toContain('can be edited')
+    })
+  })
+
+  it('shows assessment statement to non-government user only when assessed', async () => {
+    renderComponent(
+      {
+        assessmentStatement: 'This is a director statement',
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+            createDate: '2024-05-01T10:00:00Z',
+            userProfile: { firstName: 'Test', lastName: 'User' },
+            displayName: 'Test User'
+          }
+        ]
+      },
+      { defaultExpanded: true }
+    )
+
+    await waitFor(() => {
+      const listItems = screen.getAllByRole('listitem')
+      const directorStatementItem = listItems.find((item) =>
+        item.textContent.includes('Assessment statement from the director')
+      )
+      expect(directorStatementItem).toBeTruthy()
+      expect(directorStatementItem.textContent).toContain(
+        'This is a director statement'
+      )
+      expect(directorStatementItem.textContent).not.toContain('can be edited')
+    })
+  })
+
+  it('does not show assessment statement to non-government user when not assessed', async () => {
+    renderComponent(
+      {
+        assessmentStatement: 'This is a director statement',
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            createDate: '2024-05-01T10:00:00Z',
+            userProfile: { firstName: 'Test', lastName: 'User' },
+            displayName: 'Test User'
+          }
+        ]
+      },
+      { defaultExpanded: true }
+    )
+
+    await waitFor(() => {
+      const listItems = screen.getAllByRole('listitem')
+      const hasDirectorStatement = listItems.some((item) =>
+        item.textContent.includes('Assessment statement from the director')
+      )
+      expect(hasDirectorStatement).toBe(false)
+    })
+  })
+
+  it('does not show assessment statement when it is empty', async () => {
+    useCurrentUserHook.useCurrentUser.mockReturnValueOnce({
+      data: { isGovernmentUser: true },
+      isLoading: false
+    })
+
+    renderComponent(
+      {
+        assessmentStatement: '',
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        history: [
+          {
+            status: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            createDate: '2024-05-01T10:00:00Z',
+            userProfile: { firstName: 'Test', lastName: 'User' },
+            displayName: 'Test User'
+          }
+        ]
+      },
+      { defaultExpanded: true }
+    )
+
+    await waitFor(() => {
+      const listItems = screen.getAllByRole('listitem')
+      const hasDirectorStatement = listItems.some((item) =>
+        item.textContent.includes('Assessment statement from the director')
+      )
+      expect(hasDirectorStatement).toBe(false)
     })
   })
 })
