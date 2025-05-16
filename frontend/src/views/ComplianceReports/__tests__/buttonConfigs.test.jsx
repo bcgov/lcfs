@@ -201,4 +201,27 @@ describe('buttonClusterConfigFn', () => {
     )
     expect(returnButton).toBeUndefined()
   })
+
+  it('should display assessment button for Director in Recommended by analyst status', () => {
+    const props = {
+      ...baseProps,
+      isGovernmentUser: true,
+      hasRoles: (role) => role === roles.director,
+      hasDraftSupplemental: false
+    }
+
+    // Test Recommended by Analyst status with Director role
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]
+
+    // We should see the Director buttons (after the Manager buttons)
+    expect(buttons.length).toBe(2)
+    expect(buttons[0].id).toBe('assess-report-btn')
+    expect(buttons[0].label).toBe('report:actionBtns.assessReportBtn')
+    expect(buttons[0].disabled).toBe(false)
+
+    expect(buttons[1].id).toBe('return-report-manager-btn')
+    expect(buttons[1].label).toBe('report:actionBtns.returnToAnalyst')
+    expect(buttons[1].disabled).toBe(false)
+  })
 })
