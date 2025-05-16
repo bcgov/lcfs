@@ -315,7 +315,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     })
 
   const methods = useForm() // TODO we will need this for summary line inputs
-
+  const isSupplemental = reportData?.report?.hasSupplemental
   const buttonClusterConfig = useMemo(
     () =>
       buttonClusterConfigFn({
@@ -332,7 +332,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         isGovernmentUser,
         isSigningAuthorityDeclared,
         hasDraftSupplemental,
-        reportVersion: reportData?.report?.version
+        reportVersion: reportData?.report?.version,
+        isSupplemental
       }),
     [
       hasRoles,
@@ -348,7 +349,8 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       isGovernmentUser,
       isSigningAuthorityDeclared,
       hasDraftSupplemental,
-      reportData?.report?.version
+      reportData?.report?.version,
+      isSupplemental
     ]
   )
 
