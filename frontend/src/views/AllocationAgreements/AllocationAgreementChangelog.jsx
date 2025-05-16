@@ -67,6 +67,8 @@ export const AllocationAgreementChangelog = () => {
   return (
     <Box>
       {changelogData?.map((item, i) => {
+        const isCurrentOrOriginalVersion =
+          i === 0 || item.nickname.includes('Original')
         return (
           <Box mb={4} key={i}>
             <BCTypography variant="h6" color="primary" component="div" mb={2}>
@@ -77,7 +79,7 @@ export const AllocationAgreementChangelog = () => {
                 key={i}
                 gridKey={`allocation-agreements-changelog-${i}`}
                 columnDefs={
-                  i === 0 || i + 1 === changelogData.length
+                  isCurrentOrOriginalVersion
                     ? changelogCommonColDefs(false)
                     : changelogColDefs()
                 }
@@ -85,7 +87,7 @@ export const AllocationAgreementChangelog = () => {
                 getRowId={getRowId}
                 suppressPagination
                 gridOptions={
-                  i === 0 || i + 1 === changelogData.length
+                  isCurrentOrOriginalVersion
                     ? gridOptions(false)
                     : gridOptions()
                 }
