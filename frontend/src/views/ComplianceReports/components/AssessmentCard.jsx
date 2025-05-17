@@ -64,18 +64,17 @@ export const AssessmentCard = ({
         // Navigate to the new report's page
         const newReportId = data.data.complianceReportId
         const compliancePeriodYear = data.data.compliancePeriod.description
-        navigate(
-          `/compliance-reporting/${compliancePeriodYear}/${newReportId}`,
-          {
-            state: {
-              message: t('report:supplementalCreated'),
-              severity: 'success'
-            }
-          }
-        )
+
+        navigate(`/compliance-reporting/${compliancePeriodYear}/${newReportId}`)
+
+        // Use alertRef to display the success message
+        alertRef?.current?.triggerAlert({
+          message: t('report:supplementalCreated'),
+          severity: 'success'
+        })
       },
       onError: (error) => {
-        alertRef.current?.triggerAlert({
+        alertRef?.current?.triggerAlert({
           message: error.message,
           severity: 'error'
         })
