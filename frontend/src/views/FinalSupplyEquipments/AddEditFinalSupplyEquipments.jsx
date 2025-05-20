@@ -9,7 +9,9 @@ import { defaultColDef, finalSupplyEquipmentColDefs } from './_schema'
 import {
   useFinalSupplyEquipmentOptions,
   useGetFinalSupplyEquipments,
-  useSaveFinalSupplyEquipment
+  useSaveFinalSupplyEquipment,
+  useImportFinalSupplyEquipment,
+  useGetFinalSupplyEquipmentImportJobStatus
 } from '@/hooks/useFinalSupplyEquipment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
@@ -24,10 +26,6 @@ import { Menu, MenuItem } from '@mui/material'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import ImportDialog from '@/components/ImportDialog'
-import {
-  useImportFinalSupplyEquipment,
-  useGetFinalSupplyEquipmentImportJobStatus
-} from '@/hooks/useFinalSupplyEquipment'
 
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 
