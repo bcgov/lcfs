@@ -81,6 +81,7 @@ async def test_import_data_success(importer_instance, mock_redis):
 
     user_mock = MagicMock()
     user_mock.organization.organization_code = "TEST-ORG"
+    org_code = "TEST-ORG"
 
     with patch(
         "lcfs.web.api.final_supply_equipment.importer.import_async",
@@ -88,7 +89,11 @@ async def test_import_data_success(importer_instance, mock_redis):
     ) as mock_import_task:
 
         job_id = await importer_instance.import_data(
-            compliance_report_id=123, user=user_mock, file=file_mock, overwrite=False
+            compliance_report_id=123,
+            user=user_mock,
+            org_code=org_code,
+            file=file_mock,
+            overwrite=False,
         )
 
         assert isinstance(job_id, str)
@@ -107,12 +112,17 @@ async def test_import_data_with_clamav(importer_instance, mock_clamav, mock_redi
         file_mock.filename = "test.xlsx"
         file_mock.read = AsyncMock(return_value=b"excel-data")
         user_mock = MagicMock()
+        org_code = "TEST-ORG"
 
         with patch(
             "lcfs.web.api.final_supply_equipment.importer.import_async", new=AsyncMock()
         ) as mock_import_task:
             job_id = await importer_instance.import_data(
-                compliance_report_id=999, user=user_mock, file=file_mock, overwrite=True
+                compliance_report_id=999,
+                user=user_mock,
+                org_code=org_code,
+                file=file_mock,
+                overwrite=True,
             )
 
             assert job_id

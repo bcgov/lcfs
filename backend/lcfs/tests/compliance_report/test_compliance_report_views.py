@@ -4,7 +4,7 @@ import json
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.compliance_report.schema import (
@@ -13,7 +13,8 @@ from lcfs.web.api.compliance_report.schema import (
     ChainedComplianceReportSchema,
 )
 from lcfs.web.api.email.repo import CHESEmailRepository
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
+from fastapi import status
 
 
 @pytest.fixture

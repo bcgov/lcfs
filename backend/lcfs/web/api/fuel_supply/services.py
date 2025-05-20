@@ -17,6 +17,7 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelSupplyResponseSchema,
     FuelTypeOptionsResponse,
     FuelTypeOptionsSchema,
+    ModeEnum,
     ProvisionOfTheActSchema,
     TargetCarbonIntensitySchema,
     UnitOfMeasureSchema,
@@ -231,11 +232,11 @@ class FuelSupplyServices:
 
     @service_handler
     async def get_fuel_supply_list(
-        self, compliance_report_id: int, changelog: bool = False
+        self, compliance_report_id: int, mode: ModeEnum = ModeEnum.VIEW
     ) -> FuelSuppliesSchema:
         """Get fuel supply list for a compliance report"""
         fuel_supply_models = await self.repo.get_fuel_supply_list(
-            compliance_report_id, changelog
+            compliance_report_id, mode
         )
         fs_list = [self.map_entity_to_schema(fs) for fs in fuel_supply_models]
 

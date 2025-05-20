@@ -19,6 +19,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
 )
+from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
@@ -852,3 +853,180 @@ async def test_adjust_balance_reserved_negative_exceeds_balance(org_service_inst
             compliance_units=compliance_units,
             organization_id=1,
         )
+
+
+@pytest.mark.anyio
+async def test_handle_recommended_by_analyst_status_not_superseded(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_analyst: MagicMock,
+    mock_compliance_report_recommended_analyst: MagicMock,
+):
+    # Arrange
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+    # Patch user_has_roles directly for this test
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_recommended_by_analyst_status(
+            mock_compliance_report_recommended_analyst, mock_user_profile_analyst
+        )
+
+        # Assert
+        mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(
+            mock_compliance_report_recommended_analyst.compliance_report_group_uuid
+        )
+
+
+@pytest.mark.anyio
+async def test_handle_recommended_by_analyst_status_superseded(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_analyst: MagicMock,
+    mock_compliance_report_recommended_analyst: MagicMock,
+    mock_compliance_report_draft: MagicMock,  # Newer draft
+):
+    """Test handle_recommended_by_analyst_status raises 409 if superseded."""
+    # Arrange
+    mock_compliance_report_draft.version = (
+        mock_compliance_report_recommended_analyst.version + 1
+    )  # Ensure draft is newer
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(
+        return_value=mock_compliance_report_draft
+    )
+
+    # Act & Assert
+    with pytest.raises(HTTPException) as excinfo:
+        await compliance_report_update_service.handle_recommended_by_analyst_status(
+            mock_compliance_report_recommended_analyst, mock_user_profile_analyst
+        )
+    assert excinfo.value.status_code == 409
+    assert "superseded by a draft" in excinfo.value.detail.lower()
+    mock_repo.get_draft_report_by_group_uuid.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_handle_recommended_by_manager_status_not_superseded(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_manager: MagicMock,
+    mock_compliance_report_recommended_manager: MagicMock,
+):
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+    # Arrange user roles check to pass
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_recommended_by_manager_status(
+            mock_compliance_report_recommended_manager, mock_user_profile_manager
+        )
+    # Assert (after Act)
+    mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(
+        mock_compliance_report_recommended_manager.compliance_report_group_uuid
+    )
+
+
+@pytest.mark.anyio
+async def test_handle_recommended_by_manager_status_superseded(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_manager: MagicMock,
+    mock_compliance_report_recommended_manager: MagicMock,
+    mock_compliance_report_draft: MagicMock,  # Newer draft
+):
+    """Test handle_recommended_by_manager_status raises 409 if superseded."""
+    # Arrange
+    mock_compliance_report_draft.version = (
+        mock_compliance_report_recommended_manager.version + 1
+    )  # Ensure draft is newer
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(
+        return_value=mock_compliance_report_draft
+    )
+
+    # Act & Assert
+    with pytest.raises(HTTPException) as excinfo:
+        await compliance_report_update_service.handle_recommended_by_manager_status(
+            mock_compliance_report_recommended_manager, mock_user_profile_manager
+        )
+    assert excinfo.value.status_code == 409
+    assert "superseded by a draft" in excinfo.value.detail.lower()
+    mock_repo.get_draft_report_by_group_uuid.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_handle_assessed_status_not_superseded(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+    mock_compliance_report_assessed: MagicMock,
+):
+    # Arrange
+    # Create a mock SQLAlchemy model object, not schema
+    mock_report_model = MagicMock(spec=ComplianceReport)
+    mock_report_model.compliance_report_id = (
+        mock_compliance_report_assessed.compliance_report_id
+    )
+    mock_report_model.compliance_report_group_uuid = (
+        mock_compliance_report_assessed.compliance_report_group_uuid
+    )
+    mock_report_model.version = mock_compliance_report_assessed.version
+    # Set a mock transaction object on the model
+    mock_report_model.transaction = MagicMock()
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    # Patch roles check to ensure it passes
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_assessed_status(
+            mock_report_model, mock_user_profile_director
+        )
+
+    # Assert
+    mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(
+        mock_report_model.compliance_report_group_uuid
+    )
+    # Assert that the transaction attribute was accessed and modified
+    assert (
+        mock_report_model.transaction.transaction_action
+        == TransactionActionEnum.Adjustment
+    )
+    assert (
+        mock_report_model.transaction.update_user
+        == mock_user_profile_director.keycloak_username
+    )
+    mock_repo.update_compliance_report.assert_called_once_with(mock_report_model)
+
+
+@pytest.mark.anyio
+async def test_handle_assessed_status_superseded(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+    mock_compliance_report_assessed: MagicMock,
+    mock_compliance_report_draft: MagicMock,  # Newer draft
+):
+    """Test handle_assessed_status raises 409 if superseded."""
+    # Arrange
+    mock_compliance_report_draft.version = (
+        mock_compliance_report_assessed.version + 1
+    )  # Ensure draft is newer
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(
+        return_value=mock_compliance_report_draft
+    )
+
+    # Act & Assert
+    with pytest.raises(HTTPException) as excinfo:
+        await compliance_report_update_service.handle_assessed_status(
+            mock_compliance_report_assessed, mock_user_profile_director
+        )
+    assert excinfo.value.status_code == 409
+    assert "superseded by a draft" in excinfo.value.detail.lower()
+    mock_repo.get_draft_report_by_group_uuid.assert_called_once()

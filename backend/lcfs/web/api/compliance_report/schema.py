@@ -69,6 +69,7 @@ class SnapshotSchema(BaseSchema):
 
 class ComplianceReportOrganizationSchema(BaseSchema):
     organization_id: int
+    organization_code: str
     name: str
 
 

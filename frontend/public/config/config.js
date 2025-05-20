@@ -14,6 +14,7 @@ export const config = {
     supplementalReporting: true,
     fullLegacyReports: true,
     fseImportExport: true,
+    allocationAgreementImportExport: true,
     governmentAdjustment: true
   }
 }

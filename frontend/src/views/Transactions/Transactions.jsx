@@ -26,7 +26,10 @@ import OrganizationList from './components/OrganizationList'
 import Loading from '@/components/Loading'
 import { ConditionalLinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
-import { useGetTransactionList } from '@/hooks/useTransactions'
+import {
+  useGetTransactionList,
+  useDownloadTransactions
+} from '@/hooks/useTransactions'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 const initialPaginationOptions = {
@@ -71,6 +74,8 @@ export const Transactions = () => {
       staleTime: 0
     }
   )
+
+  const { mutateAsync: downloadTransactions } = useDownloadTransactions()
 
   const getRowId = useCallback((params) => {
     return (
@@ -173,12 +178,33 @@ export const Transactions = () => {
     return apiRoutes.exportTransactions
   }, [selectedOrg, currentUser, hasRoles])
 
+  const convertToBackendFilters = (model = {}) =>
+    Object.entries(model).map(([field, cfg]) => ({
+      field,
+      filterType: cfg.filterType || 'text',
+      type: cfg.type,
+      filter: cfg.filter,
+      dateFrom: cfg.dateFrom,
+      dateTo: cfg.dateTo
+    }))
+
+  const buildExportPayload = (gridApi) => ({
+    page: 1,
+    size: 10000, // ignored by back-end but required by schema
+    filters: convertToBackendFilters(gridApi.getFilterModel?.() || {}),
+    sortOrders: []
+  })
+
   const handleDownloadTransactions = async () => {
     setIsDownloadingTransactions(true)
     setAlertMessage('')
     try {
       const endpoint = getExportApiEndpoint()
-      await apiService.download(`${endpoint}`)
+      await downloadTransactions({
+        format: 'xlsx',
+        endpoint: getExportApiEndpoint(),
+        body: buildExportPayload(gridRef.current?.api)
+      })
       setIsDownloadingTransactions(false)
     } catch (error) {
       console.error('Error downloading transactions information:', error)

@@ -20,8 +20,14 @@ from lcfs.web.api.allocation_agreement.schema import AllocationAgreementSchema
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.core.decorators import repo_handler
+from sqlalchemy import and_, select, delete, func, text
 
 logger = structlog.get_logger(__name__)
+
+
+ALLOCATION_AGREEMENT_BULK_DELETE_EXCLUDE_FIELDS = {
+    "allocation_agreement_id",
+}
 
 
 class AllocationAgreementRepository:
@@ -339,3 +345,14 @@ class AllocationAgreementRepository:
 
         result = await self.db.execute(query)
         return result.unique().scalars().first()
+
+    async def delete_all_for_report(self, compliance_report_id: int):
+        """
+        Delete every AllocationAgreement linked to a compliance report
+        """
+        await self.db.execute(
+            delete(AllocationAgreement).where(
+                AllocationAgreement.compliance_report_id == compliance_report_id
+            )
+        )
+        await self.db.flush()

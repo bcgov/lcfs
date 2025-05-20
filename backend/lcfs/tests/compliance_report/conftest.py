@@ -1,6 +1,6 @@
 import pytest
 import uuid
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from lcfs.db.models import Organization, CompliancePeriod, ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
@@ -28,8 +28,12 @@ from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.notional_transfer.services import NotionalTransferServices
 from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotService
+from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentServices
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.services.s3.client import DocumentService
+from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 
 
 @pytest.fixture
@@ -127,26 +131,34 @@ def mock_org_repo():
 
 @pytest.fixture
 def mock_snapshot_service():
-    service = AsyncMock(spec=OrganizationSnapshotService)
-    return service
+    return AsyncMock(spec=OrganizationSnapshotService)
 
 
 @pytest.fixture
 def mock_trxn_repo():
-    trxn_repo = AsyncMock(spec=TransactionRepository)
-    return trxn_repo
+    return AsyncMock(spec=TransactionRepository)
 
 
 @pytest.fixture
 def mock_fuel_supply_repo():
-    mock_repo = AsyncMock(spec=FuelSupplyRepository)
-    mock_repo.get_effective_fuel_supplies = AsyncMock(return_value=[])
-    return mock_repo
+    repo = AsyncMock(spec=FuelSupplyRepository)
+    repo.get_effective_fuel_supplies = AsyncMock(return_value=[])
+    return repo
 
 
 @pytest.fixture
 def mock_fuel_export_repo():
     return AsyncMock(spec=FuelExportRepository)
+
+
+@pytest.fixture
+def mock_fse_services():
+    return AsyncMock(spec=FinalSupplyEquipmentServices)
+
+
+@pytest.fixture
+def mock_document_service():
+    return AsyncMock(spec=DocumentService)
 
 
 @pytest.fixture
@@ -241,6 +253,8 @@ def compliance_report_service(
     mock_repo,
     mock_org_repo,
     mock_snapshot_service,
+    mock_fse_services,
+    mock_document_service,
 ):
     service = ComplianceReportServices()
     service.repo = mock_repo
@@ -248,7 +262,8 @@ def compliance_report_service(
     service.request = MagicMock()
     service.request.user = mock_user_profile
     service.snapshot_services = mock_snapshot_service
-    service.final_supply_equipment_service = AsyncMock()
+    service.final_supply_equipment_service = mock_fse_services
+    service.document_service = mock_document_service
     return service
 
 
@@ -356,3 +371,97 @@ async def compliance_reports(
     for report in reports:
         await dbsession.refresh(report)
     return reports
+
+
+# === Role Specific User Profiles ===
+@pytest.fixture
+def mock_user_profile_analyst(mock_user_profile):
+    mock_user_profile.roles = [
+        MagicMock(name=RoleEnum.GOVERNMENT),
+        MagicMock(name=RoleEnum.ANALYST),
+    ]
+    return mock_user_profile
+
+
+@pytest.fixture
+def mock_user_profile_supplier(mock_user_profile):
+    mock_user_profile.roles = [MagicMock(name=RoleEnum.SUPPLIER)]
+    mock_user_profile.organization_id = 998
+    return mock_user_profile
+
+
+@pytest.fixture
+def mock_user_profile_manager(mock_user_profile):
+    mock_user_profile.roles = [
+        MagicMock(name=RoleEnum.GOVERNMENT),
+        MagicMock(name=RoleEnum.COMPLIANCE_MANAGER),
+    ]
+    return mock_user_profile
+
+
+@pytest.fixture
+def mock_user_profile_director(mock_user_profile):
+    mock_user_profile.roles = [
+        MagicMock(name=RoleEnum.GOVERNMENT),
+        MagicMock(name=RoleEnum.DIRECTOR),
+    ]
+    return mock_user_profile
+
+
+# === Compliance Reports with Specific Statuses ===
+@pytest.fixture
+def mock_compliance_report_draft(compliance_report_base_schema):
+    report = compliance_report_base_schema()
+    report.current_status.status = ComplianceReportStatusEnum.Draft
+    report.compliance_report_id = 101
+    report.version = 1
+    return report
+
+
+@pytest.fixture
+def mock_compliance_report_submitted(compliance_report_base_schema):
+    report = compliance_report_base_schema()
+    report.current_status.status = ComplianceReportStatusEnum.Submitted
+    report.compliance_report_id = 102
+    report.version = 0
+    return report
+
+
+@pytest.fixture
+def mock_compliance_report_recommended_analyst(compliance_report_base_schema):
+    report = compliance_report_base_schema()
+    report.current_status.status = ComplianceReportStatusEnum.Recommended_by_analyst
+    report.compliance_report_id = 103
+    report.version = 0
+    return report
+
+
+@pytest.fixture
+def mock_compliance_report_recommended_manager(compliance_report_base_schema):
+    report = compliance_report_base_schema()
+    report.current_status.status = ComplianceReportStatusEnum.Recommended_by_manager
+    report.compliance_report_id = 104
+    report.version = 0
+    return report
+
+
+@pytest.fixture
+def mock_compliance_report_assessed(compliance_report_base_schema):
+    report = compliance_report_base_schema()
+    report.current_status.status = ComplianceReportStatusEnum.Assessed
+    report.compliance_report_id = 105
+    report.version = 0
+    return report
+
+
+# === Role Specific Async Clients ===
+@pytest.fixture
+async def async_client_analyst(client, fastapi_app, set_mock_user):
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+    return client
+
+
+@pytest.fixture
+async def async_client_supplier(client, fastapi_app, set_mock_user):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    return client
