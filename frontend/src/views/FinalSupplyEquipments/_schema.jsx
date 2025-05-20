@@ -277,7 +277,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
     ),
-    valueGetter: (params) => params.data?.intendedUseTypes,
+    valueGetter: (params) => params.data?.intendedUses,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData?.intendedUseTypes.map((obj) => obj.type) || [],
@@ -297,7 +297,7 @@ export const finalSupplyEquipmentColDefs = (
     headerName: i18n.t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
     ),
-    valueGetter: (params) => params.data?.intendedUserTypes,
+    valueGetter: (params) => params.data?.intendedUsers,
     cellEditor: AutocompleteCellEditor,
     cellEditorParams: {
       options: optionsData?.intendedUserTypes.map((obj) => obj.typeName) || [],
