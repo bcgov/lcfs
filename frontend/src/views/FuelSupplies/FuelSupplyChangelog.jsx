@@ -67,8 +67,7 @@ export const FuelSupplyChangelog = () => {
   return (
     <Box>
       {changelogData?.map((item, i) => {
-        const isCurrentOrOriginalVersion =
-          i === 0 || item.nickname.includes('Original')
+        const isCurrentOrOriginalVersion = i === 0 || item.version === 0
         return (
           <Box mb={4} key={i}>
             <BCTypography variant="h6" color="primary" component="div" mb={2}>
