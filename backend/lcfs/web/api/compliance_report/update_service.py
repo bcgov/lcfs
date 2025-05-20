@@ -281,10 +281,23 @@ class ComplianceReportUpdateService:
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
+        # First ensure we have a summary and calculate credit change
+        calculated_summary = await self._calculate_and_lock_summary(report, user)
+        credit_change = calculated_summary.line_20_surplus_deficit_units
+            
         if report.transaction:
             # Update the transaction to assessed
             report.transaction.transaction_action = TransactionActionEnum.Adjustment
             report.transaction.update_user = user.keycloak_username
+            report.transaction.compliance_units = credit_change
+        else:
+            # Create a new transaction if none exists (fixes Government adjustment issue)
+            await self._create_or_update_reserve_transaction(credit_change, report)
+            if report.transaction:
+                # Update the newly created transaction to Adjustment status
+                report.transaction.transaction_action = TransactionActionEnum.Adjustment
+                report.transaction.update_user = user.keycloak_username
+                
         await self.repo.update_compliance_report(report)
 
     async def _create_or_update_reserve_transaction(self, credit_change, report):
