@@ -29,6 +29,7 @@ from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentSer
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.api.organizations.repo import OrganizationsRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -147,7 +148,16 @@ async def import_async(
                 fs_repo = FuelSupplyRepository(session)
                 fse_repo = FinalSupplyEquipmentRepository(session)
                 cr_repo = ComplianceReportRepository(session, fs_repo)
-                fse_service = FinalSupplyEquipmentServices(fse_repo, cr_repo)
+
+                # Import OrganizationsRepository and initialize it
+                org_repo = OrganizationsRepository(session)
+
+                # Provide all three required repositories
+                fse_service = FinalSupplyEquipmentServices(
+                    repo=fse_repo,
+                    compliance_report_repo=cr_repo,
+                    organization_repo=org_repo,
+                )
                 clamav_service = ClamAVService()
                 redis_client = Redis(
                     host=settings.redis_host,
@@ -243,8 +253,14 @@ async def import_async(
                         # Parse row data and insert into DB
                         try:
                             fse_data = _parse_row(row, compliance_report_id)
+
+                            # Get the organization ID using helper function
+                            organization_id = await _get_organization_id(
+                                org_repo, cr_repo, org_code, compliance_report_id
+                            )
+
                             await fse_service.create_final_supply_equipment(
-                                fse_data, org_code
+                                fse_data, organization_id
                             )
                             created += 1
                         except Exception as ex:
@@ -465,3 +481,28 @@ async def _update_progress(
         "errors": errors,
     }
     await redis_client.set(f"jobs/{job_id}", json.dumps(data), ex=60)
+
+
+async def _get_organization_id(
+    org_repo: OrganizationsRepository,
+    cr_repo: ComplianceReportRepository,
+    org_code: str,
+    compliance_report_id: int,
+) -> int:
+    """
+    Helper function to get organization ID from either org code or compliance report
+    """
+    # Try to get the organization ID from the organization code
+    organization = await org_repo.get_organization_by_code(org_code)
+
+    # If we can't find by code, try to get using the compliance report's organization
+    if not organization:
+        compliance_report = await cr_repo.get_compliance_report_by_id(
+            compliance_report_id
+        )
+        if compliance_report and compliance_report.organization_id:
+            return compliance_report.organization_id
+        else:
+            raise ValueError(f"Organization with code {org_code} not found")
+    else:
+        return organization.organization_id
