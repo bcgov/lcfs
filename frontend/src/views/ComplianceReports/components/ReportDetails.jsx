@@ -386,7 +386,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           scheduleData.every((item) => item.actionType === 'DELETE')
 
         return (
-          ((scheduleData && !isArrayEmpty(scheduleData)) || hasVersions) && (
+          ((((scheduleData && !isArrayEmpty(scheduleData)) || hasVersions) &&
+            !isDisabled) ||
+            index === 0) && (
             <Accordion
               sx={{
                 '& .Mui-disabled': {
@@ -465,22 +467,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     color="warning"
                     size="small"
                     sx={{ ...chipStyles }}
-                  />
-                )}
-                {isDisabled && (
-                  <Chip
-                    aria-label="no records"
-                    icon={<InfoOutlined fontSize="small" />}
-                    label={t('Empty')}
-                    size="small"
-                    sx={{
-                      ...chipStyles,
-                      color: colors.alerts.error.color,
-                      '& .MuiChip-icon': {
-                        color: colors.alerts.error.color
-                      },
-                      backgroundImage: `linear-gradient(195deg, ${colors.alerts.error.border},${colors.alerts.error.background})`
-                    }}
                   />
                 )}
               </AccordionSummary>
