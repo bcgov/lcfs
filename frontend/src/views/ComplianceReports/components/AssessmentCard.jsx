@@ -176,7 +176,11 @@ export const AssessmentCard = ({
                           onClick={() => {
                             createSupplementalReport()
                           }}
-                          startIcon={<Assignment fontSize="1rem !important" />}
+                          startIcon={
+                            <Assignment
+                              sx={{ height: '19px', width: '19px' }}
+                            />
+                          }
                           sx={{ mt: 3 }}
                           disabled={isLoading}
                         >
