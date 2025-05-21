@@ -821,8 +821,9 @@ export const changelogColDefs = (highlight = true) => [
     field: 'groupUuid',
     hide: true,
     sort: 'desc',
-    sortIndex: 1
+    sortIndex: 3
   },
+  { field: 'createDate', hide: true, sort: 'asc', sortIndex: 1 },
   { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
   {
     field: 'actionType',

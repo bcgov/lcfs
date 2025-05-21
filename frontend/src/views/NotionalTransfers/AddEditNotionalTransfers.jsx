@@ -254,13 +254,29 @@ export const AddEditNotionalTransfers = () => {
   useEffect(() => {
     if (!transfersLoading && !isArrayEmpty(notionalTransfers)) {
       const updatedRowData =
-        notionalTransfers?.map((item) => ({
-          ...item,
-          complianceReportId,
-          isNewSupplementalEntry:
-            isSupplemental && item.complianceReportId === +complianceReportId
-        })) ?? []
-      setRowData(updatedRowData)
+        notionalTransfers?.map((item) => {
+          let matchingRow = rowData.find(
+            (row) => row.notionalTransferId === item.notionalTransferId
+          )
+          if (!matchingRow) {
+            matchingRow = rowData.find(
+              (row) =>
+                row.notionalTransferId === undefined ||
+                row.notionalTransferId === null
+            )
+          }
+          return {
+            ...item,
+            complianceReportId,
+            isNewSupplementalEntry:
+              isSupplemental && item.complianceReportId === +complianceReportId,
+            id: matchingRow ? matchingRow.id : uuid()
+          }
+        }) ?? []
+      setRowData([
+        ...updatedRowData,
+        { id: uuid(), complianceReportId, compliancePeriod }
+      ])
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
