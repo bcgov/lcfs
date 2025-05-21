@@ -178,7 +178,6 @@ export const AssessmentCard = ({
                           }}
                           startIcon={
                             <Assignment
-                              fontSize="1rem !important"
                               sx={{
                                 width: '1rem',
                                 height: '1rem'
