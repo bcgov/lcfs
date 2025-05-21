@@ -385,8 +385,18 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           scheduleData.length > 0 &&
           scheduleData.every((item) => item.actionType === 'DELETE')
 
+        // Determine if this accordion should be displayed
+        const shouldShowAccordion =
+          // Always show if it has data
+          (scheduleData && !isArrayEmpty(scheduleData)) ||
+          // Or if it's Supporting Docs and user has analyst role (always show this section regardless of content)
+          activity.name === t('report:supportingDocs') ||
+          // For non-supplemental reports, always show all sections even if they're empty
+          // For supplemental reports (version > 0), hide empty accordions
+          !isSupplemental
+
         return (
-          ((scheduleData && !isArrayEmpty(scheduleData)) || hasVersions) && (
+          shouldShowAccordion && (
             <Accordion
               sx={{
                 '& .Mui-disabled': {
@@ -465,22 +475,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     color="warning"
                     size="small"
                     sx={{ ...chipStyles }}
-                  />
-                )}
-                {isDisabled && (
-                  <Chip
-                    aria-label="no records"
-                    icon={<InfoOutlined fontSize="small" />}
-                    label={t('Empty')}
-                    size="small"
-                    sx={{
-                      ...chipStyles,
-                      color: colors.alerts.error.color,
-                      '& .MuiChip-icon': {
-                        color: colors.alerts.error.color
-                      },
-                      backgroundImage: `linear-gradient(195deg, ${colors.alerts.error.border},${colors.alerts.error.background})`
-                    }}
                   />
                 )}
               </AccordionSummary>
