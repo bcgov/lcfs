@@ -121,6 +121,7 @@ class InternalCommentService:
         )
         return InternalCommentResponseSchema.model_validate(updated_comment)
 
+    @service_handler
     async def copy_internal_comments(
         self, source_report_id: int, target_report_id: int
     ) -> None:
