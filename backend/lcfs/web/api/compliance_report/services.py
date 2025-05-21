@@ -625,52 +625,74 @@ class ComplianceReportServices:
 
         filtered_history = []
 
-        # Statuses to hide from BCeID
+        # Statuses to hide from BCeID (non-IDIR) viewers for non-Draft items
         bceid_hidden_statuses = {
             ComplianceReportStatusEnum.Recommended_by_analyst.value,
             ComplianceReportStatusEnum.Recommended_by_manager.value,
         }
 
-        # Statuses to hide from non-Analysts
+        # Statuses to hide from non-Analyst viewers for non-Draft items
         non_analyst_hidden_statuses = {
             ComplianceReportStatusEnum.Analyst_adjustment.value,
         }
 
-        # Always hide Draft status from history view
-        always_hidden_statuses = {ComplianceReportStatusEnum.Draft.value}
+        # Statuses typically set by government users, used for name masking fallback
+        government_statuses_for_masking = {
+            ComplianceReportStatusEnum.Recommended_by_analyst.value,
+            ComplianceReportStatusEnum.Recommended_by_manager.value,
+            ComplianceReportStatusEnum.Assessed.value,
+            ComplianceReportStatusEnum.Analyst_adjustment.value,
+        }
+
+        # The original always_hidden_statuses set that included Draft is superseded by this new logic.
+        # If other statuses were meant to be always hidden, they would need a separate check.
 
         for h in report.history:
-            # Filter statuses based on requesting user's role
-            if h.status.status in always_hidden_statuses:
-                continue
-            if not is_requesting_user_idir and h.status.status in bceid_hidden_statuses:
-                continue
-            if (
-                not is_requesting_user_analyst
-                and h.status.status in non_analyst_hidden_statuses
-            ):
+            should_hide_history_item = False
+
+            # Determine if the creator of this history item is an IDIR user (primary check: no organization)
+            history_creator_is_idir = bool(
+                h.user_profile and not h.user_profile.organization
+            )
+
+            # Rule 1: Handling for Draft status
+            if h.status.status == ComplianceReportStatusEnum.Draft.value:
+                # Hide Draft items created by non-IDIR (supplier) users
+                if not history_creator_is_idir:
+                    should_hide_history_item = True
+
+            # Rule 2: Handling for non-Draft statuses
+            else:
+                hide_for_bceid_viewer = (
+                    not is_requesting_user_idir
+                    and h.status.status in bceid_hidden_statuses
+                )
+                hide_for_non_analyst_viewer = (
+                    not is_requesting_user_analyst
+                    and h.status.status in non_analyst_hidden_statuses
+                )
+
+                if hide_for_bceid_viewer or hide_for_non_analyst_viewer:
+                    should_hide_history_item = True
+
+            if should_hide_history_item:
                 continue
 
-            # Mask creator name if requesting user is BCeID and creator is IDIR
+            # Mask creator name if the requesting user is BCeID (non-IDIR)
+            # and the history item's creator is effectively an IDIR user.
             if not is_requesting_user_idir and h.user_profile:
-                # Instead of checking roles which don't exist in ComplianceReportUserSchema,
-                # assume users without an organization are government users
-                # Or use status-based heuristics to identify government actions
-                is_creator_idir = False
+                # Determine if creator is IDIR for masking purposes.
+                # Primary check: history_creator_is_idir (no organization).
+                # Fallback: creator has an organization, but status implies government action.
+                effective_creator_is_idir_for_masking = history_creator_is_idir
+                if (
+                    not effective_creator_is_idir_for_masking
+                    and h.user_profile.organization
+                ):
+                    if h.status.status in government_statuses_for_masking:
+                        effective_creator_is_idir_for_masking = True
 
-                # Check if the history entry is for a status typically set by IDIR users
-                government_statuses = {
-                    ComplianceReportStatusEnum.Recommended_by_analyst.value,
-                    ComplianceReportStatusEnum.Recommended_by_manager.value,
-                    ComplianceReportStatusEnum.Assessed.value,
-                    ComplianceReportStatusEnum.Analyst_adjustment.value,
-                }
-
-                if h.status.status in government_statuses:
-                    is_creator_idir = True
-
-                # If there's evidence this is a government user, mask their identity
-                if is_creator_idir:
+                if effective_creator_is_idir_for_masking:
                     # Create a copy or modify if mutable to avoid side effects
                     # Assuming ComplianceReportHistorySchema allows modification or we create a new one
                     # Let's assume we can modify display_name; adjust if schema is immutable

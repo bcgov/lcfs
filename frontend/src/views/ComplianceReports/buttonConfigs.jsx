@@ -48,7 +48,8 @@ export const buttonClusterConfigFn = ({
   isSigningAuthorityDeclared,
   supplementalInitiator,
   hasDraftSupplemental,
-  reportVersion
+  reportVersion,
+  isSupplemental
 }) => {
   const reportButtons = {
     submitReport: {
@@ -259,18 +260,31 @@ export const buttonClusterConfigFn = ({
               ...reportButtons.recommendByAnalyst,
               disabled: hasDraftSupplemental
             },
-            ...(reportVersion === 0
+            ...((reportVersion === 0 && !isPastReturnDeadline) ||
+            (reportVersion !== 0 && isSupplemental)
               ? [
                   {
                     ...reportButtons.returnToSupplier,
-                    disabled: isPastReturnDeadline || hasDraftSupplemental
+                    disabled: hasDraftSupplemental
                   }
                 ]
               : []),
-            {
-              ...reportButtons.createIdirSupplementalReport,
-              disabled: hasDraftSupplemental
-            }
+            ...(reportVersion === 0 && isPastReturnDeadline
+              ? [
+                  {
+                    ...reportButtons.createIdirSupplementalReport,
+                    disabled: hasDraftSupplemental
+                  }
+                ]
+              : []),
+            ...(reportVersion !== 0
+              ? [
+                  {
+                    ...reportButtons.createIdirSupplementalReport,
+                    disabled: hasDraftSupplemental
+                  }
+                ]
+              : [])
           ]
         : [])
     ],
@@ -289,6 +303,12 @@ export const buttonClusterConfigFn = ({
               ...reportButtons.recommendByManager,
               disabled: hasDraftSupplemental
             },
+            { ...reportButtons.returnToAnalyst, disabled: hasDraftSupplemental }
+          ]
+        : []),
+      ...(isGovernmentUser && hasRoles('Director')
+        ? [
+            { ...reportButtons.assessReport, disabled: hasDraftSupplemental },
             { ...reportButtons.returnToAnalyst, disabled: hasDraftSupplemental }
           ]
         : [])
