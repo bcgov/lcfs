@@ -14,9 +14,15 @@ from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum
 from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
-from lcfs.db.models.comment.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
-from lcfs.db.models.comment.AdminAdjustmentInternalComment import AdminAdjustmentInternalComment
-from lcfs.db.models.comment.ComplianceReportInternalComment import ComplianceReportInternalComment
+from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
+    InitiativeAgreementInternalComment,
+)
+from lcfs.db.models.comment.AdminAdjustmentInternalComment import (
+    AdminAdjustmentInternalComment,
+)
+from lcfs.db.models.comment.ComplianceReportInternalComment import (
+    ComplianceReportInternalComment,
+)
 
 
 logger = structlog.get_logger(__name__)
@@ -244,3 +250,44 @@ class InternalCommentRepository:
             internal_comment.create_user
         )
         return internal_comment
+
+    @repo_handler
+    async def get_internal_comment_ids_for_entity(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> List[int]:
+        """
+        Retrieves the IDs of internal comments for a specific entity.
+
+        Args:
+            entity_type (EntityTypeEnum): The type of entity.
+            entity_id (int): The ID of the entity.
+
+        Returns:
+            List[int]: List of internal comment IDs.
+        """
+        # Mapping of entity types to their respective models and where conditions
+        entity_mapping = {
+            EntityTypeEnum.TRANSFER: (
+                TransferInternalComment,
+                TransferInternalComment.transfer_id,
+            ),
+            EntityTypeEnum.INITIATIVE_AGREEMENT: (
+                InitiativeAgreementInternalComment,
+                InitiativeAgreementInternalComment.initiative_agreement_id,
+            ),
+            EntityTypeEnum.ADMIN_ADJUSTMENT: (
+                AdminAdjustmentInternalComment,
+                AdminAdjustmentInternalComment.admin_adjustment_id,
+            ),
+            EntityTypeEnum.COMPLIANCE_REPORT: (
+                ComplianceReportInternalComment,
+                ComplianceReportInternalComment.compliance_report_id,
+            ),
+        }
+
+        entity_model, where_condition = entity_mapping[entity_type]
+        query = select(entity_model.internal_comment_id).where(
+            where_condition == entity_id
+        )
+        result = await self.db.execute(query)
+        return [row[0] for row in result.all()]

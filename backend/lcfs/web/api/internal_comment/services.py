@@ -5,8 +5,15 @@ from fastapi import Depends, Request
 
 from lcfs.web.core.decorators import service_handler
 from lcfs.db.models.comment.InternalComment import InternalComment
+from lcfs.db.models.comment.ComplianceReportInternalComment import (
+    ComplianceReportInternalComment,
+)
 from .repo import InternalCommentRepository
-from .schema import InternalCommentCreateSchema, InternalCommentResponseSchema
+from .schema import (
+    InternalCommentCreateSchema,
+    InternalCommentResponseSchema,
+    EntityTypeEnum,
+)
 
 
 logger = structlog.get_logger(__name__)
@@ -113,3 +120,42 @@ class InternalCommentService:
             internal_comment_id, new_comment_text
         )
         return InternalCommentResponseSchema.model_validate(updated_comment)
+
+    async def copy_internal_comments(
+        self, source_report_id: int, target_report_id: int
+    ) -> None:
+        """
+        Copy internal comments from one compliance report to another.
+
+        Args:
+            source_report_id (int): ID of the source report.
+            target_report_id (int): ID of the target report.
+
+        Returns:
+            None
+        """
+        try:
+            comment_ids = await self.repo.get_internal_comment_ids_for_entity(
+                EntityTypeEnum.COMPLIANCE_REPORT, source_report_id
+            )
+
+            if not comment_ids:
+                return
+
+            associations = [
+                ComplianceReportInternalComment(
+                    compliance_report_id=target_report_id,
+                    internal_comment_id=comment_id,
+                )
+                for comment_id in comment_ids
+            ]
+            self.repo.db.add_all(associations)
+            await self.repo.db.flush()
+        except Exception as e:
+            logger.error(
+                "Failed to copy internal comments",
+                source_report_id=source_report_id,
+                target_report_id=target_report_id,
+                error=str(e),
+            )
+            raise
