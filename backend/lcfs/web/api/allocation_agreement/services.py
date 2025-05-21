@@ -424,6 +424,7 @@ class AllocationAgreementServices:
             raise HTTPException(
                 status_code=404, detail="Allocation agreement record not found."
             )
+        # If the compliance report IDs match, also delete the original record
         if (
             existing_allocation_agreement.compliance_report_id
             == allocation_agreement_data.compliance_report_id
@@ -452,15 +453,6 @@ class AllocationAgreementServices:
                 setattr(
                     deleted_entity, field, getattr(existing_allocation_agreement, field)
                 )
-
-        # If the compliance report IDs match, also delete the original record
-        if (
-            existing_allocation_agreement.compliance_report_id
-            == allocation_agreement_data.compliance_report_id
-        ):
-            await self.repo.delete_allocation_agreement(
-                allocation_agreement_data.allocation_agreement_id
-            )
 
         # Always create the deletion record
         await self.repo.create_allocation_agreement(deleted_entity)
