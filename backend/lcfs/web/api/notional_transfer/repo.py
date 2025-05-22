@@ -127,7 +127,7 @@ class NotionalTransferRepository:
                     == valid_notional_transfers_subq.c.max_version,
                 ),
             )
-            .order_by(NotionalTransfer.notional_transfer_id)
+            .order_by(NotionalTransfer.create_date)
         )
 
         result = await self.db.execute(notional_transfers_select)

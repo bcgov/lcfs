@@ -240,7 +240,7 @@ async def test_delete_allocation_agreement(
             "group_uuid": group_uuid,
             "version": 1,
             "action_type": ActionTypeEnum.CREATE,
-            "compliance_report_id": 1,
+            "compliance_report_id": 12, # if same compliance report id then it'll do physical delete if not creates a new record with action type DELETE
             "transaction_partner": "LCFS Org 2",
             "postal_address": "789 Stellar Lane Floor 10",
             "transaction_partner_email": "tfrs@gov.bc.ca",

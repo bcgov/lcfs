@@ -41,8 +41,8 @@ class FinalSupplyEquipmentCreateSchema(BaseSchema):
     model: Optional[str] = None
     level_of_equipment: str
     ports: Optional[PortsEnum] = None
-    intended_uses: List[str]
-    intended_users: List[str]
+    intended_use_types: List[str]
+    intended_user_types: List[str]
     street_address: str
     city: str
     postal_code: str = Field(pattern=POSTAL_REGEX)

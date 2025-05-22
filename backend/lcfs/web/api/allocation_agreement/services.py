@@ -36,6 +36,8 @@ ALLOCATION_AGREEMENT_EXCLUDE_FIELDS = {
     "user_type",
     "version",
     "action_type",
+    "is_new_supplemental_entry",
+    "compliance_report_id",
 }
 
 PROVISION_APPROVED_FUEL_CODE = "Fuel code - section 19 (b) (i)"
@@ -303,9 +305,9 @@ class AllocationAgreementServices:
                 allocation_agreement_data.group_uuid
             )
             existing_allocation_agreement.version = (
-                existing_allocation_agreement.version + 1
+                existing_allocation_agreement.version
             )
-            existing_allocation_agreement.action_type = ActionTypeEnum.UPDATE
+            existing_allocation_agreement.action_type = existing_allocation_agreement.action_type
 
             updated_allocation_agreement = await self.repo.update_allocation_agreement(
                 existing_allocation_agreement
@@ -358,6 +360,12 @@ class AllocationAgreementServices:
         )
         allocation_agreement.version = (
             0 if not existing_record else existing_record.version + 1
+        )
+        allocation_agreement.create_date = (
+            existing_record.create_date if existing_record else None
+        )
+        allocation_agreement.create_user = (
+            existing_record.create_user if existing_record else None
         )
 
         created_allocation_agreement = await self.repo.create_allocation_agreement(
@@ -412,7 +420,21 @@ class AllocationAgreementServices:
                 allocation_agreement_data.group_uuid
             )
         )
-
+        if not existing_allocation_agreement:
+            raise HTTPException(
+                status_code=404, detail="Allocation agreement record not found."
+            )
+        # If the compliance report IDs match, also delete the original record
+        if (
+            existing_allocation_agreement.compliance_report_id
+            == allocation_agreement_data.compliance_report_id
+        ):
+            await self.repo.delete_allocation_agreement(
+                allocation_agreement_data.allocation_agreement_id
+            )
+            return DeleteAllocationAgreementResponseSchema(
+                success=True, message="Marked as deleted."
+            )
         # If the record is already deleted, just return success
         if existing_allocation_agreement.action_type == ActionTypeEnum.DELETE:
             return DeleteAllocationAgreementResponseSchema(message="Marked as deleted.")
@@ -431,15 +453,6 @@ class AllocationAgreementServices:
                 setattr(
                     deleted_entity, field, getattr(existing_allocation_agreement, field)
                 )
-
-        # If the compliance report IDs match, also delete the original record
-        if (
-            existing_allocation_agreement.compliance_report_id
-            == allocation_agreement_data.compliance_report_id
-        ):
-            await self.repo.delete_allocation_agreement(
-                allocation_agreement_data.allocation_agreement_id
-            )
 
         # Always create the deletion record
         await self.repo.create_allocation_agreement(deleted_entity)
