@@ -202,6 +202,8 @@ class NotionalTransferServices:
         notional_transfer.version = (
             0 if not existing_record else existing_record.version + 1
         )
+        notional_transfer.create_date = existing_record.create_date if existing_record else None
+        notional_transfer.create_user = existing_record.create_user if existing_record else None
         created_transfer = await self.repo.create_notional_transfer(notional_transfer)
 
         return self.model_to_schema(created_transfer)
