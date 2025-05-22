@@ -29,9 +29,11 @@ logger = structlog.get_logger(__name__)
 class FinalSupplyEquipmentServices:
     def __init__(
         self,
-        repo: FinalSupplyEquipmentRepository = Depends(),
-        compliance_report_repo: ComplianceReportRepository = Depends(),
-        organization_repo: OrganizationsRepository = Depends(),
+        repo: FinalSupplyEquipmentRepository = Depends(FinalSupplyEquipmentRepository),
+        compliance_report_repo: ComplianceReportRepository = Depends(
+            ComplianceReportRepository
+        ),
+        organization_repo: OrganizationsRepository = Depends(OrganizationsRepository),
     ) -> None:
         self.organization_repo = organization_repo
         self.repo = repo
