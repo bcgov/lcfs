@@ -40,6 +40,7 @@ const renderComponent = (overrides = {}, options = {}) => {
     <HistoryCard
       report={{ ...defaultReport, ...overrides }}
       defaultExpanded={options.defaultExpanded}
+      assessedMessage={options.assessedMessage}
     />,
     {
       wrapper
@@ -325,7 +326,7 @@ describe('Director Statement', () => {
           }
         ]
       },
-      { defaultExpanded: true }
+      { defaultExpanded: true, assessedMessage: 'This is a director statement' }
     )
 
     await waitFor(() => {
@@ -355,7 +356,7 @@ describe('Director Statement', () => {
           }
         ]
       },
-      { defaultExpanded: true }
+      { defaultExpanded: true, assessedMessage: 'This is a director statement' }
     )
 
     await waitFor(() => {
