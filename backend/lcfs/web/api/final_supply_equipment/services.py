@@ -79,8 +79,8 @@ class FinalSupplyEquipmentServices:
                 exclude={
                     "id",
                     "level_of_equipment",
-                    "intended_uses",
-                    "intended_users",
+                    "intended_use_types",
+                    "intended_user_types",
                     "deleted",
                 }
             )
@@ -88,11 +88,11 @@ class FinalSupplyEquipmentServices:
         fse_model.level_of_equipment = await self.repo.get_level_of_equipment_by_name(
             fse.level_of_equipment
         )
-        for intended_use in fse.intended_uses:
+        for intended_use in fse.intended_use_types:
             fse_model.intended_use_types.append(
                 await self.repo.get_intended_use_by_name(intended_use)
             )
-        for intended_user in fse.intended_users:
+        for intended_user in fse.intended_user_types:
             fse_model.intended_user_types.append(
                 await self.repo.get_intended_user_by_name(intended_user)
             )
@@ -162,7 +162,7 @@ class FinalSupplyEquipmentServices:
             existing_fse.level_of_equipment = level_of_equipment
         existing_fse.ports = fse_data.ports
         intended_use_types = []
-        for intended_use in fse_data.intended_uses:
+        for intended_use in fse_data.intended_use_types:
             if intended_use not in [
                 intended_use_type.type
                 for intended_use_type in existing_fse.intended_use_types
@@ -183,7 +183,7 @@ class FinalSupplyEquipmentServices:
                     )
                 )
         intended_user_types = []
-        for intended_user in fse_data.intended_users:
+        for intended_user in fse_data.intended_user_types:
             # Check if this intended use is already in the existing list
             existing_user_type = next(
                 (
@@ -361,15 +361,15 @@ class FinalSupplyEquipmentServices:
                     "final_supply_equipment_id",
                     "level_of_equipment",
                     "compliance_report_id",
-                    "intended_uses",
-                    "intended_users",
+                    "intended_use_types",
+                    "intended_user_types",
                 }
             )
             new_fse = FinalSupplyEquipmentCreateSchema(
                 **payload,
                 level_of_equipment=old_fse.level_of_equipment,
-                intended_uses=[use_type for use_type in old_fse.intended_use_types],
-                intended_users=[user_type for user_type in old_fse.intended_user_types],
+                intended_use_types=[use_type for use_type in old_fse.intended_use_types],
+                intended_user_types=[user_type for user_type in old_fse.intended_user_types],
                 compliance_report_id=target_report_id,
             )
 
