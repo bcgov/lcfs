@@ -56,6 +56,10 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const alertRef = useRef()
   const navigate = useNavigate()
 
+  // Store if we've already shown an alert for this location state to prevent duplicates
+  const [hasProcessedLocationAlert, setHasProcessedLocationAlert] =
+    useState(false)
+
   const { compliancePeriod, complianceReportId } = useParams()
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
@@ -355,19 +359,36 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   )
 
   useEffect(() => {
-    if (location.state?.message) {
+    // Only handle location state alerts if we haven't processed them yet
+    if (location.state?.message && !hasProcessedLocationAlert) {
       alertRef.current?.triggerAlert({
         message: location.state.message,
         severity: location.state.severity || 'info'
       })
+      // Mark that we've processed this alert
+      setHasProcessedLocationAlert(true)
+
+      // Clear the message from location state to prevent child components from showing it
+      navigate(location.pathname, {
+        replace: true,
+        state: { ...location.state, message: undefined, severity: undefined }
+      })
     }
+
     if (isError) {
       alertRef.current?.triggerAlert({
         message: error.response?.data?.detail || error.message,
         severity: 'error'
       })
     }
-  }, [location.state, isError, error])
+  }, [
+    location.state,
+    isError,
+    error,
+    navigate,
+    hasProcessedLocationAlert,
+    location.pathname
+  ])
 
   if (isLoading || isCurrentUserLoading) {
     return <Loading />
