@@ -56,6 +56,10 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const alertRef = useRef()
   const navigate = useNavigate()
 
+  // Store if we've already shown an alert for this location state to prevent duplicates
+  const [hasProcessedLocationAlert, setHasProcessedLocationAlert] =
+    useState(false)
+
   const { compliancePeriod, complianceReportId } = useParams()
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
@@ -355,19 +359,36 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   )
 
   useEffect(() => {
-    if (location.state?.message) {
+    // Only handle location state alerts if we haven't processed them yet
+    if (location.state?.message && !hasProcessedLocationAlert) {
       alertRef.current?.triggerAlert({
         message: location.state.message,
         severity: location.state.severity || 'info'
       })
+      // Mark that we've processed this alert
+      setHasProcessedLocationAlert(true)
+
+      // Clear the message from location state to prevent child components from showing it
+      navigate(location.pathname, {
+        replace: true,
+        state: { ...location.state, message: undefined, severity: undefined }
+      })
     }
+
     if (isError) {
       alertRef.current?.triggerAlert({
         message: error.response?.data?.detail || error.message,
         severity: 'error'
       })
     }
-  }, [location.state, isError, error])
+  }, [
+    location.state,
+    isError,
+    error,
+    navigate,
+    hasProcessedLocationAlert,
+    location.pathname
+  ])
 
   if (isLoading || isCurrentUserLoading) {
     return <Loading />
@@ -474,62 +495,89 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               isEarlyIssuance={showEarlyIssuanceSummary}
             />
           )}
-          {isGovernmentUser && !qReport?.isQuarterly && <AssessmentStatement />}
-          {hasRoles(roles.analyst) && !qReport?.isQuarterly && (
-            <AssessmentRecommendation
-              reportData={reportData}
-              complianceReportId={complianceReportId}
-              currentStatus={currentStatus}
-            />
-          )}
-          {/* Internal Comments */}
-          {isGovernmentUser && (
-            <BCBox mt={4}>
-              <BCTypography variant="h6" color="primary">
-                {t(`report:internalComments`)}
-              </BCTypography>
-              <BCBox>
-                <Role roles={govRoles}>
-                  <InternalComments
-                    entityType="complianceReport"
-                    entityId={parseInt(complianceReportId)}
-                  />
-                </Role>
+
+          <BCTypography
+            color="primary"
+            variant="h5"
+            mb={2}
+            mt={2}
+            component="div"
+          >
+            {t('report:assessmentRecommendation')}
+          </BCTypography>
+
+          <BCBox
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.28)',
+              padding: '20px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.28)'
+            }}
+          >
+            {isGovernmentUser && !qReport?.isQuarterly && (
+              <AssessmentStatement />
+            )}
+            {hasRoles(roles.analyst) && !qReport?.isQuarterly && (
+              <AssessmentRecommendation
+                reportData={reportData}
+                complianceReportId={complianceReportId}
+                currentStatus={currentStatus}
+              />
+            )}
+            {/* Internal Comments */}
+            {isGovernmentUser && (
+              <BCBox mt={4}>
+                <BCTypography variant="h6" color="primary">
+                  {t(`report:internalComments`)}
+                </BCTypography>
+                <BCBox>
+                  <Role roles={govRoles}>
+                    <InternalComments
+                      entityType="complianceReport"
+                      entityId={parseInt(complianceReportId)}
+                    />
+                  </Role>
+                </BCBox>
+                <Stack
+                  direction="row"
+                  justifyContent="flex-start"
+                  mt={2}
+                  gap={2}
+                >
+                  {buttonClusterConfig[currentStatus]?.map(
+                    (config) =>
+                      config && (
+                        <BCButton
+                          key={config.id}
+                          data-test={config.id}
+                          id={config.id}
+                          size="small"
+                          variant={config.variant}
+                          color={config.color}
+                          onClick={methods.handleSubmit(() =>
+                            config.handler({
+                              assessmentStatement:
+                                reportData?.report.assessmentStatement
+                            })
+                          )}
+                          startIcon={
+                            config.startIcon && (
+                              <FontAwesomeIcon
+                                icon={config.startIcon}
+                                className="small-icon"
+                              />
+                            )
+                          }
+                          disabled={config.disabled}
+                        >
+                          {config.label}
+                        </BCButton>
+                      )
+                  )}
+                </Stack>
               </BCBox>
-              <Stack direction="row" justifyContent="flex-start" mt={2} gap={2}>
-                {buttonClusterConfig[currentStatus]?.map(
-                  (config) =>
-                    config && (
-                      <BCButton
-                        key={config.id}
-                        data-test={config.id}
-                        id={config.id}
-                        size="small"
-                        variant={config.variant}
-                        color={config.color}
-                        onClick={methods.handleSubmit(() =>
-                          config.handler({
-                            assessmentStatement:
-                              reportData?.report.assessmentStatement
-                          })
-                        )}
-                        startIcon={
-                          config.startIcon && (
-                            <FontAwesomeIcon
-                              icon={config.startIcon}
-                              className="small-icon"
-                            />
-                          )
-                        }
-                        disabled={config.disabled}
-                      >
-                        {config.label}
-                      </BCButton>
-                    )
-                )}
-              </Stack>
-            </BCBox>
-          )}
+            )}
+          </BCBox>
+
           {/* 30-Day Submission Notice for BCeID on Draft Supplementals */}
           {!isGovernmentUser && isDraftSupplemental && submissionDeadline && (
             <Alert
