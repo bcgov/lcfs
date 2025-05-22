@@ -68,7 +68,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
           dataKey="notionalTransfers"
           suppressPagination={data?.notionalTransfers?.length <= 10}
           autoSizeStrategy={{
-            type: 'fitCellContents',
+            type: 'fitGridWidth',
             defaultMinWidth: 50,
             defaultMaxWidth: 600
           }}

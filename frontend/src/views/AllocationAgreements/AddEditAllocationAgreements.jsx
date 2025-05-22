@@ -13,7 +13,9 @@ import {
 import {
   useAllocationAgreementOptions,
   useGetAllocationAgreementsList,
-  useSaveAllocationAgreement
+  useSaveAllocationAgreement,
+  useImportAllocationAgreement,
+  useGetAllocationAgreementImportJobStatus
 } from '@/hooks/useAllocationAgreement'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
@@ -25,10 +27,6 @@ import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes/apiRoutes'
 import ImportDialog from '@/components/ImportDialog'
-import {
-  useImportAllocationAgreement,
-  useGetAllocationAgreementImportJobStatus
-} from '@/hooks/useAllocationAgreement'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { Menu, MenuItem } from '@mui/material'
 import BCButton from '@/components/BCButton'
@@ -199,16 +197,30 @@ export const AddEditAllocationAgreements = () => {
       !allocationAgreementsLoading &&
       data?.allocationAgreements?.length > 0
     ) {
-      const updatedRowData = data.allocationAgreements.map((item) => ({
-        ...item,
-        complianceReportId,
-        compliancePeriod,
-        isNewSupplementalEntry:
-          isSupplemental && item.complianceReportId === +complianceReportId,
-        id: uuid()
-      }))
-
-      setRowData(updatedRowData)
+      const updatedRowData = data.allocationAgreements.map((item) => {
+        let matchingRow = rowData.find(
+          (row) => row.allocationAgreementId === item.allocationAgreementId
+        )
+        if (!matchingRow) {
+          matchingRow = rowData.find(
+            (row) =>
+              row.allocationAgreementId === undefined ||
+              row.allocationAgreementId === null
+          )
+        }
+        return {
+          ...item,
+          complianceReportId,
+          compliancePeriod,
+          isNewSupplementalEntry:
+            isSupplemental && item.complianceReportId === +complianceReportId,
+          id: matchingRow ? matchingRow.id : uuid()
+        }
+      })
+      setRowData([
+        ...updatedRowData,
+        { id: uuid(), complianceReportId, compliancePeriod }
+      ])
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }

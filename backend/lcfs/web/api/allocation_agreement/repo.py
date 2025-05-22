@@ -174,7 +174,7 @@ class AllocationAgreementRepository:
                     AllocationAgreement.version == valid_agreements_subq.c.max_version,
                 ),
             )
-            .order_by(AllocationAgreement.allocation_agreement_id)
+            .order_by(AllocationAgreement.create_date)
         )
 
         result = await self.db.execute(allocation_agreements_select)
