@@ -74,7 +74,9 @@ class FuelExportActionService:
         fuel_export.ci_of_fuel = fuel_data.effective_carbon_intensity
         fuel_export.target_ci = fuel_data.target_ci
         fuel_export.eer = fuel_data.eer
-        fuel_export.energy_density = fuel_data.energy_density
+        fuel_export.energy_density = (
+            fuel_export.energy_density or fuel_data.energy_density
+        )
         fuel_export.uci = fuel_data.uci
 
         # Calculate total energy if energy density is available
