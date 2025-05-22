@@ -40,6 +40,7 @@ const renderComponent = (overrides = {}, options = {}) => {
     <HistoryCard
       report={{ ...defaultReport, ...overrides }}
       defaultExpanded={options.defaultExpanded}
+      assessedMessage={options.assessedMessage}
     />,
     {
       wrapper
@@ -183,14 +184,17 @@ describe('HistoryCard', () => {
       }
     ]
 
-    renderComponent({
-      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
-      history,
-      summary: {
-        line11FossilDerivedBaseFuelTotal: 0,
-        line21NonCompliancePenaltyPayable: 0
-      }
-    })
+    renderComponent(
+      {
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        history,
+        summary: {
+          line11FossilDerivedBaseFuelTotal: 0,
+          line21NonCompliancePenaltyPayable: 0
+        }
+      },
+      { defaultExpanded: true }
+    )
 
     await waitFor(() => {
       expect(
@@ -219,14 +223,17 @@ describe('HistoryCard', () => {
         displayName: 'John Doe'
       }
     ]
-    renderComponent({
-      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
-      history,
-      summary: {
-        line11FossilDerivedBaseFuelTotal: 0.0,
-        line21NonCompliancePenaltyPayable: 0.0
-      }
-    })
+    renderComponent(
+      {
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        history,
+        summary: {
+          line11FossilDerivedBaseFuelTotal: 0.0,
+          line21NonCompliancePenaltyPayable: 0.0
+        }
+      },
+      { defaultExpanded: true }
+    )
 
     await waitFor(() => {
       expect(
@@ -319,7 +326,7 @@ describe('Director Statement', () => {
           }
         ]
       },
-      { defaultExpanded: true }
+      { defaultExpanded: true, assessedMessage: 'This is a director statement' }
     )
 
     await waitFor(() => {
@@ -349,7 +356,7 @@ describe('Director Statement', () => {
           }
         ]
       },
-      { defaultExpanded: true }
+      { defaultExpanded: true, assessedMessage: 'This is a director statement' }
     )
 
     await waitFor(() => {
