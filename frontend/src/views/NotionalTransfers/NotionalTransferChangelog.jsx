@@ -39,7 +39,7 @@ export const NotionalTransferChangelog = () => {
   const gridOptions = (highlight = true) => ({
     overlayNoRowsTemplate: t('notionalTransfer:noNotionalTransfersFound'),
     autoSizeStrategy: {
-      type: 'fitCellContents',
+      type: 'fitGridWidth',
       defaultMinWidth: 50,
       defaultMaxWidth: 600
     },
@@ -66,6 +66,7 @@ export const NotionalTransferChangelog = () => {
   return (
     <Box>
       {changelogData?.map((item, i) => {
+        const isCurrentOrOriginalVersion = i === 0 || item.version === 0
         return (
           <Box mb={4} key={i}>
             <BCTypography variant="h6" color="primary" component="div" mb={2}>
@@ -76,7 +77,7 @@ export const NotionalTransferChangelog = () => {
                 key={i}
                 gridKey={`notional-transfers-changelog-${i}`}
                 columnDefs={
-                  i === 0 || i + 1 === changelogData.length
+                  isCurrentOrOriginalVersion
                     ? changelogCommonColDefs(false)
                     : changelogColDefs()
                 }
@@ -84,7 +85,7 @@ export const NotionalTransferChangelog = () => {
                 getRowId={getRowId}
                 suppressPagination
                 gridOptions={
-                  i === 0 || i + 1 === changelogData.length
+                  isCurrentOrOriginalVersion
                     ? gridOptions(false)
                     : gridOptions()
                 }
