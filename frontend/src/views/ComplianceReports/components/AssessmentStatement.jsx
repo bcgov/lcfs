@@ -83,10 +83,7 @@ export const AssessmentStatement = () => {
   return (
     <>
       <FloatingAlert ref={ref} data-test="alert-box" delay={10000} />
-      <BCBox mt={4}>
-        <BCTypography variant="h5" color="primary">
-          {t(`report:assessmentRecommendation`)}
-        </BCTypography>
+      <BCBox>
         <BCTypography variant="h6" color="primary" mb={2}>
           {t(`report:directorStatement`)}
         </BCTypography>
