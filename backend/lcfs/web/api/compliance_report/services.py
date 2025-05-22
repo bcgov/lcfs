@@ -46,6 +46,7 @@ from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotServ
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from lcfs.services.s3.client import DocumentService
@@ -62,6 +63,7 @@ class ComplianceReportServices:
         final_supply_equipment_service: FinalSupplyEquipmentServices = Depends(),
         document_service: DocumentService = Depends(),
         transaction_repo: TransactionRepository = Depends(),
+        internal_comment_service: InternalCommentService = Depends(),
     ) -> None:
         self.final_supply_equipment_service = final_supply_equipment_service
         self.org_repo = org_repo
@@ -69,6 +71,7 @@ class ComplianceReportServices:
         self.snapshot_services = snapshot_services
         self.document_service = document_service
         self.transaction_repo = transaction_repo
+        self.internal_comment_service = internal_comment_service
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
@@ -212,6 +215,11 @@ class ComplianceReportServices:
             existing_report_id, new_report.compliance_report_id
         )
 
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
+            existing_report_id, new_report.compliance_report_id
+        )
+
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
@@ -327,6 +335,11 @@ class ComplianceReportServices:
             original_report_id, new_report.compliance_report_id
         )
 
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
+            original_report_id, new_report.compliance_report_id
+        )
+
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
@@ -415,6 +428,11 @@ class ComplianceReportServices:
 
         # Copy documents from the original report
         await self.document_service.copy_documents(
+            existing_report_id, new_report.compliance_report_id
+        )
+
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
             existing_report_id, new_report.compliance_report_id
         )
 
