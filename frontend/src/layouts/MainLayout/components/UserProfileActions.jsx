@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
-import { logout } from '@/utils/keycloak'
-import { useKeycloak } from '@react-keycloak/web'
+import { useAuth } from '@/hooks/useAuth'
 import { useTranslation } from 'react-i18next'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
@@ -15,14 +14,14 @@ import {
   CircularProgress,
   Tooltip
 } from '@mui/material'
-import { Notifications, Logout } from '@mui/icons-material'
+import { Notifications, Logout as LogoutIcon } from '@mui/icons-material'
 import { NavLink, useLocation } from 'react-router-dom'
 import { ROUTES, buildPath } from '@/routes/routes'
 
 export const UserProfileActions = () => {
   const { t } = useTranslation()
-  const { data: currentUser } = useCurrentUser()
-  const { keycloak } = useKeycloak()
+  const auth = useAuth()
+  const { data: currentUserData } = useCurrentUser()
   const location = useLocation()
 
   // TODO:
@@ -32,7 +31,7 @@ export const UserProfileActions = () => {
   // the client of updates as they occur, reducing unnecessary polling.
   const {
     data: notificationsData,
-    isLoading,
+    isLoading: notificationsLoading,
     refetch
   } = useNotificationsCount({
     refetchInterval: 60000 // Automatically refetch every 1 minute (60000ms)
@@ -61,27 +60,47 @@ export const UserProfileActions = () => {
     </IconButton>
   )
 
+  if (auth.isLoading) {
+    return <CircularProgress size={24} sx={{ color: '#fff', mx: 2 }} />
+  }
+
+  // Use auth.user.profile for display name if available, fallback to currentUserData
+  const displayName =
+    auth.user?.profile?.name ||
+    (currentUserData?.firstName && currentUserData?.lastName
+      ? `${currentUserData.firstName} ${currentUserData.lastName}`
+      : 'User')
+
+  // Determine if user specific link should be shown
+  const showUserLink =
+    auth.user?.profile &&
+    currentUserData?.organization?.organizationId &&
+    currentUserData?.userProfileId
+  const userProfilePath = showUserLink
+    ? buildPath(
+        currentUserData?.isGovernmentUser
+          ? ROUTES.ADMIN.USERS.VIEW
+          : ROUTES.ORGANIZATION.VIEW_USER,
+        {
+          orgID: currentUserData?.organization?.organizationId,
+          userID: currentUserData?.userProfileId
+        }
+      )
+    : '#' // Fallback path if needed, or hide link
+
   return (
-    keycloak.authenticated && (
+    auth.isAuthenticated && (
       <BCBox
         display="flex"
         alignItems="center"
         justifyContent="space-between"
         mr={3}
       >
-        {currentUser?.firstName && (
+        {showUserLink && (
           <>
             <BCTypography
               component={NavLink}
-              to={buildPath(
-                currentUser?.isGovernmentUser
-                  ? ROUTES.ADMIN.USERS.VIEW
-                  : ROUTES.ORGANIZATION.VIEW_USER,
-                {
-                  orgID: currentUser?.organization?.organizationId,
-                  userID: currentUser?.userProfileId
-                }
-              )}
+              to={userProfilePath}
               style={{
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
@@ -93,7 +112,7 @@ export const UserProfileActions = () => {
               variant="subtitle1"
               color="light"
             >
-              {`${currentUser.firstName} ${currentUser.lastName}`}
+              {displayName}
             </BCTypography>
             <Divider
               orientation="vertical"
@@ -110,7 +129,7 @@ export const UserProfileActions = () => {
           </>
         )}
         <>
-          {isLoading ? (
+          {notificationsLoading ? (
             <CircularProgress size={24} sx={{ color: '#fff', mx: 2 }} />
           ) : (
             <Tooltip title={t('Notifications')}>
@@ -154,12 +173,12 @@ export const UserProfileActions = () => {
         </>
         <BCButton
           style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
-          onClick={logout}
+          onClick={() => auth.signoutRedirect()}
           color="light"
           size="small"
           variant="outlined"
           data-test="logout-button"
-          startIcon={<Logout sx={{ width: '18px', height: '18px' }} />}
+          startIcon={<LogoutIcon sx={{ width: '18px', height: '18px' }} />}
           sx={{
             maxHeight: '32px',
             '&:hover': {
