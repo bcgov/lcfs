@@ -141,13 +141,22 @@ export const AssessmentCard = ({
                   >
                     {t('report:reportHistory')}
                   </BCTypography>
-                  {filteredChain.map((report, index) => (
-                    <HistoryCard
-                      defaultExpanded={index === 0}
-                      key={report.version}
-                      report={report}
-                    />
-                  ))}
+                  {filteredChain.map((report, index) => {
+                    const assessmentStatement = filteredChain.find(
+                      (r) =>
+                        r?.assessmentStatement !== null &&
+                        r?.assessmentStatement !== undefined
+                    )?.assessmentStatement
+
+                    return (
+                      <HistoryCard
+                        defaultExpanded={index === 0}
+                        key={report.version}
+                        report={report}
+                        assessedMessage={index === 0 && assessmentStatement}
+                      />
+                    )
+                  })}
                 </>
               )}
             <Role roles={[roles.supplier]}>
