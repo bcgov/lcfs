@@ -602,7 +602,8 @@ export const fuelExportColDefs = (
       showStepperButtons: false
     },
     valueGetter: (params) => {
-      return params.data.energyDensity !== undefined
+      return params.data.energyDensity !== undefined &&
+        params.data.energyDensity !== null
         ? `${params.data.energyDensity} MJ/${params.data.units || 0}`
         : ''
     },
