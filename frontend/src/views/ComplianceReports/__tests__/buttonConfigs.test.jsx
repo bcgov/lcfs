@@ -169,10 +169,34 @@ describe('buttonClusterConfigFn', () => {
     expect(buttons.length).toBe(2)
     expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
     expect(buttons[0].disabled).toBe(true)
-    expect(buttons[1].label).toBe(
-      'report:actionBtns.createSupplementalReportBtn'
-    )
+    expect(buttons[1].label).toBe('report:actionBtns.returnToSupplier')
     expect(buttons[1].disabled).toBe(true)
+  })
+
+  it('shows enabled Analyst actions for Submitted (reportVersion > 0) if NO draft exists', () => {
+    const props = {
+      ...baseProps,
+      isGovernmentUser: true,
+      hasRoles: (role) => role === roles.analyst,
+      hasDraftSupplemental: false, // NO Draft exists
+      reportVersion: 1 // Is a supplemental report
+    }
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+    expect(buttons).toBeDefined()
+    expect(buttons.length).toBe(2)
+    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
+    expect(buttons[0].disabled).toBe(false) // Should be enabled
+    expect(buttons[1].label).toBe(
+      'report:actionBtns.returnToSupplier' // Changed from createSupplementalReportBtn
+    )
+    expect(buttons[1].disabled).toBe(false) // Should be enabled
+
+    // Verify no Create IDIR Supplemental Report button is present for this case
+    const createSupplementalButton = buttons.find(
+      (b) => b.id === 'create-idir-supplemental-report-btn'
+    )
+    expect(createSupplementalButton).toBeUndefined()
   })
 
   it('should disable Manager/Director actions when draft supplemental exists', () => {

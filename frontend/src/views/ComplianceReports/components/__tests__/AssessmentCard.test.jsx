@@ -337,3 +337,86 @@ describe('AssessmentCard', () => {
     })
   })
 })
+
+describe('AssessmentCard - assessedMessage indirect testing', () => {
+  const mockHistory = [
+    {
+      status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+      createDate: '2024-10-01',
+      userProfile: { firstName: 'John', lastName: 'Doe' },
+      displayName: 'John Doe',
+      summary: {
+        line11FossilDerivedBaseFuelTotal: 1
+      }
+    }
+  ]
+
+  const mockOrgData = {
+    name: 'Test Org'
+  }
+
+  beforeEach(() => {
+    vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
+      hasRoles: vi.fn(() => true),
+      isLoading: false
+    })
+  })
+
+  it('shows assessment statement in first history card when present', async () => {
+    const mockChain = [
+      {
+        history: mockHistory,
+        version: 1,
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        assessmentStatement: 'Test assessment statement'
+      }
+    ]
+
+    render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={true}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Test assessment statement')).toBeInTheDocument()
+    })
+  })
+
+  it('does not show assessment statement when it is null', async () => {
+    const mockChain = [
+      {
+        history: mockHistory,
+        version: 1,
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        assessmentStatement: null
+      }
+    ]
+
+    render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={true}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.queryByTestId('assessment-statement')
+      ).not.toBeInTheDocument()
+    })
+  })
+})

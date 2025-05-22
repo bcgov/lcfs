@@ -221,7 +221,7 @@ describe('AddEditAllocationAgreements', () => {
 
     // Use findAllByTestId for asynchronous elements
     const rows = await screen.findAllByTestId('grid-row')
-    expect(rows.length).toBe(2)
+    expect(rows.length).toBe(3) // consider for an extra empty row
     // Check that each row's textContent matches UUID format
     const uuidRegex =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i

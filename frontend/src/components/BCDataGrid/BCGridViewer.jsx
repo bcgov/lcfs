@@ -41,7 +41,7 @@ export const BCGridViewer = forwardRef(
     exportName = 'ExportData',
 
     ...props
-  }) => {
+  }, ref) => {
     const { data, error, isError, isLoading } = queryData
 
     const onGridReady = useCallback(
