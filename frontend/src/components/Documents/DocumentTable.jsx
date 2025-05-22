@@ -20,6 +20,8 @@ import {
   useUploadDocument,
   useDownloadDocument
 } from '@/hooks/useDocuments'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { timezoneFormatter } from '@/utils/formatters'
 import { MAX_FILE_SIZE_BYTES } from '@/constants/common.js'
 
 const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
@@ -40,7 +42,7 @@ const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
 const FileTable = styled(Box)(({ theme }) => ({
   width: '100%',
   display: 'grid',
-  gridTemplateColumns: '1fr max-content max-content max-content',
+  gridTemplateColumns: '1fr 220px max-content max-content max-content',
   gridColumnGap: '8px'
 }))
 
@@ -54,6 +56,7 @@ function DocumentTable({ parentType, parentID }) {
   const [isDragActive, setIsDragActive] = useState(false)
   const fileInputRef = useRef(null)
   const [files, setFiles] = useState([])
+  const { data: currentUser, hasRoles } = useCurrentUser()
 
   const { data: loadedFiles } = useDocuments(parentType, parentID)
   useEffect(() => {
@@ -205,6 +208,11 @@ function DocumentTable({ parentType, parentID }) {
         </TableCell>
         <TableCell>
           <BCTypography color="primary" variant="subtitle1">
+            Uploaded
+          </BCTypography>
+        </TableCell>
+        <TableCell>
+          <BCTypography color="primary" variant="subtitle1">
             Size
           </BCTypography>
         </TableCell>
@@ -238,6 +246,12 @@ function DocumentTable({ parentType, parentID }) {
               )}
             </TableCell>
             <TableCell>
+              {timezoneFormatter({ value: file.createDate })}
+              {file.createUser && !hasRoles('Supplier')
+                ? ` - ${file.createUser}`
+                : ''}
+            </TableCell>
+            <TableCell>
               {file.oversize && (
                 <Icon style={{ color: colors.error.main }}>close</Icon>
               )}
@@ -257,7 +271,8 @@ function DocumentTable({ parentType, parentID }) {
                 {!file.deleting &&
                   !file.virus &&
                   !file.scanning &&
-                  !file.oversize && (
+                  !file.oversize &&
+                  file.createUser === currentUser?.keycloakUsername && (
                     <IconButton
                       onClick={() => {
                         handleDeleteFile(file.documentId)
