@@ -183,14 +183,17 @@ describe('HistoryCard', () => {
       }
     ]
 
-    renderComponent({
-      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
-      history,
-      summary: {
-        line11FossilDerivedBaseFuelTotal: 0,
-        line21NonCompliancePenaltyPayable: 0
-      }
-    })
+    renderComponent(
+      {
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        history,
+        summary: {
+          line11FossilDerivedBaseFuelTotal: 0,
+          line21NonCompliancePenaltyPayable: 0
+        }
+      },
+      { defaultExpanded: true }
+    )
 
     await waitFor(() => {
       expect(
@@ -219,14 +222,17 @@ describe('HistoryCard', () => {
         displayName: 'John Doe'
       }
     ]
-    renderComponent({
-      currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
-      history,
-      summary: {
-        line11FossilDerivedBaseFuelTotal: 0.0,
-        line21NonCompliancePenaltyPayable: 0.0
-      }
-    })
+    renderComponent(
+      {
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+        history,
+        summary: {
+          line11FossilDerivedBaseFuelTotal: 0.0,
+          line21NonCompliancePenaltyPayable: 0.0
+        }
+      },
+      { defaultExpanded: true }
+    )
 
     await waitFor(() => {
       expect(
