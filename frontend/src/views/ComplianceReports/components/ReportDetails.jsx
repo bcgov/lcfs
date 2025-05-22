@@ -117,13 +117,19 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     return canEdit
   }
 
-  const wasEdited = (data) => {
-    const crMap = {}
+  const crMap = useMemo(() => {
+    const mapSet = {}
     complianceReportData.chain.forEach((complianceReport) => {
-      crMap[complianceReport.complianceReportId] = complianceReport.version
+      mapSet[complianceReport.complianceReportId] = complianceReport.version
     })
+    return mapSet
+  }, [complianceReportData])
 
-    return data?.some((row) => crMap[row.complianceReportId] !== 0)
+  const wasEdited = (data) => {
+    return data?.some(
+      (row) =>
+        crMap[row.complianceReportId] !== 0 && Object.prototype.hasOwnProperty.call(row, 'version')
+    )
   }
 
   const activityList = useMemo(
@@ -475,6 +481,22 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     color="warning"
                     size="small"
                     sx={{ ...chipStyles }}
+                  />
+                )}
+                {hasNoData && (
+                  <Chip
+                    aria-label="no records"
+                    icon={<InfoOutlined fontSize="small" />}
+                    label={t('Empty')}
+                    size="small"
+                    sx={{
+                      ...chipStyles,
+                      color: colors.alerts.info.color,
+                      '& .MuiChip-icon': {
+                        color: colors.alerts.info.color
+                      },
+                      backgroundImage: `linear-gradient(195deg, ${colors.alerts.info.border},${colors.alerts.info.background})`
+                    }}
                   />
                 )}
               </AccordionSummary>
