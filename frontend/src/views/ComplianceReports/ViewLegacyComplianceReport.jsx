@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCModal from '@/components/BCModal'
@@ -25,6 +25,10 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
   const { t } = useTranslation(['common', 'report'])
   const [modalData, setModalData] = useState(null)
   const alertRef = useRef()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [hasProcessedLocationAlert, setHasProcessedLocationAlert] =
+    useState(false)
 
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
@@ -63,6 +67,25 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
   const { data: orgData, isLoading } = useOrganization(
     reportData.report.organizationId
   )
+
+  // Add effect to handle location alerts in one place
+  useEffect(() => {
+    // Only handle location state alerts if we haven't processed them yet
+    if (location.state?.message && !hasProcessedLocationAlert) {
+      alertRef.current?.triggerAlert({
+        message: location.state.message,
+        severity: location.state.severity || 'info'
+      })
+      // Mark that we've processed this alert
+      setHasProcessedLocationAlert(true)
+
+      // Clear the message from location state to prevent child components from showing it
+      navigate(location.pathname, {
+        replace: true,
+        state: { ...location.state, message: undefined, severity: undefined }
+      })
+    }
+  }, [location.state, navigate, hasProcessedLocationAlert, location.pathname])
 
   if (isLoading || isCurrentUserLoading) {
     return <Loading />

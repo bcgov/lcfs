@@ -117,13 +117,19 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     return canEdit
   }
 
-  const wasEdited = (data) => {
-    const crMap = {}
+  const crMap = useMemo(() => {
+    const mapSet = {}
     complianceReportData.chain.forEach((complianceReport) => {
-      crMap[complianceReport.complianceReportId] = complianceReport.version
+      mapSet[complianceReport.complianceReportId] = complianceReport.version
     })
+    return mapSet
+  }, [complianceReportData])
 
-    return data?.some((row) => crMap[row.complianceReportId] !== 0)
+  const wasEdited = (data) => {
+    return data?.some(
+      (row) =>
+        crMap[row.complianceReportId] !== 0 && Object.prototype.hasOwnProperty.call(row, 'version')
+    )
   }
 
   const activityList = useMemo(
@@ -385,8 +391,18 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           scheduleData.length > 0 &&
           scheduleData.every((item) => item.actionType === 'DELETE')
 
+        // Determine if this accordion should be displayed
+        const shouldShowAccordion =
+          // Always show if it has data
+          (scheduleData && !isArrayEmpty(scheduleData)) ||
+          // Or if it's Supporting Docs and user has analyst role (always show this section regardless of content)
+          activity.name === t('report:supportingDocs') ||
+          // For non-supplemental reports, always show all sections even if they're empty
+          // For supplemental reports (version > 0), hide empty accordions
+          !isSupplemental
+
         return (
-          ((scheduleData && !isArrayEmpty(scheduleData)) || hasVersions) && (
+          shouldShowAccordion && (
             <Accordion
               sx={{
                 '& .Mui-disabled': {
@@ -467,7 +483,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     sx={{ ...chipStyles }}
                   />
                 )}
-                {isDisabled && (
+                {hasNoData && (
                   <Chip
                     aria-label="no records"
                     icon={<InfoOutlined fontSize="small" />}
@@ -475,11 +491,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     size="small"
                     sx={{
                       ...chipStyles,
-                      color: colors.alerts.error.color,
+                      color: colors.alerts.info.color,
                       '& .MuiChip-icon': {
-                        color: colors.alerts.error.color
+                        color: colors.alerts.info.color
                       },
-                      backgroundImage: `linear-gradient(195deg, ${colors.alerts.error.border},${colors.alerts.error.background})`
+                      backgroundImage: `linear-gradient(195deg, ${colors.alerts.info.border},${colors.alerts.info.background})`
                     }}
                   />
                 )}

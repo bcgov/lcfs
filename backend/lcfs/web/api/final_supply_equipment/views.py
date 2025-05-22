@@ -194,16 +194,11 @@ async def export(
             status_code=400, detail="Invalid report id. Must be an integer."
         )
 
-    await report_validate.validate_organization_access(compliance_report_id)
-
-    CRS = __import__(
-        "lcfs.web.api.compliance_report.services",
-        fromlist=["ComplianceReportServices"],
-    ).ComplianceReportServices
-    compliance_report = await CRS().get_compliance_report_by_id(
-        report_id=compliance_report_id,
-        user=request.user,
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
     )
+    if compliance_report is None:
+        raise HTTPException(status_code=404, detail="Compliance report not found")
 
     return await exporter.export(
         compliance_report_id, request.user, compliance_report.organization, True
@@ -260,16 +255,9 @@ async def import_fse(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    if compliance_report is None:
+        raise HTTPException(status_code=404, detail="Compliance report not found")
 
-    # Check if overwrite is allowed
-    CRS = __import__(
-        "lcfs.web.api.compliance_report.services",
-        fromlist=["ComplianceReportServices"],
-    ).ComplianceReportServices
-    compliance_report = await CRS().get_compliance_report_by_id(
-        report_id=compliance_report_id,
-        user=request.user,
-    )
     version = compliance_report.version
     is_original = version == 0
 
@@ -316,15 +304,11 @@ async def get_template(
             status_code=400, detail="Invalid report id. Must be an integer."
         )
 
-    await report_validate.validate_organization_access(compliance_report_id)
-
-    CRS = __import__(
-        "lcfs.web.api.compliance_report.services",
-        fromlist=["ComplianceReportServices"],
-    ).ComplianceReportServices
-    compliance_report = await CRS().get_compliance_report_by_id(
-        report_id=compliance_report_id, user=request.user
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
     )
+    if compliance_report is None:
+        raise HTTPException(status_code=404, detail="Compliance report not found")
 
     organization = compliance_report.organization
     return await exporter.export(

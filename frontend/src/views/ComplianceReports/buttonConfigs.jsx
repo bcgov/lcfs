@@ -48,7 +48,8 @@ export const buttonClusterConfigFn = ({
   isSigningAuthorityDeclared,
   supplementalInitiator,
   hasDraftSupplemental,
-  reportVersion
+  reportVersion,
+  isSupplemental
 }) => {
   const reportButtons = {
     submitReport: {

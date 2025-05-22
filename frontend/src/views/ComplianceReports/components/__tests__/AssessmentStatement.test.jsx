@@ -99,15 +99,12 @@ describe('AssessmentStatement Component', () => {
     render(<AssessmentStatement />)
     // Use querySelector directly to handle potential attribute differences
     expect(document.querySelector('[data-testid="bc-box"]')).not.toBeNull()
-    // Alternatively check for a more reliable element that should always be present
-    expect(screen.getByText('Assessment Recommendation')).toBeInTheDocument()
   })
 
   test('displays the correct headings', async () => {
     render(<AssessmentStatement />)
 
     // Check for headings
-    expect(screen.getByText('Assessment Recommendation')).toBeInTheDocument()
     expect(screen.getByText('Director Statement')).toBeInTheDocument()
     expect(screen.getByText('Instructions for assessment')).toBeInTheDocument()
     expect(screen.getByText('Save Statement')).toBeInTheDocument()

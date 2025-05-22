@@ -224,7 +224,8 @@
     "Reassessed": "Re-assessed",
     "renewableTarget": "Renewable fuel target",
     "lowCarbonTarget": "Low carbon fuel target",
-    "directorStatement": "Assessment statement from the director"
+    "directorStatement": "Assessment statement from the director",
+    "canBeEdited": "(can be edited below)"
   },
   "internalComments": "Internal comments",
   "fuelLabels": {

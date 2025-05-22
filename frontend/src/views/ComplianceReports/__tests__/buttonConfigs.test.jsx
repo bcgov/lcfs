@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest'
 import { buttonClusterConfigFn } from '../buttonConfigs'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
-import { DateTime } from 'luxon'
 
 // Mock t function
 const t = (key) => key
@@ -31,7 +30,8 @@ const baseProps = {
   isSigningAuthorityDeclared: true,
   supplementalInitiator: null,
   hasDraftSupplemental: false,
-  currentUser: mockCurrentUser
+  currentUser: mockCurrentUser,
+  isSupplemental: false
   // Add other props used by the function as needed
 }
 
@@ -224,5 +224,90 @@ describe('buttonClusterConfigFn', () => {
       (b) => b.id === 'return-report-supplier-btn'
     )
     expect(returnButton).toBeUndefined()
+  })
+
+  const findReturnToSupplierButton = (buttons) => {
+    return buttons?.find((b) => b.id === 'return-report-supplier-btn')
+  }
+
+  it('should show return to supplier button for Analyst role with reportVersion 0 before deadline', () => {
+    // Set date to before March 31st of next year
+    vi.setSystemTime(new Date(2024, 1, 15)) // Feb 15, 2024
+
+    const props = {
+      ...baseProps,
+      hasRoles: (role) => role === roles.analyst,
+      isGovernmentUser: true,
+      reportVersion: 0
+    }
+
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+    const returnButton = findReturnToSupplierButton(buttons)
+
+    expect(returnButton).toBeDefined()
+    expect(returnButton.label).toBe('report:actionBtns.returnToSupplier')
+    expect(returnButton.disabled).toBe(false)
+  })
+
+  it('should not show return to supplier button for Analyst role with reportVersion 0 after deadline', () => {
+    // Set date to after March 31st of next year
+    vi.setSystemTime(new Date(2024, 4, 1)) // May 1, 2024
+
+    const props = {
+      ...baseProps,
+      hasRoles: (role) => role === roles.analyst,
+      isGovernmentUser: true,
+      reportVersion: 0
+    }
+
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+    const returnButton = findReturnToSupplierButton(buttons)
+
+    expect(returnButton).toBeUndefined()
+  })
+
+  it('should show return to supplier button for supplemental reports even if past deadline', () => {
+    // Set date to after March 31st of next year
+    vi.setSystemTime(new Date(2024, 4, 1)) // May 1, 2024
+    const props = {
+      ...baseProps,
+      hasRoles: (role) => role === roles.analyst,
+      isGovernmentUser: true,
+      reportVersion: 1,
+      isSupplemental: true
+    }
+
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+    const returnButton = findReturnToSupplierButton(buttons)
+
+    expect(returnButton).toBeDefined()
+    expect(returnButton.label).toBe('report:actionBtns.returnToSupplier')
+    expect(returnButton.disabled).toBe(false)
+  })
+
+  it('should display assessment button for Director in Recommended by analyst status', () => {
+    const props = {
+      ...baseProps,
+      isGovernmentUser: true,
+      hasRoles: (role) => role === roles.director,
+      hasDraftSupplemental: false
+    }
+
+    // Test Recommended by Analyst status with Director role
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]
+
+    // We should see the Director buttons (after the Manager buttons)
+    expect(buttons.length).toBe(2)
+    expect(buttons[0].id).toBe('assess-report-btn')
+    expect(buttons[0].label).toBe('report:actionBtns.assessReportBtn')
+    expect(buttons[0].disabled).toBe(false)
+
+    expect(buttons[1].id).toBe('return-report-manager-btn')
+    expect(buttons[1].label).toBe('report:actionBtns.returnToAnalyst')
+    expect(buttons[1].disabled).toBe(false)
   })
 })
