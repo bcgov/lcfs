@@ -268,23 +268,25 @@ function DocumentTable({ parentType, parentID }) {
             </TableCell>
             <TableCell>
               <Tooltip title="Delete">
-                {!file.deleting &&
-                  !file.virus &&
-                  !file.scanning &&
-                  !file.oversize &&
-                  file.createUser === currentUser?.keycloakUsername && (
-                    <IconButton
-                      onClick={() => {
-                        handleDeleteFile(file.documentId)
-                      }}
-                      aria-label="delete row"
-                      data-test="delete-button"
-                      color="error"
-                    >
-                      <Delete style={{ pointerEvents: 'none' }} />
-                    </IconButton>
-                  )}
-                {file.deleting && <CircularProgress size={22} />}
+                <div>
+                  {!file.deleting &&
+                    !file.virus &&
+                    !file.scanning &&
+                    !file.oversize &&
+                    file.createUser === currentUser?.keycloakUsername && (
+                      <IconButton
+                        onClick={() => {
+                          handleDeleteFile(file.documentId)
+                        }}
+                        aria-label="delete row"
+                        data-test="delete-button"
+                        color="error"
+                      >
+                        <Delete style={{ pointerEvents: 'none' }} />
+                      </IconButton>
+                    )}
+                  {file.deleting && <CircularProgress size={22} />}
+                </div>
               </Tooltip>
             </TableCell>
           </div>
