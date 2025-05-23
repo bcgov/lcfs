@@ -36,7 +36,9 @@ describe('DocumentUploadDialog', () => {
       mutate: vi.fn()
     })
     useCurrentUser.mockReturnValue({
-      data: { keycloakUsername: 'tester' }
+      data: { keycloakUsername: 'tester' },
+      hasRoles: vi.fn(() => false),
+      hasAnyRole: vi.fn(() => false)
     })
   })
 

@@ -175,6 +175,11 @@ describe('AddEditOrg', () => {
       isFetched: true
     })
 
+    // Mock successful API response
+    apiSpy.post.mockResolvedValueOnce({
+      data: { organization_id: 1, name: 'New Test Org Legal' }
+    })
+
     render(
       <MockFormProvider>
         <AddEditOrgForm />
@@ -214,6 +219,14 @@ describe('AddEditOrg', () => {
 
     // Submit the form
     fireEvent.click(screen.getByTestId('saveOrganization'))
+
+    // Wait for the API call to be made
+    await waitFor(() => {
+      expect(apiSpy.post).toHaveBeenCalledWith(
+        '/organizations/create',
+        expect.any(Object)
+      )
+    })
 
     // Wait for the navigation side effect
     await waitFor(() => {
