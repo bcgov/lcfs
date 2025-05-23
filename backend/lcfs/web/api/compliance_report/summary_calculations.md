@@ -100,7 +100,16 @@ This approach drives continuous innovation while providing flexibility in how ob
 
 16. **Line 16: Banked Units Remaining** - This shows the supplier's balance of banked units that remain available for future use after any current period usage. This provides visibility into a supplier's compliance reserves, which can be valuable for planning purposes.
 
-17. **Line 17: Non-Banked Units Used** - This represents compliance units acquired from other sources (such as credit trades with other suppliers) that are being used to achieve compliance in the current period. This market-based flexibility mechanism allows cost-effective distribution of compliance efforts.
+17. **Line 17: Available Compliance Unit Balance** - This represents the available compliance unit balance for the compliance period calculated using the specific TFRS formula. This calculation includes:
+   - Compliance unit balance changes from assessments (validations) listed with the compliance period or prior
+   - Minus reductions listed with the compliance period or prior
+   - Plus compliance units purchased through credit transfers with effective date on or before the end of the compliance period
+   - Minus compliance units sold through credit transfers with effective date on or before the end of the compliance period
+   - Plus compliance units issued under Initiative Agreements (IA/P3A) with effective date on or before the end of the compliance period
+   - Plus/minus admin adjustments with effective date on or before the end of the compliance period
+   - Minus all future debits (such as transfers or reductions)
+   
+   This balance represents the total compliance units available to the organization as of March 31st of the compliance year + 1, following the TFRS legacy calculation methodology to ensure consistency with historical reporting standards.
 
 18. **Line 18: Units to be Banked** - When a supplier has excess compliance units after meeting current obligations, this line shows how many units they are choosing to bank for future use. There may be regulatory limits on how many units can be banked or how long they can be carried forward.
 

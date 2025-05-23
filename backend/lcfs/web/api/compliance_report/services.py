@@ -287,7 +287,7 @@ class ComplianceReportServices:
 
         # Get the current available balance for line 17
         current_available_balance = (
-            await self.transaction_repo.calculate_available_balance_for_period(
+            await self.transaction_repo.calculate_line_17_available_balance_for_period(
                 current_report.organization_id,
                 int(current_report.compliance_period.description),
             )
