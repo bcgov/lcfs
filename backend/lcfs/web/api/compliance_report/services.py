@@ -617,7 +617,7 @@ class ComplianceReportServices:
         ]
 
         # Apply masking to each report in the chain
-        masked_chain = self._mask_report_status(compliance_report_chain, user)
+        masked_chain = self._mask_report_status(filtered_chain, user)
         # Apply history masking to each report in the chain
         masked_chain = [
             self._mask_report_status_for_history(report, user)
