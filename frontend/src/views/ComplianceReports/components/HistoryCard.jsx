@@ -12,6 +12,7 @@ import MuiAccordionSummary, {
   accordionSummaryClasses
 } from '@mui/material/AccordionSummary'
 import { useTranslation } from 'react-i18next'
+import { roles } from '@/constants/roles.js'
 
 const Accordion = styled((props) => (
   <MuiAccordion disableGutters elevation={0} square {...props} />
@@ -50,12 +51,33 @@ export const HistoryCard = ({
   defaultExpanded = false,
   assessedMessage = undefined
 }) => {
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser, hasRoles } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const { t } = useTranslation(['report'])
 
   const isCurrentAssessed =
     report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED
+
+  // Check if the current government user can edit the assessment statement
+  const canEditAssessmentStatement = useMemo(() => {
+    if (!isGovernmentUser) return false
+
+    const currentStatus = report.currentStatus?.status
+    const roleStatusMap = {
+      [roles.analyst]: [
+        COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      ],
+      [roles.compliance_manager]: [
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+      ],
+      [roles.director]: [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]
+    }
+
+    return Object.entries(roleStatusMap).some(
+      ([role, statuses]) => hasRoles(role) && statuses.includes(currentStatus)
+    )
+  }, [isGovernmentUser, hasRoles, report.currentStatus?.status])
 
   /**
    * Helper: build the two assessment list items.
@@ -145,7 +167,7 @@ export const HistoryCard = ({
                     <strong>
                       {t('report:complianceReportHistory.directorStatement')}
                     </strong>
-                    {isGovernmentUser && (
+                    {isGovernmentUser && canEditAssessmentStatement && (
                       <span style={{ color: '#d8292f' }}>
                         {' '}
                         {t('report:complianceReportHistory.canBeEdited')}

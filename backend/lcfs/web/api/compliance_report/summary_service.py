@@ -487,7 +487,7 @@ class ComplianceReportSummaryService:
             await self.fuel_supply_repo.get_effective_fuel_supplies(
                 compliance_report.compliance_report_group_uuid,
                 compliance_report.compliance_report_id,
-                compliance_report.version
+                compliance_report.version,
             )
         )
 
@@ -959,14 +959,20 @@ class ComplianceReportSummaryService:
         compliance_units_prev_issued_for_fuel_export = (
             previous_summary.line_19_units_to_be_exported if previous_summary else 0
         )  # line 16
-        
+
         # For supplemental reports with a summary already, use the stored line_17 value
         # This preserves the available balance from when the supplemental report was created
-        if compliance_report.version > 0 and compliance_report.summary and compliance_report.summary.line_17_non_banked_units_used is not None:
-            available_balance_for_period = compliance_report.summary.line_17_non_banked_units_used
+        if (
+            compliance_report.version > 0
+            and compliance_report.summary
+            and compliance_report.summary.line_17_non_banked_units_used is not None
+        ):
+            available_balance_for_period = (
+                compliance_report.summary.line_17_non_banked_units_used
+            )
         else:
-            # For original reports or new supplemental reports, calculate the current available balance
-            available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(
+            # Calculate the available balance using the specific period end formula for Line 17
+            available_balance_for_period = await self.trxn_repo.calculate_line_17_available_balance_for_period(
                 organization_id, compliance_period_start.year
             )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
         compliance_units_curr_issued_for_fuel_supply = (
@@ -1115,7 +1121,9 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid, report.compliance_report_id, report.version
+            report.compliance_report_group_uuid,
+            report.compliance_report_id,
+            report.version,
         )
 
         # Initialize compliance units sum
@@ -1152,7 +1160,9 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid, report.compliance_report_id, report.version
+            report.compliance_report_group_uuid,
+            report.compliance_report_id,
+            report.version,
         )
 
         # Initialize compliance units sum

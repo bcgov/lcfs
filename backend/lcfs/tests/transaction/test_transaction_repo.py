@@ -84,6 +84,242 @@ async def test_edge_case_transaction_in_proper_period(
 
 
 @pytest.mark.anyio
+async def test_calculate_line_17_available_balance_for_period(
+    dbsession, transaction_repo
+):
+    """Test Line 17 available balance calculation using the TFRS formula"""
+    # This test would need actual database setup with transfers, initiative agreements, etc.
+    # For now, just test that the method exists and returns a non-negative value
+    available_balance = (
+        await transaction_repo.calculate_line_17_available_balance_for_period(
+            test_org_id, 2024
+        )
+    )
+    assert available_balance >= 0
+
+
+@pytest.mark.anyio
+async def test_calculate_line_17_available_balance_tfrs_formula(
+    dbsession, transaction_repo
+):
+    """
+    Comprehensive test for Line 17 calculation using the TFRS formula.
+    Tests various scenarios including assessments, transfers, initiative agreements, and admin adjustments.
+    """
+    from datetime import datetime
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+    from lcfs.db.models.transfer.Transfer import Transfer
+    from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
+    from lcfs.db.models.initiative_agreement.InitiativeAgreement import (
+        InitiativeAgreement,
+    )
+    from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+    from lcfs.db.models.compliance.ComplianceReportStatus import (
+        ComplianceReportStatus,
+        ComplianceReportStatusEnum,
+    )
+
+    test_org_id = 1
+    compliance_period = 2024
+
+    # Create mock compliance report status
+    assessed_status = ComplianceReportStatus(
+        compliance_report_status_id=1, status=ComplianceReportStatusEnum.Assessed
+    )
+    dbsession.add(assessed_status)
+
+    # Create assessed compliance report with transaction
+    compliance_report = ComplianceReport(
+        compliance_report_id=1,
+        organization_id=test_org_id,
+        current_status_id=1,
+        compliance_period_id=1,
+        transaction_id=1,
+    )
+    dbsession.add(compliance_report)
+
+    # 1. Assessment transaction (positive impact)
+    assessment_transaction = Transaction(
+        transaction_id=1,
+        organization_id=test_org_id,
+        compliance_units=1000,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2024, 12, 1),  # Within compliance period
+    )
+    dbsession.add(assessment_transaction)
+
+    # 2. Transfer purchase (positive impact) - within period
+    transfer_purchase = Transfer(
+        transfer_id=1,
+        from_organization_id=2,
+        to_organization_id=test_org_id,
+        quantity=500,
+        current_status_id=6,  # Recorded status
+        transaction_effective_date=datetime(2024, 6, 15).date(),
+    )
+    dbsession.add(transfer_purchase)
+
+    # 3. Transfer sale (negative impact) - within period
+    transfer_sale = Transfer(
+        transfer_id=2,
+        from_organization_id=test_org_id,
+        to_organization_id=2,
+        quantity=200,
+        current_status_id=6,  # Recorded status
+        transaction_effective_date=datetime(2024, 8, 15).date(),
+    )
+    dbsession.add(transfer_sale)
+
+    # 4. Initiative Agreement (positive impact)
+    initiative_agreement = InitiativeAgreement(
+        initiative_agreement_id=1,
+        to_organization_id=test_org_id,
+        compliance_units=300,
+        current_status_id=3,  # Approved status
+        transaction_effective_date=datetime(2024, 10, 1).date(),
+    )
+    dbsession.add(initiative_agreement)
+
+    # 5. Admin adjustment (positive impact)
+    admin_adjustment = AdminAdjustment(
+        admin_adjustment_id=1,
+        to_organization_id=test_org_id,
+        compliance_units=100,
+        current_status_id=3,  # Approved status
+        transaction_effective_date=datetime(2024, 11, 1).date(),
+    )
+    dbsession.add(admin_adjustment)
+
+    # 6. Future transfer (should reduce available balance)
+    future_transfer = Transfer(
+        transfer_id=3,
+        from_organization_id=test_org_id,
+        to_organization_id=2,
+        quantity=50,
+        current_status_id=6,  # Recorded status
+        transaction_effective_date=datetime(2025, 6, 1).date(),  # Future
+    )
+    dbsession.add(future_transfer)
+
+    # 7. Future negative transaction (should reduce available balance)
+    future_transaction = Transaction(
+        transaction_id=2,
+        organization_id=test_org_id,
+        compliance_units=-75,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 8, 1),  # Future
+    )
+    dbsession.add(future_transaction)
+
+    await dbsession.commit()
+
+    # Calculate Line 17 balance
+    available_balance = (
+        await transaction_repo.calculate_line_17_available_balance_for_period(
+            test_org_id, compliance_period
+        )
+    )
+
+    # Expected calculation:
+    # Assessment: +1000
+    # Transfer purchases: +500
+    # Transfer sales: -200
+    # Initiative agreements: +300
+    # Admin adjustments: +100
+    # Future transfer debits: -50
+    # Future negative transactions: -75
+    # Total: 1000 + 500 - 200 + 300 + 100 - 50 - 75 = 1575
+    expected_balance = 1575
+
+    assert available_balance == expected_balance
+
+
+@pytest.mark.anyio
+async def test_calculate_line_17_edge_cases(dbsession, transaction_repo):
+    """Test edge cases for Line 17 calculation"""
+    from datetime import datetime
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+
+    test_org_id = 99
+    compliance_period = 2024
+
+    # Test with no transactions - should return 0
+    balance_no_data = (
+        await transaction_repo.calculate_line_17_available_balance_for_period(
+            test_org_id, compliance_period
+        )
+    )
+    assert balance_no_data == 0
+
+    # Test negative balance scenario - should return 0 (max with 0)
+    negative_transaction = Transaction(
+        transaction_id=100,
+        organization_id=test_org_id,
+        compliance_units=-500,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2024, 6, 1),
+    )
+    dbsession.add(negative_transaction)
+    await dbsession.commit()
+
+    balance_negative = (
+        await transaction_repo.calculate_line_17_available_balance_for_period(
+            test_org_id, compliance_period
+        )
+    )
+    assert balance_negative == 0  # Should not go negative
+
+
+@pytest.mark.anyio
+async def test_calculate_line_17_period_boundaries(dbsession, transaction_repo):
+    """Test that Line 17 calculation respects compliance period boundaries"""
+    from datetime import datetime
+    from lcfs.db.models.transaction.Transaction import (
+        Transaction,
+        TransactionActionEnum,
+    )
+
+    test_org_id = 88
+    compliance_period = 2024
+
+    # Transaction exactly at period end (March 31, 2025 23:59:59)
+    end_period_transaction = Transaction(
+        transaction_id=200,
+        organization_id=test_org_id,
+        compliance_units=1000,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 3, 31, 23, 59, 59),  # Period end
+    )
+    dbsession.add(end_period_transaction)
+
+    # Transaction just after period end (April 1, 2025)
+    after_period_transaction = Transaction(
+        transaction_id=201,
+        organization_id=test_org_id,
+        compliance_units=-200,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 4, 1, 0, 0, 0),  # After period
+    )
+    dbsession.add(after_period_transaction)
+
+    await dbsession.commit()
+
+    balance = await transaction_repo.calculate_line_17_available_balance_for_period(
+        test_org_id, compliance_period
+    )
+
+    # Should include the period-end transaction (+1000) and subtract future negative (-200)
+    # Expected: 1000 - 200 = 800
+    assert balance == 800
+
+
+@pytest.mark.anyio
 async def test_create_transaction(dbsession, transaction_repo):
     dbsession.add_all([test_org])
     await dbsession.flush()
