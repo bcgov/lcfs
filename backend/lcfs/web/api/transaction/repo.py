@@ -19,6 +19,7 @@ from sqlalchemy import (
     or_,
     extract,
     delete,
+    join,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -136,13 +137,18 @@ class TransactionRepository:
                     and_(
                         TransactionView.status == "Rescinded",
                         exists()
-                        .select_from(TransferHistory)
+                        .select_from(
+                            join(
+                                TransferHistory,
+                                TransferStatus,
+                                TransferHistory.transfer_status_id
+                                == TransferStatus.transfer_status_id,
+                            )
+                        )
                         .where(
                             and_(
                                 TransferHistory.transfer_id
                                 == TransactionView.transaction_id,
-                                TransferHistory.transfer_status_id
-                                == TransferStatus.transfer_status_id,
                                 TransferStatus.status == "Submitted",
                                 TransferHistory.create_date
                                 < TransactionView.update_date,
@@ -169,8 +175,8 @@ class TransactionRepository:
             query = query.order_by(direction(getattr(TransactionView, order.field)))
 
         # Execute count query for total records matching the filter
-        count_query = select(func.count(TransactionView.transaction_id)).select_from(
-            query.subquery()
+        count_query = select(func.count(TransactionView.transaction_id)).where(
+            and_(*query_conditions)
         )
         total_count_result = await self.db.execute(count_query)
         total_count = total_count_result.scalar_one()

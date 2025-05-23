@@ -650,6 +650,7 @@ async def test_create_supplemental_report_uses_current_balance(
     from lcfs.db.models.compliance.ComplianceReport import (
         ComplianceReport,
         SupplementalInitiatorType,
+        ReportingFrequency,
     )
     from lcfs.db.models.compliance.ComplianceReportStatus import (
         ComplianceReportStatus,
@@ -701,6 +702,22 @@ async def test_create_supplemental_report_uses_current_balance(
     # Mock the new report that will be created
     mock_new_report = MagicMock(spec=ComplianceReport)
     mock_new_report.compliance_report_id = 2
+    mock_new_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_new_report.supplemental_initiator = (
+        SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+    )
+    mock_new_report.compliance_period = mock_current_report.compliance_period
+    mock_new_report.organization = MagicMock()
+    mock_new_report.organization.organizationCode = "ORG123"
+    mock_new_report.organization.name = "Test Organization"
+    mock_new_report.current_status = MagicMock()
+    mock_new_report.current_status.status = "Draft"
+    mock_new_report.nickname = "Supplemental report 1"
+    mock_new_report.supplemental_note = "Test supplemental note"
+    mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
+    mock_new_report.assessment_statement = "Test assessment statement"
+    mock_repo.create_compliance_report.return_value = mock_new_report
+    mock_repo.add_compliance_report_history = AsyncMock()
 
     # Setup repository mocks
     mock_repo.get_compliance_report_by_id.return_value = mock_current_report
@@ -709,8 +726,6 @@ async def test_create_supplemental_report_uses_current_balance(
     mock_repo.get_assessed_compliance_report_by_period.return_value = (
         mock_assessed_report
     )
-    mock_repo.create_compliance_report.return_value = mock_new_report
-    mock_repo.add_compliance_report_history = AsyncMock()
 
     # Mock the transaction repo to return a specific balance for Line 17
     expected_line_17_balance = 2500
@@ -764,7 +779,10 @@ async def test_create_supplemental_report_line_17_calculation_error_handling(
     mock_transaction_repo,
 ):
     """Test error handling when Line 17 calculation fails during supplemental report creation"""
-    from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+    from lcfs.db.models.compliance.ComplianceReport import (
+        ComplianceReport,
+        ReportingFrequency,
+    )
     from lcfs.db.models.compliance.ComplianceReportSummary import (
         ComplianceReportSummary,
     )
@@ -773,8 +791,12 @@ async def test_create_supplemental_report_line_17_calculation_error_handling(
     mock_current_report = MagicMock(spec=ComplianceReport)
     mock_current_report.compliance_report_id = 1
     mock_current_report.organization_id = 123
+    mock_current_report.compliance_period = MagicMock()
     mock_current_report.compliance_period.description = "2024"
     mock_current_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_current_report.version = 0
+    mock_current_report.reporting_frequency = ReportingFrequency.ANNUAL
+    mock_current_report.compliance_period_id = 1
 
     # Mock assessed report
     mock_assessed_report = MagicMock()
@@ -823,16 +845,28 @@ async def test_create_supplemental_report_line_17_zero_balance(
     mock_current_report = MagicMock(spec=ComplianceReport)
     mock_current_report.compliance_report_id = 1
     mock_current_report.organization_id = 123
+    mock_current_report.compliance_period = MagicMock()
     mock_current_report.compliance_period.description = "2024"
     mock_current_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_current_report.version = 0
+    mock_current_report.reporting_frequency = "Annual"
+
+    # Mock assessed report with summary
+    mock_assessed_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_assessed_summary.line_6_renewable_fuel_retained_gasoline = 100
+    mock_assessed_summary.line_6_renewable_fuel_retained_diesel = 200
+    mock_assessed_summary.line_6_renewable_fuel_retained_jet_fuel = 300
+    mock_assessed_summary.line_7_previously_retained_gasoline = 50
+    mock_assessed_summary.line_7_previously_retained_diesel = 75
+    mock_assessed_summary.line_7_previously_retained_jet_fuel = 100
+    mock_assessed_summary.line_8_obligation_deferred_gasoline = 25
+    mock_assessed_summary.line_8_obligation_deferred_diesel = 35
+    mock_assessed_summary.line_8_obligation_deferred_jet_fuel = 45
+    mock_assessed_summary.line_9_obligation_added_gasoline = 10
+    mock_assessed_summary.line_9_obligation_added_diesel = 15
+    mock_assessed_summary.line_9_obligation_added_jet_fuel = 20
 
     # Mock assessed report
-    mock_assessed_summary = MagicMock(spec=ComplianceReportSummary)
-    # Set all line attributes to 0 for simplicity
-    for attr in dir(mock_assessed_summary):
-        if attr.startswith("line_") and not attr.startswith("line_17"):
-            setattr(mock_assessed_summary, attr, 0)
-
     mock_assessed_report = MagicMock()
     mock_assessed_report.summary = mock_assessed_summary
 
@@ -841,23 +875,39 @@ async def test_create_supplemental_report_line_17_zero_balance(
     mock_user.organization_id = 123
     mock_user.keycloak_username = "test_user"
 
-    # Mock new report
-    mock_new_report = MagicMock()
+    # Mock draft status
+    mock_draft_status = MagicMock(spec=ComplianceReportStatus)
+    mock_draft_status.compliance_report_status_id = 1
+
+    # Mock the new report that will be created
+    mock_new_report = MagicMock(spec=ComplianceReport)
     mock_new_report.compliance_report_id = 2
+    mock_new_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_new_report.supplemental_initiator = (
+        SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+    )
+    mock_new_report.compliance_period = mock_current_report.compliance_period
+    mock_new_report.organization = MagicMock()
+    mock_new_report.organization.organizationCode = "ORG123"
+    mock_new_report.organization.name = "Test Organization"
+    mock_new_report.current_status = MagicMock()
+    mock_new_report.current_status.status = "Draft"
+    mock_new_report.nickname = "Supplemental report 1"
+    mock_new_report.supplemental_note = "Test supplemental note"
+    mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
+    mock_new_report.assessment_statement = "Test assessment statement"
+    mock_repo.create_compliance_report.return_value = mock_new_report
+    mock_repo.add_compliance_report_history = AsyncMock()
 
     # Setup repository mocks
     mock_repo.get_compliance_report_by_id.return_value = mock_current_report
     mock_repo.get_latest_report_by_group_uuid.return_value = MagicMock(version=0)
-    mock_repo.get_compliance_report_status_by_desc.return_value = MagicMock(
-        compliance_report_status_id=1
-    )
+    mock_repo.get_compliance_report_status_by_desc.return_value = mock_draft_status
     mock_repo.get_assessed_compliance_report_by_period.return_value = (
         mock_assessed_report
     )
-    mock_repo.create_compliance_report.return_value = mock_new_report
-    mock_repo.add_compliance_report_history = AsyncMock()
 
-    # Mock transaction repo to return zero balance
+    # Mock the transaction repo to return zero balance
     mock_transaction_repo.calculate_line_17_available_balance_for_period = AsyncMock(
         return_value=0
     )
