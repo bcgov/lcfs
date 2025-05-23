@@ -100,8 +100,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     if (hasAnalystRole) {
       const editableAnalystStatuses = [
         COMPLIANCE_REPORT_STATUSES.SUBMITTED,
-        COMPLIANCE_REPORT_STATUSES.ASSESSED,
-        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST,
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER,
+        COMPLIANCE_REPORT_STATUSES.ASSESSED
       ]
 
       return editableAnalystStatuses.includes(currentStatus)
@@ -117,19 +118,13 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     return canEdit
   }
 
-  const crMap = useMemo(() => {
-    const mapSet = {}
-    complianceReportData.chain.forEach((complianceReport) => {
-      mapSet[complianceReport.complianceReportId] = complianceReport.version
-    })
-    return mapSet
-  }, [complianceReportData])
-
   const wasEdited = (data) => {
-    return data?.some(
-      (row) =>
-        crMap[row.complianceReportId] !== 0 && Object.prototype.hasOwnProperty.call(row, 'version')
-    )
+    const crMap = {}
+    complianceReportData.chain.forEach((complianceReport) => {
+      crMap[complianceReport.complianceReportId] = complianceReport.version
+    })
+
+    return data?.some((row) => crMap[row.complianceReportId] !== 0)
   }
 
   const activityList = useMemo(
@@ -391,18 +386,13 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           scheduleData.length > 0 &&
           scheduleData.every((item) => item.actionType === 'DELETE')
 
-        // Determine if this accordion should be displayed
-        const shouldShowAccordion =
-          // Always show if it has data
-          (scheduleData && !isArrayEmpty(scheduleData)) ||
-          // Or if it's Supporting Docs and user has analyst role (always show this section regardless of content)
+        const shouldRender =
           activity.name === t('report:supportingDocs') ||
-          // For non-supplemental reports, always show all sections even if they're empty
-          // For supplemental reports (version > 0), hide empty accordions
-          !isSupplemental
+          (scheduleData && !isArrayEmpty(scheduleData)) ||
+          hasVersions
 
         return (
-          shouldShowAccordion && (
+          shouldRender && (
             <Accordion
               sx={{
                 '& .Mui-disabled': {
@@ -483,7 +473,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     sx={{ ...chipStyles }}
                   />
                 )}
-                {hasNoData && (
+                {isDisabled && (
                   <Chip
                     aria-label="no records"
                     icon={<InfoOutlined fontSize="small" />}
@@ -491,11 +481,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     size="small"
                     sx={{
                       ...chipStyles,
-                      color: colors.alerts.info.color,
+                      color: colors.alerts.error.color,
                       '& .MuiChip-icon': {
-                        color: colors.alerts.info.color
+                        color: colors.alerts.error.color
                       },
-                      backgroundImage: `linear-gradient(195deg, ${colors.alerts.info.border},${colors.alerts.info.background})`
+                      backgroundImage: `linear-gradient(195deg, ${colors.alerts.error.border},${colors.alerts.error.background})`
                     }}
                   />
                 )}

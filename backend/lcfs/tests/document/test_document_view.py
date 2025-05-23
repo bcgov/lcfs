@@ -17,6 +17,8 @@ class DummyDocument:
         self.file_name = file_name
         self.document_id = document_id
         self.file_size = file_size
+        self.create_date = "2024-01-01T00:00:00Z"
+        self.create_user = "tester"
 
 
 class FakeDocumentService:
@@ -26,6 +28,8 @@ class FakeDocumentService:
                 "document_id": 1,
                 "file_name": "test.pdf",
                 "file_size": 123,
+                "create_date": "2024-01-01T00:00:00Z",
+                "create_user": "tester",
             }
         ]
 
@@ -36,6 +40,8 @@ class FakeDocumentService:
             "document_id": 2,
             "file_name": "uploaded.pdf",
             "file_size": 456,
+            "create_date": "2024-01-01T00:00:00Z",
+            "create_user": "tester",
         }
 
     async def get_object(self, document_id: int):
@@ -105,6 +111,8 @@ async def test_get_all_documents(fastapi_app, client):
     assert doc["documentId"] == 1
     assert doc["fileName"] == "test.pdf"
     assert doc["fileSize"] == 123
+    assert doc["createDate"] == "2024-01-01T00:00:00Z"
+    assert doc["createUser"] == "tester"
 
 
 @pytest.mark.anyio
@@ -121,6 +129,8 @@ async def test_upload_file_success(fastapi_app, client):
     assert data["documentId"] == 2
     assert data["fileName"] == "uploaded.pdf"
     assert data["fileSize"] == 456
+    assert data["createDate"] == "2024-01-01T00:00:00Z"
+    assert data["createUser"] == "tester"
 
 
 @pytest.mark.anyio
