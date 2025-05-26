@@ -2097,3 +2097,98 @@ class TestMaskReportStatusForHistory:
             == ComplianceReportStatusEnum.Assessed.value
         )
         assert result_report.history[2].display_name == "Government of British Columbia"
+
+
+class TestIsSupplementalRequestedByGovUser:
+    """Test cases for the is_supplemental_requested_by_gov_user method"""
+
+    @pytest.fixture
+    def service(self) -> ComplianceReportServices:
+        """Provides a simple instance of ComplianceReportServices for testing this method."""
+        return ComplianceReportServices(
+            repo=MagicMock(),
+            org_repo=MagicMock(),
+            snapshot_services=MagicMock(),
+            final_supply_equipment_service=MagicMock(),
+            document_service=MagicMock(),
+            transaction_repo=MagicMock(),
+            internal_comment_service=MagicMock(),
+        )
+
+    def _create_mock_history_item(
+        self,
+        status: ComplianceReportStatusEnum,
+        user_has_organization: bool = True,
+        organization_value=None,
+    ):
+        """Helper to create a mock history item"""
+        history_item = MagicMock()
+        history_item.status = MagicMock()
+        history_item.status.status = status.value
+
+        history_item.user_profile = MagicMock()
+        if organization_value is not None:
+            history_item.user_profile.organization = organization_value
+        elif not user_has_organization:
+            history_item.user_profile.organization = None
+        else:
+            history_item.user_profile.organization = "Some Organization"
+
+        return history_item
+
+    def _create_mock_chained_report(self, history_items: list = None):
+        """Helper to create a mock chained report"""
+        chained_report = MagicMock()
+        chained_report.history = history_items or []
+        return chained_report
+
+    def test_returns_true_when_draft_status_created_by_gov_user(self, service):
+        """Test returns True when history contains Draft status created by government user (no organization)"""
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft,
+            user_has_organization=False,  # Government user has no organization
+        )
+
+        chained_report = self._create_mock_chained_report([history_item])
+
+        result = service.is_supplemental_requested_by_gov_user(chained_report)
+
+        assert result is True
+
+    def test_returns_false_when_draft_status_created_by_supplier_user(self, service):
+        """Test returns False when history contains Draft status created by supplier user (has organization)"""
+        history_item = self._create_mock_history_item(
+            ComplianceReportStatusEnum.Draft,
+            user_has_organization=True,  # Supplier user has organization
+        )
+
+        chained_report = self._create_mock_chained_report([history_item])
+
+        result = service.is_supplemental_requested_by_gov_user(chained_report)
+
+        assert result is False
+
+    def test_returns_false_when_no_draft_status_in_history(self, service):
+        """Test returns False when history contains no Draft status items"""
+        history_items = [
+            self._create_mock_history_item(
+                ComplianceReportStatusEnum.Submitted, user_has_organization=False
+            ),
+            self._create_mock_history_item(
+                ComplianceReportStatusEnum.Assessed, user_has_organization=False
+            ),
+        ]
+
+        chained_report = self._create_mock_chained_report(history_items)
+
+        result = service.is_supplemental_requested_by_gov_user(chained_report)
+
+        assert result is False
+
+    def test_returns_false_when_history_is_empty(self, service):
+        """Test returns False when history is empty"""
+        chained_report = self._create_mock_chained_report([])
+
+        result = service.is_supplemental_requested_by_gov_user(chained_report)
+
+        assert result is False

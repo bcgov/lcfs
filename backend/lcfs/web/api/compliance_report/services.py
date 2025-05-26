@@ -517,18 +517,9 @@ class ComplianceReportServices:
         is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
         is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
 
-        becid_only_statuses = {
-            ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
-            ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
-        }
-
         becid_only_statuses_regular = {
             ComplianceReportStatusEnum.Recommended_by_analyst.value,
             ComplianceReportStatusEnum.Recommended_by_manager.value,
-        }
-
-        analyst_only_statuses = {
-            ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
         }
 
         analyst_only_statuses_regular = {
@@ -580,6 +571,26 @@ class ComplianceReportServices:
                         )
         return reports
 
+    def is_supplemental_requested_by_gov_user(self, chained_report):
+        """
+        Check if the supplemental report was requested by gov user:
+        """
+        if not hasattr(chained_report, "history") or not chained_report.history:
+            return False
+
+        for history_item in chained_report.history:
+            if (
+                hasattr(history_item, "status")
+                and hasattr(history_item.status, "status")
+                and history_item.status.status == ComplianceReportStatusEnum.Draft.value
+                and hasattr(history_item, "user_profile")
+                and hasattr(history_item.user_profile, "organization")
+                and history_item.user_profile.organization is None
+            ):
+                return True
+
+        return False
+
     @service_handler
     async def get_compliance_report_chain(
         self,
@@ -599,7 +610,10 @@ class ComplianceReportServices:
         filtered_chain = [
             chained_report
             for chained_report in compliance_report_chain
-            if chained_report.version <= report.version
+            if (
+                chained_report.version <= report.version
+                or self.is_supplemental_requested_by_gov_user(chained_report)
+            )
         ]
 
         # Apply masking to each report in the chain
