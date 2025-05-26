@@ -8,6 +8,7 @@ import {
   useUploadDocument,
   useDocuments
 } from '@/hooks/useDocuments'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 // Mock hooks
 vi.mock('@/hooks/useDocuments', () => ({
@@ -16,6 +17,7 @@ vi.mock('@/hooks/useDocuments', () => ({
   useUploadDocument: vi.fn(),
   useDownloadDocument: vi.fn()
 }))
+vi.mock('@/hooks/useCurrentUser')
 
 describe('DocumentUploadDialog', () => {
   const parentID = '123'
@@ -32,6 +34,11 @@ describe('DocumentUploadDialog', () => {
     })
     useDeleteDocument.mockReturnValue({
       mutate: vi.fn()
+    })
+    useCurrentUser.mockReturnValue({
+      data: { keycloakUsername: 'tester' },
+      hasRoles: vi.fn(() => false),
+      hasAnyRole: vi.fn(() => false)
     })
   })
 
@@ -108,7 +115,9 @@ describe('DocumentUploadDialog', () => {
         {
           documentId: '1',
           fileName: 'example.txt',
-          fileSize: 1024
+          fileSize: 1024,
+          createUser: 'tester',
+          createDate: '2024-01-01T00:00:00Z'
         }
       ],
       isLoading: false
