@@ -51,8 +51,8 @@ export const CompareReports = () => {
         const sortedChain = [...chain].sort(
           (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
         )
-        setReport1ID(sortedChain[0].complianceReportId)
-        setReport2ID(sortedChain[1].complianceReportId)
+        setReport1ID(sortedChain[1].complianceReportId)
+        setReport2ID(sortedChain[0].complianceReportId)
       }
 
       setIsLoading(false)
@@ -97,7 +97,8 @@ export const CompareReports = () => {
           line: row.line,
           description: row.description,
           format: row.format,
-          report1: row.value
+          report1:
+            row.value || row.totalValue || row.amount || row[fuelType] || 0
         })
       }
     }
@@ -113,15 +114,30 @@ export const CompareReports = () => {
         const matchingRow = report2Summary.lowCarbonFuelTargetSummary.find(
           (row2) => row2.line === row.line
         )
-        row.report2 = matchingRow.value
-        row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+        if (matchingRow) {
+          row.report2 = matchingRow.value
+          row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+        } else {
+          row.report2 = null
+          row.delta = null
+        }
       }
       for (const row of nonCompliancePenaltySummary) {
         const matchingRow = report2Summary.nonCompliancePenaltySummary.find(
           (row2) => row2.line === row.line
         )
-        row.report2 = matchingRow.value
-        row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+        if (matchingRow) {
+          row.report2 =
+            matchingRow.value ||
+            matchingRow.totalValue ||
+            matchingRow.amount ||
+            matchingRow[fuelType] ||
+            0
+          row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+        } else {
+          row.report2 = null
+          row.delta = null
+        }
       }
     }
     setRenewableSummary(renewableSummary)
