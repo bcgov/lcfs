@@ -286,4 +286,26 @@ describe('buttonClusterConfigFn', () => {
     expect(buttons[1].label).toBe('report:actionBtns.returnToAnalyst')
     expect(buttons[1].disabled).toBe(false)
   })
+
+  it('should show return to supplier button for supplemental reports', () => {
+    vi.setSystemTime(new Date(2024, 4, 1)) // May 1, 2024
+    const props = {
+      ...baseProps,
+      hasRoles: (role) => role === roles.analyst,
+      isGovernmentUser: true,
+      reportVersion: 1,
+      isSupplemental: true
+    }
+
+    const config = buttonClusterConfigFn(props)
+    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
+
+    expect(buttons.length).toBe(3)
+    expect(buttons[0].id).toBe('recommend-report-analyst-btn')
+
+    const returnButton = findReturnToSupplierButton(buttons)
+    expect(returnButton).toBeDefined()
+
+    vi.useRealTimers()
+  })
 })

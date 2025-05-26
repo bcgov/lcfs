@@ -246,6 +246,8 @@ export const buttonClusterConfigFn = ({
     month: 3,
     day: 31
   })
+  // Calculate if we're past the March 31 deadline for returning original reports
+  // Note: This deadline does NOT apply to supplemental reports
   const isPastReturnDeadline = DateTime.now() > returnDeadline
 
   return {
@@ -260,6 +262,9 @@ export const buttonClusterConfigFn = ({
               ...reportButtons.recommendByAnalyst,
               disabled: hasDraftSupplemental
             },
+            // Return to supplier button - show for:
+            // 1. Original reports (reportVersion === 0) before deadline
+            // 2. Supplemental reports (isSupplemental) at ANY time (no deadline)
             ...((reportVersion === 0 && !isPastReturnDeadline) ||
             (reportVersion !== 0 && isSupplemental)
               ? [
