@@ -51,8 +51,8 @@ export const CompareReports = () => {
         const sortedChain = [...chain].sort(
           (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
         )
-        setReport1ID(sortedChain[1].complianceReportId)
-        setReport2ID(sortedChain[0].complianceReportId)
+        setReport1ID(sortedChain[0].complianceReportId)
+        setReport2ID(sortedChain[1].complianceReportId)
       }
 
       setIsLoading(false)
