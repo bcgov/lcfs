@@ -20,6 +20,20 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/services/useApiService')
 vi.mock('react-router-dom')
 
+// Mock the useMutation hook to properly handle onSuccess callback
+const mockMutate = vi.fn()
+vi.mock('@tanstack/react-query', async () => {
+  const actual = await vi.importActual('@tanstack/react-query')
+  return {
+    ...actual,
+    useMutation: vi.fn(() => ({
+      mutate: mockMutate,
+      isPending: false,
+      isError: false
+    }))
+  }
+})
+
 const MockFormProvider = ({ children }) => {
   const methods = useForm({
     resolver: yupResolver(schemaValidation)
@@ -175,6 +189,24 @@ describe('AddEditOrg', () => {
       isFetched: true
     })
 
+    // Mock successful API response
+    apiSpy.post.mockResolvedValueOnce({
+      data: { organization_id: 1, name: 'New Test Org Legal' }
+    })
+
+    // Setup useMutation mock to call onSuccess when mutate is called
+    const { useMutation } = await import('@tanstack/react-query')
+    useMutation.mockImplementation(({ onSuccess }) => ({
+      mutate: vi.fn((payload) => {
+        // Simulate successful API call
+        apiSpy.post('/organizations/create', payload).then(() => {
+          onSuccess()
+        })
+      }),
+      isPending: false,
+      isError: false
+    }))
+
     render(
       <MockFormProvider>
         <AddEditOrgForm />
@@ -214,6 +246,14 @@ describe('AddEditOrg', () => {
 
     // Submit the form
     fireEvent.click(screen.getByTestId('saveOrganization'))
+
+    // Wait for the API call to be made
+    await waitFor(() => {
+      expect(apiSpy.post).toHaveBeenCalledWith(
+        '/organizations/create',
+        expect.any(Object)
+      )
+    })
 
     // Wait for the navigation side effect
     await waitFor(() => {
