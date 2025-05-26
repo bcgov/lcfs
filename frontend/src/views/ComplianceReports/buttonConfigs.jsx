@@ -246,8 +246,6 @@ export const buttonClusterConfigFn = ({
     month: 3,
     day: 31
   })
-  // Calculate if we're past the March 31 deadline for returning original reports
-  // Note: This deadline does NOT apply to supplemental reports
   const isPastReturnDeadline = DateTime.now() > returnDeadline
 
   return {
@@ -255,44 +253,37 @@ export const buttonClusterConfigFn = ({
       reportButtons.submitReport,
       ...(supplementalInitiator ? [reportButtons.deleteSupplementalReport] : [])
     ],
-    [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
-      ...(isGovernmentUser && hasRoles('Analyst')
-        ? [
-            {
-              ...reportButtons.recommendByAnalyst,
+    [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: (() => {
+      if (isGovernmentUser && hasRoles('Analyst')) {
+        const buttons = [
+          {
+            ...reportButtons.recommendByAnalyst,
+            disabled: hasDraftSupplemental
+          }
+        ]
+        if (reportVersion === 0) {
+          if (!isPastReturnDeadline) {
+            buttons.push({
+              ...reportButtons.returnToSupplier,
               disabled: hasDraftSupplemental
-            },
-            // Return to supplier button - show for:
-            // 1. Original reports (reportVersion === 0) before deadline
-            // 2. Supplemental reports (isSupplemental) at ANY time (no deadline)
-            ...((reportVersion === 0 && !isPastReturnDeadline) ||
-            (reportVersion !== 0 && isSupplemental)
-              ? [
-                  {
-                    ...reportButtons.returnToSupplier,
-                    disabled: hasDraftSupplemental
-                  }
-                ]
-              : []),
-            ...(reportVersion === 0 && isPastReturnDeadline
-              ? [
-                  {
-                    ...reportButtons.createIdirSupplementalReport,
-                    disabled: hasDraftSupplemental
-                  }
-                ]
-              : []),
-            ...(reportVersion !== 0
-              ? [
-                  {
-                    ...reportButtons.createIdirSupplementalReport,
-                    disabled: hasDraftSupplemental
-                  }
-                ]
-              : [])
-          ]
-        : [])
-    ],
+            })
+          } else {
+            buttons.push({
+              ...reportButtons.createIdirSupplementalReport,
+              disabled: hasDraftSupplemental
+            })
+          }
+        } else {
+          // This is reportVersion !== 0 (e.g. supplemental report)
+          buttons.push({
+            ...reportButtons.returnToSupplier,
+            disabled: hasDraftSupplemental
+          })
+        }
+        return buttons
+      }
+      return [] // Return empty array if not Analyst or not government user
+    })(),
     [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: [
       ...(isGovernmentUser && hasRoles('Analyst')
         ? [

@@ -206,10 +206,36 @@ describe('ReportDetails', () => {
 
     vi.mock('@/hooks/useComplianceReports', () => ({
       useGetComplianceReport: () => ({
-        data: { report: { version: 1 }, chain: [{}, {}] }
+        data: {
+          report: { complianceReportId: 2, version: 1 },
+          chain: [
+            { complianceReportId: 1, version: 0 },
+            { complianceReportId: 2, version: 1 }
+          ]
+        }
       }),
       useComplianceReportDocuments: () => ({
         data: [],
+        isLoading: false,
+        error: null
+      })
+    }))
+    vi.mock('@/hooks/useFuelSupply', () => ({
+      useGetFuelSupplies: () => ({
+        data: {
+          fuelSupplies: [
+            {
+              complianceReportId: 1,
+              version: 0,
+              fuelSupplyId: 24
+            },
+            {
+              complianceReportId: 2,
+              version: 0,
+              fuelSupplyId: 25
+            }
+          ]
+        },
         isLoading: false,
         error: null
       })

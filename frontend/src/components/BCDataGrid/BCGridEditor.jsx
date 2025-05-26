@@ -41,6 +41,7 @@ export const BCGridEditor = ({
   onCellEditingStopped,
   onCellValueChanged,
   onAction,
+  getRowId = (params) => params.data.id,
   showAddRowsButton = true,
   addMultiRow = false,
   saveButtonProps = {
@@ -329,7 +330,7 @@ export const BCGridEditor = ({
         undoRedoCellEditing
         undoRedoCellEditingLimit={5}
         enableBrowserTooltips
-        getRowId={(params) => params.data.id}
+        getRowId={getRowId}
         onCellClicked={onCellClicked}
         onCellEditingStopped={handleOnCellEditingStopped}
         onCellFocused={onCellFocused}

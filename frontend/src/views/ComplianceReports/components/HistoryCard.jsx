@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import BCTypography from '@/components/BCTypography/index.jsx'
 import { StyledListItem } from '@/components/StyledListItem.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
@@ -10,7 +11,6 @@ import MuiAccordionDetails from '@mui/material/AccordionDetails'
 import MuiAccordionSummary, {
   accordionSummaryClasses
 } from '@mui/material/AccordionSummary'
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const Accordion = styled((props) => (
@@ -45,7 +45,11 @@ const AccordionDetails = styled(MuiAccordionDetails)(() => ({
   paddingBottom: 0
 }))
 
-export const HistoryCard = ({ report, defaultExpanded = false }) => {
+export const HistoryCard = ({
+  report,
+  defaultExpanded = false,
+  assessedMessage = undefined
+}) => {
   const { data: currentUser } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const { t } = useTranslation(['report'])
@@ -61,7 +65,7 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
   const AssessmentLines = () => (
     <>
       <StyledListItem disablePadding>
-        <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
+        <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
           <strong>
             {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
           </strong>
@@ -75,7 +79,7 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
         </ListItemText>
       </StyledListItem>
       <StyledListItem disablePadding>
-        <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
+        <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
           <strong>
             {t('report:complianceReportHistory.lowCarbonTarget')}:&nbsp;
           </strong>
@@ -125,16 +129,18 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
         <AccordionDetails>
           <List>
             {/* GOV users – show assessment lines immediately (top‑level) until Assessed */}
-            {isGovernmentUser && !isCurrentAssessed && <AssessmentLines />}
+            {isGovernmentUser && !isCurrentAssessed && defaultExpanded && (
+              <AssessmentLines />
+            )}
 
             {/* Director statement – show to government users and non-government users if assessed */}
-            {report.assessmentStatement &&
+            {assessedMessage &&
               ((!isGovernmentUser && isCurrentAssessed) ||
                 isGovernmentUser) && (
                 <StyledListItem disablePadding>
                   <ListItemText
                     data-test="list-item"
-                    primaryTypographyProps={{ variant: 'body4' }}
+                    slotProps={{ primary: { variant: 'body4' } }}
                   >
                     <strong>
                       {t('report:complianceReportHistory.directorStatement')}
@@ -145,7 +151,7 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
                         {t('report:complianceReportHistory.canBeEdited')}
                       </span>
                     )}
-                    : {report.assessmentStatement}
+                    : {assessedMessage}
                   </ListItemText>
                 </StyledListItem>
               )}
@@ -161,7 +167,7 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
                 <StyledListItem key={index} disablePadding>
                   <ListItemText
                     data-test="list-item"
-                    primaryTypographyProps={{ variant: 'body4' }}
+                    slotProps={{ primary: { variant: 'body4' } }}
                   >
                     <span
                       dangerouslySetInnerHTML={{
