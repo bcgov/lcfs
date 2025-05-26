@@ -238,7 +238,9 @@ class ComplianceReportUpdateService:
             and report.supplemental_initiator
             == SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
         ):
-            summary = await self._calculate_and_lock_summary(report, user)
+            summary = await self._calculate_and_lock_summary(
+                report, user, skip_can_sign_check=True
+            )
             credit_change = summary.line_20_surplus_deficit_units
             await self._create_or_update_reserve_transaction(credit_change, report)
 
@@ -282,9 +284,11 @@ class ComplianceReportUpdateService:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
         # First ensure we have a summary and calculate credit change
-        calculated_summary = await self._calculate_and_lock_summary(report, user)
+        calculated_summary = await self._calculate_and_lock_summary(
+            report, user, skip_can_sign_check=True
+        )
         credit_change = calculated_summary.line_20_surplus_deficit_units
-            
+
         if report.transaction:
             # Update the transaction to assessed
             report.transaction.transaction_action = TransactionActionEnum.Adjustment
@@ -297,7 +301,7 @@ class ComplianceReportUpdateService:
                 # Update the newly created transaction to Adjustment status
                 report.transaction.transaction_action = TransactionActionEnum.Adjustment
                 report.transaction.update_user = user.keycloak_username
-                
+
         await self.repo.update_compliance_report(report)
 
     async def _create_or_update_reserve_transaction(self, credit_change, report):
@@ -322,7 +326,7 @@ class ComplianceReportUpdateService:
                 )
 
     async def _calculate_and_lock_summary(
-        self, report, user
+        self, report, user, skip_can_sign_check=False
     ) -> ComplianceReportSummary:
         # Fetch the existing summary from the database, if any
         existing_summary = await self.summary_repo.get_summary_by_report_id(
@@ -334,7 +338,8 @@ class ComplianceReportUpdateService:
                 report.compliance_report_id
             )
         )
-        if not calculated_summary.can_sign:
+        # Skip can_sign check for assessment operations
+        if not skip_can_sign_check and not calculated_summary.can_sign:
             raise ServiceException("ComplianceReportSummary is not able to be signed")
 
         # If there's an existing summary, preserve user-edited values

@@ -982,8 +982,8 @@ class ComplianceReportSummaryService:
                 compliance_report.summary.line_17_non_banked_units_used
             )
         else:
-            # For original reports or new supplemental reports, calculate the current available balance
-            available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(
+            # Calculate the available balance using the specific period end formula for Line 17
+            available_balance_for_period = await self.trxn_repo.calculate_line_17_available_balance_for_period(
                 organization_id, compliance_period_start.year
             )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
         compliance_units_curr_issued_for_fuel_supply = (
