@@ -46,6 +46,7 @@ from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotServ
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from lcfs.services.s3.client import DocumentService
@@ -62,6 +63,7 @@ class ComplianceReportServices:
         final_supply_equipment_service: FinalSupplyEquipmentServices = Depends(),
         document_service: DocumentService = Depends(),
         transaction_repo: TransactionRepository = Depends(),
+        internal_comment_service: InternalCommentService = Depends(),
     ) -> None:
         self.final_supply_equipment_service = final_supply_equipment_service
         self.org_repo = org_repo
@@ -69,6 +71,7 @@ class ComplianceReportServices:
         self.snapshot_services = snapshot_services
         self.document_service = document_service
         self.transaction_repo = transaction_repo
+        self.internal_comment_service = internal_comment_service
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
@@ -212,6 +215,11 @@ class ComplianceReportServices:
             existing_report_id, new_report.compliance_report_id
         )
 
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
+            existing_report_id, new_report.compliance_report_id
+        )
+
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
@@ -279,7 +287,7 @@ class ComplianceReportServices:
 
         # Get the current available balance for line 17
         current_available_balance = (
-            await self.transaction_repo.calculate_available_balance_for_period(
+            await self.transaction_repo.calculate_line_17_available_balance_for_period(
                 current_report.organization_id,
                 int(current_report.compliance_period.description),
             )
@@ -324,6 +332,11 @@ class ComplianceReportServices:
 
         # Copy documents from the original report
         await self.document_service.copy_documents(
+            original_report_id, new_report.compliance_report_id
+        )
+
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
             original_report_id, new_report.compliance_report_id
         )
 
@@ -418,6 +431,11 @@ class ComplianceReportServices:
             existing_report_id, new_report.compliance_report_id
         )
 
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
+            existing_report_id, new_report.compliance_report_id
+        )
+
         # 10. Return the validated base schema
         return ComplianceReportBaseSchema.model_validate(new_report)
 
@@ -499,18 +517,9 @@ class ComplianceReportServices:
         is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
         is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
 
-        becid_only_statuses = {
-            ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
-            ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
-        }
-
         becid_only_statuses_regular = {
             ComplianceReportStatusEnum.Recommended_by_analyst.value,
             ComplianceReportStatusEnum.Recommended_by_manager.value,
-        }
-
-        analyst_only_statuses = {
-            ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
         }
 
         analyst_only_statuses_regular = {
@@ -562,6 +571,26 @@ class ComplianceReportServices:
                         )
         return reports
 
+    def is_supplemental_requested_by_gov_user(self, chained_report):
+        """
+        Check if the supplemental report was requested by gov user:
+        """
+        if not hasattr(chained_report, "history") or not chained_report.history:
+            return False
+
+        for history_item in chained_report.history:
+            if (
+                hasattr(history_item, "status")
+                and hasattr(history_item.status, "status")
+                and history_item.status.status == ComplianceReportStatusEnum.Draft.value
+                and hasattr(history_item, "user_profile")
+                and hasattr(history_item.user_profile, "organization")
+                and history_item.user_profile.organization is None
+            ):
+                return True
+
+        return False
+
     @service_handler
     async def get_compliance_report_chain(
         self,
@@ -581,7 +610,10 @@ class ComplianceReportServices:
         filtered_chain = [
             chained_report
             for chained_report in compliance_report_chain
-            if chained_report.version <= report.version
+            if (
+                chained_report.version <= report.version
+                or self.is_supplemental_requested_by_gov_user(chained_report)
+            )
         ]
 
         # Apply masking to each report in the chain

@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import BCTypography from '@/components/BCTypography/index.jsx'
 import { StyledListItem } from '@/components/StyledListItem.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
@@ -10,8 +11,8 @@ import MuiAccordionDetails from '@mui/material/AccordionDetails'
 import MuiAccordionSummary, {
   accordionSummaryClasses
 } from '@mui/material/AccordionSummary'
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { roles } from '@/constants/roles.js'
 
 const Accordion = styled((props) => (
   <MuiAccordion disableGutters elevation={0} square {...props} />
@@ -45,13 +46,38 @@ const AccordionDetails = styled(MuiAccordionDetails)(() => ({
   paddingBottom: 0
 }))
 
-export const HistoryCard = ({ report, defaultExpanded = false }) => {
-  const { data: currentUser } = useCurrentUser()
+export const HistoryCard = ({
+  report,
+  defaultExpanded = false,
+  assessedMessage = undefined
+}) => {
+  const { data: currentUser, hasRoles } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const { t } = useTranslation(['report'])
 
   const isCurrentAssessed =
     report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED
+
+  // Check if the current government user can edit the assessment statement
+  const canEditAssessmentStatement = useMemo(() => {
+    if (!isGovernmentUser) return false
+
+    const currentStatus = report.currentStatus?.status
+    const roleStatusMap = {
+      [roles.analyst]: [
+        COMPLIANCE_REPORT_STATUSES.SUBMITTED,
+        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      ],
+      [roles.compliance_manager]: [
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+      ],
+      [roles.director]: [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]
+    }
+
+    return Object.entries(roleStatusMap).some(
+      ([role, statuses]) => hasRoles(role) && statuses.includes(currentStatus)
+    )
+  }, [isGovernmentUser, hasRoles, report.currentStatus?.status])
 
   /**
    * Helper: build the two assessment list items.
@@ -61,7 +87,7 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
   const AssessmentLines = () => (
     <>
       <StyledListItem disablePadding>
-        <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
+        <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
           <strong>
             {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
           </strong>
@@ -75,7 +101,7 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
         </ListItemText>
       </StyledListItem>
       <StyledListItem disablePadding>
-        <ListItemText primaryTypographyProps={{ variant: 'body4' }}>
+        <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
           <strong>
             {t('report:complianceReportHistory.lowCarbonTarget')}:&nbsp;
           </strong>
@@ -124,24 +150,33 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
       {sortedHistory.length > 0 && (
         <AccordionDetails>
           <List>
-            {report.assessmentStatement &&
+            {/* GOV users – show assessment lines immediately (top‑level) until Assessed */}
+            {isGovernmentUser && !isCurrentAssessed && defaultExpanded && (
+              <AssessmentLines />
+            )}
+
+            {/* Director statement – show to government users and non-government users if assessed */}
+            {assessedMessage &&
               ((!isGovernmentUser && isCurrentAssessed) ||
                 isGovernmentUser) && (
                 <StyledListItem disablePadding>
                   <ListItemText
                     data-test="list-item"
-                    primaryTypographyProps={{ variant: 'body4' }}
+                    slotProps={{ primary: { variant: 'body4' } }}
                   >
                     <strong>
-                      {t('report:complianceReportHistory.directorStatement')}:
-                    </strong>{' '}
-                    {report.assessmentStatement}
+                      {t('report:complianceReportHistory.directorStatement')}
+                    </strong>
+                    {isGovernmentUser && canEditAssessmentStatement && (
+                      <span style={{ color: '#d8292f' }}>
+                        {' '}
+                        {t('report:complianceReportHistory.canBeEdited')}
+                      </span>
+                    )}
+                    : {assessedMessage}
                   </ListItemText>
                 </StyledListItem>
               )}
-
-            {/* GOV users – show assessment lines immediately (top‑level) until Assessed */}
-            {isGovernmentUser && !isCurrentAssessed && <AssessmentLines />}
 
             {/* History timeline */}
             {sortedHistory.map((item, index) => {
@@ -154,7 +189,7 @@ export const HistoryCard = ({ report, defaultExpanded = false }) => {
                 <StyledListItem key={index} disablePadding>
                   <ListItemText
                     data-test="list-item"
-                    primaryTypographyProps={{ variant: 'body4' }}
+                    slotProps={{ primary: { variant: 'body4' } }}
                   >
                     <span
                       dangerouslySetInnerHTML={{

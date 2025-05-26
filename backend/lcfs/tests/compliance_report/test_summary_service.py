@@ -22,7 +22,7 @@ def _assert_repo_calls(
     mock_repo.get_issued_compliance_units.assert_called_once_with(
         start_date, end_date, organization_id
     )
-    mock_trxn_repo.calculate_available_balance_for_period.assert_called_once_with(
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
         organization_id, start_date.year
     )
 
@@ -158,7 +158,7 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
     mock_summary_repo.get_received_compliance_units.return_value = 300
     mock_summary_repo.get_issued_compliance_units.return_value = 200
-    mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 1000
     compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
         AsyncMock(return_value=100)
     )
@@ -217,35 +217,43 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     compliance_period_start = datetime(2024, 1, 1)
     compliance_period_end = datetime(2024, 12, 31)
     organization_id = 1
-    compliance_report = MagicMock(spec=ComplianceReport)
-    compliance_report.version = 2
 
-    fuel_supplies = [
-        MagicMock(
-            target_ci=100, eer=1.0, ci_of_fuel=80, quantity=100000, energy_density=10
-        ),
-        MagicMock(
-            target_ci=90, eer=1.2, ci_of_fuel=70, quantity=200000, energy_density=8
-        ),
-        MagicMock(
-            target_ci=80, eer=0.5, ci_of_fuel=60, quantity=300000, energy_density=8
-        ),
-    ]
-    compliance_report_summary_service.get_effective_fuel_supplies = AsyncMock(
-        return_value=fuel_supplies
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.configure_mock(version=2)  # Use configure_mock
+    compliance_report.organization_id = organization_id
+    compliance_report.compliance_period = MagicMock(
+        effective_date=compliance_period_start,
+        expiration_date=compliance_period_end,
+        description=str(compliance_period_start.year),
     )
+    compliance_report.compliance_report_group_uuid = (
+        "test-uuid-supplemental"  # Added if needed
+    )
+    compliance_report.compliance_report_id = 12345  # Added if needed
+
+    # Ensure compliance_report.summary.line_17_non_banked_units_used is None
+    # so that trxn_repo.calculate_line_17_available_balance_for_period is called.
+    mock_cr_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_cr_summary.line_17_non_banked_units_used = None
+    compliance_report.summary = mock_cr_summary
 
     # Repository returns.
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
     mock_summary_repo.get_received_compliance_units.return_value = 300
     mock_summary_repo.get_issued_compliance_units.return_value = 200
-    previous_summary = Mock()
-    previous_summary.line_15_banked_units_used = 0
-    previous_summary.line_16_banked_units_remaining = 0
-    previous_summary.line_18_units_to_be_banked = 15
-    previous_summary.line_19_units_to_be_exported = 15
-    mock_summary_repo.get_previous_summary.return_value = previous_summary
-    mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
+
+    previous_summary_mock = MagicMock(
+        spec=ComplianceReportSummary
+    )  # Use MagicMock with spec
+    previous_summary_mock.line_18_units_to_be_banked = 15
+    previous_summary_mock.line_19_units_to_be_exported = 15
+    mock_summary_repo.get_previous_summary = AsyncMock(
+        return_value=previous_summary_mock
+    )
+
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
+        1000  # Expected to be called
+    )
     compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
         AsyncMock(return_value=100)
     )
@@ -269,21 +277,133 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     assert line_values[12] == 500
     assert line_values[13] == 300
     assert line_values[14] == 200
-    assert line_values[15] == 15
-    assert line_values[16] == 15
+    assert (
+        line_values[15] == 15
+    )  # From previous_summary_mock.line_18_units_to_be_banked
+    assert (
+        line_values[16] == 15
+    )  # From previous_summary_mock.line_19_units_to_be_exported
+    assert (
+        line_values[17] == 1000
+    )  # From mock_trxn_repo.calculate_line_17_available_balance_for_period
     assert line_values[18] == 100
     assert line_values[19] == 100
-    assert line_values[20] == 170  # As per business logic
-    assert line_values[21] == 0
+    # Line 20 = line 18 + line 19 - line 15 - line 16 = 100 + 100 - 15 - 15 = 170
+    assert line_values[20] == 170
+    assert (
+        line_values[21] == 0
+    )  # Assuming no penalty calculated in this part for this value
+    # Line 22 = line 17 + line 20 = 1000 + 170 = 1170
     assert line_values[22] == 1170
 
     _assert_repo_calls(
-        mock_summary_repo,
+        mock_summary_repo,  # This is self.repo in the service method
         mock_trxn_repo,
         compliance_period_start,
         compliance_period_end,
         organization_id,
     )
+    # Ensure calculate_line_17_available_balance_for_period was called
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
+        organization_id, compliance_period_start.year
+    )
+    mock_summary_repo.get_previous_summary.assert_called_once_with(compliance_report)
+
+
+@pytest.mark.anyio
+async def test_supplemental_report_uses_existing_summary_line_17(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+):
+    """
+    Tests that for a supplemental report with an existing summary,
+    line 17 (available_balance_for_period) is taken from
+    summary.line_17_non_banked_units_used and trxn_repo.calculate_line_17_available_balance_for_period
+    is NOT called.
+    """
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 1
+    existing_line_17_value = 777  # Distinct value for testing
+
+    # Setup ComplianceReport mock
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 1  # Supplemental report
+    compliance_report.organization_id = organization_id
+    compliance_report.compliance_period = MagicMock(
+        effective_date=compliance_period_start,
+        expiration_date=compliance_period_end,
+        description="2024",
+    )
+    compliance_report.compliance_report_group_uuid = "test-group-uuid"
+    compliance_report.compliance_report_id = 123
+
+    # Setup ComplianceReportSummary mock attached to the report
+    mock_summary_model = MagicMock(spec=ComplianceReportSummary)
+    mock_summary_model.line_17_non_banked_units_used = existing_line_17_value
+    # Ensure other potentially accessed attributes on summary have defaults if necessary
+    mock_summary_model.line_18_units_to_be_banked = 0
+    mock_summary_model.line_19_units_to_be_exported = 0
+
+    compliance_report.summary = mock_summary_model
+
+    # Setup repository mocks
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 100
+    mock_summary_repo.get_received_compliance_units.return_value = 50
+    mock_summary_repo.get_issued_compliance_units.return_value = 25
+    # For version > 0, get_previous_summary will be called
+    previous_summary_mock = MagicMock(spec=ComplianceReportSummary)
+    previous_summary_mock.line_18_units_to_be_banked = 10
+    previous_summary_mock.line_19_units_to_be_exported = 5
+    mock_summary_repo.get_previous_summary = AsyncMock(
+        return_value=previous_summary_mock
+    )
+
+    # Mock calculation services
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=20)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=10)
+    )
+
+    # Call the target method
+    summary_result, _ = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    # Assertions
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_not_called()
+
+    line_values = _get_line_values(summary_result)
+    assert (
+        line_values[17] == existing_line_17_value
+    )  # Should use the value from compliance_report.summary
+
+    # Check other values to ensure calculation proceeded
+    assert line_values[12] == 100  # Transferred out
+    assert line_values[13] == 50  # Received
+    assert line_values[14] == 25  # Issued
+    assert (
+        line_values[15] == 10
+    )  # Prev issued for fuel supply (from previous_summary_mock)
+    assert (
+        line_values[16] == 5
+    )  # Prev issued for fuel export (from previous_summary_mock)
+    assert line_values[18] == 20  # Curr issued for fuel supply
+    assert line_values[19] == 10  # Curr issued for fuel export
+
+    # Line 20 = line 18 + line 19 - line 15 - line 16
+    # Line 20 = 20 + 10 - 10 - 5 = 15
+    assert line_values[20] == 15
+
+    # Line 22 = line 17 + line 20 (if > 0)
+    # Line 22 = 777 + 15 = 792
+    assert line_values[22] == existing_line_17_value + 15
 
 
 @pytest.mark.anyio
@@ -829,9 +949,6 @@ async def test_can_sign_flag_logic(
         line_8_obligation_deferred_gasoline=5,
         line_8_obligation_deferred_diesel=10,
         line_8_obligation_deferred_jet_fuel=15,
-        line_9_obligation_added_gasoline=5,
-        line_9_obligation_added_diesel=10,
-        line_9_obligation_added_jet_fuel=15,
         line_4_eligible_renewable_fuel_required_gasoline=25,
         line_4_eligible_renewable_fuel_required_diesel=50,
         line_4_eligible_renewable_fuel_required_jet_fuel=10,
@@ -847,7 +964,7 @@ async def test_can_sign_flag_logic(
         compliance_report_id=1,
         summary=mock_summary,
     )
-    mock_trxn_repo.calculate_available_balance_for_period.return_value = 1000
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 1000
     previous_retained = {"gasoline": 10, "diesel": 20, "jet_fuel": 30}
     previous_obligation = {"gasoline": 5, "diesel": 10, "jet_fuel": 15}
 
@@ -1094,3 +1211,399 @@ async def test_calculate_fuel_export_compliance_units_parametrized(
         )
     )
     assert result == expected_result
+
+
+@pytest.mark.anyio
+async def test_line_17_method_called_during_summary_calculation(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+):
+    """Test that the Line 17 TFRS method is called during low carbon fuel target summary calculation"""
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 123
+
+    # Mock compliance report (non-supplemental)
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 0
+    compliance_report.summary = MagicMock()
+    compliance_report.summary.line_17_non_banked_units_used = None
+
+    # Setup repository mocks
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 100
+    mock_summary_repo.get_received_compliance_units.return_value = 200
+    mock_summary_repo.get_issued_compliance_units.return_value = 300
+
+    # Mock the TFRS Line 17 calculation
+    expected_line_17_balance = 1500
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
+        expected_line_17_balance
+    )
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=400)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=50)
+    )
+
+    # Call the low carbon fuel target summary calculation
+    summary, penalty = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    # Verify the Line 17 method was called with correct parameters
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
+        organization_id, compliance_period_start.year
+    )
+
+    # Verify Line 17 value appears in the summary
+    line_values = _get_line_values(summary)
+    assert line_values[17] == expected_line_17_balance
+
+
+@pytest.mark.anyio
+async def test_line_17_different_compliance_periods(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+):
+    """Test Line 17 calculation with different compliance periods"""
+    organization_id = 456
+
+    # Test 2023 compliance period
+    compliance_period_start_2023 = datetime(2023, 1, 1)
+    compliance_period_end_2023 = datetime(2023, 12, 31)
+
+    compliance_report_2023 = MagicMock(spec=ComplianceReport)
+    compliance_report_2023.version = 0
+    compliance_report_2023.summary = MagicMock()
+    compliance_report_2023.summary.line_17_non_banked_units_used = None
+
+    # Setup mocks
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 50
+    mock_summary_repo.get_received_compliance_units.return_value = 100
+    mock_summary_repo.get_issued_compliance_units.return_value = 150
+
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 800
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=200)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=25)
+    )
+
+    # Call for 2023
+    await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+        compliance_period_start_2023,
+        compliance_period_end_2023,
+        organization_id,
+        compliance_report_2023,
+    )
+
+    # Verify 2023 was used
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_with(
+        organization_id, 2023
+    )
+
+    # Reset mock
+    mock_trxn_repo.reset_mock()
+
+    # Test 2025 compliance period
+    compliance_period_start_2025 = datetime(2025, 1, 1)
+    compliance_period_end_2025 = datetime(2025, 12, 31)
+
+    compliance_report_2025 = MagicMock(spec=ComplianceReport)
+    compliance_report_2025.version = 0
+    compliance_report_2025.summary = MagicMock()
+    compliance_report_2025.summary.line_17_non_banked_units_used = None
+
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 1200
+
+    # Call for 2025
+    await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+        compliance_period_start_2025,
+        compliance_period_end_2025,
+        organization_id,
+        compliance_report_2025,
+    )
+
+    # Verify 2025 was used
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_with(
+        organization_id, 2025
+    )
+
+
+@pytest.mark.anyio
+async def test_supplemental_report_preserves_existing_line_17_value(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+):
+    """Test that supplemental reports preserve existing Line 17 values"""
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 789
+
+    # Mock supplemental report with existing Line 17 value
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 1  # Supplemental
+    compliance_report.summary = MagicMock()
+    existing_line_17_value = 2500
+    compliance_report.summary.line_17_non_banked_units_used = existing_line_17_value
+
+    # Setup repository mocks
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 150
+    mock_summary_repo.get_received_compliance_units.return_value = 250
+    mock_summary_repo.get_issued_compliance_units.return_value = 350
+
+    # Mock previous summary for supplemental reports
+    previous_summary_mock = MagicMock()
+    previous_summary_mock.line_18_units_to_be_banked = 75
+    previous_summary_mock.line_19_units_to_be_exported = 125
+    mock_summary_repo.get_previous_summary = AsyncMock(
+        return_value=previous_summary_mock
+    )
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=450)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=65)
+    )
+
+    # Call the method
+    summary, penalty = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    # Verify the Line 17 method was NOT called for supplemental with existing value
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_not_called()
+
+    # Verify existing Line 17 value is preserved
+    line_values = _get_line_values(summary)
+    assert line_values[17] == existing_line_17_value
+
+
+@pytest.mark.anyio
+async def test_supplemental_report_calculates_line_17_when_missing(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+):
+    """Test that supplemental reports calculate Line 17 when no existing value is present"""
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 321
+
+    # Mock supplemental report WITHOUT existing Line 17 value
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 2  # Supplemental
+    compliance_report.summary = MagicMock()
+    compliance_report.summary.line_17_non_banked_units_used = None  # No existing value
+
+    # Setup repository mocks
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 80
+    mock_summary_repo.get_received_compliance_units.return_value = 160
+    mock_summary_repo.get_issued_compliance_units.return_value = 240
+
+    # Mock previous summary for supplemental reports
+    previous_summary_mock = MagicMock()
+    previous_summary_mock.line_18_units_to_be_banked = 40
+    previous_summary_mock.line_19_units_to_be_exported = 60
+    mock_summary_repo.get_previous_summary = AsyncMock(
+        return_value=previous_summary_mock
+    )
+
+    # Mock the TFRS Line 17 calculation
+    expected_line_17_balance = 1800
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
+        expected_line_17_balance
+    )
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=320)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=45)
+    )
+
+    # Call the method
+    summary, penalty = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    # Verify the Line 17 method was called for supplemental without existing value
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
+        organization_id, compliance_period_start.year
+    )
+
+    # Verify Line 17 value in summary
+    line_values = _get_line_values(summary)
+    assert line_values[17] == expected_line_17_balance
+
+
+@pytest.mark.anyio
+async def test_line_17_error_handling(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+):
+    """Test error handling when Line 17 calculation fails"""
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 999
+
+    # Mock compliance report
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 0
+    compliance_report.summary = MagicMock()
+    compliance_report.summary.line_17_non_banked_units_used = None
+
+    # Setup repository mocks
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 100
+    mock_summary_repo.get_received_compliance_units.return_value = 200
+    mock_summary_repo.get_issued_compliance_units.return_value = 300
+
+    # Mock the TFRS Line 17 calculation to raise an exception
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.side_effect = (
+        Exception("Database connection failed")
+    )
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=400)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=50)
+    )
+
+    # Test that the exception is properly propagated
+    with pytest.raises(Exception, match="Database connection failed"):
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+
+
+@pytest.mark.anyio
+async def test_line_17_zero_balance_handling(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+):
+    """Test handling of zero balance from Line 17 calculation"""
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 111
+
+    # Mock compliance report
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 0
+    compliance_report.summary = MagicMock()
+    compliance_report.summary.line_17_non_banked_units_used = None
+
+    # Setup repository mocks
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 75
+    mock_summary_repo.get_received_compliance_units.return_value = 125
+    mock_summary_repo.get_issued_compliance_units.return_value = 175
+
+    # Mock the TFRS Line 17 calculation to return 0
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 0
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=250)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=35)
+    )
+
+    # Call the method
+    summary, penalty = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    # Verify Line 17 is 0
+    line_values = _get_line_values(summary)
+    assert line_values[17] == 0
+
+    # Verify other calculations proceed normally
+    assert line_values[12] == 75  # Transferred out
+    assert line_values[13] == 125  # Received
+    assert line_values[14] == 175  # Issued
+
+
+@pytest.mark.anyio
+async def test_line_17_integration_with_compliance_report_creation(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+):
+    """Test that Line 17 calculation integrates properly with compliance report summary creation workflow"""
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 555
+
+    # Mock compliance report
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 0
+    compliance_report.summary = MagicMock()
+    compliance_report.summary.line_17_non_banked_units_used = None
+
+    # Setup repository mocks with realistic values
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
+    mock_summary_repo.get_received_compliance_units.return_value = 1000
+    mock_summary_repo.get_issued_compliance_units.return_value = 1500
+
+    # Mock TFRS Line 17 calculation with a realistic balance
+    expected_line_17_balance = 2750
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
+        expected_line_17_balance
+    )
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=800)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=150)
+    )
+
+    # Call the method
+    summary, penalty = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    # Verify Line 17 method was called correctly
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
+        organization_id, 2024
+    )
+
+    # Verify the summary contains the correct Line 17 value
+    line_values = _get_line_values(summary)
+    assert line_values[17] == expected_line_17_balance
+
+    # Verify that other summary lines also contain expected values
+    assert line_values[12] == 500  # Transferred out
+    assert line_values[13] == 1000  # Received
+    assert line_values[14] == 1500  # Issued
+
+    # Verify that a summary was returned
+    assert summary is not None
+    assert len(summary) > 0
+
+    # Verify penalty was calculated
+    assert penalty is not None

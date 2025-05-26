@@ -29,6 +29,7 @@ from lcfs.web.api.final_supply_equipment.services import FinalSupplyEquipmentSer
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.web.api.organizations.repo import OrganizationsRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -147,7 +148,16 @@ async def import_async(
                 fs_repo = FuelSupplyRepository(session)
                 fse_repo = FinalSupplyEquipmentRepository(session)
                 cr_repo = ComplianceReportRepository(session, fs_repo)
-                fse_service = FinalSupplyEquipmentServices(fse_repo, cr_repo)
+
+                # Import OrganizationsRepository and initialize it
+                org_repo = OrganizationsRepository(session)
+
+                # Provide all three required repositories
+                fse_service = FinalSupplyEquipmentServices(
+                    repo=fse_repo,
+                    compliance_report_repo=cr_repo,
+                    organization_repo=org_repo,
+                )
                 clamav_service = ClamAVService()
                 redis_client = Redis(
                     host=settings.redis_host,
@@ -200,11 +210,11 @@ async def import_async(
                         errors=errors,
                     )
 
-                    valid_intended_users = await fse_repo.get_intended_user_types()
+                    valid_intended_user_types = await fse_repo.get_intended_user_types()
                     valid_use_types = await fse_repo.get_intended_use_types()
                     valid_use_type_names = {obj.type for obj in valid_use_types}
                     valid_user_type_names = {
-                        obj.type_name for obj in valid_intended_users
+                        obj.type_name for obj in valid_intended_user_types
                     }
 
                     # Iterate through all data rows, skipping the header
@@ -243,8 +253,14 @@ async def import_async(
                         # Parse row data and insert into DB
                         try:
                             fse_data = _parse_row(row, compliance_report_id)
+
+                            # Get the organization ID using helper function
+                            organization_id = await _get_organization_id(
+                                org_repo, cr_repo, org_code, compliance_report_id
+                            )
+
                             await fse_service.create_final_supply_equipment(
-                                fse_data, org_code
+                                fse_data, organization_id
                             )
                             created += 1
                         except Exception as ex:
@@ -323,8 +339,8 @@ def _validate_row(
         model,
         level_of_equipment,
         ports,
-        intended_use_str,
-        intended_users_str,
+        intended_use_types,
+        intended_user_types,
         street_address,
         city,
         postal_code,
@@ -354,9 +370,9 @@ def _validate_row(
         missing_fields.append("Latitude")
     if longitude is None:
         missing_fields.append("Longitude")
-    if not intended_use_str or len(intended_use_str) < 4:
+    if not intended_use_types or len(intended_use_types) < 4:
         missing_fields.append("Intended use")
-    if not intended_users_str or len(intended_users_str) < 4:
+    if not intended_user_types or len(intended_user_types) < 4:
         missing_fields.append("Intended users")
 
     if missing_fields:
@@ -368,14 +384,12 @@ def _validate_row(
         return f"Row {row_idx}: Invalid postal code"
 
     # Validate intended uses
-    intended_uses = [u.strip() for u in intended_use_str.split(",")]
-    invalid_uses = [use for use in intended_uses if use not in valid_use_types]
+    invalid_uses = [use for use in intended_use_types if use not in valid_use_types]
     if invalid_uses:
         return f"Row {row_idx}: Invalid intended use(s): {', '.join(invalid_uses)}"
 
     # Validate intended users
-    intended_users = [u.strip() for u in intended_users_str.split(",")]
-    invalid_users = [user for user in intended_users if user not in valid_user_types]
+    invalid_users = [user for user in intended_user_types if user not in valid_user_types]
     if invalid_users:
         return f"Row {row_idx}: Invalid intended user(s): {', '.join(invalid_users)}"
 
@@ -398,8 +412,8 @@ def _parse_row(
         model,
         level_of_equipment,
         ports,
-        intended_use_str,
-        intended_users_str,
+        intended_use_types,
+        intended_user_types,
         street_address,
         city,
         postal_code,
@@ -413,12 +427,6 @@ def _parse_row(
     kwh_usage = int(kwh_usage) if kwh_usage else 0
     latitude = float(latitude) if latitude else 0.0
     longitude = float(longitude) if longitude else 0.0
-    intended_uses = (
-        [u.strip() for u in intended_use_str.split(",")] if intended_use_str else []
-    )
-    intended_users = (
-        [u.strip() for u in intended_users_str.split(",")] if intended_users_str else []
-    )
 
     return FinalSupplyEquipmentCreateSchema(
         compliance_report_id=compliance_report_id,
@@ -431,8 +439,8 @@ def _parse_row(
         model=str(model) or "",
         level_of_equipment=level_of_equipment or "",
         ports=PortsEnum(ports) if ports else None,
-        intended_uses=intended_uses,
-        intended_users=intended_users,
+        intended_use_types=intended_use_types,
+        intended_user_types=intended_user_types,
         street_address=str(street_address) or "",
         city=str(city) or "",
         postal_code=postal_code or "",
@@ -473,3 +481,28 @@ async def _update_progress(
         "errors": errors,
     }
     await redis_client.set(f"jobs/{job_id}", json.dumps(data), ex=60)
+
+
+async def _get_organization_id(
+    org_repo: OrganizationsRepository,
+    cr_repo: ComplianceReportRepository,
+    org_code: str,
+    compliance_report_id: int,
+) -> int:
+    """
+    Helper function to get organization ID from either org code or compliance report
+    """
+    # Try to get the organization ID from the organization code
+    organization = await org_repo.get_organization_by_code(org_code)
+
+    # If we can't find by code, try to get using the compliance report's organization
+    if not organization:
+        compliance_report = await cr_repo.get_compliance_report_by_id(
+            compliance_report_id
+        )
+        if compliance_report and compliance_report.organization_id:
+            return compliance_report.organization_id
+        else:
+            raise ValueError(f"Organization with code {org_code} not found")
+    else:
+        return organization.organization_id
