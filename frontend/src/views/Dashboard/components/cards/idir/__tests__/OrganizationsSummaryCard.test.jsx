@@ -25,6 +25,15 @@ describe('OrganizationsSummaryCards', () => {
     })
   })
 
+  it('calls useOrganizationNames with correct statuses for dashboard', () => {
+    render(<OrganizationsSummaryCard />, { wrapper })
+
+    expect(useOrganizationNames).toHaveBeenCalledWith([
+      'Registered',
+      'Unregistered'
+    ])
+  })
+
   it('renders correctly with default values', () => {
     render(<OrganizationsSummaryCard />, { wrapper })
 

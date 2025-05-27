@@ -34,7 +34,7 @@ export const TransactionDetails = ({ transactionId, isEditable }) => {
     control
   } = useFormContext()
 
-  const { data: orgData } = useOrganizationNames(false)
+  const { data: orgData } = useOrganizationNames(null)
   const organizations =
     orgData?.map((org) => ({
       value: parseInt(org.organizationId),

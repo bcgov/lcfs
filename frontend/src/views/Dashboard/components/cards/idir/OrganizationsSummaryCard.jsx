@@ -7,7 +7,10 @@ import { numberFormatter } from '@/utils/formatters.js'
 import { useTranslation } from 'react-i18next'
 
 const OrganizationsSummaryCard = () => {
-  const { data: organizations, isLoading } = useOrganizationNames()
+  const { data: organizations, isLoading } = useOrganizationNames([
+    'Registered',
+    'Unregistered'
+  ])
   const { t } = useTranslation(['common', 'transaction'])
 
   const [formattedOrgs, setFormattedOrgs] = useState([])
