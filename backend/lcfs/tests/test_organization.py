@@ -232,12 +232,27 @@ async def test_get_organization_names(
 ) -> None:
     set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     url = fastapi_app.url_path_for("get_organization_names")
+
+    # Test without any filters
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
     data = response.json()
     assert isinstance(data, list)
     assert len(data) > 0
     assert all("name" in org for org in data)
+
+    # Test with specific statuses
+    response = await client.get(url + "?statuses=Registered&statuses=Unregistered")
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert isinstance(data, list)
+    assert all("name" in org for org in data)
+
+    # Test with single status
+    response = await client.get(url + "?statuses=Registered")
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert isinstance(data, list)
 
 
 @pytest.mark.anyio

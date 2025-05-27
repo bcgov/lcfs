@@ -76,6 +76,29 @@ describe('TransactionDetails Component', () => {
     })
   })
 
+  it('calls useOrganizationNames with null to get all organizations', () => {
+    const TestComponent = () => {
+      const methods = useForm()
+      return (
+        <FormProvider {...methods}>
+          <TransactionDetails transactionId={null} isEditable={true} />
+        </FormProvider>
+      )
+    }
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <ThemeProvider theme={theme}>
+          <MemoryRouter>
+            <TestComponent />
+          </MemoryRouter>
+        </ThemeProvider>
+      </QueryClientProvider>
+    )
+
+    expect(useOrganizationNames).toHaveBeenCalledWith(null)
+  })
+
   afterEach(() => {
     vi.resetModules()
   })

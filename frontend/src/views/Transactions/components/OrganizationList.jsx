@@ -12,7 +12,8 @@ const OrganizationList = ({
   onlyRegistered = true
 }) => {
   const { t } = useTranslation(['transaction'])
-  const { data, isLoading } = useOrganizationNames(onlyRegistered)
+  const statuses = onlyRegistered ? ['Registered'] : null
+  const { data, isLoading } = useOrganizationNames(statuses)
   const [optionsList, setOptionsList] = useState([])
 
   useEffect(() => {
@@ -82,8 +83,7 @@ const OrganizationList = ({
               aria-label={t('txn:selectOrganizationName')}
               value={
                 optionsList.find(
-                  (option) =>
-                    option.organizationId === selectedOrg?.id
+                  (option) => option.organizationId === selectedOrg?.id
                 ) || null
               }
               slotProps={{
