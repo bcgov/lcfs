@@ -345,31 +345,28 @@ class TransactionRepository:
         compliance_period_end_local = compliance_period_end.replace(
             hour=23, minute=59, second=59, microsecond=999999, tzinfo=vancouver_timezone
         )
-        async with self.db.begin_nested():
-            # Calculate the sum of all transactions up to the specified date
-            balance_to_date = await self.db.scalar(
-                select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
-                    and_(
-                        Transaction.organization_id == organization_id,
-                        Transaction.create_date <= compliance_period_end_local,
-                        Transaction.transaction_action
-                        != TransactionActionEnum.Released,
-                    )
+        # Calculate the sum of all transactions up to the specified date
+        balance_to_date = await self.db.scalar(
+            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
+                and_(
+                    Transaction.organization_id == organization_id,
+                    Transaction.create_date <= compliance_period_end_local,
+                    Transaction.transaction_action != TransactionActionEnum.Released,
                 )
             )
+        )
 
-            # Calculate the sum of future negative transactions
-            future_negative_transactions = await self.db.scalar(
-                select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
-                    and_(
-                        Transaction.organization_id == organization_id,
-                        Transaction.create_date > compliance_period_end_local,
-                        Transaction.compliance_units < 0,
-                        Transaction.transaction_action
-                        != TransactionActionEnum.Released,
-                    )
+        # Calculate the sum of future negative transactions
+        future_negative_transactions = await self.db.scalar(
+            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
+                and_(
+                    Transaction.organization_id == organization_id,
+                    Transaction.create_date > compliance_period_end_local,
+                    Transaction.compliance_units < 0,
+                    Transaction.transaction_action != TransactionActionEnum.Released,
                 )
             )
+        )
 
         # Calculate the available balance, round to the nearest whole number, and if negative, set to zero
         available_balance = max(
@@ -409,117 +406,112 @@ class TransactionRepository:
             hour=23, minute=59, second=59, microsecond=999999, tzinfo=vancouver_timezone
         )
 
-        async with self.db.begin_nested():
-            # 1. Compliance unit balance changes from assessments (compliance reports)
-            # Include assessed/reassessed compliance reports from the compliance period or prior
-            assessment_balance = await self.db.scalar(
-                select(func.coalesce(func.sum(Transaction.compliance_units), 0))
-                .select_from(Transaction)
-                .join(
-                    ComplianceReport,
-                    Transaction.transaction_id == ComplianceReport.transaction_id,
-                )
-                .join(
-                    ComplianceReportStatus,
-                    ComplianceReport.current_status_id
-                    == ComplianceReportStatus.compliance_report_status_id,
-                )
-                .where(
-                    and_(
-                        Transaction.organization_id == organization_id,
-                        ComplianceReportStatus.status.in_(
-                            [
-                                ComplianceReportStatusEnum.Assessed,
-                            ]
-                        ),
-                        Transaction.create_date <= compliance_period_end_local,
-                        Transaction.transaction_action
-                        == TransactionActionEnum.Adjustment,
-                    )
+        # 1. Compliance unit balance changes from assessments (compliance reports)
+        # Include assessed/reassessed compliance reports from the compliance period or prior
+        assessment_balance = await self.db.scalar(
+            select(func.coalesce(func.sum(Transaction.compliance_units), 0))
+            .select_from(Transaction)
+            .join(
+                ComplianceReport,
+                Transaction.transaction_id == ComplianceReport.transaction_id,
+            )
+            .join(
+                ComplianceReportStatus,
+                ComplianceReport.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            )
+            .where(
+                and_(
+                    Transaction.organization_id == organization_id,
+                    ComplianceReportStatus.status.in_(
+                        [
+                            ComplianceReportStatusEnum.Assessed,
+                        ]
+                    ),
+                    Transaction.create_date <= compliance_period_end_local,
+                    Transaction.transaction_action == TransactionActionEnum.Adjustment,
                 )
             )
+        )
 
-            # 2. Compliance units received through transfers (purchases)
-            # Include recorded transfers where this org is the receiver, effective date <= end of compliance period
-            transfer_purchases = await self.db.scalar(
-                select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
-                    and_(
-                        Transfer.to_organization_id == organization_id,
-                        Transfer.current_status_id == 6,  # Recorded status
-                        Transfer.transaction_effective_date
-                        <= compliance_period_end_local.date(),
-                    )
+        # 2. Compliance units received through transfers (purchases)
+        # Include recorded transfers where this org is the receiver, effective date <= end of compliance period
+        transfer_purchases = await self.db.scalar(
+            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
+                and_(
+                    Transfer.to_organization_id == organization_id,
+                    Transfer.current_status_id == 6,  # Recorded status
+                    Transfer.transaction_effective_date
+                    <= compliance_period_end_local.date(),
                 )
             )
+        )
 
-            # 3. Compliance units transferred away (sales)
-            # Include recorded transfers where this org is the sender, effective date <= end of compliance period
-            transfer_sales = await self.db.scalar(
-                select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
-                    and_(
-                        Transfer.from_organization_id == organization_id,
-                        Transfer.current_status_id == 6,  # Recorded status
-                        Transfer.transaction_effective_date
-                        <= compliance_period_end_local.date(),
-                    )
+        # 3. Compliance units transferred away (sales)
+        # Include recorded transfers where this org is the sender, effective date <= end of compliance period
+        transfer_sales = await self.db.scalar(
+            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
+                and_(
+                    Transfer.from_organization_id == organization_id,
+                    Transfer.current_status_id == 6,  # Recorded status
+                    Transfer.transaction_effective_date
+                    <= compliance_period_end_local.date(),
                 )
             )
+        )
 
-            # 4. Compliance units issued under IA/P3A (Initiative Agreements)
-            # Include approved initiative agreements with effective date <= end of compliance period
-            initiative_agreements = await self.db.scalar(
-                select(
-                    func.coalesce(func.sum(InitiativeAgreement.compliance_units), 0)
-                ).where(
-                    and_(
-                        InitiativeAgreement.to_organization_id == organization_id,
-                        InitiativeAgreement.current_status_id == 3,  # Approved status
-                        InitiativeAgreement.transaction_effective_date
-                        <= compliance_period_end_local.date(),
-                    )
+        # 4. Compliance units issued under IA/P3A (Initiative Agreements)
+        # Include approved initiative agreements with effective date <= end of compliance period
+        initiative_agreements = await self.db.scalar(
+            select(
+                func.coalesce(func.sum(InitiativeAgreement.compliance_units), 0)
+            ).where(
+                and_(
+                    InitiativeAgreement.to_organization_id == organization_id,
+                    InitiativeAgreement.current_status_id == 3,  # Approved status
+                    InitiativeAgreement.transaction_effective_date
+                    <= compliance_period_end_local.date(),
                 )
             )
+        )
 
-            # 5. Admin adjustments
-            # Include approved admin adjustments with effective date <= end of compliance period
-            admin_adjustments = await self.db.scalar(
-                select(
-                    func.coalesce(func.sum(AdminAdjustment.compliance_units), 0)
-                ).where(
-                    and_(
-                        AdminAdjustment.to_organization_id == organization_id,
-                        AdminAdjustment.current_status_id == 3,  # Approved status
-                        AdminAdjustment.transaction_effective_date
-                        <= compliance_period_end_local.date(),
-                    )
+        # 5. Admin adjustments
+        # Include approved admin adjustments with effective date <= end of compliance period
+        admin_adjustments = await self.db.scalar(
+            select(func.coalesce(func.sum(AdminAdjustment.compliance_units), 0)).where(
+                and_(
+                    AdminAdjustment.to_organization_id == organization_id,
+                    AdminAdjustment.current_status_id == 3,  # Approved status
+                    AdminAdjustment.transaction_effective_date
+                    <= compliance_period_end_local.date(),
                 )
             )
+        )
 
-            # 6. Future debits (negative transactions after the compliance period end)
-            # This includes future transfers out and other future negative transactions
-            future_transfer_debits = await self.db.scalar(
-                select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
-                    and_(
-                        Transfer.from_organization_id == organization_id,
-                        Transfer.current_status_id == 6,  # Recorded status
-                        Transfer.transaction_effective_date
-                        > compliance_period_end_local.date(),
-                    )
+        # 6. Future debits (negative transactions after the compliance period end)
+        # This includes future transfers out and other future negative transactions
+        future_transfer_debits = await self.db.scalar(
+            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
+                and_(
+                    Transfer.from_organization_id == organization_id,
+                    Transfer.current_status_id == 6,  # Recorded status
+                    Transfer.transaction_effective_date
+                    > compliance_period_end_local.date(),
                 )
             )
+        )
 
-            # Future negative adjustments and other transactions
-            future_negative_transactions = await self.db.scalar(
-                select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
-                    and_(
-                        Transaction.organization_id == organization_id,
-                        Transaction.create_date > compliance_period_end_local,
-                        Transaction.compliance_units < 0,
-                        Transaction.transaction_action
-                        != TransactionActionEnum.Released,
-                    )
+        # Future negative adjustments and other transactions
+        future_negative_transactions = await self.db.scalar(
+            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
+                and_(
+                    Transaction.organization_id == organization_id,
+                    Transaction.create_date > compliance_period_end_local,
+                    Transaction.compliance_units < 0,
+                    Transaction.transaction_action != TransactionActionEnum.Released,
                 )
             )
+        )
 
         # Calculate the available balance using the TFRS formula
         available_balance = (
