@@ -506,7 +506,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           (scheduleData && !isArrayEmpty(scheduleData)) ||
           // Or if it's Supporting Docs
           activity.name === t('report:supportingDocs') ||
-          // For non-supplemental reports, always show all sections
+          // if in editing statuses then show all sections
           [
             COMPLIANCE_REPORT_STATUSES.DRAFT,
             COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
