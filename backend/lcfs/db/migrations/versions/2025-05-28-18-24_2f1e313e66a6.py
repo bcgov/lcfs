@@ -8,7 +8,7 @@ Create Date: 2025-05-28 18:24:13.657636
 
 import logging
 from alembic import op
-from lcfs.db.utils import get_sql_content
+from lcfs.db.utils import get_sql_content, split_and_execute
 
 # revision identifiers, used by Alembic.
 revision = "2f1e313e66a6"
@@ -22,7 +22,8 @@ logger = logging.getLogger("alembic.runtime.migration")
 
 def upgrade() -> None:
     try:
-        op.execute(get_sql_content("metabase/models/fuel_code_base_model/upgrade.sql"))
+        sql = get_sql_content("metabase/models/fuel_code_base_model/upgrade.sql")
+        split_and_execute(sql)
     except Exception as e:
         logger.error(f"Migration upgrade failed: {e}", exc_info=True)
         raise
@@ -30,9 +31,9 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     try:
-        op.execute(
-            get_sql_content("metabase/models/fuel_code_base_model/downgrade.sql")
-        )
+        sql = "metabase/models/fuel_code_base_model/downgrade.sql"
+        split_and_execute(sql)
+
     except Exception as e:
         logger.error(f"Migration downgrade failed: {e}", exc_info=True)
         raise

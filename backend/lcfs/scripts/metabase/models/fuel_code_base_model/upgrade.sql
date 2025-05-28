@@ -1,5 +1,5 @@
 -- Create Fuel Code Base View
-CREATE OR REPLACE VIEW public.v_fuel_code_base AS
+CREATE OR REPLACE VIEW public.vw_fuel_code_base AS
 SELECT
     fuel_code.fuel_code_id AS "ID",
     fuel_code_prefix.prefix AS "Prefix",
@@ -33,7 +33,7 @@ WHERE
     fuel_code_status.status != 'Deleted';
 
 -- Grant permissions
-GRANT SELECT ON public.v_fuel_code_base TO basic_lcfs_reporting_role;
+GRANT SELECT ON public.vw_fuel_code_base TO basic_lcfs_reporting_role;
 
 GRANT SELECT ON 
     public.fuel_code, 
