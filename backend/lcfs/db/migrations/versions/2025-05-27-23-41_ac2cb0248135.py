@@ -89,17 +89,23 @@ def upgrade() -> None:
             """
         )
         logger.info("Created materialized view: mv_director_review_transaction_count")
-
         op.execute(
             """
-        CREATE OR REPLACE FUNCTION refresh_mv_director_review_transaction_count()
-        RETURNS TRIGGER AS $$
-        BEGIN
-            REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count;
-            RETURN NULL;
-        END;
-        $$ LANGUAGE plpgsql;
-        """
+            CREATE UNIQUE INDEX mv_director_review_transaction_count_unique_idx
+            ON mv_director_review_transaction_count (transaction_type);
+            """
+        )
+        logger.info("Created index for mv_director_review_transaction_count")
+        op.execute(
+            """
+            CREATE OR REPLACE FUNCTION refresh_mv_director_review_transaction_count()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+            """
         )
         logger.info("Created function: refresh_mv_director_review_transaction_count")
         # Triggers for mv_director_review_transaction_count
@@ -129,13 +135,6 @@ def upgrade() -> None:
             CREATE TRIGGER refresh_mv_director_review_transaction_count_after_aa
             AFTER INSERT OR UPDATE OR DELETE ON admin_adjustment
             FOR EACH STATEMENT EXECUTE FUNCTION refresh_mv_director_review_transaction_count();
-            """
-        )
-        logger.info("Created triggers for mv_director_review_transaction_count")
-        op.execute(
-            """
-            CREATE UNIQUE INDEX mv_director_review_transaction_count_unique_idx
-            ON mv_director_review_transaction_count (transaction_type);
             """
         )
         logger.info("Created index for mv_director_review_transaction_count")
@@ -198,17 +197,23 @@ def downgrade() -> None:
             """
         )
         logger.info("Created materialized view: mv_director_review_transaction_count")
-
         op.execute(
             """
-        CREATE OR REPLACE FUNCTION refresh_mv_director_review_transaction_count()
-        RETURNS TRIGGER AS $$
-        BEGIN
-            REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count;
-            RETURN NULL;
-        END;
-        $$ LANGUAGE plpgsql;
-        """
+            CREATE UNIQUE INDEX mv_director_review_transaction_count_unique_idx
+            ON mv_director_review_transaction_count (transaction_type);
+            """
+        )
+        logger.info("Created index for mv_director_review_transaction_count")
+        op.execute(
+            """
+            CREATE OR REPLACE FUNCTION refresh_mv_director_review_transaction_count()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                REFRESH MATERIALIZED VIEW CONCURRENTLY mv_director_review_transaction_count;
+                RETURN NULL;
+            END;
+            $$ LANGUAGE plpgsql;
+            """
         )
         logger.info("Created function: refresh_mv_director_review_transaction_count")
         # Triggers for mv_director_review_transaction_count
@@ -241,13 +246,6 @@ def downgrade() -> None:
             """
         )
         logger.info("Created triggers for mv_director_review_transaction_count")
-        op.execute(
-            """
-            CREATE UNIQUE INDEX mv_director_review_transaction_count_unique_idx
-            ON mv_director_review_transaction_count (transaction_type);
-            """
-        )
-        logger.info("Created index for mv_director_review_transaction_count")
     except Exception as e:
         logger.error(f"Migration downgrade failed: {e}", exc_info=True)
         raise
