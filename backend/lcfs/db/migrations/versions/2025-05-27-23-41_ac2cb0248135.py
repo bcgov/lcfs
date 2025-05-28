@@ -66,8 +66,8 @@ def upgrade() -> None:
                                         vcr.organization_id 
                             ORDER BY vcr.version DESC
                         ) as rn
-                    FROM lcfs.public.v_compliance_report vcr
-                    JOIN lcfs.public.compliance_report_status crs 
+                    FROM v_compliance_report vcr
+                    JOIN compliance_report_status crs 
                         ON crs.compliance_report_status_id = vcr.report_status_id
                         AND crs.status NOT IN ('Draft'::compliancereportstatusenum, 'Analyst_adjustment'::compliancereportstatusenum)
                 ) cr
