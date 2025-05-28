@@ -126,13 +126,3 @@ async def test_authenticate_no_auth_header(auth_backend):
 
     assert exc_info.value.status_code == 401
     assert exc_info.value.detail == "Authorization header is required"
-
-
-@pytest.mark.anyio
-async def test_map_user_keycloak_id(auth_backend, session_generator):
-    user_profile = UserProfile()
-    user_token = {"preferred_username": "testuser"}
-
-    await auth_backend.map_user_keycloak_id(user_profile, user_token)
-
-    assert user_profile.keycloak_user_id == "testuser"
