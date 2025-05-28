@@ -150,15 +150,36 @@ describe('CompareReports Component', () => {
     })
   })
 
-  it('initializes with default report selections', () => {
+  it('initializes with default report selections in correct order', () => {
     render(<CompareReports />, { wrapper })
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
 
-    // Since the component sorts by timestamp and selects the two most recent reports
+    // Earliest report should be on the left (report1), most recent on the right (report2)
+    expect(report1Select).toHaveTextContent('Supplemental Report 1')
+    expect(report2Select).toHaveTextContent('Government Adjustment 2')
+  })
+
+  it('ensures column ordering follows chronological order (earliest left, latest right)', () => {
+    render(<CompareReports />, { wrapper })
+
+    const report1Select = screen.getAllByRole('combobox')[0]
+    const report2Select = screen.getAllByRole('combobox')[1]
+
+    expect(report1Select).toHaveTextContent('Supplemental Report 1')
+    expect(report2Select).toHaveTextContent('Government Adjustment 2')
+
+    fireEvent.mouseDown(report1Select)
+    fireEvent.click(
+      screen.getByRole('option', { name: 'Government Adjustment 2' })
+    )
+
+    fireEvent.mouseDown(report2Select)
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
+
     expect(report1Select).toHaveTextContent('Government Adjustment 2')
-    expect(report2Select).toHaveTextContent('Supplemental Report 1')
+    expect(report2Select).toHaveTextContent('Original Report')
   })
 
   it('allows selecting different reports', async () => {
@@ -173,17 +194,17 @@ describe('CompareReports Component', () => {
 
     // Verify selection was made
     expect(report1Select).toHaveTextContent('Original Report')
-    expect(report2Select).toHaveTextContent('Supplemental Report 1')
+    expect(report2Select).toHaveTextContent('Government Adjustment 2')
 
     // Open second dropdown and select a different option
     fireEvent.mouseDown(report2Select)
     fireEvent.click(
-      screen.getByRole('option', { name: 'Government Adjustment 2' })
+      screen.getByRole('option', { name: 'Supplemental Report 1' })
     )
 
     // Verify both selections
     expect(report1Select).toHaveTextContent('Original Report')
-    expect(report2Select).toHaveTextContent('Government Adjustment 2')
+    expect(report2Select).toHaveTextContent('Supplemental Report 1')
   })
 
   it('should not allow selecting the same report in both dropdowns', async () => {
@@ -192,7 +213,7 @@ describe('CompareReports Component', () => {
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
 
-    // Initially Government Adjustment 2 and Supplemental Report 1 are selected
+    // Initially Supplemental Report 1 (left) and Government Adjustment 2 (right) are selected
 
     // Select Original Report in first dropdown
     fireEvent.mouseDown(report1Select)
@@ -243,7 +264,7 @@ describe('CompareReports Component', () => {
 
     fireEvent.mouseDown(report2Select)
     fireEvent.click(
-      screen.getByRole('option', { name: 'Government Adjustment 2' })
+      screen.getByRole('option', { name: 'Supplemental Report 1' })
     )
 
     // Check if the data rows are rendered correctly after selection
