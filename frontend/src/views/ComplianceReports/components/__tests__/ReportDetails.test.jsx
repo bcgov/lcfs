@@ -151,13 +151,30 @@ describe('ReportDetails', () => {
       wrapper
     })
 
+    // Wait for initial render
+    await waitFor(() => {
+      expect(screen.getByText('report:expandAll')).toBeInTheDocument()
+    })
+
     fireEvent.click(screen.getByText('report:expandAll'))
 
     await waitFor(() => {
-      // For supplemental reports (version=1) with hasVersions=true, all 7 panels should be visible:
-      // supportingDocs, supplyOfFuel, finalSupplyEquipments, allocationAgreements, notionalTransfers, otherUses, fuelExports
+      // For supplemental reports (version=1) with hasVersions=true, only sections with data are shown:
+      // - supportingDocs (always shown)
+      // - supplyOfFuel (has 2 items)
+      // - finalSupplyEquipments (has 2 items)
+      // Empty sections (allocationAgreements, notionalTransfers, otherUses, fuelExports) are hidden
       const panels = screen.getAllByTestId(/panel\d+-summary/)
-      expect(panels).toHaveLength(7)
+      expect(panels).toHaveLength(3)
+
+      // Verify the specific sections that should be visible
+      expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
+      expect(
+        screen.getByText('report:activityLists.supplyOfFuel')
+      ).toBeInTheDocument()
+      expect(
+        screen.getByText('finalSupplyEquipment:fseTitle')
+      ).toBeInTheDocument()
     })
   })
 

@@ -8,7 +8,7 @@ import {
   IconButton,
   Link
 } from '@mui/material'
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
@@ -53,6 +53,7 @@ import {
   NewReleasesOutlined
 } from '@mui/icons-material'
 
+// Move static styles outside component to prevent re-creation
 const chipStyles = {
   ml: 2,
   color: colors.badgeColors.warning.text,
@@ -64,6 +65,32 @@ const chipStyles = {
   },
   boxShadow:
     '0 1px 2px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255,255,255,0.5)'
+}
+
+// Memoize chip styles for different states
+const getChipStyles = (type) => {
+  switch (type) {
+    case 'edited':
+      return {
+        ...chipStyles,
+        color: colors.alerts.success.color,
+        '& .MuiChip-icon': {
+          color: colors.alerts.success.color
+        },
+        backgroundImage: `linear-gradient(195deg, ${colors.alerts.success.border},${colors.alerts.success.background})`
+      }
+    case 'info':
+      return {
+        ...chipStyles,
+        color: colors.alerts.info.color,
+        '& .MuiChip-icon': {
+          color: colors.alerts.info.color
+        },
+        backgroundImage: `linear-gradient(195deg, ${colors.alerts.info.border},${colors.alerts.info.background})`
+      }
+    default:
+      return chipStyles
+  }
 }
 
 const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
@@ -83,14 +110,32 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   )
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
-  const hasAnalystRole = hasRoles('Analyst')
-  const hasSupplierRole = hasRoles('Supplier')
-  const isSupplemental = complianceReportData.report.version > 0
-  const hasVersions = complianceReportData.chain.length > 1
-  const isEarlyIssuance =
-    complianceReportData.report?.reportingFrequency ===
-    REPORT_SCHEDULES.QUARTERLY
+  // Initialize expanded state as empty array first
+  const [expanded, setExpanded] = useState([])
 
+  // Memoize role checks to prevent re-computation
+  const hasAnalystRole = useMemo(() => hasRoles('Analyst'), [hasRoles])
+  const hasSupplierRole = useMemo(() => hasRoles('Supplier'), [hasRoles])
+
+  // Memoize derived values
+  const reportInfo = useMemo(() => {
+    if (!complianceReportData)
+      return {
+        isSupplemental: false,
+        hasVersions: false,
+        isEarlyIssuance: false
+      }
+
+    return {
+      isSupplemental: complianceReportData.report?.version > 0,
+      hasVersions: complianceReportData.chain?.length > 1,
+      isEarlyIssuance:
+        complianceReportData.report?.reportingFrequency ===
+        REPORT_SCHEDULES.QUARTERLY
+    }
+  }, [complianceReportData])
+
+  // Memoize edit permissions
   const editSupportingDocs = useMemo(() => {
     // Allow BCeID users to edit in Draft status
     if (hasSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) {
@@ -100,41 +145,114 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     if (hasAnalystRole) {
       const editableAnalystStatuses = [
         COMPLIANCE_REPORT_STATUSES.SUBMITTED,
-        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST,
-        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER,
-        COMPLIANCE_REPORT_STATUSES.ASSESSED
+        COMPLIANCE_REPORT_STATUSES.ASSESSED,
+        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
       ]
-
       return editableAnalystStatuses.includes(currentStatus)
     }
-
     return false
   }, [hasAnalystRole, hasSupplierRole, currentStatus])
 
-  const shouldShowEditIcon = (activityName) => {
-    if (activityName === t('report:supportingDocs')) {
-      return editSupportingDocs
-    }
-    return canEdit
-  }
+  // Memoize shouldShowEditIcon function
+  const shouldShowEditIcon = useCallback(
+    (activityName) => {
+      if (activityName === t('report:supportingDocs')) {
+        return editSupportingDocs
+      }
+      return canEdit
+    },
+    [editSupportingDocs, canEdit, t]
+  )
 
-  const wasEdited = (data) => {
-    const crMap = {}
+  // Memoize crMap
+  const crMap = useMemo(() => {
+    if (!complianceReportData?.chain) return {}
+
+    const mapSet = {}
     complianceReportData.chain.forEach((complianceReport) => {
-      crMap[complianceReport.complianceReportId] = complianceReport.version
+      mapSet[complianceReport.complianceReportId] = complianceReport.version
     })
+    return mapSet
+  }, [complianceReportData?.chain])
 
-    return data?.some((row) => crMap[row.complianceReportId] !== 0)
-  }
+  // Memoize wasEdited function
+  const wasEdited = useCallback(
+    (data) => {
+      if (!data || !Array.isArray(data)) return false
+      return data.some(
+        (row) =>
+          crMap[row.complianceReportId] !== 0 &&
+          Object.prototype.hasOwnProperty.call(row, 'version')
+      )
+    },
+    [crMap]
+  )
 
+  // Memoize navigation handlers
+  const navigationHandlers = useMemo(
+    () => ({
+      fuelSupplies: () =>
+        navigate(
+          buildPath(ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL, {
+            compliancePeriod,
+            complianceReportId
+          })
+        ),
+      finalSupplyEquipments: () =>
+        navigate(
+          buildPath(ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS, {
+            compliancePeriod,
+            complianceReportId
+          })
+        ),
+      allocationAgreements: () =>
+        navigate(
+          buildPath(ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS, {
+            compliancePeriod,
+            complianceReportId
+          })
+        ),
+      notionalTransfers: () =>
+        navigate(
+          buildPath(ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS, {
+            compliancePeriod,
+            complianceReportId
+          })
+        ),
+      otherUses: () =>
+        navigate(
+          buildPath(ROUTES.REPORTS.ADD.OTHER_USE_FUELS, {
+            compliancePeriod,
+            complianceReportId
+          })
+        ),
+      fuelExports: () =>
+        navigate(
+          buildPath(ROUTES.REPORTS.ADD.FUEL_EXPORTS, {
+            compliancePeriod,
+            complianceReportId
+          })
+        )
+    }),
+    [navigate, compliancePeriod, complianceReportId]
+  )
+
+  // Memoize file dialog handlers
+  const handleFileDialogOpen = useCallback((e) => {
+    e.stopPropagation()
+    setFileDialogOpen(true)
+  }, [])
+
+  const handleFileDialogClose = useCallback(() => {
+    setFileDialogOpen(false)
+  }, [])
+
+  // Memoize activity list
   const activityList = useMemo(
     () => [
       {
         name: t('report:supportingDocs'),
-        action: (e) => {
-          e.stopPropagation()
-          setFileDialogOpen(true)
-        },
+        action: handleFileDialogOpen,
         useFetch: useComplianceReportDocuments,
         component: (data) => (
           <>
@@ -147,9 +265,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
               parentID={complianceReportId}
               parentType="compliance_report"
               open={isFileDialogOpen}
-              close={() => {
-                setFileDialogOpen(false)
-              }}
+              close={handleFileDialogClose}
             />
           </>
         ),
@@ -158,20 +274,14 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       {
         name: t('report:activityLists.supplyOfFuel'),
         key: 'fuelSupplies',
-        action: () =>
-          navigate(
-            buildPath(ROUTES.REPORTS.ADD.SUPPLY_OF_FUEL, {
-              compliancePeriod,
-              complianceReportId
-            })
-          ),
+        action: navigationHandlers.fuelSupplies,
         useFetch: useGetFuelSupplies,
         component: (data) =>
           data.fuelSupplies.length > 0 && (
             <TogglePanel
               label="Change log"
               disabled={
-                !(hasVersions || isSupplemental) ||
+                !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
                 !wasEdited(data.fuelSupplies)
               }
               onComponent={<FuelSupplyChangelog canEdit={canEdit} />}
@@ -179,7 +289,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                 <FuelSupplySummary
                   status={currentStatus}
                   data={data}
-                  isEarlyIssuance={isEarlyIssuance}
+                  isEarlyIssuance={reportInfo.isEarlyIssuance}
                 />
               }
             />
@@ -188,13 +298,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       {
         name: t('finalSupplyEquipment:fseTitle'),
         key: 'finalSupplyEquipments',
-        action: () =>
-          navigate(
-            buildPath(ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS, {
-              compliancePeriod,
-              complianceReportId
-            })
-          ),
+        action: navigationHandlers.finalSupplyEquipments,
         useFetch: useGetFinalSupplyEquipments,
         component: (data) =>
           data.finalSupplyEquipments.length > 0 && (
@@ -204,20 +308,14 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       {
         name: t('report:activityLists.allocationAgreements'),
         key: 'allocationAgreements',
-        action: () =>
-          navigate(
-            buildPath(ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS, {
-              compliancePeriod,
-              complianceReportId
-            })
-          ),
+        action: navigationHandlers.allocationAgreements,
         useFetch: useGetAllAllocationAgreements,
         component: (data) =>
           data.allocationAgreements.length > 0 && (
             <TogglePanel
               label="Change log"
               disabled={
-                !(hasVersions || isSupplemental) ||
+                !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
                 !wasEdited(data.allocationAgreements)
               }
               onComponent={<AllocationAgreementChangelog canEdit={canEdit} />}
@@ -233,20 +331,14 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       {
         name: t('report:activityLists.notionalTransfers'),
         key: 'notionalTransfers',
-        action: () =>
-          navigate(
-            buildPath(ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS, {
-              compliancePeriod,
-              complianceReportId
-            })
-          ),
+        action: navigationHandlers.notionalTransfers,
         useFetch: useGetAllNotionalTransfers,
         component: (data) =>
           data.notionalTransfers.length > 0 && (
             <TogglePanel
               label="Change log"
               disabled={
-                !(hasVersions || isSupplemental) ||
+                !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
                 !wasEdited(data.notionalTransfers)
               }
               onComponent={<NotionalTransferChangelog canEdit={canEdit} />}
@@ -259,20 +351,15 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       {
         name: t('otherUses:summaryTitle'),
         key: 'otherUses',
-        action: () =>
-          navigate(
-            buildPath(ROUTES.REPORTS.ADD.OTHER_USE_FUELS, {
-              compliancePeriod,
-              complianceReportId
-            })
-          ),
+        action: navigationHandlers.otherUses,
         useFetch: useGetAllOtherUses,
         component: (data) =>
           data.otherUses.length > 0 && (
             <TogglePanel
               label="Change log"
               disabled={
-                !(hasVersions || isSupplemental) || !wasEdited(data.otherUses)
+                !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
+                !wasEdited(data.otherUses)
               }
               onComponent={<OtherUsesChangelog canEdit={canEdit} />}
               offComponent={
@@ -284,20 +371,15 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       {
         name: t('fuelExport:fuelExportTitle'),
         key: 'fuelExports',
-        action: () =>
-          navigate(
-            buildPath(ROUTES.REPORTS.ADD.FUEL_EXPORTS, {
-              compliancePeriod,
-              complianceReportId
-            })
-          ),
+        action: navigationHandlers.fuelExports,
         useFetch: useGetFuelExports,
         component: (data) =>
           !isArrayEmpty(data) && (
             <TogglePanel
               label="Change log"
               disabled={
-                !(hasVersions || isSupplemental) || !wasEdited(data.fuelExports)
+                !(reportInfo.hasVersions || reportInfo.isSupplemental) ||
+                !wasEdited(data.fuelExports)
               }
               onComponent={<FuelExportChangelog canEdit={canEdit} />}
               offComponent={
@@ -309,41 +391,72 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     ],
     [
       t,
-      compliancePeriod,
+      handleFileDialogOpen,
+      navigationHandlers,
       complianceReportId,
       isFileDialogOpen,
-      navigate,
-      currentStatus,
-      isArrayEmpty
+      handleFileDialogClose,
+      reportInfo,
+      wasEdited,
+      canEdit,
+      currentStatus
     ]
   )
 
-  const [expanded, setExpanded] = useState(
-    activityList
-      .map((activity, index) => {
-        if (activity.name === t('report:supportingDocs')) {
-          return isArrayEmpty(activity.useFetch(complianceReportId).data)
-            ? ''
-            : `panel${index}`
-        }
-        return `panel${index}`
-      })
-      .filter(Boolean)
+  // Effect to initialize expanded state after activityList is ready
+  useEffect(() => {
+    if (activityList.length > 0 && expanded.length === 0) {
+      const initialExpanded = activityList
+        .map((activity, index) => {
+          if (activity.name === t('report:supportingDocs')) {
+            try {
+              const data = activity.useFetch(complianceReportId).data
+              return isArrayEmpty(data) ? '' : `panel${index}`
+            } catch (error) {
+              return `panel${index}`
+            }
+          }
+          return `panel${index}`
+        })
+        .filter(Boolean)
+
+      setExpanded(initialExpanded)
+    }
+  }, [activityList, expanded.length, complianceReportId, t])
+
+  // Memoize expand handlers
+  const onExpand = useCallback(
+    (panel) => (event, isExpanded) => {
+      setExpanded((prev) =>
+        isExpanded ? [...prev, panel] : prev.filter((p) => p !== panel)
+      )
+    },
+    []
   )
 
-  const onExpand = (panel) => (event, isExpanded) => {
-    setExpanded((prev) =>
-      isExpanded ? [...prev, panel] : prev.filter((p) => p !== panel)
-    )
-  }
+  const onExpandAll = useCallback(() => {
+    if (activityList && activityList.length > 0) {
+      setExpanded(activityList.map((_, index) => `panel${index}`))
+    }
+  }, [activityList])
 
-  const onExpandAll = () => {
-    setExpanded(activityList.map((_, index) => `panel${index}`))
-  }
-
-  const onCollapseAll = () => {
+  const onCollapseAll = useCallback(() => {
     setExpanded([])
-  }
+  }, [])
+
+  // Memoize accordion styles
+  const accordionStyles = useMemo(
+    () => ({
+      '& .Mui-disabled': {
+        backgroundColor: colors.light.main,
+        opacity: '0.8 !important',
+        '& .MuiTypography-root': {
+          color: 'initial !important'
+        }
+      }
+    }),
+    []
+  )
 
   return (
     <>
@@ -367,57 +480,55 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           {t('report:collapseAll')}
         </Link>
       </BCTypography>
+
       {activityList.map((activity, index) => {
         const { data, error, isLoading } = activity.useFetch(
           complianceReportId,
           {
-            changelog: isSupplemental
+            changelog: reportInfo.isSupplemental
           }
         )
         const scheduleData =
-          (!isLoading && activity.key ? data[activity.key] : data) ?? []
+          (!isLoading && activity.key ? data?.[activity.key] : data) ?? []
 
         // Check if the accordion should be disabled
         const hasNoData = isArrayEmpty(scheduleData)
         const isDisabled = !canEdit && hasNoData
+
         // Check if all records are marked as DELETE
         const allRecordsDeleted =
           Array.isArray(scheduleData) &&
           scheduleData.length > 0 &&
           scheduleData.every((item) => item.actionType === 'DELETE')
-
-        const shouldRender =
-          activity.name === t('report:supportingDocs') ||
+        // Determine if this accordion should be displayed
+        const shouldShowAccordion =
+          // Always show if it has data
           (scheduleData && !isArrayEmpty(scheduleData)) ||
-          hasVersions
+          // Or if it's Supporting Docs
+          activity.name === t('report:supportingDocs') ||
+          // For non-supplemental reports, always show all sections
+          !reportInfo.isSupplemental
+
+        const panelId = `panel${index}`
+        const isExpanded = expanded.includes(panelId)
+        const showEditIcon = shouldShowEditIcon(activity.name)
 
         return (
-          shouldRender && (
+          shouldShowAccordion && (
             <Accordion
-              sx={{
-                '& .Mui-disabled': {
-                  backgroundColor: colors.light.main,
-                  opacity: '0.8 !important',
-                  '& .MuiTypography-root': {
-                    color: 'initial !important'
-                  }
-                }
-              }}
+              sx={accordionStyles}
               key={index}
-              expanded={
-                expanded.includes(`panel${index}`) &&
-                (!isDisabled || shouldShowEditIcon(activity.name))
-              }
-              onChange={onExpand(`panel${index}`)}
-              disabled={!shouldShowEditIcon(activity.name) && isDisabled}
+              expanded={isExpanded && (!isDisabled || showEditIcon)}
+              onChange={onExpand(panelId)}
+              disabled={!showEditIcon && isDisabled}
             >
               <AccordionSummary
                 expandIcon={
                   <ExpandMore sx={{ width: '2rem', height: '2rem' }} />
                 }
-                aria-controls={`panel${index}-content`}
-                id={`panel${index}-header`}
-                data-test={`panel${index}-summary`}
+                aria-controls={`${panelId}-content`}
+                id={`${panelId}-header`}
+                data-test={`${panelId}-summary`}
                 sx={{
                   '& .MuiAccordionSummary-content': { alignItems: 'center' }
                 }}
@@ -429,7 +540,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                   component="div"
                 >
                   {activity.name}&nbsp;&nbsp;
-                  {shouldShowEditIcon(activity.name) && (
+                  {showEditIcon && (
                     <Role
                       roles={[
                         roles.signing_authority,
@@ -452,14 +563,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                       icon={<NewReleasesOutlined fontSize="small" />}
                       label={t('Edited')}
                       size="small"
-                      sx={{
-                        ...chipStyles,
-                        color: colors.alerts.success.color,
-                        '& .MuiChip-icon': {
-                          color: colors.alerts.success.color
-                        },
-                        backgroundImage: `linear-gradient(195deg, ${colors.alerts.success.border},${colors.alerts.success.background})`
-                      }}
+                      sx={getChipStyles('edited')}
                     />
                   )}
                 </BCTypography>
@@ -470,23 +574,16 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     label={t('Deleted')}
                     color="warning"
                     size="small"
-                    sx={{ ...chipStyles }}
+                    sx={chipStyles}
                   />
                 )}
-                {isDisabled && (
+                {hasNoData && (
                   <Chip
                     aria-label="no records"
                     icon={<InfoOutlined fontSize="small" />}
                     label={t('Empty')}
                     size="small"
-                    sx={{
-                      ...chipStyles,
-                      color: colors.alerts.error.color,
-                      '& .MuiChip-icon': {
-                        color: colors.alerts.error.color
-                      },
-                      backgroundImage: `linear-gradient(195deg, ${colors.alerts.error.border},${colors.alerts.error.background})`
-                    }}
+                    sx={getChipStyles('info')}
                   />
                 )}
               </AccordionSummary>
@@ -515,13 +612,12 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           )
         )
       })}
+
       <DocumentUploadDialog
         parentID={complianceReportId}
         parentType="compliance_report"
         open={isFileDialogOpen}
-        close={() => {
-          setFileDialogOpen(false)
-        }}
+        close={handleFileDialogClose}
       />
     </>
   )
