@@ -65,7 +65,6 @@ async def _engine() -> AsyncGenerator[AsyncEngine, None]:
     await create_test_database()
 
     # Run Alembic migrations
-    # subprocess.run(["alembic", "upgrade", "head"], check=True)
     try:
         subprocess.run(
             ["alembic", "upgrade", "head"],

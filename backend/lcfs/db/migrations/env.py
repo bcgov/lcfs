@@ -114,4 +114,3 @@ else:
             loop.create_task(run_migrations_online())
         else:
             raise
-
