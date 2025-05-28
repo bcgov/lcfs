@@ -364,7 +364,7 @@ export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
     field: 'endUseType.type',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'endUseType')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
