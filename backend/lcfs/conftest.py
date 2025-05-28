@@ -1,5 +1,5 @@
 import warnings
-
+import os
 import structlog
 
 # Suppress the PendingDeprecationWarning for multipart
@@ -65,7 +65,19 @@ async def _engine() -> AsyncGenerator[AsyncEngine, None]:
     await create_test_database()
 
     # Run Alembic migrations
-    subprocess.run(["alembic", "upgrade", "head"], check=True)
+    try:
+        subprocess.run(
+            ["alembic", "upgrade", "head"],
+            cwd=f"{os.getcwd()}",
+            check=True,
+        )
+    except Exception as e:
+        logger.error(
+            "Error running migrations",
+            error=str(e),
+            exc_info=e,
+        )
+        raise
 
     # Create AsyncEngine instance
     engine = create_async_engine(str(settings.db_test_url))
