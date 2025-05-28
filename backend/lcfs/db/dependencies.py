@@ -17,8 +17,8 @@ db_url = make_url(str(settings.db_url.with_path(f"/{settings.db_base}")))
 async_engine = create_async_engine(
     db_url,
     future=True,
-    pool_size=50,
-    max_overflow=100,
+    pool_size=30,
+    max_overflow=50,
     pool_pre_ping=True,
     pool_recycle=3600,
     pool_timeout=30,

@@ -13,8 +13,8 @@ The application uses SQLAlchemy's async connection pool with the following setti
 async_engine = create_async_engine(
     db_url,
     future=True,
-    pool_size=50,           # Base connection pool size
-    max_overflow=100,       # Additional connections beyond pool_size
+    pool_size=30,           # Base connection pool size (reduced from 50)
+    max_overflow=50,        # Additional connections beyond pool_size (reduced from 100)
     pool_pre_ping=True,     # Test connections before use
     pool_recycle=3600,      # Recycle connections every hour
     pool_timeout=30,        # Wait time for connection (seconds)
@@ -24,11 +24,25 @@ async_engine = create_async_engine(
 
 ### Pool Settings Explained
 
-- **Total Available Connections**: 150 (50 base + 100 overflow)
+- **Total Available Connections**: 80 (30 base + 50 overflow) - **SAFE within DB limit of 100**
+- **Reserved for System**: 20 connections left for PostgreSQL internal operations, monitoring, backups
 - **Connection Lifecycle**: Connections are recycled every hour to prevent stale connections
 - **Health Checks**: `pool_pre_ping=True` ensures connections are valid before use
 - **Timeout**: Requests wait up to 30 seconds for an available connection
 - **Clean State**: `pool_reset_on_return='commit'` ensures connections are reset to a clean state when returned to the pool
+
+### Database Capacity Considerations
+
+**Current Database Settings:**
+- PostgreSQL `max_connections = 100`
+- No PgBouncer connection pooling
+- Each application connection = 1 database connection
+
+**Why We Use 80 Total Connections:**
+- Leaves 20 connections for PostgreSQL system operations
+- Prevents connection exhaustion errors
+- Allows for monitoring tools and manual admin connections
+- Provides safety buffer for connection spikes
 
 #### Connection Reset Behavior (`pool_reset_on_return='commit'`)
 
@@ -84,24 +98,26 @@ Some operations create additional connections:
 With the current pool configuration:
 
 ### Theoretical Maximum
-- **150 total connections ÷ 2 connections per request = 75 concurrent requests**
+- **80 total connections ÷ 2 connections per request = 40 concurrent requests**
 
 ### Practical Capacity
 Accounting for background operations and safety margins:
 
-- **Recommended Concurrent Users**: 60-65
-- **Peak Burst Capacity**: 70-75 concurrent requests
+- **Recommended Concurrent Users**: 30-35
+- **Peak Burst Capacity**: 40-45 concurrent requests
 - **Background Operations Reserve**: 5-10 connections
 
 ### Performance Characteristics
 
-| Concurrent Users | Connection Usage | Performance |
-|-----------------|------------------|-------------|
-| 1-30            | 60 connections  | Optimal     |
-| 31-50           | 100 connections | Good        |
-| 51-65           | 130 connections | Acceptable  |
-| 66-75           | 150 connections | Peak Load   |
-| 75+             | Pool Exhausted  | Degraded    |
+| Concurrent Users | Connection Usage | Performance | Status |
+|-----------------|------------------|-------------|---------|
+| 1-20            | 40 connections  | Optimal     | ✅ Safe |
+| 21-30           | 60 connections  | Good        | ✅ Safe |
+| 31-35           | 70 connections  | Acceptable  | ⚠️ Monitor |
+| 36-40           | 80 connections  | Peak Load   | ⚠️ At Limit |
+| 40+             | Pool Exhausted  | Degraded    | ❌ Unsafe |
+
+**⚠️ CRITICAL**: With database `max_connections = 100`, we must stay under 40 concurrent users to avoid connection exhaustion.
 
 ## Connection Lifecycle
 
@@ -164,6 +180,43 @@ async with AsyncSession(async_engine) as session:
 - Review background job scheduling
 
 ## Scaling Recommendations
+
+### Immediate Actions Required
+
+**1. Update Application Configuration**
+```python
+# Update both files with safer settings:
+# - backend/lcfs/db/dependencies.py  
+# - backend/lcfs/web/lifetime.py
+
+pool_size=30,        # Reduced from 50
+max_overflow=50,     # Reduced from 100
+```
+
+**2. Database Options to Consider**
+
+**Option A: Increase Database Connections (Simple)**
+```sql
+-- In postgresql.conf
+max_connections = 200  # Double current capacity
+```
+- Pros: Simple, allows current app config
+- Cons: Uses more memory (~2.5MB per connection)
+
+**Option B: Install PgBouncer (Recommended)**
+```
+# PgBouncer configuration example
+pool_mode = transaction
+max_client_conn = 1000
+default_pool_size = 25
+```
+- Pros: Much higher concurrent user capacity, efficient resource usage
+- Cons: Requires setup and configuration
+
+**Option C: Hybrid Approach**
+- Increase `max_connections` to 150-200
+- Install PgBouncer for future scaling
+- Keep app pool at safe levels
 
 ### Horizontal Scaling
 For higher concurrent user loads:
