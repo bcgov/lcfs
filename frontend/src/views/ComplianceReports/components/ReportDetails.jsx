@@ -507,7 +507,10 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           // Or if it's Supporting Docs
           activity.name === t('report:supportingDocs') ||
           // For non-supplemental reports, always show all sections
-          !reportInfo.isSupplemental
+          [
+            COMPLIANCE_REPORT_STATUSES.DRAFT,
+            COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+          ].includes(currentStatus)
 
         const panelId = `panel${index}`
         const isExpanded = expanded.includes(panelId)
