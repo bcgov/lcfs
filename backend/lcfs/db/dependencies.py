@@ -17,10 +17,12 @@ db_url = make_url(str(settings.db_url.with_path(f"/{settings.db_base}")))
 async_engine = create_async_engine(
     db_url,
     future=True,
-    pool_size=20,
-    max_overflow=30,
+    pool_size=50,
+    max_overflow=100,
     pool_pre_ping=True,
     pool_recycle=3600,
+    pool_timeout=30,
+    pool_reset_on_return="commit",
 )
 logger = structlog.get_logger("sqlalchemy.engine")
 register_query_analyzer(async_engine.sync_engine)
@@ -54,19 +56,24 @@ async def get_async_db_session(
     """
     async with AsyncSession(async_engine) as session:
         # Begin the main transaction for the request's operations.
-        async with session.begin():
-            try:
-                # Set user context for auditing within the transaction.
-                # This ensures 'app.username' is set on the connection within the active transaction.
-                if request.user:
-                    current_user_var.set(request.user)
-                    current_user = get_current_user()
-                    await set_user_context(session, current_user)
+        try:
+            async with session.begin():
+                try:
+                    # Set user context for auditing within the transaction.
+                    # This ensures 'app.username' is set on the connection within the active transaction.
+                    if request.user:
+                        current_user_var.set(request.user)
+                        current_user = get_current_user()
+                        await set_user_context(session, current_user)
 
-                yield session
-                # The 'async with session.begin()' block will handle commit upon successful completion
-                # or rollback if an exception occurs within the 'yield'ed block.
-            except Exception:
-                # Rollback is handled by 'async with session.begin()'
-                raise
+                    yield session
+                    # The 'async with session.begin()' block will handle commit upon successful completion
+                    # or rollback if an exception occurs within the 'yield'ed block.
+                except Exception as e:
+                    logger.error(f"Error in database session: {e}", exc_info=True)
+                    # Rollback is handled by 'async with session.begin()'
+                    raise
+        except Exception as e:
+            logger.error(f"Error creating database transaction: {e}", exc_info=True)
+            raise
         # Session is automatically closed by 'async with AsyncSession(...)'

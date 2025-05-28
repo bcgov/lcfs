@@ -26,10 +26,12 @@ def _setup_db(app: FastAPI) -> None:  # pragma: no cover
     engine = create_async_engine(
         str(settings.db_url),
         echo=settings.db_echo,
-        pool_size=20,
-        max_overflow=30,
+        pool_size=50,
+        max_overflow=100,
         pool_pre_ping=True,
         pool_recycle=3600,
+        pool_timeout=30,
+        pool_reset_on_return="commit",
     )
     session_factory = async_sessionmaker(
         engine,
