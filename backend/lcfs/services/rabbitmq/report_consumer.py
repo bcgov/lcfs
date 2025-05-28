@@ -16,6 +16,7 @@ from lcfs.settings import settings
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.compliance_report.schema import ComplianceReportCreateSchema
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
+from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.transaction.repo import TransactionRepository
@@ -139,7 +140,8 @@ class ReportConsumer(BaseConsumer):
 
         async with AsyncSession(async_engine) as session:
             async with session.begin():
-                # Initialize repositories and services
+                # Initialize repositories and services with the same session
+                fuel_supply_repo = FuelSupplyRepository(db=session)
                 org_repo = OrganizationsRepository(db=session)
                 transaction_repo = TransactionRepository(db=session)
                 redis_balance_service = RedisBalanceService(
@@ -150,7 +152,9 @@ class ReportConsumer(BaseConsumer):
                     transaction_repo=transaction_repo,
                     redis_balance_service=redis_balance_service,
                 )
-                compliance_report_repo = ComplianceReportRepository(db=session)
+                compliance_report_repo = ComplianceReportRepository(
+                    db=session, fuel_supply_repo=fuel_supply_repo
+                )
                 compliance_report_service = ComplianceReportServices(
                     repo=compliance_report_repo
                 )

@@ -388,8 +388,8 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
 
         const shouldRender =
           activity.name === t('report:supportingDocs') ||
-          (scheduleData && !isArrayEmpty(scheduleData)) ||
-          hasVersions
+          !isArrayEmpty(scheduleData) ||
+          !isSupplemental
 
         return (
           shouldRender && (
