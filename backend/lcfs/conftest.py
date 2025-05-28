@@ -69,7 +69,7 @@ async def _engine() -> AsyncGenerator[AsyncEngine, None]:
     try:
         subprocess.run(
             ["alembic", "upgrade", "head"],
-            cwd=f"{os.getcwd()}/backend",
+            cwd=f"{os.getcwd()}",
             check=True,
         )
     except Exception as e:
