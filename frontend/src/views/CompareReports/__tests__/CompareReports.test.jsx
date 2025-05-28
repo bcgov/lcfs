@@ -170,13 +170,13 @@ describe('CompareReports Component', () => {
     expect(report1Select).toHaveTextContent('Supplemental Report 1')
     expect(report2Select).toHaveTextContent('Government Adjustment 2')
 
+    fireEvent.mouseDown(report2Select)
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
+
     fireEvent.mouseDown(report1Select)
     fireEvent.click(
       screen.getByRole('option', { name: 'Government Adjustment 2' })
     )
-
-    fireEvent.mouseDown(report2Select)
-    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
 
     expect(report1Select).toHaveTextContent('Government Adjustment 2')
     expect(report2Select).toHaveTextContent('Original Report')
