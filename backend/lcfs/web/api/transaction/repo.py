@@ -329,31 +329,28 @@ class TransactionRepository:
         compliance_period_end_local = compliance_period_end.replace(
             hour=23, minute=59, second=59, microsecond=999999, tzinfo=vancouver_timezone
         )
-        async with self.db.begin_nested():
-            # Calculate the sum of all transactions up to the specified date
-            balance_to_date = await self.db.scalar(
-                select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
-                    and_(
-                        Transaction.organization_id == organization_id,
-                        Transaction.create_date <= compliance_period_end_local,
-                        Transaction.transaction_action
-                        != TransactionActionEnum.Released,
-                    )
+        # Calculate the sum of all transactions up to the specified date
+        balance_to_date = await self.db.scalar(
+            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
+                and_(
+                    Transaction.organization_id == organization_id,
+                    Transaction.create_date <= compliance_period_end_local,
+                    Transaction.transaction_action != TransactionActionEnum.Released,
                 )
             )
+        )
 
-            # Calculate the sum of future negative transactions
-            future_negative_transactions = await self.db.scalar(
-                select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
-                    and_(
-                        Transaction.organization_id == organization_id,
-                        Transaction.create_date > compliance_period_end_local,
-                        Transaction.compliance_units < 0,
-                        Transaction.transaction_action
-                        != TransactionActionEnum.Released,
-                    )
+        # Calculate the sum of future negative transactions
+        future_negative_transactions = await self.db.scalar(
+            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
+                and_(
+                    Transaction.organization_id == organization_id,
+                    Transaction.create_date > compliance_period_end_local,
+                    Transaction.compliance_units < 0,
+                    Transaction.transaction_action != TransactionActionEnum.Released,
                 )
             )
+        )
 
         # Calculate the available balance, round to the nearest whole number, and if negative, set to zero
         available_balance = max(

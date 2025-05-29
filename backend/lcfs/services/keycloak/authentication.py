@@ -140,12 +140,46 @@ class UserAuthentication(AuthenticationBackend):
             ),
         ).lower()
 
-        # Attempt #1: look up by keycloak_user_id
-        user = None
-        if preferred_username:
-            try:
-                async with self.session_factory() as session:
-                    result = await session.execute(
+        # Use a single session for all authentication database operations
+        async with self.session_factory() as session:
+            async with session.begin():
+                user = None
+
+                # Attempt #1: look up by keycloak_user_id
+                if preferred_username:
+                    try:
+                        result = await session.execute(
+                            select(UserProfile)
+                            .options(
+                                joinedload(UserProfile.organization),
+                                joinedload(UserProfile.user_roles).joinedload(
+                                    UserRole.role
+                                ),
+                            )
+                            .where(
+                                func.lower(UserProfile.keycloak_user_id)
+                                == preferred_username
+                            )
+                        )
+                        user = result.unique().scalar_one_or_none()
+                        if user:
+                            # Check if the user is active
+                            if not user.is_active:
+                                error_text = "The account is currently inactive."
+                                await self._create_login_history_in_session(
+                                    session, user_token, False, error_text
+                                )
+                                raise HTTPException(status_code=403, detail=error_text)
+                            else:
+                                # Already found by keycloak_user_id => return
+                                return AuthCredentials(["authenticated"]), user
+
+                    except NoResultFound:
+                        pass
+
+                # Attempt #2: if user was not found by keycloak_user_id, look up by email + username
+                if email and not user:
+                    user_query = (
                         select(UserProfile)
                         .options(
                             joinedload(UserProfile.organization),
@@ -154,98 +188,73 @@ class UserAuthentication(AuthenticationBackend):
                             ),
                         )
                         .where(
-                            func.lower(UserProfile.keycloak_user_id)
-                            == preferred_username
+                            func.lower(UserProfile.keycloak_email) == email,
+                            func.lower(UserProfile.keycloak_username)
+                            == parse_external_username(user_token),
                         )
                     )
-                    user = result.unique().scalar_one_or_none()
-                    if user:
-                        # Check if the user is active
-                        if not user.is_active:
-                            error_text = "The account is currently inactive."
-                            await self.create_login_history(
-                                user_token, False, error_text
-                            )
-                            raise HTTPException(status_code=403, detail=error_text)
-                        else:
-                            # Already found by keycloak_user_id => return
-                            return AuthCredentials(["authenticated"]), user
+                    # Check for Government or Supplier affiliation
+                    if user_token["identity_provider"] == "idir":
+                        user_query = user_query.where(
+                            UserProfile.organization_id.is_(None)
+                        )
+                    elif user_token["identity_provider"] == "bceidbusiness":
+                        user_query = user_query.where(
+                            UserProfile.organization_id.isnot(None)
+                        )
+                    else:
+                        error_text = "Unknown identity provider."
+                        raise HTTPException(status_code=401, detail=error_text)
 
-            except NoResultFound:
-                pass
+                    user_result = await session.execute(user_query)
+                    user = user_result.unique().scalar_one_or_none()
 
-        # Attempt #2: if user was not found by keycloak_user_id, look up by email + username
-        if email and not user:
-            user_query = (
-                select(UserProfile)
-                .options(
-                    joinedload(UserProfile.organization),
-                    joinedload(UserProfile.user_roles).joinedload(UserRole.role),
-                )
-                .where(
-                    func.lower(UserProfile.keycloak_email) == email,
-                    func.lower(UserProfile.keycloak_username)
-                    == parse_external_username(user_token),
-                )
-            )
-            # Check for Government or Supplier affiliation
-            if user_token["identity_provider"] == "idir":
-                user_query = user_query.where(UserProfile.organization_id.is_(None))
-            elif user_token["identity_provider"] == "bceidbusiness":
-                user_query = user_query.where(UserProfile.organization_id.isnot(None))
-            else:
-                error_text = "Unknown identity provider."
-                raise HTTPException(status_code=401, detail=error_text)
+                    if user is None:
+                        error_text = "No User with that configuration exists."
+                        await self._create_login_history_in_session(
+                            session, user_token, False, error_text
+                        )
+                        raise HTTPException(status_code=403, detail=error_text)
 
-            async with self.session_factory() as session:
-                user_result = await session.execute(user_query)
-                user = user_result.unique().scalar_one_or_none()
+                    # Check if the user is active
+                    if not user.is_active:
+                        error_text = "The account is currently inactive."
+                        await self._create_login_history_in_session(
+                            session, user_token, False, error_text
+                        )
+                        raise HTTPException(status_code=403, detail=error_text)
+                else:
+                    if not user:
+                        error_text = (
+                            "preferred_username or email is required in JWT payload."
+                        )
+                        raise HTTPException(status_code=401, detail=error_text)
 
-                if user is None:
-                    error_text = "No User with that configuration exists."
-                    await self.create_login_history(user_token, False, error_text)
-                    raise HTTPException(status_code=403, detail=error_text)
+                # Map the keycloak user id to the user for future login caching
+                if user and user.keycloak_user_id != user_token["preferred_username"]:
+                    user.keycloak_user_id = user_token["preferred_username"]
+                    session.add(user)
 
-                # Check if the user is active
-                if not user.is_active:
-                    error_text = "The account is currently inactive."
-                    await self.create_login_history(user_token, False, error_text)
-                    raise HTTPException(status_code=403, detail=error_text)
-        else:
-            error_text = "preferred_username or email is required in JWT payload."
-            raise HTTPException(status_code=401, detail=error_text)
+                # Create successful login history
+                await self._create_login_history_in_session(session, user_token, True)
 
-        await self.map_user_keycloak_id(user, user_token)
+                return AuthCredentials(["authenticated"]), user
 
-        return AuthCredentials(["authenticated"]), user
-
-    async def map_user_keycloak_id(self, user_profile, user_token):
+    async def _create_login_history_in_session(
+        self, session, user_token, is_success, error_msg=None
+    ):
         """
-        Updates the user's keycloak_user_id and commits the changes to the database.
+        Create login history within an existing session (used during authentication).
         """
-        # Map the keycloak user id to the user for future login caching
-        user_profile.keycloak_user_id = user_token["preferred_username"]
-
-        # The merge method is used to merge the state of the given object into the current session
-        # If the instance does not exist in the session, insert it.
-        # If the instance already exists in the session, update it.
-        async with self.session_factory() as session:
-            await session.merge(user_profile)
-            await session.commit()
-
-        return user_profile
-
-    async def create_login_history(self, user_token, is_success=True, error_msg=None):
         email = user_token.get("email", "").lower()
         username = parse_external_username(user_token)
         preferred_username = user_token.get("preferred_username", "").lower()
+
         login_history = UserLoginHistory(
             keycloak_email=email,
-            external_username=username,
+            keycloak_username=username,
             keycloak_user_id=preferred_username,
             is_login_successful=is_success,
             login_error_message=error_msg,
         )
-        async with self.session_factory() as session:
-            session.add(login_history)
-            await session.commit()
+        session.add(login_history)
