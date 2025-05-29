@@ -1,6 +1,8 @@
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
+from alembic import op
+from pathlib import Path
 
 from lcfs.settings import settings
 
@@ -42,3 +44,16 @@ async def drop_test_database() -> None:
         )
         await conn.execute(text(disc_users))
         await conn.execute(text(f'DROP DATABASE "{settings.db_test}"'))
+
+
+def get_sql_content(filename):
+    sql_dir = Path(__file__).parent.parent / "scripts"
+    return (sql_dir / filename).read_text()
+
+
+def split_and_execute(sql: str) -> None:
+    """Split SQL on semicolons and execute each part separately."""
+    for stmt in sql.split(";"):
+        stmt = stmt.strip()
+        if stmt:
+            op.execute(stmt)
