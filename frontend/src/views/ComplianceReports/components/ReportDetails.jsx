@@ -53,43 +53,33 @@ import {
   NewReleasesOutlined
 } from '@mui/icons-material'
 
-// Move static styles outside component to prevent re-creation
-const chipStyles = {
-  ml: 2,
-  color: colors.badgeColors.warning.text,
-  border: '1px solid rgba(108, 74, 0, 0.1)',
-  backgroundImage: `linear-gradient(195deg, ${colors.alerts.warning.border}, ${colors.alerts.warning.background})`,
-  fontWeight: 600,
-  '& .MuiChip-icon': {
-    color: colors.badgeColors.warning.text
-  },
-  boxShadow:
-    '0 1px 2px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255,255,255,0.5)'
+const chipTypeMap = {
+  deleted: 'warning',
+  edited: 'success',
+  empty: 'info'
 }
 
-// Memoize chip styles for different states
+const chipTypeStyles = Object.entries(chipTypeMap).reduce(
+  (acc, [key, alertType]) => {
+    acc[key] = {
+      color: colors.alerts[alertType].color,
+      '& .MuiChip-icon': {
+        color: colors.alerts[alertType].color
+      },
+      backgroundImage: `linear-gradient(195deg, ${colors.alerts[alertType].border},${colors.alerts[alertType].background})`
+    }
+    return acc
+  },
+  {}
+)
+
 const getChipStyles = (type) => {
-  switch (type) {
-    case 'edited':
-      return {
-        ...chipStyles,
-        color: colors.alerts.success.color,
-        '& .MuiChip-icon': {
-          color: colors.alerts.success.color
-        },
-        backgroundImage: `linear-gradient(195deg, ${colors.alerts.success.border},${colors.alerts.success.background})`
-      }
-    case 'info':
-      return {
-        ...chipStyles,
-        color: colors.alerts.info.color,
-        '& .MuiChip-icon': {
-          color: colors.alerts.info.color
-        },
-        backgroundImage: `linear-gradient(195deg, ${colors.alerts.info.border},${colors.alerts.info.background})`
-      }
-    default:
-      return chipStyles
+  return {
+    ml: 2,
+    border: '1px solid rgba(108, 74, 0, 0.1)',
+    boxShadow:
+      '0 1px 2px rgba(0, 0, 0, 0.15), inset 0 1px 1px rgba(255,255,255,0.5)',
+    ...(chipTypeStyles[type] || {})
   }
 }
 
@@ -110,8 +100,8 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   )
 
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
-  // Initialize expanded state as empty array first
   const [expanded, setExpanded] = useState([])
+  const [hasAutoExpanded, setHasAutoExpanded] = useState(false)
 
   // Memoize role checks to prevent re-computation
   const hasAnalystRole = useMemo(() => hasRoles('Analyst'), [hasRoles])
@@ -143,12 +133,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     }
     // Allow analysts to edit in Submitted/Assessed/Analyst Adjustment statuses
     if (hasAnalystRole) {
-      const editableAnalystStatuses = [
-        COMPLIANCE_REPORT_STATUSES.SUBMITTED,
-        COMPLIANCE_REPORT_STATUSES.ASSESSED,
-        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
-      ]
-      return editableAnalystStatuses.includes(currentStatus)
+      return true
     }
     return false
   }, [hasAnalystRole, hasSupplierRole, currentStatus])
@@ -403,27 +388,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     ]
   )
 
-  // Effect to initialize expanded state after activityList is ready
-  useEffect(() => {
-    if (activityList.length > 0 && expanded.length === 0) {
-      const initialExpanded = activityList
-        .map((activity, index) => {
-          if (activity.name === t('report:supportingDocs')) {
-            try {
-              const data = activity.useFetch(complianceReportId).data
-              return isArrayEmpty(data) ? '' : `panel${index}`
-            } catch (error) {
-              return `panel${index}`
-            }
-          }
-          return `panel${index}`
-        })
-        .filter(Boolean)
-
-      setExpanded(initialExpanded)
-    }
-  }, [activityList, expanded.length, complianceReportId, t])
-
   // Memoize expand handlers
   const onExpand = useCallback(
     (panel) => (event, isExpanded) => {
@@ -434,11 +398,111 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     []
   )
 
-  const onExpandAll = useCallback(() => {
-    if (activityList && activityList.length > 0) {
-      setExpanded(activityList.map((_, index) => `panel${index}`))
+  // Get data for all activities to determine visibility
+  const activityDataResults = activityList.map((activity) => {
+    const result = activity.useFetch(complianceReportId, {
+      changelog: reportInfo.isSupplemental
+    })
+    return {
+      activity,
+      ...result
     }
-  }, [activityList])
+  })
+
+  // Calculate which accordions should actually be shown based on real data
+  const accordionsWithData = useMemo(() => {
+    const accordionsData = new Map()
+
+    activityList.forEach((activity, index) => {
+      const panelId = `panel${index}`
+      const dataResult = activityDataResults[index]
+
+      // For supporting docs, always show
+      // if (activity.name === t('report:supportingDocs')) {
+      //   accordionsData.set(panelId, {
+      //     shouldShow: true,
+      //     hasData: true,
+      //     activity,
+      //     data: dataResult?.data,
+      //     isLoading: dataResult?.isLoading,
+      //     error: dataResult?.error
+      //   })
+      //   return
+      // }
+
+      // check if they have actual data
+      const scheduleData =
+        (!dataResult?.isLoading && activity.key
+          ? dataResult?.data?.[activity.key]
+          : dataResult?.data) ?? []
+      const hasRealData = !isArrayEmpty(scheduleData)
+
+      // Show if has data OR if in editing mode
+      const shouldShowInEditMode = [
+        COMPLIANCE_REPORT_STATUSES.DRAFT,
+        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      ].includes(currentStatus)
+
+      const shouldShow =
+        hasRealData ||
+        shouldShowInEditMode ||
+        activity.name === t('report:supportingDocs')
+
+      accordionsData.set(panelId, {
+        shouldShow,
+        hasData: hasRealData,
+        activity,
+        data: dataResult?.data,
+        isLoading: dataResult?.isLoading,
+        error: dataResult?.error,
+        scheduleData
+      })
+    })
+    return accordionsData
+  }, [
+    activityList,
+    activityDataResults,
+    t,
+    currentStatus,
+    reportInfo.isSupplemental,
+    complianceReportId
+  ])
+
+  // Auto-expand all panels once data is loaded
+  useEffect(() => {
+    if (hasAutoExpanded) return
+
+    const allDataLoaded = activityDataResults.every(
+      (result) => !result.isLoading
+    )
+
+    if (allDataLoaded && accordionsWithData.size > 0) {
+      const accordionsWithActualData = []
+
+      accordionsWithData.forEach((accordionInfo, panelId) => {
+        // Expand if it should show AND has actual data (not empty)
+        if (accordionInfo.shouldShow && accordionInfo.hasData) {
+          accordionsWithActualData.push(panelId)
+        }
+      })
+
+      setExpanded(accordionsWithActualData)
+      setHasAutoExpanded(true)
+    }
+  }, [activityDataResults, accordionsWithData, hasAutoExpanded])
+
+  const onExpandAll = useCallback(() => {
+    // Expand all visible accordions
+    const allVisibleAccordions = []
+
+    accordionsWithData.forEach((accordionInfo, panelId) => {
+      if (accordionInfo.shouldShow) {
+        allVisibleAccordions.push(panelId)
+      }
+    })
+
+    setExpanded(allVisibleAccordions)
+  }, [accordionsWithData])
 
   const onCollapseAll = useCallback(() => {
     setExpanded([])
@@ -482,16 +546,14 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       </BCTypography>
 
       {activityList.map((activity, index) => {
-        const { data, error, isLoading } = activity.useFetch(
-          complianceReportId,
-          {
-            changelog: reportInfo.isSupplemental
-          }
-        )
-        const scheduleData =
-          (!isLoading && activity.key ? data?.[activity.key] : data) ?? []
+        const panelId = `panel${index}`
+        const accordionInfo = accordionsWithData.get(panelId)
 
-        // Check if the accordion should be disabled
+        if (!accordionInfo?.shouldShow) {
+          return null
+        }
+
+        const { data, error, isLoading, scheduleData } = accordionInfo
         const hasNoData = isArrayEmpty(scheduleData)
         const isDisabled = !canEdit && hasNoData
 
@@ -501,89 +563,66 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           scheduleData.length > 0 &&
           scheduleData.every((item) => item.actionType === 'DELETE')
 
-        // Determine if this accordion should be displayed
-        const shouldShowAccordion =
-          // Always show if it has data
-          (scheduleData && !isArrayEmpty(scheduleData)) ||
-          // Or if it's Supporting Docs
-          activity.name === t('report:supportingDocs') ||
-          // if in editing statuses then show all sections
-          [
-            COMPLIANCE_REPORT_STATUSES.DRAFT,
-            COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
-          ].includes(currentStatus)
-
-        const panelId = `panel${index}`
         const isExpanded = expanded.includes(panelId)
         const showEditIcon = shouldShowEditIcon(activity.name)
 
-        const shouldRender =
-          activity.name === t('report:supportingDocs') ||
-          !isArrayEmpty(scheduleData) ||
-          !isSupplemental
-
         return (
-          shouldShowAccordion && (
-            <Accordion
-              sx={accordionStyles}
-              key={index}
-              expanded={isExpanded && (!isDisabled || showEditIcon)}
-              onChange={onExpand(panelId)}
-              disabled={!showEditIcon && isDisabled}
+          <Accordion
+            sx={accordionStyles}
+            key={index}
+            expanded={isExpanded}
+            onChange={onExpand(panelId)}
+            disabled={!showEditIcon && isDisabled}
+          >
+            <AccordionSummary
+              expandIcon={<ExpandMore sx={{ width: '2rem', height: '2rem' }} />}
+              aria-controls={`${panelId}-content`}
+              id={`${panelId}-header`}
+              data-test={`${panelId}-summary`}
+              sx={{
+                '& .MuiAccordionSummary-content': { alignItems: 'center' }
+              }}
             >
-              <AccordionSummary
-                expandIcon={
-                  <ExpandMore sx={{ width: '2rem', height: '2rem' }} />
-                }
-                aria-controls={`${panelId}-content`}
-                id={`${panelId}-header`}
-                data-test={`${panelId}-summary`}
-                sx={{
-                  '& .MuiAccordionSummary-content': { alignItems: 'center' }
-                }}
+              <BCTypography
+                style={{ display: 'flex', alignItems: 'center' }}
+                variant="h6"
+                color="primary"
+                component="div"
               >
-                <BCTypography
-                  style={{ display: 'flex', alignItems: 'center' }}
-                  variant="h6"
-                  color="primary"
-                  component="div"
-                >
-                  {activity.name}&nbsp;&nbsp;
-                  {showEditIcon && (
-                    <Role
-                      roles={[
-                        roles.signing_authority,
-                        roles.compliance_reporting,
-                        roles.analyst
-                      ]}
+                {activity.name}&nbsp;&nbsp;
+                {showEditIcon && (
+                  <Role
+                    roles={[
+                      roles.signing_authority,
+                      roles.compliance_reporting,
+                      roles.analyst
+                    ]}
+                  >
+                    <IconButton
+                      color="primary"
+                      aria-label="edit"
+                      onClick={activity.action}
                     >
-                      <IconButton
-                        color="primary"
-                        aria-label="edit"
-                        onClick={activity.action}
-                      >
-                        <Edit />
-                      </IconButton>
-                    </Role>
-                  )}{' '}
-                  {wasEdited(data?.[activity.key]) && (
-                    <Chip
-                      aria-label="changes were made since original report"
-                      icon={<NewReleasesOutlined fontSize="small" />}
-                      label={t('Edited')}
-                      size="small"
-                      sx={getChipStyles('edited')}
-                    />
-                  )}
-                </BCTypography>
+                      <Edit />
+                    </IconButton>
+                  </Role>
+                )}{' '}
+                {wasEdited(data?.[activity.key]) && (
+                  <Chip
+                    aria-label="changes were made since original report"
+                    icon={<NewReleasesOutlined fontSize="small" />}
+                    label={t('Edited')}
+                    size="small"
+                    sx={getChipStyles('edited')}
+                  />
+                )}
                 {allRecordsDeleted && (
                   <Chip
                     aria-label="all previous records deleted"
                     icon={<DeleteOutline fontSize="small" />}
                     label={t('Deleted')}
-                    color="warning"
                     size="small"
-                    sx={chipStyles}
+                    sx={getChipStyles('deleted')}
                   />
                 )}
                 {hasNoData && (
@@ -595,30 +634,30 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     sx={getChipStyles('info')}
                   />
                 )}
-              </AccordionSummary>
-              <AccordionDetails>
-                {allRecordsDeleted && (
-                  <BCAlert
-                    severity="warning"
-                    data-test="alert-box"
-                    noFade={true}
-                    dismissible={false}
-                  >
-                    {t('report:allRecordsDeleted')}
-                  </BCAlert>
-                )}
-                {isLoading ? (
-                  <CircularProgress />
-                ) : error ? (
-                  <BCTypography color="error">Error loading data</BCTypography>
-                ) : activity.component ? (
-                  activity.component(data)
-                ) : (
-                  <BCTypography>{JSON.stringify(data)}</BCTypography>
-                )}
-              </AccordionDetails>
-            </Accordion>
-          )
+              </BCTypography>
+            </AccordionSummary>
+            <AccordionDetails>
+              {allRecordsDeleted && (
+                <BCAlert
+                  severity="warning"
+                  data-test="alert-box"
+                  noFade={true}
+                  dismissible={false}
+                >
+                  {t('report:allRecordsDeleted')}
+                </BCAlert>
+              )}
+              {isLoading ? (
+                <CircularProgress />
+              ) : error ? (
+                <BCTypography color="error">Error loading data</BCTypography>
+              ) : activity.component ? (
+                activity.component(data)
+              ) : (
+                <BCTypography>{JSON.stringify(data)}</BCTypography>
+              )}
+            </AccordionDetails>
+          </Accordion>
         )
       })}
 
