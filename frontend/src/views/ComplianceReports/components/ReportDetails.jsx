@@ -500,6 +500,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           Array.isArray(scheduleData) &&
           scheduleData.length > 0 &&
           scheduleData.every((item) => item.actionType === 'DELETE')
+
         // Determine if this accordion should be displayed
         const shouldShowAccordion =
           // Always show if it has data
@@ -515,6 +516,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         const panelId = `panel${index}`
         const isExpanded = expanded.includes(panelId)
         const showEditIcon = shouldShowEditIcon(activity.name)
+
+        const shouldRender =
+          activity.name === t('report:supportingDocs') ||
+          !isArrayEmpty(scheduleData) ||
+          !isSupplemental
 
         return (
           shouldShowAccordion && (

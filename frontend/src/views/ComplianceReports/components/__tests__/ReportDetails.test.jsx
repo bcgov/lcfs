@@ -175,6 +175,11 @@ describe('ReportDetails', () => {
       expect(
         screen.getByText('finalSupplyEquipment:fseTitle')
       ).toBeInTheDocument()
+      // For supplemental reports (version=1) with hasVersions=true, 3 panels should be visible:
+      // supportingDocs, fuelsupplies, finalSupplyEquipments
+      const panels = screen.getAllByTestId(/panel\d+-summary/)
+      console.log(panels)
+      expect(panels).toHaveLength(3)
     })
   })
 
