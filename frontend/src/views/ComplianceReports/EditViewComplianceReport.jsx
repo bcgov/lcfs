@@ -547,43 +547,6 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                     />
                   </Role>
                 </BCBox>
-                <Stack
-                  direction="row"
-                  justifyContent="flex-start"
-                  mt={2}
-                  gap={2}
-                >
-                  {buttonClusterConfig[currentStatus]?.map(
-                    (config) =>
-                      config && (
-                        <BCButton
-                          key={config.id}
-                          data-test={config.id}
-                          id={config.id}
-                          size="small"
-                          variant={config.variant}
-                          color={config.color}
-                          onClick={methods.handleSubmit(() =>
-                            config.handler({
-                              assessmentStatement:
-                                reportData?.report.assessmentStatement
-                            })
-                          )}
-                          startIcon={
-                            config.startIcon && (
-                              <FontAwesomeIcon
-                                icon={config.startIcon}
-                                className="small-icon"
-                              />
-                            )
-                          }
-                          disabled={config.disabled}
-                        >
-                          {config.label}
-                        </BCButton>
-                      )
-                  )}
-                </Stack>
               </BCBox>
             )}
           </BCBox>
