@@ -268,6 +268,7 @@ class OrganizationsRepository:
                 "operating_name": org.operating_name,
                 "total_balance": org.total_balance,
                 "reserved_balance": org.reserved_balance,
+                "status": org.org_status,
             }
             for org in organizations
         ]
