@@ -48,7 +48,8 @@ export const buttonClusterConfigFn = ({
   isSigningAuthorityDeclared,
   supplementalInitiator,
   hasDraftSupplemental,
-  reportVersion
+  reportVersion,
+  isSupplemental
 }) => {
   const reportButtons = {
     submitReport: {
@@ -252,40 +253,37 @@ export const buttonClusterConfigFn = ({
       reportButtons.submitReport,
       ...(supplementalInitiator ? [reportButtons.deleteSupplementalReport] : [])
     ],
-    [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: [
-      ...(isGovernmentUser && hasRoles('Analyst')
-        ? [
-            {
-              ...reportButtons.recommendByAnalyst,
+    [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: (() => {
+      if (isGovernmentUser && hasRoles('Analyst')) {
+        const buttons = [
+          {
+            ...reportButtons.recommendByAnalyst,
+            disabled: hasDraftSupplemental
+          }
+        ]
+        if (reportVersion === 0) {
+          if (!isPastReturnDeadline) {
+            buttons.push({
+              ...reportButtons.returnToSupplier,
               disabled: hasDraftSupplemental
-            },
-            ...(reportVersion === 0 && !isPastReturnDeadline
-              ? [
-                  {
-                    ...reportButtons.returnToSupplier,
-                    disabled: hasDraftSupplemental
-                  }
-                ]
-              : []),
-            ...(reportVersion === 0 && isPastReturnDeadline
-              ? [
-                  {
-                    ...reportButtons.createIdirSupplementalReport,
-                    disabled: hasDraftSupplemental
-                  }
-                ]
-              : []),
-            ...(reportVersion !== 0
-              ? [
-                  {
-                    ...reportButtons.createIdirSupplementalReport,
-                    disabled: hasDraftSupplemental
-                  }
-                ]
-              : [])
-          ]
-        : [])
-    ],
+            })
+          } else {
+            buttons.push({
+              ...reportButtons.createIdirSupplementalReport,
+              disabled: hasDraftSupplemental
+            })
+          }
+        } else {
+          // This is reportVersion !== 0 (e.g. supplemental report)
+          buttons.push({
+            ...reportButtons.returnToSupplier,
+            disabled: hasDraftSupplemental
+          })
+        }
+        return buttons
+      }
+      return [] // Return empty array if not Analyst or not government user
+    })(),
     [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: [
       ...(isGovernmentUser && hasRoles('Analyst')
         ? [

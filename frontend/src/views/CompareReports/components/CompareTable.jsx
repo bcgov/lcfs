@@ -238,12 +238,19 @@ const CompareTable = ({
                           : 'normal'
                     }}
                   >
-                    {row.format && colIndex !== 0
+                    {row.format &&
+                    colIndex !== 0 &&
+                    row[column.id] !== undefined &&
+                    row[column.id] !== null
                       ? rowFormatters[row.format](
                           row[column.id],
                           useParenthesis
                         )
-                      : row[column.id]}
+                      : row[column.id] === undefined || row[column.id] === null
+                        ? column.id !== 'description'
+                          ? '0'
+                          : ''
+                        : row[column.id]}
                   </span>
                 </TableCell>
               ))}

@@ -234,6 +234,17 @@ class ComplianceReportSummaryService:
             desc = self._non_compliance_special_description(
                 line, summary_obj, LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
             )
+        elif line == 22:
+            # Handle year replacement for line 22
+            compliance_year = (
+                int(summary_obj.compliance_report.compliance_period.description)
+                if summary_obj.compliance_report
+                and summary_obj.compliance_report.compliance_period
+                else 2024  # fallback year
+            )
+            desc = description.replace(
+                "{{COMPLIANCE_YEAR_PLUS_1}}", str(compliance_year + 1)
+            )
         elif line in [17, 18] and is_legacy:
             desc = self._part3_special_description(
                 line, PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
@@ -487,7 +498,7 @@ class ComplianceReportSummaryService:
             await self.fuel_supply_repo.get_effective_fuel_supplies(
                 compliance_report.compliance_report_group_uuid,
                 compliance_report.compliance_report_id,
-                compliance_report.version
+                compliance_report.version,
             )
         )
 
@@ -810,15 +821,15 @@ class ComplianceReportSummaryService:
                 "jet_fuel": float(decimal_tracked_totals.get("jet_fuel", DECIMAL_ZERO)),
             },
             4: {
-                "gasoline": float(
+                "gasoline": int(
                     decimal_eligible_renewable_fuel_required.get(
                         "gasoline", DECIMAL_ZERO
                     )
                 ),
-                "diesel": float(
+                "diesel": int(
                     decimal_eligible_renewable_fuel_required.get("diesel", DECIMAL_ZERO)
                 ),
-                "jet_fuel": float(
+                "jet_fuel": int(
                     decimal_eligible_renewable_fuel_required.get(
                         "jet_fuel", DECIMAL_ZERO
                     )
@@ -959,9 +970,22 @@ class ComplianceReportSummaryService:
         compliance_units_prev_issued_for_fuel_export = (
             previous_summary.line_19_units_to_be_exported if previous_summary else 0
         )  # line 16
-        available_balance_for_period = await self.trxn_repo.calculate_available_balance_for_period(
-            organization_id, compliance_period_start.year
-        )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
+
+        # For supplemental reports with a summary already, use the stored line_17 value
+        # This preserves the available balance from when the supplemental report was created
+        if (
+            compliance_report.version > 0
+            and compliance_report.summary
+            and compliance_report.summary.line_17_non_banked_units_used is not None
+        ):
+            available_balance_for_period = (
+                compliance_report.summary.line_17_non_banked_units_used
+            )
+        else:
+            # Calculate the available balance using the specific period end formula for Line 17
+            available_balance_for_period = await self.trxn_repo.calculate_line_17_available_balance_for_period(
+                organization_id, compliance_period_start.year
+            )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
         compliance_units_curr_issued_for_fuel_supply = (
             await self.calculate_fuel_supply_compliance_units(compliance_report)
         )  # line 18 fuel supply compliance units total
@@ -1025,7 +1049,16 @@ class ComplianceReportSummaryService:
                         "{:,}".format(non_compliance_penalty_payable_units * -1)
                     )
                     if (line == 21)
-                    else LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["description"]
+                    else (
+                        LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line][
+                            "description"
+                        ].replace(
+                            "{{COMPLIANCE_YEAR_PLUS_1}}",
+                            str(compliance_period_start.year + 1),
+                        )
+                        if (line == 22)
+                        else LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["description"]
+                    )
                 ),
                 field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["field"],
                 value=values.get("value", 0),
@@ -1108,7 +1141,9 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid, report.compliance_report_id, report.version
+            report.compliance_report_group_uuid,
+            report.compliance_report_id,
+            report.version,
         )
 
         # Initialize compliance units sum
@@ -1145,7 +1180,9 @@ class ComplianceReportSummaryService:
         """
         # Fetch fuel supply records
         fuel_supply_records = await self.fuel_supply_repo.get_effective_fuel_supplies(
-            report.compliance_report_group_uuid, report.compliance_report_id, report.version
+            report.compliance_report_group_uuid,
+            report.compliance_report_id,
+            report.version,
         )
 
         # Initialize compliance units sum

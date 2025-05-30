@@ -100,8 +100,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     if (hasAnalystRole) {
       const editableAnalystStatuses = [
         COMPLIANCE_REPORT_STATUSES.SUBMITTED,
-        COMPLIANCE_REPORT_STATUSES.ASSESSED,
-        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST,
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER,
+        COMPLIANCE_REPORT_STATUSES.ASSESSED
       ]
 
       return editableAnalystStatuses.includes(currentStatus)
@@ -385,8 +386,13 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
           scheduleData.length > 0 &&
           scheduleData.every((item) => item.actionType === 'DELETE')
 
+        const shouldRender =
+          activity.name === t('report:supportingDocs') ||
+          (scheduleData && !isArrayEmpty(scheduleData)) ||
+          hasVersions
+
         return (
-          ((scheduleData && !isArrayEmpty(scheduleData)) || hasVersions) && (
+          shouldRender && (
             <Accordion
               sx={{
                 '& .Mui-disabled': {

@@ -602,7 +602,8 @@ export const fuelExportColDefs = (
       showStepperButtons: false
     },
     valueGetter: (params) => {
-      return params.data.energyDensity !== undefined
+      return params.data.energyDensity !== undefined &&
+        params.data.energyDensity !== null
         ? `${params.data.energyDensity} MJ/${params.data.units || 0}`
         : ''
     },
@@ -821,8 +822,9 @@ export const changelogColDefs = (highlight = true) => [
     field: 'groupUuid',
     hide: true,
     sort: 'desc',
-    sortIndex: 1
+    sortIndex: 3
   },
+  { field: 'createDate', hide: true, sort: 'asc', sortIndex: 1 },
   { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
   {
     field: 'actionType',
