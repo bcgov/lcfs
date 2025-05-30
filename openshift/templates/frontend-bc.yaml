@@ -6,7 +6,7 @@ metadata:
 parameters:
   - name: VERSION
     displayName:
-    description:  image tag name for output
+    description: image tag name for output
     required: true
   - name: GIT_URL
     displayName:
@@ -17,51 +17,48 @@ parameters:
     description: lcfs branch name of the pr
     required: true
 objects:
-- apiVersion: image.openshift.io/v1
-  kind: ImageStream
-  metadata:
-    annotations:
-      description: Keeps track of changes in the client / front end image
-    labels:
-      shared: "true"
-    creationTimestamp: null
-    name: lcfs-frontend
-  spec:
-    lookupPolicy:
-      local: false
-  status:
-    dockerImageRepository: ""
-- apiVersion: build.openshift.io/v1
-  kind: BuildConfig
-  metadata:
-    name: lcfs-frontend-${VERSION}
-    creationTimestamp:
-    annotations:
-      description: Defines how to build the frontend image in docker
-  spec:
-    output:
-      to:
-        kind: ImageStreamTag
-        name: lcfs-frontend:${VERSION}
-    resources:
-      limits:
-        cpu: 1500m
-        memory: 3Gi
-      requests:
-        cpu: 500m
-        memory: 1536Mi
-    source:
-      contextDir: frontend
-      git:
-        uri: ${GIT_URL}
-        ref: ${GIT_REF}
-      type: Git
-    strategy:
-      dockerStrategy:
-        dockerfilePath: ./Dockerfile.openshift
-        pullSecret:
-          name: artifacts-pull-default-gyszor
-        forcePull: true
-        noCache: true    
-      type: Docker
-    triggers: []
+  - apiVersion: image.openshift.io/v1
+    kind: ImageStream
+    metadata:
+      annotations:
+        description: Keeps track of changes in the client / front end image
+      labels:
+        shared: "true"
+      creationTimestamp: null
+      name: lcfs-frontend
+    spec:
+      lookupPolicy:
+        local: false
+    status:
+      dockerImageRepository: ""
+  - apiVersion: build.openshift.io/v1
+    kind: BuildConfig
+    metadata:
+      name: lcfs-frontend-${VERSION}
+      creationTimestamp:
+      annotations:
+        description: Defines how to build the frontend image in docker
+    spec:
+      output:
+        to:
+          kind: ImageStreamTag
+          name: lcfs-frontend:${VERSION}
+      resources:
+        requests:
+          cpu: 50m
+          memory: 800Mi
+      source:
+        contextDir: frontend
+        git:
+          uri: ${GIT_URL}
+          ref: ${GIT_REF}
+        type: Git
+      strategy:
+        dockerStrategy:
+          dockerfilePath: ./Dockerfile.openshift
+          pullSecret:
+            name: artifacts-pull-default-gyszor
+          forcePull: true
+          noCache: true
+        type: Docker
+      triggers: []
