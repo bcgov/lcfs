@@ -154,6 +154,7 @@ async def save_allocation_agreements_row(
         compliance_report_id
     )
     await report_validate.validate_compliance_report_access(compliance_report)
+    await report_validate.validate_compliance_report_editable(compliance_report)
 
     await validate.validate_compliance_report_id(compliance_report_id, [request_data])
     if request_data.deleted:
@@ -278,6 +279,8 @@ async def import_allocation_agreements(
         report_id=compliance_report_id,
         user=request.user,
     )
+    await validate.validate_compliance_report_editable(compliance_report)
+
     is_original = compliance_report.version == 0
 
     if overwrite:
