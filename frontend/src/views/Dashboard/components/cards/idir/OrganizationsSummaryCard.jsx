@@ -7,7 +7,10 @@ import { numberFormatter } from '@/utils/formatters.js'
 import { useTranslation } from 'react-i18next'
 
 const OrganizationsSummaryCard = () => {
-  const { data: organizations, isLoading } = useOrganizationNames()
+  const { data: organizations, isLoading } = useOrganizationNames([
+    'Registered',
+    'Unregistered'
+  ])
   const { t } = useTranslation(['common', 'transaction'])
 
   const [formattedOrgs, setFormattedOrgs] = useState([])
@@ -41,10 +44,15 @@ const OrganizationsSummaryCard = () => {
   }
 
   const setAllOrgSelected = () => {
-    const totalBalance = organizations.reduce((total, org) => {
+    // Only calculate totals from registered organizations
+    const registeredOrgs = organizations.filter(
+      (org) => org.orgStatus?.status === 'Registered'
+    )
+
+    const totalBalance = registeredOrgs.reduce((total, org) => {
       return total + org.totalBalance
     }, 0)
-    const reservedBalance = organizations.reduce((total, org) => {
+    const reservedBalance = registeredOrgs.reduce((total, org) => {
       return total + Math.abs(org.reservedBalance)
     }, 0)
 

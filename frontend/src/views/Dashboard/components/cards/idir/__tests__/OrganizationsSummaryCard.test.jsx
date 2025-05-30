@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import OrganizationsSummaryCard from '../OrganizationsSummaryCard'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
@@ -14,8 +13,24 @@ vi.mock('react-i18next', () => ({
 
 describe('OrganizationsSummaryCards', () => {
   const mockOrganizations = [
-    { name: 'Org A', totalBalance: 1000, reservedBalance: 200 },
-    { name: 'Org B', totalBalance: 1500, reservedBalance: 300 }
+    {
+      name: 'Org A',
+      totalBalance: 1000,
+      reservedBalance: 200,
+      orgStatus: { status: 'Registered' }
+    },
+    {
+      name: 'Org B',
+      totalBalance: 1500,
+      reservedBalance: 300,
+      orgStatus: { status: 'Registered' }
+    },
+    {
+      name: 'Org C',
+      totalBalance: 800,
+      reservedBalance: 100,
+      orgStatus: { status: 'Unregistered' }
+    }
   ]
 
   beforeEach(() => {
@@ -25,12 +40,21 @@ describe('OrganizationsSummaryCards', () => {
     })
   })
 
+  it('calls useOrganizationNames with correct statuses for dashboard', () => {
+    render(<OrganizationsSummaryCard />, { wrapper })
+
+    expect(useOrganizationNames).toHaveBeenCalledWith([
+      'Registered',
+      'Unregistered'
+    ])
+  })
+
   it('renders correctly with default values', () => {
     render(<OrganizationsSummaryCard />, { wrapper })
 
-    expect(screen.getByText('2,500')).toBeInTheDocument() // Initial total balance
+    expect(screen.getByText('2,500')).toBeInTheDocument() // Total balance of registered orgs only (1000 + 1500)
     expect(screen.getByText('compliance units')).toBeInTheDocument()
-    expect(screen.getByText('(500 in reserve)')).toBeInTheDocument() // Initial reserved balance
+    expect(screen.getByText('(500 in reserve)')).toBeInTheDocument() // Reserved balance of registered orgs only (200 + 300)
   })
 
   it('displays organization names in the dropdown', () => {
@@ -64,18 +88,22 @@ describe('OrganizationsSummaryCards', () => {
       screen.getByRole('option', { name: 'txn:allOrganizations' })
     ) // Select All organizations
 
-    const totalBalance = mockOrganizations.reduce(
+    // Only registered organizations should be included in totals (Org A + Org B, not Org C)
+    const registeredOrgs = mockOrganizations.filter(
+      (org) => org.orgStatus?.status === 'Registered'
+    )
+    const totalBalance = registeredOrgs.reduce(
       (total, org) => total + org.totalBalance,
       0
     )
-    const totalReserved = mockOrganizations.reduce(
+    const totalReserved = registeredOrgs.reduce(
       (total, org) => total + org.reservedBalance,
       0
     )
 
-    expect(screen.getByText(totalBalance.toLocaleString())).toBeInTheDocument() // Total balance for all organizations
+    expect(screen.getByText(totalBalance.toLocaleString())).toBeInTheDocument() // Total balance for registered organizations only
     expect(
       screen.getByText(`(${totalReserved.toLocaleString()} in reserve)`)
-    ).toBeInTheDocument() // Total reserved balance for all organizations
+    ).toBeInTheDocument() // Total reserved balance for registered organizations only
   })
 })

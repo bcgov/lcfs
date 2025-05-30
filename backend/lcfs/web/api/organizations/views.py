@@ -172,12 +172,12 @@ async def get_organization_types(
 )  # Ensure only government can access this endpoint because it returns balances
 async def get_organization_names(
     request: Request,
-    only_registered: bool = Query(True),
+    statuses: Optional[List[str]] = Query(None),
     service: OrganizationsService = Depends(),
 ):
     """Fetch all organization names."""
     order_by = ("name", "asc")
-    return await service.get_organization_names(only_registered, order_by)
+    return await service.get_organization_names(order_by, statuses)
 
 
 @router.get(

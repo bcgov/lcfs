@@ -224,7 +224,7 @@ export const changelogCommonColDefs = (highlight = true) => [
     flex: 1,
     minWidth: 200,
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'fuelCategory')
+      highlight && changelogCellStyle(params, 'addressForService')
   },
   {
     headerName: i18n.t(
@@ -232,14 +232,14 @@ export const changelogCommonColDefs = (highlight = true) => [
     ),
     field: 'fuelCategory.category',
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'provisionOfTheAct')
+      highlight && changelogCellStyle(params, 'fuelCategory')
   },
   {
     headerName: i18n.t(
       'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
     ),
     field: 'receivedOrTransferred',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'receivedOrTransferred')
   },
   {
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
