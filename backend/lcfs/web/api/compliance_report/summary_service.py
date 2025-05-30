@@ -953,38 +953,46 @@ class ComplianceReportSummaryService:
         if compliance_report.version > 0:
             previous_summary = await self.repo.get_previous_summary(compliance_report)
 
-        compliance_units_transferred_out = (
+        compliance_units_transferred_out = int(
             await self.repo.get_transferred_out_compliance_units(
                 compliance_period_start, compliance_period_end, organization_id
             )
         )  # line 12
-        compliance_units_received = await self.repo.get_received_compliance_units(
-            compliance_period_start, compliance_period_end, organization_id
+        compliance_units_received = int(
+            await self.repo.get_received_compliance_units(
+                compliance_period_start, compliance_period_end, organization_id
+            )
         )  # line 13
-        compliance_units_issued = await self.repo.get_issued_compliance_units(
-            compliance_period_start, compliance_period_end, organization_id
+        compliance_units_issued = int(
+            await self.repo.get_issued_compliance_units(
+                compliance_period_start, compliance_period_end, organization_id
+            )
         )  # line 14
-        compliance_units_prev_issued_for_fuel_supply = (
+        compliance_units_prev_issued_for_fuel_supply = int(
             previous_summary.line_18_units_to_be_banked if previous_summary else 0
         )  # line 15
-        compliance_units_prev_issued_for_fuel_export = (
+        compliance_units_prev_issued_for_fuel_export = int(
             previous_summary.line_19_units_to_be_exported if previous_summary else 0
         )  # line 16
 
-        # For supplemental reports with a summary already, use the stored line_17 value
+        # For supplemental reports with a locked summary, use the stored line_17 value
         # This preserves the available balance from when the supplemental report was created
+        # For draft reports (not locked), always recalculate Line 17 dynamically
         if (
             compliance_report.version > 0
             and compliance_report.summary
+            and compliance_report.summary.is_locked
             and compliance_report.summary.line_17_non_banked_units_used is not None
         ):
-            available_balance_for_period = (
+            available_balance_for_period = int(
                 compliance_report.summary.line_17_non_banked_units_used
             )
         else:
             # Calculate the available balance using the specific period end formula for Line 17
-            available_balance_for_period = await self.trxn_repo.calculate_line_17_available_balance_for_period(
-                organization_id, compliance_period_start.year
+            available_balance_for_period = int(
+                await self.trxn_repo.calculate_line_17_available_balance_for_period(
+                    organization_id, compliance_period_start.year
+                )
             )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
         compliance_units_curr_issued_for_fuel_supply = (
             await self.calculate_fuel_supply_compliance_units(compliance_report)

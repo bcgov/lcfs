@@ -635,4 +635,68 @@ describe('EditViewComplianceReport', () => {
       expect(screen.getByLabelText('scroll to bottom')).toBeInTheDocument()
     })
   })
+
+  it('should show Assessment Recommendation section for government users (IDIR)', async () => {
+    const mocks = setupMocks({
+      currentUser: {
+        data: {
+          organization: { organizationId: '123' },
+          isGovernmentUser: true, // Government user (IDIR)
+          roles: ['analyst'] // Government role
+        },
+        isLoading: false,
+        hasRoles: (roles) => roles.includes('analyst'),
+        hasAnyRole: () => true
+      }
+    })
+
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      // Check for Assessment Recommendation heading
+      expect(screen.getByText(/assessmentRecommendation/i)).toBeInTheDocument()
+      // Check for Internal Comments section (also within the government-only section)
+      expect(screen.getByText(/internalComments/i)).toBeInTheDocument()
+    })
+  })
+
+  it('should hide Assessment Recommendation section for non-government users (BCeID)', async () => {
+    const mocks = setupMocks({
+      currentUser: {
+        data: {
+          organization: { organizationId: '123' },
+          isGovernmentUser: false, // Non-government user (BCeID)
+          roles: ['supplier'] // Non-government role
+        },
+        isLoading: false,
+        hasRoles: (roles) => roles.includes('supplier'),
+        hasAnyRole: () => false
+      }
+    })
+
+    render(
+      <EditViewComplianceReport
+        reportData={mocks.reportData}
+        isError={mocks.isError}
+        error={mocks.error}
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      // Assessment Recommendation heading should NOT be present
+      expect(
+        screen.queryByText(/assessmentRecommendation/i)
+      ).not.toBeInTheDocument()
+      // Internal Comments section should NOT be present
+      expect(screen.queryByText(/internalComments/i)).not.toBeInTheDocument()
+    })
+  })
 })
