@@ -6,7 +6,10 @@ import BCTypography from '@/components/BCTypography'
 import { styled } from '@mui/system'
 import { CloudUpload } from '@mui/icons-material'
 import { useEffect, useRef, useState } from 'react'
-import { MAX_FILE_SIZE_BYTES } from '@/constants/common.js'
+import {
+  MAX_FILE_SIZE_BYTES,
+  SCHEDULE_IMPORT_FILE_TYPES
+} from '@/constants/common'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 
@@ -343,6 +346,7 @@ function ImportDialog({
               ref={fileInputRef}
               style={{ display: 'none' }}
               onChange={handleFileChange}
+              accept={SCHEDULE_IMPORT_FILE_TYPES.ACCEPT_STRING}
             />
 
             {/* Render UI based on current dialog state */}
