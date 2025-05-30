@@ -123,7 +123,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     }
   }, [complianceReportData])
 
-
   const editSupportingDocs = useMemo(() => {
     // Allow BCeID users to edit in Draft status
     if (hasSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) {
@@ -145,7 +144,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     },
     [editSupportingDocs, canEdit, t]
   )
-
 
   const crMap = useMemo(() => {
     if (!complianceReportData?.chain) return {}
@@ -579,8 +577,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     <IconButton
                       color="primary"
                       label="edit"
+                      sx={{ px: 2 }}
                       aria-label="edit"
-                      className='small-icon'
+                      className="small-icon"
                       onClick={activity.action}
                     >
                       <Edit />
