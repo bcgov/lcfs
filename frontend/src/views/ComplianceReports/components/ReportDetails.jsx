@@ -103,11 +103,9 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
   const [expanded, setExpanded] = useState([])
   const [hasAutoExpanded, setHasAutoExpanded] = useState(false)
 
-  // Memoize role checks to prevent re-computation
   const hasAnalystRole = useMemo(() => hasRoles('Analyst'), [hasRoles])
   const hasSupplierRole = useMemo(() => hasRoles('Supplier'), [hasRoles])
 
-  // Memoize derived values
   const reportInfo = useMemo(() => {
     if (!complianceReportData)
       return {
@@ -125,20 +123,19 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     }
   }, [complianceReportData])
 
-  // Memoize edit permissions
+
   const editSupportingDocs = useMemo(() => {
     // Allow BCeID users to edit in Draft status
     if (hasSupplierRole && currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT) {
       return true
     }
-    // Allow analysts to edit in Submitted/Assessed/Analyst Adjustment statuses
+    // Allow analysts to edit in Submitted/Assessed/Analyst Adjustment/Recommended statuses
     if (hasAnalystRole) {
       return true
     }
     return false
   }, [hasAnalystRole, hasSupplierRole, currentStatus])
 
-  // Memoize shouldShowEditIcon function
   const shouldShowEditIcon = useCallback(
     (activityName) => {
       if (activityName === t('report:supportingDocs')) {
@@ -149,7 +146,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     [editSupportingDocs, canEdit, t]
   )
 
-  // Memoize crMap
+
   const crMap = useMemo(() => {
     if (!complianceReportData?.chain) return {}
 
@@ -160,7 +157,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     return mapSet
   }, [complianceReportData?.chain])
 
-  // Memoize wasEdited function
   const wasEdited = useCallback(
     (data) => {
       if (!data || !Array.isArray(data)) return false
@@ -173,7 +169,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     [crMap]
   )
 
-  // Memoize navigation handlers
   const navigationHandlers = useMemo(
     () => ({
       fuelSupplies: () =>
@@ -222,7 +217,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     [navigate, compliancePeriod, complianceReportId]
   )
 
-  // Memoize file dialog handlers
   const handleFileDialogOpen = useCallback((e) => {
     e.stopPropagation()
     setFileDialogOpen(true)
@@ -232,7 +226,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     setFileDialogOpen(false)
   }, [])
 
-  // Memoize activity list
   const activityList = useMemo(
     () => [
       {
@@ -388,7 +381,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     ]
   )
 
-  // Memoize expand handlers
   const onExpand = useCallback(
     (panel) => (event, isExpanded) => {
       setExpanded((prev) =>
@@ -416,19 +408,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     activityList.forEach((activity, index) => {
       const panelId = `panel${index}`
       const dataResult = activityDataResults[index]
-
-      // For supporting docs, always show
-      // if (activity.name === t('report:supportingDocs')) {
-      //   accordionsData.set(panelId, {
-      //     shouldShow: true,
-      //     hasData: true,
-      //     activity,
-      //     data: dataResult?.data,
-      //     isLoading: dataResult?.isLoading,
-      //     error: dataResult?.error
-      //   })
-      //   return
-      // }
 
       // check if they have actual data
       const scheduleData =
@@ -508,7 +487,6 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
     setExpanded([])
   }, [])
 
-  // Memoize accordion styles
   const accordionStyles = useMemo(
     () => ({
       '& .Mui-disabled': {
@@ -608,7 +586,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                     </IconButton>
                   </Role>
                 )}{' '}
-                {wasEdited(data?.[activity.key]) && (
+                {wasEdited(data?.[activity.key]) && !allRecordsDeleted && (
                   <Chip
                     aria-label="changes were made since original report"
                     icon={<NewReleasesOutlined fontSize="small" />}
