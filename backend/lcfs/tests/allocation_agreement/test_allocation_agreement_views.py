@@ -21,6 +21,8 @@ from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from starlette.responses import StreamingResponse
 import io
+from lcfs.db.models import ComplianceReport, Organization
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 
 
 @pytest.fixture
@@ -305,3 +307,88 @@ async def test_get_allocation_agreement_import_status(
         data = response.json()
         assert data["progress"] == 42
         mock_status.assert_awaited_once_with("abc123")
+
+
+# Tests for editable validation
+@pytest.mark.anyio
+async def test_save_allocation_agreement_draft_status_allowed(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test that saving is allowed when compliance report is in Draft status"""
+    mock_report = ComplianceReport(organization=Organization())
+    mock_report.current_status = MagicMock()
+    mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable, patch(
+        "lcfs.web.api.allocation_agreement.services.AllocationAgreementServices.create_allocation_agreement"
+    ) as mock_create, patch(
+        "lcfs.web.api.allocation_agreement.validation.AllocationAgreementValidation.validate_compliance_report_id"
+    ) as mock_validate_id:
+
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_validate_editable.return_value = None  # Should not raise exception
+        mock_validate_id.return_value = None
+        mock_create.return_value = {"allocationAgreementId": 1, "quantity": 1000}
+
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_allocation_agreements_row")
+        payload = {
+            "compliance_report_id": 1,
+            "fuel_type_id": 1,
+            "fuel_category_id": 1,
+            "quantity": 1000,
+            "partner_name": "Test Partner",
+            "partner_address": "123 Test St",
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 200
+        mock_validate_editable.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_save_allocation_agreement_submitted_status_blocked(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test that saving is blocked when compliance report is in Submitted status"""
+    from fastapi import HTTPException
+
+    mock_report = ComplianceReport(organization=Organization())
+    mock_report.current_status = MagicMock()
+    mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
+
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable:
+
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_validate_editable.side_effect = HTTPException(
+            status_code=403,
+            detail="Compliance report cannot be edited in Submitted status",
+        )
+
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_allocation_agreements_row")
+        payload = {
+            "compliance_report_id": 1,
+            "fuel_type_id": 1,
+            "fuel_category_id": 1,
+            "quantity": 1000,
+            "partner_name": "Test Partner",
+            "partner_address": "123 Test St",
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 403
+        assert "cannot be edited" in response.json()["detail"]
+        mock_validate_editable.assert_called_once()

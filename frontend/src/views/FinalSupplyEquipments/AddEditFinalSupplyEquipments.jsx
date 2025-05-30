@@ -9,7 +9,9 @@ import { defaultColDef, finalSupplyEquipmentColDefs } from './_schema'
 import {
   useFinalSupplyEquipmentOptions,
   useGetFinalSupplyEquipments,
-  useSaveFinalSupplyEquipment
+  useSaveFinalSupplyEquipment,
+  useImportFinalSupplyEquipment,
+  useGetFinalSupplyEquipmentImportJobStatus
 } from '@/hooks/useFinalSupplyEquipment'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
@@ -24,10 +26,6 @@ import { Menu, MenuItem } from '@mui/material'
 import { faCaretDown } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import ImportDialog from '@/components/ImportDialog'
-import {
-  useImportFinalSupplyEquipment,
-  useGetFinalSupplyEquipmentImportJobStatus
-} from '@/hooks/useFinalSupplyEquipment'
 
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 
@@ -161,11 +159,19 @@ export const AddEditFinalSupplyEquipments = () => {
         compliancePeriod,
         errors,
         warnings,
-        isGridReady
+        isGridReady,
+        complianceReport?.currentStatus?.status
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [compliancePeriod, errors, warnings, optionsData, isGridReady])
+  }, [
+    compliancePeriod,
+    errors,
+    warnings,
+    optionsData,
+    isGridReady,
+    complianceReport?.currentStatus?.status
+  ])
 
   const onCellEditingStopped = useCallback(
     async (params) => {
