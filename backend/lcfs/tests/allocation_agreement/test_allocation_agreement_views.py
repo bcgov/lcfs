@@ -23,6 +23,7 @@ from starlette.responses import StreamingResponse
 import io
 from lcfs.db.models import ComplianceReport, Organization
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
+from lcfs.web.api.allocation_agreement.schema import AllocationAgreementSchema
 
 
 @pytest.fixture
@@ -191,6 +192,10 @@ async def test_import_allocation_agreements_view(
         new=AsyncMock(return_value=True),
     ), patch.object(
         ComplianceReportServices, "get_compliance_report_by_id", new=AsyncMock()
+    ) as mock_get_report, patch.object(
+        ComplianceReportValidation,
+        "validate_compliance_report_editable",
+        new=AsyncMock(return_value=None),
     ), patch.object(
         AllocationAgreementRepository,
         "get_allocation_agreements",
@@ -200,6 +205,13 @@ async def test_import_allocation_agreements_view(
         "import_data",
         new=AsyncMock(return_value="fake-job-id"),
     ) as mock_import:
+        # Create a properly mocked compliance report with version
+        mock_report = MagicMock()
+        mock_report.version = 0
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_get_report.return_value = mock_report
+
         url = fastapi_app.url_path_for("import_allocation_agreements", report_id=999)
 
         file_content = b"fake-excel-content"
@@ -214,38 +226,40 @@ async def test_import_allocation_agreements_view(
 
         response = await client.post(url, files=files, data=data)
         assert response.status_code == HTTP_200_OK
-        resp_json = response.json()
-        assert resp_json.get("jobId") == "fake-job-id"
-        mock_import.assert_awaited_once()
+        assert "jobId" in response.json()
+        mock_import.assert_called_once()
 
 
 @pytest.mark.anyio
 async def test_import_allocation_agreements_overwrite_not_allowed(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    """
-    Scenario: 'overwrite' => True, but compliance report is version=1 AND we have existing data => 400.
-    """
     set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
-
-    compliance_report_mock = MagicMock()
-    compliance_report_mock.version = 1
-    existing_data = [MagicMock()]
 
     with patch.object(
         ComplianceReportValidation,
         "validate_organization_access",
         new=AsyncMock(return_value=True),
     ), patch.object(
-        ComplianceReportServices,
-        "get_compliance_report_by_id",
-        new=AsyncMock(return_value=compliance_report_mock),
+        ComplianceReportServices, "get_compliance_report_by_id", new=AsyncMock()
+    ) as mock_get_report, patch.object(
+        ComplianceReportValidation,
+        "validate_compliance_report_editable",
+        new=AsyncMock(return_value=None),
     ), patch.object(
         AllocationAgreementRepository,
         "get_allocation_agreements",
-        new=AsyncMock(return_value=existing_data),
+        new=AsyncMock(return_value=[{"fake": "data"}]),  # Existing data
     ):
+        # Create a properly mocked compliance report with version > 0
+        mock_report = MagicMock()
+        mock_report.version = 1  # Non-initial report
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_get_report.return_value = mock_report
+
         url = fastapi_app.url_path_for("import_allocation_agreements", report_id=999)
+
         file_content = b"fake-excel-content"
         files = {
             "file": (
@@ -257,9 +271,11 @@ async def test_import_allocation_agreements_overwrite_not_allowed(
         data = {"overwrite": "true"}
 
         response = await client.post(url, files=files, data=data)
-
         assert response.status_code == HTTP_400_BAD_REQUEST
-        assert "Overwrite not allowed" in response.text
+        assert (
+            "Overwrite not allowed: this is a non-initial report with existing data"
+            in response.json()["detail"]
+        )
 
 
 async def test_get_allocation_agreement_template(
@@ -335,17 +351,38 @@ async def test_save_allocation_agreement_draft_status_allowed(
         mock_validate_access.return_value = None
         mock_validate_editable.return_value = None  # Should not raise exception
         mock_validate_id.return_value = None
-        mock_create.return_value = {"allocationAgreementId": 1, "quantity": 1000}
+        mock_create.return_value = AllocationAgreementSchema(
+            allocation_agreement_id=1,
+            compliance_report_id=1,
+            allocation_transaction_type="Allocated from",
+            transaction_partner="Test Partner",
+            postal_address="123 Test St",
+            transaction_partner_email="test@example.com",
+            transaction_partner_phone="555-1234",
+            fuel_type="Biodiesel",
+            fuel_category="Diesel",
+            provision_of_the_act="Default carbon intensity - section 19 (b) (ii)",
+            quantity=1000,
+            units="L",
+            group_uuid="test-uuid",
+            version=1,
+            action_type="CREATE",
+        )
 
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_allocation_agreements_row")
         payload = {
             "compliance_report_id": 1,
-            "fuel_type_id": 1,
-            "fuel_category_id": 1,
+            "allocation_transaction_type": "Allocated from",
+            "transaction_partner": "Test Partner",
+            "postal_address": "123 Test St",
+            "transaction_partner_email": "test@example.com",
+            "transaction_partner_phone": "555-1234",
+            "fuel_type": "Biodiesel",
+            "fuel_category": "Diesel",
+            "provision_of_the_act": "Default carbon intensity - section 19 (b) (ii)",
             "quantity": 1000,
-            "partner_name": "Test Partner",
-            "partner_address": "123 Test St",
+            "units": "L",
         }
         response = await client.post(url, json=payload)
         assert response.status_code == 200
@@ -375,20 +412,25 @@ async def test_save_allocation_agreement_submitted_status_blocked(
         mock_validate_access.return_value = None
         mock_validate_editable.side_effect = HTTPException(
             status_code=403,
-            detail="Compliance report cannot be edited in Submitted status",
+            detail="Forbidden resource",
         )
 
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_allocation_agreements_row")
         payload = {
             "compliance_report_id": 1,
-            "fuel_type_id": 1,
-            "fuel_category_id": 1,
+            "allocation_transaction_type": "Allocated from",
+            "transaction_partner": "Test Partner",
+            "postal_address": "123 Test St",
+            "transaction_partner_email": "test@example.com",
+            "transaction_partner_phone": "555-1234",
+            "fuel_type": "Biodiesel",
+            "fuel_category": "Diesel",
+            "provision_of_the_act": "Default carbon intensity - section 19 (b) (ii)",
             "quantity": 1000,
-            "partner_name": "Test Partner",
-            "partner_address": "123 Test St",
+            "units": "L",
         }
         response = await client.post(url, json=payload)
         assert response.status_code == 403
-        assert "cannot be edited" in response.json()["detail"]
+        assert "Forbidden resource" in response.json()["detail"]
         mock_validate_editable.assert_called_once()

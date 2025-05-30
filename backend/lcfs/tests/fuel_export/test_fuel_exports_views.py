@@ -197,8 +197,17 @@ async def test_save_fuel_export_row_delete_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
-    ) as mock_validate_compliance_report_access:
-        mock_validate_organization_access.return_value = ComplianceReport()
+    ) as mock_validate_compliance_report_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable:
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_validate_organization_access.return_value = mock_report
+        mock_validate_compliance_report_access.return_value = None
+        mock_validate_editable.return_value = None
+
         mock_delete_response = DeleteFuelExportResponseSchema(
             success=True, message="fuel export row deleted successfully"
         )
@@ -237,22 +246,18 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
-    ) as mock_validate_compliance_report_access:
-        mock_validate_organization_access.return_value = ComplianceReport()
-
-        # Create mock classes if not already defined at module level
-        class MockCompliancePeriod:
-            def __init__(self, description: str):
-                self.description = description
-
-        class MockComplianceReport:
-            def __init__(self, compliance_period: MockCompliancePeriod):
-                self.compliance_period = compliance_period
-
-        # Set up mock return value for validate_organization_access
-        mock_compliance_report = MockComplianceReport(
-            compliance_period=MockCompliancePeriod(description="2024")
-        )
+    ) as mock_validate_compliance_report_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable:
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_report.compliance_period = MagicMock()
+        mock_report.compliance_period.description = "2024"
+        mock_validate_organization_access.return_value = mock_report
+        mock_validate_compliance_report_access.return_value = None
+        mock_validate_editable.return_value = None
 
         mock_fuel_export = FuelExportSchema(
             fuel_export_id=1,
@@ -291,7 +296,6 @@ async def test_save_fuel_export_row_update_success(client, fastapi_app, set_mock
             export_date=datetime.date(2024, 1, 1),
         )
 
-        mock_validate_organization_access.return_value = mock_compliance_report
         mock_update_fuel_export.return_value = mock_fuel_export
 
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
@@ -314,22 +318,18 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access, patch(
         "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_access"
-    ) as mock_validate_compliance_report_access:
-        mock_validate_organization_access.return_value = ComplianceReport()
-
-        # Create mock classes
-        class MockCompliancePeriod:
-            def __init__(self, description: str):
-                self.description = description
-
-        class MockComplianceReport:
-            def __init__(self, compliance_period: MockCompliancePeriod):
-                self.compliance_period = compliance_period
-
-        # Set up mock return value for validate_organization_access
-        mock_compliance_report = MockComplianceReport(
-            compliance_period=MockCompliancePeriod(description="2024")
-        )
+    ) as mock_validate_compliance_report_access, patch(
+        "lcfs.web.api.fuel_export.views.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable:
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_report.compliance_period = MagicMock()
+        mock_report.compliance_period.description = "2024"
+        mock_validate_organization_access.return_value = mock_report
+        mock_validate_compliance_report_access.return_value = None
+        mock_validate_editable.return_value = None
 
         # Create payload with all required fields
         create_payload = FuelExportCreateUpdateSchema(
@@ -367,7 +367,6 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
             ),
         )
 
-        mock_validate_organization_access.return_value = mock_compliance_report
         mock_create_fuel_export.return_value = mock_fuel_export
         set_mock_user(fastapi_app, [RoleEnum.SUPPLIER, RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_fuel_export_row")
@@ -389,6 +388,8 @@ async def test_save_fuel_export_draft_status_allowed(
     mock_report = ComplianceReport(organization=Organization())
     mock_report.current_status = MagicMock()
     mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
 
     with patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
@@ -403,12 +404,29 @@ async def test_save_fuel_export_draft_status_allowed(
         mock_validate_org.return_value = mock_report
         mock_validate_access.return_value = None
         mock_validate_editable.return_value = None  # Should not raise exception
-        mock_create.return_value = {
-            "fuel_export_id": 1,
-            "compliance_report_id": 1,
-            "fuel_type": "Gasoline",
-            "quantity": 1000,
-        }
+        mock_create.return_value = FuelExportSchema(
+            fuel_export_id=1,
+            compliance_report_id=1,
+            fuel_type_id=1,
+            fuel_type=FuelTypeSchema(
+                fuel_type_id=1,
+                fuel_type="Gasoline",
+                units="L",
+                default_carbon_intensity=1,
+            ),
+            fuel_category_id=1,
+            fuel_category=FuelCategoryResponseSchema(category="Petroleum-based"),
+            end_use_id=24,
+            provision_of_the_act_id=1,
+            provision_of_the_act=ProvisionOfTheActSchema(
+                provision_of_the_act_id=1,
+                name="Test Provision",
+            ),
+            quantity=1000,
+            units="L",
+            export_date=datetime.date(2024, 1, 1),
+            compliance_period="2024",
+        )
 
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_fuel_export_row")
@@ -437,6 +455,8 @@ async def test_save_fuel_export_submitted_status_blocked(
     mock_report = ComplianceReport(organization=Organization())
     mock_report.current_status = MagicMock()
     mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
 
     with patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
@@ -450,7 +470,7 @@ async def test_save_fuel_export_submitted_status_blocked(
         mock_validate_access.return_value = None
         mock_validate_editable.side_effect = HTTPException(
             status_code=403,
-            detail="Compliance report cannot be edited in Submitted status",
+            detail="Forbidden resource",
         )
 
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
@@ -467,5 +487,5 @@ async def test_save_fuel_export_submitted_status_blocked(
         }
         response = await client.post(url, json=payload)
         assert response.status_code == 403
-        assert "cannot be edited" in response.json()["detail"]
+        assert "Forbidden resource" in response.json()["detail"]
         mock_validate_editable.assert_called_once()
