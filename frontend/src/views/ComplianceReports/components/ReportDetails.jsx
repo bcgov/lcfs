@@ -580,6 +580,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                       color="primary"
                       label="edit"
                       aria-label="edit"
+                      className='small-icon'
                       onClick={activity.action}
                     >
                       <Edit />
