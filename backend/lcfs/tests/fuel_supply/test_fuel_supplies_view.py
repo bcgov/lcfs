@@ -59,19 +59,16 @@ async def test_save_fuel_supply_row_create(
     mock_fuel_supply_action_service.create_fuel_supply.return_value = {
         "fuelSupplyId": 1,
         "complianceReportId": 1,
-        "fuelTypeId": 1,
         "fuelType": "Gasoline",
-        "units": "liters",
-        "fuelCategory": "category",
+        "fuelTypeId": 1,
+        "fuelCategory": "Petroleum-based",
         "fuelCategoryId": 1,
-        "endUseType": "endUseType",
-        "endUseId": 1,
-        "quantity": 1000,
-        "groupUuid": "some-uuid",
-        "version": 1,
-        "userType": "SUPPLIER",
-        "actionType": "CREATE",
+        "endUseType": "Transport",
+        "endUseId": 24,
         "provisionOfTheActId": 1,
+        "quantity": 1000,
+        "units": "L",
+        "actionType": "CREATE",
     }
 
     # Override dependencies
@@ -251,6 +248,8 @@ async def test_save_fuel_supply_draft_status_allowed(
     mock_report = ComplianceReport(organization=Organization())
     mock_report.current_status = MagicMock()
     mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
 
     with patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
@@ -272,7 +271,15 @@ async def test_save_fuel_supply_draft_status_allowed(
             "fuelSupplyId": 1,
             "complianceReportId": 1,
             "fuelType": "Gasoline",
+            "fuelTypeId": 1,
+            "fuelCategory": "Petroleum-based",
+            "fuelCategoryId": 1,
+            "endUseType": "Transport",
+            "endUseId": 24,
+            "provisionOfTheActId": 1,
             "quantity": 1000,
+            "units": "L",
+            "actionType": "CREATE",
         }
 
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
@@ -301,6 +308,8 @@ async def test_save_fuel_supply_submitted_status_blocked(
     mock_report = ComplianceReport(organization=Organization())
     mock_report.current_status = MagicMock()
     mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
+    mock_report.compliance_period = MagicMock()
+    mock_report.compliance_period.description = "2024"
 
     with patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
@@ -311,7 +320,7 @@ async def test_save_fuel_supply_submitted_status_blocked(
         mock_validate_org.return_value = mock_report
         mock_validate_editable.side_effect = HTTPException(
             status_code=403,
-            detail="Compliance report cannot be edited in Submitted status",
+            detail="Forbidden resource",
         )
 
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
@@ -327,5 +336,5 @@ async def test_save_fuel_supply_submitted_status_blocked(
         }
         response = await client.post(url, json=payload)
         assert response.status_code == 403
-        assert "cannot be edited" in response.json()["detail"]
+        assert "Forbidden resource" in response.json()["detail"]
         mock_validate_editable.assert_called_once()

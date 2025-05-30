@@ -7,10 +7,7 @@ import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
-import {
-  COMPLIANCE_REPORT_STATUSES,
-  FUEL_CODE_STATUSES
-} from '@/constants/statuses'
+import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 
 export const fuelCodeColDefs = (t, status = null) => [
   {

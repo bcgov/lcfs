@@ -167,7 +167,11 @@ async def test_save_other_uses_row_create(
             **payload
         )
 
-        mock_validate_organization_access.return_value = ComplianceReport()
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_validate_organization_access.return_value = mock_report
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
             lambda: mock_other_uses_service
@@ -209,7 +213,12 @@ async def test_save_other_uses_row_update(
         ).model_dump()
 
         mock_other_uses_service.update_other_use.return_value = payload
-        mock_validate_organization_access.return_value = ComplianceReport()
+
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_validate_organization_access.return_value = mock_report
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
             lambda: mock_other_uses_service
@@ -250,8 +259,13 @@ async def test_save_other_uses_row_delete(
         )
 
         mock_other_uses_service.delete_other_use.return_value = None
-        mock_validate_organization_access.return_value = ComplianceReport()
         mock_other_uses_validation.validate_compliance_report_id.return_value = None
+
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_validate_organization_access.return_value = mock_report
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
             lambda: mock_other_uses_service
@@ -303,11 +317,12 @@ async def test_save_other_uses_draft_status_allowed(
         url = fastapi_app.url_path_for("save_other_uses_row")
         payload = {
             "compliance_report_id": 1,
-            "fuel_type_id": 1,
-            "fuel_category_id": 1,
+            "fuel_type": "Gasoline",
+            "fuel_category": "Petroleum-based",
+            "provision_of_the_act": "Fuel supplied",
             "quantity_supplied": 1000,
             "units": "L",
-            "use_type": "Transport",
+            "expected_use": "Transport",
             "rationale": "Test rationale",
         }
         response = await client.post(url, json=payload)
@@ -338,21 +353,22 @@ async def test_save_other_uses_submitted_status_blocked(
         mock_validate_access.return_value = None
         mock_validate_editable.side_effect = HTTPException(
             status_code=403,
-            detail="Compliance report cannot be edited in Submitted status",
+            detail="Forbidden resource",
         )
 
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_other_uses_row")
         payload = {
             "compliance_report_id": 1,
-            "fuel_type_id": 1,
-            "fuel_category_id": 1,
+            "fuel_type": "Gasoline",
+            "fuel_category": "Petroleum-based",
+            "provision_of_the_act": "Fuel supplied",
             "quantity_supplied": 1000,
             "units": "L",
-            "use_type": "Transport",
+            "expected_use": "Transport",
             "rationale": "Test rationale",
         }
         response = await client.post(url, json=payload)
         assert response.status_code == 403
-        assert "cannot be edited" in response.json()["detail"]
+        assert "Forbidden resource" in response.json()["detail"]
         mock_validate_editable.assert_called_once()
