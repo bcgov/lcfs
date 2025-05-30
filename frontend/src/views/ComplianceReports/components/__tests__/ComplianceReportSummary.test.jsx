@@ -142,7 +142,7 @@ describe('ComplianceReportSummary', () => {
           t: vi.fn(),
           setModalData: vi.fn(),
           updateComplianceReport: vi.fn(),
-          isGovernmentUser: true,
+          isGovernmentUser: false,
           isSigningAuthorityDeclared: true,
           compliancePeriod: '2023',
           label: 'Button'

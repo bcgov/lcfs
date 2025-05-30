@@ -249,10 +249,14 @@ export const buttonClusterConfigFn = ({
   const isPastReturnDeadline = DateTime.now() > returnDeadline
 
   return {
-    [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
-      reportButtons.submitReport,
-      ...(supplementalInitiator ? [reportButtons.deleteSupplementalReport] : [])
-    ],
+    [COMPLIANCE_REPORT_STATUSES.DRAFT]: !isGovernmentUser
+      ? [
+          reportButtons.submitReport,
+          ...(supplementalInitiator
+            ? [reportButtons.deleteSupplementalReport]
+            : [])
+        ]
+      : [],
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: (() => {
       if (isGovernmentUser && hasRoles('Analyst')) {
         const buttons = [
