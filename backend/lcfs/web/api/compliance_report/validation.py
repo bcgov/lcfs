@@ -70,3 +70,18 @@ class ComplianceReportValidation:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User does not have access to this compliance report.",
             )
+
+    async def validate_compliance_report_editable(
+        self, compliance_report: ComplianceReport
+    ):
+        """Validates if compliance report can be edited based on its status"""
+        editable_statuses = [
+            ComplianceReportStatusEnum.Draft,
+            ComplianceReportStatusEnum.Analyst_adjustment,
+        ]
+
+        if compliance_report.current_status.status not in editable_statuses:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Compliance report cannot be edited in {compliance_report.current_status.status} status. Editing is only allowed in Draft or Analyst adjustment status.",
+            )

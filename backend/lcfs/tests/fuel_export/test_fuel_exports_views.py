@@ -4,10 +4,11 @@ import pytest
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from httpx import AsyncClient
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
-from lcfs.db.models import ComplianceReport
+from lcfs.db.models import ComplianceReport, Organization
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
     FuelExportCreateUpdateSchema,
@@ -377,3 +378,94 @@ async def test_save_fuel_export_row_create_success(client, fastapi_app, set_mock
 
         assert response.status_code == 201
         mock_create_fuel_export.assert_called_once()
+
+
+# Tests for editable validation
+@pytest.mark.anyio
+async def test_save_fuel_export_draft_status_allowed(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test that saving is allowed when compliance report is in Draft status"""
+    mock_report = ComplianceReport(organization=Organization())
+    mock_report.current_status = MagicMock()
+    mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable, patch(
+        "lcfs.web.api.fuel_export.actions_service.FuelExportActionService.create_fuel_export"
+    ) as mock_create:
+
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_validate_editable.return_value = None  # Should not raise exception
+        mock_create.return_value = {
+            "fuel_export_id": 1,
+            "compliance_report_id": 1,
+            "fuel_type": "Gasoline",
+            "quantity": 1000,
+        }
+
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_fuel_export_row")
+        payload = {
+            "compliance_report_id": 1,
+            "fuel_type_id": 1,
+            "fuel_category_id": 1,
+            "end_use_id": 24,
+            "provision_of_the_act_id": 1,
+            "quantity": 1000,
+            "units": "L",
+            "export_date": "2024-01-01",
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 201
+        mock_validate_editable.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_save_fuel_export_submitted_status_blocked(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test that saving is blocked when compliance report is in Submitted status"""
+    from fastapi import HTTPException
+
+    mock_report = ComplianceReport(organization=Organization())
+    mock_report.current_status = MagicMock()
+    mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
+
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable:
+
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_validate_editable.side_effect = HTTPException(
+            status_code=403,
+            detail="Compliance report cannot be edited in Submitted status",
+        )
+
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_fuel_export_row")
+        payload = {
+            "compliance_report_id": 1,
+            "fuel_type_id": 1,
+            "fuel_category_id": 1,
+            "end_use_id": 24,
+            "provision_of_the_act_id": 1,
+            "quantity": 1000,
+            "units": "L",
+            "export_date": "2024-01-01",
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 403
+        assert "cannot be edited" in response.json()["detail"]
+        mock_validate_editable.assert_called_once()
