@@ -252,7 +252,7 @@ class UserAuthentication(AuthenticationBackend):
 
         login_history = UserLoginHistory(
             keycloak_email=email,
-            keycloak_username=username,
+            external_username=username,
             keycloak_user_id=preferred_username,
             is_login_successful=is_success,
             login_error_message=error_msg,
