@@ -58,8 +58,8 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
     [status]
   )
   const columns = useMemo(() => {
-    return finalSupplyEquipmentSummaryColDefs(t)
-  }, [t])
+    return finalSupplyEquipmentSummaryColDefs(t, status)
+  }, [t, status])
 
   const getRowId = (params) => {
     return params.data.finalSupplyEquipmentId.toString()
