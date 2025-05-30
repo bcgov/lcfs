@@ -53,7 +53,7 @@ export const DateEditor = ({
     // Normalize the date to avoid timezone issues (common cross-browser problem)
     const normalizedDate = new Date(
       val.getFullYear(),
-      val.  getMonth(),
+      val.getMonth(),
       val.getDate()
     )
     setSelectedDate(normalizedDate)

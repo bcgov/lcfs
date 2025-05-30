@@ -55,7 +55,6 @@ async def get_async_db_session(
     :yield: database session.
     """
     async with AsyncSession(async_engine) as session:
-        # Begin the main transaction for the request's operations.
         try:
             async with session.begin():
                 try:

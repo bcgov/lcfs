@@ -7,8 +7,9 @@ import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
+import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 
-export const fuelCodeColDefs = (t) => [
+export const fuelCodeColDefs = (t, status = null) => [
   {
     field: 'status',
     headerName: t('fuelCode:fuelCodeColLabels.status'),
@@ -153,7 +154,14 @@ export const fuelCodeColDefs = (t) => [
       params.data.feedstockFuelTransportModes.map(
         (item) => item.feedstockFuelTransportMode?.transportMode || ''
       ) || [],
-    cellRenderer: (props) => <CommonArrayRenderer {...props} />
+    cellRenderer: (props) => (
+      <CommonArrayRenderer
+        {...props}
+        disableLink={
+          props.data?.fuelCodeStatus?.status !== FUEL_CODE_STATUSES.DRAFT
+        }
+      />
+    )
   },
   {
     field: 'finishedFuelTransportMode',
@@ -171,7 +179,14 @@ export const fuelCodeColDefs = (t) => [
       params.data.finishedFuelTransportModes.map(
         (item) => item.finishedFuelTransportMode?.transportMode || ''
       ) || [],
-    cellRenderer: (props) => <CommonArrayRenderer {...props} />
+    cellRenderer: (props) => (
+      <CommonArrayRenderer
+        {...props}
+        disableLink={
+          props.data?.fuelCodeStatus?.status !== FUEL_CODE_STATUSES.DRAFT
+        }
+      />
+    )
   },
   {
     field: 'formerCompany',
