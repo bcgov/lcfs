@@ -318,6 +318,7 @@ class OrganizationsService:
                 operating_name=org["operating_name"],
                 total_balance=org["total_balance"],
                 reserved_balance=org["reserved_balance"],
+                org_status=org["status"],
             )
             for org in organization_data
         ]

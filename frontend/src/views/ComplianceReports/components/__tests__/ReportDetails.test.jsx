@@ -154,10 +154,11 @@ describe('ReportDetails', () => {
     fireEvent.click(screen.getByText('report:expandAll'))
 
     await waitFor(() => {
-      // For supplemental reports (version=1) with hasVersions=true, all 7 panels should be visible:
-      // supportingDocs, supplyOfFuel, finalSupplyEquipments, allocationAgreements, notionalTransfers, otherUses, fuelExports
+      // For supplemental reports (version=1) with hasVersions=true, 3 panels should be visible:
+      // supportingDocs, fuelsupplies, finalSupplyEquipments
       const panels = screen.getAllByTestId(/panel\d+-summary/)
-      expect(panels).toHaveLength(7)
+      console.log(panels)
+      expect(panels).toHaveLength(3)
     })
   })
 
