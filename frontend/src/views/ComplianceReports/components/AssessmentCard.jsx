@@ -28,7 +28,8 @@ export const AssessmentCard = ({
   complianceReportId,
   alertRef,
   chain,
-  isQuarterlyReport = false
+  isQuarterlyReport = false,
+  reportVersion = 0
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
@@ -147,12 +148,22 @@ export const AssessmentCard = ({
                         r?.assessmentStatement !== undefined
                     )?.assessmentStatement
 
+                    // Hide assessment statement for supplemental reports (version > 0) for IDIR users
+                    const shouldShowAssessment =
+                      index === 0 &&
+                      assessmentStatement &&
+                      !(isGovernmentUser && report.version > 0)
+
                     return (
                       <HistoryCard
                         defaultExpanded={index === 0}
                         key={report.version}
                         report={report}
-                        assessedMessage={index === 0 && assessmentStatement}
+                        assessedMessage={
+                          shouldShowAssessment ? assessmentStatement : false
+                        }
+                        reportVersion={report.version}
+                        currentStatus={currentStatus}
                       />
                     )
                   })}

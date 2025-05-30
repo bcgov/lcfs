@@ -49,16 +49,23 @@ const AccordionDetails = styled(MuiAccordionDetails)(() => ({
 export const HistoryCard = ({
   report,
   defaultExpanded = false,
-  assessedMessage = undefined
+  assessedMessage = undefined,
+  reportVersion = 0,
+  currentStatus = null
 }) => {
   const { data: currentUser, hasRoles } = useCurrentUser()
   const isGovernmentUser = currentUser?.isGovernmentUser
   const { t } = useTranslation(['report'])
 
+  // Basic status checks
   const isCurrentAssessed =
     report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED
+  const isSupplementalReport = reportVersion > 0
 
-  // Check if the current government user can edit the assessment statement
+  // Assessment hiding conditions
+  const shouldHideAssessmentLines = isGovernmentUser && isSupplementalReport
+
+  // User permission checks
   const canEditAssessmentStatement = useMemo(() => {
     if (!isGovernmentUser) return false
 
@@ -78,6 +85,21 @@ export const HistoryCard = ({
       ([role, statuses]) => hasRoles(role) && statuses.includes(currentStatus)
     )
   }, [isGovernmentUser, hasRoles, report.currentStatus?.status])
+
+  // Display conditions - what to show/hide
+  const shouldShowTopLevelAssessmentLines =
+    isGovernmentUser &&
+    !isCurrentAssessed &&
+    defaultExpanded &&
+    !shouldHideAssessmentLines
+
+  const shouldShowDirectorStatement =
+    assessedMessage &&
+    ((!isGovernmentUser && isCurrentAssessed) || isGovernmentUser) &&
+    !shouldHideAssessmentLines
+
+  const shouldShowEditableIndicator =
+    isGovernmentUser && canEditAssessmentStatement
 
   /**
    * Helper: build the two assessment list items.
@@ -151,32 +173,28 @@ export const HistoryCard = ({
         <AccordionDetails>
           <List>
             {/* GOV users – show assessment lines immediately (top‑level) until Assessed */}
-            {isGovernmentUser && !isCurrentAssessed && defaultExpanded && (
-              <AssessmentLines />
-            )}
+            {shouldShowTopLevelAssessmentLines && <AssessmentLines />}
 
             {/* Director statement – show to government users and non-government users if assessed */}
-            {assessedMessage &&
-              ((!isGovernmentUser && isCurrentAssessed) ||
-                isGovernmentUser) && (
-                <StyledListItem disablePadding>
-                  <ListItemText
-                    data-test="list-item"
-                    slotProps={{ primary: { variant: 'body4' } }}
-                  >
-                    <strong>
-                      {t('report:complianceReportHistory.directorStatement')}
-                    </strong>
-                    {isGovernmentUser && canEditAssessmentStatement && (
-                      <span style={{ color: '#d8292f' }}>
-                        {' '}
-                        {t('report:complianceReportHistory.canBeEdited')}
-                      </span>
-                    )}
-                    : {assessedMessage}
-                  </ListItemText>
-                </StyledListItem>
-              )}
+            {shouldShowDirectorStatement && (
+              <StyledListItem disablePadding>
+                <ListItemText
+                  data-test="list-item"
+                  slotProps={{ primary: { variant: 'body4' } }}
+                >
+                  <strong>
+                    {t('report:complianceReportHistory.directorStatement')}
+                  </strong>
+                  {shouldShowEditableIndicator && (
+                    <span style={{ color: '#d8292f' }}>
+                      {' '}
+                      {t('report:complianceReportHistory.canBeEdited')}
+                    </span>
+                  )}
+                  : {assessedMessage}
+                </ListItemText>
+              </StyledListItem>
+            )}
 
             {/* History timeline */}
             {sortedHistory.map((item, index) => {
@@ -209,7 +227,7 @@ export const HistoryCard = ({
                   </ListItemText>
 
                   {/* Nested assessment – appears once the status is Assessed */}
-                  {showNestedAssessment && (
+                  {showNestedAssessment && !shouldHideAssessmentLines && (
                     <List sx={{ p: 0, m: 0 }}>
                       <AssessmentLines />
                     </List>
