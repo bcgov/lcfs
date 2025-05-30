@@ -104,3 +104,17 @@ id_prefix_to_transaction_type_map = {
 FUEL_CATEGORIES = ["Diesel", "Gasoline", "Jet fuel"]
 
 POSTAL_REGEX = r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$"
+
+
+ALLOWED_MIME_TYPES = [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+]
+ALLOWED_FILE_TYPES = (
+    "PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx)"
+)

@@ -22,7 +22,11 @@ import {
 } from '@/hooks/useDocuments'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { timezoneFormatter } from '@/utils/formatters'
-import { MAX_FILE_SIZE_BYTES } from '@/constants/common.js'
+import {
+  MAX_FILE_SIZE_BYTES,
+  COMPLIANCE_REPORT_FILE_TYPES
+} from '@/constants/common'
+import { validateFile } from '@/utils/fileValidation'
 
 const StyledCard = styled(Card)(({ theme, isDragActive = false }) => ({
   width: '100%',
@@ -117,7 +121,27 @@ function DocumentTable({ parentType, parentID }) {
     const baseDocument = {
       documentId: fileId,
       fileName: file.name,
-      fileSize: file.size
+      fileSize: file.size,
+      createDate: new Date().toISOString(),
+      createUser: currentUser?.keycloakUsername
+    }
+
+    // Validate file type and size
+    const validation = validateFile(
+      file,
+      MAX_FILE_SIZE_BYTES,
+      COMPLIANCE_REPORT_FILE_TYPES
+    )
+    if (!validation.isValid) {
+      setFiles([
+        ...files,
+        {
+          ...baseDocument,
+          error: true,
+          errorMessage: validation.errorMessage
+        }
+      ])
+      return
     }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
@@ -184,6 +208,7 @@ function DocumentTable({ parentType, parentID }) {
         data-test="file-input"
         ref={fileInputRef}
         style={{ display: 'none' }}
+        accept={COMPLIANCE_REPORT_FILE_TYPES.ACCEPT_STRING}
         onChange={handleFileChange}
       />
       <StyledCard
