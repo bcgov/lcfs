@@ -117,7 +117,7 @@ class ComplianceReportExporter:
             if sheet_name in [FSE_EXPORT_SHEET, ALLOCATION_AGREEMENTS_SHEET]:
                 tasks.append(loader(cid))
             else:
-                tasks.append(loader(uuid, cid))
+                tasks.append(loader(uuid, cid, report.version))
         # Concurrently gather results
         results = await asyncio.gather(*tasks)
 
@@ -320,9 +320,9 @@ class ComplianceReportExporter:
                 pass
         return str(val) if val else None
 
-    async def _load_fuel_supply_data(self, uuid, cid) -> List[List[Any]]:
+    async def _load_fuel_supply_data(self, uuid, cid, version) -> List[List[Any]]:
         """Load fuel supply data."""
-        data = await self.fs_repo.get_effective_fuel_supplies(uuid, cid)
+        data = await self.fs_repo.get_effective_fuel_supplies(uuid, cid, version)
         headers = [col.label for col in FUEL_SUPPLY_COLUMNS]
 
         rows = []
@@ -349,7 +349,7 @@ class ComplianceReportExporter:
 
         return [headers] + rows
 
-    async def _load_notional_transfer_data(self, uuid, cid) -> List[List[Any]]:
+    async def _load_notional_transfer_data(self, uuid, cid, version) -> List[List[Any]]:
         """Load notional transfer data."""
         data = await self.nt_repo.get_effective_notional_transfers(uuid, cid)
         headers = [col.label for col in NOTIONAL_TRANSFER_COLUMNS]
@@ -372,7 +372,7 @@ class ComplianceReportExporter:
 
         return [headers] + rows
 
-    async def _load_fuels_for_other_use_data(self, uuid, cid) -> List[List[Any]]:
+    async def _load_fuels_for_other_use_data(self, uuid, cid, version) -> List[List[Any]]:
         """Load fuels for other use data."""
         data: List[OtherUsesSchema] = await self.ou_repo.get_effective_other_uses(
             uuid, cid
@@ -397,7 +397,7 @@ class ComplianceReportExporter:
 
         return [headers] + rows
 
-    async def _load_export_fuel_data(self, uuid, cid) -> List[List[Any]]:
+    async def _load_export_fuel_data(self, uuid, cid, version) -> List[List[Any]]:
         """Load export fuel data."""
         data = await self.ef_repo.get_effective_fuel_exports(uuid, cid)
         headers = [col.label for col in EXPORT_FUEL_COLUMNS]
