@@ -33,7 +33,7 @@ export const finalSupplyEquipmentColDefs = (
   return [
     validation,
     actions((params) => ({
-      enableDuplicate: false,
+      enableDuplicate: true,
       enableDelete: !params.data.isNewSupplementalEntry,
       enableUndo: false, // FSE doesn't use supplemental logic yet
       enableStatus: false
