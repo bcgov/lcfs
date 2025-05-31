@@ -134,6 +134,7 @@ async def save_final_supply_equipment_row(
         compliance_report_id
     )
     await report_validate.validate_compliance_report_access(compliance_report)
+    await report_validate.validate_compliance_report_editable(compliance_report)
 
     if request_data.deleted:
         # Delete existing final supply equipment row
@@ -255,8 +256,11 @@ async def import_fse(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+
     if compliance_report is None:
         raise HTTPException(status_code=404, detail="Compliance report not found")
+
+    await report_validate.validate_compliance_report_editable(compliance_report)
 
     version = compliance_report.version
     is_original = version == 0

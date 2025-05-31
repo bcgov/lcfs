@@ -249,6 +249,7 @@ class UserAuthentication(AuthenticationBackend):
         email = user_token.get("email", "").lower()
         username = parse_external_username(user_token)
         preferred_username = user_token.get("preferred_username", "").lower()
+
         login_history = UserLoginHistory(
             keycloak_email=email,
             external_username=username,
