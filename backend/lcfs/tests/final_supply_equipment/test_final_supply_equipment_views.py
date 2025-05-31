@@ -7,6 +7,7 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime
 from lcfs.db.models import ComplianceReport, Organization, CompliancePeriod
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.web.api.final_supply_equipment.schema import (
     FinalSupplyEquipmentsSchema,
@@ -107,50 +108,52 @@ async def test_save_final_supply_equipment_create_success(
 ):
     with patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
-    ) as mock_validate_report_access:
-        with patch(
-            "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
-        ) as mock_validate_report:
-            mock_validate_report.return_value = ComplianceReport(
-                organization=Organization()
-            )
+    ) as mock_validate_report_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_report, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable, patch(
+        "lcfs.web.api.final_supply_equipment.validation.FinalSupplyEquipmentValidation.check_equipment_uniqueness_and_overlap"
+    ) as mock_validate_fse, patch(
+        "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.create_final_supply_equipment"
+    ) as mock_create_fse:
 
-            with patch(
-                "lcfs.web.api.final_supply_equipment.validation.FinalSupplyEquipmentValidation.check_equipment_uniqueness_and_overlap"
-            ) as mock_validate_fse:
-                mock_validate_fse.return_value = None
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_validate_report.return_value = mock_report
+        mock_validate_report_access.return_value = None
+        mock_validate_editable.return_value = None
+        mock_validate_fse.return_value = None
+        mock_create_fse.return_value = valid_final_supply_equipment_schema
 
-                with patch(
-                    "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.create_final_supply_equipment"
-                ) as mock_create_fse:
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
 
-                    mock_create_fse.return_value = valid_final_supply_equipment_schema
-
-                    set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
-                    url = fastapi_app.url_path_for("save_final_supply_equipment_row")
-                    payload = {
-                        "complianceReportId": 456,
-                        "organizationName": "Example Organization",
-                        "supplyFromDate": "2025-01-01",
-                        "supplyToDate": "2025-12-31",
-                        "kwhUsage": 250.5,
-                        "serialNbr": "ABC123XYZ",
-                        "manufacturer": "Generic Manufacturer",
-                        "model": "Model X",
-                        "levelOfEquipment": "Level 2",
-                        "ports": "Single port",
-                        "intendedUses": ["public charging", "fleet management"],
-                        "intendedUsers": ["general public", "employees"],
-                        "streetAddress": "123 Main St",
-                        "city": "Anytown",
-                        "postalCode": "A1A 1A1",
-                        "latitude": 49.2827,
-                        "longitude": -123.1207,
-                        "notes": "Additional notes about the equipment",
-                    }
-                    response = await client.post(url, json=payload)
-                    assert response.status_code == 201
-                    assert "finalSupplyEquipmentId" in response.json()
+        url = fastapi_app.url_path_for("save_final_supply_equipment_row")
+        payload = {
+            "compliance_report_id": 456,
+            "organization_name": "Example Organization",
+            "supply_from_date": "2025-01-01",
+            "supply_to_date": "2025-12-31",
+            "kwh_usage": 250.5,
+            "serial_nbr": "ABC123XYZ",
+            "manufacturer": "Generic Manufacturer",
+            "model": "Model X",
+            "level_of_equipment": "Level 2",
+            "ports": PortsEnum.SINGLE,
+            "intended_uses": ["public charging", "fleet management"],
+            "intended_users": ["general public", "employees"],
+            "street_address": "123 Main St",
+            "city": "Anytown",
+            "postal_code": "A1A 1A1",
+            "latitude": 49.2827,
+            "longitude": -123.1207,
+            "notes": "Additional notes about the equipment",
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 201
+        assert "finalSupplyEquipmentId" in response.json()
 
 
 @pytest.mark.anyio
@@ -159,43 +162,49 @@ async def test_save_final_supply_equipment_delete_success(
 ):
     with patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
-    ) as mock_validate_report_access:
-        with patch(
-            "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
-        ) as mock_validate_report:
-            mock_validate_report.return_value = ComplianceReport(
-                organization=Organization()
-            )
-            set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
-            url = fastapi_app.url_path_for("save_final_supply_equipment_row")
-            payload = {
-                "final_supply_equipment_id": 123,
-                "compliance_report_id": 456,
-                "organization_name": "Example Organization",
-                "supply_from_date": "2025-01-01",
-                "supply_to_date": "2025-12-31",
-                "kwh_usage": 250.5,
-                "serial_nbr": "ABC123XYZ",
-                "manufacturer": "Generic Manufacturer",
-                "model": "Model X",
-                "level_of_equipment": "Level 2",
-                "ports": PortsEnum.SINGLE,
-                "intended_uses": ["public charging", "fleet management"],
-                "intended_users": ["general public", "employees"],
-                "street_address": "123 Main St",
-                "city": "Anytown",
-                "postal_code": "A1A 1A1",
-                "latitude": 49.2827,
-                "longitude": -123.1207,
-                "notes": "Additional notes about the equipment",
-                "deleted": True,
-            }
-            response = await client.post(url, json=payload)
-            assert response.status_code == 201
-            assert (
-                response.json()["message"]
-                == "Final supply equipment row deleted successfully"
-            )
+    ) as mock_validate_report_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_report, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable:
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_validate_report.return_value = mock_report
+        mock_validate_report_access.return_value = None
+        mock_validate_editable.return_value = None
+
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_final_supply_equipment_row")
+        payload = {
+            "final_supply_equipment_id": 123,
+            "compliance_report_id": 456,
+            "organization_name": "Example Organization",
+            "supply_from_date": "2025-01-01",
+            "supply_to_date": "2025-12-31",
+            "kwh_usage": 250.5,
+            "serial_nbr": "ABC123XYZ",
+            "manufacturer": "Generic Manufacturer",
+            "model": "Model X",
+            "level_of_equipment": "Level 2",
+            "ports": PortsEnum.SINGLE,
+            "intended_uses": ["public charging", "fleet management"],
+            "intended_users": ["general public", "employees"],
+            "street_address": "123 Main St",
+            "city": "Anytown",
+            "postal_code": "A1A 1A1",
+            "latitude": 49.2827,
+            "longitude": -123.1207,
+            "notes": "Additional notes about the equipment",
+            "deleted": True,
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 201
+        assert (
+            response.json()["message"]
+            == "Final supply equipment row deleted successfully"
+        )
 
 
 @pytest.mark.anyio
@@ -267,3 +276,172 @@ async def test_export_invalid_report_id(
     response = await client.get(url)
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid report id. Must be an integer."
+
+
+# Tests for editable validation
+@pytest.mark.anyio
+async def test_save_final_supply_equipment_draft_status_allowed(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    valid_final_supply_equipment_schema,
+):
+    """Test that saving is allowed when compliance report is in Draft status"""
+    mock_report = ComplianceReport(organization=Organization())
+    mock_report.current_status = MagicMock()
+    mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable, patch(
+        "lcfs.web.api.final_supply_equipment.validation.FinalSupplyEquipmentValidation.check_equipment_uniqueness_and_overlap"
+    ) as mock_validate_fse, patch(
+        "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.create_final_supply_equipment"
+    ) as mock_create_fse:
+
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_validate_editable.return_value = None  # Should not raise exception
+        mock_validate_fse.return_value = None
+        mock_create_fse.return_value = valid_final_supply_equipment_schema
+
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_final_supply_equipment_row")
+        payload = {
+            "compliance_report_id": 456,
+            "organization_name": "Example Organization",
+            "supply_from_date": "2025-01-01",
+            "supply_to_date": "2025-12-31",
+            "kwh_usage": 250.5,
+            "serial_nbr": "ABC123XYZ",
+            "manufacturer": "Generic Manufacturer",
+            "model": "Model X",
+            "level_of_equipment": "Level 2",
+            "ports": PortsEnum.SINGLE,
+            "intended_uses": ["public charging"],
+            "intended_users": ["general public"],
+            "street_address": "123 Main St",
+            "city": "Anytown",
+            "postal_code": "A1A 1A1",
+            "latitude": 49.2827,
+            "longitude": -123.1207,
+            "notes": "Test equipment",
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 201
+        mock_validate_editable.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_save_final_supply_equipment_analyst_adjustment_status_allowed(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    valid_final_supply_equipment_schema,
+):
+    """Test that saving is allowed when compliance report is in Analyst_adjustment status"""
+    mock_report = ComplianceReport(organization=Organization())
+    mock_report.current_status = MagicMock()
+    mock_report.current_status.status = ComplianceReportStatusEnum.Analyst_adjustment
+
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable, patch(
+        "lcfs.web.api.final_supply_equipment.validation.FinalSupplyEquipmentValidation.check_equipment_uniqueness_and_overlap"
+    ) as mock_validate_fse, patch(
+        "lcfs.web.api.final_supply_equipment.services.FinalSupplyEquipmentServices.create_final_supply_equipment"
+    ) as mock_create_fse:
+
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_validate_editable.return_value = None  # Should not raise exception
+        mock_validate_fse.return_value = None
+        mock_create_fse.return_value = valid_final_supply_equipment_schema
+
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+        url = fastapi_app.url_path_for("save_final_supply_equipment_row")
+        payload = {
+            "compliance_report_id": 456,
+            "organization_name": "Example Organization",
+            "supply_from_date": "2025-01-01",
+            "supply_to_date": "2025-12-31",
+            "kwh_usage": 250.5,
+            "serial_nbr": "ABC123XYZ",
+            "manufacturer": "Generic Manufacturer",
+            "model": "Model X",
+            "level_of_equipment": "Level 2",
+            "ports": PortsEnum.SINGLE,
+            "intended_uses": ["public charging"],
+            "intended_users": ["general public"],
+            "street_address": "123 Main St",
+            "city": "Anytown",
+            "postal_code": "A1A 1A1",
+            "latitude": 49.2827,
+            "longitude": -123.1207,
+            "notes": "Test equipment",
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 201
+        mock_validate_editable.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_save_final_supply_equipment_submitted_status_blocked(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test that saving is blocked when compliance report is in Submitted status"""
+    from fastapi import HTTPException
+
+    mock_report = ComplianceReport(organization=Organization())
+    mock_report.current_status = MagicMock()
+    mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
+
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable:
+
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_validate_editable.side_effect = HTTPException(
+            status_code=403,
+            detail="Forbidden resource",
+        )
+
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_final_supply_equipment_row")
+        payload = {
+            "compliance_report_id": 456,
+            "organization_name": "Example Organization",
+            "supply_from_date": "2025-01-01",
+            "supply_to_date": "2025-12-31",
+            "kwh_usage": 250.5,
+            "serial_nbr": "ABC123XYZ",
+            "manufacturer": "Generic Manufacturer",
+            "model": "Model X",
+            "level_of_equipment": "Level 2",
+            "ports": PortsEnum.SINGLE,
+            "intended_uses": ["public charging"],
+            "intended_users": ["general public"],
+            "street_address": "123 Main St",
+            "city": "Anytown",
+            "postal_code": "A1A 1A1",
+            "latitude": 49.2827,
+            "longitude": -123.1207,
+            "notes": "Test equipment",
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 403
+        assert "Forbidden resource" in response.json()["detail"]
+        mock_validate_editable.assert_called_once()

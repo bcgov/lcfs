@@ -8,10 +8,10 @@ import snowflake2 from '@/assets/images/particles/snowflake2.png'
 import waterdrop from '@/assets/images/particles/water-drop.png'
 
 // Background Images
-import bgAutumnImage from '@/assets/images/backgrounds/autumn.jpg'
-import bgSpringImage from '@/assets/images/backgrounds/spring.jpg'
-import bgSummerImage from '@/assets/images/backgrounds/summer.jpg'
-import bgWinterImage from '@/assets/images/backgrounds/winter.jpg'
+import bgAutumnImage from '@/assets/images/backgrounds/autumn.webp'
+import bgSpringImage from '@/assets/images/backgrounds/spring.webp'
+import bgSummerImage from '@/assets/images/backgrounds/summer.webp'
+import bgWinterImage from '@/assets/images/backgrounds/winter.webp'
 
 import logoDark from '@/assets/images/logo-banner.svg'
 import BCBox from '@/components/BCBox'

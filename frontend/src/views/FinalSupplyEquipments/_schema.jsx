@@ -20,6 +20,7 @@ import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
 import { ADDRESS_SEARCH_URL } from '@/constants/common'
+import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { sortMixedStrings } from './components/utils'
 
 export const finalSupplyEquipmentColDefs = (
@@ -28,426 +29,430 @@ export const finalSupplyEquipmentColDefs = (
   errors,
   warnings,
   gridReady
-) => [
-  validation,
-  actions({
-    enableDuplicate: true,
-    enableDelete: true
-  }),
-  {
-    field: 'id',
-    cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
-    hide: true
-  },
-  {
-    field: 'complianceReportId',
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceReportId'
-    ),
-    cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
-    hide: true
-  },
-  {
-    field: 'organizationName',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
-    ),
-    cellEditor: AutocompleteCellEditor,
-    cellRenderer: SelectRenderer,
-    cellEditorParams: {
-      options: sortMixedStrings(optionsData?.organizationNames ?? []),
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: true,
-      openOnFocus: true
+) => {
+  return [
+    validation,
+    actions((params) => ({
+      enableDuplicate: true,
+      enableDelete: !params.data.isNewSupplementalEntry,
+      enableUndo: false, // FSE doesn't use supplemental logic yet
+      enableStatus: false
+    })),
+    {
+      field: 'id',
+      cellEditor: 'agTextCellEditor',
+      cellDataType: 'text',
+      hide: true
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    suppressKeyboardEvent,
-    minWidth: 260,
-    editable: true,
-    valueGetter: (params) => {
-      return params.data?.organizationName || ''
+    {
+      field: 'complianceReportId',
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.complianceReportId'
+      ),
+      cellEditor: 'agTextCellEditor',
+      cellDataType: 'text',
+      hide: true
     },
-    valueSetter: (params) => {
-      if (params.newValue) {
-        const isValidOrganizationName = optionsData?.organizationNames.includes(
-          params.newValue
-        )
+    {
+      field: 'organizationName',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
+      ),
+      cellEditor: AutocompleteCellEditor,
+      cellRenderer: SelectRenderer,
+      cellEditorParams: {
+        options: sortMixedStrings(optionsData?.organizationNames ?? []),
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: true,
+        openOnFocus: true
+      },
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      suppressKeyboardEvent,
+      minWidth: 260,
+      editable: true,
+      valueGetter: (params) => {
+        return params.data?.organizationName || ''
+      },
+      valueSetter: (params) => {
+        if (params.newValue) {
+          const isValidOrganizationName =
+            optionsData?.organizationNames.includes(params.newValue)
 
-        params.data.organizationName = isValidOrganizationName
-          ? params.newValue
-          : params.newValue
+          params.data.organizationName = isValidOrganizationName
+            ? params.newValue
+            : params.newValue
+          return true
+        }
+        return false
+      },
+      tooltipValueGetter: (params) =>
+        'Select the organization name from the list'
+    },
+    {
+      field: 'supplyFromDate',
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
+      ),
+      headerComponent: RequiredHeader,
+      minWidth: 200,
+      cellRenderer: (params) => (
+        <BCTypography variant="body4">
+          {params.value ? params.value : 'YYYY-MM-DD'}
+        </BCTypography>
+      ),
+      suppressKeyboardEvent,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      cellEditor: DateEditor,
+      cellEditorParams: {
+        minDate: dayjs(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
+        maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate(),
+        autoOpenLastRow: !gridReady
+      },
+      editable: true,
+      valueGetter: (params) => {
+        return params.data.supplyFromDate || `${compliancePeriod}-01-01`
+      },
+      valueSetter: (params) => {
+        params.data.supplyFromDate = params.newValue
         return true
       }
-      return false
     },
-    tooltipValueGetter: (params) => 'Select the organization name from the list'
-  },
-  {
-    field: 'supplyFromDate',
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyFromDate'
-    ),
-    headerComponent: RequiredHeader,
-    minWidth: 200,
-    cellRenderer: (params) => (
-      <BCTypography variant="body4">
-        {params.value ? params.value : 'YYYY-MM-DD'}
-      </BCTypography>
-    ),
-    suppressKeyboardEvent,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    cellEditor: DateEditor,
-    cellEditorParams: {
-      minDate: dayjs(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
-      maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate(),
-      autoOpenLastRow: !gridReady
+    {
+      field: 'supplyToDate',
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
+      ),
+      headerComponent: RequiredHeader,
+      minWidth: 200,
+      cellRenderer: (params) => (
+        <BCTypography variant="body4">
+          {params.value ? params.value : 'YYYY-MM-DD'}
+        </BCTypography>
+      ),
+      suppressKeyboardEvent,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      cellEditor: DateEditor,
+      cellEditorParams: {
+        minDate: dayjs(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
+        maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate(),
+        autoOpenLastRow: !gridReady
+      },
+      editable: true,
+      valueGetter: (params) => {
+        return params.data.supplyToDate || `${compliancePeriod}-12-31`
+      },
+      valueSetter: (params) => {
+        params.data.supplyToDate = params.newValue
+        return true
+      }
     },
-    valueGetter: (params) => {
-      return params.data.supplyFromDate || `${compliancePeriod}-01-01`
+    {
+      field: 'kwhUsage',
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
+      ),
+      minWidth: 220,
+      valueFormatter: numberFormatter,
+      cellEditor: NumberEditor,
+      type: 'numericColumn',
+      cellEditorParams: {
+        precision: 0,
+        min: 0,
+        showStepperButtons: false
+      },
+      editable: true,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings)
     },
-    valueSetter: (params) => {
-      params.data.supplyFromDate = params.newValue
-      return true
-    }
-  },
-  {
-    field: 'supplyToDate',
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.supplyToDate'
-    ),
-    headerComponent: RequiredHeader,
-    minWidth: 200,
-    cellRenderer: (params) => (
-      <BCTypography variant="body4">
-        {params.value ? params.value : 'YYYY-MM-DD'}
-      </BCTypography>
-    ),
-    suppressKeyboardEvent,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    cellEditor: DateEditor,
-    cellEditorParams: {
-      minDate: dayjs(`${compliancePeriod}-01-01`, 'YYYY-MM-DD').toDate(),
-      maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate(),
-      autoOpenLastRow: !gridReady
+    {
+      field: 'serialNbr',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'
+      ),
+      minWidth: 220,
+      cellEditor: 'agTextCellEditor',
+      cellDataType: 'text',
+      editable: true,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings)
     },
-    valueGetter: (params) => {
-      return params.data.supplyToDate || `${compliancePeriod}-12-31`
+    {
+      field: 'manufacturer',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
+      ),
+      minWidth: 320,
+      cellEditor: AsyncSuggestionEditor,
+      cellEditorParams: (params) => ({
+        queryKey: 'fuel-code-search',
+        queryFn: async ({ client, queryKey }) => {
+          try {
+            const [, searchTerm] = queryKey
+            const path = `${
+              apiRoutes.searchFinalSupplyEquipments
+            }manufacturer=${encodeURIComponent(searchTerm)}`
+            const response = await client.get(path)
+            return response.data
+          } catch (error) {
+            console.error('Error fetching manufacturer data:', error)
+            return []
+          }
+        },
+        optionLabel: 'manufacturer',
+        title: 'fuelCode'
+      }),
+      suppressKeyboardEvent,
+      cellDataType: 'text',
+      editable: true,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings)
     },
-    valueSetter: (params) => {
-      params.data.supplyToDate = params.newValue
-      return true
-    }
-  },
-  {
-    field: 'kwhUsage',
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.kwhUsage'
-    ),
-    minWidth: 220,
-    valueFormatter: numberFormatter,
-    cellEditor: NumberEditor,
-    type: 'numericColumn',
-    cellEditorParams: {
-      precision: 0,
-      min: 0,
-      showStepperButtons: false
+    {
+      field: 'model',
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.model'
+      ),
+      minWidth: 220,
+      cellEditor: 'agTextCellEditor',
+      cellDataType: 'text',
+      editable: true,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings)
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
-  },
-  {
-    field: 'serialNbr',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.serialNbr'
-    ),
-    minWidth: 220,
-    cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
-  },
-  {
-    field: 'manufacturer',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.manufacturer'
-    ),
-    minWidth: 320,
-    cellEditor: AsyncSuggestionEditor,
-    cellEditorParams: (params) => ({
-      queryKey: 'fuel-code-search',
-      queryFn: async ({ client, queryKey }) => {
-        try {
-          const [, searchTerm] = queryKey
-          const path = `${
-            apiRoutes.searchFinalSupplyEquipments
-          }manufacturer=${encodeURIComponent(searchTerm)}`
-          const response = await client.get(path)
-          return response.data
-        } catch (error) {
-          console.error('Error fetching manufacturer data:', error)
-          return []
+    {
+      field: 'levelOfEquipment',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
+      ),
+      cellEditor: AutocompleteCellEditor,
+      cellEditorParams: {
+        options: optionsData?.levelsOfEquipment?.map((obj) => obj.name) || [],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true,
+        clearable: true
+      },
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      cellRenderer: SelectRenderer,
+      editable: true
+    },
+    {
+      field: 'ports',
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'
+      ),
+      minWidth: 220,
+      cellEditor: AutocompleteCellEditor,
+      suppressKeyboardEvent,
+      cellEditorParams: {
+        options: optionsData?.ports || [],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true,
+        clearable: true
+      },
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      cellRenderer: SelectRenderer
+    },
+    {
+      field: 'intendedUses',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
+      ),
+      valueGetter: (params) => params.data.intendedUseTypes,
+      cellEditor: AutocompleteCellEditor,
+      cellEditorParams: {
+        options: optionsData?.intendedUseTypes?.map((obj) => obj.type) || [],
+        multiple: true,
+        disableCloseOnSelect: true,
+        openOnFocus: true
+      },
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      cellRenderer: MultiSelectRenderer,
+      suppressKeyboardEvent,
+      minWidth: 560,
+      editable: true
+    },
+    {
+      field: 'intendedUsers',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
+      ),
+      valueGetter: (params) => params.data?.intendedUserTypes,
+      cellEditor: AutocompleteCellEditor,
+      cellEditorParams: {
+        options:
+          optionsData?.intendedUserTypes?.map((obj) => obj.typeName) || [],
+        multiple: true,
+        disableCloseOnSelect: true,
+        openOnFocus: true
+      },
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      cellRenderer: (params) =>
+        (params.value && params.value !== '' && (
+          <CommonArrayRenderer disableLink {...params} />
+        )) ||
+        (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+      suppressKeyboardEvent,
+      minWidth: 315,
+      editable: true
+    },
+    {
+      field: 'streetAddress',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
+      ),
+      cellEditor: AsyncSuggestionEditor,
+      cellEditorParams: (params) => ({
+        queryKey: 'fuel-code-search',
+        queryFn: async ({ queryKey, client }) => {
+          const response = await fetch(
+            ADDRESS_SEARCH_URL + encodeURIComponent(queryKey[1])
+          )
+          if (!response.ok) throw new Error('Network response was not ok')
+          const data = await response.json()
+          return data.features.map((feature) => ({
+            label: feature.properties.fullAddress || '',
+            coordinates: feature.geometry.coordinates
+          }))
+        },
+        optionLabel: 'label'
+      }),
+      valueSetter: async (params) => {
+        if (params.newValue === '' || params.newValue?.name === '') {
+          params.data.streetAddress = ''
+          params.data.city = ''
+          params.data.latitude = ''
+          params.data.longitude = ''
+        } else if (typeof params.newValue === 'string') {
+          // Directly set the street address if it's a custom input
+          params.data.streetAddress = params.newValue
+        } else {
+          const [street = '', city = '', province = ''] = params.newValue.label
+            .split(',')
+            .map((val) => val.trim())
+          const [long, lat] = params.newValue.coordinates
+          params.data.streetAddress = street
+          params.data.city = city
+          params.data.latitude = lat
+          params.data.longitude = long
+        }
+        return true
+      },
+      cellDataType: 'object',
+      suppressKeyboardEvent,
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      minWidth: 260,
+      editable: true
+    },
+    {
+      field: 'city',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.city'
+      ),
+      cellEditor: 'agTextCellEditor',
+      cellDataType: 'text',
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      minWidth: 260,
+      editable: true
+    },
+    {
+      field: 'postalCode',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
+      ),
+      valueSetter: (params) => {
+        const newValue = params.newValue.toUpperCase()
+        params.data[params.colDef.field] = newValue
+        return true
+      },
+      cellEditor: TextCellEditor,
+      cellEditorParams: {
+        mask: 'A1A 1A1',
+        formatChars: {
+          A: '[A-Za-z]',
+          1: '[0-9]'
         }
       },
-      optionLabel: 'manufacturer',
-      title: 'fuelCode'
-    }),
-    suppressKeyboardEvent,
-    cellDataType: 'text',
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
-  },
-  {
-    field: 'model',
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.model'
-    ),
-    minWidth: 220,
-    cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings)
-  },
-  {
-    field: 'levelOfEquipment',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
-    ),
-    cellEditor: AutocompleteCellEditor,
-    suppressKeyboardEvent,
-    minWidth: 430,
-    cellEditorParams: {
-      options: optionsData?.levelsOfEquipment.map((obj) => obj.name),
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false,
-      openOnFocus: true
+      suppressKeyboardEvent,
+      cellDataType: 'text',
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      minWidth: 150,
+      editable: true
     },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: SelectRenderer,
-    valueGetter: (params) => {
-      if (params.data?.levelOfEquipment) {
-        return typeof params.data.levelOfEquipment === 'object'
-          ? params.data.levelOfEquipment.name
-          : params.data.levelOfEquipment
-      }
-      return ''
-    },
-    valueSetter: (params) => {
-      if (params.newValue) {
-        params.data.levelOfEquipment = params.newValue
-        return true
-      }
-      return false
-    }
-  },
-  {
-    field: 'ports',
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.ports'
-    ),
-    minWidth: 220,
-    cellEditor: AutocompleteCellEditor,
-    suppressKeyboardEvent,
-    cellEditorParams: {
-      options: optionsData?.ports || [],
-      multiple: false,
-      disableCloseOnSelect: false,
-      freeSolo: false,
-      openOnFocus: true,
-      clearable: true
-    },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: SelectRenderer
-  },
-  {
-    field: 'intendedUses',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
-    ),
-    valueGetter: (params) => params.data?.intendedUseTypes,
-    cellEditor: AutocompleteCellEditor,
-    cellEditorParams: {
-      options: optionsData?.intendedUseTypes.map((obj) => obj.type) || [],
-      multiple: true,
-      disableCloseOnSelect: true,
-      openOnFocus: true
-    },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: MultiSelectRenderer,
-    suppressKeyboardEvent,
-    minWidth: 560
-  },
-  {
-    field: 'intendedUsers',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
-    ),
-    valueGetter: (params) => params.data?.intendedUserTypes,
-    cellEditor: AutocompleteCellEditor,
-    cellEditorParams: {
-      options: optionsData?.intendedUserTypes.map((obj) => obj.typeName) || [],
-      multiple: true,
-      disableCloseOnSelect: true,
-      openOnFocus: true
-    },
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    cellRenderer: (params) =>
-      (params.value && params.value !== '' && (
-        <CommonArrayRenderer disableLink {...params} />
-      )) ||
-      (!params.value && <BCTypography variant="body4">Select</BCTypography>),
-    suppressKeyboardEvent,
-    minWidth: 315
-  },
-  {
-    field: 'streetAddress',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.streetAddress'
-    ),
-    cellEditor: AsyncSuggestionEditor,
-    cellEditorParams: (params) => ({
-      queryKey: 'fuel-code-search',
-      queryFn: async ({ queryKey, client }) => {
-        const response = await fetch(
-          ADDRESS_SEARCH_URL + encodeURIComponent(queryKey[1])
-        )
-        if (!response.ok) throw new Error('Network response was not ok')
-        const data = await response.json()
-        return data.features.map((feature) => ({
-          label: feature.properties.fullAddress || '',
-          coordinates: feature.geometry.coordinates
-        }))
+    {
+      field: 'latitude',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.latitude'
+      ),
+      cellEditor: 'agNumberCellEditor',
+      cellEditorParams: {
+        precision: 6,
+        max: 90,
+        min: -90,
+        showStepperButtons: false
       },
-      optionLabel: 'label'
-    }),
-    valueSetter: async (params) => {
-      if (params.newValue === '' || params.newValue?.name === '') {
-        params.data.streetAddress = ''
-        params.data.city = ''
-        params.data.latitude = ''
-        params.data.longitude = ''
-      } else if (typeof params.newValue === 'string') {
-        // Directly set the street address if it's a custom input
-        params.data.streetAddress = params.newValue
-      } else {
-        const [street = '', city = '', province = ''] = params.newValue.label
-          .split(',')
-          .map((val) => val.trim())
-        const [long, lat] = params.newValue.coordinates
-        params.data.streetAddress = street
-        params.data.city = city
-        params.data.latitude = lat
-        params.data.longitude = long
-      }
-      return true
+      cellDataType: 'number',
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      minWidth: 150,
+      editable: true
     },
-    cellDataType: 'object',
-    suppressKeyboardEvent,
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    minWidth: 260
-  },
-  {
-    field: 'city',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.city'
-    ),
-    cellEditor: 'agTextCellEditor',
-    cellDataType: 'text',
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    minWidth: 260
-  },
-  {
-    field: 'postalCode',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.postalCode'
-    ),
-    valueSetter: (params) => {
-      const newValue = params.newValue.toUpperCase()
-      params.data[params.colDef.field] = newValue
-      return true
+    {
+      field: 'longitude',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.longitude'
+      ),
+      cellEditor: 'agNumberCellEditor',
+      cellEditorParams: {
+        precision: 6,
+        max: 180,
+        min: -180,
+        showStepperButtons: false
+      },
+      cellDataType: 'number',
+      cellStyle: (params) =>
+        StandardCellWarningAndErrors(params, errors, warnings),
+      minWidth: 150,
+      editable: true
     },
-    cellEditor: TextCellEditor,
-    cellEditorParams: {
-      mask: 'A1A 1A1',
-      formatChars: {
-        A: '[A-Za-z]',
-        1: '[0-9]'
-      }
-    },
-    suppressKeyboardEvent,
-    cellDataType: 'text',
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    minWidth: 150
-  },
-  {
-    field: 'latitude',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.latitude'
-    ),
-    cellEditor: 'agNumberCellEditor',
-    cellEditorParams: {
-      precision: 6,
-      max: 90,
-      min: -90,
-      showStepperButtons: false
-    },
-    cellDataType: 'number',
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    minWidth: 150
-  },
-  {
-    field: 'longitude',
-    headerComponent: RequiredHeader,
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.longitude'
-    ),
-    cellEditor: 'agNumberCellEditor',
-    cellEditorParams: {
-      precision: 6,
-      max: 180,
-      min: -180,
-      showStepperButtons: false
-    },
-    cellDataType: 'number',
-    cellStyle: (params) =>
-      StandardCellWarningAndErrors(params, errors, warnings),
-    minWidth: 150
-  },
-  {
-    field: 'notes',
-    headerName: i18n.t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.notes'
-    ),
-    cellEditor: 'agTextCellEditor',
-    minWidth: 500
-  }
-]
+    {
+      field: 'notes',
+      headerName: i18n.t(
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.notes'
+      ),
+      cellEditor: 'agTextCellEditor',
+      minWidth: 500,
+      editable: true
+    }
+  ]
+}
 
-export const finalSupplyEquipmentSummaryColDefs = (t) => [
+export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
   {
     headerName: t(
       'finalSupplyEquipment:finalSupplyEquipmentColLabels.organizationName'
@@ -514,7 +519,10 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
     field: 'intendedUses',
     valueGetter: (params) => params.data.intendedUseTypes,
     cellRenderer: CommonArrayRenderer,
-    cellRendererParams: { marginTop: '0.7em' }
+    cellRendererParams:
+      status === COMPLIANCE_REPORT_STATUSES.DRAFT
+        ? { marginTop: '0.7em' }
+        : { marginTop: '0.7em', disableLink: true }
   },
   {
     headerName: t(
@@ -523,7 +531,10 @@ export const finalSupplyEquipmentSummaryColDefs = (t) => [
     field: 'intendedUsers',
     valueGetter: (params) => params.data.intendedUserTypes,
     cellRenderer: CommonArrayRenderer,
-    cellRendererParams: { marginTop: '0.7em' }
+    cellRendererParams:
+      status === COMPLIANCE_REPORT_STATUSES.DRAFT
+        ? { marginTop: '0.7em' }
+        : { marginTop: '0.7em', disableLink: true }
   },
   {
     headerName: t(
