@@ -28,20 +28,16 @@ export const finalSupplyEquipmentColDefs = (
   compliancePeriod,
   errors,
   warnings,
-  gridReady,
-  status = null
+  gridReady
 ) => {
-  // Define which statuses allow editing - be explicit and secure
-  const isEditable =
-    status === COMPLIANCE_REPORT_STATUSES.DRAFT ||
-    status === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
-
   return [
     validation,
-    actions({
-      enableDuplicate: isEditable,
-      enableDelete: isEditable
-    }),
+    actions((params) => ({
+      enableDuplicate: false,
+      enableDelete: !params.data.isNewSupplementalEntry,
+      enableUndo: false, // FSE doesn't use supplemental logic yet
+      enableStatus: false
+    })),
     {
       field: 'id',
       cellEditor: 'agTextCellEditor',
@@ -76,7 +72,7 @@ export const finalSupplyEquipmentColDefs = (
         StandardCellWarningAndErrors(params, errors, warnings),
       suppressKeyboardEvent,
       minWidth: 260,
-      editable: isEditable,
+      editable: true,
       valueGetter: (params) => {
         return params.data?.organizationName || ''
       },
@@ -116,7 +112,7 @@ export const finalSupplyEquipmentColDefs = (
         maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate(),
         autoOpenLastRow: !gridReady
       },
-      editable: isEditable,
+      editable: true,
       valueGetter: (params) => {
         return params.data.supplyFromDate || `${compliancePeriod}-01-01`
       },
@@ -146,7 +142,7 @@ export const finalSupplyEquipmentColDefs = (
         maxDate: dayjs(`${compliancePeriod}-12-31`, 'YYYY-MM-DD').toDate(),
         autoOpenLastRow: !gridReady
       },
-      editable: isEditable,
+      editable: true,
       valueGetter: (params) => {
         return params.data.supplyToDate || `${compliancePeriod}-12-31`
       },
@@ -169,7 +165,7 @@ export const finalSupplyEquipmentColDefs = (
         min: 0,
         showStepperButtons: false
       },
-      editable: isEditable,
+      editable: true,
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings)
     },
@@ -182,7 +178,7 @@ export const finalSupplyEquipmentColDefs = (
       minWidth: 220,
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
-      editable: isEditable,
+      editable: true,
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings)
     },
@@ -214,7 +210,7 @@ export const finalSupplyEquipmentColDefs = (
       }),
       suppressKeyboardEvent,
       cellDataType: 'text',
-      editable: isEditable,
+      editable: true,
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings)
     },
@@ -226,7 +222,7 @@ export const finalSupplyEquipmentColDefs = (
       minWidth: 220,
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
-      editable: isEditable,
+      editable: true,
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings)
     },
@@ -238,7 +234,7 @@ export const finalSupplyEquipmentColDefs = (
       ),
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: {
-        options: optionsData?.levelsOfEquipment || [],
+        options: optionsData?.levelsOfEquipment?.map((obj) => obj.name) || [],
         multiple: false,
         disableCloseOnSelect: false,
         freeSolo: false,
@@ -248,7 +244,7 @@ export const finalSupplyEquipmentColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       cellRenderer: SelectRenderer,
-      editable: isEditable
+      editable: true
     },
     {
       field: 'ports',
@@ -279,7 +275,7 @@ export const finalSupplyEquipmentColDefs = (
       valueGetter: (params) => params.data.intendedUseTypes,
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: {
-        options: optionsData?.intendedUseTypes.map((obj) => obj.type) || [],
+        options: optionsData?.intendedUseTypes?.map((obj) => obj.type) || [],
         multiple: true,
         disableCloseOnSelect: true,
         openOnFocus: true
@@ -289,7 +285,7 @@ export const finalSupplyEquipmentColDefs = (
       cellRenderer: MultiSelectRenderer,
       suppressKeyboardEvent,
       minWidth: 560,
-      editable: isEditable
+      editable: true
     },
     {
       field: 'intendedUsers',
@@ -301,7 +297,7 @@ export const finalSupplyEquipmentColDefs = (
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: {
         options:
-          optionsData?.intendedUserTypes.map((obj) => obj.typeName) || [],
+          optionsData?.intendedUserTypes?.map((obj) => obj.typeName) || [],
         multiple: true,
         disableCloseOnSelect: true,
         openOnFocus: true
@@ -315,7 +311,7 @@ export const finalSupplyEquipmentColDefs = (
         (!params.value && <BCTypography variant="body4">Select</BCTypography>),
       suppressKeyboardEvent,
       minWidth: 315,
-      editable: isEditable
+      editable: true
     },
     {
       field: 'streetAddress',
@@ -365,7 +361,7 @@ export const finalSupplyEquipmentColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 260,
-      editable: isEditable
+      editable: true
     },
     {
       field: 'city',
@@ -378,7 +374,7 @@ export const finalSupplyEquipmentColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 260,
-      editable: isEditable
+      editable: true
     },
     {
       field: 'postalCode',
@@ -404,7 +400,7 @@ export const finalSupplyEquipmentColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 150,
-      editable: isEditable
+      editable: true
     },
     {
       field: 'latitude',
@@ -423,7 +419,7 @@ export const finalSupplyEquipmentColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 150,
-      editable: isEditable
+      editable: true
     },
     {
       field: 'longitude',
@@ -442,7 +438,7 @@ export const finalSupplyEquipmentColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
       minWidth: 150,
-      editable: isEditable
+      editable: true
     },
     {
       field: 'notes',
@@ -451,7 +447,7 @@ export const finalSupplyEquipmentColDefs = (
       ),
       cellEditor: 'agTextCellEditor',
       minWidth: 500,
-      editable: isEditable
+      editable: true
     }
   ]
 }
