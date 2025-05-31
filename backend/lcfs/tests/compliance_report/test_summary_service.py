@@ -235,6 +235,7 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     # so that trxn_repo.calculate_line_17_available_balance_for_period is called.
     mock_cr_summary = MagicMock(spec=ComplianceReportSummary)
     mock_cr_summary.line_17_non_banked_units_used = None
+    mock_cr_summary.is_locked = False  # Add is_locked attribute
     compliance_report.summary = mock_cr_summary
 
     # Repository returns.
@@ -340,6 +341,9 @@ async def test_supplemental_report_uses_existing_summary_line_17(
     # Setup ComplianceReportSummary mock attached to the report
     mock_summary_model = MagicMock(spec=ComplianceReportSummary)
     mock_summary_model.line_17_non_banked_units_used = existing_line_17_value
+    mock_summary_model.is_locked = (
+        True  # Add is_locked attribute for supplemental report
+    )
     # Ensure other potentially accessed attributes on summary have defaults if necessary
     mock_summary_model.line_18_units_to_be_banked = 0
     mock_summary_model.line_19_units_to_be_exported = 0
@@ -1227,6 +1231,7 @@ async def test_line_17_method_called_during_summary_calculation(
     compliance_report.version = 0
     compliance_report.summary = MagicMock()
     compliance_report.summary.line_17_non_banked_units_used = None
+    compliance_report.summary.is_locked = False  # Add is_locked attribute
 
     # Setup repository mocks
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 100
@@ -1281,6 +1286,7 @@ async def test_line_17_different_compliance_periods(
     compliance_report_2023.version = 0
     compliance_report_2023.summary = MagicMock()
     compliance_report_2023.summary.line_17_non_banked_units_used = None
+    compliance_report_2023.summary.is_locked = False  # Add is_locked attribute
 
     # Setup mocks
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 50
@@ -1320,6 +1326,7 @@ async def test_line_17_different_compliance_periods(
     compliance_report_2025.version = 0
     compliance_report_2025.summary = MagicMock()
     compliance_report_2025.summary.line_17_non_banked_units_used = None
+    compliance_report_2025.summary.is_locked = False  # Add is_locked attribute
 
     mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 1200
 
@@ -1352,6 +1359,7 @@ async def test_supplemental_report_preserves_existing_line_17_value(
     compliance_report.summary = MagicMock()
     existing_line_17_value = 2500
     compliance_report.summary.line_17_non_banked_units_used = existing_line_17_value
+    compliance_report.summary.is_locked = True  # Add is_locked attribute
 
     # Setup repository mocks
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 150
@@ -1405,6 +1413,7 @@ async def test_supplemental_report_calculates_line_17_when_missing(
     compliance_report.version = 2  # Supplemental
     compliance_report.summary = MagicMock()
     compliance_report.summary.line_17_non_banked_units_used = None  # No existing value
+    compliance_report.summary.is_locked = False  # Add is_locked attribute
 
     # Setup repository mocks
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 80
@@ -1466,6 +1475,7 @@ async def test_line_17_error_handling(
     compliance_report.version = 0
     compliance_report.summary = MagicMock()
     compliance_report.summary.line_17_non_banked_units_used = None
+    compliance_report.summary.is_locked = False  # Add is_locked attribute
 
     # Setup repository mocks
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 100
@@ -1508,6 +1518,7 @@ async def test_line_17_zero_balance_handling(
     compliance_report.version = 0
     compliance_report.summary = MagicMock()
     compliance_report.summary.line_17_non_banked_units_used = None
+    compliance_report.summary.is_locked = False  # Add is_locked attribute
 
     # Setup repository mocks
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 75
@@ -1545,6 +1556,70 @@ async def test_line_17_zero_balance_handling(
 
 
 @pytest.mark.anyio
+async def test_supplemental_report_unlocked_recalculates_line_17(
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+):
+    """Test that unlocked supplemental reports recalculate Line 17 even with existing value"""
+    compliance_period_start = datetime(2024, 1, 1)
+    compliance_period_end = datetime(2024, 12, 31)
+    organization_id = 654
+
+    # Mock supplemental report with existing Line 17 value but NOT locked
+    compliance_report = MagicMock(spec=ComplianceReport)
+    compliance_report.version = 1  # Supplemental
+    compliance_report.summary = MagicMock()
+    existing_line_17_value = 1500  # This should be ignored since not locked
+    compliance_report.summary.line_17_non_banked_units_used = existing_line_17_value
+    compliance_report.summary.is_locked = False  # NOT locked - should recalculate
+
+    # Setup repository mocks
+    mock_summary_repo.get_transferred_out_compliance_units.return_value = 200
+    mock_summary_repo.get_received_compliance_units.return_value = 400
+    mock_summary_repo.get_issued_compliance_units.return_value = 600
+
+    # Mock previous summary for supplemental reports
+    previous_summary_mock = MagicMock()
+    previous_summary_mock.line_18_units_to_be_banked = 100
+    previous_summary_mock.line_19_units_to_be_exported = 150
+    mock_summary_repo.get_previous_summary = AsyncMock(
+        return_value=previous_summary_mock
+    )
+
+    # Mock the TFRS Line 17 calculation - this should be called and used
+    expected_line_17_balance = 2200  # Different from existing value
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = (
+        expected_line_17_balance
+    )
+
+    compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
+        AsyncMock(return_value=500)
+    )
+    compliance_report_summary_service.calculate_fuel_export_compliance_units = (
+        AsyncMock(return_value=75)
+    )
+
+    # Call the method
+    summary, penalty = (
+        await compliance_report_summary_service.calculate_low_carbon_fuel_target_summary(
+            compliance_period_start,
+            compliance_period_end,
+            organization_id,
+            compliance_report,
+        )
+    )
+
+    # Verify the Line 17 method WAS called for unlocked supplemental
+    mock_trxn_repo.calculate_line_17_available_balance_for_period.assert_called_once_with(
+        organization_id, compliance_period_start.year
+    )
+
+    # Verify NEW calculated Line 17 value is used, not the existing one
+    line_values = _get_line_values(summary)
+    assert line_values[17] == expected_line_17_balance
+    assert line_values[17] != existing_line_17_value  # Should be different
+
+
+@pytest.mark.anyio
 async def test_line_17_integration_with_compliance_report_creation(
     compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
 ):
@@ -1558,6 +1633,7 @@ async def test_line_17_integration_with_compliance_report_creation(
     compliance_report.version = 0
     compliance_report.summary = MagicMock()
     compliance_report.summary.line_17_non_banked_units_used = None
+    compliance_report.summary.is_locked = False  # Add is_locked attribute
 
     # Setup repository mocks with realistic values
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
