@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import date, datetime, timedelta
+from types import SimpleNamespace
 
 from lcfs.db.models import UserProfile
 from lcfs.db.models.user.Role import RoleEnum
@@ -300,3 +301,57 @@ async def test_no_category_update_when_category_exists(
 
     assert dummy_transfer.to_transaction == "new_transaction"
     assert dummy_transfer.category == "Existing"
+
+
+@pytest.mark.anyio
+async def test_director_record_transfer_with_none_category(
+    transfer_service, dummy_transfer, mock_director
+):
+    """
+    Test that director_record_transfer correctly assigns a category
+    when transfer_category is None. This tests the bug fix for the
+    case where hasattr(None, 'category') would raise an AttributeError.
+    """
+    # Set transfer_category to None to simulate the bug scenario
+    dummy_transfer.transfer_category = None
+    dummy_transfer.agreement_date = datetime.now() - timedelta(
+        days=10
+    )  # Recent agreement date for category A
+
+    # Track if update_category was called
+    category_updated = False
+
+    async def dummy_update_category_fn(transfer_id, category):
+        nonlocal category_updated
+        category_updated = True
+        dummy_transfer.called_category = category
+        dummy_transfer.transfer_category = SimpleNamespace(category=category)
+        return dummy_transfer
+
+    transfer_service.update_category = dummy_update_category_fn
+
+    async def confirm_success(tx_id):
+        return True
+
+    transfer_service.transaction_repo.confirm_transaction = confirm_success
+
+    async def dummy_adjust_balance_fn(
+        *, transaction_action, compliance_units, organization_id
+    ):
+        return "new_transaction"
+
+    transfer_service.org_service.adjust_balance = dummy_adjust_balance_fn
+
+    # Mock repo.refresh_transfer to do nothing
+    async def mock_refresh(transfer):
+        return
+
+    transfer_service.repo.refresh_transfer = mock_refresh
+    transfer_service.repo.update_transfer = AsyncMock(return_value=dummy_transfer)
+
+    await transfer_service.director_record_transfer(dummy_transfer, mock_director)
+
+    # Verify that update_category was called and with the correct category
+    assert category_updated is True
+    assert getattr(dummy_transfer, "called_category", None) == "A"
+    assert dummy_transfer.to_transaction == "new_transaction"

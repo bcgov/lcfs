@@ -740,18 +740,18 @@ export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     field: 'fuelType.fuelType',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelTypeId')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory.category',
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'fuelCategoryId')
+      highlight && changelogCellStyle(params, 'fuelCategory')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
     field: 'endUseType.type',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'endUseId')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'endUseType')
   },
   {
     headerName: i18n.t(
@@ -759,12 +759,12 @@ export const changelogCommonColDefs = (highlight = true) => [
     ),
     field: 'provisionOfTheAct.name',
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'provisionOfTheActId')
+      highlight && changelogCellStyle(params, 'provisionOfTheAct')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCodeId')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
