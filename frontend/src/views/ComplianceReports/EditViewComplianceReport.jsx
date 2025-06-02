@@ -190,15 +190,13 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
 
   // Determine if the current report is a draft supplemental for the 30-day notice
   const isDraftSupplemental =
-    complianceReportData?.report?.currentStatus.status ===
-      COMPLIANCE_REPORT_STATUSES.DRAFT &&
-    complianceReportData?.report?.version > 0
+    reportData?.report?.currentStatus?.status ===
+      COMPLIANCE_REPORT_STATUSES.DRAFT && reportData?.report?.version > 0
+
   let submissionDeadline = null
   let daysRemaining = null
-  if (isDraftSupplemental && complianceReportData?.report?.createTimestamp) {
-    const creationDate = DateTime.fromISO(
-      complianceReportData.report.createTimestamp
-    )
+  if (isDraftSupplemental && reportData?.report?.createTimestamp) {
+    const creationDate = DateTime.fromISO(reportData.report.createTimestamp)
     submissionDeadline = creationDate.plus({ days: 30 })
     daysRemaining = Math.ceil(submissionDeadline.diffNow('days').days)
   }
@@ -411,6 +409,17 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   const report = complianceReportData?.report
   const isReadOnly = isGovernmentUser && hasDraftSupplemental
 
+  // Clean boolean conditions for assessment sections
+  const shouldShowAssessmentStatement =
+    isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental
+
+  const shouldShowAssessmentRecommendation =
+    hasRoles(roles.analyst) && !qReport?.isQuarterly && !hasDraftSupplemental
+
+  // Show the section title only if any assessment components are visible
+  const shouldShowAssessmentSectionTitle =
+    shouldShowAssessmentStatement || shouldShowAssessmentRecommendation
+
   return (
     <>
       <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
@@ -461,6 +470,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               hasSupplemental={reportData?.report.hasSupplemental}
               chain={reportData.chain}
               isQuarterlyReport={qReport?.isQuarterly}
+              reportVersion={reportData?.report?.version}
             />
           </Stack>
           {!location.state?.newReport && (
@@ -496,87 +506,50 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             />
           )}
 
-          {isGovernmentUser && (
-            <>
-              <BCTypography
-                color="primary"
-                variant="h5"
-                mb={2}
-                mt={2}
-                component="div"
-              >
-                {t('report:assessmentRecommendation')}
-              </BCTypography>
+          {shouldShowAssessmentSectionTitle && (
+            <BCTypography
+              color="primary"
+              variant="h5"
+              mb={2}
+              mt={2}
+              component="div"
+            >
+              {t('report:assessmentRecommendation')}
+            </BCTypography>
+          )}
 
-              <BCBox
-                sx={{
-                  border: '1px solid rgba(0, 0, 0, 0.28)',
-                  padding: '20px',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.28)'
-                }}
-              >
-                {!qReport?.isQuarterly && <AssessmentStatement />}
-                {hasRoles(roles.analyst) && !qReport?.isQuarterly && (
-                  <AssessmentRecommendation
-                    reportData={reportData}
-                    complianceReportId={complianceReportId}
-                    currentStatus={currentStatus}
-                  />
-                )}
-                {/* Internal Comments */}
-                <BCBox mt={4}>
-                  <BCTypography variant="h6" color="primary">
-                    {t(`report:internalComments`)}
-                  </BCTypography>
-                  <BCBox>
-                    <Role roles={govRoles}>
-                      <InternalComments
-                        entityType="complianceReport"
-                        entityId={parseInt(complianceReportId)}
-                      />
-                    </Role>
-                  </BCBox>
-                  <Stack
-                    direction="row"
-                    justifyContent="flex-start"
-                    mt={2}
-                    gap={2}
-                  >
-                    {buttonClusterConfig[currentStatus]?.map(
-                      (config) =>
-                        config && (
-                          <BCButton
-                            key={config.id}
-                            data-test={config.id}
-                            id={config.id}
-                            size="small"
-                            variant={config.variant}
-                            color={config.color}
-                            onClick={methods.handleSubmit(() =>
-                              config.handler({
-                                assessmentStatement:
-                                  reportData?.report.assessmentStatement
-                              })
-                            )}
-                            startIcon={
-                              config.startIcon && (
-                                <FontAwesomeIcon
-                                  icon={config.startIcon}
-                                  className="small-icon"
-                                />
-                              )
-                            }
-                            disabled={config.disabled}
-                          >
-                            {config.label}
-                          </BCButton>
-                        )
-                    )}
-                  </Stack>
+          <BCBox
+            sx={{
+              border: '1px solid rgba(0, 0, 0, 0.28)',
+              padding: '20px',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.28)'
+            }}
+          >
+            {shouldShowAssessmentStatement && <AssessmentStatement />}
+            {shouldShowAssessmentRecommendation && (
+              <AssessmentRecommendation
+                reportData={reportData}
+                complianceReportId={complianceReportId}
+                currentStatus={currentStatus}
+              />
+            )}
+            {/* Internal Comments */}
+            {isGovernmentUser && (
+              <BCBox>
+                <BCTypography variant="h6" color="primary">
+                  {t(`report:internalComments`)}
+                </BCTypography>
+                <BCBox>
+                  <Role roles={govRoles}>
+                    <InternalComments
+                      entityType="complianceReport"
+                      entityId={parseInt(complianceReportId)}
+                    />
+                  </Role>
                 </BCBox>
               </BCBox>
-            </>
-          )}
+            )}
+          </BCBox>
 
           {/* 30-Day Submission Notice for BCeID on Draft Supplementals */}
           {!isGovernmentUser && isDraftSupplemental && submissionDeadline && (
