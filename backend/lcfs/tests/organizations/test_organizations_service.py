@@ -2,15 +2,6 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.organizations.schema import OrganizationSummaryResponseSchema
-from lcfs.db.models.organization.OrganizationStatus import OrganizationStatus, OrgStatusEnum
-
-
-def create_mock_org_status(status_enum: OrgStatusEnum):
-    mock_status = MagicMock(spec=OrganizationStatus)
-    mock_status.organization_status_id = 1
-    mock_status.status = status_enum
-    mock_status.description = f"{status_enum.value} status"
-    return mock_status
 
 
 @pytest.fixture
@@ -49,7 +40,6 @@ async def test_get_organization_names_with_statuses(organizations_service, mock_
             "operating_name": "Test Operating 1",
             "total_balance": 1000,
             "reserved_balance": 100,
-            "status": create_mock_org_status(OrgStatusEnum.Registered),
         },
         {
             "organization_id": 2,
@@ -57,7 +47,6 @@ async def test_get_organization_names_with_statuses(organizations_service, mock_
             "operating_name": "Test Operating 2",
             "total_balance": 2000,
             "reserved_balance": 200,
-            "status": create_mock_org_status(OrgStatusEnum.Unregistered),
         },
     ]
 
@@ -102,7 +91,6 @@ async def test_get_organization_names_registered_status(
             "operating_name": "Registered Operating",
             "total_balance": 1000,
             "reserved_balance": 100,
-            "status": create_mock_org_status(OrgStatusEnum.Registered),
         }
     ]
 
@@ -139,7 +127,6 @@ async def test_get_organization_names_no_statuses_filter(
             "operating_name": "Any Operating",
             "total_balance": 1000,
             "reserved_balance": 100,
-            "status": create_mock_org_status(OrgStatusEnum.Registered),
         }
     ]
 
