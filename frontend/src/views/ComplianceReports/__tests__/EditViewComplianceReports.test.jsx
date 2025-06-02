@@ -103,7 +103,21 @@ vi.mock('../components/ReportDetails', () => ({
 }))
 
 vi.mock('../components/ComplianceReportSummary', () => ({
-  default: () => <div>Compliance Report Summary</div>
+  default: ({ buttonClusterConfig, currentStatus }) => {
+    // Get the buttons for the current status
+    const buttons = buttonClusterConfig?.[currentStatus] || []
+
+    return (
+      <div>
+        <div>Compliance Report Summary</div>
+        {buttons.map((button, index) => (
+          <button key={index} type="button">
+            {button.label}
+          </button>
+        ))}
+      </div>
+    )
+  }
 }))
 
 vi.mock('../components/Introduction', () => ({
