@@ -103,7 +103,21 @@ vi.mock('../components/ReportDetails', () => ({
 }))
 
 vi.mock('../components/ComplianceReportSummary', () => ({
-  default: () => <div>Compliance Report Summary</div>
+  default: ({ buttonClusterConfig, currentStatus }) => {
+    // Get the buttons for the current status
+    const buttons = buttonClusterConfig?.[currentStatus] || []
+
+    return (
+      <div>
+        <div>Compliance Report Summary</div>
+        {buttons.map((button, index) => (
+          <button key={index} type="button">
+            {button.label}
+          </button>
+        ))}
+      </div>
+    )
+  }
 }))
 
 vi.mock('../components/Introduction', () => ({
@@ -112,6 +126,10 @@ vi.mock('../components/Introduction', () => ({
 
 vi.mock('../components/AssessmentStatement', () => ({
   AssessmentStatement: () => <div>Assessment Statement</div>
+}))
+
+vi.mock('../components/AssessmentRecommendation', () => ({
+  AssessmentRecommendation: () => <div>Assessment Recommendation</div>
 }))
 
 // Basic mock data structure
@@ -633,6 +651,305 @@ describe('EditViewComplianceReport', () => {
     await waitFor(() => {
       fireEvent.scroll(window, { target: { pageYOffset: 0 } })
       expect(screen.getByLabelText('scroll to bottom')).toBeInTheDocument()
+    })
+  })
+
+  describe('Assessment Section Visibility', () => {
+    it('shows assessment section title and components for government users without draft supplemental', async () => {
+      const mocks = setupMocks({
+        currentUser: {
+          data: { isGovernmentUser: true },
+          hasRoles: (role) => role === 'Analyst',
+          hasAnyRole: () => false,
+          isLoading: false
+        },
+        reportData: {
+          report: {
+            organizationId: '123',
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            history: [],
+            nickname: 'Test Report',
+            reportingFrequency: 'Annual' // Not quarterly
+          },
+          chain: []
+        }
+      })
+
+      // Mock useGetComplianceReport to return no draft supplemental
+      vi.mocked(
+        useComplianceReportsHook.useGetComplianceReport
+      ).mockReturnValue({
+        data: { isNewest: true }, // No draft supplemental
+        isLoading: false,
+        isError: false
+      })
+
+      render(
+        <EditViewComplianceReport
+          reportData={mocks.reportData}
+          isError={mocks.isError}
+          error={mocks.error}
+        />,
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('report:assessmentRecommendation')
+        ).toBeInTheDocument()
+        expect(screen.getByText('Assessment Statement')).toBeInTheDocument()
+        expect(
+          screen.getByText('Assessment Recommendation')
+        ).toBeInTheDocument()
+      })
+    })
+
+    it('hides assessment section title and components when draft supplemental exists', async () => {
+      const mocks = setupMocks({
+        currentUser: {
+          data: { isGovernmentUser: true },
+          hasRoles: (role) => role === 'Analyst',
+          hasAnyRole: () => false,
+          isLoading: false
+        },
+        reportData: {
+          report: {
+            organizationId: '123',
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            history: [],
+            nickname: 'Test Report',
+            reportingFrequency: 'Annual'
+          },
+          chain: []
+        }
+      })
+
+      // Mock useGetComplianceReport to return draft supplemental exists
+      vi.mocked(
+        useComplianceReportsHook.useGetComplianceReport
+      ).mockReturnValue({
+        data: { isNewest: false }, // Draft supplemental exists
+        isLoading: false,
+        isError: false
+      })
+
+      render(
+        <EditViewComplianceReport
+          reportData={mocks.reportData}
+          isError={mocks.isError}
+          error={mocks.error}
+        />,
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('report:assessmentRecommendation')
+        ).not.toBeInTheDocument()
+        expect(
+          screen.queryByText('Assessment Statement')
+        ).not.toBeInTheDocument()
+        expect(
+          screen.queryByText('Assessment Recommendation')
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it('hides assessment section for quarterly reports', async () => {
+      const mocks = setupMocks({
+        currentUser: {
+          data: { isGovernmentUser: true },
+          hasRoles: (role) => role === 'Analyst',
+          hasAnyRole: () => false,
+          isLoading: false
+        },
+        reportData: {
+          report: {
+            organizationId: '123',
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            history: [],
+            nickname: 'Test Report',
+            reportingFrequency: 'Quarterly' // Quarterly report
+          },
+          chain: []
+        }
+      })
+
+      vi.mocked(
+        useComplianceReportsHook.useGetComplianceReport
+      ).mockReturnValue({
+        data: { isNewest: true },
+        isLoading: false,
+        isError: false
+      })
+
+      render(
+        <EditViewComplianceReport
+          reportData={mocks.reportData}
+          isError={mocks.isError}
+          error={mocks.error}
+        />,
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('report:assessmentRecommendation')
+        ).not.toBeInTheDocument()
+        expect(
+          screen.queryByText('Assessment Statement')
+        ).not.toBeInTheDocument()
+        expect(
+          screen.queryByText('Assessment Recommendation')
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it('hides assessment statement for non-government users', async () => {
+      const mocks = setupMocks({
+        currentUser: {
+          data: { isGovernmentUser: false },
+          hasRoles: () => false,
+          hasAnyRole: () => false,
+          isLoading: false
+        },
+        reportData: {
+          report: {
+            organizationId: '123',
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            history: [],
+            nickname: 'Test Report',
+            reportingFrequency: 'Annual'
+          },
+          chain: []
+        }
+      })
+
+      vi.mocked(
+        useComplianceReportsHook.useGetComplianceReport
+      ).mockReturnValue({
+        data: { isNewest: true },
+        isLoading: false,
+        isError: false
+      })
+
+      render(
+        <EditViewComplianceReport
+          reportData={mocks.reportData}
+          isError={mocks.isError}
+          error={mocks.error}
+        />,
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText('Assessment Statement')
+        ).not.toBeInTheDocument()
+        // Section title should not show since no components are visible
+        expect(
+          screen.queryByText('report:assessmentRecommendation')
+        ).not.toBeInTheDocument()
+      })
+    })
+
+    it('shows assessment recommendation only for analysts', async () => {
+      const mocks = setupMocks({
+        currentUser: {
+          data: { isGovernmentUser: true },
+          hasRoles: (role) => role === 'Director', // Not analyst
+          hasAnyRole: () => false,
+          isLoading: false
+        },
+        reportData: {
+          report: {
+            organizationId: '123',
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            history: [],
+            nickname: 'Test Report',
+            reportingFrequency: 'Annual'
+          },
+          chain: []
+        }
+      })
+
+      vi.mocked(
+        useComplianceReportsHook.useGetComplianceReport
+      ).mockReturnValue({
+        data: { isNewest: true },
+        isLoading: false,
+        isError: false
+      })
+
+      render(
+        <EditViewComplianceReport
+          reportData={mocks.reportData}
+          isError={mocks.isError}
+          error={mocks.error}
+        />,
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        // Should show assessment statement for government users
+        expect(screen.getByText('Assessment Statement')).toBeInTheDocument()
+        // Should not show assessment recommendation for non-analysts
+        expect(
+          screen.queryByText('Assessment Recommendation')
+        ).not.toBeInTheDocument()
+        // Should still show section title since assessment statement is visible
+        expect(
+          screen.getByText('report:assessmentRecommendation')
+        ).toBeInTheDocument()
+      })
+    })
+
+    it('shows both assessment components for government analyst users', async () => {
+      const mocks = setupMocks({
+        currentUser: {
+          data: { isGovernmentUser: true },
+          hasRoles: (role) => role === 'Analyst',
+          hasAnyRole: () => false,
+          isLoading: false
+        },
+        reportData: {
+          report: {
+            organizationId: '123',
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+            history: [],
+            nickname: 'Test Report',
+            reportingFrequency: 'Annual'
+          },
+          chain: []
+        }
+      })
+
+      vi.mocked(
+        useComplianceReportsHook.useGetComplianceReport
+      ).mockReturnValue({
+        data: { isNewest: true },
+        isLoading: false,
+        isError: false
+      })
+
+      render(
+        <EditViewComplianceReport
+          reportData={mocks.reportData}
+          isError={mocks.isError}
+          error={mocks.error}
+        />,
+        { wrapper }
+      )
+
+      await waitFor(() => {
+        expect(
+          screen.getByText('report:assessmentRecommendation')
+        ).toBeInTheDocument()
+        expect(screen.getByText('Assessment Statement')).toBeInTheDocument()
+        expect(
+          screen.getByText('Assessment Recommendation')
+        ).toBeInTheDocument()
+      })
     })
   })
 })

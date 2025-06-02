@@ -47,12 +47,13 @@ export const CompareReports = () => {
       setReportChain(chain)
 
       // Set default selections to the two most recent reports
+      // with the oldest on the left (report1) and newest on the right (report2)
       if (chain.length >= 2) {
         const sortedChain = [...chain].sort(
           (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
         )
-        setReport1ID(sortedChain[0].complianceReportId)
-        setReport2ID(sortedChain[1].complianceReportId)
+        setReport1ID(sortedChain[1].complianceReportId)
+        setReport2ID(sortedChain[0].complianceReportId)
       }
 
       setIsLoading(false)
