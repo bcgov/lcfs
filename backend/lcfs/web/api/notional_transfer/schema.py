@@ -1,5 +1,5 @@
 from typing import Optional, List
-from pydantic import Field
+from pydantic import Field, model_validator
 from lcfs.web.api.base import (
     BaseSchema,
     FilterModel,
@@ -9,6 +9,8 @@ from lcfs.web.api.base import (
     ComplianceReportRequestSchema,
 )
 from enum import Enum
+from lcfs.db.models.compliance.NotionalTransfer import ReceivedOrTransferredEnum
+from lcfs.web.utils.schema_validators import fuel_quantity_required
 
 
 class ReceivedOrTransferredEnumSchema(str, Enum):
@@ -31,7 +33,11 @@ class NotionalTransferChangelogSchema(BaseSchema):
     address_for_service: str
     fuel_category: FuelCategorySchema
     received_or_transferred: ReceivedOrTransferredEnumSchema
-    quantity: int
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     notional_transfer_id: Optional[int] = None
     compliance_report_id: int
     deleted: Optional[bool] = None
@@ -46,7 +52,11 @@ class NotionalTransferCreateSchema(BaseSchema):
     address_for_service: str
     fuel_category: str
     received_or_transferred: ReceivedOrTransferredEnumSchema
-    quantity: int
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     notional_transfer_id: Optional[int] = None
     compliance_report_id: int
     deleted: Optional[bool] = None
@@ -54,6 +64,13 @@ class NotionalTransferCreateSchema(BaseSchema):
     version: Optional[int] = None
     action_type: Optional[str] = None
     is_new_supplemental_entry: Optional[bool] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_quantity_required(cls, values):
+        if isinstance(values, DeleteNotionalTransferResponseSchema):
+            return values
+        return fuel_quantity_required(values)
 
 
 class NotionalTransferSchema(NotionalTransferCreateSchema):
