@@ -80,8 +80,20 @@ class ComplianceReportValidation:
             ComplianceReportStatusEnum.Analyst_adjustment,
         ]
 
-        if compliance_report.current_status.status not in editable_statuses:
+        # Get the current status - handle both enum and string values
+        current_status = compliance_report.current_status.status
+        if hasattr(current_status, "value"):
+            # If it's an enum, get the string value
+            current_status_value = current_status.value
+        else:
+            # If it's already a string
+            current_status_value = current_status
+
+        # Check if the status value matches any of the editable status values
+        editable_status_values = [status.value for status in editable_statuses]
+
+        if current_status_value not in editable_status_values:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Compliance report cannot be edited in {compliance_report.current_status.status} status. Editing is only allowed in Draft or Analyst adjustment status.",
+                detail=f"Compliance report cannot be edited in {current_status_value} status. Editing is only allowed in Draft or Analyst adjustment status.",
             )

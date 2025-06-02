@@ -159,19 +159,11 @@ export const AddEditFinalSupplyEquipments = () => {
         compliancePeriod,
         errors,
         warnings,
-        isGridReady,
-        complianceReport?.currentStatus?.status
+        isGridReady
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [
-    compliancePeriod,
-    errors,
-    warnings,
-    optionsData,
-    isGridReady,
-    complianceReport?.currentStatus?.status
-  ])
+  }, [compliancePeriod, errors, warnings, optionsData, isGridReady])
 
   const onCellEditingStopped = useCallback(
     async (params) => {
