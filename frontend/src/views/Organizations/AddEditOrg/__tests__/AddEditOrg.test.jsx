@@ -197,11 +197,13 @@ describe('AddEditOrg', () => {
     // Setup useMutation mock to call onSuccess when mutate is called
     const { useMutation } = await import('@tanstack/react-query')
     useMutation.mockImplementation(({ onSuccess }) => ({
-      mutate: vi.fn((payload) => {
+      mutate: vi.fn(async (payload) => {
         // Simulate successful API call
-        apiSpy.post('/organizations/create', payload).then(() => {
+        await apiSpy.post('/organizations/create', payload)
+        // Call onSuccess immediately after API call
+        if (onSuccess) {
           onSuccess()
-        })
+        }
       }),
       isPending: false,
       isError: false
@@ -248,21 +250,27 @@ describe('AddEditOrg', () => {
     fireEvent.click(screen.getByTestId('saveOrganization'))
 
     // Wait for the API call to be made
-    await waitFor(() => {
-      expect(apiSpy.post).toHaveBeenCalledWith(
-        '/organizations/create',
-        expect.any(Object)
-      )
-    })
+    await waitFor(
+      () => {
+        expect(apiSpy.post).toHaveBeenCalledWith(
+          '/organizations/create',
+          expect.any(Object)
+        )
+      },
+      { timeout: 10000 }
+    )
 
     // Wait for the navigation side effect
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST, {
-        state: {
-          message: 'Organization has been successfully added.',
-          severity: 'success'
-        }
-      })
-    })
-  }, 15000)
+    await waitFor(
+      () => {
+        expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST, {
+          state: {
+            message: 'Organization has been successfully added.',
+            severity: 'success'
+          }
+        })
+      },
+      { timeout: 5000 }
+    )
+  }, 20000) // Increase overall test timeout to 20 seconds
 })

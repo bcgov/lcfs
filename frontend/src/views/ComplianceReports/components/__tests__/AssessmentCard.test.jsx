@@ -419,4 +419,103 @@ describe('AssessmentCard - assessedMessage indirect testing', () => {
       ).not.toBeInTheDocument()
     })
   })
+
+  // Test for the fix: Hide assessment statements for supplemental reports in draft status for IDIR users
+  it('hides assessment statement for supplemental reports in draft status for IDIR users', async () => {
+    const mockChain = [
+      {
+        history: mockHistory,
+        version: 1, // Supplemental report (version > 0)
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }, // Not draft for history to show
+        assessmentStatement: 'Test assessment statement'
+      }
+    ]
+
+    render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={true} // IDIR user
+        currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT} // Draft status
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
+        reportVersion={1} // Supplemental report
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      // Report history should still be hidden because currentStatus is DRAFT
+      expect(screen.queryByText('Report History')).not.toBeInTheDocument()
+      // Assessment statement should not be present
+      expect(
+        screen.queryByText('Test assessment statement')
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it('shows assessment statement for supplemental reports in non-draft status for IDIR users', async () => {
+    const mockChain = [
+      {
+        history: mockHistory,
+        version: 1, // Supplemental report (version > 0)
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        assessmentStatement: 'Test assessment statement'
+      }
+    ]
+
+    render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={true} // IDIR user
+        currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED} // Non-draft status
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
+        reportVersion={1} // Supplemental report
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      // Report history should be visible since it's not in draft
+      expect(screen.getByText('Report History')).toBeInTheDocument()
+      // Assessment statement should be visible for supplemental reports in submitted status
+      expect(screen.getByText('Test assessment statement')).toBeInTheDocument()
+    })
+  })
+
+  it('shows assessment statement for original reports in any status for IDIR users', async () => {
+    const mockChain = [
+      {
+        history: mockHistory,
+        version: 0, // Original report (version = 0)
+        currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+        assessmentStatement: 'Test assessment statement'
+      }
+    ]
+
+    render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={true} // IDIR user
+        currentStatus={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+        complianceReportId="123"
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={mockChain}
+        reportVersion={0} // Original report
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      // Report history should be visible
+      expect(screen.getByText('Report History')).toBeInTheDocument()
+      // Assessment statement should be visible for original reports
+      expect(screen.getByText('Test assessment statement')).toBeInTheDocument()
+    })
+  })
 })
