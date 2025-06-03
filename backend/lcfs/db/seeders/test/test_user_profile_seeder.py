@@ -7,63 +7,17 @@ logger = structlog.get_logger(__name__)
 
 async def seed_test_user_profiles(session):
     """
-    Seeds the user profiles into the database, if they do not already exist.
+    Seeds the user profiles into the database with comprehensive test data,
+    if they do not already exist.
 
     Args:
         session: The database session for committing the new records.
     """
 
-    # Define the user profiles to seed
+    # Define the user profiles to seed based on actual test database
     user_profiles_to_seed = [
         {
-            "keycloak_email": "stuart.galloway@gov.bc.ca",
-            "keycloak_username": "SGALLOWA",
-            "email": "stuart.galloway@gov.bc.ca",
-            "title": "Sr. UX Practitioner",
-            "phone": "1234567890",
-            "mobile_phone": "1234567890",
-            "first_name": "Stuart",
-            "last_name": "Galloway",
-            "organization_id": None,
-            "is_active": True,
-        },
-        {
-            "keycloak_email": "Haris.Ishaq@gov.bc.ca",
-            "keycloak_username": "HISHAQ",
-            "email": "Haris.Ishaq@gov.bc.ca",
-            "title": "Chief Engineer",
-            "phone": None,
-            "mobile_phone": None,
-            "first_name": "Haris",
-            "last_name": "Ishaq",
-            "organization_id": None,
-            "is_active": True,
-        },
-        {
-            "keycloak_email": "shannon.payne@gov.bc.ca",
-            "keycloak_username": "shpayne",
-            "email": "shannon.payne@gov.bc.ca",
-            "title": "Chief Engineer",
-            "phone": None,
-            "mobile_phone": None,
-            "first_name": "Shannon",
-            "last_name": "Payne",
-            "organization_id": None,
-            "is_active": True,
-        },
-        {
-            "keycloak_email": "tfrs@gov.bc.ca",
-            "keycloak_username": "LCFS1_bat",
-            "email": "tfrs@gov.bc.ca",
-            "title": "CEO",
-            "phone": None,
-            "mobile_phone": None,
-            "first_name": "Donald",
-            "last_name": "Freeman",
-            "organization_id": 1,
-            "is_active": True,
-        },
-        {
+            "user_profile_id": 1,
             "keycloak_email": "alex.zorkin@gov.bc.ca",
             "keycloak_username": "ALZORKIN",
             "email": "alex.zorkin@gov.bc.ca",
@@ -76,6 +30,7 @@ async def seed_test_user_profiles(session):
             "last_name": "Zorkin",
         },
         {
+            "user_profile_id": 2,
             "keycloak_email": "hamed.valiollahibayeki@gov.bc.ca",
             "keycloak_username": "HVALIOLL",
             "email": "hamed.valiollahibayeki@gov.bc.ca",
@@ -88,6 +43,7 @@ async def seed_test_user_profiles(session):
             "last_name": "Bayeki",
         },
         {
+            "user_profile_id": 3,
             "keycloak_email": "kevin.hashimoto@gov.bc.ca",
             "keycloak_username": "KHASHIMO",
             "email": "kevin.hashimoto@gov.bc.ca",
@@ -100,6 +56,7 @@ async def seed_test_user_profiles(session):
             "last_name": "Hashimoto",
         },
         {
+            "user_profile_id": 4,
             "keycloak_email": "prashanth.venkateshappa@gov.bc.ca",
             "keycloak_username": "PVENKATE",
             "email": "prashanth.venkateshappa@gov.bc.ca",
@@ -112,6 +69,7 @@ async def seed_test_user_profiles(session):
             "last_name": "V",
         },
         {
+            "user_profile_id": 5,
             "keycloak_email": "justin.lepitzki@gov.bc.ca",
             "keycloak_username": "JLEPITZ",
             "email": "justin.lepitzki@gov.bc.ca",
@@ -124,6 +82,7 @@ async def seed_test_user_profiles(session):
             "last_name": "Lepitzki",
         },
         {
+            "user_profile_id": 6,
             "keycloak_email": "lindsy.grunert@gov.bc.ca",
             "keycloak_username": "LGRUNERT",
             "email": "lindsy.grunert@gov.bc.ca",
@@ -136,6 +95,150 @@ async def seed_test_user_profiles(session):
             "last_name": "Grunert",
         },
         {
+            "user_profile_id": 7,
+            "keycloak_email": "tfrs@gov.bc.ca",
+            "keycloak_username": "tfs1",
+            "email": "tfrs@gov.bc.ca",
+            "title": "Supplier - Liquid",
+            "phone": "(604) 567-8976",
+            "mobile_phone": "1112223333",
+            "organization_id": 1,
+            "is_active": True,
+            "first_name": "Jane",
+            "last_name": "Doe",
+        },
+        {
+            "user_profile_id": 8,
+            "keycloak_email": "tfrs@gov.bc.ca",
+            "keycloak_username": "tfs2",
+            "email": "tfrs@gov.bc.ca",
+            "title": "Allocator Rep - Fleet",
+            "phone": "(778) 896-1198",
+            "mobile_phone": "2223334444",
+            "organization_id": 2,
+            "is_active": True,
+            "first_name": "John",
+            "last_name": "Smith",
+        },
+        {
+            "user_profile_id": 9,
+            "keycloak_email": "tfrs@gov.bc.ca",
+            "keycloak_username": "tfs3",
+            "email": "tfrs@gov.bc.ca",
+            "title": "Supplier - Biofuel",
+            "phone": "(250) 765-9901",
+            "mobile_phone": "3334445555",
+            "organization_id": 3,
+            "is_active": True,
+            "first_name": "Alice",
+            "last_name": "Woo",
+        },
+        {
+            "user_profile_id": 10,
+            "keycloak_email": "tfrs@gov.bc.ca",
+            "keycloak_username": "tfs4",
+            "email": "tfrs@gov.bc.ca",
+            "title": "Supplier - Electricity, Liquid Fuel, Exporter",
+            "phone": "(250) 555-1122",
+            "mobile_phone": "4445556666",
+            "organization_id": 4,
+            "is_active": True,
+            "first_name": "Bob",
+            "last_name": "Lee",
+        },
+        {
+            "user_profile_id": 11,
+            "keycloak_email": "tfrs@gov.bc.ca",
+            "keycloak_username": "tfs5",
+            "email": "tfrs@gov.bc.ca",
+            "title": "Analyst",
+            "phone": "6667778888",
+            "mobile_phone": "6667778888",
+            "organization_id": 5,
+            "is_active": True,
+            "first_name": "David",
+            "last_name": "Clark",
+        },
+        {
+            "user_profile_id": 12,
+            "keycloak_email": "tfrs@gov.bc.ca",
+            "keycloak_username": "tfs6",
+            "email": "tfrs@gov.bc.ca",
+            "title": "Analyst",
+            "phone": "8889990000",
+            "mobile_phone": "8889990000",
+            "organization_id": 6,
+            "is_active": True,
+            "first_name": "Frank",
+            "last_name": "Wilson",
+        },
+        {
+            "user_profile_id": 13,
+            "keycloak_email": "tfrs@gov.bc.ca",
+            "keycloak_username": "tfs7",
+            "email": "tfrs@gov.bc.ca",
+            "title": "Analyst",
+            "phone": "0001112222",
+            "mobile_phone": "0001112222",
+            "organization_id": 7,
+            "is_active": True,
+            "first_name": "Bill",
+            "last_name": "Teller",
+        },
+        {
+            "user_profile_id": 14,
+            "keycloak_email": "tfrs@gov.bc.ca",
+            "keycloak_username": "tfs8",
+            "email": "tfrs@gov.bc.ca",
+            "title": "Analyst",
+            "phone": "2223334445",
+            "mobile_phone": "2223334445",
+            "organization_id": 8,
+            "is_active": True,
+            "first_name": "James",
+            "last_name": "Bell",
+        },
+        {
+            "user_profile_id": 15,
+            "keycloak_email": "tfrs@gov.bc.ca",
+            "keycloak_username": "tfs9",
+            "email": "tfrs@gov.bc.ca",
+            "title": "Analyst",
+            "phone": "4445556667",
+            "mobile_phone": "4445556667",
+            "organization_id": 9,
+            "is_active": True,
+            "first_name": "Leo",
+            "last_name": "Martin",
+        },
+        {
+            "user_profile_id": 16,
+            "keycloak_email": "tfrs@gov.bc.ca",
+            "keycloak_username": "tfs10",
+            "email": "tfrs@gov.bc.ca",
+            "title": "Analyst",
+            "phone": "6667778889",
+            "mobile_phone": "6667778889",
+            "organization_id": 10,
+            "is_active": True,
+            "first_name": "Noah",
+            "last_name": "Thomas",
+        },
+        {
+            "user_profile_id": 17,
+            "keycloak_email": "kailee.douglas@gov.bc.ca",
+            "keycloak_username": "KADOUGLA",
+            "email": "kailee.douglas@gov.bc.ca",
+            "title": "Admin",
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": None,
+            "is_active": False,
+            "first_name": "Kailee",
+            "last_name": "Douglas",
+        },
+        {
+            "user_profile_id": 18,
             "keycloak_email": "alasdair.ring@gov.bc.ca",
             "keycloak_username": "AIRING",
             "email": "alasdair.ring@gov.bc.ca",
@@ -148,6 +251,7 @@ async def seed_test_user_profiles(session):
             "last_name": "Ring",
         },
         {
+            "user_profile_id": 19,
             "keycloak_email": "rebekah.ford@gov.bc.ca",
             "keycloak_username": "RRFORD",
             "email": "rebekah.ford@gov.bc.ca",
@@ -159,28 +263,63 @@ async def seed_test_user_profiles(session):
             "first_name": "Rebekah",
             "last_name": "Ford",
         },
+        {
+            "user_profile_id": 20,
+            "keycloak_email": "stuart.galloway@gov.bc.ca",
+            "keycloak_username": "SGALLOWA",
+            "email": "stuart.galloway@gov.bc.ca",
+            "title": "Sr. UX Practitioner",
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": None,
+            "is_active": True,
+            "first_name": "Stuart",
+            "last_name": "Galloway",
+        },
+        {
+            "user_profile_id": 21,
+            "keycloak_email": "lcfstest@gov.bc.ca",
+            "keycloak_username": "lcfstest",
+            "email": "lcfstest@gov.bc.ca",
+            "title": "Test Account",
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": None,
+            "is_active": False,
+            "first_name": "LCFS_IDIR",
+            "last_name": "TESTER",
+        },
+        {
+            "user_profile_id": 22,
+            "keycloak_email": "jackie.duys@gov.bc.ca",
+            "keycloak_username": "jduys",
+            "email": "jackie.duys@gov.bc.ca",
+            "title": "Senior Service Designer",
+            "phone": "1234567890",
+            "mobile_phone": "1234567890",
+            "organization_id": None,
+            "is_active": True,
+            "first_name": "Jackie",
+            "last_name": "Duys",
+        },
     ]
 
-    try:
-        for user_data in user_profiles_to_seed:
-            # Check if the user already exists based on a unique attribute
-            exists = await session.execute(
-                select(UserProfile).where(
-                    UserProfile.keycloak_email == user_data["keycloak_email"]
-                )
+    for user_profile_data in user_profiles_to_seed:
+        # Check if the user profile already exists
+        existing_user_profile = await session.execute(
+            select(UserProfile).where(
+                UserProfile.user_profile_id == user_profile_data["user_profile_id"]
             )
-            if not exists.scalars().first():
-                user_profile = UserProfile(**user_data)
-                session.add(user_profile)
-
-    except Exception as e:
-        context = {
-            "function": "seed_test_user_profiles",
-        }
-        logger.error(
-            "Error occurred while seeding user profiles",
-            error=str(e),
-            exc_info=e,
-            **context,
         )
-        raise
+        if existing_user_profile.scalar():
+            logger.info(
+                f"User profile with ID {user_profile_data['user_profile_id']} already exists, skipping."
+            )
+            continue
+
+        # Create and add the new user profile
+        user_profile = UserProfile(**user_profile_data)
+        session.add(user_profile)
+
+    await session.flush()
+    logger.info(f"Seeded {len(user_profiles_to_seed)} user profiles.")

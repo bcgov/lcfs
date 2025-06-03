@@ -1,108 +1,88 @@
 import structlog
 from datetime import datetime
-from sqlalchemy import select, and_, text
+from sqlalchemy import select, text
 from lcfs.db.models.transfer.Transfer import Transfer
-from lcfs.db.models.organization.Organization import Organization
 
 logger = structlog.get_logger(__name__)
 
 
 async def seed_test_transfers(session):
     """
-    Seeds the transfers into the test database, if they do not already exist.
+    Seeds the transfers into the test database with comprehensive test data,
+    if they do not already exist.
     Args:
         session: The database session for committing the new records.
     """
+    # Define the transfers to seed based on actual test database
     transfers_to_seed = [
         {
-            "from_organization_id": 1,
-            "to_organization_id": 2,
-            "current_status_id": 2,
-            "transfer_category_id": 1,
-            "agreement_date": datetime.strptime("2023-01-01", "%Y-%m-%d").date(),
+            "transfer_id": 1,
+            "from_organization_id": 5,
+            "to_organization_id": 1,
+            "from_transaction_id": 11,
+            "to_transaction_id": 16,
+            "quantity": 10000,
+            "transfer_category_id": 2,
+            "current_status_id": 6,
+            "price_per_unit": 500.00,
+        },
+        {
+            "transfer_id": 2,
+            "from_organization_id": 5,
+            "to_organization_id": 3,
+            "from_transaction_id": 12,
+            "quantity": 5000,
+            "current_status_id": 9,
+            "price_per_unit": 500.00,
+        },
+        {
+            "transfer_id": 3,
+            "from_organization_id": 2,
+            "to_organization_id": 3,
+            "from_transaction_id": 13,
             "quantity": 100,
-            "price_per_unit": 10.0,
+            "current_status_id": 7,
+            "price_per_unit": 235.00,
         },
         {
-            "from_organization_id": 2,
-            "to_organization_id": 1,
-            "current_status_id": 2,
+            "transfer_id": 4,
+            "from_organization_id": 1,
+            "to_organization_id": 5,
+            "from_transaction_id": 14,
+            "to_transaction_id": 15,
+            "quantity": 1000,
             "transfer_category_id": 1,
-            "agreement_date": datetime.strptime("2023-01-02", "%Y-%m-%d").date(),
-            "quantity": 50,
-            "price_per_unit": 5.0,
-        },
-        {
-            "from_organization_id": 2,
-            "to_organization_id": 1,
-            "current_status_id": 3,
-            "transfer_category_id": 1,
-            "from_transaction_id": 2,
-            "agreement_date": datetime.strptime("2023-01-02", "%Y-%m-%d").date(),
-            "quantity": 50,
-            "price_per_unit": 5.0,
+            "current_status_id": 6,
+            "price_per_unit": 250.00,
         },
     ]
 
     for transfer_data in transfers_to_seed:
-        from_org_exists = await session.get(
-            Organization, transfer_data["from_organization_id"]
+        # Check if the transfer already exists
+        existing_transfer = await session.execute(
+            select(Transfer).where(Transfer.transfer_id == transfer_data["transfer_id"])
         )
-        to_org_exists = await session.get(
-            Organization, transfer_data["to_organization_id"]
-        )
-
-        if not from_org_exists or not to_org_exists:
-            context = {
-                'transfer_data': transfer_data,
-                'from_org_exists': from_org_exists,
-                'to_org_exists': to_org_exists,
-            }
-            logger.error(
-                "Referenced organizations for transfer do not exist.",
-                **context,
+        if existing_transfer.scalar():
+            logger.info(
+                f"Transfer with ID {transfer_data['transfer_id']} already exists, skipping."
             )
             continue
 
-        try:
-            exists = await session.execute(
-                select(Transfer).where(
-                    and_(
-                        Transfer.from_organization_id
-                        == transfer_data["from_organization_id"],
-                        Transfer.to_organization_id
-                        == transfer_data["to_organization_id"],
-                        Transfer.current_status_id
-                        == transfer_data["current_status_id"],
-                        Transfer.transfer_category_id
-                        == transfer_data["transfer_category_id"],
-                        Transfer.agreement_date == transfer_data["agreement_date"],
-                        Transfer.quantity == transfer_data["quantity"],
-                        Transfer.price_per_unit == transfer_data["price_per_unit"],
-                    )
-                )
-            )
-            transfer = exists.scalars().first()
-            if not transfer:
-                transfer = Transfer(**transfer_data)
-                session.add(transfer)
-            else:
-                # Update existing transfer if needed
-                pass
+        # Create and add the new transfer
+        transfer = Transfer(**transfer_data)
+        session.add(transfer)
 
-        except Exception as e:
-            context = {
-                "function": "seed_test_transfers",
-            }
-            logger.error(
-                "Error occurred while seeding transfers",
-                error=str(e),
-                exc_info=e,
-                **context,
-            )
-            raise
+    await session.flush()
+    logger.info(f"Seeded {len(transfers_to_seed)} transfers.")
 
     # Refresh the materialized view to include the new/updated transfers
-    await session.execute(
-        text("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate")
-    )
+    try:
+        await session.execute(
+            text("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate")
+        )
+    except Exception as e:
+        logger.warning(f"Could not refresh materialized view: {e}")
+        # Try without CONCURRENTLY
+        await session.execute(
+            text("REFRESH MATERIALIZED VIEW mv_transaction_aggregate")
+        )
