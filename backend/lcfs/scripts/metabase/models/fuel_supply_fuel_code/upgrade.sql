@@ -1,5 +1,5 @@
 -- Create Transfer Summary View
-CREATE OR REPLACE VIEW public.vw_fuel_supply_fuel_code AS
+CREATE OR REPLACE VIEW vw_fuel_supply_fuel_code AS
 SELECT
       "source"."compliance_report_id" AS "compliance_report_id",
       "source"."organization_id" AS "organization_id",
@@ -72,7 +72,7 @@ SELECT
           SELECT
             DISTINCT ON (group_uuid) *
           FROM
-            public.fuel_supply
+            fuel_supply
          
 ORDER BY
             group_uuid,
@@ -143,7 +143,7 @@ LEFT JOIN provision_of_the_act ON fuel_supply.provision_of_the_act_id = provisio
 WHERE
           compliance_report.current_status_id IN (2, 3, 4, 5)
       ) AS "source"
-      LEFT JOIN "public"."fuel_code" AS "Fuel Code - fuel_code_id" ON "source"."fuel_code_id" = "Fuel Code - fuel_code_id"."fuel_code_id";
+      LEFT JOIN "fuel_code" AS "Fuel Code - fuel_code_id" ON "source"."fuel_code_id" = "Fuel Code - fuel_code_id"."fuel_code_id";
 
 -- Grant SELECT privileges to the reporting role
-GRANT SELECT ON public.vw_fuel_supply_fuel_code TO basic_lcfs_reporting_role;
+GRANT SELECT ON vw_fuel_supply_fuel_code TO basic_lcfs_reporting_role;

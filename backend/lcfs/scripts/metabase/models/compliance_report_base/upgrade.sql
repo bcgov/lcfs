@@ -1,23 +1,23 @@
 -- Create Transfer Summary View
-CREATE OR REPLACE VIEW public.vw_compliance_report_base AS
+CREATE OR REPLACE VIEW vw_compliance_report_base AS
 SELECT
-      "public"."compliance_report"."compliance_report_id" AS "compliance_report_id",
-      "public"."compliance_report"."compliance_period_id" AS "compliance_period_id",
-      "public"."compliance_report"."organization_id" AS "organization_id",
-      "public"."compliance_report"."current_status_id" AS "current_status_id",
-      "public"."compliance_report"."transaction_id" AS "transaction_id",
-      "public"."compliance_report"."compliance_report_group_uuid" AS "compliance_report_group_uuid",
-      "public"."compliance_report"."legacy_id" AS "legacy_id",
-      "public"."compliance_report"."version" AS "version",
-      "public"."compliance_report"."supplemental_initiator" AS "supplemental_initiator",
-      "public"."compliance_report"."reporting_frequency" AS "reporting_frequency",
-      "public"."compliance_report"."nickname" AS "nickname",
-      "public"."compliance_report"."supplemental_note" AS "supplemental_note",
-      "public"."compliance_report"."create_date" AS "create_date",
-      "public"."compliance_report"."update_date" AS "update_date",
-      "public"."compliance_report"."create_user" AS "create_user",
-      "public"."compliance_report"."update_user" AS "update_user",
-      "public"."compliance_report"."assessment_statement" AS "assessment_statement",
+      "compliance_report"."compliance_report_id" AS "compliance_report_id",
+      "compliance_report"."compliance_period_id" AS "compliance_period_id",
+      "compliance_report"."organization_id" AS "organization_id",
+      "compliance_report"."current_status_id" AS "current_status_id",
+      "compliance_report"."transaction_id" AS "transaction_id",
+      "compliance_report"."compliance_report_group_uuid" AS "compliance_report_group_uuid",
+      "compliance_report"."legacy_id" AS "legacy_id",
+      "compliance_report"."version" AS "version",
+      "compliance_report"."supplemental_initiator" AS "supplemental_initiator",
+      "compliance_report"."reporting_frequency" AS "reporting_frequency",
+      "compliance_report"."nickname" AS "nickname",
+      "compliance_report"."supplemental_note" AS "supplemental_note",
+      "compliance_report"."create_date" AS "create_date",
+      "compliance_report"."update_date" AS "update_date",
+      "compliance_report"."create_user" AS "create_user",
+      "compliance_report"."update_user" AS "update_user",
+      "compliance_report"."assessment_statement" AS "assessment_statement",
       CASE
         WHEN "Compliance Report Summary - Compliance Report"."line_11_fossil_derived_base_fuel_total" > 0 THEN 'Not Met'
         ELSE 'Met'
@@ -144,13 +144,13 @@ SELECT
       "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid" AS "Compliance Reports Chained - Compliance Report Grou_1a77e4cb",
       "Compliance Reports Chained - Compliance Report Group UUID"."max_version" AS "Compliance Reports Chained - Compliance Report Grou_480bb7b1"
     FROM
-      "public"."compliance_report"
-      INNER JOIN "public"."compliance_period" AS "Compliance Period" ON "public"."compliance_report"."compliance_period_id" = "Compliance Period"."compliance_period_id"
-      INNER JOIN "public"."compliance_report_status" AS "Compliance Report Status - Current Status" ON "public"."compliance_report"."current_status_id" = "Compliance Report Status - Current Status"."compliance_report_status_id"
-      INNER JOIN "public"."compliance_report_summary" AS "Compliance Report Summary - Compliance Report" ON "public"."compliance_report"."compliance_report_id" = "Compliance Report Summary - Compliance Report"."compliance_report_id"
+      "compliance_report"
+      INNER JOIN "compliance_period" AS "Compliance Period" ON "compliance_report"."compliance_period_id" = "Compliance Period"."compliance_period_id"
+      INNER JOIN "compliance_report_status" AS "Compliance Report Status - Current Status" ON "compliance_report"."current_status_id" = "Compliance Report Status - Current Status"."compliance_report_status_id"
+      INNER JOIN "compliance_report_summary" AS "Compliance Report Summary - Compliance Report" ON "compliance_report"."compliance_report_id" = "Compliance Report Summary - Compliance Report"."compliance_report_id"
      
-LEFT JOIN "public"."transaction" AS "Transaction" ON "public"."compliance_report"."transaction_id" = "Transaction"."transaction_id"
-      LEFT JOIN "public"."organization" AS "Organization" ON "public"."compliance_report"."organization_id" = "Organization"."organization_id"
+LEFT JOIN "transaction" AS "Transaction" ON "compliance_report"."transaction_id" = "Transaction"."transaction_id"
+      LEFT JOIN "organization" AS "Organization" ON "compliance_report"."organization_id" = "Organization"."organization_id"
       INNER JOIN (
         SELECT
           compliance_report_group_uuid AS group_uuid,
@@ -161,12 +161,12 @@ LEFT JOIN "public"."transaction" AS "Transaction" ON "public"."compliance_report
 GROUP BY
           COMPLIANCE_REPORT.compliance_report_group_uuid
       ) AS "Compliance Reports Chained - Compliance Report Group UUID" ON (
-        "public"."compliance_report"."compliance_report_group_uuid" = "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid"
+        "compliance_report"."compliance_report_group_uuid" = "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid"
       )
      
    AND (
-        "public"."compliance_report"."version" = "Compliance Reports Chained - Compliance Report Group UUID"."max_version"
+        "compliance_report"."version" = "Compliance Reports Chained - Compliance Report Group UUID"."max_version"
       );
 
 -- Grant SELECT privileges to the reporting role
-GRANT SELECT ON public.vw_compliance_report_base TO basic_lcfs_reporting_role;
+GRANT SELECT ON vw_compliance_report_base TO basic_lcfs_reporting_role;

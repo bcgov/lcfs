@@ -1,5 +1,5 @@
 -- Create Transfer Summary View
-CREATE OR REPLACE VIEW public.vw_transfer_base AS
+CREATE OR REPLACE VIEW vw_transfer_base AS
 SELECT
       transfer.transfer_id,
       transfer_status.status,
@@ -38,4 +38,4 @@ WHERE
       AND status = 'Recorded';
 
 -- Grant SELECT privileges to the reporting role
-GRANT SELECT ON public.vw_transfer_base TO basic_lcfs_reporting_role;
+GRANT SELECT ON vw_transfer_base TO basic_lcfs_reporting_role;

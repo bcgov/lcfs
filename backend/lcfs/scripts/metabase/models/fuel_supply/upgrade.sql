@@ -1,10 +1,10 @@
 -- Create Transfer Summary View
-CREATE OR REPLACE VIEW public.vw_fuel_supply AS
+CREATE OR REPLACE VIEW vw_fuel_supply AS
 WITH latest_fs AS (
       SELECT
         DISTINCT ON (group_uuid) *
       FROM
-        public.fuel_supply
+        fuel_supply
      
 ORDER BY
         group_uuid,
@@ -76,4 +76,4 @@ WHERE
       compliance_report.current_status_id IN (2, 3, 4, 5);
 
 -- Grant SELECT privileges to the reporting role
-GRANT SELECT ON public.vw_fuel_supply TO basic_lcfs_reporting_role;
+GRANT SELECT ON vw_fuel_supply TO basic_lcfs_reporting_role;

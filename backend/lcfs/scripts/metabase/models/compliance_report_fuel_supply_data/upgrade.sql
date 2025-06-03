@@ -1,5 +1,5 @@
 -- Create Transfer Summary View
-CREATE OR REPLACE VIEW public.vw_compliance_report_fuel_supply_data AS
+CREATE OR REPLACE VIEW vw_compliance_report_fuel_supply_data AS
 SELECT
       "source"."fuel_supply_id" AS "fuel_supply_id",
       "source"."compliance_report_id" AS "compliance_report_id",
@@ -40,60 +40,60 @@ SELECT
     FROM
       (
         SELECT
-          "public"."fuel_supply"."fuel_supply_id" AS "fuel_supply_id",
-          "public"."fuel_supply"."compliance_report_id" AS "compliance_report_id",
-          "public"."fuel_supply"."quantity" AS "quantity",
-          "public"."fuel_supply"."units" AS "units",
-          "public"."fuel_supply"."compliance_units" AS "compliance_units",
-          "public"."fuel_supply"."target_ci" AS "target_ci",
-          "public"."fuel_supply"."ci_of_fuel" AS "ci_of_fuel",
-          "public"."fuel_supply"."energy_density" AS "energy_density",
-          "public"."fuel_supply"."eer" AS "eer",
-          "public"."fuel_supply"."uci" AS "uci",
-          "public"."fuel_supply"."energy" AS "energy",
-          "public"."fuel_supply"."fuel_type_other" AS "fuel_type_other",
-          "public"."fuel_supply"."fuel_category_id" AS "fuel_category_id",
-          "public"."fuel_supply"."fuel_code_id" AS "fuel_code_id",
-          "public"."fuel_supply"."fuel_type_id" AS "fuel_type_id",
-          "public"."fuel_supply"."provision_of_the_act_id" AS "provision_of_the_act_id",
-          "public"."fuel_supply"."end_use_id" AS "end_use_id",
-          "public"."fuel_supply"."create_date" AS "create_date",
-          "public"."fuel_supply"."update_date" AS "update_date",
-          "public"."fuel_supply"."create_user" AS "create_user",
-          "public"."fuel_supply"."update_user" AS "update_user",
-          "public"."fuel_supply"."group_uuid" AS "group_uuid",
-          "public"."fuel_supply"."version" AS "version",
-          "public"."fuel_supply"."action_type" AS "action_type",
-          "public"."fuel_supply"."q1_quantity" AS "q1_quantity",
-          "public"."fuel_supply"."q2_quantity" AS "q2_quantity",
-          "public"."fuel_supply"."q3_quantity" AS "q3_quantity",
-          "public"."fuel_supply"."q4_quantity" AS "q4_quantity",
+          "fuel_supply"."fuel_supply_id" AS "fuel_supply_id",
+          "fuel_supply"."compliance_report_id" AS "compliance_report_id",
+          "fuel_supply"."quantity" AS "quantity",
+          "fuel_supply"."units" AS "units",
+          "fuel_supply"."compliance_units" AS "compliance_units",
+          "fuel_supply"."target_ci" AS "target_ci",
+          "fuel_supply"."ci_of_fuel" AS "ci_of_fuel",
+          "fuel_supply"."energy_density" AS "energy_density",
+          "fuel_supply"."eer" AS "eer",
+          "fuel_supply"."uci" AS "uci",
+          "fuel_supply"."energy" AS "energy",
+          "fuel_supply"."fuel_type_other" AS "fuel_type_other",
+          "fuel_supply"."fuel_category_id" AS "fuel_category_id",
+          "fuel_supply"."fuel_code_id" AS "fuel_code_id",
+          "fuel_supply"."fuel_type_id" AS "fuel_type_id",
+          "fuel_supply"."provision_of_the_act_id" AS "provision_of_the_act_id",
+          "fuel_supply"."end_use_id" AS "end_use_id",
+          "fuel_supply"."create_date" AS "create_date",
+          "fuel_supply"."update_date" AS "update_date",
+          "fuel_supply"."create_user" AS "create_user",
+          "fuel_supply"."update_user" AS "update_user",
+          "fuel_supply"."group_uuid" AS "group_uuid",
+          "fuel_supply"."version" AS "version",
+          "fuel_supply"."action_type" AS "action_type",
+          "fuel_supply"."q1_quantity" AS "q1_quantity",
+          "fuel_supply"."q2_quantity" AS "q2_quantity",
+          "fuel_supply"."q3_quantity" AS "q3_quantity",
+          "fuel_supply"."q4_quantity" AS "q4_quantity",
           "Latest Fuel Supply per Group - Version"."group_uuid" AS "Latest Fuel Supply per Group - Version__group_uuid",
           "Latest Fuel Supply per Group - Version"."max" AS "Latest Fuel Supply per Group - Version__max"
         FROM
-          "public"."fuel_supply"
+          "fuel_supply"
           INNER JOIN (
             SELECT
-              "public"."fuel_supply"."group_uuid" AS "group_uuid",
-              MAX("public"."fuel_supply"."version") AS "max"
+              "fuel_supply"."group_uuid" AS "group_uuid",
+              MAX("fuel_supply"."version") AS "max"
             FROM
-              "public"."fuel_supply"
+              "fuel_supply"
            
 GROUP BY
-              "public"."fuel_supply"."group_uuid"
+              "fuel_supply"."group_uuid"
            
 ORDER BY
-              "public"."fuel_supply"."group_uuid" ASC
+              "fuel_supply"."group_uuid" ASC
           ) AS "Latest Fuel Supply per Group - Version" ON (
-            "public"."fuel_supply"."group_uuid" = "Latest Fuel Supply per Group - Version"."group_uuid"
+            "fuel_supply"."group_uuid" = "Latest Fuel Supply per Group - Version"."group_uuid"
           )
          
    AND (
-            "public"."fuel_supply"."version" = "Latest Fuel Supply per Group - Version"."max"
+            "fuel_supply"."version" = "Latest Fuel Supply per Group - Version"."max"
           )
        
 WHERE
-          "public"."fuel_supply"."action_type" = CAST('CREATE' AS "actiontypeenum")
+          "fuel_supply"."action_type" = CAST('CREATE' AS "actiontypeenum")
       ) AS "source"
      
 LEFT JOIN (
@@ -113,30 +113,30 @@ LEFT JOIN (
         FROM
           (
             SELECT
-              "public"."v_compliance_report"."compliance_report_id" AS "compliance_report_id",
-              "public"."v_compliance_report"."compliance_report_group_uuid" AS "compliance_report_group_uuid",
-              "public"."v_compliance_report"."version" AS "version",
-              "public"."v_compliance_report"."compliance_period_id" AS "compliance_period_id",
-              "public"."v_compliance_report"."compliance_period" AS "compliance_period",
-              "public"."v_compliance_report"."organization_id" AS "organization_id",
-              "public"."v_compliance_report"."organization_name" AS "organization_name",
-              "public"."v_compliance_report"."report_type" AS "report_type",
-              "public"."v_compliance_report"."report_status_id" AS "report_status_id",
-              "public"."v_compliance_report"."report_status" AS "report_status",
-              "public"."v_compliance_report"."update_date" AS "update_date",
-              "public"."v_compliance_report"."supplemental_initiator" AS "supplemental_initiator"
+              "v_compliance_report"."compliance_report_id" AS "compliance_report_id",
+              "v_compliance_report"."compliance_report_group_uuid" AS "compliance_report_group_uuid",
+              "v_compliance_report"."version" AS "version",
+              "v_compliance_report"."compliance_period_id" AS "compliance_period_id",
+              "v_compliance_report"."compliance_period" AS "compliance_period",
+              "v_compliance_report"."organization_id" AS "organization_id",
+              "v_compliance_report"."organization_name" AS "organization_name",
+              "v_compliance_report"."report_type" AS "report_type",
+              "v_compliance_report"."report_status_id" AS "report_status_id",
+              "v_compliance_report"."report_status" AS "report_status",
+              "v_compliance_report"."update_date" AS "update_date",
+              "v_compliance_report"."supplemental_initiator" AS "supplemental_initiator"
             FROM
-              "public"."v_compliance_report"
+              "v_compliance_report"
             WHERE
               (
-                "public"."v_compliance_report"."report_status" <> CAST('Draft' AS "compliancereportstatusenum")
+                "v_compliance_report"."report_status" <> CAST('Draft' AS "compliancereportstatusenum")
               )
              
     OR (
-                "public"."v_compliance_report"."report_status" IS NULL
+                "v_compliance_report"."report_status" IS NULL
               )
           ) AS "source"
-          INNER JOIN "public"."compliance_report" AS "Compliance Report - Compliance Report Group UUID" ON "source"."compliance_report_group_uuid" = "Compliance Report - Compliance Report Group UUID"."compliance_report_group_uuid"
+          INNER JOIN "compliance_report" AS "Compliance Report - Compliance Report Group UUID" ON "source"."compliance_report_group_uuid" = "Compliance Report - Compliance Report Group UUID"."compliance_report_group_uuid"
       ) AS "Compliance Report groups - Compliance Report" ON "Compliance Report groups - Compliance Report"."compliance_report_id" = "Compliance Report groups - Compliance Report"."Compliance Report - Compliance Report Group UUID__c_e4dbf381";
  -- Grant SELECT privileges to the reporting role
-GRANT SELECT ON public.vw_compliance_report_fuel_supply_data TO basic_lcfs_reporting_role;
+GRANT SELECT ON vw_compliance_report_fuel_supply_data TO basic_lcfs_reporting_role;
