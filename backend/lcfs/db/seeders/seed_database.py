@@ -7,7 +7,8 @@ from sqlalchemy.orm import sessionmaker
 
 from lcfs.db.seeders.dev_seeder import seed_dev
 from lcfs.db.seeders.prod_seeder import seed_prod
-from lcfs.db.seeders.test_seeder import seed_test
+from lcfs.db.seeders.staging_seeder import seed_staging
+from lcfs.db.seeders.pytest_seeder import seed_pytest
 from lcfs.settings import settings
 
 logger = structlog.get_logger(__name__)
@@ -26,10 +27,12 @@ async def seed_database(environment):
                     await seed_dev(session)
                 elif environment == "prod":
                     await seed_prod(session)
-                elif environment == "test":
-                    await seed_test(session)
+                elif environment == "staging":
+                    await seed_staging(session)
+                elif environment == "pytest":
+                    await seed_pytest(session)
                 else:
-                    raise ValueError("Unknown environment")
+                    raise ValueError(f"Unknown environment: {environment}")
 
                 # commit all seeders
                 await session.commit()
