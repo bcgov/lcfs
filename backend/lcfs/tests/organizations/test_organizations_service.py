@@ -2,7 +2,10 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.organizations.schema import OrganizationSummaryResponseSchema
-from lcfs.db.models.organization.OrganizationStatus import OrganizationStatus, OrgStatusEnum
+from lcfs.db.models.organization.OrganizationStatus import (
+    OrganizationStatus,
+    OrgStatusEnum,
+)
 
 
 def create_mock_org_status(status_enum: OrgStatusEnum):

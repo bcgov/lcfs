@@ -47,7 +47,8 @@ const ComplianceReportSummary = ({
 
   const { data: snapshotData } = useOrganizationSnapshot(reportID)
 
-  const { hasRoles } = useCurrentUser()
+  const { hasRoles, data: currentUser } = useCurrentUser()
+  const isGovernmentUser = currentUser?.isGovernmentUser
 
   const { data, isLoading, isError, error, isFetching } =
     useGetComplianceReportSummary(reportID)
@@ -169,12 +170,15 @@ const ComplianceReportSummary = ({
           />
           {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
             <>
-              <SigningAuthorityDeclaration
-                onChange={setIsSigningAuthorityDeclared}
-                hasAuthority={hasRoles(roles.signing_authority)}
-                hasRecords={hasRecords}
-                hasValidAddress={hasValidAddress}
-              />
+              {!isGovernmentUser && (
+                <SigningAuthorityDeclaration
+                  onChange={setIsSigningAuthorityDeclared}
+                  hasAuthority={hasRoles(roles.signing_authority)}
+                  hasRecords={hasRecords}
+                  hasValidAddress={hasValidAddress}
+                />
+              )}
+
               <Stack direction="row" justifyContent="flex-start" mt={2} gap={2}>
                 {buttonClusterConfig[currentStatus]?.map(
                   (config) =>

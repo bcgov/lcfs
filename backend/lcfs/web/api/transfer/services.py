@@ -453,7 +453,9 @@ class TransferServices:
 
         await self.repo.refresh_transfer(transfer)
 
-        if not hasattr(transfer.transfer_category, "category"):
+        if transfer.transfer_category is None or not hasattr(
+            transfer.transfer_category, "category"
+        ):
             today = datetime.now()
             diff_seconds = today.timestamp() - transfer.agreement_date.timestamp()
             # Define approximate thresholds in seconds

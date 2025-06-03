@@ -372,7 +372,9 @@ class ComplianceReportExporter:
 
         return [headers] + rows
 
-    async def _load_fuels_for_other_use_data(self, uuid, cid, version) -> List[List[Any]]:
+    async def _load_fuels_for_other_use_data(
+        self, uuid, cid, version
+    ) -> List[List[Any]]:
         """Load fuels for other use data."""
         data: List[OtherUsesSchema] = await self.ou_repo.get_effective_other_uses(
             uuid, cid

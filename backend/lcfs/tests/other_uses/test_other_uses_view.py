@@ -3,14 +3,16 @@ from fastapi import FastAPI
 from httpx import AsyncClient
 from unittest.mock import MagicMock, AsyncMock, patch
 
-from lcfs.db.models import ComplianceReport
+from lcfs.db.models import ComplianceReport, Organization
 from lcfs.db.models.user.Role import RoleEnum
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 from lcfs.tests.other_uses.conftest import create_mock_schema
 from lcfs.web.api.base import ComplianceReportRequestSchema
 from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.other_uses.schema import (
     PaginatedOtherUsesRequestSchema,
     OtherUsesSchema,
+    OtherUsesCreateSchema,
 )
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
@@ -165,7 +167,11 @@ async def test_save_other_uses_row_create(
             **payload
         )
 
-        mock_validate_organization_access.return_value = ComplianceReport()
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_validate_organization_access.return_value = mock_report
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
             lambda: mock_other_uses_service
@@ -207,7 +213,12 @@ async def test_save_other_uses_row_update(
         ).model_dump()
 
         mock_other_uses_service.update_other_use.return_value = payload
-        mock_validate_organization_access.return_value = ComplianceReport()
+
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_validate_organization_access.return_value = mock_report
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
             lambda: mock_other_uses_service
@@ -248,8 +259,13 @@ async def test_save_other_uses_row_delete(
         )
 
         mock_other_uses_service.delete_other_use.return_value = None
-        mock_validate_organization_access.return_value = ComplianceReport()
         mock_other_uses_validation.validate_compliance_report_id.return_value = None
+
+        # Create a properly mocked compliance report with current_status
+        mock_report = ComplianceReport(organization=Organization())
+        mock_report.current_status = MagicMock()
+        mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+        mock_validate_organization_access.return_value = mock_report
 
         fastapi_app.dependency_overrides[OtherUsesServices] = (
             lambda: mock_other_uses_service
@@ -267,3 +283,92 @@ async def test_save_other_uses_row_delete(
         mock_other_uses_service.delete_other_use.assert_called_once_with(mock_schema)
         mock_validate_organization_access.assert_called_once_with(1)
         mock_other_uses_validation.validate_compliance_report_id.assert_called_once()
+
+
+# Tests for editable validation
+@pytest.mark.anyio
+async def test_save_other_uses_draft_status_allowed(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test that saving is allowed when compliance report is in Draft status"""
+    mock_report = ComplianceReport(organization=Organization())
+    mock_report.current_status = MagicMock()
+    mock_report.current_status.status = ComplianceReportStatusEnum.Draft
+
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable, patch(
+        "lcfs.web.api.other_uses.services.OtherUsesServices.create_other_use"
+    ) as mock_create, patch(
+        "lcfs.web.api.other_uses.validation.OtherUsesValidation.validate_compliance_report_id"
+    ) as mock_validate_id:
+
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_validate_editable.return_value = None  # Should not raise exception
+        mock_validate_id.return_value = None
+        mock_create.return_value = {"otherUsesId": 1, "quantitySupplied": 1000}
+
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_other_uses_row")
+        payload = {
+            "compliance_report_id": 1,
+            "fuel_type": "Gasoline",
+            "fuel_category": "Petroleum-based",
+            "provision_of_the_act": "Fuel supplied",
+            "quantity_supplied": 1000,
+            "units": "L",
+            "expected_use": "Transport",
+            "rationale": "Test rationale",
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 200
+        mock_validate_editable.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_save_other_uses_submitted_status_blocked(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test that saving is blocked when compliance report is in Submitted status"""
+    from fastapi import HTTPException
+
+    mock_report = ComplianceReport(organization=Organization())
+    mock_report.current_status = MagicMock()
+    mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
+
+    with patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
+    ) as mock_validate_editable:
+
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_validate_editable.side_effect = HTTPException(
+            status_code=403,
+            detail="Forbidden resource",
+        )
+
+        set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+        url = fastapi_app.url_path_for("save_other_uses_row")
+        payload = {
+            "compliance_report_id": 1,
+            "fuel_type": "Gasoline",
+            "fuel_category": "Petroleum-based",
+            "provision_of_the_act": "Fuel supplied",
+            "quantity_supplied": 1000,
+            "units": "L",
+            "expected_use": "Transport",
+            "rationale": "Test rationale",
+        }
+        response = await client.post(url, json=payload)
+        assert response.status_code == 403
+        assert "Forbidden resource" in response.json()["detail"]
+        mock_validate_editable.assert_called_once()
