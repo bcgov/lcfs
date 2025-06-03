@@ -95,7 +95,7 @@ filterwarnings = [
     "ignore:.*unclosed.*:ResourceWarning",
 ]
 env = [
-    "LCFS_ENVIRONMENT=pytest",
+    "APP_ENVIRONMENT=pytest",
     "LCFS_DB_BASE=lcfs_test",
 ]
 
