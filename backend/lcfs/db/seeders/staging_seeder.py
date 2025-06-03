@@ -2,49 +2,49 @@ import structlog
 import asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
-from lcfs.db.seeders.test.test_admin_adjustment_seeder import (
+from lcfs.db.seeders.staging.test_admin_adjustment_seeder import (
     seed_test_admin_adjustments,
 )
-from lcfs.db.seeders.test.test_organization_seeder import seed_test_organizations
-from lcfs.db.seeders.test.test_organization_address_seeder import (
+from lcfs.db.seeders.staging.test_organization_seeder import seed_test_organizations
+from lcfs.db.seeders.staging.test_organization_address_seeder import (
     seed_test_organization_addresses,
 )
-from lcfs.db.seeders.test.test_organization_attorney_address_seeder import (
+from lcfs.db.seeders.staging.test_organization_attorney_address_seeder import (
     seed_test_organization_attorney_addresses,
 )
-from lcfs.db.seeders.test.test_user_profile_seeder import seed_test_user_profiles
-from lcfs.db.seeders.test.test_user_role_seeder import seed_test_user_roles
-from lcfs.db.seeders.test.test_transaction_seeder import seed_test_transactions
-from lcfs.db.seeders.test.test_transfer_seeder import seed_test_transfers
-from lcfs.db.seeders.test.test_compliance_report_seeder import (
+from lcfs.db.seeders.staging.test_user_profile_seeder import seed_test_user_profiles
+from lcfs.db.seeders.staging.test_user_role_seeder import seed_test_user_roles
+from lcfs.db.seeders.staging.test_transaction_seeder import seed_test_transactions
+from lcfs.db.seeders.staging.test_transfer_seeder import seed_test_transfers
+from lcfs.db.seeders.staging.test_compliance_report_seeder import (
     seed_test_compliance_reports,
 )
-from lcfs.db.seeders.test.test_compliance_report_summary_seeder import (
+from lcfs.db.seeders.staging.test_compliance_report_summary_seeder import (
     seed_test_compliance_report_summaries,
 )
-from lcfs.db.seeders.test.test_compliance_report_organization_snapshot_seeder import (
+from lcfs.db.seeders.staging.test_compliance_report_organization_snapshot_seeder import (
     seed_test_compliance_report_organization_snapshots,
 )
-from lcfs.db.seeders.test.test_fuel_supply_seeder import seed_test_fuel_supplies
-from lcfs.db.seeders.test.test_fuel_export_seeder import seed_test_fuel_exports
-from lcfs.db.seeders.test.test_notional_transfer_seeder import (
+from lcfs.db.seeders.staging.test_fuel_supply_seeder import seed_test_fuel_supplies
+from lcfs.db.seeders.staging.test_fuel_export_seeder import seed_test_fuel_exports
+from lcfs.db.seeders.staging.test_notional_transfer_seeder import (
     seed_test_notional_transfers,
 )
-from lcfs.db.seeders.test.test_fuel_code_seeder import seed_test_fuel_codes
-from lcfs.db.seeders.test.test_compliance_report_history_seeder import (
+from lcfs.db.seeders.staging.test_fuel_code_seeder import seed_test_fuel_codes
+from lcfs.db.seeders.staging.test_compliance_report_history_seeder import (
     seed_test_compliance_report_history,
 )
-from lcfs.db.seeders.test.test_transfer_history_seeder import (
+from lcfs.db.seeders.staging.test_transfer_history_seeder import (
     seed_test_transfer_history,
 )
-from lcfs.db.seeders.test.test_other_uses_seeder import seed_test_other_uses
-from lcfs.db.seeders.test.test_allocation_agreement_seeder import (
+from lcfs.db.seeders.staging.test_other_uses_seeder import seed_test_other_uses
+from lcfs.db.seeders.staging.test_allocation_agreement_seeder import (
     seed_test_allocation_agreements,
 )
-from lcfs.db.seeders.test.test_final_supply_equipment_seeder import (
+from lcfs.db.seeders.staging.test_final_supply_equipment_seeder import (
     seed_test_final_supply_equipment,
 )
-from lcfs.db.seeders.test.test_document_seeder import (
+from lcfs.db.seeders.staging.test_document_seeder import (
     seed_test_documents,
 )
 
@@ -100,9 +100,9 @@ async def update_sequences(session: AsyncSession):
         await session.execute(max_value_query)
 
 
-async def seed_test(session: AsyncSession):
+async def seed_staging(session: AsyncSession):
     """
-    Function to seed the database with comprehensive test data.
+    Function to seed the database with staging data.
     """
     # Seed addresses first (organizations will reference these)
     await seed_test_organization_addresses(session)
@@ -144,4 +144,8 @@ async def seed_test(session: AsyncSession):
     # Update sequences after all seeders have run
     await update_sequences(session)
 
-    logger.info("Comprehensive test database seeding completed successfully.")
+    logger.info("Staging database seeding completed successfully.")
+
+
+if __name__ == "__main__":
+    asyncio.run(seed_staging())
