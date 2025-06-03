@@ -10,7 +10,6 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 from starlette.responses import StreamingResponse
 from typing import List, Union, Any
 
-from lcfs.db.models import ComplianceReportSummary
 from lcfs.utils.constants import FILE_MEDIA_TYPE
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.base import PaginationRequestSchema
@@ -39,6 +38,7 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
 )
+from lcfs.web.api.compliance_report.schema import ComplianceReportSummarySchema
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.fuel_export.repo import FuelExportRepository
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
@@ -105,8 +105,11 @@ class ComplianceReportExporter:
         uuid = report.compliance_report_group_uuid
         cid = report.compliance_report_id
 
-        # Add summary sheet
-        await self._add_summary_sheet(wb, report.summary)
+        # Recalculate summary to ensure latest data and add summary sheet
+        summary_schema = await self.summary_service.calculate_compliance_report_summary(
+            compliance_report_id
+        )
+        await self._add_summary_sheet(wb, summary_schema)
 
         # Add all schedule data sheets
         tasks = []
@@ -200,11 +203,10 @@ class ComplianceReportExporter:
             )
 
     async def _add_summary_sheet(
-        self, wb: Workbook, summary: ComplianceReportSummary
+        self, wb: Workbook, summary: ComplianceReportSummarySchema
     ) -> None:
         """Add the summary sheet with all three tables."""
         ws = wb.create_sheet(title=SUMMARY_SHEET)
-        summary_model = self.summary_service.convert_summary_to_dict(summary)
         bold = Font(bold=True)
 
         def append_and_bold(row):
@@ -221,7 +223,7 @@ class ComplianceReportExporter:
         header_row = ws.max_row + 1
         append_and_bold(["Line", "Description", "Gasoline", "Diesel", "Jet"])
 
-        for line in summary_model.renewable_fuel_target_summary:
+        for line in summary.renewable_fuel_target_summary:
             row = [
                 line.line,
                 line.description,
@@ -254,7 +256,7 @@ class ComplianceReportExporter:
         header_row = ws.max_row + 1
         append_and_bold(["Line", "Description", "Value"])
 
-        for line in summary_model.low_carbon_fuel_target_summary:
+        for line in summary.low_carbon_fuel_target_summary:
             row = [line.line, line.description, line.value]
             ws.append(row)
             last_col_idx = len(row)
@@ -280,7 +282,7 @@ class ComplianceReportExporter:
         header_row = ws.max_row + 1
         append_and_bold(["Line", "Description", "Total Value"])
 
-        for line in summary_model.non_compliance_penalty_summary:
+        for line in summary.non_compliance_penalty_summary:
             row = ["", line.description, line.total_value]
             ws.append(row)
             last_col_idx = len(row)
