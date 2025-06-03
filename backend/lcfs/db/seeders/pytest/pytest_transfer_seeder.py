@@ -7,7 +7,7 @@ from lcfs.db.models.organization.Organization import Organization
 logger = structlog.get_logger(__name__)
 
 
-async def seed_test_transfers(session):
+async def seed_pytest_transfers(session):
     """
     Seeds the transfers into the test database, if they do not already exist.
     Args:
@@ -54,9 +54,9 @@ async def seed_test_transfers(session):
 
         if not from_org_exists or not to_org_exists:
             context = {
-                'transfer_data': transfer_data,
-                'from_org_exists': from_org_exists,
-                'to_org_exists': to_org_exists,
+                "transfer_data": transfer_data,
+                "from_org_exists": from_org_exists,
+                "to_org_exists": to_org_exists,
             }
             logger.error(
                 "Referenced organizations for transfer do not exist.",
@@ -92,7 +92,7 @@ async def seed_test_transfers(session):
 
         except Exception as e:
             context = {
-                "function": "seed_test_transfers",
+                "function": "seed_pytest_transfers",
             }
             logger.error(
                 "Error occurred while seeding transfers",

@@ -5,7 +5,7 @@ from lcfs.db.models.user.UserRole import UserRole
 logger = structlog.get_logger(__name__)
 
 
-async def seed_test_user_roles(session):
+async def seed_pytest_user_roles(session):
     """
     Seeds the user roles into the database, if they do not already exist.
 
@@ -38,7 +38,7 @@ async def seed_test_user_roles(session):
 
     except Exception as e:
         context = {
-                "function": "seed_test_user_roles",
+            "function": "seed_pytest_user_roles",
         }
         logger.error(
             "Error occurred while seeding user roles",

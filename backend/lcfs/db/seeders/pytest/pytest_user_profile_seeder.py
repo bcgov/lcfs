@@ -5,7 +5,7 @@ from lcfs.db.models.user.UserProfile import UserProfile
 logger = structlog.get_logger(__name__)
 
 
-async def seed_test_user_profiles(session):
+async def seed_pytest_user_profiles(session):
     """
     Seeds the user profiles into the database, if they do not already exist.
 
@@ -175,7 +175,7 @@ async def seed_test_user_profiles(session):
 
     except Exception as e:
         context = {
-            "function": "seed_test_user_profiles",
+            "function": "seed_pytest_user_profiles",
         }
         logger.error(
             "Error occurred while seeding user profiles",
