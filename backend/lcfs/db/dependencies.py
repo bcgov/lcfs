@@ -1,5 +1,9 @@
 from typing import AsyncGenerator
 import structlog
+import re
+import sqlalchemy as sa
+from alembic import op
+import os
 
 from fastapi import Request
 from sqlalchemy import text
@@ -76,3 +80,131 @@ async def get_async_db_session(
             logger.error(f"Error creating database transaction: {e}", exc_info=True)
             raise
         # Session is automatically closed by 'async with AsyncSession(...)'
+
+
+def create_role_if_not_exists():
+    """Create database role and user if they don't exist"""
+    try:
+        # Check if role exists
+        result = (
+            op.get_bind()
+            .execute(
+                sa.text(
+                    "SELECT 1 FROM pg_roles WHERE rolname = 'basic_lcfs_reporting_role'"
+                )
+            )
+            .fetchone()
+        )
+
+        if not result:
+            print("Creating basic_lcfs_reporting_role...")
+            op.execute("CREATE ROLE basic_lcfs_reporting_role")
+            op.execute(
+                "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM basic_lcfs_reporting_role;"
+            )
+            op.execute(
+                "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO basic_lcfs_reporting_role;"
+            )
+        else:
+            print("Role basic_lcfs_reporting_role already exists")
+
+    except Exception as e:
+        print(f"Note: Role/user creation issue (continuing): {e}")
+
+
+def find_and_read_sql_file():
+    """Find and read the SQL file"""
+    current_dir = os.path.dirname(__file__)
+
+    # Possible paths to try
+    possible_paths = [
+        os.path.join(current_dir, "sql", "views", "upgrade.sql"),
+        os.path.join(current_dir, "..", "..", "sql", "views", "upgrade.sql"),
+    ]
+
+    for path in possible_paths:
+        normalized_path = os.path.normpath(path)
+        print(f"Trying: {normalized_path}")
+        if os.path.exists(normalized_path):
+            print(f"Found SQL file at: {normalized_path}")
+            with open(normalized_path, "r") as f:
+                return f.read()
+
+    raise FileNotFoundError("Could not find sql/views/upgrade.sql")
+
+
+def clean_and_split_sql(content):
+    """Clean SQL content and split into executable statements"""
+    # Remove comment-only lines that are just separators
+    lines = []
+    for line in content.split("\n"):
+        stripped = line.strip()
+        # Skip lines that are just comment separators (-- ===...)
+        if stripped.startswith("--") and (
+            "=" in stripped
+            and len(stripped.replace("-", "").replace("=", "").strip()) == 0
+        ):
+            continue
+        lines.append(line)
+
+    # Rejoin the content
+    cleaned_content = "\n".join(lines)
+
+    # Split by semicolon to get individual statements
+    # But be smarter about it - don't split on semicolons inside quoted strings
+    statements = []
+    current_statement = []
+    in_quotes = False
+    quote_char = None
+
+    i = 0
+    while i < len(cleaned_content):
+        char = cleaned_content[i]
+
+        # Handle quotes
+        if char in ('"', "'") and (i == 0 or cleaned_content[i - 1] != "\\"):
+            if not in_quotes:
+                in_quotes = True
+                quote_char = char
+            elif char == quote_char:
+                in_quotes = False
+                quote_char = None
+
+        # Handle semicolons
+        elif char == ";" and not in_quotes:
+            # End of statement
+            stmt = "".join(current_statement).strip()
+            if stmt:
+                statements.append(stmt)
+            current_statement = []
+            i += 1
+            continue
+
+        current_statement.append(char)
+        i += 1
+
+    # Don't forget the last statement if it doesn't end with semicolon
+    final_stmt = "".join(current_statement).strip()
+    if final_stmt:
+        statements.append(final_stmt)
+
+    # Filter out empty statements and comment-only statements
+    filtered_statements = []
+    for stmt in statements:
+        stmt = stmt.strip()
+        if not stmt:
+            continue
+
+        # Skip statements that are only comments
+        lines = stmt.split("\n")
+        has_sql = False
+        for line in lines:
+            line = line.strip()
+            if line and not line.startswith("--"):
+                has_sql = True
+                break
+
+        if has_sql:
+            filtered_statements.append(stmt)
+
+    return filtered_statements
