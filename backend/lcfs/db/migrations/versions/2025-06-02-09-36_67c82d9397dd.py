@@ -95,15 +95,5 @@ def downgrade():
             except Exception as e:
                 print(f"Warning: Could not drop {view}: {e}")
 
-        # Revoke permissions
-        try:
-            op.execute(
-                sa.text(
-                    "REVOKE SELECT ON ALL TABLES IN SCHEMA public FROM basic_lcfs_reporting_role"
-                )
-            )
-        except Exception as e:
-            print(f"Warning: Could not revoke permissions: {e}")
-
     except Exception as e:
         print(f"Error during downgrade: {e}")
