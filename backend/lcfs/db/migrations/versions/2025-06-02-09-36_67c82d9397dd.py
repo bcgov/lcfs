@@ -6,7 +6,11 @@ Create Date: 2025-06-02 09:36:04.425278
 
 """
 
-from lcfs.db.dependencies import clean_and_split_sql, create_role_if_not_exists, find_and_read_sql_file
+from lcfs.db.dependencies import (
+    clean_and_split_sql,
+    create_role_if_not_exists,
+    find_and_read_sql_file,
+)
 import sqlalchemy as sa
 from alembic import op
 
@@ -22,6 +26,10 @@ SECTIONS_TO_EXECUTE = [
     "Compliance Reports Waiting review",
     "Compliance reports time per status",
     "Transfer base Analytics View",
+    "User Login Analytics Base View",
+    "BCeID Daily Login Summary View",
+    "BCeID User Statistics View",
+    "Login Failures Analysis View",
 ]
 
 
@@ -70,6 +78,10 @@ def downgrade():
     try:
         # Drop views in reverse order
         views_to_drop = [
+            "vw_login_failures_analysis",
+            "vw_bceid_user_statistics",
+            "vw_bceid_daily_login_summary",
+            "vw_user_login_analytics_base",
             "vw_transfer_base",
             "vw_compliance_reports_time_per_status",
             "vw_reports_waiting_review",
