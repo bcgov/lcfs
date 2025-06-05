@@ -7,9 +7,10 @@ Create Date: 2025-06-02 09:36:04.425278
 """
 
 from lcfs.db.dependencies import (
-    clean_and_split_sql,
     create_role_if_not_exists,
+    execute_sql_sections,
     find_and_read_sql_file,
+    parse_sql_sections,
 )
 import sqlalchemy as sa
 from alembic import op
@@ -43,26 +44,12 @@ def upgrade():
         # Read SQL file
         content = find_and_read_sql_file()
 
-        # Clean and split into statements
-        statements = clean_and_split_sql(content)
+        # Read and parse SQL file
+        content = find_and_read_sql_file()
+        sections = parse_sql_sections(content)
 
-        print(f"Found {len(statements)} SQL statements to execute")
-
-        # Execute each statement
-        for i, statement in enumerate(statements, 1):
-            try:
-                # Get first few words for logging
-                first_words = " ".join(statement.split()[:5])
-                print(f"Executing statement {i}/{len(statements)}: {first_words}...")
-
-                op.execute(sa.text(statement))
-
-            except Exception as e:
-                print(f"Error executing statement {i}: {e}")
-                print(f"Statement preview: {statement[:300]}...")
-                print(f"Full statement:")
-                print(statement)
-                raise
+        # Execute sections based on SECTIONS_TO_EXECUTE configuration
+        execute_sql_sections(sections, SECTIONS_TO_EXECUTE)
 
         print("All SQL statements executed successfully!")
 

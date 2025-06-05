@@ -133,78 +133,107 @@ def find_and_read_sql_file():
     raise FileNotFoundError("Could not find sql/views/upgrade.sql")
 
 
-def clean_and_split_sql(content):
-    """Clean SQL content and split into executable statements"""
-    # Remove comment-only lines that are just separators
-    lines = []
-    for line in content.split("\n"):
-        stripped = line.strip()
-        # Skip lines that are just comment separators (-- ===...)
-        if stripped.startswith("--") and (
-            "=" in stripped
-            and len(stripped.replace("-", "").replace("=", "").strip()) == 0
-        ):
-            continue
-        lines.append(line)
+def parse_sql_sections(content):
+    """Parse SQL content into named sections"""
+    sections = {}
+    current_section = None
+    current_sql = []
 
-    # Rejoin the content
-    cleaned_content = "\n".join(lines)
-
-    # Split by semicolon to get individual statements
-    # But be smarter about it - don't split on semicolons inside quoted strings
-    statements = []
-    current_statement = []
-    in_quotes = False
-    quote_char = None
-
+    lines = content.split("\n")
     i = 0
-    while i < len(cleaned_content):
-        char = cleaned_content[i]
 
-        # Handle quotes
-        if char in ('"', "'") and (i == 0 or cleaned_content[i - 1] != "\\"):
-            if not in_quotes:
-                in_quotes = True
-                quote_char = char
-            elif char == quote_char:
-                in_quotes = False
-                quote_char = None
+    while i < len(lines):
+        line = lines[i].strip()
 
-        # Handle semicolons
-        elif char == ";" and not in_quotes:
-            # End of statement
-            stmt = "".join(current_statement).strip()
-            if stmt:
-                statements.append(stmt)
-            current_statement = []
-            i += 1
-            continue
+        # Look for section headers with === separators
+        if line.startswith("--") and "=" in line and len(line) > 20:
+            # This might be a separator line, check next few lines for section name
+            if i + 1 < len(lines):
+                next_line = lines[i + 1].strip()
+                if (
+                    next_line.startswith("--")
+                    and "=" not in next_line
+                    and next_line.replace("--", "").strip()
+                ):
+                    # Save previous section
+                    if current_section and current_sql:
+                        sql_content = "\n".join(current_sql).strip()
+                        if sql_content:
+                            sections[current_section] = sql_content
 
-        current_statement.append(char)
+                    # Start new section
+                    current_section = next_line.replace("--", "").strip()
+                    current_sql = []
+
+                    # Skip the separator lines and section name
+                    i += 2
+                    while (
+                        i < len(lines)
+                        and lines[i].strip().startswith("--")
+                        and "=" in lines[i]
+                    ):
+                        i += 1
+                    continue
+
+        # Add content to current section (skip separator lines)
+        elif current_section and not (
+            line.startswith("--") and "=" in line and len(line) > 15
+        ):
+            current_sql.append(lines[i])
+
         i += 1
 
-    # Don't forget the last statement if it doesn't end with semicolon
-    final_stmt = "".join(current_statement).strip()
-    if final_stmt:
-        statements.append(final_stmt)
+    # Save last section
+    if current_section and current_sql:
+        sql_content = "\n".join(current_sql).strip()
+        if sql_content:
+            sections[current_section] = sql_content
 
-    # Filter out empty statements and comment-only statements
-    filtered_statements = []
-    for stmt in statements:
-        stmt = stmt.strip()
-        if not stmt:
-            continue
+    return sections
 
-        # Skip statements that are only comments
-        lines = stmt.split("\n")
-        has_sql = False
-        for line in lines:
-            line = line.strip()
-            if line and not line.startswith("--"):
-                has_sql = True
-                break
 
-        if has_sql:
-            filtered_statements.append(stmt)
+def execute_sql_sections(sections, SECTIONS_TO_EXECUTE):
+    """Execute specified sections or all sections if SECTIONS_TO_EXECUTE is empty"""
+    if not SECTIONS_TO_EXECUTE:
+        # Execute all sections
+        sections_to_run = list(sections.keys())
+        print(
+            f"SECTIONS_TO_EXECUTE is empty - executing all {len(sections_to_run)} sections"
+        )
+    else:
+        # Execute only specified sections
+        sections_to_run = SECTIONS_TO_EXECUTE
+        print(f"Executing {len(sections_to_run)} specified sections: {sections_to_run}")
 
-    return filtered_statements
+    print(f"Available sections: {list(sections.keys())}")
+
+    executed_count = 0
+    for section_name in sections_to_run:
+        if section_name in sections:
+            print(f"Executing section: {section_name}")
+
+            # Split by semicolon and execute each statement
+            sql_content = sections[section_name]
+            statements = [
+                stmt.strip() for stmt in sql_content.split(";") if stmt.strip()
+            ]
+
+            for i, statement in enumerate(statements, 1):
+                if statement.strip():
+                    try:
+                        print(
+                            f"  Statement {i}/{len(statements)}: {statement.split()[0:3]}"
+                        )
+                        op.execute(sa.text(statement))
+                    except Exception as e:
+                        print(
+                            f"Error executing statement {i} in section '{section_name}': {e}"
+                        )
+                        print(f"Statement: {statement[:200]}...")
+                        raise
+            executed_count += 1
+        else:
+            print(f"Warning: Section '{section_name}' not found in SQL file")
+            print(f"Available sections: {list(sections.keys())}")
+
+    print(f"Successfully executed {executed_count} sections!")
