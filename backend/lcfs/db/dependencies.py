@@ -112,14 +112,14 @@ def create_role_if_not_exists():
         print(f"Note: Role/user creation issue (continuing): {e}")
 
 
-def find_and_read_sql_file():
+def find_and_read_sql_file(sqlFile):
     """Find and read the SQL file"""
     current_dir = os.path.dirname(__file__)
 
     # Possible paths to try
     possible_paths = [
-        os.path.join(current_dir, "sql", "views", "upgrade.sql"),
-        os.path.join(current_dir, "..", "..", "sql", "views", "upgrade.sql"),
+        os.path.join(current_dir, "sql", "views", sqlFile),
+        os.path.join(current_dir, "..", "..", "sql", "views", sqlFile),
     ]
 
     for path in possible_paths:
