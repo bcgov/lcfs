@@ -5,7 +5,7 @@ from lcfs.db.models.organization.Organization import Organization
 logger = structlog.get_logger(__name__)
 
 
-async def seed_test_organizations(session):
+async def seed_pytest_organizations(session):
     """
     Seeds the organizations into the database, if they do not already exist.
 
@@ -51,7 +51,7 @@ async def seed_test_organizations(session):
 
     except Exception as e:
         context = {
-            "function": "seed_test_organizations",
+            "function": "seed_pytest_organizations",
         }
         logger.error(
             "Error occurred while seeding organizations",

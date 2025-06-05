@@ -104,17 +104,21 @@ vi.mock('../components/ReportDetails', () => ({
 
 vi.mock('../components/ComplianceReportSummary', () => ({
   default: ({ buttonClusterConfig, currentStatus }) => {
-    // Get the buttons for the current status
-    const buttons = buttonClusterConfig?.[currentStatus] || []
+    const COMPLIANCE_REPORT_STATUSES = {
+      DRAFT: 'Draft'
+    }
 
     return (
       <div>
         <div>Compliance Report Summary</div>
-        {buttons.map((button, index) => (
-          <button key={index} type="button">
-            {button.label}
-          </button>
-        ))}
+        {/* Only show buttons for DRAFT status, matching real component behavior */}
+        {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT &&
+          buttonClusterConfig?.[currentStatus] &&
+          buttonClusterConfig[currentStatus].map((button, index) => (
+            <button key={index} type="button">
+              {button.label}
+            </button>
+          ))}
       </div>
     )
   }

@@ -1,4 +1,5 @@
 import enum
+import os
 from pathlib import Path
 from tempfile import gettempdir
 from typing import Optional
@@ -92,6 +93,13 @@ class Settings(BaseSettings):
     ches_client_secret: str = ""
     ches_sender_email: str = "noreply@gov.bc.ca"
     ches_sender_name: str = "LCFS Notification System"
+
+    def __init__(self, **kwargs):
+        # Map APP_ENVIRONMENT to environment if present
+        app_env = os.getenv("APP_ENVIRONMENT")
+        if app_env and "environment" not in kwargs:
+            kwargs["environment"] = app_env
+        super().__init__(**kwargs)
 
     @property
     def db_url(self) -> URL:

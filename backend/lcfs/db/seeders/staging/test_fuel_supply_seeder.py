@@ -1,0 +1,318 @@
+import structlog
+from sqlalchemy import select
+from lcfs.db.models.compliance.FuelSupply import FuelSupply
+
+logger = structlog.get_logger(__name__)
+
+
+async def seed_test_fuel_supplies(session):
+    """
+    Seeds the fuel supplies into the database with comprehensive test data,
+    if they do not already exist.
+
+    Args:
+        session: The database session for committing the new records.
+    """
+
+    # Define the fuel supplies to seed based on actual test database
+    fuel_supplies_to_seed = [
+        {
+            "fuel_supply_id": 1,
+            "compliance_report_id": 1,
+            "quantity": 800000000,
+            "units": "Litres",
+            "compliance_units": -466916.73600,
+            "fuel_category_id": 2,
+            "fuel_type_id": 16,
+            "provision_of_the_act_id": 1,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 2,
+            "compliance_report_id": 1,
+            "quantity": 100000000,
+            "units": "Litres",
+            "compliance_units": 102603.18240,
+            "fuel_category_id": 1,
+            "fuel_code_id": 9,
+            "fuel_type_id": 4,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 3,
+            "compliance_report_id": 1,
+            "quantity": 75000000,
+            "units": "Litres",
+            "compliance_units": 0.00000,
+            "fuel_category_id": 3,
+            "fuel_type_id": 18,
+            "provision_of_the_act_id": 1,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 4,
+            "compliance_report_id": 1,
+            "quantity": 20000000,
+            "units": "Litres",
+            "compliance_units": 56837.67360,
+            "fuel_category_id": 2,
+            "fuel_code_id": 15,
+            "fuel_type_id": 1,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 5,
+            "compliance_report_id": 1,
+            "quantity": 20000000,
+            "units": "Litres",
+            "compliance_units": 66770.91360,
+            "fuel_category_id": 2,
+            "fuel_code_id": 8,
+            "fuel_type_id": 1,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 6,
+            "compliance_report_id": 1,
+            "quantity": 1000000000,
+            "units": "Litres",
+            "compliance_units": -519905.96800,
+            "fuel_category_id": 1,
+            "fuel_type_id": 17,
+            "provision_of_the_act_id": 1,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 7,
+            "compliance_report_id": 1,
+            "quantity": 150000000,
+            "units": "Litres",
+            "compliance_units": 351917.77320,
+            "fuel_category_id": 2,
+            "fuel_code_id": 11,
+            "fuel_type_id": 5,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 8,
+            "compliance_report_id": 1,
+            "quantity": 150000000,
+            "units": "Litres",
+            "compliance_units": 362659.58820,
+            "fuel_category_id": 2,
+            "fuel_code_id": 17,
+            "fuel_type_id": 5,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 12,
+            "compliance_report_id": 3,
+            "quantity": 100000000,
+            "units": "Litres",
+            "compliance_units": -51990.59680,
+            "fuel_category_id": 1,
+            "fuel_type_id": 17,
+            "provision_of_the_act_id": 1,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 13,
+            "compliance_report_id": 3,
+            "quantity": 100000000,
+            "units": "Litres",
+            "compliance_units": -58364.59200,
+            "fuel_category_id": 2,
+            "fuel_type_id": 16,
+            "provision_of_the_act_id": 1,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 14,
+            "compliance_report_id": 3,
+            "quantity": 10000000,
+            "units": "Litres",
+            "compliance_units": 10260.31824,
+            "fuel_category_id": 1,
+            "fuel_code_id": 9,
+            "fuel_type_id": 4,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 15,
+            "compliance_report_id": 3,
+            "quantity": 10000000,
+            "units": "Litres",
+            "compliance_units": 28418.83680,
+            "fuel_category_id": 2,
+            "fuel_code_id": 15,
+            "fuel_type_id": 1,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 16,
+            "compliance_report_id": 3,
+            "quantity": 10000000,
+            "units": "Litres",
+            "compliance_units": 33385.45680,
+            "fuel_category_id": 2,
+            "fuel_code_id": 8,
+            "fuel_type_id": 1,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 17,
+            "compliance_report_id": 3,
+            "quantity": 100000,
+            "units": "Litres",
+            "compliance_units": 305.97551,
+            "fuel_category_id": 1,
+            "fuel_code_id": 19,
+            "fuel_type_id": 14,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 18,
+            "compliance_report_id": 3,
+            "quantity": 10000,
+            "units": "Litres",
+            "compliance_units": 23.46118,
+            "fuel_category_id": 2,
+            "fuel_code_id": 11,
+            "fuel_type_id": 5,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 19,
+            "compliance_report_id": 3,
+            "quantity": 10000,
+            "units": "Litres",
+            "compliance_units": 24.17731,
+            "fuel_category_id": 2,
+            "fuel_code_id": 17,
+            "fuel_type_id": 5,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 20,
+            "compliance_report_id": 3,
+            "quantity": 10000000,
+            "units": "Litres",
+            "compliance_units": 20123.74728,
+            "fuel_category_id": 1,
+            "fuel_code_id": 16,
+            "fuel_type_id": 15,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 22,
+            "compliance_report_id": 4,
+            "quantity": 600000,
+            "units": "Kilowatt_hour",
+            "compliance_units": 568.61957,
+            "fuel_category_id": 1,
+            "fuel_type_id": 3,
+            "provision_of_the_act_id": 3,
+            "end_use_id": 1,
+        },
+        {
+            "fuel_supply_id": 23,
+            "compliance_report_id": 3,
+            "quantity": 100000000,
+            "units": "Litres",
+            "compliance_units": 0.00000,
+            "fuel_category_id": 3,
+            "fuel_type_id": 18,
+            "provision_of_the_act_id": 1,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 24,
+            "compliance_report_id": 3,
+            "quantity": 100000,
+            "units": "Litres",
+            "compliance_units": 174.45600,
+            "fuel_category_id": 3,
+            "fuel_code_id": 18,
+            "fuel_type_id": 11,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 25,
+            "compliance_report_id": 6,
+            "quantity": 1000000,
+            "units": "Cubic_metres",
+            "compliance_units": 1949.52271,
+            "fuel_category_id": 2,
+            "fuel_code_id": 7,
+            "fuel_type_id": 2,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 26,
+            "compliance_report_id": 6,
+            "quantity": 1000000,
+            "units": "Cubic_metres",
+            "compliance_units": 284.77771,
+            "fuel_category_id": 2,
+            "fuel_type_id": 2,
+            "provision_of_the_act_id": 3,
+            "end_use_id": 24,
+        },
+        {
+            "fuel_supply_id": 27,
+            "compliance_report_id": 6,
+            "quantity": 1000000,
+            "units": "Kilowatt_hour",
+            "compliance_units": 947.69928,
+            "fuel_category_id": 1,
+            "fuel_type_id": 3,
+            "provision_of_the_act_id": 3,
+            "end_use_id": 1,
+        },
+        {
+            "fuel_supply_id": 30,
+            "compliance_report_id": 6,
+            "quantity": 100000,
+            "units": "Litres",
+            "compliance_units": 333.85457,
+            "fuel_category_id": 2,
+            "fuel_code_id": 8,
+            "fuel_type_id": 1,
+            "provision_of_the_act_id": 2,
+            "end_use_id": 24,
+        },
+    ]
+
+    for fuel_supply_data in fuel_supplies_to_seed:
+        # Check if the fuel supply already exists
+        existing_fuel_supply = await session.execute(
+            select(FuelSupply).where(
+                FuelSupply.fuel_supply_id == fuel_supply_data["fuel_supply_id"]
+            )
+        )
+        if existing_fuel_supply.scalar():
+            logger.info(
+                f"Fuel supply with ID {fuel_supply_data['fuel_supply_id']} already exists, skipping."
+            )
+            continue
+
+        # Create and add the new fuel supply
+        fuel_supply = FuelSupply(**fuel_supply_data)
+        session.add(fuel_supply)
+
+    await session.flush()
+    logger.info(f"Seeded {len(fuel_supplies_to_seed)} fuel supplies.")
