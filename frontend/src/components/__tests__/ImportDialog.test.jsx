@@ -86,9 +86,21 @@ vi.mock('@/components/BCBox', () => ({
   )
 }))
 
-vi.mock('@/constants/common.js', () => ({
-  MAX_FILE_SIZE_BYTES: 10000 // 10KB for testing
-}))
+vi.mock('@/constants/common.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    MAX_FILE_SIZE_BYTES: 10000, // 10KB for testing
+    SCHEDULE_IMPORT_FILE_TYPES: actual.SCHEDULE_IMPORT_FILE_TYPES || {
+      MIME_TYPES: [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      ],
+      get ACCEPT_STRING() {
+        return this.MIME_TYPES.join(',')
+      }
+    }
+  }
+})
 
 function createWrapper() {
   const queryClient = new QueryClient()
