@@ -42,10 +42,7 @@ def upgrade():
         create_role_if_not_exists()
 
         # Read SQL file
-        content = find_and_read_sql_file("metabase.sql")
-
-        # Read and parse SQL file
-        content = find_and_read_sql_file()
+        content = find_and_read_sql_file(sqlFile="metabase.sql")
         sections = parse_sql_sections(content)
 
         # Execute sections based on SECTIONS_TO_EXECUTE configuration
