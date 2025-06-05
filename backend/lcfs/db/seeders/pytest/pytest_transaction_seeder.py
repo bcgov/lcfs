@@ -5,7 +5,7 @@ from lcfs.db.models.transaction.Transaction import Transaction, TransactionActio
 logger = structlog.get_logger(__name__)
 
 
-async def seed_test_transactions(session):
+async def seed_pytest_transactions(session):
     """
     Seeds initial transaction for organizations into the database, if they do not already exist.
     Args:
@@ -45,7 +45,7 @@ async def seed_test_transactions(session):
 
     except Exception as e:
         context = {
-            "function": "seed_test_transactions",
+            "function": "seed_pytest_transactions",
         }
         logger.error(
             "Error occurred while seeding transactions",

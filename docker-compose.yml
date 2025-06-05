@@ -2,7 +2,7 @@ services:
   db:
     container_name: db
     restart: "no"
-    image: postgres:14.2
+    image: postgres:17
     environment:
       POSTGRES_DB: lcfs
       POSTGRES_USER: lcfs
