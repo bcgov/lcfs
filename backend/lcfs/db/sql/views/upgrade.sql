@@ -314,3 +314,97 @@ GROUP BY
 
 GRANT SELECT ON vw_login_failures_analysis TO basic_lcfs_reporting_role;
 
+-- ==========================================
+-- Fuel Supply Analytics Base View
+-- ==========================================
+CREATE OR REPLACE VIEW vw_fuel_supply_analytics_base AS
+WITH
+  latest_fs AS (
+    SELECT
+      fs.group_uuid,
+      MAX(fs.version) AS max_version
+    FROM
+      fuel_supply fs
+    WHERE
+      action_type <> 'DELETE'
+    GROUP BY
+      fs.group_uuid
+  ),
+  selected_fs AS (
+    SELECT
+      fs.*
+    FROM
+      fuel_supply fs
+      JOIN latest_fs lfs ON fs.group_uuid = lfs.group_uuid
+      AND fs.version = lfs.max_version
+    WHERE
+      fs.action_type != 'DELETE'
+  ),
+  grouped_reports AS (
+    SELECT
+      compliance_report_id,
+      compliance_report_group_uuid,
+      VERSION,
+      compliance_period_id,
+      current_status_id,
+      organization_id
+    FROM
+      compliance_report
+    WHERE
+      compliance_report_group_uuid IN (
+        SELECT
+          vcrb.compliance_report_group_uuid
+        FROM
+          vw_compliance_report_base vcrb
+      )
+  )
+SELECT DISTINCT
+  gr.compliance_report_group_uuid,
+  vcrb.report_status,
+  vcrb.compliance_report_id,
+  org.organization_id,
+  org.name AS supplier_name,
+  cp.description AS compliance_year,
+  ft.fuel_type,
+  ft.renewable,
+  ft.fossil_derived,
+  ft.units as fuel_units,
+  fcat.category as fuel_category,
+  concat(fcp.prefix, fc.fuel_suffix) AS fuel_code,
+  pa.description as provision_description,
+  eut.type AS end_use_type,
+  fc.carbon_intensity,
+  fc.company as fuel_code_company,
+  fc.feedstock,
+  fc.feedstock_location,
+  fc.fuel_production_facility_city,
+  fc.fuel_production_facility_province_state,
+  fc.fuel_production_facility_country,
+  fc.facility_nameplate_capacity,
+  fc.facility_nameplate_capacity_unit,
+  fc.application_date,
+  fc.approval_date,
+  fc.expiration_date,
+  fcs.status as fuel_code_status,
+  fs.fuel_supply_id,
+  fs.fuel_type_id,
+  fs.fuel_code_id,
+  fs.quantity,
+  fs.provision_of_the_act_id,
+  fs.fuel_category_id,
+  fs.end_use_id
+FROM
+  selected_fs fs
+  JOIN grouped_reports gr ON fs.compliance_report_id = gr.compliance_report_id
+  JOIN vw_compliance_report_base vcrb ON vcrb.compliance_report_group_uuid = gr.compliance_report_group_uuid
+  JOIN compliance_period cp ON gr.compliance_period_id = cp.compliance_period_id
+  JOIN organization org ON gr.organization_id = org.organization_id
+  LEFT JOIN fuel_code fc ON fs.fuel_code_id = fc.fuel_code_id
+  LEFT JOIN fuel_code_status fcs ON fc.fuel_status_id = fcs.fuel_code_status_id
+  LEFT JOIN fuel_code_prefix fcp ON fc.prefix_id = fcp.fuel_code_prefix_id
+  LEFT JOIN fuel_type ft ON fs.fuel_type_id = ft.fuel_type_id
+  LEFT JOIN fuel_category fcat ON fcat.fuel_category_id = fs.fuel_category_id
+  LEFT JOIN end_use_type eut ON fs.end_use_id = eut.end_use_type_id
+  LEFT JOIN provision_of_the_act pa ON fs.provision_of_the_act_id = pa.provision_of_the_act_id;
+grant select on vw_fuel_supply_analytics_base to basic_lcfs_reporting_role;
+grant select on fuel_category, fuel_type, fuel_code, fuel_code_status, fuel_code_prefix, provision_of_the_act, end_use_type to basic_lcfs_reporting_role;

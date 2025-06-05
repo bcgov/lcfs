@@ -30,6 +30,7 @@ SECTIONS_TO_EXECUTE = [
     "BCeID Daily Login Summary View",
     "BCeID User Statistics View",
     "Login Failures Analysis View",
+    "Fuel Supply Analytics Base View",
 ]
 
 
@@ -78,6 +79,7 @@ def downgrade():
     try:
         # Drop views in reverse order
         views_to_drop = [
+            "vw_fuel_supply_analytics_base",
             "vw_login_failures_analysis",
             "vw_bceid_user_statistics",
             "vw_bceid_daily_login_summary",
