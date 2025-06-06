@@ -73,7 +73,7 @@ class ComplianceReportUpdateService:
         # Handle status changes
         if report_data.status in [status.value for status in ReturnStatus]:
             new_status, status_has_changed = await self._handle_return_status(
-                report_data
+                report_data, report
             )
             report_data.status = new_status
 
@@ -181,11 +181,20 @@ class ComplianceReportUpdateService:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
     async def _handle_return_status(
-        self, report_data: ComplianceReportUpdateSchema
+        self, report_data: ComplianceReportUpdateSchema, report: ComplianceReport
     ) -> Tuple[str, bool]:
         """Handle return status logic and return new status and change flag."""
-        mapped_status = RETURN_STATUS_MAPPER.get(report_data.status)
+        # Check if this is a government adjustment being returned to analyst
+        if (
+            report_data.status == ReturnStatus.ANALYST.value
+            and report.supplemental_initiator
+            == SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+        ):
+            # Government adjustments should return to "Analyst adjustment" status, not "Submitted"
+            return ComplianceReportStatusEnum.Analyst_adjustment.value, False
 
+        # Default mapping for all other cases
+        mapped_status = RETURN_STATUS_MAPPER.get(report_data.status)
         return mapped_status, False
 
     async def handle_submitted_status(

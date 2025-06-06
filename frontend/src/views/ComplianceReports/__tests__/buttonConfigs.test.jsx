@@ -310,4 +310,85 @@ describe('buttonClusterConfigFn', () => {
     expect(buttons[1].label).toBe('report:actionBtns.returnToAnalyst')
     expect(buttons[1].disabled).toBe(false)
   })
+
+  // Tests for Government Adjustment draft delete button fix (Issue #2784)
+  describe('Draft status Government Adjustment delete button', () => {
+    it('shows delete button for Government Adjustments in draft mode for analysts', () => {
+      const props = {
+        ...baseProps,
+        isGovernmentUser: true,
+        hasRoles: (role) => role === roles.analyst,
+        supplementalInitiator: 'Government Reassessment'
+      }
+      const config = buttonClusterConfigFn(props)
+      const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
+
+      expect(buttons).toBeDefined()
+      expect(buttons.length).toBe(1)
+      expect(buttons[0].label).toBe(
+        'report:actionBtns.deleteAnalystAdjustmentBtn'
+      )
+      expect(buttons[0].id).toBe('delete-compliance-report-btn')
+    })
+
+    it('shows no buttons for regular supplemental reports in draft mode for analysts', () => {
+      const props = {
+        ...baseProps,
+        isGovernmentUser: true,
+        hasRoles: (role) => role === roles.analyst,
+        supplementalInitiator: 'Supplier Supplemental'
+      }
+      const config = buttonClusterConfigFn(props)
+      const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
+
+      expect(buttons).toBeDefined()
+      expect(buttons.length).toBe(0)
+    })
+
+    it('shows no buttons for draft reports with no supplemental initiator for analysts', () => {
+      const props = {
+        ...baseProps,
+        isGovernmentUser: true,
+        hasRoles: (role) => role === roles.analyst,
+        supplementalInitiator: null
+      }
+      const config = buttonClusterConfigFn(props)
+      const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
+
+      expect(buttons).toBeDefined()
+      expect(buttons.length).toBe(0)
+    })
+
+    it('shows no buttons for Government Adjustments in draft mode for non-analyst government users', () => {
+      const props = {
+        ...baseProps,
+        isGovernmentUser: true,
+        hasRoles: (role) => role === roles.compliance_manager, // Not analyst
+        supplementalInitiator: 'Government Reassessment'
+      }
+      const config = buttonClusterConfigFn(props)
+      const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
+
+      expect(buttons).toBeDefined()
+      expect(buttons.length).toBe(0)
+    })
+
+    it('shows submit and delete buttons for suppliers with supplemental reports in draft mode', () => {
+      const props = {
+        ...baseProps,
+        isGovernmentUser: false,
+        hasRoles: (role) => role === roles.signing_authority,
+        supplementalInitiator: 'Supplier Supplemental'
+      }
+      const config = buttonClusterConfigFn(props)
+      const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
+
+      expect(buttons).toBeDefined()
+      expect(buttons.length).toBe(2)
+      expect(buttons[0].label).toBe('report:actionBtns.submitReportBtn')
+      expect(buttons[1].label).toBe(
+        'report:actionBtns.deleteSupplementalReportBtn'
+      )
+    })
+  })
 })
