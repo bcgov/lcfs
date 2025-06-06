@@ -92,7 +92,11 @@ class NotionalTransferDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseD
     legal_name: str
     address_for_service: str
     received_or_transferred: ReceivedOrTransferredEnum
-    quantity: int
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
 
     fuel_category: Optional[FuelCategoryDTO] = None
 

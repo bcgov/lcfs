@@ -25,11 +25,34 @@ class NotionalTransfer(BaseModel, Auditable, Versioning):
         nullable=False,
         comment="Foreign key to the compliance report",
     )
+
+    # Quantity fields - main quantity for regular reports, quarterly for early issuance
     quantity = Column(
         Integer,
-        nullable=False,
-        comment="Quantity of fuel being notionally transferred. Cannot be negative.",
+        nullable=True,
+        comment="Quantity of fuel being notionally transferred (no early issuance)",
     )
+    q1_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel being notionally transferred in Q1 (early issuance only)",
+    )
+    q2_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel being notionally transferred in Q2 (early issuance only)",
+    )
+    q3_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel being notionally transferred in Q3 (early issuance only)",
+    )
+    q4_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel being notionally transferred in Q4 (early issuance only)",
+    )
+
     legal_name = Column(
         String, nullable=False, comment="Legal name of the trading partner"
     )
