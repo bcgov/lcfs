@@ -1,7 +1,7 @@
 """Add quarterly columns to notional_transfer table
 
 Revision ID: 15b79c70409d
-Revises: ac2cb0248135
+Revises: 67c82d9397dd
 Create Date: 2025-06-02 10:54:13.289018
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "15b79c70409d"
-down_revision = "ac2cb0248135"
+down_revision = "67c82d9397dd"
 branch_labels = None
 depends_on = None
 
