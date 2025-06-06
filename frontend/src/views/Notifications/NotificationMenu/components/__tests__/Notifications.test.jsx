@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
+import { Notifications } from '../Notifications'
+
 const navigateMock = vi.fn()
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -118,8 +120,6 @@ vi.mock('../_schema', () => ({
     testService: '/test-route/:transactionId'
   })
 }))
-
-import { Notifications } from '../Notifications'
 
 describe('Notifications Component', () => {
   beforeEach(() => {

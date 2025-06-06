@@ -5,6 +5,9 @@ import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 import { roles } from '@/constants/roles'
 
+import { OrganizationDetailsCard } from '../OrganizationDetailsCard'
+import * as CurrentUserHook from '@/hooks/useCurrentUser'
+
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
     keycloak: { token: 'mock', authenticated: true, initialized: true }
@@ -54,9 +57,6 @@ const makeUserHook = (user) => ({
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn(() => makeUserHook(govUser))
 }))
-
-import { OrganizationDetailsCard } from '../OrganizationDetailsCard'
-import * as CurrentUserHook from '@/hooks/useCurrentUser'
 
 const renderCard = () =>
   render(

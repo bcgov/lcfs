@@ -10,6 +10,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 
+import { CreditLedger } from '../CreditLedger'
+
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
     keycloak: { token: 'mock', authenticated: true, initialized: true }
@@ -59,8 +61,6 @@ vi.mock('@/hooks/useComplianceReports', () => ({
     isLoading: false
   })
 }))
-
-import { CreditLedger } from '../CreditLedger'
 
 const renderWithProviders = (ui) => {
   const client = new QueryClient()
