@@ -256,7 +256,16 @@ export const buttonClusterConfigFn = ({
             ? [reportButtons.deleteSupplementalReport]
             : [])
         ]
-      : [],
+      : (() => {
+          // For government users (analysts), check if it's a Government Adjustment/Reassessment
+          if (isGovernmentUser && hasRoles(roles.analyst)) {
+            if (supplementalInitiator === 'Government Reassessment') {
+              // Government Adjustments/Reassessments in draft mode should show delete button
+              return [reportButtons.deleteAnalystAdjustment]
+            }
+          }
+          return []
+        })(),
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: (() => {
       if (isGovernmentUser && hasRoles(roles.analyst)) {
         const buttons = [
