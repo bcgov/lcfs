@@ -1,5 +1,3 @@
-import colors from '@/themes/base/colors'
-
 export const StandardCellErrors = (params, errors) => {
   let style = {}
   if (
@@ -9,6 +7,18 @@ export const StandardCellErrors = (params, errors) => {
     style = { ...style, borderColor: 'red', border: '2px solid red' }
   } else {
     style = { ...style, borderColor: 'unset' }
+  }
+
+  // For CREATE actions, use the row-level green background but add disabled styling
+  if (params.data.actionType === 'CREATE') {
+    // Add a subtle overlay to indicate the cells are disabled while preserving green background
+    style = {
+      ...style,
+      backgroundColor: 'rgba(0, 0, 0, 0.05)', // Very light overlay to show disabled state
+      pointerEvents: 'none', // Disable click interactions
+      cursor: 'not-allowed' // Show disabled cursor
+    }
+    return style
   }
 
   const isEditable =
@@ -33,13 +43,10 @@ export const StandardCellWarningAndErrors = (
   warnings,
   isSupplemental = false
 ) => {
-  if (isSupplemental && params.data.isNewSupplementalEntry) {
-    if (params.data.actionType === 'UPDATE') {
-      return { backgroundColor: colors.alerts.warning.background }
-    }
-  } else {
+  // Don't override row-level styling for CREATE actions (let green background show through)
+  if (params.data.actionType === 'CREATE') {
     let style = StandardCellErrors(params, errors)
-
+    // Only apply borders, not background colors
     if (
       warnings &&
       warnings[params.data.id] &&
@@ -47,9 +54,20 @@ export const StandardCellWarningAndErrors = (
     ) {
       style = { ...style, borderColor: '#fcba19', border: '2px solid #fcba19' }
     }
-
     return style
   }
+
+  let style = StandardCellErrors(params, errors)
+
+  if (
+    warnings &&
+    warnings[params.data.id] &&
+    warnings[params.data.id].includes(params.colDef.field)
+  ) {
+    style = { ...style, borderColor: '#fcba19', border: '2px solid #fcba19' }
+  }
+
+  return style
 }
 
 export const StandardCellStyle = (
