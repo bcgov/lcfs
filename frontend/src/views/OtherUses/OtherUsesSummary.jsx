@@ -1,12 +1,11 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { useGetOtherUses } from '@/hooks/useOtherUses'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { otherUsesSummaryColDefs } from '@/views/OtherUses/_schema.jsx'
 import Grid2 from '@mui/material/Grid2'
-import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
@@ -18,16 +17,8 @@ export const OtherUsesSummary = ({ data, status }) => {
     defaultInitialPagination
   )
 
-  const { complianceReportId } = useParams()
+  const gridRef = useRef()
   const location = useLocation()
-
-  const queryData = useGetOtherUses(
-    { ...paginationOptions, complianceReportId },
-    {
-      cacheTime: 0,
-      staleTime: 0
-    }
-  )
 
   useEffect(() => {
     if (location.state?.message) {
@@ -35,6 +26,83 @@ export const OtherUsesSummary = ({ data, status }) => {
       setAlertSeverity(location.state.severity || 'info')
     }
   }, [location.state])
+
+  // Client-side pagination logic
+  const paginatedData = useMemo(() => {
+    if (!data?.otherUses) {
+      return {
+        data: {
+          otherUses: [],
+          pagination: {
+            page: 1,
+            size: paginationOptions.size,
+            total: 0
+          }
+        },
+        error: null,
+        isError: false,
+        isLoading: false
+      }
+    }
+
+    let filteredData = [...data.otherUses]
+
+    // Apply filters if any
+    if (paginationOptions.filters && paginationOptions.filters.length > 0) {
+      paginationOptions.filters.forEach((filter) => {
+        if (filter.type === 'contains' && filter.filter) {
+          filteredData = filteredData.filter((item) => {
+            const fieldValue = item[filter.field]
+            return (
+              fieldValue &&
+              fieldValue
+                .toString()
+                .toLowerCase()
+                .includes(filter.filter.toLowerCase())
+            )
+          })
+        }
+      })
+    }
+
+    // Apply sorting if any
+    if (
+      paginationOptions.sortOrders &&
+      paginationOptions.sortOrders.length > 0
+    ) {
+      paginationOptions.sortOrders.forEach((sort) => {
+        filteredData.sort((a, b) => {
+          const aVal = a[sort.field]
+          const bVal = b[sort.field]
+
+          let comparison = 0
+          if (aVal > bVal) comparison = 1
+          if (aVal < bVal) comparison = -1
+
+          return sort.direction === 'desc' ? -comparison : comparison
+        })
+      })
+    }
+
+    const total = filteredData.length
+    const startIndex = (paginationOptions.page - 1) * paginationOptions.size
+    const endIndex = startIndex + paginationOptions.size
+    const paginatedItems = filteredData.slice(startIndex, endIndex)
+
+    return {
+      data: {
+        otherUses: paginatedItems,
+        pagination: {
+          page: paginationOptions.page,
+          size: paginationOptions.size,
+          total
+        }
+      },
+      error: null,
+      isError: false,
+      isLoading: false
+    }
+  }, [data?.otherUses, paginationOptions])
 
   const defaultColDef = useMemo(
     () => ({
@@ -63,10 +131,11 @@ export const OtherUsesSummary = ({ data, status }) => {
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridKey="other-uses"
+          gridRef={gridRef}
           getRowId={getRowId}
           columnDefs={otherUsesSummaryColDefs}
           defaultColDef={defaultColDef}
-          queryData={queryData}
+          queryData={paginatedData}
           dataKey="otherUses"
           suppressPagination={data?.otherUses?.length <= 10}
           autoSizeStrategy={{

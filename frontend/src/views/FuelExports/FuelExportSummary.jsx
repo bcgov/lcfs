@@ -1,20 +1,18 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema.jsx'
 import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const FuelExportSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const { complianceReportId } = useParams()
 
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
@@ -24,20 +22,89 @@ export const FuelExportSummary = ({ data, status }) => {
   const { t } = useTranslation(['common', 'fuelExport'])
   const location = useLocation()
 
-  const queryData = useGetFuelExports(
-    { ...paginationOptions, complianceReportId },
-    {
-      cacheTime: 0,
-      staleTime: 0
-    }
-  )
-
   useEffect(() => {
     if (location.state?.message) {
       setAlertMessage(location.state.message)
       setAlertSeverity(location.state.severity || 'info')
     }
   }, [location.state])
+
+  // Client-side pagination logic
+  const paginatedData = useMemo(() => {
+    if (!data?.fuelExports) {
+      return {
+        data: {
+          fuelExports: [],
+          pagination: {
+            page: 1,
+            size: paginationOptions.size,
+            total: 0
+          }
+        },
+        error: null,
+        isError: false,
+        isLoading: false
+      }
+    }
+
+    let filteredData = [...data.fuelExports]
+
+    // Apply filters if any
+    if (paginationOptions.filters && paginationOptions.filters.length > 0) {
+      paginationOptions.filters.forEach((filter) => {
+        if (filter.type === 'contains' && filter.filter) {
+          filteredData = filteredData.filter((item) => {
+            const fieldValue = item[filter.field]
+            return (
+              fieldValue &&
+              fieldValue
+                .toString()
+                .toLowerCase()
+                .includes(filter.filter.toLowerCase())
+            )
+          })
+        }
+      })
+    }
+
+    // Apply sorting if any
+    if (
+      paginationOptions.sortOrders &&
+      paginationOptions.sortOrders.length > 0
+    ) {
+      paginationOptions.sortOrders.forEach((sort) => {
+        filteredData.sort((a, b) => {
+          const aVal = a[sort.field]
+          const bVal = b[sort.field]
+
+          let comparison = 0
+          if (aVal > bVal) comparison = 1
+          if (aVal < bVal) comparison = -1
+
+          return sort.direction === 'desc' ? -comparison : comparison
+        })
+      })
+    }
+
+    const total = filteredData.length
+    const startIndex = (paginationOptions.page - 1) * paginationOptions.size
+    const endIndex = startIndex + paginationOptions.size
+    const paginatedItems = filteredData.slice(startIndex, endIndex)
+
+    return {
+      data: {
+        fuelExports: paginatedItems,
+        pagination: {
+          page: paginationOptions.page,
+          size: paginationOptions.size,
+          total
+        }
+      },
+      error: null,
+      isError: false,
+      isLoading: false
+    }
+  }, [data?.fuelExports, paginationOptions])
 
   const gridOptions = useMemo(
     () => ({
@@ -47,7 +114,7 @@ export const FuelExportSummary = ({ data, status }) => {
         defaultMinWidth: 50,
         defaultMaxWidth: 600
       },
-      enableCellTextSelection: true, // enables text selection on the grid
+      enableCellTextSelection: true,
       ensureDomOrder: true
     }),
     [t]
@@ -83,14 +150,14 @@ export const FuelExportSummary = ({ data, status }) => {
         <BCGridViewer
           gridKey="fuel-exports"
           gridRef={gridRef}
-          queryData={queryData}
+          queryData={paginatedData}
           dataKey="fuelExports"
           columnDefs={fuelExportSummaryColDefs}
           getRowId={getRowId}
           gridOptions={gridOptions}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
-          suppressPagination={data.fuelExports.length <= 10}
+          suppressPagination={data?.fuelExports.length <= 10}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({

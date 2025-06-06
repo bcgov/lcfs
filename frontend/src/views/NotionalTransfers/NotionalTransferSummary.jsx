@@ -1,32 +1,24 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { useGetNotionalTransfers } from '@/hooks/useNotionalTransfer'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema.jsx'
 import Grid2 from '@mui/material/Grid2'
-import { useEffect, useMemo, useState } from 'react'
-import { useLocation, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const NotionalTransferSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
-  const { complianceReportId } = useParams()
 
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
 
+  const gridRef = useRef()
   const location = useLocation()
-  const queryData = useGetNotionalTransfers(
-    { ...paginationOptions, complianceReportId },
-    {
-      cacheTime: 0,
-      staleTime: 0
-    }
-  )
 
   useEffect(() => {
     if (location.state?.message) {
@@ -35,7 +27,85 @@ export const NotionalTransferSummary = ({ data, status }) => {
     }
   }, [location.state])
 
+  // Client-side pagination logic
+  const paginatedData = useMemo(() => {
+    if (!data?.notionalTransfers) {
+      return {
+        data: {
+          notionalTransfers: [],
+          pagination: {
+            page: 1,
+            size: paginationOptions.size,
+            total: 0
+          }
+        },
+        error: null,
+        isError: false,
+        isLoading: false
+      }
+    }
+
+    let filteredData = [...data.notionalTransfers]
+
+    // Apply filters if any
+    if (paginationOptions.filters && paginationOptions.filters.length > 0) {
+      paginationOptions.filters.forEach((filter) => {
+        if (filter.type === 'contains' && filter.filter) {
+          filteredData = filteredData.filter((item) => {
+            const fieldValue = item[filter.field]
+            return (
+              fieldValue &&
+              fieldValue
+                .toString()
+                .toLowerCase()
+                .includes(filter.filter.toLowerCase())
+            )
+          })
+        }
+      })
+    }
+
+    // Apply sorting if any
+    if (
+      paginationOptions.sortOrders &&
+      paginationOptions.sortOrders.length > 0
+    ) {
+      paginationOptions.sortOrders.forEach((sort) => {
+        filteredData.sort((a, b) => {
+          const aVal = a[sort.field]
+          const bVal = b[sort.field]
+
+          let comparison = 0
+          if (aVal > bVal) comparison = 1
+          if (aVal < bVal) comparison = -1
+
+          return sort.direction === 'desc' ? -comparison : comparison
+        })
+      })
+    }
+
+    const total = filteredData.length
+    const startIndex = (paginationOptions.page - 1) * paginationOptions.size
+    const endIndex = startIndex + paginationOptions.size
+    const paginatedItems = filteredData.slice(startIndex, endIndex)
+
+    return {
+      data: {
+        notionalTransfers: paginatedItems,
+        pagination: {
+          page: paginationOptions.page,
+          size: paginationOptions.size,
+          total
+        }
+      },
+      error: null,
+      isError: false,
+      isLoading: false
+    }
+  }, [data?.notionalTransfers, paginationOptions])
+
   const getRowId = (params) => params.data.notionalTransferId.toString()
+
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
@@ -61,10 +131,11 @@ export const NotionalTransferSummary = ({ data, status }) => {
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridKey="notional-transfers"
+          gridRef={gridRef}
           getRowId={getRowId}
           columnDefs={notionalTransferSummaryColDefs}
           defaultColDef={defaultColDef}
-          queryData={queryData}
+          queryData={paginatedData}
           dataKey="notionalTransfers"
           suppressPagination={data?.notionalTransfers?.length <= 10}
           autoSizeStrategy={{
