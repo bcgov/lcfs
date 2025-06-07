@@ -141,6 +141,32 @@ export const useGetComplianceReport = (orgID, reportID, options = {}) => {
   })
 }
 
+export const useComplianceReportWithCache = (reportId, options = {}) => {
+  
+  const { getCachedReport, shouldFetchReport } = useComplianceReportStore()
+
+  const cachedReport = getCachedReport(reportId)
+  const needsFetch = shouldFetchReport(reportId)
+  const { data: currentUser } = useCurrentUser()
+  const queryResult = useGetComplianceReport(
+    currentUser?.organization?.organizationId,
+    reportId,
+    {
+      ...options,
+      enabled:
+        needsFetch && !!reportId && !!currentUser?.organization?.organizationId
+    }
+  )
+
+  // Return cached data if available, otherwise return query result
+  return {
+    ...queryResult,
+    data: cachedReport || queryResult.data,
+    isLoading: needsFetch ? queryResult.isLoading : false,
+    isCached: !!cachedReport
+  }
+}
+
 export const useGetComplianceReportSummary = (reportID, options = {}) => {
   const client = useApiService()
 

@@ -18,7 +18,7 @@ import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 
 export const notionalTransferColDefs = (
   optionsData,
-  currentUser,
+  orgName,
   errors,
   warnings,
   isSupplemental
@@ -67,7 +67,7 @@ export const notionalTransferColDefs = (
         path += 'org_name=' + queryKey[1]
         const response = await client.get(path)
         const filteredData = response.data.filter(
-          (org) => org.name !== currentUser.organization.name
+          (org) => org.name !== orgName
         )
         params.node.data.apiDataCache = filteredData
         return filteredData

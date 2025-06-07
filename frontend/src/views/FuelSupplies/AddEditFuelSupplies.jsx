@@ -3,8 +3,6 @@ import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
 import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
 import { buildPath, ROUTES } from '@/routes/routes'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useFuelSupplyOptions,
   useGetFuelSuppliesList,
@@ -21,6 +19,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelSupplyColDefs } from './_schema'
 import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -32,20 +31,14 @@ export const AddEditFuelSupplies = () => {
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelSupply', 'reports'])
-  const params = useParams()
-  const { complianceReportId, compliancePeriod } = params
+  const { complianceReportId, compliancePeriod } = useParams()
   const navigate = useNavigate()
-  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
-  const { data: complianceReport, isLoading: complianceReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId,
-      { enabled: !currentUserLoading }
-    )
+  const { data: currentReport, isLoading } =
+    useComplianceReportWithCache(complianceReportId)
 
-  const isSupplemental = complianceReport?.report?.version !== 0
+  const isSupplemental = currentReport?.report?.version !== 0
   const isEarlyIssuance =
-    complianceReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+    currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   const {
     data: optionsData,
@@ -59,7 +52,9 @@ export const AddEditFuelSupplies = () => {
     useGetFuelSuppliesList(
       {
         complianceReportId,
-        mode: isSupplemental ? REPORT_SCHEDULES_VIEW.EDIT : REPORT_SCHEDULES_VIEW.VIEW
+        mode: isSupplemental
+          ? REPORT_SCHEDULES_VIEW.EDIT
+          : REPORT_SCHEDULES_VIEW.VIEW
       },
       {}
     )
@@ -324,8 +319,7 @@ export const AddEditFuelSupplies = () => {
   return (
     isFetched &&
     !fuelSuppliesLoading &&
-    !currentUserLoading &&
-    !complianceReportLoading && (
+    !isLoading && (
       <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">

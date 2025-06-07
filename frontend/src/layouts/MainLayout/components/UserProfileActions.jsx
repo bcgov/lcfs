@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { logout } from '@/utils/keycloak'
 import { useKeycloak } from '@react-keycloak/web'
 import { useTranslation } from 'react-i18next'
@@ -16,33 +16,68 @@ import {
   Tooltip
 } from '@mui/material'
 import { Notifications, Logout } from '@mui/icons-material'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { ROUTES, buildPath } from '@/routes/routes'
 
 export const UserProfileActions = () => {
   const { t } = useTranslation()
   const { data: currentUser } = useCurrentUser()
   const { keycloak } = useKeycloak()
-  const location = useLocation()
+  const intervalRef = useRef(null)
 
-  // TODO:
-  // Automatically refetch every 1 minute (60000ms) for real-time updates.
-  // Alternatively, for better efficiency and scalability, consider implementing
-  // server-side push mechanisms (e.g., WebSockets, Server-Sent Events) to notify
-  // the client of updates as they occur, reducing unnecessary polling.
   const {
     data: notificationsData,
     isLoading,
     refetch
   } = useNotificationsCount({
-    refetchInterval: 60000 // Automatically refetch every 1 minute (60000ms)
+    refetchInterval: false, // Disable automatic refetching by React Query
+    staleTime: 0, // Consider data stale immediately so manual refetch works
+    cacheTime: 5 * 60 * 1000 // Keep in cache for 5 minutes
   })
   const notificationsCount = notificationsData?.count || 0
 
-  // Call refetch whenever the route changes
+  // Set up manual interval for refetching
   useEffect(() => {
-    refetch()
-  }, [location, refetch])
+    // Initial fetch when component mounts (if needed)
+    if (!notificationsData) {
+      refetch()
+    }
+
+    // Set up interval to refetch every minute
+    intervalRef.current = setInterval(() => {
+      refetch()
+    }, 60000) // 60000ms = 1 minute
+
+    // Cleanup interval on unmount
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [refetch, notificationsData])
+
+  // Optional: Refetch when user becomes active after being away
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // User returned to the tab, refetch notifications
+        refetch()
+      }
+    }
+
+    const handleFocus = () => {
+      // User focused on the window, refetch notifications
+      refetch()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [refetch])
 
   const iconBtn = (
     <IconButton

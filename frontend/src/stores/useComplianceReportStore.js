@@ -12,7 +12,7 @@ const useComplianceReportStore = create((set, get) => ({
     })),
 
   getCachedReport: (reportId) => get().reportCache.get(reportId),
-
+  shouldFetchReport: (reportId) => !get().reportCache.has(reportId),
   clearCurrentReport: () => set({ currentReport: null }),
   removeReport: (reportId) =>
     set((state) => {

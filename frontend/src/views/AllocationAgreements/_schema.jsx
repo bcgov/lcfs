@@ -27,7 +27,7 @@ export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
 export const allocationAgreementColDefs = (
   optionsData,
-  currentUser,
+  orgName,
   errors,
   warnings,
   isSupplemental
@@ -106,7 +106,7 @@ export const allocationAgreementColDefs = (
         path += 'org_name=' + queryKey[1]
         const response = await client.get(path)
         const filteredData = response.data.filter(
-          (org) => org.name !== currentUser.organization.name
+          (org) => org.name !== orgName
         )
         params.node.data.apiDataCache = filteredData
         return filteredData
@@ -126,7 +126,7 @@ export const allocationAgreementColDefs = (
     minWidth: 310,
     editable: true,
     valueSetter: (params) => {
-      const { newValue: selectedName, node, data } = params
+      const { newValue: selectedName, data } = params
 
       if (typeof selectedName === 'object') {
         // Only update related fields if a match is found in the API data
