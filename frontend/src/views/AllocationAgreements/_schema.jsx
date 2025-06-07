@@ -636,3 +636,69 @@ export const changelogGridOptions = {
     }
   }
 }
+
+export const allocAgrmtSummaryColDefs = (t) => [
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
+    ),
+    field: 'allocationTransactionType'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartner'
+    ),
+    field: 'transactionPartner'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.postalAddress'
+    ),
+    field: 'postalAddress'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
+    ),
+    field: 'transactionPartnerEmail'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
+    ),
+    field: 'transactionPartnerPhone'
+  },
+  {
+    headerName: t('allocationAgreement:allocationAgreementColLabels.fuelType'),
+    field: 'fuelType'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.fuelCategory'
+    ),
+    field: 'fuelCategory'
+  },
+  {
+    headerName: t(
+      'allocationAgreement:allocationAgreementColLabels.carbonIntensity'
+    ),
+    field: 'provisionOfTheAct'
+  },
+  {
+    headerName: t('allocationAgreement:allocationAgreementColLabels.fuelCode'),
+    field: 'fuelCode'
+  },
+  {
+    headerName: t('allocationAgreement:allocationAgreementColLabels.ciOfFuel'),
+    field: 'ciOfFuel'
+  },
+  {
+    headerName: t('allocationAgreement:allocationAgreementColLabels.quantity'),
+    field: 'quantity',
+    valueFormatter
+  },
+  {
+    headerName: t('allocationAgreement:allocationAgreementColLabels.units'),
+    field: 'units'
+  }
+]
