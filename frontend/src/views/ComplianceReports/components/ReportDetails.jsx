@@ -273,7 +273,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
         action: navigationHandlers.allocationAgreements,
         useFetch: useGetAllAllocationAgreements,
         component: (data) =>
-          data.allocationAgreements.length > 0 && (
+          data?.allocationAgreements.length > 0 && (
             <TogglePanel
               label="Change log"
               disabled={
