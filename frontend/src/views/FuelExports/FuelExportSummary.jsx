@@ -1,33 +1,19 @@
-import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { fuelExportSummaryColDefs } from '@/views/FuelExports/_schema.jsx'
 import Grid2 from '@mui/material/Grid2'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const FuelExportSummary = ({ data, status }) => {
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
-
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
-
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'fuelExport'])
-  const location = useLocation()
-
-  useEffect(() => {
-    if (location.state?.message) {
-      setAlertMessage(location.state.message)
-      setAlertSeverity(location.state.severity || 'info')
-    }
-  }, [location.state])
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
@@ -139,13 +125,6 @@ export const FuelExportSummary = ({ data, status }) => {
 
   return (
     <Grid2 className="fuel-export-container" mx={-1}>
-      <div>
-        {alertMessage && (
-          <BCAlert data-test="alert-box" severity={alertSeverity}>
-            {alertMessage}
-          </BCAlert>
-        )}
-      </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridKey="fuel-exports"

@@ -1,11 +1,10 @@
-import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { LinkRenderer } from '@/utils/grid/cellRenderers'
 import Grid2 from '@mui/material/Grid2'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { finalSupplyEquipmentSummaryColDefs } from '@/views/FinalSupplyEquipments/_schema.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
@@ -14,8 +13,6 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Switch from '@mui/material/Switch'
 
 export const FinalSupplyEquipmentSummary = ({ data, status }) => {
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
   const [showMap, setShowMap] = useState(false)
   const { complianceReportId } = useParams()
 
@@ -25,14 +22,6 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
 
   const gridRef = useRef()
   const { t } = useTranslation(['common', 'finalSupplyEquipment'])
-  const location = useLocation()
-
-  useEffect(() => {
-    if (location.state?.message) {
-      setAlertMessage(location.state.message)
-      setAlertSeverity(location.state.severity || 'info')
-    }
-  }, [location.state])
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
@@ -151,13 +140,6 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
 
   return (
     <Grid2 className="final-supply-equipment-container" mx={-1}>
-      <div>
-        {alertMessage && (
-          <BCAlert data-test="alert-box" severity={alertSeverity}>
-            {alertMessage}
-          </BCAlert>
-        )}
-      </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridKey="final-supply-equipments"

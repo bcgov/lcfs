@@ -1,31 +1,17 @@
-import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { notionalTransferSummaryColDefs } from '@/views/NotionalTransfers/_schema.jsx'
 import Grid2 from '@mui/material/Grid2'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useMemo, useRef, useState } from 'react'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 export const NotionalTransferSummary = ({ data, status }) => {
-  const [alertMessage, setAlertMessage] = useState('')
-  const [alertSeverity, setAlertSeverity] = useState('info')
-
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
-
   const gridRef = useRef()
-  const location = useLocation()
-
-  useEffect(() => {
-    if (location.state?.message) {
-      setAlertMessage(location.state.message)
-      setAlertSeverity(location.state.severity || 'info')
-    }
-  }, [location.state])
 
   // Client-side pagination logic
   const paginatedData = useMemo(() => {
@@ -121,13 +107,6 @@ export const NotionalTransferSummary = ({ data, status }) => {
 
   return (
     <Grid2 className="notional-transfer-container" mx={-1}>
-      <div>
-        {alertMessage && (
-          <BCAlert data-test="alert-box" severity={alertSeverity}>
-            {alertMessage}
-          </BCAlert>
-        )}
-      </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridKey="notional-transfers"
