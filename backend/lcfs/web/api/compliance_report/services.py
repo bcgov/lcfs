@@ -146,17 +146,25 @@ class ComplianceReportServices:
         """
         Creates a new analyst adjustment report.
         The report_id can be any report in the series (original or supplemental).
-        Analyst adjustments are only allowed if the status of the current report is 'Submitted'.
+        Analyst adjustments are only allowed if the status of the current report is 'Submitted' or 'Assessed'
         """
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(existing_report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
-        # Validate that the status of the current report is 'Submitted'
-        if current_report.current_status.status != ComplianceReportStatusEnum.Submitted:
+        # Validate that the status of the current report is 'Submitted' or 'Assessed'
+        # 'Submitted' - normal analyst adjustment workflow
+        # 'Assessed' - creating reassessments/government adjustments on assessed reports
+        allowed_statuses = [
+            ComplianceReportStatusEnum.Submitted,
+            ComplianceReportStatusEnum.Assessed,
+        ]
+
+        if current_report.current_status.status not in allowed_statuses:
             raise ServiceException(
-                "An analyst adjustment can only be created if the current report's status is 'Submitted'."
+                "An analyst adjustment can only be created if the current report's status is "
+                "'Submitted' or 'Assessed'."
             )
 
         # Get the group_uuid from the current report
