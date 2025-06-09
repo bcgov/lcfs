@@ -42,6 +42,32 @@ vi.mock('@/hooks/useNotionalTransfer', () => ({
   })
 }))
 
+// Mock useCurrentUser hook
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    data: {
+      firstName: 'John',
+      lastName: 'Doe',
+      organization: {
+        organizationId: 1
+      }
+    },
+    isLoading: false
+  })
+}))
+
+// Mock useGetComplianceReport hook
+vi.mock('@/hooks/useComplianceReports', () => ({
+  useGetComplianceReport: () => ({
+    data: {
+      report: {
+        reportingFrequency: 'ANNUAL'
+      }
+    },
+    isLoading: false
+  })
+}))
+
 describe('NotionalTransferSummary Component Tests', () => {
   let navigate
   let location
