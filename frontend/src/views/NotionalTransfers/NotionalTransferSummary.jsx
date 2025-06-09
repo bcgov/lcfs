@@ -9,6 +9,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { REPORT_SCHEDULES } from '@/constants/common'
 
 export const NotionalTransferSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
@@ -20,6 +23,17 @@ export const NotionalTransferSummary = ({ data, status }) => {
   )
 
   const location = useLocation()
+  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+  const { data: complianceReport, isLoading: complianceReportLoading } =
+    useGetComplianceReport(
+      currentUser?.organization?.organizationId,
+      complianceReportId,
+      { enabled: !currentUserLoading }
+    )
+
+  const isEarlyIssuance =
+    complianceReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+
   const queryData = useGetNotionalTransfers(
     { ...paginationOptions, complianceReportId },
     {
@@ -62,7 +76,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
         <BCGridViewer
           gridKey="notional-transfers"
           getRowId={getRowId}
-          columnDefs={notionalTransferSummaryColDefs}
+          columnDefs={notionalTransferSummaryColDefs(isEarlyIssuance)}
           defaultColDef={defaultColDef}
           queryData={queryData}
           dataKey="notionalTransfers"

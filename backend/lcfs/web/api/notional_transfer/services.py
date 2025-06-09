@@ -71,6 +71,10 @@ class NotionalTransferServices:
             notional_transfer_id=model.notional_transfer_id,
             compliance_report_id=model.compliance_report_id,
             quantity=model.quantity,
+            q1_quantity=model.q1_quantity,
+            q2_quantity=model.q2_quantity,
+            q3_quantity=model.q3_quantity,
+            q4_quantity=model.q4_quantity,
             legal_name=model.legal_name,
             address_for_service=model.address_for_service,
             fuel_category=model.fuel_category.category,
@@ -202,8 +206,12 @@ class NotionalTransferServices:
         notional_transfer.version = (
             0 if not existing_record else existing_record.version + 1
         )
-        notional_transfer.create_date = existing_record.create_date if existing_record else None
-        notional_transfer.create_user = existing_record.create_user if existing_record else None
+        notional_transfer.create_date = (
+            existing_record.create_date if existing_record else None
+        )
+        notional_transfer.create_user = (
+            existing_record.create_user if existing_record else None
+        )
         created_transfer = await self.repo.create_notional_transfer(notional_transfer)
 
         return self.model_to_schema(created_transfer)
