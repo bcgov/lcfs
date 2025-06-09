@@ -39,7 +39,8 @@ SECTIONS_TO_EXECUTE = [
     "Compliance Report Chained View",
     "Compliance Report Base View",
     "Allocation Agreement Chained View",
-    "Allocation Agreement Base View"
+    "Allocation Agreement Base View",
+    "Fuel Code Base View"
 ]
 
 
@@ -71,6 +72,7 @@ def downgrade():
     try:
         # Drop views in reverse order
         views_to_drop = [
+            "vw_fuel_code_base",
             "vw_allocation_agreement_base",
             "vw_allocation_agreement_chained",
             "vw_compliance_report_base",
