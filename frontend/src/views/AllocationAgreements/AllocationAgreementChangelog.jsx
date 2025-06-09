@@ -144,8 +144,7 @@ export const AllocationAgreementChangelog = () => {
     <Box>
       {changelogData?.map((item, i) => {
         const isCurrentOrOriginalVersion = i === 0 || item.version === 0
-        const shouldPaginate =
-          isCurrentOrOriginalVersion || item.allocationAgreements.length >= 10
+        const shouldPaginate = item.allocationAgreements.length >= 10
         const paginationOptions =
           paginationStates[i] || defaultInitialPagination
         const queryData = getPaginatedData(

@@ -140,8 +140,7 @@ export const OtherUsesChangelog = () => {
     <Box>
       {changelogData?.map((item, i) => {
         const isCurrentOrOriginalVersion = i === 0 || item.version === 0
-        const shouldPaginate =
-          isCurrentOrOriginalVersion || item.otherUses.length >= 10
+        const shouldPaginate = item.otherUses.length >= 10
         const paginationOptions =
           paginationStates[i] || defaultInitialPagination
         const queryData = getPaginatedData(

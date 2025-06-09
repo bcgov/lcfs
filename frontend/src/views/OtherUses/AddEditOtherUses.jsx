@@ -148,7 +148,7 @@ export const AddEditOtherUses = () => {
           if (!row.id) {
             return {
               ...row,
-              complianceReportId, // This takes current reportId, important for versioning
+              complianceReportId,
               isNewSupplementalEntry:
                 isSupplemental &&
                 row.complianceReportId === +complianceReportId,

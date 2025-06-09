@@ -139,6 +139,7 @@ export const FuelExportChangelog = () => {
     <Box>
       {changelogData?.map((item, i) => {
         const isCurrentOrOriginalVersion = i === 0 || item.version === 0
+        const shouldPaginate = item.fuelExports.length >= 10
         const paginationOptions =
           paginationStates[i] || defaultInitialPagination
         const queryData = getPaginatedData(
@@ -163,7 +164,7 @@ export const FuelExportChangelog = () => {
                 }
                 queryData={queryData}
                 getRowId={getRowId}
-                suppressPagination={!isCurrentOrOriginalVersion}
+                suppressPagination={!shouldPaginate}
                 gridOptions={
                   isCurrentOrOriginalVersion
                     ? gridOptions(false)
@@ -175,12 +176,10 @@ export const FuelExportChangelog = () => {
                   sortable: false
                 }}
                 paginationOptions={
-                  isCurrentOrOriginalVersion ? paginationOptions : undefined
+                  shouldPaginate ? paginationOptions : undefined
                 }
                 onPaginationChange={
-                  isCurrentOrOriginalVersion
-                    ? handlePaginationChange(i)
-                    : undefined
+                  shouldPaginate ? handlePaginationChange(i) : undefined
                 }
               />
             </Box>
