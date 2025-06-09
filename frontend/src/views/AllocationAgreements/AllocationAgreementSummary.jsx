@@ -33,7 +33,11 @@ export const AllocationAgreementSummary = ({ data, status }) => {
       }
     }
 
-    let filteredData = [...data.allocationAgreements]
+    let filteredData = [
+      ...data.allocationAgreements.filter(
+        (item) => item.actionType !== 'DELETE'
+      )
+    ]
 
     // Apply filters if any
     if (paginationOptions.filters && paginationOptions.filters.length > 0) {

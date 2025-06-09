@@ -25,6 +25,10 @@ export const UserProfileActions = () => {
   const { keycloak } = useKeycloak()
   const intervalRef = useRef(null)
 
+  // TODO:
+  // Alternatively, for better efficiency and scalability, consider implementing
+  // server-side push mechanisms (e.g., WebSockets, Server-Sent Events) to notify
+  // the client of updates as they occur, reducing unnecessary polling.
   const {
     data: notificationsData,
     isLoading,
