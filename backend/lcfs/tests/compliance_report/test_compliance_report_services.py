@@ -2296,9 +2296,54 @@ async def test_create_analyst_adjustment_from_submitted_status_success(
         ComplianceReportStatusEnum.Analyst_adjustment
     )
 
-    # Mock new report
+    # Mock new report - properly configure all fields that need validation
     mock_new_report = MagicMock(spec=ComplianceReport)
     mock_new_report.compliance_report_id = 2
+    mock_new_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_new_report.version = 1
+    mock_new_report.supplemental_initiator = (
+        SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    )
+    mock_new_report.compliance_period_id = 1
+    mock_new_report.organization_id = 123
+    mock_new_report.current_status_id = 3
+    mock_new_report.nickname = "Government adjustment 1"
+    mock_new_report.supplemental_note = ""
+    mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
+    mock_new_report.assessment_statement = ""
+    mock_new_report.has_supplemental = True
+
+    # Mock nested objects
+    mock_compliance_period = MagicMock()
+    mock_compliance_period.compliance_period_id = 1
+    mock_compliance_period.description = "2024"
+    mock_compliance_period.display_name = "2024"
+    mock_compliance_period.effective_date = "2024-01-01"
+    mock_compliance_period.expiration_date = "2024-12-31"
+    mock_new_report.compliance_period = mock_compliance_period
+
+    # Create a proper organization mock that handles attribute access correctly
+    class MockOrganization:
+        def __init__(self):
+            self.organization_id = 123
+            self.organization_code = "ORG123"
+            self.name = "Test Organization"
+
+        def __getattr__(self, name):
+            # Handle both snake_case and camelCase
+            if name == "organizationCode":
+                return self.organization_code
+            if name == "organizationId":
+                return self.organization_id
+            # Return actual attribute values
+            return super().__getattribute__(name)
+
+    mock_new_report.organization = MockOrganization()
+
+    mock_current_status = MagicMock()
+    mock_current_status.compliance_report_status_id = 3
+    mock_current_status.status = ComplianceReportStatusEnum.Analyst_adjustment.value
+    mock_new_report.current_status = mock_current_status
 
     # Setup mocks
     mock_repo.get_compliance_report_by_id.return_value = mock_submitted_report
@@ -2344,7 +2389,7 @@ async def test_create_analyst_adjustment_from_analyst_adjustment_status_fails(
 
     assert (
         "An analyst adjustment can only be created if the current report's status is 'Submitted' or 'Assessed'."
-        in str(exc_info.value)
+        in exc_info.value.args[0]
     )
     mock_repo.create_compliance_report.assert_not_called()
 
@@ -2371,7 +2416,7 @@ async def test_create_analyst_adjustment_from_draft_status_fails(
 
     assert (
         "An analyst adjustment can only be created if the current report's status is 'Submitted' or 'Assessed'."
-        in str(exc_info.value)
+        in exc_info.value.args[0]
     )
     mock_repo.create_compliance_report.assert_not_called()
 
@@ -2392,7 +2437,7 @@ async def test_create_analyst_adjustment_report_not_found_fails(
             999, mock_user_profile_analyst
         )
 
-    assert "Compliance report not found." in str(exc_info.value)
+    assert "Compliance report not found." in exc_info.value.args[0]
     mock_repo.create_compliance_report.assert_not_called()
 
 
@@ -2428,9 +2473,54 @@ async def test_create_analyst_adjustment_from_assessed_status_success(
         ComplianceReportStatusEnum.Analyst_adjustment
     )
 
-    # Mock new report
+    # Mock new report - properly configure all fields that need validation
     mock_new_report = MagicMock(spec=ComplianceReport)
     mock_new_report.compliance_report_id = 2
+    mock_new_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_new_report.version = 1
+    mock_new_report.supplemental_initiator = (
+        SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    )
+    mock_new_report.compliance_period_id = 1
+    mock_new_report.organization_id = 123
+    mock_new_report.current_status_id = 3
+    mock_new_report.nickname = "Government adjustment 1"
+    mock_new_report.supplemental_note = ""
+    mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
+    mock_new_report.assessment_statement = ""
+    mock_new_report.has_supplemental = True
+
+    # Mock nested objects
+    mock_compliance_period = MagicMock()
+    mock_compliance_period.compliance_period_id = 1
+    mock_compliance_period.description = "2024"
+    mock_compliance_period.display_name = "2024"
+    mock_compliance_period.effective_date = "2024-01-01"
+    mock_compliance_period.expiration_date = "2024-12-31"
+    mock_new_report.compliance_period = mock_compliance_period
+
+    # Create a proper organization mock that handles attribute access correctly
+    class MockOrganization:
+        def __init__(self):
+            self.organization_id = 123
+            self.organization_code = "ORG123"
+            self.name = "Test Organization"
+
+        def __getattr__(self, name):
+            # Handle both snake_case and camelCase
+            if name == "organizationCode":
+                return self.organization_code
+            if name == "organizationId":
+                return self.organization_id
+            # Return actual attribute values
+            return super().__getattribute__(name)
+
+    mock_new_report.organization = MockOrganization()
+
+    mock_current_status = MagicMock()
+    mock_current_status.compliance_report_status_id = 3
+    mock_current_status.status = ComplianceReportStatusEnum.Analyst_adjustment.value
+    mock_new_report.current_status = mock_current_status
 
     # Setup mocks
     mock_repo.get_compliance_report_by_id.return_value = mock_assessed_report
