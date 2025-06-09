@@ -31,7 +31,9 @@ export const NotionalTransferSummary = ({ data, status }) => {
       }
     }
 
-    let filteredData = [...data.notionalTransfers]
+    let filteredData = [
+      ...data.notionalTransfers.filter((item) => item.actionType !== 'DELETE')
+    ]
 
     // Apply filters if any
     if (paginationOptions.filters && paginationOptions.filters.length > 0) {

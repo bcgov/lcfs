@@ -31,7 +31,9 @@ export const OtherUsesSummary = ({ data, status }) => {
       }
     }
 
-    let filteredData = [...data.otherUses]
+    let filteredData = [
+      ...data.otherUses.filter((item) => item.actionType !== 'DELETE')
+    ]
 
     // Apply filters if any
     if (paginationOptions.filters && paginationOptions.filters.length > 0) {

@@ -33,7 +33,9 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
       }
     }
 
-    let filteredData = [...data.fuelSupplies]
+    let filteredData = [
+      ...data.fuelSupplies.filter((item) => item.actionType !== 'DELETE')
+    ]
 
     // Apply filters if any
     if (paginationOptions.filters && paginationOptions.filters.length > 0) {

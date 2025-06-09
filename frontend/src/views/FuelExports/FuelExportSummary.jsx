@@ -33,7 +33,9 @@ export const FuelExportSummary = ({ data, status }) => {
       }
     }
 
-    let filteredData = [...data.fuelExports]
+    let filteredData = [
+      ...data.fuelExports.filter((item) => item.actionType !== 'DELETE')
+    ]
 
     // Apply filters if any
     if (paginationOptions.filters && paginationOptions.filters.length > 0) {
