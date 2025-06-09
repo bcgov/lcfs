@@ -32,6 +32,14 @@ SECTIONS_TO_EXECUTE = [
     "BCeID User Statistics View",
     "Login Failures Analysis View",
     "Fuel Supply Analytics Base View",
+    "Transaction Base View",
+    "Fuel Supply Fuel Code Base View",
+    "Fuel Supply Base View",
+    "Compliance Report Fuel Supply Base View",
+    "Compliance Report Chained View",
+    "Compliance Report Base View",
+    "Allocation Agreement Chained View",
+    "Allocation Agreement Base View"
 ]
 
 
@@ -63,6 +71,14 @@ def downgrade():
     try:
         # Drop views in reverse order
         views_to_drop = [
+            "vw_allocation_agreement_base",
+            "vw_allocation_agreement_chained",
+            "vw_compliance_report_base",
+            "vw_compliance_report_chained"
+            "vw_compliance_report_fuel_supply_base",
+            "vw_fuel_supply_base",
+            "vw_fuel_supply_fuel_code_base",
+            "vw_transaction_base",
             "vw_fuel_supply_analytics_base",
             "vw_login_failures_analysis",
             "vw_bceid_user_statistics",
@@ -71,7 +87,7 @@ def downgrade():
             "vw_transfer_base",
             "vw_compliance_reports_time_per_status",
             "vw_reports_waiting_review",
-            "vw_compliance_report_base",
+            "vw_compliance_report_analytics_base",
         ]
 
         for view in views_to_drop:
