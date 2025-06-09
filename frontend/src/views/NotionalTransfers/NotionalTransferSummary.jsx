@@ -6,6 +6,8 @@ import Grid2 from '@mui/material/Grid2'
 import { useMemo, useRef, useState } from 'react'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+import { REPORT_SCHEDULES } from '@/constants/common'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 export const NotionalTransferSummary = ({ data, status }) => {
   const [paginationOptions, setPaginationOptions] = useState(
@@ -93,7 +95,9 @@ export const NotionalTransferSummary = ({ data, status }) => {
   }, [data?.notionalTransfers, paginationOptions])
 
   const getRowId = (params) => params.data.notionalTransferId.toString()
-
+  const { currentReport } = useComplianceReportStore()
+  const isEarlyIssuance =
+    currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
@@ -114,7 +118,7 @@ export const NotionalTransferSummary = ({ data, status }) => {
           gridKey="notional-transfers"
           gridRef={gridRef}
           getRowId={getRowId}
-          columnDefs={notionalTransferSummaryColDefs}
+          columnDefs={notionalTransferSummaryColDefs(isEarlyIssuance)}
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="notionalTransfers"

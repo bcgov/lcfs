@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, notionalTransferColDefs } from './_schema'
+import { REPORT_SCHEDULES } from '@/constants/common'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 
 export const AddEditNotionalTransfers = () => {
@@ -42,6 +43,9 @@ export const AddEditNotionalTransfers = () => {
   const orgName = currentReport?.report?.organization?.name
 
   const isSupplemental = currentReport?.report?.version !== 0
+  const isEarlyIssuance =
+    currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+
   const { data: notionalTransfers, isLoading: transfersLoading } =
     useGetAllNotionalTransfersList({
       complianceReportId,
@@ -226,17 +230,28 @@ export const AddEditNotionalTransfers = () => {
   }
 
   useEffect(() => {
-    if (!optionsLoading) {
-      const updatedColumnDefs = notionalTransferColDefs(
-        optionsData,
-        orgName,
-        errors,
-        warnings,
-        isSupplemental
+    if (!optionsLoading && !isArrayEmpty(optionsData)) {
+      setColumnDefs(
+        notionalTransferColDefs(
+          optionsData,
+          orgName,
+          errors,
+          warnings,
+          isSupplemental,
+          compliancePeriod,
+          isEarlyIssuance
+        )
       )
-      setColumnDefs(updatedColumnDefs)
     }
-  }, [optionsData, orgName, errors, warnings, optionsLoading, isSupplemental])
+  }, [
+    isSupplemental,
+    isEarlyIssuance,
+    errors,
+    optionsData,
+    warnings,
+    orgName,
+    compliancePeriod
+  ])
 
   useEffect(() => {
     if (!transfersLoading && !isArrayEmpty(notionalTransfers)) {
