@@ -9,8 +9,12 @@ export const StandardCellErrors = (params, errors) => {
     style = { ...style, borderColor: 'unset' }
   }
 
-  // For CREATE actions, use the row-level green background but add disabled styling
-  if (params.data.actionType === 'CREATE') {
+  // For CREATE actions in supplemental reports, use the row-level green background but add disabled styling
+  // Only disable if this is actually a new supplemental entry (not government adjustment existing rows)
+  if (
+    params.data.actionType === 'CREATE' &&
+    params.data.isNewSupplementalEntry
+  ) {
     // Add a subtle overlay to indicate the cells are disabled while preserving green background
     style = {
       ...style,
@@ -44,6 +48,7 @@ export const StandardCellWarningAndErrors = (
   isSupplemental = false
 ) => {
   // Don't override row-level styling for CREATE actions (let green background show through)
+  // But only disable interaction for actual new supplemental entries
   if (params.data.actionType === 'CREATE') {
     let style = StandardCellErrors(params, errors)
     // Only apply borders, not background colors

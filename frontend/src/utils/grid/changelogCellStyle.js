@@ -16,21 +16,40 @@ export const changelogCellStyle = (params, key) => {
 }
 
 export const changelogRowStyle = (params, isSupplemental) => {
-  // For CREATE actions, always show green background for the entire row
-  if (params.data.actionType === 'CREATE') {
+  // For CREATE actions, only show green background if it's a new supplemental entry in supplemental mode
+  if (
+    params.data.actionType === 'CREATE' &&
+    params.data.isNewSupplementalEntry &&
+    isSupplemental
+  ) {
     return {
       backgroundColor: colors.alerts.success.background
     }
   }
   
-  // For DELETE actions, always show red background for the entire row
-  if (params.data.actionType === 'DELETE') {
+  // For UPDATE actions, only show yellow background if it's a new supplemental entry in supplemental mode
+  if (
+    params.data.actionType === 'UPDATE' &&
+    params.data.isNewSupplementalEntry &&
+    isSupplemental
+  ) {
+    return {
+      backgroundColor: colors.alerts.warning.background
+    }
+  }
+  
+  // For DELETE actions, only show red background if it's a new supplemental entry in supplemental mode
+  if (
+    params.data.actionType === 'DELETE' &&
+    params.data.isNewSupplementalEntry &&
+    isSupplemental
+  ) {
     return {
       backgroundColor: colors.alerts.error.background
     }
   }
   
-  // No row-level styling for other cases (empty rows, UPDATE actions, etc.)
+  // No row-level styling for other cases (prevents highlighting all rows in edit mode)
   return {}
 }
 
