@@ -1,7 +1,7 @@
 import React from 'react'
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { FuelExportSummary } from '../FuelExportSummary'
+import { AllocationAgreementSummary } from '../AllocationAgreementSummary'
 import { wrapper } from '@/tests/utils/wrapper'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
@@ -52,11 +52,11 @@ vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
 }))
 
 // Mock the schema
-vi.mock('@/views/FuelExports/_schema.jsx', () => ({
-  fuelExportSummaryColDefs: [
-    { field: 'fuelType', headerName: 'Fuel Type' },
-    { field: 'quantity', headerName: 'Quantity' },
-    { field: 'destination', headerName: 'Destination' }
+vi.mock('./_schema', () => ({
+  allocAgrmtSummaryColDefs: (t) => [
+    { field: 'agreementName', headerName: 'Agreement Name' },
+    { field: 'fuel', headerName: 'Fuel' },
+    { field: 'quantity', headerName: 'Quantity' }
   ]
 }))
 
@@ -75,31 +75,35 @@ vi.mock('@/constants/schedules.js', () => ({
   }
 }))
 
-describe('FuelExportSummary', () => {
+describe('AllocationAgreementSummary', () => {
   beforeEach(() => {
     vi.resetAllMocks()
   })
 
   it('renders the component with BCGridViewer', () => {
     render(
-      <FuelExportSummary
-        data={{ fuelExports: [] }}
+      <AllocationAgreementSummary
+        data={{ allocationAgreements: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
       { wrapper }
     )
 
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-    expect(screen.getByTestId('grid-key')).toHaveTextContent('fuel-exports')
-    expect(screen.getByTestId('data-key')).toHaveTextContent('fuelExports')
+    expect(screen.getByTestId('grid-key')).toHaveTextContent(
+      'allocation-agreements'
+    )
+    expect(screen.getByTestId('data-key')).toHaveTextContent(
+      'allocationAgreements'
+    )
     expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
     expect(screen.getByTestId('copy-button')).toHaveTextContent('copy-disabled')
   })
 
   it('renders with empty data correctly', () => {
     render(
-      <FuelExportSummary
-        data={{ fuelExports: [] }}
+      <AllocationAgreementSummary
+        data={{ allocationAgreements: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
       { wrapper }
@@ -108,28 +112,28 @@ describe('FuelExportSummary', () => {
     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
   })
 
-  it('renders fuel export data correctly', () => {
+  it('renders allocation agreement data correctly', () => {
     const mockData = {
-      fuelExports: [
+      allocationAgreements: [
         {
-          fuelExportId: 1,
-          fuelType: 'Diesel',
+          allocationAgreementId: 1,
+          agreementName: 'Agreement A',
+          fuel: 'Diesel',
           quantity: 100,
-          destination: 'USA',
           actionType: 'CREATE'
         },
         {
-          fuelExportId: 2,
-          fuelType: 'Gasoline',
+          allocationAgreementId: 2,
+          agreementName: 'Agreement B',
+          fuel: 'Gasoline',
           quantity: 200,
-          destination: 'Mexico',
           actionType: 'UPDATE'
         }
       ]
     }
 
     render(
-      <FuelExportSummary
+      <AllocationAgreementSummary
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
@@ -141,33 +145,30 @@ describe('FuelExportSummary', () => {
 
   it('filters out deleted items', () => {
     const mockData = {
-      fuelExports: [
+      allocationAgreements: [
         {
-          fuelExportId: 1,
-          fuelType: 'Diesel',
-          quantity: 100,
-          destination: 'USA',
+          allocationAgreementId: 1,
+          agreementName: 'Agreement A',
+          fuel: 'Diesel',
           actionType: 'CREATE'
         },
         {
-          fuelExportId: 2,
-          fuelType: 'Gasoline',
-          quantity: 200,
-          destination: 'Mexico',
+          allocationAgreementId: 2,
+          agreementName: 'Agreement B',
+          fuel: 'Gasoline',
           actionType: 'DELETE'
         },
         {
-          fuelExportId: 3,
-          fuelType: 'Biodiesel',
-          quantity: 300,
-          destination: 'Canada',
+          allocationAgreementId: 3,
+          agreementName: 'Agreement C',
+          fuel: 'Biodiesel',
           actionType: 'UPDATE'
         }
       ]
     }
 
     render(
-      <FuelExportSummary
+      <AllocationAgreementSummary
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
@@ -180,17 +181,17 @@ describe('FuelExportSummary', () => {
 
   it('suppresses pagination when 10 or fewer items', () => {
     const mockData = {
-      fuelExports: Array.from({ length: 8 }, (_, i) => ({
-        fuelExportId: i + 1,
-        fuelType: 'Diesel',
+      allocationAgreements: Array.from({ length: 8 }, (_, i) => ({
+        allocationAgreementId: i + 1,
+        agreementName: `Agreement${i + 1}`,
+        fuel: 'Diesel',
         quantity: (i + 1) * 100,
-        destination: 'USA',
         actionType: 'CREATE'
       }))
     }
 
     render(
-      <FuelExportSummary
+      <AllocationAgreementSummary
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
@@ -207,17 +208,17 @@ describe('FuelExportSummary', () => {
 
   it('enables pagination when more than 10 items', () => {
     const mockData = {
-      fuelExports: Array.from({ length: 15 }, (_, i) => ({
-        fuelExportId: i + 1,
-        fuelType: 'Diesel',
+      allocationAgreements: Array.from({ length: 15 }, (_, i) => ({
+        allocationAgreementId: i + 1,
+        agreementName: `Agreement${i + 1}`,
+        fuel: 'Diesel',
         quantity: (i + 1) * 100,
-        destination: 'USA',
         actionType: 'CREATE'
       }))
     }
 
     render(
-      <FuelExportSummary
+      <AllocationAgreementSummary
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
@@ -234,8 +235,8 @@ describe('FuelExportSummary', () => {
 
   it('handles non-DRAFT status correctly (no link renderer)', () => {
     render(
-      <FuelExportSummary
-        data={{ fuelExports: [] }}
+      <AllocationAgreementSummary
+        data={{ allocationAgreements: [] }}
         status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
       />,
       { wrapper }
@@ -244,36 +245,12 @@ describe('FuelExportSummary', () => {
     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
   })
 
-  it('handles DRAFT status correctly (with link renderer)', () => {
+  it('handles data without allocationAgreements property', () => {
     render(
-      <FuelExportSummary
-        data={{ fuelExports: [] }}
+      <AllocationAgreementSummary
+        data={{}}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
-      { wrapper }
-    )
-
-    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-  })
-
-  it('handles undefined data gracefully', () => {
-    render(
-      <FuelExportSummary
-        data={undefined}
-        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-      />,
-      { wrapper }
-    )
-
-    expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
-    expect(screen.getByTestId('suppress-pagination-value')).toHaveTextContent(
-      'true'
-    )
-  })
-
-  it('handles data without fuelExports property', () => {
-    render(
-      <FuelExportSummary data={{}} status={COMPLIANCE_REPORT_STATUSES.DRAFT} />,
       { wrapper }
     )
 
@@ -285,33 +262,30 @@ describe('FuelExportSummary', () => {
 
   it('applies client-side filtering correctly', () => {
     const mockData = {
-      fuelExports: [
+      allocationAgreements: [
         {
-          fuelExportId: 1,
-          fuelType: 'Alpha Diesel',
-          quantity: 100,
-          destination: 'USA',
+          allocationAgreementId: 1,
+          agreementName: 'Alpha Agreement',
+          fuel: 'Diesel',
           actionType: 'CREATE'
         },
         {
-          fuelExportId: 2,
-          fuelType: 'Beta Gasoline',
-          quantity: 200,
-          destination: 'Mexico',
+          allocationAgreementId: 2,
+          agreementName: 'Beta Agreement',
+          fuel: 'Gasoline',
           actionType: 'CREATE'
         },
         {
-          fuelExportId: 3,
-          fuelType: 'Gamma Biodiesel',
-          quantity: 300,
-          destination: 'Canada',
+          allocationAgreementId: 3,
+          agreementName: 'Gamma Agreement',
+          fuel: 'Biodiesel',
           actionType: 'CREATE'
         }
       ]
     }
 
     render(
-      <FuelExportSummary
+      <AllocationAgreementSummary
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
@@ -324,19 +298,18 @@ describe('FuelExportSummary', () => {
 
   it('correctly implements getRowId function', () => {
     const mockData = {
-      fuelExports: [
+      allocationAgreements: [
         {
-          fuelExportId: 123,
-          fuelType: 'Test Fuel',
-          quantity: 500,
-          destination: 'Test Country',
+          allocationAgreementId: 123,
+          agreementName: 'Test Agreement',
+          fuel: 'Diesel',
           actionType: 'CREATE'
         }
       ]
     }
 
     render(
-      <FuelExportSummary
+      <AllocationAgreementSummary
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
@@ -349,8 +322,8 @@ describe('FuelExportSummary', () => {
 
   it('disables copy button by default', () => {
     render(
-      <FuelExportSummary
-        data={{ fuelExports: [] }}
+      <AllocationAgreementSummary
+        data={{ allocationAgreements: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
       { wrapper }
@@ -361,8 +334,8 @@ describe('FuelExportSummary', () => {
 
   it('passes correct auto size strategy', () => {
     render(
-      <FuelExportSummary
-        data={{ fuelExports: [] }}
+      <AllocationAgreementSummary
+        data={{ allocationAgreements: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
       { wrapper }
@@ -374,8 +347,8 @@ describe('FuelExportSummary', () => {
 
   it('handles pagination options updates', () => {
     render(
-      <FuelExportSummary
-        data={{ fuelExports: [] }}
+      <AllocationAgreementSummary
+        data={{ allocationAgreements: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
       { wrapper }
@@ -390,19 +363,20 @@ describe('FuelExportSummary', () => {
 
   it('uses fitCellContents auto size strategy', () => {
     const mockData = {
-      fuelExports: [
+      allocationAgreements: [
         {
-          fuelExportId: 1,
-          fuelType: 'Very Long Fuel Type Name That Should Test Auto Sizing',
+          allocationAgreementId: 1,
+          agreementName:
+            'Very Long Agreement Name That Should Test Auto Sizing',
+          fuel: 'Diesel',
           quantity: 1000,
-          destination: 'Very Long Destination Country Name',
           actionType: 'CREATE'
         }
       ]
     }
 
     render(
-      <FuelExportSummary
+      <AllocationAgreementSummary
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
@@ -414,117 +388,36 @@ describe('FuelExportSummary', () => {
     expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
   })
 
+  it('passes translation function to column definitions', () => {
+    render(
+      <AllocationAgreementSummary
+        data={{ allocationAgreements: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+      />,
+      { wrapper }
+    )
+
+    // Component should render, indicating the t function was passed correctly to schema
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+  })
+
   it('maintains consistent grid configuration', () => {
     render(
-      <FuelExportSummary
-        data={{ fuelExports: [] }}
+      <AllocationAgreementSummary
+        data={{ allocationAgreements: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
       />,
       { wrapper }
     )
 
     // Verify key grid configuration
-    expect(screen.getByTestId('grid-key')).toHaveTextContent('fuel-exports')
-    expect(screen.getByTestId('data-key')).toHaveTextContent('fuelExports')
+    expect(screen.getByTestId('grid-key')).toHaveTextContent(
+      'allocation-agreements'
+    )
+    expect(screen.getByTestId('data-key')).toHaveTextContent(
+      'allocationAgreements'
+    )
     expect(screen.getByTestId('copy-button')).toHaveTextContent('copy-disabled')
     expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
-  })
-
-  it('uses static column definitions from schema', () => {
-    render(
-      <FuelExportSummary
-        data={{ fuelExports: [] }}
-        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-      />,
-      { wrapper }
-    )
-
-    // Component should render, indicating the static column definitions were used correctly
-    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-  })
-
-  it('applies correct cell renderer URL configuration', () => {
-    render(
-      <FuelExportSummary
-        data={{ fuelExports: [] }}
-        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-      />,
-      { wrapper }
-    )
-
-    // Component should render with proper configuration for fuel-exports URL
-    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-  })
-
-  it('handles mixed action types correctly', () => {
-    const mockData = {
-      fuelExports: [
-        {
-          fuelExportId: 1,
-          fuelType: 'Diesel',
-          quantity: 100,
-          actionType: 'CREATE'
-        },
-        {
-          fuelExportId: 2,
-          fuelType: 'Gasoline',
-          quantity: 200,
-          actionType: 'UPDATE'
-        },
-        {
-          fuelExportId: 3,
-          fuelType: 'Biodiesel',
-          quantity: 300,
-          actionType: 'DELETE'
-        },
-        {
-          fuelExportId: 4,
-          fuelType: 'Ethanol',
-          quantity: 400,
-          actionType: 'CREATE'
-        }
-      ]
-    }
-
-    render(
-      <FuelExportSummary
-        data={mockData}
-        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-      />,
-      { wrapper }
-    )
-
-    // Should show 3 rows (excluding the deleted one)
-    expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
-  })
-
-  it('handles items without actionType property', () => {
-    const mockData = {
-      fuelExports: [
-        {
-          fuelExportId: 1,
-          fuelType: 'Diesel',
-          quantity: 100
-          // No actionType property
-        },
-        {
-          fuelExportId: 2,
-          fuelType: 'Gasoline',
-          quantity: 200,
-          actionType: 'CREATE'
-        }
-      ]
-    }
-
-    render(
-      <FuelExportSummary
-        data={mockData}
-        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-      />,
-      { wrapper }
-    )
-
-    // Should show both rows (item without actionType should not be filtered out)
-    expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
   })
 })

@@ -138,7 +138,7 @@ export const FuelExportSummary = ({ data, status }) => {
           gridOptions={gridOptions}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
-          suppressPagination={data?.fuelExports.length <= 10}
+          suppressPagination={(data?.fuelExports?.length || 0) <= 10}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({

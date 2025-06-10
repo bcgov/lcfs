@@ -142,7 +142,7 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
           gridOptions={gridOptions}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
-          suppressPagination={data?.fuelSupplies.length <= 10}
+          suppressPagination={(data?.fuelSupplies?.length || 0) <= 10}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({

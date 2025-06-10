@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { AddEditAllocationAgreements } from '../AddEditAllocationAgreements'
 import * as useAllocationAgreementHook from '@/hooks/useAllocationAgreement'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
 import * as configModule from '@/constants/config'
@@ -14,7 +14,6 @@ const mockUseNavigate = vi.fn()
 const mockUseParams = vi.fn()
 
 vi.mock('@/hooks/useCurrentUser')
-
 vi.mock('@/hooks/useComplianceReports')
 
 vi.mock('@react-keycloak/web', () => ({
@@ -47,7 +46,7 @@ vi.mock('react-i18next', () => ({
         key === 'allocationAgreement:allocationAgreementGuides' &&
         options.returnObjects
       ) {
-        return ['Guide 1', 'Guide 2', 'Guide 3'] // Mocked guide objects
+        return ['Guide 1', 'Guide 2', 'Guide 3']
       }
       return key
     })
@@ -70,6 +69,51 @@ vi.mock('@/services/useApiService', () => ({
   })
 }))
 
+// Mock uuid
+vi.mock('uuid', () => ({
+  v4: vi.fn(() => 'mocked-uuid-1234')
+}))
+
+// Mock utility functions
+vi.mock('@/utils/schedules', () => ({
+  handleScheduleDelete: vi.fn(),
+  handleScheduleSave: vi.fn()
+}))
+
+vi.mock('@/utils/grid/changelogCellStyle', () => ({
+  changelogRowStyle: vi.fn()
+}))
+
+vi.mock('@/routes/routes', () => ({
+  ROUTES: {
+    REPORTS: {
+      VIEW: '/reports/view'
+    }
+  },
+  buildPath: vi.fn(
+    (route, params) =>
+      `/reports/view/${params.compliancePeriod}/${params.complianceReportId}`
+  )
+}))
+
+vi.mock('@/constants/common', () => ({
+  DEFAULT_CI_FUEL: {}
+}))
+
+vi.mock('@/constants/routes/apiRoutes', () => ({
+  apiRoutes: {
+    exportAllocationAgreements: '/api/export/:reportID',
+    downloadAllocationAgreementsTemplate: '/api/template/:reportID'
+  }
+}))
+
+// Mock schema
+vi.mock('../_schema', () => ({
+  defaultColDef: {},
+  allocationAgreementColDefs: vi.fn(() => []),
+  PROVISION_APPROVED_FUEL_CODE: 'APPROVED_FUEL_CODE'
+}))
+
 // Mock BCGridEditor component
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: ({
@@ -79,17 +123,33 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
     rowData,
     onCellValueChanged,
     onCellEditingStopped
-  }) => (
-    <div data-test="bc-grid-editor">
-      <div data-test="row-data">
-        {rowData.map((row, index) => (
-          <div key={index} data-test="grid-row">
-            {row.id}
-          </div>
-        ))}
+  }) => {
+    // Simulate onGridReady being called
+    React.useEffect(() => {
+      if (onGridReady) {
+        onGridReady({
+          api: {
+            sizeColumnsToFit: vi.fn(),
+            getLastDisplayedRowIndex: vi.fn(() => 0),
+            setFocusedCell: vi.fn(),
+            startEditingCell: vi.fn()
+          }
+        })
+      }
+    }, [onGridReady])
+
+    return (
+      <div data-test="bc-grid-editor">
+        <div data-test="row-data">
+          {rowData.map((row, index) => (
+            <div key={index} data-test="grid-row">
+              {row.id}
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 }))
 
 vi.mock('@/components/ImportDialog', () => ({
@@ -100,6 +160,50 @@ vi.mock('@/components/ImportDialog', () => ({
       </button>
     </div>
   )
+}))
+
+// Mock Material-UI components
+vi.mock('@mui/material', () => ({
+  Menu: ({ children, open, onClose }) =>
+    open ? (
+      <div data-testid="menu" onClick={onClose}>
+        {children}
+      </div>
+    ) : null,
+  MenuItem: ({ children, onClick }) => (
+    <div data-testid="menu-item" onClick={onClick}>
+      {children}
+    </div>
+  )
+}))
+
+// Mock other BC components
+vi.mock('@/components/BCTypography', () => ({
+  default: ({ children }) => <div>{children}</div>
+}))
+
+vi.mock('@/components/BCBox', () => ({
+  default: ({ children }) => <div>{children}</div>
+}))
+
+vi.mock('@/components/BCButton', () => ({
+  default: ({ children, onClick, isLoading, disabled }) => (
+    <button onClick={onClick} disabled={disabled || isLoading}>
+      {children}
+    </button>
+  )
+}))
+
+vi.mock('@mui/material/Grid2', () => ({
+  default: ({ children }) => <div>{children}</div>
+}))
+
+vi.mock('@fortawesome/react-fontawesome', () => ({
+  FontAwesomeIcon: () => <span>icon</span>
+}))
+
+vi.mock('@fortawesome/free-solid-svg-icons', () => ({
+  faCaretDown: 'caret-down'
 }))
 
 vi.mock('@/contexts/AuthorizationContext', () => ({
@@ -114,7 +218,7 @@ describe('AddEditAllocationAgreements', () => {
 
     // Mock react-router-dom hooks with complete location object
     mockUseLocation.mockReturnValue({
-      pathname: '/test-path', // Include pathname to prevent undefined errors
+      pathname: '/test-path',
       state: {}
     })
     mockUseNavigate.mockReturnValue(vi.fn())
@@ -123,21 +227,13 @@ describe('AddEditAllocationAgreements', () => {
       compliancePeriod: '2024'
     })
 
-    // Mock useGetAllocationAgreements hook to return empty data initially
-    vi.mocked(
-      useAllocationAgreementHook.useGetAllAllocationAgreements
-    ).mockReturnValue({
-      data: { allocationAgreements: [] },
-      isLoading: false,
-      refetch: vi.fn()
-    })
-
-    // Add this missing mock for useGetAllocationAgreementsList
+    // Mock useGetAllocationAgreementsList hook
     vi.mocked(
       useAllocationAgreementHook.useGetAllocationAgreementsList
     ).mockReturnValue({
       data: { allocationAgreements: [] },
-      isLoading: false
+      isLoading: false,
+      refetch: vi.fn()
     })
 
     // Mock useAllocationAgreementOptions hook
@@ -175,8 +271,14 @@ describe('AddEditAllocationAgreements', () => {
       }
     })
 
-    useGetComplianceReport.mockImplementation((id) => {
-      return { data: { report: { version: 0 } }, isLoading: false }
+    useComplianceReportWithCache.mockReturnValue({
+      data: {
+        report: {
+          version: 0,
+          organization: { name: 'Test Org' }
+        }
+      },
+      isLoading: false
     })
 
     vi.mocked(configModule.isFeatureEnabled).mockReturnValue(false)
@@ -189,8 +291,12 @@ describe('AddEditAllocationAgreements', () => {
     ).toBeInTheDocument()
   })
 
-  it('initializes with at least one row in the empty state', () => {
+  it('initializes with at least one row in the empty state', async () => {
     render(<AddEditAllocationAgreements />, { wrapper })
+
+    // Wait for the component to finish rendering and grid to be ready
+    await screen.findByTestId('bc-grid-editor')
+
     const rows = screen.getAllByTestId('grid-row')
     expect(rows.length).toBe(1) // Ensure at least one row exists
   })
@@ -204,29 +310,24 @@ describe('AddEditAllocationAgreements', () => {
     }
 
     vi.mocked(
-      useAllocationAgreementHook.useGetAllAllocationAgreements
-    ).mockReturnValue({
-      data: mockData,
-      isLoading: false
-    })
-
-    vi.mocked(
       useAllocationAgreementHook.useGetAllocationAgreementsList
     ).mockReturnValue({
       data: mockData,
-      isLoading: false
+      isLoading: false,
+      refetch: vi.fn()
     })
 
     render(<AddEditAllocationAgreements />, { wrapper })
 
-    // Use findAllByTestId for asynchronous elements
-    const rows = await screen.findAllByTestId('grid-row')
-    expect(rows.length).toBe(3) // consider for an extra empty row
-    // Check that each row's textContent matches UUID format
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    // Wait for the component to finish rendering
+    await screen.findByTestId('bc-grid-editor')
+
+    const rows = screen.getAllByTestId('grid-row')
+    expect(rows.length).toBe(3) // 2 data rows + 1 empty row
+
+    // Check that each row's textContent matches the mocked UUID
     rows.forEach((row) => {
-      expect(uuidRegex.test(row.textContent)).toBe(true)
+      expect(row.textContent).toBe('mocked-uuid-1234')
     })
   })
 
@@ -257,14 +358,17 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   it('hides overwrite option for supplemental reports with existing data', () => {
-    useGetComplianceReport.mockImplementation(() => {
-      return {
-        data: { report: { version: 1 } },
-        isLoading: false
-      }
+    useComplianceReportWithCache.mockReturnValue({
+      data: {
+        report: {
+          version: 1,
+          organization: { name: 'Test Org' }
+        }
+      },
+      isLoading: false
     })
 
-    // Mock data to simulate “existing allocation agreement rows”
+    // Mock data to simulate "existing allocation agreement rows"
     const mockExistingData = {
       allocationAgreements: [{ allocationAgreementId: 'testId1' }]
     }
@@ -273,7 +377,8 @@ describe('AddEditAllocationAgreements', () => {
       useAllocationAgreementHook.useGetAllocationAgreementsList
     ).mockReturnValue({
       data: mockExistingData,
-      isLoading: false
+      isLoading: false,
+      refetch: vi.fn()
     })
 
     vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
@@ -282,6 +387,7 @@ describe('AddEditAllocationAgreements', () => {
 
     fireEvent.click(screen.getByText('common:importExport.import.btn'))
 
+    // The menu should be visible and contain only append option
     expect(
       screen.queryByText('common:importExport.import.dialog.buttons.overwrite')
     ).not.toBeInTheDocument()
@@ -291,11 +397,14 @@ describe('AddEditAllocationAgreements', () => {
   })
 
   it('shows both import options for original reports', () => {
-    useGetComplianceReport.mockImplementation(() => {
-      return {
-        data: { report: { version: 0 } },
-        isLoading: false
-      }
+    useComplianceReportWithCache.mockReturnValue({
+      data: {
+        report: {
+          version: 0,
+          organization: { name: 'Test Org' }
+        }
+      },
+      isLoading: false
     })
 
     vi.mocked(configModule.isFeatureEnabled).mockReturnValue(true)
@@ -304,6 +413,7 @@ describe('AddEditAllocationAgreements', () => {
 
     fireEvent.click(screen.getByText('common:importExport.import.btn'))
 
+    // The menu should be visible and contain both options
     expect(
       screen.getByText('common:importExport.import.dialog.buttons.overwrite')
     ).toBeInTheDocument()

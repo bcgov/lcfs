@@ -58,7 +58,6 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
             )
           })
         }
-        // Add more filter types as needed (equals, startsWith, etc.)
       })
     }
 
@@ -111,7 +110,7 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
         defaultMinWidth: 50,
         defaultMaxWidth: 600
       },
-      enableCellTextSelection: true, // enables text selection on the grid
+      enableCellTextSelection: true,
       ensureDomOrder: true
     }),
     [t]
@@ -151,7 +150,7 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
           gridOptions={gridOptions}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
-          suppressPagination={data?.finalSupplyEquipments.length <= 10}
+          suppressPagination={(data?.finalSupplyEquipments?.length || 0) <= 10}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({

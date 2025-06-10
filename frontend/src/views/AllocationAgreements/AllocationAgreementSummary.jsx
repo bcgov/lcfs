@@ -34,9 +34,9 @@ export const AllocationAgreementSummary = ({ data, status }) => {
     }
 
     let filteredData = [
-      ...data.allocationAgreements.filter(
+      ...(data.allocationAgreements.filter(
         (item) => item.actionType !== 'DELETE'
-      )
+      ) || [])
     ]
 
     // Apply filters if any
@@ -142,7 +142,7 @@ export const AllocationAgreementSummary = ({ data, status }) => {
           gridOptions={gridOptions}
           enableCopyButton={false}
           defaultColDef={defaultColDef}
-          suppressPagination={data?.allocationAgreements.length <= 10}
+          suppressPagination={(data?.allocationAgreements?.length || 0) <= 10}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
             setPaginationOptions((prev) => ({

@@ -1,3 +1,4 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render } from '@testing-library/react'
 import { AddEditFuelExports } from '../AddEditFuelExports'
@@ -7,20 +8,73 @@ import * as useComplianceReports from '@/hooks/useComplianceReports'
 import { wrapper } from '@/tests/utils/wrapper'
 import { fuelExportColDefs } from '../_schema'
 
+// Mock uuid
+vi.mock('uuid', () => ({
+  v4: vi.fn(() => 'mocked-uuid-1234')
+}))
+
+// Mock utility functions
+vi.mock('@/utils/array.js', () => ({
+  isArrayEmpty: vi.fn((arr) => !arr || arr.length === 0)
+}))
+
+vi.mock('@/utils/schedules.js', () => ({
+  handleScheduleSave: vi.fn(async ({ updatedData }) => updatedData),
+  handleScheduleDelete: vi.fn()
+}))
+
+vi.mock('@/utils/grid/changelogCellStyle', () => ({
+  changelogRowStyle: vi.fn()
+}))
+
+// Mock routes
+vi.mock('@/routes/routes', () => ({
+  ROUTES: {
+    REPORTS: {
+      VIEW: '/reports/view'
+    }
+  },
+  buildPath: vi.fn(() => '/reports/view/123/456')
+}))
+
+// Mock i18n
+vi.mock('react-i18n', () => ({
+  useTranslation: () => ({
+    t: (key) => key
+  })
+}))
+
+// Mock BC components
+vi.mock('@/components/BCBox', () => ({
+  default: ({ children }) => <div>{children}</div>
+}))
+
+vi.mock('@/components/BCTypography', () => ({
+  default: ({ children }) => <div>{children}</div>
+}))
+
+vi.mock('@mui/material/Grid2', () => ({
+  default: ({ children }) => <div>{children}</div>
+}))
+
+// Mock BCGridEditor component
 vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
   BCGridEditor: vi.fn(
     ({ alertRef, onGridReady, rowData, onAction, saveButtonProps }) => {
-      if (onGridReady) {
-        setTimeout(() => {
-          onGridReady({
-            api: {
-              sizeColumnsToFit: vi.fn(),
-              getLastDisplayedRowIndex: vi.fn(() => 0),
-              startEditingCell: vi.fn()
-            }
-          })
-        }, 0)
-      }
+      // Simulate onGridReady being called
+      React.useEffect(() => {
+        if (onGridReady) {
+          setTimeout(() => {
+            onGridReady({
+              api: {
+                sizeColumnsToFit: vi.fn(),
+                getLastDisplayedRowIndex: vi.fn(() => 0),
+                startEditingCell: vi.fn()
+              }
+            })
+          }, 0)
+        }
+      }, [onGridReady])
 
       return (
         <div data-testid="grid-editor">
@@ -60,24 +114,10 @@ vi.mock('react-router-dom', () => ({
   Route: ({ children }) => <div>{children}</div>
 }))
 
-vi.mock('@/routes/routes', () => ({
-  ROUTES: {
-    REPORTS: {
-      VIEW: '/reports/view'
-    }
-  },
-  buildPath: vi.fn(() => '/reports/view/123/456')
-}))
-
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key) => key
   })
-}))
-
-vi.mock('@/utils/schedules.js', () => ({
-  handleScheduleSave: vi.fn(async ({ updatedData }) => updatedData),
-  handleScheduleDelete: vi.fn()
 }))
 
 describe('AddEditFuelExports Component', () => {
@@ -205,7 +245,10 @@ describe('AddEditFuelExports Component', () => {
       isLoading: false
     })
 
-    vi.spyOn(useComplianceReports, 'useGetComplianceReport').mockReturnValue({
+    vi.spyOn(
+      useComplianceReports,
+      'useComplianceReportWithCache'
+    ).mockReturnValue({
       data: mockComplianceReport,
       isLoading: false
     })
@@ -253,7 +296,7 @@ describe('AddEditFuelExports Component', () => {
 
         vi.spyOn(
           useComplianceReports,
-          'useGetComplianceReport'
+          'useComplianceReportWithCache'
         ).mockReturnValueOnce({
           data: undefined,
           isLoading: true
@@ -270,7 +313,10 @@ describe('AddEditFuelExports Component', () => {
 
   describe('Supplemental Report Handling', () => {
     beforeEach(() => {
-      vi.spyOn(useComplianceReports, 'useGetComplianceReport').mockReturnValue({
+      vi.spyOn(
+        useComplianceReports,
+        'useComplianceReportWithCache'
+      ).mockReturnValue({
         data: mockSupplementalReport,
         isLoading: false
       })

@@ -118,7 +118,7 @@ export const OtherUsesSummary = ({ data, status }) => {
           defaultColDef={defaultColDef}
           queryData={paginatedData}
           dataKey="otherUses"
-          suppressPagination={data?.otherUses?.length <= 10}
+          suppressPagination={(data?.otherUses?.length || 0) <= 10}
           autoSizeStrategy={{
             type: 'fitCellContents',
             defaultMinWidth: 50,
