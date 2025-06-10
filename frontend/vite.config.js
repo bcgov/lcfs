@@ -18,22 +18,18 @@ export default defineConfig({
       overlay: false,
       clientPort: 3000
     }
-    // watch: {
-    //   usePolling: true,
-    // },
   },
   test: {
     globals: true,
     environment: 'jsdom',
     setupFiles: './testSetup.js',
-
     coverage: {
       thresholds: '80',
       enabled: true,
       reporter: ['html'],
       include: ['src'],
       exclude: [
-        'src/*.{jsx,js}',
+        'src/*.{jsx,js,tsx,ts}', // Add TypeScript extensions
         'src/assets',
         'src/constants',
         'src/themes',
