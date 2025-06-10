@@ -127,6 +127,7 @@ jobs:
           npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
         env:
           CI: true
+          NODE_OPTIONS: '--max-old-space-size=4096'
 
       - name: Upload Vitest results
         if: always()
