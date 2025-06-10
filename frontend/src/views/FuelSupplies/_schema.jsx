@@ -152,20 +152,13 @@ export const fuelSupplyColDefs = (
         minWords: 1
       }),
 
-      cellStyle: (params) => {
-        if (isSupplemental && params.data.isNewSupplementalEntry) {
-          if (params.data.actionType === 'UPDATE') {
-            return { backgroundColor: colors.alerts.warning.background }
-          }
-        } else {
-          return StandardCellStyle(
-            params,
-            errors,
-            warnings,
-            fuelTypeOtherConditionalStyle
-          )
-        }
-      },
+      cellStyle: (params) =>
+        StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        ),
       valueSetter: (params) => {
         const { newValue: selectedFuelTypeOther, data } = params
         data.fuelTypeOther = selectedFuelTypeOther
@@ -469,20 +462,13 @@ export const fuelSupplyColDefs = (
       cellRenderer: SelectRenderer,
       suppressKeyboardEvent,
       editable: (params) => isFuelTypeOther(params),
-      cellStyle: (params) => {
-        if (isSupplemental && params.data.isNewSupplementalEntry) {
-          if (params.data.actionType === 'UPDATE') {
-            return { backgroundColor: colors.alerts.warning.background }
-          }
-        } else {
-          return StandardCellStyle(
-            params,
-            errors,
-            warnings,
-            fuelTypeOtherConditionalStyle
-          )
-        }
-      }
+      cellStyle: (params) =>
+        StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        )
     },
     {
       field: 'targetCi',
@@ -524,20 +510,13 @@ export const fuelSupplyColDefs = (
       field: 'energyDensity',
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
       cellEditor: 'agNumberCellEditor',
-      cellStyle: (params) => {
-        if (isSupplemental && params.data.isNewSupplementalEntry) {
-          if (params.data.actionType === 'UPDATE') {
-            return { backgroundColor: colors.alerts.warning.background }
-          }
-        } else {
-          return StandardCellStyle(
-            params,
-            errors,
-            warnings,
-            fuelTypeOtherConditionalStyle
-          )
-        }
-      },
+      cellStyle: (params) =>
+        StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        ),
       cellEditorParams: {
         precision: 2,
         min: 0,
