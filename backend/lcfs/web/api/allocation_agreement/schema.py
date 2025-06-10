@@ -11,7 +11,10 @@ from lcfs.web.api.base import (
 from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_supply.schema import FuelTypeOptionsResponse
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
-from lcfs.web.utils.schema_validators import fuel_code_required_label
+from lcfs.web.utils.schema_validators import (
+    fuel_code_required_label,
+    fuel_quantity_required,
+)
 
 
 class AllocationTransactionTypeSchema(BaseSchema):
@@ -174,6 +177,13 @@ class AllocationAgreementCreateSchema(BaseSchema):
     @classmethod
     def check_fuel_code_required(cls, values):
         return fuel_code_required_label(values)
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_quantity_required(cls, values):
+        if isinstance(values, DeleteAllocationAgreementResponseSchema):
+            return values
+        return fuel_quantity_required(values)
 
 
 class AllocationAgreementSchema(AllocationAgreementCreateSchema):
