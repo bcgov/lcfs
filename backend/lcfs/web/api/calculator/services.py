@@ -7,7 +7,10 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelTypeOptionsSchema,
 )
 from lcfs.web.api.calculator.schema import CreditsResultSchema
-from lcfs.web.utils.calculations import calculate_compliance_units, calculate_legacy_compliance_units
+from lcfs.web.utils.calculations import (
+    calculate_compliance_units,
+    calculate_legacy_compliance_units,
+)
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.calculator.repo import CalculatorRepository
 from lcfs.web.core.decorators import service_handler
@@ -125,7 +128,7 @@ class CalculatorService:
         # Return Credits result
         return CreditsResultSchema(
             rci=round(fuel_data.effective_carbon_intensity, 2),
-            tci=round(fuel_data.target_ci, 2),
+            tci=round(fuel_data.target_ci, 5),
             eer=round(fuel_data.eer, 2),
             energy_density=round(fuel_data.energy_density or 0, 2),
             uci=fuel_data.uci,
