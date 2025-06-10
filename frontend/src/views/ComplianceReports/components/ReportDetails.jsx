@@ -299,6 +299,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                 <AllocationAgreementSummary
                   status={currentStatus}
                   data={data}
+                  isEarlyIssuance={reportInfo.isEarlyIssuance}
                 />
               }
             />
@@ -436,14 +437,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       })
     })
     return accordionsData
-  }, [
-    activityList,
-    activityDataResults,
-    t,
-    currentStatus,
-    reportInfo.isSupplemental,
-    complianceReportId
-  ])
+  }, [activityList, activityDataResults, t, currentStatus])
 
   // Auto-expand all panels once data is loaded
   useEffect(() => {

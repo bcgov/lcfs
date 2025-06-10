@@ -1,7 +1,6 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import Grid2 from '@mui/material/Grid2'
-import { formatNumberWithCommas as valueFormatter } from '@/utils/formatters'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
@@ -10,8 +9,13 @@ import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement.js'
+import { allocationAgreementSummaryColDef } from './_schema.jsx'
 
-export const AllocationAgreementSummary = ({ data, status }) => {
+export const AllocationAgreementSummary = ({
+  data,
+  status,
+  isEarlyIssuance
+}) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const { complianceReportId } = useParams()
@@ -70,80 +74,8 @@ export const AllocationAgreementSummary = ({ data, status }) => {
   )
 
   const columns = useMemo(
-    () => [
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.allocationTransactionType'
-        ),
-        field: 'allocationTransactionType'
-      },
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.transactionPartner'
-        ),
-        field: 'transactionPartner'
-      },
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.postalAddress'
-        ),
-        field: 'postalAddress'
-      },
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.transactionPartnerEmail'
-        ),
-        field: 'transactionPartnerEmail'
-      },
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.transactionPartnerPhone'
-        ),
-        field: 'transactionPartnerPhone'
-      },
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.fuelType'
-        ),
-        field: 'fuelType'
-      },
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.fuelCategory'
-        ),
-        field: 'fuelCategory'
-      },
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.carbonIntensity'
-        ),
-        field: 'provisionOfTheAct'
-      },
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.fuelCode'
-        ),
-        field: 'fuelCode'
-      },
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.ciOfFuel'
-        ),
-        field: 'ciOfFuel'
-      },
-      {
-        headerName: t(
-          'allocationAgreement:allocationAgreementColLabels.quantity'
-        ),
-        field: 'quantity',
-        valueFormatter
-      },
-      {
-        headerName: t('allocationAgreement:allocationAgreementColLabels.units'),
-        field: 'units'
-      }
-    ],
-    [t]
+    () => allocationAgreementSummaryColDef(isEarlyIssuance),
+    [isEarlyIssuance]
   )
 
   const getRowId = (params) => {

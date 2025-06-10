@@ -92,7 +92,7 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         'report:activityLists.allocationAgreements',
         'report:activityLabels.allocationAgreements',
         ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS,
-        false
+        true
       ),
       {
         name: t('report:activityLists.uploadDocuments'),
