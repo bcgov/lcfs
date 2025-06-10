@@ -88,6 +88,7 @@ async def test_create_allocation_agreement(
         {
             "version": 0,
             "action_type": ActionTypeEnum.CREATE,
+            "quantity": 100,
         }
     )
 
@@ -102,7 +103,10 @@ async def test_create_allocation_agreement(
 
 @pytest.mark.anyio
 async def test_create_allocation_agreement_with_quarterly_fields(
-    service, mock_repo_full, quarterly_allocation_agreement_schema, mock_allocation_agreement_full
+    service,
+    mock_repo_full,
+    quarterly_allocation_agreement_schema,
+    mock_allocation_agreement_full,
 ):
     """Test creation of allocation agreement with quarterly fields for early issuance"""
 
@@ -121,7 +125,9 @@ async def test_create_allocation_agreement_with_quarterly_fields(
 
     mock_repo_full.create_allocation_agreement.return_value = mock_allocation_agreement
 
-    result = await service.create_allocation_agreement(quarterly_allocation_agreement_schema)
+    result = await service.create_allocation_agreement(
+        quarterly_allocation_agreement_schema
+    )
 
     assert result.version == 0
     assert result.action_type == ActionTypeEnum.CREATE.value
