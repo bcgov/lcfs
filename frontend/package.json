@@ -16,6 +16,8 @@
     "test": "vitest",
     "test.coverage": "vitest --coverage",
     "test:run": "vitest run",
+    "test:ci": "vitest run --reporter=verbose --reporter=junit --outputFile.junit=vitest-results.xml",
+    "test:ci:memory": "node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=verbose --reporter=junit --outputFile.junit=vitest-results.xml",
     "cypress:install": "cypress install",
     "cypress:verify": "cypress verify",
     "cypress:open": "cypress open",

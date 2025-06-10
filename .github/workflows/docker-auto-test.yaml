@@ -124,11 +124,9 @@ jobs:
         id: frontend_tests
         run: |
           cd frontend
-          # Run tests in smaller batches to manage memory
-          npm run test:run -- --run --reporter=junit --outputFile=vitest-results.xml
+          npm run test:ci:memory
         env:
           CI: true
-          NODE_OPTIONS: "--max-old-space-size=4096 --expose-gc"
 
       - name: Upload Vitest results
         if: always()
