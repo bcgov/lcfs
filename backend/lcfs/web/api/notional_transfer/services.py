@@ -117,11 +117,7 @@ class NotionalTransferServices:
         notional_transfers = await self.repo.get_notional_transfers(
             compliance_report_id, changelog
         )
-        return NotionalTransfersAllSchema(
-            notional_transfers=[
-                NotionalTransferSchema.model_validate(nt) for nt in notional_transfers
-            ]
-        )
+        return NotionalTransfersAllSchema(notional_transfers=notional_transfers)
 
     @service_handler
     async def get_notional_transfers_paginated(
@@ -141,9 +137,7 @@ class NotionalTransferServices:
                 size=pagination.size,
                 total_pages=math.ceil(total_count / pagination.size),
             ),
-            notional_transfers=[
-                NotionalTransferSchema.model_validate(nt) for nt in notional_transfers
-            ],
+            notional_transfers=notional_transfers,
         )
 
     @service_handler
