@@ -124,18 +124,9 @@ jobs:
         id: frontend_tests
         run: |
           cd frontend
-          npm run test:run:components -- --reporter=junit --outputFile=components.xml
-          npm run test:run:hooks -- --reporter=junit --outputFile=hooks.xml
-          npm run test:run:layouts -- --reporter=junit --outputFile=layouts.xml
-          npm run test:run:services -- --reporter=junit --outputFile=services.xml
-          npm run test:run:utils -- --reporter=junit --outputFile=utils.xml
-          npm run test:run:views -- --reporter=junit --outputFile=views.xml
+          npm run test:ci:memory
         env:
-          NODE_OPTIONS: "--max-old-space-size=6144"
-      - name: Merge JUnit test reports
-        run: |
-          npx junit-report-merger -o vitest-results.xml components.xml hooks.xml layouts.xml services.xml utils.xml views.xml
-        working-directory: frontend
+          CI: true
 
       - name: Upload Vitest results
         if: always()
