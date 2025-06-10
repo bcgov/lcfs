@@ -403,8 +403,9 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
 
   const isEarlyIssuance =
     reportData.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
-  const showEarlyIssuanceSummary =
-    isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
+  // TODO: Currently showing full summary instead of early issuance summary
+  // Original logic: const showEarlyIssuanceSummary = isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
+  const showEarlyIssuanceSummary = false // Always show full summary for now
 
   const report = complianceReportData?.report
   const isReadOnly = isGovernmentUser && hasDraftSupplemental
