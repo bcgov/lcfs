@@ -89,7 +89,10 @@ export const AddEditFuelExports = () => {
             isSupplemental && item.complianceReportId === +complianceReportId,
           id: uuid()
         }))
-        setRowData([...updatedRowData, { id: uuid(), compliancePeriod }])
+        setRowData([
+          ...updatedRowData,
+          { id: uuid(), complianceReportId, compliancePeriod }
+        ])
       } else {
         setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
@@ -135,7 +138,10 @@ export const AddEditFuelExports = () => {
           isSupplemental && item.complianceReportId === +complianceReportId,
         id: uuid()
       }))
-      setRowData(updatedRowData)
+      setRowData([
+        ...updatedRowData,
+        { id: uuid(), complianceReportId, compliancePeriod }
+      ])
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }

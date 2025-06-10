@@ -415,7 +415,7 @@ export const changelogCommonColDefs = (highlight = true) => [
     field: 'legalName',
     flex: 1,
     minWidth: 200,
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'legalName')
   },
   {
     headerName: i18n.t(
@@ -448,7 +448,7 @@ export const changelogCommonColDefs = (highlight = true) => [
     field: 'quantity',
     valueFormatter,
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'quantitySupplied')
+      highlight && changelogCellStyle(params, 'quantity')
   }
 ]
 

@@ -49,7 +49,7 @@ export const otherUsesColDefs = (
     cellEditor: AutocompleteCellEditor,
     minWidth: '280',
     cellEditorParams: {
-      options: optionsData.fuelTypes.map((obj) => obj.fuelType),
+      options: optionsData?.fuelTypes.map((obj) => obj.fuelType),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -253,7 +253,7 @@ export const otherUsesColDefs = (
     cellEditor: AutocompleteCellEditor,
     flex: 1,
     cellEditorParams: {
-      options: optionsData.expectedUses.map((obj) => obj.name),
+      options: optionsData?.expectedUses.map((obj) => obj.name),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -363,8 +363,8 @@ export const changelogCommonColDefs = (highlight = true) => [
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
-    field: 'endUseType.type',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'endUseType')
+    field: 'fuelCode.fuelCode',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
