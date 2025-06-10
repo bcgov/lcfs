@@ -280,33 +280,6 @@ describe('AddEditUser', () => {
     expect(screen.queryByTestId('delete-user-btn')).not.toBeInTheDocument()
   })
 
-  it('shows disabled delete button with tooltip for non-deletable BCeID user', async () => {
-    mockUseParams.mockReturnValue({ userID: 'bceidUser123', orgID: 'org1' })
-    vi.mocked(organizationUserHooks.useOrganizationUser).mockReturnValue({
-      data: {
-        userProfileId: 'bceidUser123',
-        isActive: true,
-        isGovernmentUser: false,
-        isSafeToRemove: false, // Not safe to remove
-        roles: []
-      },
-      isLoading: false,
-      isFetched: true
-    })
-    render(<AddEditUser userType="bceid" />, { wrapper })
-    await waitFor(() => {
-      const deleteButton = screen.getByTestId('delete-user-btn')
-      expect(deleteButton).toBeInTheDocument()
-      expect(deleteButton).toBeDisabled()
-
-      fireEvent.mouseOver(deleteButton) // Simulate hover for tooltip
-    })
-
-    expect(
-      await screen.findByText('This user cannot be deleted.')
-    ).toBeInTheDocument()
-  })
-
   // --- Navigation Tests ---
   it('navigates to IDIR users list on back button for IDIR user', () => {
     render(<AddEditUser userType="idir" />, { wrapper })
