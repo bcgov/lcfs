@@ -1,4 +1,3 @@
-import math
 import pytest
 
 from lcfs.db.base import ActionTypeEnum
@@ -30,6 +29,34 @@ def allocation_agreement_schema():
         ci_of_fuel=100.21,
         provision_of_the_act="Default carbon intensity - section 19 (b) (ii)",
         quantity=100,
+        q1_quantity=None,
+        q2_quantity=None,
+        q3_quantity=None,
+        q4_quantity=None,
+        units="L",
+    )
+
+
+@pytest.fixture
+def quarterly_allocation_agreement_schema():
+    """Create an allocation agreement schema with quarterly fields for early issuance testing"""
+    return AllocationAgreementCreateSchema(
+        compliance_report_id=1,
+        group_uuid=DEFAULT_UUID,
+        allocation_transaction_type="Allocated from",
+        transaction_partner="LCFS Org 2",
+        postal_address="789 Stellar Lane Floor 10",
+        transaction_partner_email="tfrs@gov.bc.ca",
+        transaction_partner_phone="000-555-5678",
+        fuel_type="Biodiesel",
+        fuel_category="Diesel",
+        ci_of_fuel=100.21,
+        provision_of_the_act="Default carbon intensity - section 19 (b) (ii)",
+        quantity=None,  # Should be None for quarterly reports
+        q1_quantity=25,
+        q2_quantity=30,
+        q3_quantity=20,
+        q4_quantity=25,
         units="L",
     )
 
@@ -61,6 +88,7 @@ async def test_create_allocation_agreement(
         {
             "version": 0,
             "action_type": ActionTypeEnum.CREATE,
+            "quantity": 100,
         }
     )
 
@@ -70,6 +98,44 @@ async def test_create_allocation_agreement(
 
     assert result.version == 0
     assert result.action_type == ActionTypeEnum.CREATE.value
+    mock_repo_full.create_allocation_agreement.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_create_allocation_agreement_with_quarterly_fields(
+    service,
+    mock_repo_full,
+    quarterly_allocation_agreement_schema,
+    mock_allocation_agreement_full,
+):
+    """Test creation of allocation agreement with quarterly fields for early issuance"""
+
+    # Create a mock that includes quarterly fields
+    mock_allocation_agreement = mock_allocation_agreement_full(
+        {
+            "version": 0,
+            "action_type": ActionTypeEnum.CREATE,
+            "quantity": None,
+            "q1_quantity": 25,
+            "q2_quantity": 30,
+            "q3_quantity": 20,
+            "q4_quantity": 25,
+        }
+    )
+
+    mock_repo_full.create_allocation_agreement.return_value = mock_allocation_agreement
+
+    result = await service.create_allocation_agreement(
+        quarterly_allocation_agreement_schema
+    )
+
+    assert result.version == 0
+    assert result.action_type == ActionTypeEnum.CREATE.value
+    assert result.quantity is None
+    assert result.q1_quantity == 25
+    assert result.q2_quantity == 30
+    assert result.q3_quantity == 20
+    assert result.q4_quantity == 25
     mock_repo_full.create_allocation_agreement.assert_called_once()
 
 
@@ -148,6 +214,102 @@ async def test_update_allocation_agreement(
     assert result.postal_address == "Updated Address"
 
     # Verify that update_allocation_agreement was called with expected arguments
+    mock_repo_full.update_allocation_agreement.assert_called_once()
+    mock_repo_full.get_latest_allocation_agreement_by_group_uuid.assert_called_once_with(
+        DEFAULT_UUID
+    )
+
+
+@pytest.mark.anyio
+async def test_update_allocation_agreement_quarterly_fields(
+    service, mock_repo_full, mock_allocation_agreement_full
+):
+    """Test update with quarterly fields modification"""
+
+    update_data = AllocationAgreementCreateSchema(
+        compliance_report_id=1,
+        allocation_agreement_id=1,
+        group_uuid=DEFAULT_UUID,
+        allocation_transaction_type="Allocated from",
+        transaction_partner="LCFS Org 2",
+        postal_address="789 Stellar Lane Floor 10",
+        transaction_partner_email="tfrs@gov.bc.ca",
+        transaction_partner_phone="000-555-5678",
+        fuel_type="Biodiesel",
+        fuel_category="Diesel",
+        ci_of_fuel=100.21,
+        provision_of_the_act="Default carbon intensity - section 19 (b) (ii)",
+        quantity=None,
+        q1_quantity=50,  # Updated quantity
+        q2_quantity=30,
+        q3_quantity=20,
+        q4_quantity=25,
+        units="L",
+        version=1,
+    )
+
+    # Create existing record
+    existing = mock_allocation_agreement_full(
+        {
+            "allocation_agreement_id": 1,
+            "group_uuid": DEFAULT_UUID,
+            "version": 1,
+            "action_type": ActionTypeEnum.CREATE,
+            "compliance_report_id": 1,
+            "transaction_partner": "LCFS Org 2",
+            "postal_address": "789 Stellar Lane Floor 10",
+            "transaction_partner_email": "tfrs@gov.bc.ca",
+            "transaction_partner_phone": "000-555-5678",
+            "ci_of_fuel": 100.21,
+            "quantity": None,
+            "q1_quantity": 25,  # Original value
+            "q2_quantity": 30,
+            "q3_quantity": 20,
+            "q4_quantity": 25,
+            "units": "L",
+            "fuel_type_other": None,
+        }
+    )
+
+    mock_repo_full.get_latest_allocation_agreement_by_group_uuid.return_value = existing
+
+    # Create mock for the updated agreement
+    mock_updated = mock_allocation_agreement_full(
+        {
+            "allocation_agreement_id": 1,
+            "group_uuid": DEFAULT_UUID,
+            "version": 2,
+            "action_type": ActionTypeEnum.UPDATE,
+            "compliance_report_id": 1,
+            "transaction_partner": "LCFS Org 2",
+            "postal_address": "789 Stellar Lane Floor 10",
+            "transaction_partner_email": "tfrs@gov.bc.ca",
+            "transaction_partner_phone": "000-555-5678",
+            "ci_of_fuel": 100.21,
+            "quantity": None,
+            "q1_quantity": 50,  # Updated value
+            "q2_quantity": 30,
+            "q3_quantity": 20,
+            "q4_quantity": 25,
+            "units": "L",
+            "fuel_type_other": None,
+        }
+    )
+
+    mock_repo_full.update_allocation_agreement.return_value = mock_updated
+
+    # Execute the service method
+    result = await service.update_allocation_agreement(update_data)
+
+    # Verify the result
+    assert result.version == 2
+    assert result.action_type == ActionTypeEnum.UPDATE.value
+    assert result.q1_quantity == 50
+    assert result.q2_quantity == 30
+    assert result.q3_quantity == 20
+    assert result.q4_quantity == 25
+
+    # Verify that update_allocation_agreement was called
     mock_repo_full.update_allocation_agreement.assert_called_once()
     mock_repo_full.get_latest_allocation_agreement_by_group_uuid.assert_called_once_with(
         DEFAULT_UUID
@@ -314,3 +476,35 @@ async def test_delete_already_deleted_allocation_agreement(
     )
     # Verify create_allocation_agreement was not called
     mock_repo_full.create_allocation_agreement.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_convert_to_model_quarterly_fields(service, mock_fuel_repo_full):
+    """Test conversion of schema to model includes quarterly fields"""
+    
+    schema = AllocationAgreementCreateSchema(
+        compliance_report_id=1,
+        allocation_transaction_type="Allocated from",
+        transaction_partner="Test Partner",
+        postal_address="Test Address",
+        transaction_partner_email="test@example.com",
+        transaction_partner_phone="123-456-7890",
+        fuel_type="Biodiesel",
+        fuel_category="Diesel",
+        provision_of_the_act="Default carbon intensity - section 19 (b) (ii)",
+        quantity=None,
+        q1_quantity=10,
+        q2_quantity=20,
+        q3_quantity=30,
+        q4_quantity=40,
+        fuel_code=None,
+    )
+
+    result = await service.convert_to_model(schema)
+
+    # Verify quarterly fields are preserved
+    assert result.quantity is None
+    assert result.q1_quantity == 10
+    assert result.q2_quantity == 20
+    assert result.q3_quantity == 30
+    assert result.q4_quantity == 40
