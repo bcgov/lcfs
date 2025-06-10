@@ -1,644 +1,510 @@
-import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { AddEditUser } from '../AddEditUser'
-import { wrapper } from '@/tests/utils/wrapper'
+import { PropTypes } from 'prop-types'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { useMutation } from '@tanstack/react-query'
+import { useForm, FormProvider } from 'react-hook-form'
+import { yupResolver } from '@hookform/resolvers/yup'
 import { useUser, useDeleteUser } from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import {
+  userInfoSchema,
+  idirTextFields,
+  bceidTextFields,
+  defaultValues,
+  statusOptions
+} from './_schema'
+import { useApiService } from '@/services/useApiService'
+import { ROUTES, buildPath } from '@/routes/routes'
+import { BCFormRadio, BCFormText } from '@/components/BCForm'
+import colors from '@/themes/base/colors'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import {
+  faFloppyDisk,
+  faArrowLeft,
+  faTrash
+} from '@fortawesome/free-solid-svg-icons'
+import BCButton from '@/components/BCButton'
+import {
+  Box,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip
+} from '@mui/material'
+import BCTypography from '@/components/BCTypography'
+import Grid2 from '@mui/material/Grid2'
+import BCAlert from '@/components/BCAlert'
+import Loading from '@/components/Loading'
+import { IDIRSpecificRoleFields } from './components/IDIRSpecificRoleFields'
+import { BCeIDSpecificRoleFields } from './components/BCeIDSpecificRoleFields'
+import { roles } from '@/constants/roles'
 import { useOrganizationUser } from '@/hooks/useOrganization'
 
-// Mock react-router-dom hooks
-const mockUseNavigate = vi.fn()
-const mockUseParams = vi.fn()
+// switch between 'idir' and 'bceid'
+export const AddEditUser = ({ userType = 'idir' }) => {
+  const {
+    data: currentUser,
+    hasRoles,
+    isLoading: isCurrentUserLoading
+  } = useCurrentUser()
+  const navigate = useNavigate()
+  const apiService = useApiService()
+  const { t } = useTranslation(['common', 'admin'])
+  const { userID, orgID } = useParams()
+  const [orgName, setOrgName] = useState('')
+  const [openConfirm, setOpenConfirm] = useState(false)
 
-vi.mock('react-router-dom', () => ({
-  ...vi.importActual('react-router-dom'),
-  useNavigate: () => mockUseNavigate(),
-  useParams: () => mockUseParams()
-}))
+  const {
+    data,
+    isLoading: isUserLoading,
+    isFetched: isUserFetched
+  } = hasRoles(roles.supplier) && userID
+    ? userID
+      ? // eslint-disable-next-line react-hooks/rules-of-hooks
+        useOrganizationUser(
+          orgID || currentUser?.organization?.organizationId,
+          userID,
+          { enabled: !isCurrentUserLoading }
+        )
+      : { undefined, isLoading: false, isFetched: false }
+    : // eslint-disable-next-line react-hooks/rules-of-hooks
+      useUser(userID, { enabled: !!userID, retry: false })
 
-// Mock react-i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key) => key
+  // Determine if user is safe to remove
+  const safeToDelete = data?.isSafeToRemove
+
+  // User form hook and form validation
+  const form = useForm({
+    resolver: yupResolver(userInfoSchema(userType)),
+    mode: 'onChange',
+    defaultValues
   })
-}))
-
-// Mock hooks
-vi.mock('@/hooks/useUser')
-vi.mock('@/hooks/useCurrentUser')
-vi.mock('@/hooks/useOrganization')
-
-// Mock @tanstack/react-query
-vi.mock('@tanstack/react-query', () => ({
-  useMutation: vi.fn(() => ({
-    mutate: vi.fn(),
-    isPending: false,
-    isError: false
-  }))
-}))
-
-// Mock useApiService
-vi.mock('@/services/useApiService', () => ({
-  useApiService: () => ({
-    put: vi.fn(),
-    post: vi.fn()
-  })
-}))
-
-// Mock react-hook-form
-const mockSetValue = vi.fn()
-const mockReset = vi.fn()
-const mockWatch = vi.fn()
-const mockHandleSubmit = vi.fn()
-
-vi.mock('react-hook-form', () => ({
-  useForm: () => ({
-    handleSubmit: mockHandleSubmit.mockReturnValue(vi.fn()),
-    control: {},
-    setValue: mockSetValue,
-    watch: mockWatch,
-    reset: mockReset
-  }),
-  FormProvider: ({ children }) => (
-    <div data-test="form-provider">{children}</div>
+  const { handleSubmit, control, setValue, watch, reset } = form
+  const [disabled, setDisabled] = useState(false)
+  const textFields = useMemo(
+    () =>
+      hasRoles(roles.supplier) || orgName || userType === 'bceid'
+        ? bceidTextFields(t)
+        : idirTextFields(t),
+    [hasRoles, orgName, t, userType]
   )
-}))
+  const status = watch('status')
+  const readOnly = watch('readOnly')
+  const bceidRoles = watch('bceidRoles')
 
-// Mock schema
-vi.mock('./_schema', () => ({
-  userInfoSchema: () => ({}),
-  idirTextFields: (t) => [
-    { name: 'firstName', label: 'First Name', optional: false },
-    { name: 'lastName', label: 'Last Name', optional: false },
-    { name: 'keycloakEmail', label: 'Email', optional: false }
-  ],
-  bceidTextFields: (t) => [
-    { name: 'firstName', label: 'First Name', optional: false },
-    { name: 'lastName', label: 'Last Name', optional: false },
-    { name: 'keycloakEmail', label: 'Email', optional: false },
-    { name: 'jobTitle', label: 'Job Title', optional: true }
-  ],
-  defaultValues: {},
-  statusOptions: (t) => [
-    { value: 'Active', label: 'Active' },
-    { value: 'Inactive', label: 'Inactive' }
-  ]
-}))
+  useEffect(() => {
+    if (status !== 'Active') {
+      setDisabled(true)
+    } else {
+      setDisabled(false)
+    }
+  }, [status])
 
-// Mock components
-vi.mock('@/components/BCForm', () => ({
-  BCFormRadio: ({ name, label, options }) => (
-    <div data-test={`form-radio-${name}`}>
-      <label>{label}</label>
-      {options?.map((option, index) => (
-        <input key={index} type="radio" value={option.value} />
-      ))}
-    </div>
-  ),
-  BCFormText: ({ name, label }) => (
-    <div data-test={`form-text-${name}`}>
-      <label>{label}</label>
-      <input name={name} />
-    </div>
-  )
-}))
+  useEffect(() => {
+    if (readOnly === roles.read_only.toLocaleLowerCase()) {
+      setValue('bceidRoles', [])
+    }
+  }, [readOnly])
 
-vi.mock('./components/IDIRSpecificRoleFields', () => ({
-  IDIRSpecificRoleFields: ({ form, disabled, t }) => (
-    <div data-test="idir-role-fields">IDIR Role Fields</div>
-  )
-}))
+  useEffect(() => {
+    if (bceidRoles.length > 0) {
+      setValue('readOnly', '')
+    }
+  }, [bceidRoles])
 
-vi.mock('./components/BCeIDSpecificRoleFields', () => ({
-  BCeIDSpecificRoleFields: ({ form, disabled, status, t }) => (
-    <div data-test="bceid-role-fields">BCeID Role Fields</div>
-  )
-}))
-
-vi.mock('@/components/Loading', () => ({
-  default: ({ message }) => <div data-test="loading">{message}</div>
-}))
-
-// Mock constants
-vi.mock('@/constants/roles', () => ({
-  roles: {
-    supplier: 'supplier',
-    government: 'government',
-    administrator: 'administrator',
-    read_only: 'read_only'
-  }
-}))
-
-describe('AddEditUser', () => {
-  const mockNavigate = vi.fn()
-
-  beforeEach(() => {
-    vi.resetAllMocks()
-
-    // Mock router hooks
-    mockUseNavigate.mockReturnValue(mockNavigate)
-    mockUseParams.mockReturnValue({
-      userID: undefined,
-      orgID: undefined
-    })
-
-    // Mock watch to return default values
-    mockWatch.mockImplementation((field) => {
-      const defaults = {
-        status: 'Active',
-        readOnly: '',
-        bceidRoles: []
+  useEffect(() => {
+    if (isUserFetched && data) {
+      const dataRoles = data?.roles
+        .map((role) => role.name.toLowerCase())
+        .filter(
+          (r) =>
+            r !== roles.government.toLocaleLowerCase() &&
+            r !== roles.supplier.toLocaleLowerCase()
+        )
+      const userData = {
+        keycloakEmail: data?.keycloakEmail,
+        altEmail: data?.email || '',
+        jobTitle: data?.title,
+        firstName: data?.firstName,
+        lastName: data?.lastName,
+        userName: data?.keycloakUsername,
+        phone: data?.phone,
+        mobile: data?.mobilePhone,
+        status: data?.isActive ? 'Active' : 'Inactive',
+        readOnly: dataRoles
+          .filter((r) => r === roles.read_only.toLocaleLowerCase())
+          .join(''),
+        adminRole: dataRoles.filter(
+          (r) => r === roles.administrator.toLocaleLowerCase()
+        ),
+        idirRole: dataRoles
+          .filter((r) => r !== roles.administrator.toLocaleLowerCase())
+          .join(''),
+        bceidRoles: dataRoles.includes(roles.read_only.toLocaleLowerCase())
+          ? []
+          : dataRoles
       }
-      return defaults[field] || ''
-    })
+      if (data.isGovernmentUser) {
+        userData.bceidRoles = []
+        userData.readOnly = ''
+      } else {
+        userData.adminRole = []
+        userData.idirRole = ''
+        setOrgName(data.organization?.name)
+      }
+      reset(userData)
+    }
+  }, [isUserFetched, data, reset])
+  // Prepare payload and call mutate function
+  const onSubmit = (data) => {
+    const payload = {
+      userProfileId: userID,
+      title: data.jobTitle,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      keycloakUsername: data.userName,
+      keycloakEmail: data.keycloakEmail,
+      email: data.altEmail === '' ? null : data.altEmail,
+      phone: data.phone,
+      mobilePhone: data.mobile,
+      isActive: data.status === 'Active',
+      organizationId: orgID || currentUser.organizationId,
+      roles:
+        data.status === 'Active'
+          ? [
+              ...data.adminRole,
+              ...(data.readOnly === '' ? data.bceidRoles : []),
+              data.idirRole,
+              data.readOnly
+            ]
+          : []
+    }
+    if (orgID || hasRoles(roles.supplier)) {
+      payload.roles = [...payload.roles, roles.supplier.toLocaleLowerCase()]
+    } else {
+      payload.roles = [...payload.roles, roles.government.toLocaleLowerCase()]
+    }
+    mutate(payload)
+  }
 
-    // Mock useCurrentUser
-    vi.mocked(useCurrentUser).mockReturnValue({
-      data: {
-        organizationId: 'org123',
-        organization: { organizationId: 'org123' },
-        isGovernmentUser: true
+  const onErrors = (error) => {
+    console.log(error)
+  }
+  // useMutation hook from React Query for handling API request
+  const { mutate, isPending, isError } = useMutation({
+    mutationFn: async (payload) => {
+      if (hasRoles(roles.supplier)) {
+        const orgId = orgID || currentUser.organization?.organizationId
+        return userID
+          ? await apiService.put(
+              `/organization/${orgId}/users/${userID}`,
+              payload
+            )
+          : await apiService.post(`/organization/${orgId}/users`, payload)
+      }
+      return userID
+        ? await apiService.put(`/users/${userID}`, payload)
+        : await apiService.post('/users', payload)
+    },
+    onSuccess: () => {
+      // on success navigate somewhere
+      if (hasRoles(roles.supplier)) {
+        navigate(ROUTES.ORGANIZATION.ORG)
+      } else if (orgID) {
+        navigate(buildPath(ROUTES.ORGANIZATIONS.VIEW, { orgID }), {
+          state: {
+            message: 'User has been successfully saved.',
+            severity: 'success'
+          }
+        })
+      } else {
+        navigate(ROUTES.ADMIN.USERS.LIST, {
+          state: {
+            message: 'User has been successfully saved.',
+            severity: 'success'
+          }
+        })
+      }
+    },
+    onError: (error) => {
+      // handle axios errors here
+      console.error('Error saving user:', error)
+    }
+  })
+
+  // Delete mutation hook (only used for BCeID users)
+  const { mutate: deleteUser } = useDeleteUser()
+
+  // Handler for confirming deletion
+  const handleConfirmDelete = () => {
+    deleteUser(userID, {
+      onSuccess: () => {
+        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
+          state: {
+            message: t('admin:deleteUser.success'),
+            severity: 'success'
+          }
+        })
       },
-      hasRoles: vi.fn(() => false),
-      isLoading: false
+      onError: (error) => {
+        console.error('Error deleting user:', error)
+      }
     })
-
-    // Mock useUser
-    vi.mocked(useUser).mockReturnValue({
-      data: null,
-      isLoading: false,
-      isFetched: false
-    })
-
-    // Mock useOrganizationUser
-    vi.mocked(useOrganizationUser).mockReturnValue({
-      data: null,
-      isLoading: false,
-      isFetched: false
-    })
-
-    // Mock useDeleteUser
-    vi.mocked(useDeleteUser).mockReturnValue({
-      mutate: vi.fn()
-    })
-  })
-
-  it('renders add user form with IDIR fields by default', () => {
-    render(<AddEditUser />, { wrapper })
-
-    expect(screen.getByText('Add user')).toBeInTheDocument()
-    expect(screen.getByTestId('form-text-firstName')).toBeInTheDocument()
-    expect(screen.getByTestId('form-text-lastName')).toBeInTheDocument()
-    expect(screen.getByTestId('form-text-keycloakEmail')).toBeInTheDocument()
-    expect(screen.getByTestId('form-radio-status')).toBeInTheDocument()
-    expect(screen.getByTestId('idir-role-fields')).toBeInTheDocument()
-  })
-
-  it('renders add user form with BCeID fields when userType is bceid', () => {
-    render(<AddEditUser userType="bceid" />, { wrapper })
-
-    expect(screen.getByText('Add user')).toBeInTheDocument()
-    expect(screen.getByTestId('form-text-firstName')).toBeInTheDocument()
-    expect(screen.getByTestId('form-text-lastName')).toBeInTheDocument()
-    expect(screen.getByTestId('form-text-keycloakEmail')).toBeInTheDocument()
-    expect(screen.getByTestId('form-text-jobTitle')).toBeInTheDocument()
-    expect(screen.getByTestId('bceid-role-fields')).toBeInTheDocument()
-  })
-
-  it('shows loading when user data is loading', () => {
-    vi.mocked(useCurrentUser).mockReturnValue({
-      data: null,
-      hasRoles: vi.fn(() => false),
-      isLoading: true
-    })
-
-    render(<AddEditUser />, { wrapper })
-    expect(screen.getByTestId('loading')).toBeInTheDocument()
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
-  })
-
-  it('shows loading when mutation is pending', () => {
-    const { useMutation } = require('@tanstack/react-query')
-    useMutation.mockReturnValue({
-      mutate: vi.fn(),
-      isPending: true,
-      isError: false
-    })
-
-    render(<AddEditUser />, { wrapper })
-    expect(screen.getByTestId('loading')).toBeInTheDocument()
-    expect(screen.getByText('Adding user...')).toBeInTheDocument()
-  })
-
-  it('shows error alert when mutation fails', () => {
-    const { useMutation } = require('@tanstack/react-query')
-    useMutation.mockReturnValue({
-      mutate: vi.fn(),
-      isPending: false,
-      isError: true
-    })
-
-    render(<AddEditUser />, { wrapper })
-    expect(screen.getByText('common:submitError')).toBeInTheDocument()
-  })
-
-  it('renders edit user form when userID is provided', () => {
-    mockUseParams.mockReturnValue({
-      userID: 'user123',
-      orgID: undefined
-    })
-
-    vi.mocked(useUser).mockReturnValue({
-      data: {
-        userProfileId: 'user123',
-        firstName: 'John',
-        lastName: 'Doe',
-        keycloakEmail: 'john@example.com',
-        isActive: true,
-        isGovernmentUser: true,
-        isSafeToRemove: true,
-        roles: [{ name: 'government' }]
-      },
-      isLoading: false,
-      isFetched: true
-    })
-
-    render(<AddEditUser />, { wrapper })
-    expect(screen.getByText('Edit user')).toBeInTheDocument()
-  })
-
-  it('handles back button click for IDIR users', () => {
-    render(<AddEditUser userType="idir" />, { wrapper })
-
-    const backButton = screen.getByTestId('back-btn')
-    fireEvent.click(backButton)
-
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/users')
-  })
-
-  it('handles back button click for BCeID users', () => {
-    render(<AddEditUser userType="bceid" />, { wrapper })
-
-    const backButton = screen.getByTestId('back-btn')
-    fireEvent.click(backButton)
-
-    expect(mockNavigate).toHaveBeenCalledWith('/organizations')
-  })
-
-  it('handles back button click for supplier users', () => {
-    vi.mocked(useCurrentUser).mockReturnValue({
-      data: {
-        organizationId: 'org123',
-        organization: { organizationId: 'org123' },
-        isGovernmentUser: false
-      },
-      hasRoles: vi.fn(() => true),
-      isLoading: false
-    })
-
-    render(<AddEditUser />, { wrapper })
-
-    const backButton = screen.getByTestId('back-btn')
-    fireEvent.click(backButton)
-
-    expect(mockNavigate).toHaveBeenCalledWith('/organization')
-  })
-
-  it('shows delete button for BCeID users when safe to delete', () => {
-    mockUseParams.mockReturnValue({
-      userID: 'user123',
-      orgID: 'org456'
-    })
-
-    vi.mocked(useOrganizationUser).mockReturnValue({
-      data: {
-        userProfileId: 'user123',
-        firstName: 'John',
-        lastName: 'Doe',
-        isGovernmentUser: false,
-        isSafeToRemove: true,
-        organization: { organizationId: 'org456' },
-        roles: [{ name: 'supplier' }]
-      },
-      isLoading: false,
-      isFetched: true
-    })
-
-    render(<AddEditUser userType="bceid" />, { wrapper })
-    expect(screen.getByTestId('delete-user-btn')).toBeInTheDocument()
-  })
-
-  it('shows disabled delete button when not safe to delete', () => {
-    mockUseParams.mockReturnValue({
-      userID: 'user123',
-      orgID: 'org456'
-    })
-
-    vi.mocked(useOrganizationUser).mockReturnValue({
-      data: {
-        userProfileId: 'user123',
-        firstName: 'John',
-        lastName: 'Doe',
-        isGovernmentUser: false,
-        isSafeToRemove: false,
-        organization: { organizationId: 'org456' },
-        roles: [{ name: 'supplier' }]
-      },
-      isLoading: false,
-      isFetched: true
-    })
-
-    render(<AddEditUser userType="bceid" />, { wrapper })
-
-    const deleteButton = screen.getByTestId('delete-user-btn')
-    expect(deleteButton).toBeInTheDocument()
-    expect(deleteButton).toBeDisabled()
-  })
-
-  it('does not show delete button for government users', () => {
-    mockUseParams.mockReturnValue({
-      userID: 'user123',
-      orgID: undefined
-    })
-
-    vi.mocked(useUser).mockReturnValue({
-      data: {
-        userProfileId: 'user123',
-        firstName: 'John',
-        lastName: 'Doe',
-        isGovernmentUser: true,
-        isSafeToRemove: true,
-        roles: [{ name: 'government' }]
-      },
-      isLoading: false,
-      isFetched: true
-    })
-
-    render(<AddEditUser />, { wrapper })
-    expect(screen.queryByTestId('delete-user-btn')).not.toBeInTheDocument()
-  })
-
-  it('opens confirmation dialog when delete button is clicked', async () => {
-    mockUseParams.mockReturnValue({
-      userID: 'user123',
-      orgID: 'org456'
-    })
-
-    vi.mocked(useOrganizationUser).mockReturnValue({
-      data: {
-        userProfileId: 'user123',
-        firstName: 'John',
-        lastName: 'Doe',
-        isGovernmentUser: false,
-        isSafeToRemove: true,
-        organization: { organizationId: 'org456' },
-        roles: [{ name: 'supplier' }]
-      },
-      isLoading: false,
-      isFetched: true
-    })
-
-    render(<AddEditUser userType="bceid" />, { wrapper })
-
-    const deleteButton = screen.getByTestId('delete-user-btn')
-    fireEvent.click(deleteButton)
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('admin:deleteUser.confirmTitle')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('admin:deleteUser.confirmMessage')
-      ).toBeInTheDocument()
-    })
-  })
-
-  it('handles form submission', async () => {
-    const mockMutate = vi.fn()
-    const { useMutation } = require('@tanstack/react-query')
-    useMutation.mockReturnValue({
-      mutate: mockMutate,
-      isPending: false,
-      isError: false
-    })
-
-    mockHandleSubmit.mockImplementation((onSubmit) => (e) => {
-      e.preventDefault()
-      onSubmit({
-        firstName: 'John',
-        lastName: 'Doe',
-        keycloakEmail: 'john@example.com',
-        status: 'Active',
-        adminRole: [],
-        bceidRoles: [],
-        readOnly: '',
-        idirRole: ''
-      })
-    })
-
-    render(<AddEditUser />, { wrapper })
-
-    const form =
-      screen.getByRole('form') ||
-      screen.getByTestId('form-provider').parentElement
-    fireEvent.submit(form)
-
-    await waitFor(() => {
-      expect(mockMutate).toHaveBeenCalled()
-    })
-  })
-
-  it('displays organization name for BCeID users', () => {
-    mockUseParams.mockReturnValue({
-      userID: 'user123',
-      orgID: 'org456'
-    })
-
-    vi.mocked(useOrganizationUser).mockReturnValue({
-      data: {
-        userProfileId: 'user123',
-        firstName: 'John',
-        lastName: 'Doe',
-        organization: { name: 'Test Organization' },
-        roles: [{ name: 'supplier' }]
-      },
-      isLoading: false,
-      isFetched: true
-    })
-
-    render(<AddEditUser userType="bceid" />, { wrapper })
-    expect(
-      screen.getByText('Edit user to Test Organization')
-    ).toBeInTheDocument()
-  })
-
-  it('handles status change effects', () => {
-    mockWatch.mockImplementation((field) => {
-      if (field === 'status') return 'Inactive'
-      return ''
-    })
-
-    render(<AddEditUser />, { wrapper })
-    // Component should render without errors when status is Inactive
-    expect(screen.getByTestId('form-radio-status')).toBeInTheDocument()
-  })
-
-  it('handles readOnly role effects', () => {
-    mockWatch.mockImplementation((field) => {
-      if (field === 'readOnly') return 'read_only'
-      return field === 'bceidRoles' ? [] : ''
-    })
-
-    render(<AddEditUser />, { wrapper })
-    // Component should render and setValue should be called for bceidRoles
-    expect(mockSetValue).toHaveBeenCalledWith('bceidRoles', [])
-  })
-
-  it('handles bceidRoles effects', () => {
-    mockWatch.mockImplementation((field) => {
-      if (field === 'bceidRoles') return ['some_role']
-      return ''
-    })
-
-    render(<AddEditUser />, { wrapper })
-    // Component should render and setValue should be called for readOnly
-    expect(mockSetValue).toHaveBeenCalledWith('readOnly', '')
-  })
-
-  it('handles supplier user context', () => {
-    vi.mocked(useCurrentUser).mockReturnValue({
-      data: {
-        organizationId: 'org123',
-        organization: { organizationId: 'org123' },
-        isGovernmentUser: false
-      },
-      hasRoles: vi.fn(() => true),
-      isLoading: false
-    })
-
-    render(<AddEditUser />, { wrapper })
-    expect(screen.getByTestId('bceid-role-fields')).toBeInTheDocument()
-  })
-
-  it('populates form with user data when editing', () => {
-    mockUseParams.mockReturnValue({
-      userID: 'user123',
-      orgID: undefined
-    })
-
-    vi.mocked(useUser).mockReturnValue({
-      data: {
-        userProfileId: 'user123',
-        firstName: 'John',
-        lastName: 'Doe',
-        keycloakEmail: 'john@example.com',
-        keycloakUsername: 'johndoe',
-        title: 'Developer',
-        phone: '123-456-7890',
-        mobilePhone: '098-765-4321',
-        isActive: true,
-        isGovernmentUser: true,
-        roles: [{ name: 'government' }, { name: 'administrator' }]
-      },
-      isLoading: false,
-      isFetched: true
-    })
-
-    render(<AddEditUser />, { wrapper })
-
-    expect(mockReset).toHaveBeenCalledWith(
-      expect.objectContaining({
-        firstName: 'John',
-        lastName: 'Doe',
-        keycloakEmail: 'john@example.com',
-        status: 'Active'
-      })
-    )
-  })
-
-  it('confirms user deletion', async () => {
-    const mockDeleteMutate = vi.fn()
-    vi.mocked(useDeleteUser).mockReturnValue({
-      mutate: mockDeleteMutate
-    })
-
-    mockUseParams.mockReturnValue({
-      userID: 'user123',
-      orgID: 'org456'
-    })
-
-    vi.mocked(useOrganizationUser).mockReturnValue({
-      data: {
-        userProfileId: 'user123',
-        isGovernmentUser: false,
-        isSafeToRemove: true,
-        organization: { organizationId: 'org456' },
-        roles: [{ name: 'supplier' }]
-      },
-      isLoading: false,
-      isFetched: true
-    })
-
-    render(<AddEditUser userType="bceid" />, { wrapper })
-
-    // Click delete button to open dialog
-    const deleteButton = screen.getByTestId('delete-user-btn')
-    fireEvent.click(deleteButton)
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('admin:deleteUser.confirmTitle')
-      ).toBeInTheDocument()
-    })
-
-    // Find and click confirm button
-    const confirmButton = screen.getByRole('button', {
-      name: 'admin:deleteUser.button'
-    })
-    fireEvent.click(confirmButton)
-
-    expect(mockDeleteMutate).toHaveBeenCalledWith('user123', expect.any(Object))
-  })
-
-  it('cancels user deletion', async () => {
-    mockUseParams.mockReturnValue({
-      userID: 'user123',
-      orgID: 'org456'
-    })
-
-    vi.mocked(useOrganizationUser).mockReturnValue({
-      data: {
-        userProfileId: 'user123',
-        isGovernmentUser: false,
-        isSafeToRemove: true,
-        organization: { organizationId: 'org456' },
-        roles: [{ name: 'supplier' }]
-      },
-      isLoading: false,
-      isFetched: true
-    })
-
-    render(<AddEditUser userType="bceid" />, { wrapper })
-
-    // Click delete button to open dialog
-    const deleteButton = screen.getByTestId('delete-user-btn')
-    fireEvent.click(deleteButton)
-
-    await waitFor(() => {
-      expect(
-        screen.getByText('admin:deleteUser.confirmTitle')
-      ).toBeInTheDocument()
-    })
-
-    // Find and click cancel button
-    const cancelButton = screen.getByText('cancelBtn')
-    fireEvent.click(cancelButton)
-
-    await waitFor(() => {
-      expect(
-        screen.queryByText('admin:deleteUser.confirmTitle')
-      ).not.toBeInTheDocument()
-    })
-  })
-})
+    setOpenConfirm(false)
+  }
+
+  // Cancel deletion
+  const handleCancelDelete = () => {
+    setOpenConfirm(false)
+  }
+
+  // Handler for delete button click – opens confirmation dialog
+  const handleDelete = () => {
+    // Only allow deletion for BCeID users
+    if (userType === 'bceid' && safeToDelete) {
+      setOpenConfirm(true)
+    }
+  }
+
+  if (isUserLoading || isCurrentUserLoading) {
+    return <Loading message="Loading..." />
+  }
+
+  if (isPending) {
+    return <Loading message="Adding user..." />
+  }
+
+  return (
+    <div>
+      {isError && (
+        <BCAlert severity="error" dismissible={true}>
+          {t('common:submitError')}
+        </BCAlert>
+      )}
+      <BCTypography variant="h5" color={colors.primary.main} mb={2}>
+        {userID ? 'Edit' : 'Add'} user&nbsp;
+        {userType === 'bceid' && `to ${orgName}`}
+      </BCTypography>
+      <form onSubmit={handleSubmit(onSubmit, onErrors)} id={'user-form'}>
+        <FormProvider {...{ control, setValue }}>
+          <Grid2 container columnSpacing={2.5} rowSpacing={0.5}>
+            {/* Form fields */}
+            <Grid2
+              size={{
+                xs: 12,
+                md: 5
+              }}
+            >
+              <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
+                {textFields.map((field) => (
+                  <BCFormText
+                    data-test={field.name}
+                    key={field.name}
+                    control={control}
+                    label={field.label}
+                    name={field.name}
+                    optional={field.optional}
+                  />
+                ))}
+              </Stack>
+            </Grid2>
+            <Grid2
+              size={{
+                xs: 12,
+                md: 7
+              }}
+            >
+              <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
+                <BCFormRadio
+                  control={control}
+                  name="status"
+                  label="Status"
+                  data-test="status"
+                  options={statusOptions(t)}
+                />
+                {hasRoles(roles.supplier) || orgName || orgID ? (
+                  <BCeIDSpecificRoleFields
+                    form={form}
+                    disabled={disabled}
+                    status={status}
+                    t={t}
+                  />
+                ) : (
+                  <IDIRSpecificRoleFields
+                    form={form}
+                    disabled={disabled}
+                    t={t}
+                  />
+                )}
+              </Stack>
+            </Grid2>
+            <Grid2
+              size={{
+                xs: 12,
+                md: 5
+              }}
+            >
+              <Box
+                bgcolor={colors.background.grey}
+                p={3}
+                display="flex"
+                justifyContent="space-between"
+              >
+                <BCButton
+                  variant="outlined"
+                  size="medium"
+                  color="primary"
+                  data-test="back-btn"
+                  sx={{
+                    backgroundColor: 'white.main'
+                  }}
+                  startIcon={
+                    <FontAwesomeIcon
+                      icon={faArrowLeft}
+                      className="small-icon"
+                    />
+                  }
+                  onClick={() =>
+                    hasRoles(roles.supplier)
+                      ? navigate(ROUTES.ORGANIZATION.ORG)
+                      : navigate(
+                          userType === 'idir'
+                            ? ROUTES.ADMIN.USERS.LIST
+                            : ROUTES.ORGANIZATIONS.LIST
+                        )
+                  }
+                >
+                  <BCTypography variant="subtitle2" textTransform="none">
+                    {t('backBtn')}
+                  </BCTypography>
+                </BCButton>
+                {/* Only render delete button for BCeID users */}
+                {userID &&
+                  userType === 'bceid' &&
+                  (safeToDelete ? (
+                    <BCButton
+                      variant="outlined"
+                      size="medium"
+                      sx={{
+                        backgroundColor: 'white.main',
+                        borderColor: colors.error.main,
+                        color: colors.error.main
+                      }}
+                      data-test="delete-user-btn"
+                      startIcon={
+                        <FontAwesomeIcon
+                          icon={faTrash}
+                          className="small-icon"
+                        />
+                      }
+                      onClick={handleDelete}
+                    >
+                      <BCTypography variant="subtitle2" textTransform="none">
+                        {t('admin:deleteUser.button')}
+                      </BCTypography>
+                    </BCButton>
+                  ) : (
+                    <Tooltip title={t('admin:deleteUser.notSafe')}>
+                      <span>
+                        <BCButton
+                          variant="outlined"
+                          size="medium"
+                          sx={{
+                            backgroundColor: 'white.main',
+                            borderColor: colors.error.main,
+                            color: colors.error.main,
+                            '&.Mui-disabled': {
+                              backgroundColor: 'white.main',
+                              borderColor: colors.error.main,
+                              color: colors.error.main,
+                              opacity: 0.5, // slightly faded to indicate disabled state
+                              cursor: 'not-allowed'
+                            }
+                          }}
+                          disabled
+                          data-test="delete-user-btn"
+                          startIcon={
+                            <FontAwesomeIcon
+                              icon={faTrash}
+                              className="small-icon"
+                            />
+                          }
+                        >
+                          <BCTypography
+                            variant="subtitle2"
+                            textTransform="none"
+                          >
+                            {t('admin:deleteUser.button')}
+                          </BCTypography>
+                        </BCButton>
+                      </span>
+                    </Tooltip>
+                  ))}
+                <BCButton
+                  type="submit"
+                  variant="contained"
+                  size="medium"
+                  color="primary"
+                  data-test="saveUser"
+                  sx={{ ml: 2 }}
+                  startIcon={
+                    <FontAwesomeIcon
+                      icon={faFloppyDisk}
+                      className="small-icon"
+                    />
+                  }
+                >
+                  <BCTypography variant="button">{t('saveBtn')}</BCTypography>
+                </BCButton>
+              </Box>
+            </Grid2>
+          </Grid2>
+        </FormProvider>
+      </form>
+
+      {/* Confirmation Dialog for deletion */}
+      <Dialog open={openConfirm} onClose={handleCancelDelete}>
+        <DialogTitle>
+          <BCTypography variant="h6" color={colors.primary.main}>
+            {t('admin:deleteUser.confirmTitle')}
+          </BCTypography>
+        </DialogTitle>
+        <DialogContent sx={{ mt: 2 }}>
+          <BCTypography variant="body5">
+            {t('admin:deleteUser.confirmMessage')}
+          </BCTypography>
+        </DialogContent>
+        <DialogActions>
+          <BCButton
+            variant="outlined"
+            size="medium"
+            color="primary"
+            data-test="back-btn"
+            sx={{
+              backgroundColor: 'white.main'
+            }}
+            onClick={handleCancelDelete}
+          >
+            {t('cancelBtn')}
+          </BCButton>
+          <BCButton
+            type="submit"
+            variant="contained"
+            size="medium"
+            color="error"
+            onClick={handleConfirmDelete}
+          >
+            {t('admin:deleteUser.button')}
+          </BCButton>
+        </DialogActions>
+      </Dialog>
+    </div>
+  )
+}
+
+AddEditUser.propTypes = {
+  userType: PropTypes.oneOf(['idir', 'bceid'])
+}
