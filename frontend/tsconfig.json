@@ -20,7 +20,8 @@
       "@/*": ["./src/*"]
     },
     "allowJs": true,
-    "checkJs": false
+    "checkJs": false,
+    "types": ["vitest/globals"]
   },
   "include": ["src", "**/*.js", "**/*.jsx"],
   "references": [{ "path": "./tsconfig.node.json" }]
