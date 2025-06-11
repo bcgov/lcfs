@@ -17,7 +17,7 @@
     "test.coverage": "vitest --coverage",
     "test:run": "vitest run",
     "test:ci": "vitest run --reporter=verbose --reporter=junit --outputFile.junit=vitest-results.xml",
-    "test:ci:memory": "node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=verbose --reporter=junit --outputFile.junit=vitest-results.xml",
+    "test:ci:memory": "node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=blob --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}",
     "test:run:components": "vitest run src/components",
     "test:run:hooks": "vitest run src/hooks",
     "test:run:layouts": "vitest run src/layouts",

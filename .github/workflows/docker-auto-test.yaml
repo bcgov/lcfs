@@ -3,7 +3,7 @@ name: Testing pipeline
 on:
   pull_request:
     branches:
-      - "*"
+      - '*'
 
 jobs:
   backend-tests:
@@ -15,7 +15,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10.13"
+          python-version: '3.10.13'
 
       - name: Install Docker Compose
         run: |
@@ -89,23 +89,27 @@ jobs:
         with:
           files: backend/pytest-results.xml
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: "Backend Test Results"
-          check_name: "Backend Test Results"
-          fail_on: "errors"
-          report_individual_runs: "true"
-          deduplicate_classes_by_file_name: "true"
+          comment_title: 'Backend Test Results'
+          check_name: 'Backend Test Results'
+          fail_on: 'errors'
+          report_individual_runs: 'true'
+          deduplicate_classes_by_file_name: 'true'
 
   frontend-tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shardIndex: [1, 2, 3, 4]
+        shardTotal: [4]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
 
       - name: Cache npm dependencies
         uses: actions/cache@v3
@@ -128,24 +132,60 @@ jobs:
         env:
           CI: true
 
-      - name: Upload Vitest results
-        if: always()
+      - name: Upload blob report to GitHub Actions Artifacts
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: vitest-results
-          path: frontend/vitest-results.xml
+          name: blob-report-${{ matrix.shardIndex }}
+          path: .vitest-reports/*
+          include-hidden-files: true
+          retention-days: 1
 
-      - name: Publish Frontend Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
+  merge-reports:
+    if: ${{ !cancelled() }}
+    needs: [frontend-tests]
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          files: frontend/vitest-results.xml
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: "Frontend Test Results"
-          check_name: "Frontend Test Results"
-          fail_on: "errors"
-          report_individual_runs: "true"
-          deduplicate_classes_by_file_name: "true"
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Download blob reports from GitHub Actions Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: .vitest-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge reports
+        run: npx vitest --merge-reports
+
+      # - name: Upload Vitest results
+      #   if: always()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: vitest-results
+      #     path: frontend/vitest-results.xml
+
+      # - name: Publish Frontend Test Results
+      #   uses: EnricoMi/publish-unit-test-result-action@v2
+      #   if: always()
+      #   with:
+      #     files: frontend/vitest-results.xml
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     comment_title: 'Frontend Test Results'
+      #     check_name: 'Frontend Test Results'
+      #     fail_on: 'errors'
+      #     report_individual_runs: 'true'
+      #     deduplicate_classes_by_file_name: 'true'
+
   teams-notification:
     needs: [backend-tests, frontend-tests]
     runs-on: ubuntu-latest
