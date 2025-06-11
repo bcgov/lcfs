@@ -169,7 +169,7 @@ jobs:
       - name: Merge reports
         run: |
           cd frontend
-          npx vitest@3.0.9 --merge-reports --reporter=junit
+          npx vitest@3.0.9 --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
 
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -191,7 +191,7 @@ jobs:
       - name: Determine Test Status
         id: test_status
         run: |
-          if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.frontend-tests.result, 'failure') }}" == "true" ]]; then
+          if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.merge-reports.result, 'failure') }}" == "true" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "theme_color=FF0000" >> $GITHUB_OUTPUT
           else
@@ -211,7 +211,7 @@ jobs:
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
+          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.merge-reports.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
 
           COLOR="${{ steps.test_status.outputs.theme_color }}"
 
