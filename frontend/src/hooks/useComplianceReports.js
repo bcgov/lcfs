@@ -25,7 +25,7 @@ export const useCompliancePeriod = (options = {}) => {
     queryKey: ['compliance-periods'],
     queryFn: async () => {
       const response = await client.get(apiRoutes.getCompliancePeriods)
-      return response.data
+      return response
     },
     enabled,
     staleTime,
