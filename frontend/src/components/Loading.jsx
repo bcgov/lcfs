@@ -1,9 +1,8 @@
-import PropTypes from 'prop-types'
-import CircularProgress from '@mui/material/CircularProgress'
-import Box from '@mui/material/Box'
 import BCTypography from '@/components/BCTypography'
-import colors from '@/themes/base/colors'
 import borders from '@/themes/base/borders'
+import colors from '@/themes/base/colors'
+import CircularProgress from '@mui/material/CircularProgress'
+import PropTypes from 'prop-types'
 
 const Loading = ({ message = 'Loading...', fixed = false }) => {
   return (
