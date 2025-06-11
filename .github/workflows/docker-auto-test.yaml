@@ -124,6 +124,11 @@ jobs:
           cd frontend
           npm ci
 
+      - name: Type Check Frontend
+        run: |
+          cd frontend
+          npm run type-check
+
       - name: Run frontend tests
         id: frontend_tests
         run: |
@@ -182,7 +187,7 @@ jobs:
           fail_on: 'errors'
           report_individual_runs: 'true'
           deduplicate_classes_by_file_name: 'true'
-
+          
   teams-notification:
     needs: [backend-tests, merge-reports]
     runs-on: ubuntu-latest
