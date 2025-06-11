@@ -233,6 +233,8 @@ export const finalSupplyEquipmentColDefs = (
         'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
       ),
       cellEditor: AutocompleteCellEditor,
+      suppressKeyboardEvent,
+      minWidth: 400,
       cellEditorParams: {
         options: optionsData?.levelsOfEquipment?.map((obj) => obj.name) || [],
         multiple: false,

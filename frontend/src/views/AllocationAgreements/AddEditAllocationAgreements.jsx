@@ -17,8 +17,7 @@ import {
   useImportAllocationAgreement,
   useGetAllocationAgreementImportJobStatus
 } from '@/hooks/useAllocationAgreement'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { v4 as uuid } from 'uuid'
 import { ROUTES, buildPath } from '@/routes/routes'
@@ -61,15 +60,10 @@ export const AddEditAllocationAgreements = () => {
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
-  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
-  const { data: complianceReport, isLoading: complianceReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId,
-      { enabled: !currentUserLoading }
-    )
+  const { data: currentReport, isLoading } =
+    useComplianceReportWithCache(complianceReportId)
 
-  const version = complianceReport?.report?.version ?? 0
+  const version = currentReport?.report?.version ?? 0
   const isOriginalReport = version === 0
   const isSupplemental = version !== 0
   const isEarlyIssuance =
@@ -184,9 +178,10 @@ export const AddEditAllocationAgreements = () => {
   )
 
   useEffect(() => {
+    const orgName = currentReport?.report?.organization?.name
     const updatedColumnDefs = allocationAgreementColDefs(
       optionsData,
-      currentUser,
+      orgName,
       errors,
       warnings,
       isSupplemental,
@@ -196,7 +191,7 @@ export const AddEditAllocationAgreements = () => {
     setColumnDefs(updatedColumnDefs)
   }, [
     optionsData,
-    currentUser,
+    currentReport,
     errors,
     warnings,
     isSupplemental,
@@ -339,7 +334,7 @@ export const AddEditAllocationAgreements = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'transactionPartner') {
-        const orgName = currentUser.organization?.name
+        const orgName = currentReport?.report?.organization?.name
         if (
           params.newValue === orgName ||
           (typeof params.newValue === 'object' &&
@@ -484,8 +479,7 @@ export const AddEditAllocationAgreements = () => {
   return (
     isFetched &&
     !allocationAgreementsLoading &&
-    !currentUserLoading &&
-    !complianceReportLoading && (
+    !isLoading && (
       <Grid2 className="add-edit-allocation-agreement-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">

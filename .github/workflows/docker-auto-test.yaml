@@ -124,7 +124,7 @@ jobs:
         id: frontend_tests
         run: |
           cd frontend
-          npm run test:run -- --reporter=junit --outputFile=vitest-results.xml
+          npm run test:ci:memory
         env:
           CI: true
 

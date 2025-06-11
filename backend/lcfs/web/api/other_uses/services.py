@@ -266,6 +266,12 @@ class OtherUsesServices:
         other_use.action_type = (
             ActionTypeEnum.CREATE if not existing_record else ActionTypeEnum.UPDATE
         )
+        other_use.create_date = (
+            None if not existing_record else existing_record.create_date
+        )
+        other_use.create_user = (
+            None if not existing_record else existing_record.create_user
+        )
         other_use.version = 0 if not existing_record else existing_record.version + 1
         created_use = await self.repo.create_other_use(other_use)
 

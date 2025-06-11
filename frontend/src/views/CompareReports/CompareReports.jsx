@@ -1,21 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   lowCarbonColumns,
   nonCompliancePenaltyColumns,
   renewableFuelColumns
 } from '@/views/CompareReports/_schema'
-import {
-  useGetComplianceReport,
-  useGetComplianceReportSummary
-} from '@/hooks/useComplianceReports'
+import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import { Icon, MenuItem, Select } from '@mui/material'
 import Box from '@mui/material/Box'
 import Loading from '@/components/Loading'
 import CompareTable from '@/views/CompareReports/components/CompareTable'
 import { styled } from '@mui/material/styles'
-import { useParams } from 'react-router-dom'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 const Controls = styled(Box)({
   width: '66%'
@@ -24,26 +20,17 @@ const Controls = styled(Box)({
 export const CompareReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [isLoading, setIsLoading] = useState(true)
-  const { data: currentUser, isLoading: isCurrentUserLoading } =
-    useCurrentUser()
   const [reportChain, setReportChain] = useState([])
 
-  const { complianceReportId } = useParams()
-  const { data: complianceReport } = useGetComplianceReport(
-    currentUser?.organization?.organizationId,
-    complianceReportId,
-    {
-      enabled: !!complianceReportId && !isCurrentUserLoading
-    }
-  )
+  const { currentReport } = useComplianceReportStore()
 
   const [report1ID, setReport1ID] = useState(null)
   const [report2ID, setReport2ID] = useState(null)
   const [fuelType, setFuelType] = useState('gasoline')
 
   useEffect(() => {
-    if (complianceReport) {
-      const { chain } = complianceReport
+    if (currentReport) {
+      const { chain } = currentReport
       setReportChain(chain)
 
       // Set default selections to the two most recent reports
@@ -58,7 +45,7 @@ export const CompareReports = () => {
 
       setIsLoading(false)
     }
-  }, [complianceReport])
+  }, [currentReport])
 
   const { data: report1Summary } = useGetComplianceReportSummary(report1ID, {
     enabled: !!report1ID

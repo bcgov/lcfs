@@ -13,8 +13,6 @@ import {
   useImportFinalSupplyEquipment,
   useGetFinalSupplyEquipmentImportJobStatus
 } from '@/hooks/useFinalSupplyEquipment'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { v4 as uuid } from 'uuid'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
@@ -28,6 +26,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import ImportDialog from '@/components/ImportDialog'
 
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -48,17 +47,12 @@ export const AddEditFinalSupplyEquipments = () => {
   const guides = t('finalSupplyEquipment:reportingResponsibilityInfo', {
     returnObjects: true
   })
-  const params = useParams()
 
-  const { complianceReportId, compliancePeriod } = params
+  const { complianceReportId, compliancePeriod } = useParams()
   const navigate = useNavigate()
 
-  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
-  const { data: complianceReport, isLoading: complianceReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId
-    )
+  const { data: currentReport, isLoading } =
+    useComplianceReportWithCache(complianceReportId)
 
   const {
     data: optionsData,
@@ -66,7 +60,7 @@ export const AddEditFinalSupplyEquipments = () => {
     isFetched
   } = useFinalSupplyEquipmentOptions()
 
-  const version = complianceReport?.report?.version ?? 0
+  const version = currentReport?.report?.version ?? 0
   const isOriginalReport = version === 0
 
   const { mutateAsync: saveRow } =
@@ -324,7 +318,8 @@ export const AddEditFinalSupplyEquipments = () => {
 
   return (
     isFetched &&
-    !equipmentsLoading && (
+    !equipmentsLoading &&
+    !isLoading && (
       <Grid2 className="add-edit-final-supply-equipment-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">
