@@ -21,7 +21,7 @@ import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { v4 as uuid } from 'uuid'
 import { ROUTES, buildPath } from '@/routes/routes'
-import { DEFAULT_CI_FUEL } from '@/constants/common'
+import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes/apiRoutes'
@@ -66,6 +66,8 @@ export const AddEditAllocationAgreements = () => {
   const version = currentReport?.report?.version ?? 0
   const isOriginalReport = version === 0
   const isSupplemental = version !== 0
+  const isEarlyIssuance =
+    complianceReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   const {
     data: optionsData,
@@ -182,10 +184,20 @@ export const AddEditAllocationAgreements = () => {
       orgName,
       errors,
       warnings,
-      isSupplemental
+      isSupplemental,
+      compliancePeriod,
+      isEarlyIssuance
     )
     setColumnDefs(updatedColumnDefs)
-  }, [optionsData, currentReport, errors, warnings, isSupplemental])
+  }, [
+    optionsData,
+    currentReport,
+    errors,
+    warnings,
+    isSupplemental,
+    compliancePeriod,
+    isEarlyIssuance
+  ])
 
   useEffect(() => {
     if (
@@ -487,105 +499,106 @@ export const AddEditAllocationAgreements = () => {
             ))}
           </BCBox>
         </div>
-        {isFeatureEnabled(FEATURE_FLAGS.ALLOCATION_AGREEMENT_IMPORT_EXPORT) && (
-          <BCBox>
-            <BCButton
-              color="primary"
-              variant="outlined"
-              aria-controls={isDownloadOpen ? 'download-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={isDownloadOpen ? 'true' : undefined}
-              onClick={handleDownloadClick}
-              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
-              isLoading={isDownloading}
-            >
-              {t('common:importExport.export.btn')}
-            </BCButton>
-            <Menu
-              id="download-menu"
-              anchorEl={downloadAnchorEl}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right'
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right'
-              }}
-              open={isDownloadOpen}
-              onClose={handleCloseDownloadMenu}
-            >
-              <MenuItem
-                disabled={isDownloading}
-                onClick={() => {
-                  handleDownload(true)
-                }}
+        {isFeatureEnabled(FEATURE_FLAGS.ALLOCATION_AGREEMENT_IMPORT_EXPORT) &&
+          !isEarlyIssuance && (
+            <BCBox>
+              <BCButton
+                color="primary"
+                variant="outlined"
+                aria-controls={isDownloadOpen ? 'download-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={isDownloadOpen ? 'true' : undefined}
+                onClick={handleDownloadClick}
+                endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+                isLoading={isDownloading}
               >
-                {t('common:importExport.export.withDataBtn')}
-              </MenuItem>
-              <MenuItem
-                disabled={isDownloading}
-                onClick={() => {
-                  handleDownload(false)
+                {t('common:importExport.export.btn')}
+              </BCButton>
+              <Menu
+                id="download-menu"
+                anchorEl={downloadAnchorEl}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right'
                 }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right'
+                }}
+                open={isDownloadOpen}
+                onClose={handleCloseDownloadMenu}
               >
-                {t('common:importExport.export.withoutDataBtn')}
-              </MenuItem>
-            </Menu>
-            <BCButton
-              style={{ marginLeft: '12px' }}
-              color="primary"
-              variant="outlined"
-              aria-controls={isImportOpen ? 'import-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={isImportOpen ? 'true' : undefined}
-              onClick={handleImportClick}
-              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
-            >
-              {t('common:importExport.import.btn')}
-            </BCButton>
-            <Menu
-              id="import-menu"
-              slotProps={{
-                paper: {
-                  style: {
-                    maxWidth: 240
+                <MenuItem
+                  disabled={isDownloading}
+                  onClick={() => {
+                    handleDownload(true)
+                  }}
+                >
+                  {t('common:importExport.export.withDataBtn')}
+                </MenuItem>
+                <MenuItem
+                  disabled={isDownloading}
+                  onClick={() => {
+                    handleDownload(false)
+                  }}
+                >
+                  {t('common:importExport.export.withoutDataBtn')}
+                </MenuItem>
+              </Menu>
+              <BCButton
+                style={{ marginLeft: '12px' }}
+                color="primary"
+                variant="outlined"
+                aria-controls={isImportOpen ? 'import-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={isImportOpen ? 'true' : undefined}
+                onClick={handleImportClick}
+                endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+              >
+                {t('common:importExport.import.btn')}
+              </BCButton>
+              <Menu
+                id="import-menu"
+                slotProps={{
+                  paper: {
+                    style: {
+                      maxWidth: 240
+                    }
                   }
-                }
-              }}
-              anchorEl={importAnchorEl}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right'
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right'
-              }}
-              open={isImportOpen}
-              onClose={handleCloseImportMenu}
-            >
-              {!hideOverwrite && (
+                }}
+                anchorEl={importAnchorEl}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right'
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right'
+                }}
+                open={isImportOpen}
+                onClose={handleCloseImportMenu}
+              >
+                {!hideOverwrite && (
+                  <MenuItem
+                    onClick={() => {
+                      openFileImportDialog(true)
+                      handleCloseImportMenu()
+                    }}
+                  >
+                    {t('common:importExport.import.dialog.buttons.overwrite')}
+                  </MenuItem>
+                )}
                 <MenuItem
                   onClick={() => {
-                    openFileImportDialog(true)
+                    openFileImportDialog(false)
                     handleCloseImportMenu()
                   }}
                 >
-                  {t('common:importExport.import.dialog.buttons.overwrite')}
+                  {t('common:importExport.import.dialog.buttons.append')}
                 </MenuItem>
-              )}
-              <MenuItem
-                onClick={() => {
-                  openFileImportDialog(false)
-                  handleCloseImportMenu()
-                }}
-              >
-                {t('common:importExport.import.dialog.buttons.append')}
-              </MenuItem>
-            </Menu>
-          </BCBox>
-        )}
+              </Menu>
+            </BCBox>
+          )}
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}

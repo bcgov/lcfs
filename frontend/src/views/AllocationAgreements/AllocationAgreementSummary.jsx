@@ -1,14 +1,22 @@
 import BCBox from '@/components/BCBox'
 import Grid2 from '@mui/material/Grid2'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
-import { allocAgrmtSummaryColDefs } from './_schema'
+import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement.js'
+import { allocationAgreementSummaryColDef } from './_schema.jsx'
+import { useParams } from 'react-router-dom'
 
-export const AllocationAgreementSummary = ({ data, status }) => {
+export const AllocationAgreementSummary = ({
+  data,
+  status,
+  isEarlyIssuance
+}) => {
+  const { complianceReportId } = useParams()
+
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
@@ -125,6 +133,11 @@ export const AllocationAgreementSummary = ({ data, status }) => {
     [status]
   )
 
+  const columns = useMemo(
+    () => allocationAgreementSummaryColDef(isEarlyIssuance),
+    [isEarlyIssuance]
+  )
+
   const getRowId = (params) => {
     return params.data.allocationAgreementId.toString()
   }
@@ -135,7 +148,7 @@ export const AllocationAgreementSummary = ({ data, status }) => {
         <BCGridViewer
           gridKey="allocation-agreements"
           gridRef={gridRef}
-          columnDefs={allocAgrmtSummaryColDefs(t)}
+          columnDefs={columns}
           queryData={paginatedData}
           dataKey="allocationAgreements"
           getRowId={getRowId}

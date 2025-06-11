@@ -11,7 +11,10 @@ from lcfs.web.api.base import (
 from lcfs.web.api.fuel_code.schema import FuelCodeResponseSchema
 from lcfs.web.api.fuel_supply.schema import FuelTypeOptionsResponse
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
-from lcfs.web.utils.schema_validators import fuel_code_required_label
+from lcfs.web.utils.schema_validators import (
+    fuel_code_required_label,
+    fuel_quantity_required,
+)
 
 
 class AllocationTransactionTypeSchema(BaseSchema):
@@ -99,7 +102,11 @@ class AllocationAgreementResponseSchema(BaseSchema):
     fuel_type_other: Optional[str] = None
     ci_of_fuel: Optional[float] = None
     provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
-    quantity: int
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     units: str
     fuel_category: FuelCategoryResponseSchema
     fuel_code: Optional[FuelCodeResponseSchema] = None
@@ -121,7 +128,11 @@ class AllocationAgreementChangelogSchema(BaseSchema):
     fuel_type_other: Optional[str] = None
     ci_of_fuel: float
     provision_of_the_act: str
-    quantity: int = Field(..., gt=0, description="Quantity must be greater than 0")
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     units: str
     fuel_category: FuelCategorySchema
     fuel_code: Optional[FuelCodeSchema] = None
@@ -149,7 +160,11 @@ class AllocationAgreementCreateSchema(BaseSchema):
     fuel_type_other: Optional[str] = None
     ci_of_fuel: Optional[float] = 0
     provision_of_the_act: str
-    quantity: int = Field(..., gt=0, description="Quantity must be greater than 0")
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
     units: Optional[str] = None
     fuel_category: str
     fuel_code: Optional[str] = None
@@ -162,6 +177,13 @@ class AllocationAgreementCreateSchema(BaseSchema):
     @classmethod
     def check_fuel_code_required(cls, values):
         return fuel_code_required_label(values)
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_quantity_required(cls, values):
+        if isinstance(values, DeleteAllocationAgreementResponseSchema):
+            return values
+        return fuel_quantity_required(values)
 
 
 class AllocationAgreementSchema(AllocationAgreementCreateSchema):
@@ -185,8 +207,10 @@ class PaginatedAllocationAgreementRequestSchema(BaseSchema):
     size: int
     sort_orders: List[SortOrder]
 
+
 class AllocationAgreementRequestSchema(ComplianceReportRequestSchema):
     changelog: Optional[bool] = None
+
 
 class DeleteAllocationAgreementsSchema(BaseSchema):
     allocation_agreement_id: int
