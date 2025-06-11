@@ -184,7 +184,7 @@ jobs:
           deduplicate_classes_by_file_name: 'true'
 
   teams-notification:
-    needs: [backend-tests, frontend-tests]
+    needs: [backend-tests, merge-reports]
     runs-on: ubuntu-latest
     if: always()
     steps:
