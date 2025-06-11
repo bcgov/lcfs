@@ -206,6 +206,13 @@ export const OrgStatusRenderer = (props) => {
     </Link>
   )
 }
+
+export const YesNoTextRenderer = (props) => (
+  <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
+    {props.value ? 'Yes' : 'No'}
+  </BCBox>
+)
+
 export const FuelCodeStatusRenderer = (props) => {
   const location = useLocation()
   const statusArr = getAllFuelCodeStatuses()
