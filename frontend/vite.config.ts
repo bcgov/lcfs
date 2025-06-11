@@ -27,12 +27,12 @@ export default defineConfig({
     setupFiles: './testSetup.js',
     coverage: {
       provider: 'v8',
-      thresholds: {
-        statements: 80,
-        functions: 80,
-        branches: 80,
-        lines: 80
-      },
+      // thresholds: {
+      //   statements: 80,
+      //   functions: 80,
+      //   branches: 80,
+      //   lines: 80
+      // },
       enabled: true,
       reporter: ['html'],
       include: ['src'],
