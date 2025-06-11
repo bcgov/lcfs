@@ -167,7 +167,7 @@ jobs:
           merge-multiple: true
 
       - name: Merge reports
-        run: npx vitest --merge-reports
+        run: npx vitest@3.0.9 --merge-reports
 
       # - name: Upload Vitest results
       #   if: always()
