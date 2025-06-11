@@ -215,6 +215,7 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
               color="link"
               onClick={onDownloadReport}
               sx={{
+                cursor: 'pointer',
                 textDecoration: 'underline',
                 '&:hover': { color: 'info.main' }
               }}
