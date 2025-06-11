@@ -1,4 +1,4 @@
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useFuelSupplyOptions,
@@ -80,7 +80,7 @@ describe('AddEditFuelSupplies', () => {
       isFetched: true
     })
 
-    // Mock useGetFuelSupplies to return empty data initially
+    // Mock useGetFuelSuppliesList to return empty data initially
     vi.mocked(useGetFuelSuppliesList).mockReturnValue({
       data: { fuelSupplies: [] },
       isLoading: false
@@ -91,14 +91,22 @@ describe('AddEditFuelSupplies', () => {
       mutateAsync: vi.fn()
     })
 
-    useCurrentUser.mockReturnValue({
+    // Mock useCurrentUser (though not used in component)
+    vi.mocked(useCurrentUser).mockReturnValue({
       data: {
         organization: { organizationId: 1 }
       }
     })
 
-    useGetComplianceReport.mockImplementation((id) => {
-      return { data: { report: { version: 0 } } }
+    // Mock useComplianceReportWithCache (this is the correct hook used in the component)
+    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      data: {
+        report: {
+          version: 0,
+          reportingFrequency: 'ANNUAL'
+        }
+      },
+      isLoading: false
     })
   })
 
@@ -130,5 +138,37 @@ describe('AddEditFuelSupplies', () => {
     render(<AddEditFuelSupplies />, { wrapper })
     const rows = await screen.findAllByTestId('grid-row')
     expect(rows.length).toBe(2)
+  })
+
+  it('handles supplemental report correctly', () => {
+    // Mock for supplemental report (version > 0)
+    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      data: {
+        report: {
+          version: 1,
+          reportingFrequency: 'ANNUAL'
+        }
+      },
+      isLoading: false
+    })
+
+    render(<AddEditFuelSupplies />, { wrapper })
+    expect(screen.getByText('fuelSupply:fuelSupplyTitle')).toBeInTheDocument()
+  })
+
+  it('handles early issuance report correctly', () => {
+    // Mock for early issuance report (quarterly)
+    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      data: {
+        report: {
+          version: 0,
+          reportingFrequency: 'QUARTERLY'
+        }
+      },
+      isLoading: false
+    })
+
+    render(<AddEditFuelSupplies />, { wrapper })
+    expect(screen.getByText('fuelSupply:fuelSupplyTitle')).toBeInTheDocument()
   })
 })

@@ -1,34 +1,26 @@
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import {
-  useGetChangeLog,
-  useGetComplianceReport
-} from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useGetChangeLog } from '@/hooks/useComplianceReports'
+import { defaultInitialPagination } from '@/constants/schedules.js'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
 
 export const FuelSupplyChangelog = () => {
-  const { complianceReportId } = useParams()
-  const { data: currentUser, isLoading: isCurrentUserLoading } =
-    useCurrentUser()
+  const { currentReport } = useComplianceReportStore()
   const { t } = useTranslation(['common', 'fuelSupply', 'report'])
-  const { data: currentReportData, isLoading } = useGetComplianceReport(
-    currentUser?.organization?.organizationId,
-    complianceReportId,
-    {
-      enabled: !!complianceReportId && !isCurrentUserLoading
-    }
-  )
+
+  // State for pagination - one per changelog item
+  const [paginationStates, setPaginationStates] = useState({})
 
   const { data: changelogData, isLoading: changelogDataLoading } =
     useGetChangeLog({
       complianceReportGroupUuid:
-        currentReportData?.report.complianceReportGroupUuid,
+        currentReport?.report.complianceReportGroupUuid,
       dataType: 'fuel-supplies'
     })
 
@@ -60,7 +52,92 @@ export const FuelSupplyChangelog = () => {
     }
   })
 
-  if (isLoading || changelogDataLoading) {
+  // Client-side pagination function
+  const getPaginatedData = (
+    fuelSupplies,
+    index,
+    isCurrentOrOriginalVersion
+  ) => {
+    const shouldPaginate =
+      isCurrentOrOriginalVersion || fuelSupplies.length >= 10
+
+    if (!shouldPaginate) {
+      // No pagination for versions that don't meet criteria
+      return { data: { items: fuelSupplies } }
+    }
+
+    const paginationOptions =
+      paginationStates[index] || defaultInitialPagination
+    let filteredData = [...fuelSupplies]
+
+    // Apply filters if any
+    if (paginationOptions.filters && paginationOptions.filters.length > 0) {
+      paginationOptions.filters.forEach((filter) => {
+        if (filter.type === 'contains' && filter.filter) {
+          filteredData = filteredData.filter((item) => {
+            const fieldValue = item[filter.field]
+            return (
+              fieldValue &&
+              fieldValue
+                .toString()
+                .toLowerCase()
+                .includes(filter.filter.toLowerCase())
+            )
+          })
+        }
+      })
+    }
+
+    // Apply sorting if any
+    if (
+      paginationOptions.sortOrders &&
+      paginationOptions.sortOrders.length > 0
+    ) {
+      paginationOptions.sortOrders.forEach((sort) => {
+        filteredData.sort((a, b) => {
+          const aVal = a[sort.field]
+          const bVal = b[sort.field]
+
+          let comparison = 0
+          if (aVal > bVal) comparison = 1
+          if (aVal < bVal) comparison = -1
+
+          return sort.direction === 'desc' ? -comparison : comparison
+        })
+      })
+    }
+
+    const total = filteredData.length
+    const startIndex = (paginationOptions.page - 1) * paginationOptions.size
+    const endIndex = startIndex + paginationOptions.size
+    const paginatedItems = filteredData.slice(startIndex, endIndex)
+
+    return {
+      data: {
+        items: paginatedItems,
+        pagination: {
+          page: paginationOptions.page,
+          size: paginationOptions.size,
+          total
+        }
+      },
+      error: null,
+      isError: false,
+      isLoading: false
+    }
+  }
+
+  const handlePaginationChange = (index) => (newPagination) => {
+    setPaginationStates((prev) => ({
+      ...prev,
+      [index]: {
+        ...(prev[index] || defaultInitialPagination),
+        ...newPagination
+      }
+    }))
+  }
+
+  if (changelogDataLoading) {
     return <Loading />
   }
 
@@ -68,6 +145,15 @@ export const FuelSupplyChangelog = () => {
     <Box>
       {changelogData?.map((item, i) => {
         const isCurrentOrOriginalVersion = i === 0 || item.version === 0
+        const shouldPaginate = item.fuelSupplies.length >= 10
+        const paginationOptions =
+          paginationStates[i] || defaultInitialPagination
+        const queryData = getPaginatedData(
+          item.fuelSupplies,
+          i,
+          isCurrentOrOriginalVersion
+        )
+
         return (
           <Box mb={4} key={i}>
             <BCTypography variant="h6" color="primary" component="div" mb={2}>
@@ -82,9 +168,9 @@ export const FuelSupplyChangelog = () => {
                     ? changelogCommonColDefs(false)
                     : changelogColDefs()
                 }
-                queryData={{ data: { items: item.fuelSupplies } }}
+                queryData={queryData}
                 getRowId={getRowId}
-                suppressPagination
+                suppressPagination={!shouldPaginate}
                 gridOptions={
                   isCurrentOrOriginalVersion
                     ? gridOptions(false)
@@ -95,6 +181,12 @@ export const FuelSupplyChangelog = () => {
                   filter: false,
                   sortable: false
                 }}
+                paginationOptions={
+                  shouldPaginate ? paginationOptions : undefined
+                }
+                onPaginationChange={
+                  shouldPaginate ? handlePaginationChange(i) : undefined
+                }
               />
             </Box>
           </Box>

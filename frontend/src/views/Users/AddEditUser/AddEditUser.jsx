@@ -44,7 +44,7 @@ import { roles } from '@/constants/roles'
 import { useOrganizationUser } from '@/hooks/useOrganization'
 
 // switch between 'idir' and 'bceid'
-export const AddEditUser = ({ userType }) => {
+export const AddEditUser = ({ userType = 'idir' }) => {
   const {
     data: currentUser,
     hasRoles,
@@ -513,10 +513,6 @@ export const AddEditUser = ({ userType }) => {
       </Dialog>
     </div>
   )
-}
-
-AddEditUser.defaultProps = {
-  userType: 'idir'
 }
 
 AddEditUser.propTypes = {

@@ -210,7 +210,7 @@ class OtherUsesRepository:
                     OtherUses.version == valid_other_uses_subq.c.max_version,
                 ),
             )
-            .order_by(OtherUses.other_uses_id)
+            .order_by(OtherUses.create_date.asc())
         )
 
         result = await self.db.execute(other_uses_select)
