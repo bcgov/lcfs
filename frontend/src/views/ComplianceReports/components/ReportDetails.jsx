@@ -402,14 +402,8 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
       const hasRealData = !isArrayEmpty(scheduleData)
 
       // Show if has data OR if in editing mode
-      const shouldShowInEditMode = [
-        COMPLIANCE_REPORT_STATUSES.DRAFT,
-        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
-      ].includes(currentStatus)
-
       const shouldShow =
         hasRealData ||
-        shouldShowInEditMode ||
         activity.name === t('report:supportingDocs')
 
       accordionsData.set(panelId, {
