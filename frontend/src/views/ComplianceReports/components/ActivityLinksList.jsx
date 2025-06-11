@@ -62,7 +62,7 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         'report:activityLists.notionalTransfers',
         'report:activityLabels.notionalTransfers',
         ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS,
-        false
+        true
       ),
       createActivity(
         'report:activityLists.fuelsOtherUse',
