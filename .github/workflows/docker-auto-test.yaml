@@ -131,6 +131,8 @@ jobs:
           npm run test:ci:memory
         env:
           CI: true
+          SHARD_INDEX: ${{ matrix.shardIndex }}
+          SHARD_TOTAL: ${{ matrix.shardTotal }}
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: ${{ !cancelled() }}
