@@ -37,7 +37,7 @@ export default defineConfig({
       reporter: ['html'],
       include: ['src'],
       exclude: [
-        'src/*.{jsx,js,tsx,ts}', // Add TypeScript extensions
+        'src/*.{jsx,js,tsx,ts}',
         'src/assets',
         'src/constants',
         'src/themes',

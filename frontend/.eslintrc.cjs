@@ -4,7 +4,7 @@ module.exports = {
   extends: [
     'standard',
     'eslint:recommended',
-    '@typescript-eslint/recommended', // Add TypeScript rules
+    '@typescript-eslint/recommended',
     'plugin:react/recommended',
     'plugin:react/jsx-runtime',
     'plugin:react-hooks/recommended',
@@ -14,14 +14,14 @@ module.exports = {
     'prettier'
   ],
   ignorePatterns: ['dist', '.eslintrc.cjs'],
-  parser: '@typescript-eslint/parser', // Add TypeScript parser
+  parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'] // Add TypeScript projects
+    project: ['./tsconfig.json', './tsconfig.node.json']
   },
   settings: { react: { version: '18.2' } },
-  plugins: ['react-refresh', 'cypress', '@typescript-eslint'], // Add TypeScript plugin
+  plugins: ['react-refresh', 'cypress', '@typescript-eslint'],
   rules: {
     'react-refresh/only-export-components': [
       'warn',
@@ -31,7 +31,7 @@ module.exports = {
     'react/prop-types': 0,
     'cypress/no-unnecessary-waiting': 0,
     'no-unused-vars': 1,
-    '@typescript-eslint/no-unused-vars': 'warn' // TypeScript-specific rule
+    '@typescript-eslint/no-unused-vars': 'warn'
   },
   globals: {
     vi: true
