@@ -40,7 +40,9 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
   const filteredDates = () => {
     const currentYear = new Date().getFullYear()
 
-    return periods?.data.filter((item) => {
+    // Handle both possible data structures safely
+    const periodsArray = periods?.data || periods || []
+    return periodsArray.filter((item) => {
       const effectiveYear = new Date(item.effectiveDate).getFullYear()
       return effectiveYear <= currentYear && effectiveYear >= 2024
     })

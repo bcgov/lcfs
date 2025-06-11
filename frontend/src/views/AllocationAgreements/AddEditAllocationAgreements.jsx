@@ -67,7 +67,7 @@ export const AddEditAllocationAgreements = () => {
   const isOriginalReport = version === 0
   const isSupplemental = version !== 0
   const isEarlyIssuance =
-    complianceReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+    currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   const {
     data: optionsData,
