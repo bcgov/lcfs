@@ -139,7 +139,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: blob-report-${{ matrix.shardIndex }}
-          path: .vitest-reports/*
+          path: frontend/.vitest-reports/*
           include-hidden-files: true
           retention-days: 1
 
