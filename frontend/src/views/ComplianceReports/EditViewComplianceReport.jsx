@@ -508,38 +508,42 @@ export const EditViewComplianceReport = ({ isError, error }) => {
             </BCTypography>
           )}
 
-          <BCBox
-            sx={{
-              border: '1px solid rgba(0, 0, 0, 0.28)',
-              padding: '20px',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.28)'
-            }}
-          >
-            {shouldShowAssessmentStatement && <AssessmentStatement />}
-            {shouldShowAssessmentRecommendation && (
-              <AssessmentRecommendation
-                reportData={reportData}
-                complianceReportId={complianceReportId}
-                currentStatus={currentStatus}
-              />
-            )}
-            {/* Internal Comments */}
-            {isGovernmentUser && (
-              <BCBox mt={2}>
-                <BCTypography variant="h6" color="primary">
-                  {t(`report:internalComments`)}
-                </BCTypography>
-                <BCBox>
-                  <Role roles={govRoles}>
-                    <InternalComments
-                      entityType="complianceReport"
-                      entityId={parseInt(complianceReportId)}
-                    />
-                  </Role>
-                </BCBox>
+          {shouldShowAssessmentStatement ||
+            shouldShowAssessmentRecommendation ||
+            (isGovernmentUser && (
+              <BCBox
+                sx={{
+                  border: '1px solid rgba(0, 0, 0, 0.28)',
+                  padding: '20px',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.28)'
+                }}
+              >
+                {shouldShowAssessmentStatement && <AssessmentStatement />}
+                {shouldShowAssessmentRecommendation && (
+                  <AssessmentRecommendation
+                    reportData={reportData}
+                    complianceReportId={complianceReportId}
+                    currentStatus={currentStatus}
+                  />
+                )}
+                {/* Internal Comments */}
+                {isGovernmentUser && (
+                  <BCBox mt={2}>
+                    <BCTypography variant="h6" color="primary">
+                      {t(`report:internalComments`)}
+                    </BCTypography>
+                    <BCBox>
+                      <Role roles={govRoles}>
+                        <InternalComments
+                          entityType="complianceReport"
+                          entityId={parseInt(complianceReportId)}
+                        />
+                      </Role>
+                    </BCBox>
+                  </BCBox>
+                )}
               </BCBox>
-            )}
-          </BCBox>
+            ))}
 
           {/* 30-Day Submission Notice for BCeID on Draft Supplementals */}
           {!isGovernmentUser && isDraftSupplemental && submissionDeadline && (
