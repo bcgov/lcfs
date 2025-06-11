@@ -167,7 +167,7 @@ jobs:
           merge-multiple: true
 
       - name: Merge reports
-        run: npx vitest@3.0.9 --merge-reports
+        run: npx vitest@3.0.9 --merge-reports --reporter=junit
 
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
