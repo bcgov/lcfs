@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { YesNoTextRenderer } from '../grid/cellRenderers'
+import { wrapper } from '@/tests/utils/wrapper'
 
 describe('YesNoTextRenderer', () => {
   it('renders "Yes" when value is true', () => {
@@ -8,7 +9,7 @@ describe('YesNoTextRenderer', () => {
       value: true
     }
 
-    render(<YesNoTextRenderer {...props} />)
+    render(<YesNoTextRenderer {...props} />, { wrapper })
 
     expect(screen.getByText('Yes')).toBeInTheDocument()
   })
@@ -18,7 +19,7 @@ describe('YesNoTextRenderer', () => {
       value: false
     }
 
-    render(<YesNoTextRenderer {...props} />)
+    render(<YesNoTextRenderer {...props} />, { wrapper })
 
     expect(screen.getByText('No')).toBeInTheDocument()
   })
@@ -28,7 +29,7 @@ describe('YesNoTextRenderer', () => {
       value: undefined
     }
 
-    render(<YesNoTextRenderer {...props} />)
+    render(<YesNoTextRenderer {...props} />, { wrapper })
 
     expect(screen.getByText('No')).toBeInTheDocument()
   })
@@ -38,7 +39,7 @@ describe('YesNoTextRenderer', () => {
       value: null
     }
 
-    render(<YesNoTextRenderer {...props} />)
+    render(<YesNoTextRenderer {...props} />, { wrapper })
 
     expect(screen.getByText('No')).toBeInTheDocument()
   })
@@ -48,7 +49,7 @@ describe('YesNoTextRenderer', () => {
       value: 1
     }
 
-    render(<YesNoTextRenderer {...props} />)
+    render(<YesNoTextRenderer {...props} />, { wrapper })
 
     expect(screen.getByText('Yes')).toBeInTheDocument()
   })
@@ -58,7 +59,7 @@ describe('YesNoTextRenderer', () => {
       value: 0
     }
 
-    render(<YesNoTextRenderer {...props} />)
+    render(<YesNoTextRenderer {...props} />, { wrapper })
 
     expect(screen.getByText('No')).toBeInTheDocument()
   })
