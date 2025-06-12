@@ -20,10 +20,42 @@ const prefixMap = {
 
 export const transactionsColDefs = (t) => [
   {
+    colId: 'status',
+    field: 'status',
+    headerName: t('txn:txnColLabels.status'),
+    cellRenderer: TransactionStatusRenderer,
+    cellClass: 'vertical-middle',
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'status',
+      labelKey: 'status',
+      optionsQuery: useTransactionStatuses
+    },
+    filterParams: {
+      textFormatter: (value) => value.toLowerCase(),
+      textCustomComparator: (filter, value, filterText) => {
+        // Split the filter text by comma and trim each value
+        const filterValues = filterText
+          .split(',')
+          .map((text) => text.trim().toLowerCase())
+
+        const cleanValue = value.toLowerCase()
+
+        // Return true if the value matches any of the filter values
+        return filterValues.some((filterValue) =>
+          cleanValue.includes(filterValue)
+        )
+      },
+      buttons: ['clear']
+    },
+    suppressFloatingFilterButton: true,
+    minWidth: 150
+  },
+  {
     colId: 'transactionId',
     field: 'transactionId',
     headerName: t('txn:txnColLabels.txnId'),
-    width: 175,
+    width: 130,
     valueGetter: (params) => {
       const transactionType = params.data.transactionType
       const prefix = prefixMap[transactionType] || ''
@@ -43,7 +75,7 @@ export const transactionsColDefs = (t) => [
     colId: 'compliancePeriod',
     field: 'compliancePeriod',
     headerName: t('txn:txnColLabels.compliancePeriod'),
-    minWidth: 190,
+    width: 130,
     valueGetter: (params) => {
       return params.data?.compliancePeriod || 'N/A'
     },
@@ -145,39 +177,6 @@ export const transactionsColDefs = (t) => [
       filterOptions: ['startsWith'],
       buttons: ['clear']
     }
-  },
-  {
-    colId: 'status',
-    field: 'status',
-    headerName: t('txn:txnColLabels.status'),
-    cellRenderer: TransactionStatusRenderer,
-    cellClass: 'vertical-middle',
-    floatingFilterComponent: BCSelectFloatingFilter,
-    floatingFilterComponentParams: {
-      valueKey: 'status',
-      labelKey: 'status',
-      optionsQuery: useTransactionStatuses
-    },
-    filterParams: {
-      textFormatter: (value) => value.toLowerCase(),
-      textCustomComparator: (filter, value, filterText) => {
-        // Split the filter text by comma and trim each value
-        const filterValues = filterText
-          .split(',')
-          .map((text) => text.trim().toLowerCase())
-
-        const cleanValue = value.toLowerCase()
-
-        // Return true if the value matches any of the filter values
-        return filterValues.some((filterValue) =>
-          cleanValue.includes(filterValue)
-        )
-      },
-      buttons: ['clear']
-    },
-    suppressFloatingFilterButton: true,
-    minWidth: 180,
-    width: 250
   },
   {
     colId: 'updateDate',
