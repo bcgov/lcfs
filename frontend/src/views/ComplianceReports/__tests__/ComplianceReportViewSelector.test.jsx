@@ -6,6 +6,9 @@ import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
 
+// Import useParams after mocking so it's already a mock
+import { useParams } from 'react-router-dom'
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
@@ -28,9 +31,6 @@ vi.mock('@/views/ComplianceReports/ViewLegacyComplianceReport', () => ({
 vi.mock('@/views/ComplianceReports/EditViewComplianceReport', () => ({
   EditViewComplianceReport: () => <div>Edit Compliance Report</div>
 }))
-
-// Import useParams after mocking so it's already a mock
-import { useParams } from 'react-router-dom'
 
 describe('ViewComplianceReportBrancher', () => {
   const setupMocks = ({

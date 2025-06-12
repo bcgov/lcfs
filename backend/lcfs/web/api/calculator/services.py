@@ -7,7 +7,10 @@ from lcfs.web.api.fuel_supply.schema import (
     FuelTypeOptionsSchema,
 )
 from lcfs.web.api.calculator.schema import CreditsResultSchema
-from lcfs.web.utils.calculations import calculate_compliance_units, calculate_legacy_compliance_units
+from lcfs.web.utils.calculations import (
+    calculate_compliance_units,
+    calculate_legacy_compliance_units,
+)
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.api.calculator.repo import CalculatorRepository
 from lcfs.web.core.decorators import service_handler

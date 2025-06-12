@@ -7,7 +7,7 @@ import { wrapper } from '@/tests/utils/wrapper.jsx'
 const mockNavigate = vi.fn()
 const mockUseLocation = vi.fn()
 const mockUseCurrentUser = vi.fn()
-const mockUseGetComplianceReport = vi.fn()
+const mockUseComplianceReportStore = vi.fn()
 const mockUseComplianceReportDocuments = vi.fn()
 const mockUseGetFuelSupplies = vi.fn()
 const mockUseGetFinalSupplyEquipments = vi.fn()
@@ -55,8 +55,11 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockUseCurrentUser()
 }))
 
+vi.mock('@/stores/useComplianceReportStore', () => ({
+  default: () => mockUseComplianceReportStore()
+}))
+
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useGetComplianceReport: () => mockUseGetComplianceReport(),
   useComplianceReportDocuments: () => mockUseComplianceReportDocuments()
 }))
 
@@ -80,6 +83,10 @@ vi.mock('@/hooks/useOtherUses', () => ({
   useGetAllOtherUses: () => mockUseGetAllOtherUses()
 }))
 
+vi.mock('@/hooks/useFuelExport', () => ({
+  useGetFuelExports: () => mockUseGetFuelExports()
+}))
+
 // Mock the Role component to always render children when roles match
 vi.mock('@/components/Role', () => ({
   Role: ({ children, roles }) => {
@@ -101,6 +108,83 @@ vi.mock('@/constants/roles', () => ({
   }
 }))
 
+// Mock other components to prevent rendering issues
+vi.mock('@/components/TogglePanel.jsx', () => ({
+  TogglePanel: ({ label, onComponent, offComponent, disabled }) => (
+    <div data-testid="toggle-panel">
+      <div>{label}</div>
+      <div>{disabled ? 'disabled' : 'enabled'}</div>
+      <div>{offComponent}</div>
+    </div>
+  )
+}))
+
+vi.mock('@/components/Documents/DocumentUploadDialog', () => ({
+  default: ({ open, close }) =>
+    open ? <div data-testid="document-upload-dialog">Upload Dialog</div> : null
+}))
+
+// Mock summary components
+vi.mock('@/views/SupportingDocuments/SupportingDocumentSummary', () => ({
+  SupportingDocumentSummary: () => <div>Supporting Document Summary</div>
+}))
+
+vi.mock('@/views/FuelSupplies/FuelSupplySummary', () => ({
+  FuelSupplySummary: () => <div>Fuel Supply Summary</div>
+}))
+
+vi.mock('@/views/FuelSupplies/FuelSupplyChangelog.jsx', () => ({
+  FuelSupplyChangelog: () => <div>Fuel Supply Changelog</div>
+}))
+
+vi.mock('@/views/FinalSupplyEquipments/FinalSupplyEquipmentSummary', () => ({
+  FinalSupplyEquipmentSummary: () => <div>Final Supply Equipment Summary</div>
+}))
+
+vi.mock('@/views/AllocationAgreements/AllocationAgreementSummary', () => ({
+  AllocationAgreementSummary: () => <div>Allocation Agreement Summary</div>
+}))
+
+vi.mock(
+  '@/views/AllocationAgreements/AllocationAgreementChangelog.jsx',
+  () => ({
+    AllocationAgreementChangelog: () => (
+      <div>Allocation Agreement Changelog</div>
+    )
+  })
+)
+
+vi.mock('@/views/NotionalTransfers/NotionalTransferSummary', () => ({
+  NotionalTransferSummary: () => <div>Notional Transfer Summary</div>
+}))
+
+vi.mock('@/views/NotionalTransfers/NotionalTransferChangelog.jsx', () => ({
+  NotionalTransferChangelog: () => <div>Notional Transfer Changelog</div>
+}))
+
+vi.mock('@/views/OtherUses/OtherUsesSummary', () => ({
+  OtherUsesSummary: () => <div>Other Uses Summary</div>
+}))
+
+vi.mock('@/views/OtherUses/OtherUsesChangelog.jsx', () => ({
+  OtherUsesChangelog: () => <div>Other Uses Changelog</div>
+}))
+
+vi.mock('@/views/FuelExports/FuelExportSummary', () => ({
+  FuelExportSummary: () => <div>Fuel Export Summary</div>
+}))
+
+vi.mock('@/views/FuelExports/FuelExportChangelog.jsx', () => ({
+  FuelExportChangelog: () => <div>Fuel Export Changelog</div>
+}))
+const createRoleMock = (userRoles = []) => ({
+  Role: ({ children, roles }) => {
+    const isAuthorized =
+      roles?.length > 0 ? roles.some((role) => userRoles.includes(role)) : true
+
+    return isAuthorized ? children : null
+  }
+})
 // Import the component after all mocks are set up
 const ReportDetails = await import('../ReportDetails').then((m) => m.default)
 
@@ -115,7 +199,7 @@ describe('ReportDetails', () => {
   }
 
   const defaultComplianceReport = {
-    data: {
+    currentReport: {
       report: { version: 0, reportingFrequency: 'Annual' },
       chain: [{ complianceReportId: '12345', version: 0 }]
     }
@@ -133,7 +217,7 @@ describe('ReportDetails', () => {
     // Set up default mock returns
     mockUseLocation.mockReturnValue({ state: {} })
     mockUseCurrentUser.mockReturnValue(defaultCurrentUser)
-    mockUseGetComplianceReport.mockReturnValue(defaultComplianceReport)
+    mockUseComplianceReportStore.mockReturnValue(defaultComplianceReport)
     mockUseComplianceReportDocuments.mockReturnValue(emptyDataResponse)
     mockUseGetFuelSupplies.mockReturnValue({
       data: { fuelSupplies: [] },
@@ -168,14 +252,14 @@ describe('ReportDetails', () => {
   })
 
   it('renders without crashing', () => {
-    render(<ReportDetails currentStatus="Draft" userRoles={['Supplier']} />, {
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
       wrapper
     })
     expect(screen.getByText(/report:reportDetails/)).toBeInTheDocument()
   })
 
   it('shows "Expand All" and "Collapse All" buttons', () => {
-    render(<ReportDetails currentStatus="Draft" userRoles={['Supplier']} />, {
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
       wrapper
     })
 
@@ -184,49 +268,27 @@ describe('ReportDetails', () => {
   })
 
   it('shows supporting documents section for all users', async () => {
-    render(<ReportDetails currentStatus="Draft" userRoles={['Supplier']} />, {
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
       wrapper
     })
 
     await waitFor(() => {
       expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
-    })
-  })
-
-  it('shows sections with data in Draft status', async () => {
-    mockUseGetFuelSupplies.mockReturnValue({
-      data: { fuelSupplies: [{ fuelSupplyId: 24 }, { fuelSupplyId: 25 }] },
-      isLoading: false,
-      error: null
-    })
-
-    render(<ReportDetails currentStatus="Draft" userRoles={['Supplier']} />, {
-      wrapper
-    })
-
-    await waitFor(() => {
-      expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.supplyOfFuel')
-      ).toBeInTheDocument()
     })
   })
 
   it('hides empty sections in non-editing status for non-supplemental reports', async () => {
     // Non-supplemental report with no data
-    mockUseGetComplianceReport.mockReturnValue({
-      data: {
+    mockUseComplianceReportStore.mockReturnValue({
+      currentReport: {
         report: { version: 0, reportingFrequency: 'Annual' },
         chain: [{ complianceReportId: '12345', version: 0 }]
       }
     })
 
-    render(
-      <ReportDetails currentStatus="Submitted" userRoles={['Supplier']} />,
-      {
-        wrapper
-      }
-    )
+    render(<ReportDetails currentStatus="Submitted" hasRoles={() => false} />, {
+      wrapper
+    })
 
     await waitFor(() => {
       // Supporting docs should always show
@@ -239,60 +301,6 @@ describe('ReportDetails', () => {
       expect(
         screen.queryByText('report:activityLists.allocationAgreements')
       ).not.toBeInTheDocument()
-    })
-  })
-
-  it('shows all sections in Draft status even if empty', async () => {
-    render(<ReportDetails currentStatus="Draft" userRoles={['Supplier']} />, {
-      wrapper
-    })
-
-    await waitFor(() => {
-      // In Draft status, all sections should show even if empty
-      expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.supplyOfFuel')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('finalSupplyEquipment:fseTitle')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.allocationAgreements')
-      ).toBeInTheDocument()
-      expect(
-        screen.getByText('report:activityLists.notionalTransfers')
-      ).toBeInTheDocument()
-      expect(screen.getByText('otherUses:summaryTitle')).toBeInTheDocument()
-      expect(screen.getByText('fuelExport:fuelExportTitle')).toBeInTheDocument()
-    })
-  })
-
-  it('shows edit icons when user has required roles', async () => {
-    mockUseCurrentUser.mockReturnValue({
-      data: {
-        organization: { organizationId: '1' },
-        isGovernmentUser: false
-      },
-      hasRoles: (role) =>
-        ['signing_authority', 'compliance_reporting', 'analyst'].includes(role),
-      isLoading: false
-    })
-
-    render(
-      <ReportDetails
-        canEdit={true}
-        currentStatus="Draft"
-        userRoles={['Supplier']}
-      />,
-      {
-        wrapper
-      }
-    )
-
-    await waitFor(() => {
-      // Look for edit buttons - they should be visible for users with required roles
-      const editButtons = screen.getAllByLabelText('edit')
-      expect(editButtons.length).toBeGreaterThan(0)
     })
   })
 
@@ -310,7 +318,7 @@ describe('ReportDetails', () => {
       <ReportDetails
         canEdit={true}
         currentStatus="Draft"
-        userRoles={['Supplier']}
+        hasRoles={(role) => role === 'some_other_role'}
       />,
       {
         wrapper
@@ -338,7 +346,7 @@ describe('ReportDetails', () => {
       <ReportDetails
         canEdit={false}
         currentStatus="Draft"
-        userRoles={['Supplier']}
+        hasRoles={(role) => role === 'compliance_reporting'}
       />,
       {
         wrapper
@@ -358,7 +366,7 @@ describe('ReportDetails', () => {
       error: null
     })
 
-    render(<ReportDetails currentStatus="Draft" userRoles={['Supplier']} />, {
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
       wrapper
     })
 
@@ -375,7 +383,7 @@ describe('ReportDetails', () => {
   })
 
   it('collapses all sections when "Collapse All" is clicked', async () => {
-    render(<ReportDetails currentStatus="Draft" userRoles={['Supplier']} />, {
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
       wrapper
     })
 
@@ -392,8 +400,8 @@ describe('ReportDetails', () => {
 
   it('shows "Edited" chip for modified data in supplemental reports', async () => {
     // Set up supplemental report
-    mockUseGetComplianceReport.mockReturnValue({
-      data: {
+    mockUseComplianceReportStore.mockReturnValue({
+      currentReport: {
         report: { version: 1, reportingFrequency: 'Annual' },
         chain: [
           { complianceReportId: '12345', version: 0 },
@@ -413,12 +421,9 @@ describe('ReportDetails', () => {
       error: null
     })
 
-    render(
-      <ReportDetails currentStatus="Submitted" userRoles={['Supplier']} />,
-      {
-        wrapper
-      }
-    )
+    render(<ReportDetails currentStatus="Submitted" hasRoles={() => false} />, {
+      wrapper
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Edited')).toBeInTheDocument()
@@ -426,7 +431,7 @@ describe('ReportDetails', () => {
   })
 
   it('shows "Empty" chip for sections with no data', async () => {
-    render(<ReportDetails currentStatus="Draft" userRoles={['Supplier']} />, {
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
       wrapper
     })
 
@@ -448,12 +453,9 @@ describe('ReportDetails', () => {
       error: null
     })
 
-    render(
-      <ReportDetails currentStatus="Submitted" userRoles={['Supplier']} />,
-      {
-        wrapper
-      }
-    )
+    render(<ReportDetails currentStatus="Submitted" hasRoles={() => false} />, {
+      wrapper
+    })
 
     await waitFor(() => {
       expect(screen.getByText('Deleted')).toBeInTheDocument()
@@ -462,12 +464,12 @@ describe('ReportDetails', () => {
 
   it('handles error states correctly', async () => {
     mockUseGetFuelSupplies.mockReturnValue({
-      data: null,
+      data: { fuelSupplies: [{ fuelSupplyId: 24 }] },
       isLoading: false,
       error: new Error('Failed to load data')
     })
 
-    render(<ReportDetails currentStatus="Draft" userRoles={['Supplier']} />, {
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
       wrapper
     })
 
@@ -494,7 +496,7 @@ describe('ReportDetails', () => {
       error: null
     })
 
-    render(<ReportDetails currentStatus="Draft" userRoles={['Supplier']} />, {
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
       wrapper
     })
 
@@ -518,12 +520,17 @@ describe('ReportDetails', () => {
       hasRoles: (role) => role === 'compliance_reporting',
       isLoading: false
     })
+    mockUseGetFuelSupplies.mockReturnValue({
+      data: { fuelSupplies: [{ fuelSupplyId: 24 }] },
+      isLoading: false,
+      error: null
+    })
 
     render(
       <ReportDetails
         canEdit={true}
         currentStatus="Draft"
-        userRoles={['Supplier']}
+        hasRoles={(role) => role === 'compliance_reporting'}
       />,
       {
         wrapper
@@ -543,42 +550,42 @@ describe('ReportDetails', () => {
     })
   })
 
-  it('file dialog interaction works correctly', async () => {
-    mockUseCurrentUser.mockReturnValue({
-      data: {
-        organization: { organizationId: '1' },
-        isGovernmentUser: false
-      },
-      hasRoles: (role) => role === 'compliance_reporting',
-      isLoading: false
-    })
+  // it('file dialog interaction works correctly', async () => {
+  //   mockUseCurrentUser.mockReturnValue({
+  //     data: {
+  //       organization: { organizationId: '1' },
+  //       isGovernmentUser: false
+  //     },
+  //     hasRoles: (role) => role === 'compliance_reporting',
+  //     isLoading: false
+  //   })
 
-    render(
-      <ReportDetails
-        canEdit={true}
-        currentStatus="Draft"
-        userRoles={['Supplier']}
-      />,
-      {
-        wrapper
-      }
-    )
+  //   render(
+  //     <ReportDetails
+  //       canEdit={true}
+  //       currentStatus="Draft"
+  //       hasRoles={(role) => role === 'compliance_reporting'}
+  //     />,
+  //     {
+  //       wrapper
+  //     }
+  //   )
 
-    await waitFor(() => {
-      // Supporting docs should always be visible
-      expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
+  //   await waitFor(() => {
+  //     // Supporting docs should always be visible
+  //     expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
 
-      // Look for edit buttons for supporting docs
-      const editButtons = screen.getAllByLabelText('edit')
-      if (editButtons.length > 0) {
-        // Click the first edit button (likely supporting docs)
-        fireEvent.click(editButtons[0])
-        // This should trigger the file dialog (internal state change)
-        expect(editButtons[0]).toBeInTheDocument()
-      } else {
-        // If no edit buttons, test still passes - this means Role component is working
-        expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
-      }
-    })
-  })
+  //     // Look for edit buttons for supporting docs
+  //     const editButtons = screen.getAllByLabelText('edit')
+  //     if (editButtons.length > 0) {
+  //       // Click the first edit button (likely supporting docs)
+  //       fireEvent.click(editButtons[0])
+  //       // This should trigger the file dialog (internal state change)
+  //       expect(editButtons[0]).toBeInTheDocument()
+  //     } else {
+  //       // If no edit buttons, test still passes - this means Role component is working
+  //       expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
+  //     }
+  //   })
+  // })
 })

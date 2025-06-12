@@ -152,20 +152,13 @@ export const fuelSupplyColDefs = (
         minWords: 1
       }),
 
-      cellStyle: (params) => {
-        if (isSupplemental && params.data.isNewSupplementalEntry) {
-          if (params.data.actionType === 'UPDATE') {
-            return { backgroundColor: colors.alerts.warning.background }
-          }
-        } else {
-          return StandardCellStyle(
-            params,
-            errors,
-            warnings,
-            fuelTypeOtherConditionalStyle
-          )
-        }
-      },
+      cellStyle: (params) =>
+        StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        ),
       valueSetter: (params) => {
         const { newValue: selectedFuelTypeOther, data } = params
         data.fuelTypeOther = selectedFuelTypeOther
@@ -306,9 +299,57 @@ export const fuelSupplyColDefs = (
             params.data.fuelCode = null
             params.data.fuelCodeId = null
             params.data.uci = null // Clear UCI field
+            // Reset CI to default value
+            const fuelType = optionsData?.fuelTypes?.find(
+              (obj) => params.data.fuelType === obj.fuelType
+            )
+            if (fuelType) {
+              if (
+                params.data.fuelType === 'Other' &&
+                params.data.fuelCategory
+              ) {
+                // For "Other" fuel types, use category default CI
+                const categoryData = fuelType.fuelCategories?.find(
+                  (cat) => cat.fuelCategory === params.data.fuelCategory
+                )
+                params.data.ciOfFuel =
+                  categoryData?.defaultAndPrescribedCi || null
+              } else {
+                // For regular fuel types, use fuel type default CI
+                params.data.ciOfFuel = fuelType.defaultCarbonIntensity || null
+              }
+            }
           } else if (params.newValue === PROVISION_APPROVED_FUEL_CODE) {
             params.data.fuelCode = null
             params.data.fuelCodeId = null
+            // Clear CI values when switching to fuel code - they'll be set when fuel code is selected
+            params.data.ciOfFuel = null
+            params.data.uci = null
+          } else {
+            // For other provisions (like "Default carbon intensity - section 19 (b) (ii)"),
+            // reset to default CI values and clear fuel code
+            params.data.fuelCode = null
+            params.data.fuelCodeId = null
+            params.data.uci = null
+            const fuelType = optionsData?.fuelTypes?.find(
+              (obj) => params.data.fuelType === obj.fuelType
+            )
+            if (fuelType) {
+              if (
+                params.data.fuelType === 'Other' &&
+                params.data.fuelCategory
+              ) {
+                // For "Other" fuel types, use category default CI
+                const categoryData = fuelType.fuelCategories?.find(
+                  (cat) => cat.fuelCategory === params.data.fuelCategory
+                )
+                params.data.ciOfFuel =
+                  categoryData?.defaultAndPrescribedCi || null
+              } else {
+                // For regular fuel types, use fuel type default CI
+                params.data.ciOfFuel = fuelType.defaultCarbonIntensity || null
+              }
+            }
           }
         }
         return true
@@ -421,20 +462,13 @@ export const fuelSupplyColDefs = (
       cellRenderer: SelectRenderer,
       suppressKeyboardEvent,
       editable: (params) => isFuelTypeOther(params),
-      cellStyle: (params) => {
-        if (isSupplemental && params.data.isNewSupplementalEntry) {
-          if (params.data.actionType === 'UPDATE') {
-            return { backgroundColor: colors.alerts.warning.background }
-          }
-        } else {
-          return StandardCellStyle(
-            params,
-            errors,
-            warnings,
-            fuelTypeOtherConditionalStyle
-          )
-        }
-      }
+      cellStyle: (params) =>
+        StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        )
     },
     {
       field: 'targetCi',
@@ -476,20 +510,13 @@ export const fuelSupplyColDefs = (
       field: 'energyDensity',
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
       cellEditor: 'agNumberCellEditor',
-      cellStyle: (params) => {
-        if (isSupplemental && params.data.isNewSupplementalEntry) {
-          if (params.data.actionType === 'UPDATE') {
-            return { backgroundColor: colors.alerts.warning.background }
-          }
-        } else {
-          return StandardCellStyle(
-            params,
-            errors,
-            warnings,
-            fuelTypeOtherConditionalStyle
-          )
-        }
-      },
+      cellStyle: (params) =>
+        StandardCellStyle(
+          params,
+          errors,
+          warnings,
+          fuelTypeOtherConditionalStyle
+        ),
       cellEditorParams: {
         precision: 2,
         min: 0,

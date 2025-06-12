@@ -1,7 +1,7 @@
 import React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { UserProfileActions } from '../UserProfileActions'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useNotificationsCount } from '@/hooks/useNotifications'
 import { useLocation } from 'react-router-dom'
@@ -9,68 +9,98 @@ import { wrapper } from '@/tests/utils/wrapper'
 import { ROUTES } from '@/routes/routes'
 import { logout } from '@/utils/keycloak'
 
+// Mock variables - must be declared at top level
+const mockRefetch = vi.fn()
+const mockUseLocation = vi.fn()
+
 // Mock hooks and components
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useNotifications')
 vi.mock('@/utils/keycloak')
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
-    useLocation: vi.fn()
+    useLocation: () => mockUseLocation(),
+    NavLink: ({ children, to, ...props }) => (
+      <a href={to} {...props}>
+        {children}
+      </a>
+    )
   }
 })
+
 vi.mock('@react-keycloak/web', () => ({
-  useKeycloak: vi.fn().mockReturnValue({
+  useKeycloak: () => ({
     keycloak: { authenticated: true }
   })
 }))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key) => (key === 'Notifications' ? 'Notifications' : key)
+    t: (key) => key
   })
 }))
 
-describe('UserProfileActions', () => {
-  const mockRefetch = vi.fn()
+// Mock components
+vi.mock('@/components/BCNavbar/components/DefaultNavbarLink', () => ({
+  default: ({ icon, route, ...props }) => (
+    <div data-test="default-navbar-link" data-route={route} {...props}>
+      {icon}
+    </div>
+  )
+}))
 
+describe('UserProfileActions', () => {
+  // Mock timers
   beforeEach(() => {
-    // Set up default mock data
-    useCurrentUser.mockReturnValue({
+    vi.useFakeTimers()
+    vi.resetAllMocks()
+
+    // Setup default mocks
+    mockUseLocation.mockReturnValue({ pathname: '/' })
+
+    vi.mocked(useCurrentUser).mockReturnValue({
       data: {
         firstName: 'John',
         lastName: 'Doe',
+        userProfileId: 'user123',
         isGovernmentUser: true,
-        userProfileId: '123'
+        organization: { organizationId: 'org123' }
       }
     })
 
-    useNotificationsCount.mockReturnValue({
-      data: { count: 3 },
+    vi.mocked(useNotificationsCount).mockReturnValue({
+      data: { count: 5 },
       isLoading: false,
       refetch: mockRefetch
     })
 
-    useLocation.mockReturnValue({ pathname: '/dashboard' })
+    vi.mocked(logout).mockImplementation(() => {})
   })
 
-  it('renders the user name', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('renders user profile with notifications', () => {
     render(<UserProfileActions />, { wrapper })
 
     expect(screen.getByText('John Doe')).toBeInTheDocument()
+    expect(screen.getByText('logout')).toBeInTheDocument()
   })
 
-  it('renders the notification count badge when there are notifications', () => {
+  it('shows notifications count badge', () => {
     render(<UserProfileActions />, { wrapper })
 
-    const badge = screen.getByLabelText('Notifications')
+    // The badge should show the count
+    const badge = screen.getByText('5')
     expect(badge).toBeInTheDocument()
-    // The badge text should show the count
-    expect(screen.getByText('3')).toBeInTheDocument()
   })
 
-  it('does not show notification count when count is zero', () => {
-    useNotificationsCount.mockReturnValue({
+  it('does not show badge when count is 0', () => {
+    vi.mocked(useNotificationsCount).mockReturnValue({
       data: { count: 0 },
       isLoading: false,
       refetch: mockRefetch
@@ -81,81 +111,152 @@ describe('UserProfileActions', () => {
     expect(screen.queryByText('0')).not.toBeInTheDocument()
   })
 
-  it('shows loading indicator when notifications are loading', () => {
-    useNotificationsCount.mockReturnValue({
+  it('shows loading spinner when notifications are loading', () => {
+    vi.mocked(useNotificationsCount).mockReturnValue({
+      data: null,
       isLoading: true,
       refetch: mockRefetch
     })
 
     render(<UserProfileActions />, { wrapper })
 
-    // Check for CircularProgress
-    expect(
-      document.querySelector('[class*="MuiCircularProgress-root"]')
-    ).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toBeInTheDocument()
   })
 
-  it('calls logout function when logout button is clicked', () => {
+  it('calls logout when logout button is clicked', () => {
     render(<UserProfileActions />, { wrapper })
 
-    fireEvent.click(screen.getByText('logout'))
+    const logoutButton = screen.getByTestId('logout-button')
+    fireEvent.click(logoutButton)
 
     expect(logout).toHaveBeenCalled()
   })
 
-  it('refetches notifications when location changes', () => {
+  it('sets up interval for refetching notifications', () => {
     render(<UserProfileActions />, { wrapper })
 
-    // Verify that refetch was called during initial render
-    expect(mockRefetch).toHaveBeenCalled()
+    // Fast-forward time by 1 minute
+    act(() => {
+      vi.advanceTimersByTime(60000)
+    })
 
-    // Clear the mock calls
-    mockRefetch.mockClear()
-
-    // Simulate location change
-    useLocation.mockReturnValue({ pathname: '/new-path' })
-
-    // Re-render the component with new location
-    const { rerender } = render(<UserProfileActions />, { wrapper })
-    rerender(<UserProfileActions />)
-
-    // Verify refetch was called again
     expect(mockRefetch).toHaveBeenCalled()
   })
 
-  it('links to correct user profile based on user type', () => {
-    // Test for government user
+  it('refetches notifications on window focus', () => {
     render(<UserProfileActions />, { wrapper })
 
-    const profileLink = screen.getByText('John Doe')
-    expect(profileLink).toHaveAttribute(
-      'href',
-      ROUTES.ADMIN.USERS.VIEW.replace(':userID', '123')
-    )
+    // Clear initial calls
+    mockRefetch.mockClear()
 
-    // Test for non-government user
-    useCurrentUser.mockReturnValue({
+    // Simulate window focus event
+    act(() => {
+      window.dispatchEvent(new Event('focus'))
+    })
+
+    expect(mockRefetch).toHaveBeenCalled()
+  })
+
+  it('refetches notifications when page becomes visible', () => {
+    render(<UserProfileActions />, { wrapper })
+
+    // Clear initial calls
+    mockRefetch.mockClear()
+
+    // Mock document.hidden to return false (page is visible)
+    Object.defineProperty(document, 'hidden', {
+      writable: true,
+      value: false
+    })
+
+    // Simulate visibility change event
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    expect(mockRefetch).toHaveBeenCalled()
+  })
+
+  it('does not refetch when page is hidden', () => {
+    render(<UserProfileActions />, { wrapper })
+
+    // Clear initial calls
+    mockRefetch.mockClear()
+
+    // Mock document.hidden to return true (page is hidden)
+    Object.defineProperty(document, 'hidden', {
+      writable: true,
+      value: true
+    })
+
+    // Simulate visibility change event
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+
+    expect(mockRefetch).not.toHaveBeenCalled()
+  })
+
+  it('renders correct user profile link for government user', () => {
+    render(<UserProfileActions />, { wrapper })
+
+    const userLink = screen.getByText('John Doe')
+    expect(userLink.getAttribute('href')).toContain('/admin/users/user123')
+  })
+
+  it('does not render user name when firstName is not available', () => {
+    vi.mocked(useCurrentUser).mockReturnValue({
       data: {
-        firstName: 'Jane',
-        lastName: 'Smith',
-        isGovernmentUser: false,
-        userProfileId: '456',
-        organization: {
-          organizationId: '789'
-        }
+        firstName: null,
+        lastName: 'Doe',
+        userProfileId: 'user123',
+        isGovernmentUser: true,
+        organization: { organizationId: 'org123' }
       }
     })
 
-    const { rerender } = render(<UserProfileActions />, { wrapper })
-    rerender(<UserProfileActions />)
+    render(<UserProfileActions />, { wrapper })
 
-    const nonGovProfileLink = screen.getByText('Jane Smith')
-    expect(nonGovProfileLink).toHaveAttribute(
-      'href',
-      ROUTES.ORGANIZATION.VIEW_USER.replace(':orgID', '789').replace(
-        ':userID',
-        '456'
-      )
+    expect(screen.queryByText('Doe')).not.toBeInTheDocument()
+    expect(screen.getByText('logout')).toBeInTheDocument()
+  })
+
+  it('handles missing notifications data gracefully', () => {
+    vi.mocked(useNotificationsCount).mockReturnValue({
+      data: null,
+      isLoading: false,
+      refetch: mockRefetch
+    })
+
+    render(<UserProfileActions />, { wrapper })
+
+    // Should not show any notification count
+    expect(screen.queryByText(/\d/)).not.toBeInTheDocument()
+  })
+
+  it('cleans up intervals on unmount', () => {
+    const clearIntervalSpy = vi.spyOn(global, 'clearInterval')
+
+    const { unmount } = render(<UserProfileActions />, { wrapper })
+    unmount()
+
+    expect(clearIntervalSpy).toHaveBeenCalled()
+  })
+
+  it('cleans up event listeners on unmount', () => {
+    const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener')
+    const windowRemoveEventListenerSpy = vi.spyOn(window, 'removeEventListener')
+
+    const { unmount } = render(<UserProfileActions />, { wrapper })
+    unmount()
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith(
+      'visibilitychange',
+      expect.any(Function)
+    )
+    expect(windowRemoveEventListenerSpy).toHaveBeenCalledWith(
+      'focus',
+      expect.any(Function)
     )
   })
 })

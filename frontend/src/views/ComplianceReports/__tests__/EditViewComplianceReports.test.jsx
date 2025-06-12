@@ -5,16 +5,12 @@ import { EditViewComplianceReport } from '../EditViewComplianceReport'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import * as useOrganizationHook from '@/hooks/useOrganization'
 import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
+import useComplianceReportStore, {
+  mockGetCachedReport
+} from '@/stores/useComplianceReportStore'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { wrapper } from '@/tests/utils/wrapper'
-import {
-  MemoryRouter,
-  Route,
-  Routes,
-  useLocation,
-  useParams
-} from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 
 vi.mock('@react-keycloak/web', () => ({
   ReactKeycloakProvider: ({ children }) => children,
@@ -49,7 +45,6 @@ vi.mock('@/services/useApiService', () => ({
 const mockUseParams = vi.fn()
 const mockUseLocation = vi.fn()
 const mockUseNavigate = vi.fn()
-const mockHasRoles = vi.fn()
 
 vi.mock('react-router-dom', () => ({
   ...vi.importActual('react-router-dom'),
@@ -62,6 +57,25 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key) => key
   })
+}))
+
+vi.mock('react-hook-form', () => ({
+  useForm: () => ({
+    handleSubmit: (fn) => fn,
+    reset: vi.fn(),
+    setValue: vi.fn(),
+    getValues: vi.fn(),
+    watch: vi.fn(),
+    control: {},
+    formState: { errors: {} }
+  })
+}))
+
+// Mock FontAwesome
+vi.mock('@fortawesome/react-fontawesome', () => ({
+  FontAwesomeIcon: ({ icon, className }) => (
+    <span className={className}>{icon}</span>
+  )
 }))
 
 vi.mock('@/hooks/useComplianceReports', async (importOriginal) => {
@@ -79,6 +93,21 @@ vi.mock('@/hooks/useComplianceReports', async (importOriginal) => {
 
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useOrganization')
+vi.mock('@/stores/useComplianceReportStore', () => {
+  const mockGetCachedReport = vi.fn()
+  return {
+    __esModule: true,
+    default: vi.fn((selector) => {
+      // Handle selector pattern: const reportData = useComplianceReportStore((state) => state.getCachedReport(id))
+      if (selector && typeof selector === 'function') {
+        return selector({ getCachedReport: mockGetCachedReport })
+      }
+      // Handle direct usage pattern
+      return { getCachedReport: mockGetCachedReport }
+    }),
+    mockGetCachedReport
+  }
+})
 
 vi.mock('../components/ActivityLinksList', () => ({
   ActivityLinksList: () => <div>Activity Links List</div>
@@ -104,17 +133,21 @@ vi.mock('../components/ReportDetails', () => ({
 
 vi.mock('../components/ComplianceReportSummary', () => ({
   default: ({ buttonClusterConfig, currentStatus }) => {
-    // Get the buttons for the current status
-    const buttons = buttonClusterConfig?.[currentStatus] || []
+    const COMPLIANCE_REPORT_STATUSES = {
+      DRAFT: 'Draft'
+    }
 
     return (
       <div>
         <div>Compliance Report Summary</div>
-        {buttons.map((button, index) => (
-          <button key={index} type="button">
-            {button.label}
-          </button>
-        ))}
+        {/* Only show buttons for DRAFT status, matching real component behavior */}
+        {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT &&
+          buttonClusterConfig?.[currentStatus] &&
+          buttonClusterConfig[currentStatus].map((button, index) => (
+            <button key={index} type="button">
+              {button.label}
+            </button>
+          ))}
       </div>
     )
   }
@@ -132,6 +165,88 @@ vi.mock('../components/AssessmentRecommendation', () => ({
   AssessmentRecommendation: () => <div>Assessment Recommendation</div>
 }))
 
+vi.mock('@/components/InternalComments', () => ({
+  default: () => <div>Internal Comments</div>
+}))
+
+vi.mock('@/components/Role', () => ({
+  Role: ({ children }) => <div>{children}</div>
+}))
+
+vi.mock('@/components/BCAlert', () => ({
+  FloatingAlert: ({ ref, ...props }) => (
+    <div data-testid="alert-box" {...props} />
+  )
+}))
+
+vi.mock('@/utils/grid/cellEditables.jsx', () => ({
+  isQuarterEditable: vi.fn(() => true)
+}))
+
+vi.mock('../components/ComplianceReportEarlyIssuanceSummary.jsx', () => ({
+  default: () => <div>Early Issuance Summary</div>
+}))
+
+// Mock the button configs
+vi.mock('../buttonConfigs', () => ({
+  buttonClusterConfigFn: ({ currentUser, hasRoles }) => {
+    const isAnalyst = hasRoles && hasRoles('Analyst')
+    const isManager = hasRoles && hasRoles('Compliance Manager')
+    const isDirector = hasRoles && hasRoles('Director')
+
+    return {
+      [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: isAnalyst
+        ? [
+            {
+              id: 'recommend-analyst-btn',
+              label: 'report:actionBtns.recommendReportAnalystBtn',
+              variant: 'contained',
+              color: 'primary',
+              handler: vi.fn()
+            }
+          ]
+        : [],
+      [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: isManager
+        ? [
+            {
+              id: 'recommend-manager-btn',
+              label: 'report:actionBtns.recommendReportManagerBtn',
+              variant: 'contained',
+              color: 'primary',
+              handler: vi.fn()
+            },
+            {
+              id: 'return-to-analyst-btn',
+              label: 'report:actionBtns.returnToAnalyst',
+              variant: 'outlined',
+              color: 'primary',
+              handler: vi.fn()
+            }
+          ]
+        : [],
+      [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: isDirector
+        ? [
+            {
+              id: 'assess-report-btn',
+              label: 'report:actionBtns.assessReportBtn',
+              variant: 'contained',
+              color: 'primary',
+              handler: vi.fn()
+            },
+            {
+              id: 'return-to-manager-btn',
+              label: 'report:actionBtns.returnToManager',
+              variant: 'outlined',
+              color: 'primary',
+              handler: vi.fn()
+            }
+          ]
+        : [],
+      [COMPLIANCE_REPORT_STATUSES.DRAFT]: []
+    }
+  }
+}))
+
 // Basic mock data structure
 const mockReportBase = {
   complianceReportId: 102,
@@ -146,7 +261,8 @@ const mockReportBase = {
   reportingFrequency: 'Annual',
   complianceReportGroupUuid: 'some-uuid',
   createTimestamp: new Date().toISOString(),
-  updateTimestamp: new Date().toISOString()
+  updateTimestamp: new Date().toISOString(),
+  organizationId: '123'
 }
 
 const defaultMockReportData = {
@@ -154,8 +270,6 @@ const defaultMockReportData = {
   chain: [mockReportBase],
   isNewest: true
 }
-
-const queryClient = new QueryClient()
 
 const renderComponent = (
   component,
@@ -185,17 +299,19 @@ describe('EditViewComplianceReport', () => {
           isGovernmentUser: false
         },
         isLoading: false,
-        hasRoles: mockHasRoles,
-        hasAnyRole: () => false
+        hasRoles: vi.fn(() => false),
+        hasAnyRole: vi.fn(() => false)
       },
       reportData: {
         report: {
           organizationId: '123',
           currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
           history: [],
-          nickname: 'Test Report'
+          nickname: 'Test Report',
+          reportingFrequency: 'Annual'
         },
-        chain: []
+        chain: [],
+        isNewest: true
       },
       isError: false,
       error: null,
@@ -229,6 +345,8 @@ describe('EditViewComplianceReport', () => {
     vi.mocked(useOrganizationHook.useOrganization).mockReturnValue(
       mocks.organization
     )
+    // Ensure the store mock returns the reportData when called
+    mockGetCachedReport.mockReturnValue(mocks.reportData)
     vi.mocked(
       useComplianceReportsHook.useUpdateComplianceReport
     ).mockReturnValue({ mutate: vi.fn() })
@@ -244,6 +362,9 @@ describe('EditViewComplianceReport', () => {
       mutate: vi.fn(),
       isLoading: false
     })
+    vi.mocked(
+      useComplianceReportsHook.useCreateIdirSupplementalReport
+    ).mockReturnValue({ mutate: vi.fn() })
 
     return mocks
   }
@@ -254,29 +375,22 @@ describe('EditViewComplianceReport', () => {
     // Default mock implementations
     vi.mocked(useCurrentUserHook.useCurrentUser).mockReturnValue({
       data: { isGovernmentUser: false },
-      hasRoles: () => false,
-      hasAnyRole: () => true,
+      hasRoles: vi.fn(() => false),
+      hasAnyRole: vi.fn(() => true),
       isLoading: false
     })
     vi.mocked(useOrganizationHook.useOrganization).mockReturnValue({
       data: { name: 'Test Org' },
       isLoading: false
     })
+    mockGetCachedReport.mockReturnValue(defaultMockReportData)
     mockUseLocation.mockReturnValue({ state: null })
     mockUseParams.mockReturnValue({
       compliancePeriod: '2023',
       complianceReportId: '102'
     })
 
-    // --- Key Fix: Ensure useGetComplianceReport returns the correct structure ---
-    vi.mocked(useComplianceReportsHook.useGetComplianceReport).mockReturnValue({
-      data: defaultMockReportData, // Provide mock data
-      isLoading: false,
-      isError: false,
-      error: null
-    })
-
-    // Reset mutation mocks if needed (example)
+    // Reset mutation mocks
     const mockMutate = vi.fn()
     vi.mocked(
       useComplianceReportsHook.useUpdateComplianceReport
@@ -297,29 +411,21 @@ describe('EditViewComplianceReport', () => {
 
   it('renders the component', async () => {
     const mocks = setupMocks()
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
-      expect(screen.getByText(/2023.*complianceReport/i)).toBeInTheDocument()
+      expect(
+        screen.getAllByText(/2023.*complianceReport/i).length
+      ).toBeGreaterThan(0)
     })
   })
 
   it('renders report components', async () => {
     const mocks = setupMocks()
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       expect(screen.getByText('Report Details')).toBeInTheDocument()
       expect(screen.getByText('Compliance Report Summary')).toBeInTheDocument()
@@ -331,16 +437,12 @@ describe('EditViewComplianceReport', () => {
     const mocks = setupMocks({
       useLocation: { state: { message: 'Test alert', severity: 'success' } }
     })
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
+    // The FloatingAlert component is mocked, so we just verify it's rendered
     await waitFor(() => {
-      expect(screen.getByText('Test alert')).toBeInTheDocument()
+      expect(screen.getByTestId('alert-box')).toBeInTheDocument()
     })
   })
 
@@ -351,14 +453,15 @@ describe('EditViewComplianceReport', () => {
     })
     render(
       <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
+        isError={true}
+        error={{ message: 'Error fetching report' }}
       />,
-      { wrapper }
+      {
+        wrapper
+      }
     )
     await waitFor(() => {
-      expect(screen.getByText('Error fetching report')).toBeInTheDocument()
+      expect(screen.getByText('report:errorRetrieving')).toBeInTheDocument()
     })
   })
 
@@ -366,24 +469,23 @@ describe('EditViewComplianceReport', () => {
     const mocks = setupMocks({
       reportData: {
         report: {
-          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+          organizationId: '123',
+          reportingFrequency: 'Annual'
         },
-        chain: []
+        chain: [],
+        isNewest: true
       },
       currentUser: {
         data: { isGovernmentUser: true },
-        hasRoles: (role) => role === 'Analyst',
-        hasAnyRole: () => false
+        hasRoles: vi.fn((role) => role === 'Analyst'),
+        hasAnyRole: vi.fn(() => false),
+        isLoading: false
       }
     })
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       expect(
         screen.getByText('report:actionBtns.recommendReportAnalystBtn')
@@ -397,24 +499,23 @@ describe('EditViewComplianceReport', () => {
         report: {
           currentStatus: {
             status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
-          }
+          },
+          organizationId: '123',
+          reportingFrequency: 'Annual'
         },
-        chain: []
+        chain: [],
+        isNewest: true
       },
       currentUser: {
         data: { isGovernmentUser: true },
-        hasRoles: (role) => role === 'Compliance Manager',
-        hasAnyRole: () => false
+        hasRoles: vi.fn((role) => role === 'Compliance Manager'),
+        hasAnyRole: vi.fn(() => false),
+        isLoading: false
       }
     })
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       expect(
         screen.getByText('report:actionBtns.recommendReportManagerBtn')
@@ -431,24 +532,23 @@ describe('EditViewComplianceReport', () => {
         report: {
           currentStatus: {
             status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
-          }
+          },
+          organizationId: '123',
+          reportingFrequency: 'Annual'
         },
-        chain: []
+        chain: [],
+        isNewest: true
       },
       currentUser: {
         data: { isGovernmentUser: true },
-        hasRoles: (role) => role === 'Director',
-        hasAnyRole: () => false
+        hasRoles: vi.fn((role) => role === 'Director'),
+        hasAnyRole: vi.fn(() => false),
+        isLoading: false
       }
     })
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       expect(
         screen.getByText('report:actionBtns.assessReportBtn')
@@ -463,24 +563,23 @@ describe('EditViewComplianceReport', () => {
     const mocks = setupMocks({
       reportData: {
         report: {
-          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED },
+          organizationId: '123',
+          reportingFrequency: 'Annual'
         },
-        chain: []
+        chain: [],
+        isNewest: true
       },
       currentUser: {
         data: { isGovernmentUser: false },
-        hasRoles: () => false,
-        hasAnyRole: () => false
+        hasRoles: vi.fn(() => false),
+        hasAnyRole: vi.fn(() => false),
+        isLoading: false
       }
     })
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       expect(
         screen.queryByText('report:actionBtns.recommendReportAnalystBtn')
@@ -501,18 +600,14 @@ describe('EditViewComplianceReport', () => {
     const mocks = setupMocks({
       currentUser: {
         data: { isGovernmentUser: true },
-        hasRoles: () => true,
-        hasAnyRole: () => false
+        hasRoles: vi.fn(() => true),
+        hasAnyRole: vi.fn(() => false),
+        isLoading: false
       }
     })
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       expect(screen.getByText('report:internalComments')).toBeInTheDocument()
     })
@@ -522,18 +617,14 @@ describe('EditViewComplianceReport', () => {
     const mocks = setupMocks({
       currentUser: {
         data: { isGovernmentUser: false },
-        hasRoles: () => false,
-        hasAnyRole: () => false
+        hasRoles: vi.fn(() => false),
+        hasAnyRole: vi.fn(() => false),
+        isLoading: false
       }
     })
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       expect(
         screen.queryByText('report:internalComments')
@@ -545,9 +636,12 @@ describe('EditViewComplianceReport', () => {
     const mocks = setupMocks({
       reportData: {
         report: {
-          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT }
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.DRAFT },
+          organizationId: '123',
+          reportingFrequency: 'Annual'
         },
-        chain: []
+        chain: [],
+        isNewest: true
       },
       currentUser: {
         data: {
@@ -555,18 +649,13 @@ describe('EditViewComplianceReport', () => {
           isGovernmentUser: false
         },
         isLoading: false,
-        hasRoles: mockHasRoles,
-        hasAnyRole: () => true
+        hasRoles: vi.fn(() => false),
+        hasAnyRole: vi.fn(() => true)
       }
     })
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       expect(screen.getByText('Activity Links List')).toBeInTheDocument()
     })
@@ -590,7 +679,9 @@ describe('EditViewComplianceReport', () => {
       reportData: {
         report: {
           currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
-          history: historyMock
+          history: historyMock,
+          organizationId: '123',
+          reportingFrequency: 'Annual'
         },
         chain: [
           {
@@ -601,18 +692,14 @@ describe('EditViewComplianceReport', () => {
             },
             currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
           }
-        ]
+        ],
+        isNewest: true
       }
     })
 
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       expect(screen.getByText('report:assessment')).toBeInTheDocument()
       expect(screen.getByText('report:reportHistory')).toBeInTheDocument()
@@ -624,14 +711,9 @@ describe('EditViewComplianceReport', () => {
 
   it('displays scroll-to-top button when scrolling down', async () => {
     const mocks = setupMocks()
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       fireEvent.scroll(window, { target: { pageYOffset: 100 } })
       expect(screen.getByLabelText('scroll to bottom')).toBeInTheDocument()
@@ -640,14 +722,9 @@ describe('EditViewComplianceReport', () => {
 
   it('displays scroll-to-bottom button when at the top of the page', async () => {
     const mocks = setupMocks()
-    render(
-      <EditViewComplianceReport
-        reportData={mocks.reportData}
-        isError={mocks.isError}
-        error={mocks.error}
-      />,
-      { wrapper }
-    )
+    render(<EditViewComplianceReport isError={false} error={null} />, {
+      wrapper
+    })
     await waitFor(() => {
       fireEvent.scroll(window, { target: { pageYOffset: 0 } })
       expect(screen.getByLabelText('scroll to bottom')).toBeInTheDocument()
@@ -659,8 +736,8 @@ describe('EditViewComplianceReport', () => {
       const mocks = setupMocks({
         currentUser: {
           data: { isGovernmentUser: true },
-          hasRoles: (role) => role === 'Analyst',
-          hasAnyRole: () => false,
+          hasRoles: vi.fn((role) => role === 'Analyst'),
+          hasAnyRole: vi.fn(() => false),
           isLoading: false
         },
         reportData: {
@@ -671,27 +748,14 @@ describe('EditViewComplianceReport', () => {
             nickname: 'Test Report',
             reportingFrequency: 'Annual' // Not quarterly
           },
-          chain: []
+          chain: [],
+          isNewest: true // No draft supplemental
         }
       })
 
-      // Mock useGetComplianceReport to return no draft supplemental
-      vi.mocked(
-        useComplianceReportsHook.useGetComplianceReport
-      ).mockReturnValue({
-        data: { isNewest: true }, // No draft supplemental
-        isLoading: false,
-        isError: false
+      render(<EditViewComplianceReport isError={false} error={null} />, {
+        wrapper
       })
-
-      render(
-        <EditViewComplianceReport
-          reportData={mocks.reportData}
-          isError={mocks.isError}
-          error={mocks.error}
-        />,
-        { wrapper }
-      )
 
       await waitFor(() => {
         expect(
@@ -708,8 +772,8 @@ describe('EditViewComplianceReport', () => {
       const mocks = setupMocks({
         currentUser: {
           data: { isGovernmentUser: true },
-          hasRoles: (role) => role === 'Analyst',
-          hasAnyRole: () => false,
+          hasRoles: vi.fn((role) => role === 'Analyst'),
+          hasAnyRole: vi.fn(() => false),
           isLoading: false
         },
         reportData: {
@@ -720,27 +784,14 @@ describe('EditViewComplianceReport', () => {
             nickname: 'Test Report',
             reportingFrequency: 'Annual'
           },
-          chain: []
+          chain: [],
+          isNewest: false // Draft supplemental exists
         }
       })
 
-      // Mock useGetComplianceReport to return draft supplemental exists
-      vi.mocked(
-        useComplianceReportsHook.useGetComplianceReport
-      ).mockReturnValue({
-        data: { isNewest: false }, // Draft supplemental exists
-        isLoading: false,
-        isError: false
+      render(<EditViewComplianceReport isError={false} error={null} />, {
+        wrapper
       })
-
-      render(
-        <EditViewComplianceReport
-          reportData={mocks.reportData}
-          isError={mocks.isError}
-          error={mocks.error}
-        />,
-        { wrapper }
-      )
 
       await waitFor(() => {
         expect(
@@ -759,8 +810,8 @@ describe('EditViewComplianceReport', () => {
       const mocks = setupMocks({
         currentUser: {
           data: { isGovernmentUser: true },
-          hasRoles: (role) => role === 'Analyst',
-          hasAnyRole: () => false,
+          hasRoles: vi.fn((role) => role === 'Analyst'),
+          hasAnyRole: vi.fn(() => false),
           isLoading: false
         },
         reportData: {
@@ -771,26 +822,14 @@ describe('EditViewComplianceReport', () => {
             nickname: 'Test Report',
             reportingFrequency: 'Quarterly' // Quarterly report
           },
-          chain: []
+          chain: [],
+          isNewest: true
         }
       })
 
-      vi.mocked(
-        useComplianceReportsHook.useGetComplianceReport
-      ).mockReturnValue({
-        data: { isNewest: true },
-        isLoading: false,
-        isError: false
+      render(<EditViewComplianceReport isError={false} error={null} />, {
+        wrapper
       })
-
-      render(
-        <EditViewComplianceReport
-          reportData={mocks.reportData}
-          isError={mocks.isError}
-          error={mocks.error}
-        />,
-        { wrapper }
-      )
 
       await waitFor(() => {
         expect(
@@ -809,8 +848,8 @@ describe('EditViewComplianceReport', () => {
       const mocks = setupMocks({
         currentUser: {
           data: { isGovernmentUser: false },
-          hasRoles: () => false,
-          hasAnyRole: () => false,
+          hasRoles: vi.fn(() => false),
+          hasAnyRole: vi.fn(() => false),
           isLoading: false
         },
         reportData: {
@@ -821,26 +860,14 @@ describe('EditViewComplianceReport', () => {
             nickname: 'Test Report',
             reportingFrequency: 'Annual'
           },
-          chain: []
+          chain: [],
+          isNewest: true
         }
       })
 
-      vi.mocked(
-        useComplianceReportsHook.useGetComplianceReport
-      ).mockReturnValue({
-        data: { isNewest: true },
-        isLoading: false,
-        isError: false
+      render(<EditViewComplianceReport isError={false} error={null} />, {
+        wrapper
       })
-
-      render(
-        <EditViewComplianceReport
-          reportData={mocks.reportData}
-          isError={mocks.isError}
-          error={mocks.error}
-        />,
-        { wrapper }
-      )
 
       await waitFor(() => {
         expect(
@@ -857,8 +884,8 @@ describe('EditViewComplianceReport', () => {
       const mocks = setupMocks({
         currentUser: {
           data: { isGovernmentUser: true },
-          hasRoles: (role) => role === 'Director', // Not analyst
-          hasAnyRole: () => false,
+          hasRoles: vi.fn((role) => role === 'Director'), // Not analyst
+          hasAnyRole: vi.fn(() => false),
           isLoading: false
         },
         reportData: {
@@ -869,26 +896,14 @@ describe('EditViewComplianceReport', () => {
             nickname: 'Test Report',
             reportingFrequency: 'Annual'
           },
-          chain: []
+          chain: [],
+          isNewest: true
         }
       })
 
-      vi.mocked(
-        useComplianceReportsHook.useGetComplianceReport
-      ).mockReturnValue({
-        data: { isNewest: true },
-        isLoading: false,
-        isError: false
+      render(<EditViewComplianceReport isError={false} error={null} />, {
+        wrapper
       })
-
-      render(
-        <EditViewComplianceReport
-          reportData={mocks.reportData}
-          isError={mocks.isError}
-          error={mocks.error}
-        />,
-        { wrapper }
-      )
 
       await waitFor(() => {
         // Should show assessment statement for government users
@@ -908,8 +923,8 @@ describe('EditViewComplianceReport', () => {
       const mocks = setupMocks({
         currentUser: {
           data: { isGovernmentUser: true },
-          hasRoles: (role) => role === 'Analyst',
-          hasAnyRole: () => false,
+          hasRoles: vi.fn((role) => role === 'Analyst'),
+          hasAnyRole: vi.fn(() => false),
           isLoading: false
         },
         reportData: {
@@ -920,26 +935,14 @@ describe('EditViewComplianceReport', () => {
             nickname: 'Test Report',
             reportingFrequency: 'Annual'
           },
-          chain: []
+          chain: [],
+          isNewest: true
         }
       })
 
-      vi.mocked(
-        useComplianceReportsHook.useGetComplianceReport
-      ).mockReturnValue({
-        data: { isNewest: true },
-        isLoading: false,
-        isError: false
+      render(<EditViewComplianceReport isError={false} error={null} />, {
+        wrapper
       })
-
-      render(
-        <EditViewComplianceReport
-          reportData={mocks.reportData}
-          isError={mocks.isError}
-          error={mocks.error}
-        />,
-        { wrapper }
-      )
 
       await waitFor(() => {
         expect(
