@@ -256,9 +256,18 @@ export const buttonClusterConfigFn = ({
             ? [reportButtons.deleteSupplementalReport]
             : [])
         ]
-      : [],
+      : (() => {
+          // For government users (analysts), check if it's a Government Adjustment/Reassessment
+          if (isGovernmentUser && hasRoles(roles.analyst)) {
+            if (supplementalInitiator === 'Government Reassessment') {
+              // Government Adjustments/Reassessments in draft mode should show delete button
+              return [reportButtons.deleteAnalystAdjustment]
+            }
+          }
+          return []
+        })(),
     [COMPLIANCE_REPORT_STATUSES.SUBMITTED]: (() => {
-      if (isGovernmentUser && hasRoles('Analyst')) {
+      if (isGovernmentUser && hasRoles(roles.analyst)) {
         const buttons = [
           {
             ...reportButtons.recommendByAnalyst,
@@ -289,7 +298,7 @@ export const buttonClusterConfigFn = ({
       return [] // Return empty array if not Analyst or not government user
     })(),
     [COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]: [
-      ...(isGovernmentUser && hasRoles('Analyst')
+      ...(isGovernmentUser && hasRoles(roles.analyst)
         ? [
             reportButtons.recommendByAnalyst,
             reportButtons.deleteAnalystAdjustment
@@ -297,7 +306,7 @@ export const buttonClusterConfigFn = ({
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: [
-      ...(isGovernmentUser && hasRoles('Compliance Manager')
+      ...(isGovernmentUser && hasRoles(roles.compliance_manager)
         ? [
             {
               ...reportButtons.recommendByManager,
@@ -306,7 +315,7 @@ export const buttonClusterConfigFn = ({
             { ...reportButtons.returnToAnalyst, disabled: hasDraftSupplemental }
           ]
         : []),
-      ...(isGovernmentUser && hasRoles('Director')
+      ...(isGovernmentUser && hasRoles(roles.director)
         ? [
             { ...reportButtons.assessReport, disabled: hasDraftSupplemental },
             { ...reportButtons.returnToAnalyst, disabled: hasDraftSupplemental }
@@ -314,7 +323,7 @@ export const buttonClusterConfigFn = ({
         : [])
     ],
     [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: [
-      ...(isGovernmentUser && hasRoles('Director')
+      ...(isGovernmentUser && hasRoles(roles.director)
         ? [
             { ...reportButtons.assessReport, disabled: hasDraftSupplemental },
             { ...reportButtons.returnToManager, disabled: hasDraftSupplemental }

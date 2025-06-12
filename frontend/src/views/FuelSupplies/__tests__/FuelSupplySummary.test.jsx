@@ -3,20 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { FuelSupplySummary } from '../FuelSupplySummary'
 import { wrapper } from '@/tests/utils/wrapper'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-
-// Mock react-router-dom hooks
-const mockUseLocation = vi.fn()
-const mockUseNavigate = vi.fn()
-const mockUseParams = vi.fn()
-
-vi.mock('react-router-dom', () => ({
-  ...vi.importActual('react-router-dom'),
-  useLocation: () => mockUseLocation(),
-  useNavigate: () => mockUseNavigate(),
-  useParams: () => mockUseParams()
-}))
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -25,90 +12,92 @@ vi.mock('react-i18next', () => ({
   })
 }))
 
-// Mock BCDataGridServer so we can verify it renders without a full data grid
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  // Provide a basic mock for both default export and named export
-  __esModule: true,
-  default: () => (
-    <div data-test="mocked-bc-data-grid-server">Mocked BCDataGridServer</div>
-  ),
-  BCDataGridServer: () => (
-    <div data-test="mocked-bc-data-grid-server">Mocked BCDataGridServer</div>
+// Mock BCGridViewer (this is what the component actually uses)
+vi.mock('@/components/BCDataGrid/BCGridViewer.jsx', () => ({
+  BCGridViewer: ({
+    gridKey,
+    columnDefs,
+    queryData,
+    dataKey,
+    gridOptions,
+    defaultColDef,
+    suppressPagination,
+    paginationOptions
+  }) => (
+    <div data-test="bc-grid-viewer">
+      <div data-test="grid-key">{gridKey}</div>
+      <div data-test="data-key">{dataKey}</div>
+      <div data-test="row-count">
+        {queryData?.data?.[dataKey]?.length || 0} rows
+      </div>
+      <div data-test="pagination-suppressed">
+        {suppressPagination ? 'pagination-suppressed' : 'pagination-enabled'}
+      </div>
+    </div>
   )
+}))
+
+// Mock the schema
+vi.mock('@/views/FuelSupplies/_schema.jsx', () => ({
+  fuelSupplySummaryColDef: (isEarlyIssuance) => [
+    { field: 'fuelType', headerName: 'Fuel Type' },
+    { field: 'quantity', headerName: 'Quantity' }
+  ]
+}))
+
+// Mock cell renderers
+vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
+  LinkRenderer: () => <div>Link Renderer</div>
+}))
+
+// Mock constants
+vi.mock('@/constants/schedules.js', () => ({
+  defaultInitialPagination: {
+    page: 1,
+    size: 10,
+    filters: [],
+    sortOrders: []
+  }
 }))
 
 describe('FuelSupplySummary', () => {
   beforeEach(() => {
     vi.resetAllMocks()
-
-    // Default mock returns
-    mockUseLocation.mockReturnValue({
-      pathname: '/test-fuel-supplies',
-      state: {}
-    })
-    mockUseNavigate.mockReturnValue(vi.fn())
-    mockUseParams.mockReturnValue({
-      complianceReportId: 'testReportId',
-      compliancePeriod: '2024'
-    })
   })
 
-  it('renders the component', () => {
+  it('renders the component with BCGridViewer', () => {
     render(
       <FuelSupplySummary
         data={{ fuelSupplies: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        isEarlyIssuance={false}
       />,
       { wrapper }
     )
-    // Confirm that BCDataGridServer (the mocked component) is displayed
-    expect(screen.getByTestId('mocked-bc-data-grid-server')).toBeInTheDocument()
+
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+    expect(screen.getByTestId('grid-key')).toHaveTextContent('fuel-supplies')
+    expect(screen.getByTestId('data-key')).toHaveTextContent('fuelSupplies')
   })
 
-  it('displays alert message when location.state has a message', () => {
-    mockUseLocation.mockReturnValue({
-      pathname: '/test-fuel-supplies',
-      state: { message: 'Test Alert', severity: 'error' }
-    })
-
+  it('renders with empty data correctly', () => {
     render(
       <FuelSupplySummary
         data={{ fuelSupplies: [] }}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        isEarlyIssuance={false}
       />,
       { wrapper }
     )
 
-    // Check that the alert box is rendered with the correct message
-    const alertBox = screen.getByTestId('alert-box')
-    expect(alertBox).toBeInTheDocument()
-    expect(alertBox.textContent).toContain('Test Alert')
+    expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
   })
 
-  it('does not display alert message if location.state is empty', () => {
-    mockUseLocation.mockReturnValue({
-      pathname: '/test-fuel-supplies',
-      state: {}
-    })
-
-    render(
-      <FuelSupplySummary
-        data={{ fuelSupplies: [] }}
-        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-      />,
-      { wrapper }
-    )
-
-    // Alert should not be present
-    const alertBox = screen.queryByTestId('alert-box')
-    expect(alertBox).not.toBeInTheDocument()
-  })
-
-  it('renders fuel supplies rows in BCDataGridServer when provided', () => {
+  it('renders fuel supplies data correctly', () => {
     const mockData = {
       fuelSupplies: [
-        { fuelSupplyId: 1, fuelType: 'Diesel' },
-        { fuelSupplyId: 2, fuelType: 'Gasoline' }
+        { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE' },
+        { fuelSupplyId: 2, fuelType: 'Gasoline', actionType: 'UPDATE' }
       ]
     }
 
@@ -116,21 +105,131 @@ describe('FuelSupplySummary', () => {
       <FuelSupplySummary
         data={mockData}
         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        isEarlyIssuance={false}
       />,
       { wrapper }
     )
 
-    // The actual rows are handled by the BCDataGridServer mock, so just confirm the mock rendered
-    expect(screen.getByTestId('mocked-bc-data-grid-server')).toBeInTheDocument()
+    expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
   })
 
-  it('does nothing special on row click if status is not DRAFT', () => {
-    // Here, just ensure that the component renders fine for a non-DRAFT status
+  it('filters out deleted items', () => {
+    const mockData = {
+      fuelSupplies: [
+        { fuelSupplyId: 1, fuelType: 'Diesel', actionType: 'CREATE' },
+        { fuelSupplyId: 2, fuelType: 'Gasoline', actionType: 'DELETE' },
+        { fuelSupplyId: 3, fuelType: 'Biodiesel', actionType: 'UPDATE' }
+      ]
+    }
+
     render(
-      <FuelSupplySummary data={{ fuelSupplies: [] }} status="SUBMITTED" />,
+      <FuelSupplySummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        isEarlyIssuance={false}
+      />,
       { wrapper }
     )
-    // Confirm the mock is rendered and no crash occurs
-    expect(screen.getByTestId('mocked-bc-data-grid-server')).toBeInTheDocument()
+
+    // Should show 2 rows (excluding the deleted one)
+    expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
+  })
+
+  it('suppresses pagination when 10 or fewer items', () => {
+    const mockData = {
+      fuelSupplies: Array.from({ length: 8 }, (_, i) => ({
+        fuelSupplyId: i + 1,
+        fuelType: `Fuel${i + 1}`,
+        actionType: 'CREATE'
+      }))
+    }
+
+    render(
+      <FuelSupplySummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        isEarlyIssuance={false}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-suppressed'
+    )
+  })
+
+  it('enables pagination when more than 10 items', () => {
+    const mockData = {
+      fuelSupplies: Array.from({ length: 15 }, (_, i) => ({
+        fuelSupplyId: i + 1,
+        fuelType: `Fuel${i + 1}`,
+        actionType: 'CREATE'
+      }))
+    }
+
+    render(
+      <FuelSupplySummary
+        data={mockData}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        isEarlyIssuance={false}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('pagination-suppressed')).toHaveTextContent(
+      'pagination-enabled'
+    )
+  })
+
+  it('handles non-DRAFT status correctly', () => {
+    render(
+      <FuelSupplySummary
+        data={{ fuelSupplies: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
+        isEarlyIssuance={false}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+  })
+
+  it('handles early issuance flag', () => {
+    render(
+      <FuelSupplySummary
+        data={{ fuelSupplies: [] }}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        isEarlyIssuance={true}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+  })
+
+  it('handles undefined data gracefully', () => {
+    render(
+      <FuelSupplySummary
+        data={undefined}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        isEarlyIssuance={false}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
+  })
+
+  it('handles data without fuelSupplies property', () => {
+    render(
+      <FuelSupplySummary
+        data={{}}
+        status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+        isEarlyIssuance={false}
+      />,
+      { wrapper }
+    )
+
+    expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
   })
 })

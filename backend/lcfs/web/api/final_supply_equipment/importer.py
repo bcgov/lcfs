@@ -241,6 +241,11 @@ async def import_async(
                         if all(cell is None for cell in row):
                             continue
 
+                        row = list(row)
+                        row[9] = [row[9]] if row[9] is not None else []
+                        row[10] = [row[10]] if row[10] is not None else []
+                       
+
                         # Validate row
                         error = _validate_row(
                             row, row_idx, valid_use_type_names, valid_user_type_names
@@ -370,9 +375,9 @@ def _validate_row(
         missing_fields.append("Latitude")
     if longitude is None:
         missing_fields.append("Longitude")
-    if not intended_use_types or len(intended_use_types) < 4:
+    if not intended_use_types:
         missing_fields.append("Intended use")
-    if not intended_user_types or len(intended_user_types) < 4:
+    if not intended_user_types:
         missing_fields.append("Intended users")
 
     if missing_fields:

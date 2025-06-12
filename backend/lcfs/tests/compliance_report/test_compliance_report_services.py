@@ -2259,3 +2259,284 @@ class TestIsSupplementalRequestedByGovUser:
         result = service.is_supplemental_requested_by_gov_user(chained_report)
 
         assert result is False
+
+
+# ANALYST ADJUSTMENT CREATION TESTS
+
+
+@pytest.mark.anyio
+async def test_create_analyst_adjustment_from_submitted_status_success(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,
+    mock_repo: AsyncMock,
+    mock_snapshot_service: AsyncMock,
+    mock_fse_services: AsyncMock,
+    mock_document_service: AsyncMock,
+    mock_internal_comment_service: AsyncMock,
+):
+    """Test successful creation of analyst adjustment from 'Submitted' status."""
+    # Arrange
+    mock_submitted_report = MagicMock(spec=ComplianceReport)
+    mock_submitted_report.compliance_report_id = 1
+    mock_submitted_report.compliance_period_id = 1
+    mock_submitted_report.organization_id = 123
+    mock_submitted_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_submitted_report.version = 0
+    mock_submitted_report.reporting_frequency = ReportingFrequency.ANNUAL
+    mock_submitted_report.current_status.status = ComplianceReportStatusEnum.Submitted
+
+    # Mock latest report
+    mock_latest_report = MagicMock()
+    mock_latest_report.version = 0
+
+    # Mock analyst adjustment status
+    mock_analyst_adjustment_status = MagicMock()
+    mock_analyst_adjustment_status.compliance_report_status_id = 3
+    mock_analyst_adjustment_status.status = (
+        ComplianceReportStatusEnum.Analyst_adjustment
+    )
+
+    # Mock new report - properly configure all fields that need validation
+    mock_new_report = MagicMock(spec=ComplianceReport)
+    mock_new_report.compliance_report_id = 2
+    mock_new_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_new_report.version = 1
+    mock_new_report.supplemental_initiator = (
+        SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    )
+    mock_new_report.compliance_period_id = 1
+    mock_new_report.organization_id = 123
+    mock_new_report.current_status_id = 3
+    mock_new_report.nickname = "Government adjustment 1"
+    mock_new_report.supplemental_note = ""
+    mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
+    mock_new_report.assessment_statement = ""
+    mock_new_report.has_supplemental = True
+
+    # Mock nested objects
+    mock_compliance_period = MagicMock()
+    mock_compliance_period.compliance_period_id = 1
+    mock_compliance_period.description = "2024"
+    mock_compliance_period.display_name = "2024"
+    mock_compliance_period.effective_date = "2024-01-01"
+    mock_compliance_period.expiration_date = "2024-12-31"
+    mock_new_report.compliance_period = mock_compliance_period
+
+    # Create a proper organization mock that handles attribute access correctly
+    class MockOrganization:
+        def __init__(self):
+            self.organization_id = 123
+            self.organization_code = "ORG123"
+            self.name = "Test Organization"
+
+        def __getattr__(self, name):
+            # Handle both snake_case and camelCase
+            if name == "organizationCode":
+                return self.organization_code
+            if name == "organizationId":
+                return self.organization_id
+            # Return actual attribute values
+            return super().__getattribute__(name)
+
+    mock_new_report.organization = MockOrganization()
+
+    mock_current_status = MagicMock()
+    mock_current_status.compliance_report_status_id = 3
+    mock_current_status.status = ComplianceReportStatusEnum.Analyst_adjustment.value
+    mock_new_report.current_status = mock_current_status
+
+    # Setup mocks
+    mock_repo.get_compliance_report_by_id.return_value = mock_submitted_report
+    mock_repo.get_latest_report_by_group_uuid.return_value = mock_latest_report
+    mock_repo.get_compliance_report_status_by_desc.return_value = (
+        mock_analyst_adjustment_status
+    )
+    mock_repo.create_compliance_report.return_value = mock_new_report
+    mock_repo.add_compliance_report_history.return_value = None
+
+    # Act
+    result = await compliance_report_service.create_analyst_adjustment_report(
+        1, mock_user_profile_analyst
+    )
+
+    # Assert
+    assert result is not None
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(1)
+    mock_repo.create_compliance_report.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_create_analyst_adjustment_from_analyst_adjustment_status_fails(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,
+    mock_repo: AsyncMock,
+):
+    """Test that creating analyst adjustment from 'Analyst adjustment' status fails."""
+    # Arrange
+    mock_analyst_adjustment_report = MagicMock(spec=ComplianceReport)
+    mock_analyst_adjustment_report.compliance_report_id = 1
+    mock_analyst_adjustment_report.current_status.status = (
+        ComplianceReportStatusEnum.Analyst_adjustment
+    )
+
+    mock_repo.get_compliance_report_by_id.return_value = mock_analyst_adjustment_report
+
+    # Act & Assert
+    with pytest.raises(ServiceException) as exc_info:
+        await compliance_report_service.create_analyst_adjustment_report(
+            1, mock_user_profile_analyst
+        )
+
+    assert (
+        "An analyst adjustment can only be created if the current report's status is 'Submitted' or 'Assessed'."
+        in exc_info.value.args[0]
+    )
+    mock_repo.create_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_analyst_adjustment_from_draft_status_fails(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,
+    mock_repo: AsyncMock,
+):
+    """Test that creating analyst adjustment from 'Draft' status fails."""
+    # Arrange
+    mock_draft_report = MagicMock(spec=ComplianceReport)
+    mock_draft_report.compliance_report_id = 1
+    mock_draft_report.current_status.status = ComplianceReportStatusEnum.Draft
+
+    mock_repo.get_compliance_report_by_id.return_value = mock_draft_report
+
+    # Act & Assert
+    with pytest.raises(ServiceException) as exc_info:
+        await compliance_report_service.create_analyst_adjustment_report(
+            1, mock_user_profile_analyst
+        )
+
+    assert (
+        "An analyst adjustment can only be created if the current report's status is 'Submitted' or 'Assessed'."
+        in exc_info.value.args[0]
+    )
+    mock_repo.create_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_analyst_adjustment_report_not_found_fails(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,
+    mock_repo: AsyncMock,
+):
+    """Test that creating analyst adjustment fails when report is not found."""
+    # Arrange
+    mock_repo.get_compliance_report_by_id.return_value = None
+
+    # Act & Assert
+    with pytest.raises(DataNotFoundException) as exc_info:
+        await compliance_report_service.create_analyst_adjustment_report(
+            999, mock_user_profile_analyst
+        )
+
+    assert "Compliance report not found." in exc_info.value.args[0]
+    mock_repo.create_compliance_report.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_create_analyst_adjustment_from_assessed_status_success(
+    compliance_report_service: ComplianceReportServices,
+    mock_user_profile_analyst: MagicMock,
+    mock_repo: AsyncMock,
+    mock_snapshot_service: AsyncMock,
+    mock_fse_services: AsyncMock,
+    mock_document_service: AsyncMock,
+    mock_internal_comment_service: AsyncMock,
+):
+    """Test successful creation of analyst adjustment from 'Assessed' status (reassessment scenario)."""
+    # Arrange
+    mock_assessed_report = MagicMock(spec=ComplianceReport)
+    mock_assessed_report.compliance_report_id = 1
+    mock_assessed_report.compliance_period_id = 1
+    mock_assessed_report.organization_id = 123
+    mock_assessed_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_assessed_report.version = 0
+    mock_assessed_report.reporting_frequency = ReportingFrequency.ANNUAL
+    mock_assessed_report.current_status.status = ComplianceReportStatusEnum.Assessed
+
+    # Mock latest report
+    mock_latest_report = MagicMock()
+    mock_latest_report.version = 0
+
+    # Mock analyst adjustment status
+    mock_analyst_adjustment_status = MagicMock()
+    mock_analyst_adjustment_status.compliance_report_status_id = 3
+    mock_analyst_adjustment_status.status = (
+        ComplianceReportStatusEnum.Analyst_adjustment
+    )
+
+    # Mock new report - properly configure all fields that need validation
+    mock_new_report = MagicMock(spec=ComplianceReport)
+    mock_new_report.compliance_report_id = 2
+    mock_new_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_new_report.version = 1
+    mock_new_report.supplemental_initiator = (
+        SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    )
+    mock_new_report.compliance_period_id = 1
+    mock_new_report.organization_id = 123
+    mock_new_report.current_status_id = 3
+    mock_new_report.nickname = "Government adjustment 1"
+    mock_new_report.supplemental_note = ""
+    mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
+    mock_new_report.assessment_statement = ""
+    mock_new_report.has_supplemental = True
+
+    # Mock nested objects
+    mock_compliance_period = MagicMock()
+    mock_compliance_period.compliance_period_id = 1
+    mock_compliance_period.description = "2024"
+    mock_compliance_period.display_name = "2024"
+    mock_compliance_period.effective_date = "2024-01-01"
+    mock_compliance_period.expiration_date = "2024-12-31"
+    mock_new_report.compliance_period = mock_compliance_period
+
+    # Create a proper organization mock that handles attribute access correctly
+    class MockOrganization:
+        def __init__(self):
+            self.organization_id = 123
+            self.organization_code = "ORG123"
+            self.name = "Test Organization"
+
+        def __getattr__(self, name):
+            # Handle both snake_case and camelCase
+            if name == "organizationCode":
+                return self.organization_code
+            if name == "organizationId":
+                return self.organization_id
+            # Return actual attribute values
+            return super().__getattribute__(name)
+
+    mock_new_report.organization = MockOrganization()
+
+    mock_current_status = MagicMock()
+    mock_current_status.compliance_report_status_id = 3
+    mock_current_status.status = ComplianceReportStatusEnum.Analyst_adjustment.value
+    mock_new_report.current_status = mock_current_status
+
+    # Setup mocks
+    mock_repo.get_compliance_report_by_id.return_value = mock_assessed_report
+    mock_repo.get_latest_report_by_group_uuid.return_value = mock_latest_report
+    mock_repo.get_compliance_report_status_by_desc.return_value = (
+        mock_analyst_adjustment_status
+    )
+    mock_repo.create_compliance_report.return_value = mock_new_report
+    mock_repo.add_compliance_report_history.return_value = None
+
+    # Act
+    result = await compliance_report_service.create_analyst_adjustment_report(
+        1, mock_user_profile_analyst
+    )
+
+    # Assert
+    assert result is not None
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(1)
+    mock_repo.create_compliance_report.assert_called_once()

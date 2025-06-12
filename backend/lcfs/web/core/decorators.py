@@ -233,6 +233,7 @@ def service_handler(func):
             DatabaseException,
             HTTPException,
             DataNotFoundException,
+            ServiceException,
             ValueError,
             ValidationErrorException,
             RequestValidationError,

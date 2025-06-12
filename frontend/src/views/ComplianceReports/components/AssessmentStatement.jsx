@@ -2,11 +2,7 @@ import { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCTypography from '@/components/BCTypography'
-import Loading from '@/components/Loading'
-import {
-  useGetComplianceReport,
-  useUpdateComplianceReport
-} from '@/hooks/useComplianceReports'
+import { useUpdateComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { InputBase } from '@mui/material'
 import { useMemo, useRef, useState } from 'react'
@@ -14,30 +10,22 @@ import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { roles } from '@/constants/roles.js'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 export const AssessmentStatement = () => {
   const ref = useRef(null)
   const { t } = useTranslation(['common', 'report'])
   const { complianceReportId } = useParams()
-  const {
-    data: currentUser,
-    isLoading: isCurrentUserLoading,
-    hasRoles
-  } = useCurrentUser()
-  const { data: reportData, isLoading: isReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId,
-      { enabled: !isCurrentUserLoading }
-    )
+  const { hasRoles } = useCurrentUser()
+  const { currentReport } = useComplianceReportStore()
   const [assessmentStatement, setAssessmentStatement] = useState(
-    reportData?.report.assessmentStatement
+    currentReport?.report.assessmentStatement
   )
 
   const { mutate: saveAssessmentStatement } =
     useUpdateComplianceReport(complianceReportId)
 
-  const currentStatus = reportData?.report.currentStatus?.status
+  const currentStatus = currentReport?.report.currentStatus?.status
 
   const canEdit = useMemo(() => {
     const roleStatusMap = {
@@ -60,7 +48,7 @@ export const AssessmentStatement = () => {
     saveAssessmentStatement(
       {
         assessmentStatement,
-        status: reportData?.report.currentStatus?.status
+        status: currentReport?.report.currentStatus?.status
       },
       {
         onSuccess: () =>
@@ -75,10 +63,6 @@ export const AssessmentStatement = () => {
           })
       }
     )
-
-  if (isReportLoading || isCurrentUserLoading) {
-    return <Loading />
-  }
 
   return (
     <>

@@ -13,8 +13,7 @@ import {
   useUpdateComplianceReport,
   useCreateSupplementalReport,
   useCreateAnalystAdjustment,
-  useCreateIdirSupplementalReport,
-  useGetComplianceReport
+  useCreateIdirSupplementalReport
 } from '@/hooks/useComplianceReports'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -40,13 +39,14 @@ import { FILTER_KEYS, REPORT_SCHEDULES } from '@/constants/common.js'
 import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
 import ComplianceReportEarlyIssuanceSummary from '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx'
 import { DateTime } from 'luxon'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 const iconStyle = {
   width: '2rem',
   height: '2rem',
   color: colors.white.main
 }
-export const EditViewComplianceReport = ({ reportData, isError, error }) => {
+export const EditViewComplianceReport = ({ isError, error }) => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
@@ -61,6 +61,9 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     useState(false)
 
   const { compliancePeriod, complianceReportId } = useParams()
+  const reportData = useComplianceReportStore((state) =>
+    state.getCachedReport(complianceReportId)
+  )
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
 
@@ -166,27 +169,17 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     compliancePeriod
   ])
 
-  const {
-    data: complianceReportData,
-    isLoading: isLoadingReport,
-    isError: isErrorReport
-  } = useGetComplianceReport(
-    currentUser?.organization?.organizationId,
-    complianceReportId,
-    { enabled: !!complianceReportId }
-  )
-
   // Derive hasDraftSupplemental state
   const [hasDraftSupplemental, setHasDraftSupplemental] = useState(false)
   useEffect(() => {
-    if (complianceReportData) {
+    if (reportData) {
       // Simply use the isNewest flag from the backend
       // If isNewest is false, there's a newer version (which would be a draft)
-      setHasDraftSupplemental(!complianceReportData.isNewest)
+      setHasDraftSupplemental(!reportData.isNewest)
     } else {
       setHasDraftSupplemental(false)
     }
-  }, [complianceReportData])
+  }, [reportData])
 
   // Determine if the current report is a draft supplemental for the 30-day notice
   const isDraftSupplemental =
@@ -402,12 +395,10 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   }
 
   const isEarlyIssuance =
-    reportData.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
-  const showEarlyIssuanceSummary =
-    isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
-
-  const report = complianceReportData?.report
-  const isReadOnly = isGovernmentUser && hasDraftSupplemental
+    reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+  // TODO: Currently showing full summary instead of early issuance summary
+  // Original logic: const showEarlyIssuanceSummary = isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
+  const showEarlyIssuanceSummary = false // Always show full summary for now
 
   // Clean boolean conditions for assessment sections
   const shouldShowAssessmentStatement =
@@ -468,9 +459,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               complianceReportId={complianceReportId}
               alertRef={alertRef}
               hasSupplemental={reportData?.report.hasSupplemental}
-              chain={reportData.chain}
-              isQuarterlyReport={qReport?.isQuarterly}
-              reportVersion={reportData?.report?.version}
+              chain={reportData?.chain}
             />
           </Stack>
           {!location.state?.newReport && (
@@ -478,12 +467,13 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               <ReportDetails
                 canEdit={canEdit}
                 currentStatus={currentStatus}
-                userRoles={currentUser?.userRoles}
+                hasRoles={hasRoles}
+                complianceReportData={reportData}
               />
               {!showEarlyIssuanceSummary && (
                 <ComplianceReportSummary
                   reportID={complianceReportId}
-                  enableCompareMode={reportData.chain.length > 1}
+                  enableCompareMode={reportData?.chain.length > 1}
                   canEdit={canEdit}
                   currentStatus={currentStatus}
                   compliancePeriodYear={compliancePeriod}
@@ -535,7 +525,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             )}
             {/* Internal Comments */}
             {isGovernmentUser && (
-              <BCBox>
+              <BCBox mt={2}>
                 <BCTypography variant="h6" color="primary">
                   {t(`report:internalComments`)}
                 </BCTypography>
@@ -567,6 +557,45 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                 : 'The suggested 30-day submission period for this supplemental report has passed.'}
             </Alert>
           )}
+
+          {/* Action Buttons */}
+          {buttonClusterConfig[currentStatus]?.length > 0 &&
+            buttonClusterConfig[currentStatus]?.some((config) => config) &&
+            currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
+              <Stack
+                direction="row"
+                justifyContent="flex-start"
+                mt={3}
+                mb={2}
+                gap={2}
+              >
+                {buttonClusterConfig[currentStatus]?.map(
+                  (config) =>
+                    config && (
+                      <BCButton
+                        key={config.id}
+                        data-test={config.id}
+                        id={config.id}
+                        size="small"
+                        variant={config.variant}
+                        color={config.color}
+                        onClick={methods.handleSubmit(config.handler)}
+                        startIcon={
+                          config.startIcon && (
+                            <FontAwesomeIcon
+                              icon={config.startIcon}
+                              className="small-icon"
+                            />
+                          )
+                        }
+                        disabled={config.disabled}
+                      >
+                        {config.label}
+                      </BCButton>
+                    )
+                )}
+              </Stack>
+            )}
         </Stack>
         <Tooltip
           title={

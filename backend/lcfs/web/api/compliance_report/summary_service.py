@@ -487,11 +487,23 @@ class ComplianceReportSummaryService:
             # Normalize the fuel category key
             normalized_category = transfer.fuel_category.replace(" ", "_").lower()
 
+            # Calculate total quantity - use quarterly fields if main quantity is None
+            total_quantity = transfer.quantity
+            if total_quantity is None:
+                # Sum up quarterly quantities for quarterly notional transfers
+                quarterly_sum = (
+                    (transfer.q1_quantity or 0)
+                    + (transfer.q2_quantity or 0)
+                    + (transfer.q3_quantity or 0)
+                    + (transfer.q4_quantity or 0)
+                )
+                total_quantity = quarterly_sum if quarterly_sum > 0 else 0
+
             # Update the corresponding category sum
             if transfer.received_or_transferred.lower() == "received":
-                notional_transfers_sums[normalized_category] += transfer.quantity
+                notional_transfers_sums[normalized_category] += total_quantity
             elif transfer.received_or_transferred.lower() == "transferred":
-                notional_transfers_sums[normalized_category] -= transfer.quantity
+                notional_transfers_sums[normalized_category] -= total_quantity
 
         # Get effective fuel supplies using the updated logic
         effective_fuel_supplies = (
