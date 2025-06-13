@@ -36,6 +36,7 @@ import {
 } from '@/constants/common'
 import { numberFormatter } from '@/utils/formatters'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
 export const CreditCalculator = () => {
   const { t } = useTranslation(['report'])
@@ -50,7 +51,12 @@ export const CreditCalculator = () => {
       : []
   }, [t])
 
-  const { data: orgBalance } = useCurrentOrgBalance()
+  const { data: currentUser } = useCurrentUser()
+
+  // Only fetch organization balance if user has an organization
+  const { data: orgBalance } = useCurrentOrgBalance({
+    enabled: !!currentUser?.organization?.organizationId
+  })
 
   // Fetch compliance periods from API
   const { data: compliancePeriods, isLoading: isLoadingPeriods } =
