@@ -10,7 +10,6 @@ import {
 } from '@/hooks/useFuelSupply'
 import { isArrayEmpty } from '@/utils/array.js'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -67,7 +66,6 @@ export const AddEditFuelSupplies = () => {
         defaultMinWidth: 50,
         defaultMaxWidth: 600
       },
-      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
     }),
     [t, isSupplemental]
   )

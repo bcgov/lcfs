@@ -18,7 +18,6 @@ import {
   useGetAllocationAgreementImportJobStatus
 } from '@/hooks/useAllocationAgreement'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { v4 as uuid } from 'uuid'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
@@ -106,8 +105,7 @@ export const AddEditAllocationAgreements = () => {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
-      },
-      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
+      }
     }),
     [t, isSupplemental]
   )
