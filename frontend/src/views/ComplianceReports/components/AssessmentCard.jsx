@@ -81,7 +81,9 @@ export const AssessmentCard = ({
     })
 
   const filteredChain = useMemo(() => {
-    return chain.filter((report) => report.history && report.history.length > 0)
+    return (chain || []).filter(
+      (report) => report.history && report.history.length > 0
+    )
   }, [chain])
 
   const isAddressEditable = useMemo(() => {
