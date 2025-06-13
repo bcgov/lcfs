@@ -119,7 +119,14 @@ export const AssessmentRecommendation = ({
                 variant="contained"
                 color="primary"
                 onClick={openReassessmentDialog}
-                startIcon={<Assignment />}
+                startIcon={
+                  <Assignment
+                    sx={{
+                      width: '1rem',
+                      height: '1rem'
+                    }}
+                  />
+                }
                 sx={{ mt: 2 }}
                 disabled={isLoading || !reportData.isNewest}
               >
