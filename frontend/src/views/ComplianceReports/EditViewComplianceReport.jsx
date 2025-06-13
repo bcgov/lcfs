@@ -40,32 +40,45 @@ import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
 import ComplianceReportEarlyIssuanceSummary from '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx'
 import { DateTime } from 'luxon'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import { useQueryClient } from '@tanstack/react-query'
 
 const iconStyle = {
   width: '2rem',
   height: '2rem',
   color: colors.white.main
 }
+
 export const EditViewComplianceReport = ({ isError, error }) => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
+  const [isDeleted, setIsDeleted] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
   const alertRef = useRef()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
 
   // Store if we've already shown an alert for this location state to prevent duplicates
   const [hasProcessedLocationAlert, setHasProcessedLocationAlert] =
     useState(false)
 
   const { compliancePeriod, complianceReportId } = useParams()
+
+  // Get report data from store
   const reportData = useComplianceReportStore((state) =>
     state.getCachedReport(complianceReportId)
   )
+
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
+
+  // Early return if report is deleted or being deleted
+  if (isDeleted || isDeleting) {
+    return <Loading />
+  }
 
   const scrollToTopOrBottom = () => {
     if (isScrollingUp) {
@@ -80,6 +93,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       })
     }
   }
+
   const handleScroll = useCallback(() => {
     const scrollTop = window.scrollY || document.documentElement.scrollTop
     const scrollPosition = window.scrollY + window.innerHeight
@@ -99,25 +113,36 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
+  // Get current user data - with conditional fetching
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
     hasRoles,
     hasAnyRole
   } = useCurrentUser()
+
   const isGovernmentUser = currentUser?.isGovernmentUser
-  const currentStatus = reportData?.report.currentStatus?.status
+  const currentStatus = reportData?.report?.currentStatus?.status
   const canEdit =
     (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT &&
       hasAnyRole(roles.compliance_reporting, roles.signing_authority)) ||
     (currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT &&
       hasRoles(roles.analyst))
 
+  // Conditional organization data fetching - KEY FIX HERE
   const { data: orgData, isLoading } = useOrganization(
-    reportData?.report.organizationId
+    reportData?.report?.organizationId,
+    {
+      enabled: !isDeleted && !isDeleting && !!reportData?.report?.organizationId
+    }
   )
 
   const qReport = useMemo(() => {
+    // Don't calculate if report is being deleted
+    if (isDeleted || isDeleting || !reportData) {
+      return { quarter: null, isQuarterly: false }
+    }
+
     const isQuarterly =
       reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
     let quarter = null
@@ -125,7 +150,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     if (isQuarterly) {
       const isDraft = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
       const now = new Date()
-      const submittedHistory = reportData?.report?.history.find(
+      const submittedHistory = reportData?.report?.history?.find(
         (h) => h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
       )
       const createDateFromHistory = submittedHistory?.createDate
@@ -166,20 +191,22 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     reportData?.report?.history,
     reportData?.report?.updateDate,
     currentStatus,
-    compliancePeriod
+    compliancePeriod,
+    isDeleted,
+    isDeleting
   ])
 
   // Derive hasDraftSupplemental state
   const [hasDraftSupplemental, setHasDraftSupplemental] = useState(false)
   useEffect(() => {
-    if (reportData) {
+    if (reportData && !isDeleted && !isDeleting) {
       // Simply use the isNewest flag from the backend
       // If isNewest is false, there's a newer version (which would be a draft)
       setHasDraftSupplemental(!reportData.isNewest)
     } else {
       setHasDraftSupplemental(false)
     }
-  }, [reportData])
+  }, [reportData, isDeleted, isDeleting])
 
   // Determine if the current report is a draft supplemental for the 30-day notice
   const isDraftSupplemental =
@@ -188,7 +215,12 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
   let submissionDeadline = null
   let daysRemaining = null
-  if (isDraftSupplemental && reportData?.report?.createTimestamp) {
+  if (
+    isDraftSupplemental &&
+    reportData?.report?.createTimestamp &&
+    !isDeleted &&
+    !isDeleting
+  ) {
     const creationDate = DateTime.fromISO(reportData.report.createTimestamp)
     submissionDeadline = creationDate.plus({ days: 30 })
     daysRemaining = Math.ceil(submissionDeadline.diffNow('days').days)
@@ -227,16 +259,35 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     currentUser?.organization?.organizationId,
     complianceReportId,
     {
+      onMutate: () => {
+        // KEY FIX: Set both states immediately when deletion starts
+        setIsDeleting(true)
+        setIsDeleted(true)
+      },
       onSuccess: () => {
         setModalData(null)
+
+        // Clean up React Query cache
+        queryClient.removeQueries({
+          queryKey: ['complianceReport', complianceReportId]
+        })
+        queryClient.removeQueries({
+          queryKey: ['organization', reportData?.report?.organizationId]
+        })
+
+        // Navigate to list page
         navigate(ROUTES.REPORTS.LIST, {
           state: {
             message: t('report:reportDeleteSuccessText'),
             severity: 'success'
-          }
+          },
+          replace: true
         })
       },
       onError: (error) => {
+        // Reset states on error
+        setIsDeleting(false)
+        setIsDeleted(false)
         setModalData(null)
         alertRef.current?.triggerAlert({
           message: error.message,
@@ -309,47 +360,147 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       }
     })
 
-  const methods = useForm() // TODO we will need this for summary line inputs
-  const isSupplemental = reportData?.report?.hasSupplemental
-  const buttonClusterConfig = useMemo(
-    () =>
-      buttonClusterConfigFn({
-        hasRoles,
-        currentUser,
-        t,
-        setModalData,
-        updateComplianceReport,
-        deleteComplianceReport,
-        createSupplementalReport,
-        createAnalystAdjustment,
-        createIdirSupplementalReport,
-        compliancePeriod,
-        isGovernmentUser,
-        isSigningAuthorityDeclared,
-        hasDraftSupplemental,
-        reportVersion: reportData?.report?.version,
-        isSupplemental
-      }),
-    [
+  const methods = useForm()
+
+  // Memoized report conditions - with deletion checks
+  const reportConditions = useMemo(() => {
+    if (isDeleted || isDeleting || !reportData) {
+      return {
+        isSupplemental: false,
+        isEarlyIssuance: false,
+        showEarlyIssuanceSummary: false
+      }
+    }
+
+    const isSupplemental = reportData?.report?.hasSupplemental
+    const isEarlyIssuance =
+      reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+    // TODO: Currently showing full summary instead of early issuance summary
+    // Original logic: const showEarlyIssuanceSummary = isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
+    const showEarlyIssuanceSummary = false // Always show full summary for now
+
+    return {
+      isSupplemental,
+      isEarlyIssuance,
+      showEarlyIssuanceSummary
+    }
+  }, [
+    reportData?.report?.hasSupplemental,
+    reportData?.report?.reportingFrequency,
+    isDeleted,
+    isDeleting
+  ])
+
+  // Memoized assessment section visibility - with deletion checks
+  const assessmentSectionConfig = useMemo(() => {
+    if (isDeleted || isDeleting) {
+      return {
+        shouldShowAssessmentStatement: false,
+        shouldShowAssessmentRecommendation: false,
+        shouldShowAssessmentSectionTitle: false
+      }
+    }
+
+    const shouldShowAssessmentStatement =
+      isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental
+
+    const shouldShowAssessmentRecommendation =
+      hasRoles(roles.analyst) && !qReport?.isQuarterly && !hasDraftSupplemental
+
+    const shouldShowAssessmentSectionTitle =
+      shouldShowAssessmentStatement || shouldShowAssessmentRecommendation
+
+    return {
+      shouldShowAssessmentStatement,
+      shouldShowAssessmentRecommendation,
+      shouldShowAssessmentSectionTitle
+    }
+  }, [
+    isGovernmentUser,
+    qReport?.isQuarterly,
+    hasDraftSupplemental,
+    hasRoles,
+    isDeleted,
+    isDeleting
+  ])
+
+  const { isSupplemental, isEarlyIssuance, showEarlyIssuanceSummary } =
+    reportConditions
+  const {
+    shouldShowAssessmentStatement,
+    shouldShowAssessmentRecommendation,
+    shouldShowAssessmentSectionTitle
+  } = assessmentSectionConfig
+
+  const buttonClusterConfig = useMemo(() => {
+    // Don't create button config if report is being deleted
+    if (isDeleted || isDeleting || !reportData) {
+      return {}
+    }
+
+    const context = {
+      // Required fields
+      currentStatus,
       hasRoles,
-      currentUser,
+      hasAnyRole,
       t,
       setModalData,
+
+      // Report metadata
+      reportVersion: reportData?.report?.version,
+      compliancePeriod,
+      isSigningAuthorityDeclared,
+
+      // Report type flags
+      isEarlyIssuance,
+      isOriginalReport: reportData?.report?.version === 0,
+      isAnalystAdjustment:
+        currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+
+      // Conflict detection
+      // hasConflictingSupplemental: false,
+      // hasConflictingReassessment: false,
+      hasDraftSupplemental,
+
+      // Business rules
+      hasBeenAssessed: false, // TODO: implement logic
+      hasAssessedEarlyIssuance: false, // TODO: implement
+
+      // Action functions
       updateComplianceReport,
       deleteComplianceReport,
       createSupplementalReport,
-      createAnalystAdjustment,
       createIdirSupplementalReport,
-      compliancePeriod,
-      isGovernmentUser,
-      isSigningAuthorityDeclared,
-      hasDraftSupplemental,
-      reportData?.report?.version,
-      isSupplemental
-    ]
-  )
+      createAnalystAdjustment,
+      amendPenalties: () => {}
+    }
+    return buttonClusterConfigFn(context)
+  }, [
+    hasRoles,
+    currentUser,
+    t,
+    setModalData,
+    updateComplianceReport,
+    deleteComplianceReport,
+    createSupplementalReport,
+    createAnalystAdjustment,
+    createIdirSupplementalReport,
+    compliancePeriod,
+    isGovernmentUser,
+    isSigningAuthorityDeclared,
+    hasDraftSupplemental,
+    reportData?.report?.version,
+    isSupplemental,
+    isDeleted,
+    isDeleting,
+    currentStatus,
+    isEarlyIssuance
+  ])
 
   useEffect(() => {
+    // Don't process alerts if report is being deleted
+    if (isDeleted || isDeleting) return
+
     // Only handle location state alerts if we haven't processed them yet
     if (location.state?.message && !hasProcessedLocationAlert) {
       alertRef.current?.triggerAlert({
@@ -378,10 +529,13 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     error,
     navigate,
     hasProcessedLocationAlert,
-    location.pathname
+    location.pathname,
+    isDeleted,
+    isDeleting
   ])
 
-  if (isLoading || isCurrentUserLoading) {
+  // Don't render main content if report is being deleted
+  if (isLoading || isCurrentUserLoading || isDeleted || isDeleting) {
     return <Loading />
   }
 
@@ -393,23 +547,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       </>
     )
   }
-
-  const isEarlyIssuance =
-    reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
-  // TODO: Currently showing full summary instead of early issuance summary
-  // Original logic: const showEarlyIssuanceSummary = isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
-  const showEarlyIssuanceSummary = false // Always show full summary for now
-
-  // Clean boolean conditions for assessment sections
-  const shouldShowAssessmentStatement =
-    isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental
-
-  const shouldShowAssessmentRecommendation =
-    hasRoles(roles.analyst) && !qReport?.isQuarterly && !hasDraftSupplemental
-
-  // Show the section title only if any assessment components are visible
-  const shouldShowAssessmentSectionTitle =
-    shouldShowAssessmentStatement || shouldShowAssessmentRecommendation
 
   return (
     <>
@@ -428,7 +565,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           >
             {qReport?.isQuarterly
               ? `${compliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${qReport?.quarter}`
-              : `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report.nickname}`}
+              : `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report?.nickname}`}
           </BCTypography>
           <BCTypography
             variant="h6"
@@ -458,7 +595,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               currentStatus={currentStatus}
               complianceReportId={complianceReportId}
               alertRef={alertRef}
-              hasSupplemental={reportData?.report.hasSupplemental}
+              hasSupplemental={reportData?.report?.hasSupplemental}
               chain={reportData?.chain}
             />
           </Stack>
@@ -473,7 +610,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               {!showEarlyIssuanceSummary && (
                 <ComplianceReportSummary
                   reportID={complianceReportId}
-                  enableCompareMode={reportData?.chain.length > 1}
+                  enableCompareMode={reportData?.chain?.length > 1}
                   canEdit={canEdit}
                   currentStatus={currentStatus}
                   compliancePeriodYear={compliancePeriod}
@@ -574,12 +711,13 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                     config && (
                       <BCButton
                         key={config.id}
-                        data-test={config.id}
                         id={config.id}
+                        data-test={config.id}
                         size="small"
                         variant={config.variant}
                         color={config.color}
                         onClick={methods.handleSubmit(config.handler)}
+                        disabled={config.disabled}
                         startIcon={
                           config.startIcon && (
                             <FontAwesomeIcon
@@ -588,7 +726,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                             />
                           )
                         }
-                        disabled={config.disabled}
                       >
                         {config.label}
                       </BCButton>

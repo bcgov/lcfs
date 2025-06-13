@@ -150,6 +150,13 @@ class ComplianceReportServices:
         """
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(existing_report_id)
+        latest_report = await self.repo.get_latest_report_by_group_uuid(
+            current_report.compliance_report_group_uuid
+        )
+        if current_report.compliance_report_id != latest_report.compliance_report_id:
+            raise ServiceException(
+                "An analyst adjustment should be created on the latest report."
+            )
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -241,6 +248,13 @@ class ComplianceReportServices:
         """
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(original_report_id)
+        latest_report = await self.repo.get_latest_report_by_group_uuid(
+            current_report.compliance_report_group_uuid
+        )
+        if current_report.compliance_report_id != latest_report.compliance_report_id:
+            raise ServiceException(
+                "A supplemental should be created on the latest report."
+            )
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -361,6 +375,13 @@ class ComplianceReportServices:
         """
         # 1. Fetch the current report the Analyst is viewing
         current_report = await self.repo.get_compliance_report_by_id(existing_report_id)
+        latest_report = await self.repo.get_latest_report_by_group_uuid(
+            current_report.compliance_report_group_uuid
+        )
+        if current_report.compliance_report_id != latest_report.compliance_report_id:
+            raise ServiceException(
+                "A supplemental should be created on the latest report."
+            )
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
@@ -615,6 +636,13 @@ class ComplianceReportServices:
         )
 
         is_newest = len(compliance_report_chain) - 1 == report.version
+        has_assessed_early_issuance = (
+            report.reporting_frequency == ReportingFrequency.QUARTERLY
+            and any(
+                item.currentStatus.status == ComplianceReportStatusEnum.Assessed.value
+                for item in compliance_report_chain
+            )
+        )
         filtered_chain = [
             chained_report
             for chained_report in compliance_report_chain
@@ -632,7 +660,7 @@ class ComplianceReportServices:
             for report in masked_chain
         ]
         return ChainedComplianceReportSchema(
-            report=report, chain=masked_chain, is_newest=is_newest
+            report=report, chain=masked_chain, is_newest=is_newest, has_assessed_early_issuance=has_assessed_early_issuance
         )
 
     @service_handler
