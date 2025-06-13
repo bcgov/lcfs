@@ -81,13 +81,7 @@ export const AssessmentCard = ({
     })
 
   const filteredChain = useMemo(() => {
-<<<<<<< fix/alex-supplemental-lin-17-250613
-    return (chain || []).filter(
-      (report) => report.history && report.history.length > 0
-    )
-=======
     return chain?.filter((report) => report.history && report.history.length > 0)
->>>>>>> develop
   }, [chain])
 
   const isAddressEditable = useMemo(() => {
