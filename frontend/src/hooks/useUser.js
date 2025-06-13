@@ -166,7 +166,7 @@ export const useCreateUser = ({
       })
 
       // Invalidate organization users query if in supplier context
-      if (isSupplierContext && organizationId) {
+      if (isSupplier && organizationId) {
         queryClient.invalidateQueries({
           queryKey: ['organization-users', organizationId]
         })
