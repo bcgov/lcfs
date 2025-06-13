@@ -21,6 +21,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
+    ReturnStatus,
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.notification.services import NotificationService
@@ -1441,3 +1442,102 @@ async def test_handle_submitted_status_does_not_skip_can_sign_check(
         mock.ANY,  # The user profile parameter
         # Note: no skip_can_sign_check parameter means it defaults to False
     )
+
+
+# RETURN STATUS TESTS FOR GOVERNMENT ADJUSTMENT FIX
+
+
+@pytest.mark.anyio
+async def test_handle_return_status_government_adjustment_to_analyst():
+    """Test that government adjustments returned to analyst go to 'Analyst adjustment' status."""
+    # Create service instance
+    service = ComplianceReportUpdateService()
+
+    # Create mock report data for return to analyst
+    report_data = ComplianceReportUpdateSchema(status=ReturnStatus.ANALYST.value)
+
+    # Create mock government adjustment report
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.supplemental_initiator = (
+        SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    )
+
+    # Call the method
+    result_status, status_has_changed = await service._handle_return_status(
+        report_data, mock_report
+    )
+
+    # Assert that government adjustment returns to "Analyst adjustment" status
+    assert result_status == ComplianceReportStatusEnum.Analyst_adjustment.value
+    assert status_has_changed is False
+
+
+@pytest.mark.anyio
+async def test_handle_return_status_regular_report_to_analyst():
+    """Test that regular reports returned to analyst go to 'Submitted' status (existing behavior)."""
+    # Create service instance
+    service = ComplianceReportUpdateService()
+
+    # Create mock report data for return to analyst
+    report_data = ComplianceReportUpdateSchema(status=ReturnStatus.ANALYST.value)
+
+    # Create mock regular report (not government adjustment)
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.supplemental_initiator = SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+
+    # Call the method
+    result_status, status_has_changed = await service._handle_return_status(
+        report_data, mock_report
+    )
+
+    # Assert that regular report returns to "Submitted" status (default behavior)
+    assert result_status == ComplianceReportStatusEnum.Submitted.value
+    assert status_has_changed is False
+
+
+@pytest.mark.anyio
+async def test_handle_return_status_government_adjustment_to_manager():
+    """Test that government adjustments returned to manager use default mapping."""
+    # Create service instance
+    service = ComplianceReportUpdateService()
+
+    # Create mock report data for return to manager
+    report_data = ComplianceReportUpdateSchema(status=ReturnStatus.MANAGER.value)
+
+    # Create mock government adjustment report
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.supplemental_initiator = (
+        SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    )
+
+    # Call the method
+    result_status, status_has_changed = await service._handle_return_status(
+        report_data, mock_report
+    )
+
+    # Assert that return to manager uses default mapping (Recommended by analyst)
+    assert result_status == ComplianceReportStatusEnum.Recommended_by_analyst.value
+    assert status_has_changed is False
+
+
+@pytest.mark.anyio
+async def test_handle_return_status_no_supplemental_initiator():
+    """Test that reports with no supplemental_initiator use default mapping."""
+    # Create service instance
+    service = ComplianceReportUpdateService()
+
+    # Create mock report data for return to analyst
+    report_data = ComplianceReportUpdateSchema(status=ReturnStatus.ANALYST.value)
+
+    # Create mock report with no supplemental initiator
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.supplemental_initiator = None
+
+    # Call the method
+    result_status, status_has_changed = await service._handle_return_status(
+        report_data, mock_report
+    )
+
+    # Assert that report with no supplemental initiator uses default mapping
+    assert result_status == ComplianceReportStatusEnum.Submitted.value
+    assert status_has_changed is False

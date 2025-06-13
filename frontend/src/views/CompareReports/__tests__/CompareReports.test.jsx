@@ -1,16 +1,22 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import {
-  useGetComplianceReport,
-  useGetComplianceReportSummary
-} from '@/hooks/useComplianceReports'
+import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { wrapper } from '@/tests/utils/wrapper'
 
-// Mock hooks
+// Mock hooks and stores
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useComplianceReports')
+vi.mock('@/stores/useComplianceReportStore')
+
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key) => key // Simple mock that returns the key
+  })
+}))
 
 describe('CompareReports Component', () => {
   beforeEach(() => {
@@ -20,8 +26,9 @@ describe('CompareReports Component', () => {
       isLoading: false
     })
 
-    useGetComplianceReport.mockReturnValue({
-      data: {
+    // Mock the compliance report store with currentReport
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
         chain: [
           {
             nickname: 'Original Report',
@@ -150,6 +157,10 @@ describe('CompareReports Component', () => {
     })
   })
 
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   it('initializes with default report selections in correct order', () => {
     render(<CompareReports />, { wrapper })
 
@@ -241,8 +252,12 @@ describe('CompareReports Component', () => {
 
     // The component automatically selects the two most recent reports,
     // so we should see data in the tables immediately
-    expect(screen.getByText(/renewableFuelTargetSummary/i)).toBeInTheDocument()
-    expect(screen.getByText(/lowCarbonFuelTargetSummary/i)).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/renewableFuelTargetSummary/i).length
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(/lowCarbonFuelTargetSummary/i).length
+    ).toBeGreaterThan(0)
 
     // Data values should be present with default selections
     const value250Elements = screen.getAllByText('250')
@@ -268,8 +283,12 @@ describe('CompareReports Component', () => {
     )
 
     // Check if the data rows are rendered correctly after selection
-    expect(screen.getByText(/renewableFuelTargetSummary/i)).toBeInTheDocument()
-    expect(screen.getByText(/lowCarbonFuelTargetSummary/i)).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/renewableFuelTargetSummary/i).length
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(/lowCarbonFuelTargetSummary/i).length
+    ).toBeGreaterThan(0)
 
     // Check that values are present after selection
     const value100Elements = screen.getAllByText('100')

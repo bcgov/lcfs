@@ -3,8 +3,6 @@ import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { ROUTES, buildPath } from '@/routes/routes'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useGetAllNotionalTransfersList,
   useNotionalTransferOptions,
@@ -20,6 +18,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, notionalTransferColDefs } from './_schema'
 import { REPORT_SCHEDULES } from '@/constants/common'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -39,17 +38,13 @@ export const AddEditNotionalTransfers = () => {
   } = useNotionalTransferOptions()
   const { mutateAsync: saveRow } = useSaveNotionalTransfer(complianceReportId)
   const navigate = useNavigate()
-  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
-  const { data: complianceReport, isLoading: complianceReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId,
-      { enabled: !currentUserLoading }
-    )
+  const { data: currentReport, isLoading } =
+    useComplianceReportWithCache(complianceReportId)
+  const orgName = currentReport?.report?.organization?.name
 
-  const isSupplemental = complianceReport?.report?.version !== 0
+  const isSupplemental = currentReport?.report?.version !== 0
   const isEarlyIssuance =
-    complianceReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+    currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   const { data: notionalTransfers, isLoading: transfersLoading } =
     useGetAllNotionalTransfersList({
@@ -146,7 +141,6 @@ export const AddEditNotionalTransfers = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'legalName') {
-        const orgName = currentUser.organization?.name
         if (
           (typeof params.newValue === 'object' &&
             params.newValue?.name === orgName) ||
@@ -240,7 +234,7 @@ export const AddEditNotionalTransfers = () => {
       setColumnDefs(
         notionalTransferColDefs(
           optionsData,
-          currentUser,
+          orgName,
           errors,
           warnings,
           isSupplemental,
@@ -255,7 +249,7 @@ export const AddEditNotionalTransfers = () => {
     errors,
     optionsData,
     warnings,
-    currentUser,
+    orgName,
     compliancePeriod
   ])
 
@@ -312,8 +306,7 @@ export const AddEditNotionalTransfers = () => {
   return (
     isFetched &&
     !transfersLoading &&
-    !currentUserLoading &&
-    !complianceReportLoading && (
+    !isLoading && (
       <Grid2 className="add-edit-notional-transfer-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">

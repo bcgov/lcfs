@@ -1,9 +1,16 @@
 // import React from 'react'
-// import { render, screen } from '@testing-library/react'
+// import { render, screen, fireEvent } from '@testing-library/react'
 // import { describe, it, expect, beforeEach, vi } from 'vitest'
-// import { FuelExportSummary } from '../FuelExportSummary'
+// import { FinalSupplyEquipmentSummary } from '../FinalSupplyEquipmentSummary'
 // import { wrapper } from '@/tests/utils/wrapper'
 // import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+
+// // Mock react-router-dom
+// const mockUseParams = vi.fn()
+// vi.mock('react-router-dom', () => ({
+//   ...vi.importActual('react-router-dom'),
+//   useParams: () => mockUseParams()
+// }))
 
 // // Mock react-i18next
 // vi.mock('react-i18next', () => ({
@@ -51,17 +58,26 @@
 //   )
 // }))
 
+// // Mock GeoMapping component
+// vi.mock('./GeoMapping', () => ({
+//   default: ({ complianceReportId }) => (
+//     <div data-test="geo-mapping">
+//       <div data-test="compliance-report-id">{complianceReportId}</div>
+//     </div>
+//   )
+// }))
+
 // // Mock the schema
-// vi.mock('@/views/FuelExports/_schema.jsx', () => ({
-//   fuelExportSummaryColDefs: [
+// vi.mock('@/views/FinalSupplyEquipments/_schema.jsx', () => ({
+//   finalSupplyEquipmentSummaryColDefs: (t, status) => [
+//     { field: 'equipmentName', headerName: 'Equipment Name' },
 //     { field: 'fuelType', headerName: 'Fuel Type' },
-//     { field: 'quantity', headerName: 'Quantity' },
-//     { field: 'destination', headerName: 'Destination' }
+//     { field: 'quantity', headerName: 'Quantity' }
 //   ]
 // }))
 
 // // Mock cell renderers
-// vi.mock('@/utils/grid/cellRenderers.jsx', () => ({
+// vi.mock('@/utils/grid/cellRenderers', () => ({
 //   LinkRenderer: () => <div>Link Renderer</div>
 // }))
 
@@ -75,31 +91,39 @@
 //   }
 // }))
 
-// describe('FuelExportSummary', () => {
+// describe('FinalSupplyEquipmentSummary', () => {
 //   beforeEach(() => {
 //     vi.resetAllMocks()
+
+//     mockUseParams.mockReturnValue({
+//       complianceReportId: 'test-report-id'
+//     })
 //   })
 
 //   it('renders the component with BCGridViewer', () => {
 //     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
+//       <FinalSupplyEquipmentSummary
+//         data={{ finalSupplyEquipments: [] }}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
 //       { wrapper }
 //     )
 
 //     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//     expect(screen.getByTestId('grid-key')).toHaveTextContent('fuel-exports')
-//     expect(screen.getByTestId('data-key')).toHaveTextContent('fuelExports')
+//     expect(screen.getByTestId('grid-key')).toHaveTextContent(
+//       'final-supply-equipments'
+//     )
+//     expect(screen.getByTestId('data-key')).toHaveTextContent(
+//       'finalSupplyEquipments'
+//     )
 //     expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
 //     expect(screen.getByTestId('copy-button')).toHaveTextContent('copy-disabled')
 //   })
 
 //   it('renders with empty data correctly', () => {
 //     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
+//       <FinalSupplyEquipmentSummary
+//         data={{ finalSupplyEquipments: [] }}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
 //       { wrapper }
@@ -108,89 +132,47 @@
 //     expect(screen.getByTestId('row-count')).toHaveTextContent('0 rows')
 //   })
 
-//   it('renders fuel export data correctly', () => {
+//   it('renders final supply equipment data correctly', () => {
 //     const mockData = {
-//       fuelExports: [
+//       finalSupplyEquipments: [
 //         {
-//           fuelExportId: 1,
+//           finalSupplyEquipmentId: 1,
+//           equipmentName: 'Equipment A',
 //           fuelType: 'Diesel',
-//           quantity: 100,
-//           destination: 'USA',
-//           actionType: 'CREATE'
+//           quantity: 100
 //         },
 //         {
-//           fuelExportId: 2,
+//           finalSupplyEquipmentId: 2,
+//           equipmentName: 'Equipment B',
 //           fuelType: 'Gasoline',
-//           quantity: 200,
-//           destination: 'Mexico',
-//           actionType: 'UPDATE'
+//           quantity: 200
 //         }
 //       ]
 //     }
 
 //     render(
-//       <FuelExportSummary
+//       <FinalSupplyEquipmentSummary
 //         data={mockData}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
 //       { wrapper }
 //     )
 
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
-//   })
-
-//   it('filters out deleted items', () => {
-//     const mockData = {
-//       fuelExports: [
-//         {
-//           fuelExportId: 1,
-//           fuelType: 'Diesel',
-//           quantity: 100,
-//           destination: 'USA',
-//           actionType: 'CREATE'
-//         },
-//         {
-//           fuelExportId: 2,
-//           fuelType: 'Gasoline',
-//           quantity: 200,
-//           destination: 'Mexico',
-//           actionType: 'DELETE'
-//         },
-//         {
-//           fuelExportId: 3,
-//           fuelType: 'Biodiesel',
-//           quantity: 300,
-//           destination: 'Canada',
-//           actionType: 'UPDATE'
-//         }
-//       ]
-//     }
-
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
-
-//     // Should show 2 rows (excluding the deleted one)
 //     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
 //   })
 
 //   it('suppresses pagination when 10 or fewer items', () => {
 //     const mockData = {
-//       fuelExports: Array.from({ length: 8 }, (_, i) => ({
-//         fuelExportId: i + 1,
+//       finalSupplyEquipments: Array.from({ length: 8 }, (_, i) => ({
+//         finalSupplyEquipmentId: i + 1,
+//         equipmentName: `Equipment${i + 1}`,
 //         fuelType: 'Diesel',
-//         quantity: (i + 1) * 100,
-//         destination: 'USA',
-//         actionType: 'CREATE'
+//         quantity: (i + 1) * 100
 //       }))
 //     }
 
 //     render(
-//       <FuelExportSummary
+//       <FinalSupplyEquipmentSummary
 //         data={mockData}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
@@ -207,17 +189,16 @@
 
 //   it('enables pagination when more than 10 items', () => {
 //     const mockData = {
-//       fuelExports: Array.from({ length: 15 }, (_, i) => ({
-//         fuelExportId: i + 1,
+//       finalSupplyEquipments: Array.from({ length: 15 }, (_, i) => ({
+//         finalSupplyEquipmentId: i + 1,
+//         equipmentName: `Equipment${i + 1}`,
 //         fuelType: 'Diesel',
-//         quantity: (i + 1) * 100,
-//         destination: 'USA',
-//         actionType: 'CREATE'
+//         quantity: (i + 1) * 100
 //       }))
 //     }
 
 //     render(
-//       <FuelExportSummary
+//       <FinalSupplyEquipmentSummary
 //         data={mockData}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
@@ -234,8 +215,8 @@
 
 //   it('handles non-DRAFT status correctly (no link renderer)', () => {
 //     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
+//       <FinalSupplyEquipmentSummary
+//         data={{ finalSupplyEquipments: [] }}
 //         status={COMPLIANCE_REPORT_STATUSES.SUBMITTED}
 //       />,
 //       { wrapper }
@@ -246,8 +227,8 @@
 
 //   it('handles DRAFT status correctly (with link renderer)', () => {
 //     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
+//       <FinalSupplyEquipmentSummary
+//         data={{ finalSupplyEquipments: [] }}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
 //       { wrapper }
@@ -258,7 +239,7 @@
 
 //   it('handles undefined data gracefully', () => {
 //     render(
-//       <FuelExportSummary
+//       <FinalSupplyEquipmentSummary
 //         data={undefined}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
@@ -271,9 +252,12 @@
 //     )
 //   })
 
-//   it('handles data without fuelExports property', () => {
+//   it('handles data without finalSupplyEquipments property', () => {
 //     render(
-//       <FuelExportSummary data={{}} status={COMPLIANCE_REPORT_STATUSES.DRAFT} />,
+//       <FinalSupplyEquipmentSummary
+//         data={{}}
+//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+//       />,
 //       { wrapper }
 //     )
 
@@ -283,35 +267,42 @@
 //     )
 //   })
 
+//   it('renders the map toggle switch', () => {
+//     render(
+//       <FinalSupplyEquipmentSummary
+//         data={{ finalSupplyEquipments: [] }}
+//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+//       />,
+//       { wrapper }
+//     )
+
+//     expect(screen.getByText('Show Map')).toBeInTheDocument()
+//     expect(screen.getByRole('checkbox')).toBeInTheDocument()
+//   })
+
 //   it('applies client-side filtering correctly', () => {
 //     const mockData = {
-//       fuelExports: [
+//       finalSupplyEquipments: [
 //         {
-//           fuelExportId: 1,
-//           fuelType: 'Alpha Diesel',
-//           quantity: 100,
-//           destination: 'USA',
-//           actionType: 'CREATE'
+//           finalSupplyEquipmentId: 1,
+//           equipmentName: 'Alpha Equipment',
+//           fuelType: 'Diesel'
 //         },
 //         {
-//           fuelExportId: 2,
-//           fuelType: 'Beta Gasoline',
-//           quantity: 200,
-//           destination: 'Mexico',
-//           actionType: 'CREATE'
+//           finalSupplyEquipmentId: 2,
+//           equipmentName: 'Beta Equipment',
+//           fuelType: 'Gasoline'
 //         },
 //         {
-//           fuelExportId: 3,
-//           fuelType: 'Gamma Biodiesel',
-//           quantity: 300,
-//           destination: 'Canada',
-//           actionType: 'CREATE'
+//           finalSupplyEquipmentId: 3,
+//           equipmentName: 'Gamma Equipment',
+//           fuelType: 'Biodiesel'
 //         }
 //       ]
 //     }
 
 //     render(
-//       <FuelExportSummary
+//       <FinalSupplyEquipmentSummary
 //         data={mockData}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
@@ -324,19 +315,17 @@
 
 //   it('correctly implements getRowId function', () => {
 //     const mockData = {
-//       fuelExports: [
+//       finalSupplyEquipments: [
 //         {
-//           fuelExportId: 123,
-//           fuelType: 'Test Fuel',
-//           quantity: 500,
-//           destination: 'Test Country',
-//           actionType: 'CREATE'
+//           finalSupplyEquipmentId: 123,
+//           equipmentName: 'Test Equipment',
+//           fuelType: 'Diesel'
 //         }
 //       ]
 //     }
 
 //     render(
-//       <FuelExportSummary
+//       <FinalSupplyEquipmentSummary
 //         data={mockData}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
@@ -349,8 +338,8 @@
 
 //   it('disables copy button by default', () => {
 //     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
+//       <FinalSupplyEquipmentSummary
+//         data={{ finalSupplyEquipments: [] }}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
 //       { wrapper }
@@ -361,8 +350,8 @@
 
 //   it('passes correct auto size strategy', () => {
 //     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
+//       <FinalSupplyEquipmentSummary
+//         data={{ finalSupplyEquipments: [] }}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
 //       { wrapper }
@@ -374,8 +363,8 @@
 
 //   it('handles pagination options updates', () => {
 //     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
+//       <FinalSupplyEquipmentSummary
+//         data={{ finalSupplyEquipments: [] }}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
 //       { wrapper }
@@ -390,19 +379,19 @@
 
 //   it('uses fitCellContents auto size strategy', () => {
 //     const mockData = {
-//       fuelExports: [
+//       finalSupplyEquipments: [
 //         {
-//           fuelExportId: 1,
-//           fuelType: 'Very Long Fuel Type Name That Should Test Auto Sizing',
-//           quantity: 1000,
-//           destination: 'Very Long Destination Country Name',
-//           actionType: 'CREATE'
+//           finalSupplyEquipmentId: 1,
+//           equipmentName:
+//             'Very Long Equipment Name That Should Test Auto Sizing',
+//           fuelType: 'Diesel',
+//           quantity: 1000
 //         }
 //       ]
 //     }
 
 //     render(
-//       <FuelExportSummary
+//       <FinalSupplyEquipmentSummary
 //         data={mockData}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
@@ -414,117 +403,64 @@
 //     expect(screen.getByTestId('row-count')).toHaveTextContent('1 rows')
 //   })
 
+//   it('passes translation function and status to column definitions', () => {
+//     render(
+//       <FinalSupplyEquipmentSummary
+//         data={{ finalSupplyEquipments: [] }}
+//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
+//       />,
+//       { wrapper }
+//     )
+
+//     // Component should render, indicating the t function and status were passed correctly to schema
+//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
+//   })
+
 //   it('maintains consistent grid configuration', () => {
 //     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
+//       <FinalSupplyEquipmentSummary
+//         data={{ finalSupplyEquipments: [] }}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
 //       { wrapper }
 //     )
 
 //     // Verify key grid configuration
-//     expect(screen.getByTestId('grid-key')).toHaveTextContent('fuel-exports')
-//     expect(screen.getByTestId('data-key')).toHaveTextContent('fuelExports')
+//     expect(screen.getByTestId('grid-key')).toHaveTextContent(
+//       'final-supply-equipments'
+//     )
+//     expect(screen.getByTestId('data-key')).toHaveTextContent(
+//       'finalSupplyEquipments'
+//     )
 //     expect(screen.getByTestId('copy-button')).toHaveTextContent('copy-disabled')
 //     expect(screen.getByTestId('get-row-id')).toHaveTextContent('has-get-row-id')
 //   })
 
-//   it('uses static column definitions from schema', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
-
-//     // Component should render, indicating the static column definitions were used correctly
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//   })
-
-//   it('applies correct cell renderer URL configuration', () => {
-//     render(
-//       <FuelExportSummary
-//         data={{ fuelExports: [] }}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
-
-//     // Component should render with proper configuration for fuel-exports URL
-//     expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
-//   })
-
-//   it('handles mixed action types correctly', () => {
+//   it('does not filter out any items by default (no DELETE filter)', () => {
 //     const mockData = {
-//       fuelExports: [
+//       finalSupplyEquipments: [
 //         {
-//           fuelExportId: 1,
-//           fuelType: 'Diesel',
-//           quantity: 100,
-//           actionType: 'CREATE'
+//           finalSupplyEquipmentId: 1,
+//           equipmentName: 'Equipment A',
+//           fuelType: 'Diesel'
 //         },
 //         {
-//           fuelExportId: 2,
-//           fuelType: 'Gasoline',
-//           quantity: 200,
-//           actionType: 'UPDATE'
-//         },
-//         {
-//           fuelExportId: 3,
-//           fuelType: 'Biodiesel',
-//           quantity: 300,
-//           actionType: 'DELETE'
-//         },
-//         {
-//           fuelExportId: 4,
-//           fuelType: 'Ethanol',
-//           quantity: 400,
-//           actionType: 'CREATE'
+//           finalSupplyEquipmentId: 2,
+//           equipmentName: 'Equipment B',
+//           fuelType: 'Gasoline'
 //         }
 //       ]
 //     }
 
 //     render(
-//       <FuelExportSummary
+//       <FinalSupplyEquipmentSummary
 //         data={mockData}
 //         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
 //       />,
 //       { wrapper }
 //     )
 
-//     // Should show 3 rows (excluding the deleted one)
-//     expect(screen.getByTestId('row-count')).toHaveTextContent('3 rows')
-//   })
-
-//   it('handles items without actionType property', () => {
-//     const mockData = {
-//       fuelExports: [
-//         {
-//           fuelExportId: 1,
-//           fuelType: 'Diesel',
-//           quantity: 100
-//           // No actionType property
-//         },
-//         {
-//           fuelExportId: 2,
-//           fuelType: 'Gasoline',
-//           quantity: 200,
-//           actionType: 'CREATE'
-//         }
-//       ]
-//     }
-
-//     render(
-//       <FuelExportSummary
-//         data={mockData}
-//         status={COMPLIANCE_REPORT_STATUSES.DRAFT}
-//       />,
-//       { wrapper }
-//     )
-
-//     // Should show both rows (item without actionType should not be filtered out)
+//     // All items should be shown (no DELETE filtering like other components)
 //     expect(screen.getByTestId('row-count')).toHaveTextContent('2 rows')
 //   })
 // })

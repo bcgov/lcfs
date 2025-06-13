@@ -20,11 +20,7 @@ import { REPORT_SCHEDULES } from '@/constants/common.js'
 import { roles } from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
-import {
-  useComplianceReportDocuments,
-  useGetComplianceReport
-} from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
 import { useGetFinalSupplyEquipments } from '@/hooks/useFinalSupplyEquipment'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
@@ -52,6 +48,7 @@ import {
   InfoOutlined,
   NewReleasesOutlined
 } from '@mui/icons-material'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 const chipTypeMap = {
   deleted: 'warning',
@@ -83,22 +80,11 @@ const getChipStyles = (type) => {
   }
 }
 
-const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
+const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
   const { t } = useTranslation()
-  const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
-  const {
-    data: currentUser,
-    hasRoles,
-    isLoading: isCurrentUserLoading
-  } = useCurrentUser()
-
-  const { data: complianceReportData } = useGetComplianceReport(
-    currentUser?.organization?.organizationId,
-    complianceReportId,
-    { enabled: !isCurrentUserLoading }
-  )
-
+  const { compliancePeriod, complianceReportId } = useParams()
+  const { currentReport: complianceReportData } = useComplianceReportStore()
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
   const [expanded, setExpanded] = useState([])
   const [hasAutoExpanded, setHasAutoExpanded] = useState(false)
@@ -287,7 +273,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
         action: navigationHandlers.allocationAgreements,
         useFetch: useGetAllAllocationAgreements,
         component: (data) =>
-          data.allocationAgreements.length > 0 && (
+          data?.allocationAgreements.length > 0 && (
             <TogglePanel
               label="Change log"
               disabled={
@@ -299,6 +285,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
                 <AllocationAgreementSummary
                   status={currentStatus}
                   data={data}
+                  isEarlyIssuance={reportInfo.isEarlyIssuance}
                 />
               }
             />
@@ -415,14 +402,8 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       const hasRealData = !isArrayEmpty(scheduleData)
 
       // Show if has data OR if in editing mode
-      const shouldShowInEditMode = [
-        COMPLIANCE_REPORT_STATUSES.DRAFT,
-        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
-      ].includes(currentStatus)
-
       const shouldShow =
         hasRealData ||
-        shouldShowInEditMode ||
         activity.name === t('report:supportingDocs')
 
       accordionsData.set(panelId, {
@@ -436,14 +417,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', userRoles }) => {
       })
     })
     return accordionsData
-  }, [
-    activityList,
-    activityDataResults,
-    t,
-    currentStatus,
-    reportInfo.isSupplemental,
-    complianceReportId
-  ])
+  }, [activityList, activityDataResults, t, currentStatus])
 
   // Auto-expand all panels once data is loaded
   useEffect(() => {

@@ -62,7 +62,7 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         'report:activityLists.notionalTransfers',
         'report:activityLabels.notionalTransfers',
         ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS,
-        false
+        true
       ),
       createActivity(
         'report:activityLists.fuelsOtherUse',
@@ -92,7 +92,7 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         'report:activityLists.allocationAgreements',
         'report:activityLabels.allocationAgreements',
         ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS,
-        false
+        true
       ),
       {
         name: t('report:activityLists.uploadDocuments'),
