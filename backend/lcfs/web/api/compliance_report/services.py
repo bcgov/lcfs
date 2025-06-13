@@ -636,12 +636,9 @@ class ComplianceReportServices:
         )
 
         is_newest = len(compliance_report_chain) - 1 == report.version
-        has_assessed_early_issuance = (
-            report.reporting_frequency == ReportingFrequency.QUARTERLY
-            and any(
-                item.currentStatus.status == ComplianceReportStatusEnum.Assessed.value
-                for item in compliance_report_chain
-            )
+        had_been_assessed = any(
+            report.currentStatus.status == ComplianceReportStatusEnum.Assessed.value
+            for report in compliance_report_chain
         )
         filtered_chain = [
             chained_report
@@ -660,7 +657,10 @@ class ComplianceReportServices:
             for report in masked_chain
         ]
         return ChainedComplianceReportSchema(
-            report=report, chain=masked_chain, is_newest=is_newest, has_assessed_early_issuance=has_assessed_early_issuance
+            report=report,
+            chain=masked_chain,
+            is_newest=is_newest,
+            had_been_assessed=had_been_assessed,
         )
 
     @service_handler

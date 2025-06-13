@@ -399,7 +399,7 @@ class ButtonActionFactory {
   cannotDeleteDraft() {
     // For early issuance: only until first early issuance has been assessed
     if (this.context.isEarlyIssuance) {
-      return this.context.hasAssessedEarlyIssuance
+      return this.context.hadBeenAssessed
     }
     return false
   }
@@ -480,7 +480,7 @@ function shouldShowButton(buttonName, context) {
   switch (buttonName) {
     case 'deleteDraft':
       // For early issuance: only until first early issuance has been assessed
-      if (context.isEarlyIssuance && context.hasAssessedEarlyIssuance) {
+      if (context.isEarlyIssuance && context.hadBeenAssessed) {
         return false
       }
       return true
@@ -508,7 +508,7 @@ function shouldShowButton(buttonName, context) {
       return (
         context.isOriginalReport &&
         context.reportVersion === 0 &&
-        !context.hasBeenAssessed
+        !context.hadBeenAssessed
       )
 
     case 'amendPenalties':

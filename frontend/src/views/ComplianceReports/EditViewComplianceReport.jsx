@@ -463,8 +463,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       hasDraftSupplemental,
 
       // Business rules
-      hasBeenAssessed: false, // TODO: implement logic
-      hasAssessedEarlyIssuance: false, // TODO: implement
+      hasBeenAssessed: reportData?.hadBeenAssessed,
 
       // Action functions
       updateComplianceReport,
