@@ -120,6 +120,8 @@ def compliance_report_create_schema():
 @pytest.fixture
 def mock_repo():
     repo = AsyncMock(spec=ComplianceReportRepository)
+    # Add default mock for get_assessed_compliance_report_by_period
+    repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
     return repo
 
 
@@ -172,7 +174,10 @@ def mock_other_uses_repo():
 
 @pytest.fixture
 def mock_summary_repo():
-    return AsyncMock(spec=ComplianceReportSummaryRepository)
+    repo = AsyncMock(spec=ComplianceReportSummaryRepository)
+    # Add default mock for get_assessed_compliance_report_by_period
+    repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
+    return repo
 
 
 @pytest.fixture
@@ -254,6 +259,7 @@ def mock_internal_comment_service():
     service = MagicMock()
     service.copy_internal_comments = AsyncMock()
     return service
+
 
 @pytest.fixture
 def compliance_report_service(

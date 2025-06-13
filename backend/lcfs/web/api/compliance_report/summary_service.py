@@ -1003,7 +1003,7 @@ class ComplianceReportSummaryService:
         # This preserves the available balance from when the supplemental report was created
         # For draft reports (not locked), always recalculate Line 17 dynamically
         if (
-            compliance_report.version > 0  # Is supplemental
+            compliance_report.version > 0
             and compliance_report.summary
             and compliance_report.summary.is_locked
             and compliance_report.summary.line_17_non_banked_units_used is not None
