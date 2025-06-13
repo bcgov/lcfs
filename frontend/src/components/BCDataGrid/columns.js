@@ -25,12 +25,24 @@ export const actions = (props) => ({
   cellRendererParams: props,
   cellStyle: (params) => {
     // Apply yellow background to Action column for edited rows in supplemental reports
-    if (params.data.isNewSupplementalEntry && params.data.actionType === 'UPDATE') {
+    if (
+      params.data.isNewSupplementalEntry &&
+      params.data.actionType === 'UPDATE'
+    ) {
       return { backgroundColor: colors.alerts.warning.background }
     }
     // Don't override row-level styling for CREATE actions (let the green row background show through)
-    if (params.data.actionType === 'CREATE') {
-      return {}
+    if (
+      params.data.isNewSupplementalEntry &&
+      params.data.actionType === 'CREATE'
+    ) {
+      return { backgroundColor: colors.alerts.success.background }
+    }
+    if (
+      params.data.isNewSupplementalEntry &&
+      params.data.actionType === 'DELETE'
+    ) {
+      return { backgroundColor: colors.alerts.error.background }
     }
     return {}
   },
