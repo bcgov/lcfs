@@ -7,7 +7,12 @@ import { faSquareCheck } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
-import { columnDefs, routesMapping } from './_schema'
+import {
+  columnDefs,
+  routesMapping,
+  defaultColDef,
+  defaultSortModel
+} from './_schema'
 import {
   useDeleteNotificationMessages,
   useGetNotificationMessages,
@@ -15,6 +20,13 @@ import {
 } from '@/hooks/useNotifications'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+
+const initialPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: defaultSortModel,
+  filters: []
+}
 
 export const Notifications = () => {
   const gridRef = useRef(null)
@@ -24,7 +36,7 @@ export const Notifications = () => {
   const [selectedRowCount, setSelectedRowCount] = useState(0)
 
   const [paginationOptions, setPaginationOptions] = useState(
-    defaultInitialPagination
+    initialPaginationOptions
   )
 
   const { t } = useTranslation(['notifications'])
@@ -193,7 +205,7 @@ export const Notifications = () => {
   }, [])
 
   const handleClearFilters = () => {
-    setPaginationOptions(defaultInitialPagination)
+    setPaginationOptions(initialPaginationOptions)
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
     }
