@@ -81,9 +81,13 @@ export const AssessmentCard = ({
     })
 
   const filteredChain = useMemo(() => {
+<<<<<<< fix/alex-supplemental-lin-17-250613
     return (chain || []).filter(
       (report) => report.history && report.history.length > 0
     )
+=======
+    return chain?.filter((report) => report.history && report.history.length > 0)
+>>>>>>> develop
   }, [chain])
 
   const isAddressEditable = useMemo(() => {
@@ -130,7 +134,7 @@ export const AssessmentCard = ({
                 setIsEditing={setIsEditing}
               />
             )}
-            {filteredChain.length > 0 &&
+            {filteredChain?.length > 0 &&
               currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
                 <>
                   <BCTypography
@@ -141,7 +145,7 @@ export const AssessmentCard = ({
                   >
                     {t('report:reportHistory')}
                   </BCTypography>
-                  {filteredChain.map((report, index) => {
+                  {filteredChain?.map((report, index) => {
                     const assessmentStatement = filteredChain.find(
                       (r) =>
                         r?.assessmentStatement !== null &&

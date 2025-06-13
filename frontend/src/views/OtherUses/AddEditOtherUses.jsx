@@ -9,7 +9,6 @@ import {
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
@@ -362,13 +361,6 @@ export const AddEditOtherUses = () => {
     [optionsData, errors, warnings, isSupplemental]
   )
 
-  const gridOptions = useMemo(
-    () => ({
-      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
-    }),
-    [isSupplemental]
-  )
-
   const saveButtonProps = useMemo(
     () => ({
       enabled: true,
@@ -422,7 +414,6 @@ export const AddEditOtherUses = () => {
         showAddRowsButton
         stopEditingWhenCellsLoseFocus
         saveButtonProps={saveButtonProps}
-        gridOptions={gridOptions}
       />
     </Grid2>
   )
