@@ -33,6 +33,7 @@ export const ComplianceReportViewSelector = () => {
     // if the status of the report doesn't match with the cached report data then refetch by invalidating cache
     if (
       reportData &&
+      location.state?.reportStatus &&
       location.state?.reportStatus !== reportData?.report?.currentStatus.status
     ) {
       queryClient.invalidateQueries(['compliance-report', complianceReportId])
