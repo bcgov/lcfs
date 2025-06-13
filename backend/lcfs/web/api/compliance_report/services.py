@@ -194,7 +194,11 @@ class ComplianceReportServices:
             compliance_report_group_uuid=group_uuid,  # Use the same group_uuid
             version=new_version,  # Increment the version
             supplemental_initiator=SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
-            nickname=f"Government adjustment {new_version}",
+            nickname=(
+                f"Supplemental report {new_version}"
+                if current_report.reporting_frequency == ReportingFrequency.ANNUAL
+                else f"Early issuance - Government adjustment {new_version}"
+            ),
             summary=ComplianceReportSummary(),  # Create an empty summary object
         )
 
@@ -314,7 +318,11 @@ class ComplianceReportServices:
             compliance_report_group_uuid=group_uuid,  # Use the same group_uuid
             version=new_version,  # Increment the version
             supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
-            nickname=f"Supplemental report {new_version}",
+            nickname=(
+                f"Supplemental report {new_version}"
+                if current_report.reporting_frequency == ReportingFrequency.ANNUAL
+                else f"Early issuance - Supplemental report {new_version}"
+            ),
             summary=new_summary,
         )
 
@@ -407,7 +415,11 @@ class ComplianceReportServices:
             compliance_report_group_uuid=current_report.compliance_report_group_uuid,  # Same group
             version=new_version,
             supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,  # Supplier edits it
-            nickname=f"Supplemental Report {new_version}",  # Automatic nickname
+            nickname=(
+                f"Supplemental report {new_version}"
+                if current_report.reporting_frequency == ReportingFrequency.ANNUAL
+                else f"Early issuance - Supplemental report {new_version}"
+            ),  # Automatic nickname
             summary=ComplianceReportSummary(),  # Start with an empty summary
             create_user=user.keycloak_username,  # Log who created it
             update_user=user.keycloak_username,
