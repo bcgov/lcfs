@@ -2,7 +2,10 @@ import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import { useTranslation } from 'react-i18next'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { userActivityColDefs } from '@/views/Admin/AdminMenu/components/_schema'
+import {
+  userActivityColDefs,
+  defaultSortModel
+} from '@/views/Admin/AdminMenu/components/_schema'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { useGetUserActivities } from '@/hooks/useUser'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
@@ -10,12 +13,19 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 import ROUTES, { buildPath } from '@/routes/routes.js'
 
+const initialPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: defaultSortModel,
+  filters: []
+}
+
 export const UserActivity = () => {
   const { t } = useTranslation(['common', 'admin'])
   const gridRef = useRef(null)
 
   const [paginationOptions, setPaginationOptions] = useState(
-    defaultInitialPagination
+    initialPaginationOptions
   )
 
   const queryData = useGetUserActivities(paginationOptions, {
@@ -55,7 +65,7 @@ export const UserActivity = () => {
   )
 
   const handleClearFilters = () => {
-    setPaginationOptions(defaultInitialPagination)
+    setPaginationOptions(initialPaginationOptions)
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
     }

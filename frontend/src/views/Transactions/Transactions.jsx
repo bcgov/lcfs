@@ -222,7 +222,7 @@ export const Transactions = () => {
   }, [location.state])
 
   const handleClearFilters = () => {
-    setPaginationOptions(defaultInitialPagination)
+    setPaginationOptions(initialPaginationOptions)
     setSelectedOrg({ organizationId: null, label: null })
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
