@@ -650,7 +650,7 @@ export const fuelExportColDefs = (
   }
 ]
 
-export const fuelExportSummaryColDefs = [
+export const fuelExportSummaryColDefs = (showFuelTypeOther) => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
@@ -660,6 +660,11 @@ export const fuelExportSummaryColDefs = [
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     field: 'fuelType',
     valueGetter: (params) => params.data.fuelType?.fuelType
+  },
+  {
+    field: 'fuelTypeOther',
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeOther'),
+    hide: !showFuelTypeOther
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
@@ -710,7 +715,18 @@ export const fuelExportSummaryColDefs = [
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energyDensity'),
-    field: 'energyDensity'
+    field: 'energyDensity',
+    valueGetter: (params) => {
+      if (isFuelTypeOther(params)) {
+        return params.data?.energyDensity
+          ? params.data?.energyDensity + ' MJ/' + params.data?.units
+          : 0
+      } else {
+        return params.data?.energyDensity
+          ? params.data?.energyDensity + ' MJ/' + params.data?.units
+          : ''
+      }
+    }
   },
   { headerName: i18n.t('fuelExport:fuelExportColLabels.eer'), field: 'eer' },
   {

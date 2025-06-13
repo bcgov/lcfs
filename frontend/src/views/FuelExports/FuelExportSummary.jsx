@@ -94,6 +94,10 @@ export const FuelExportSummary = ({ data, status }) => {
     }
   }, [data?.fuelExports, paginationOptions])
 
+  const showFuelTypeOther = paginatedData.data.fuelExports.some(
+    (item) => item.fuelType.fuelType === 'Other'
+  )
+
   const gridOptions = useMemo(
     () => ({
       overlayNoRowsTemplate: t('fuelExport:noFuelExportsFound'),
@@ -133,7 +137,7 @@ export const FuelExportSummary = ({ data, status }) => {
           gridRef={gridRef}
           queryData={paginatedData}
           dataKey="fuelExports"
-          columnDefs={fuelExportSummaryColDefs}
+          columnDefs={fuelExportSummaryColDefs(showFuelTypeOther)}
           getRowId={getRowId}
           gridOptions={gridOptions}
           enableCopyButton={false}
