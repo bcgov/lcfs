@@ -45,7 +45,7 @@ export const ComplianceReportViewSelector = () => {
     return <Loading />
   }
 
-  return reportData.report.legacyId ? (
+  return reportData?.report?.legacyId ? (
     <ViewLegacyComplianceReport
       reportData={reportData}
       error={error}

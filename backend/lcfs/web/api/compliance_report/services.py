@@ -628,7 +628,7 @@ class ComplianceReportServices:
 
         is_newest = len(compliance_report_chain) - 1 == report.version
         had_been_assessed = any(
-            report.currentStatus.status == ComplianceReportStatusEnum.Assessed.value
+            report.current_status.status == ComplianceReportStatusEnum.Assessed.value
             for report in compliance_report_chain
         )
         filtered_chain = [

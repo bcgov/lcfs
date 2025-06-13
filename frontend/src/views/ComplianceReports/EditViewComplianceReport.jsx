@@ -129,7 +129,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     (currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT &&
       hasRoles(roles.analyst))
 
-  // Conditional organization data fetching - KEY FIX HERE
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report?.organizationId,
     {
@@ -260,7 +259,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     complianceReportId,
     {
       onMutate: () => {
-        // KEY FIX: Set both states immediately when deletion starts
         setIsDeleting(true)
         setIsDeleted(true)
       },
@@ -362,7 +360,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
 
   const methods = useForm()
 
-  // Memoized report conditions - with deletion checks
+  // Memoized report context conditions
   const reportConditions = useMemo(() => {
     if (isDeleted || isDeleting || !reportData) {
       return {
@@ -458,12 +456,10 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
 
       // Conflict detection
-      // hasConflictingSupplemental: false,
-      // hasConflictingReassessment: false,
       hasDraftSupplemental,
 
       // Business rules
-      hasBeenAssessed: reportData?.hadBeenAssessed,
+      hadBeenAssessed: reportData?.hadBeenAssessed,
 
       // Action functions
       updateComplianceReport,
