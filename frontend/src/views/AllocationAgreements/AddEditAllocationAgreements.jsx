@@ -470,9 +470,16 @@ export const AddEditAllocationAgreements = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      buildPath(ROUTES.REPORTS.VIEW, { compliancePeriod, complianceReportId })
+      buildPath(ROUTES.REPORTS.VIEW, { compliancePeriod, complianceReportId }),
+      {
+        state: {
+          expandedSchedule: 'allocationAgreements',
+          message: t('allocationAgreement:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   return (
     isFetched &&

@@ -10,7 +10,7 @@ import {
 } from '@mui/material'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 
 import BCAlert from '@/components/BCAlert'
 import DocumentUploadDialog from '@/components/Documents/DocumentUploadDialog'
@@ -83,6 +83,7 @@ const getChipStyles = (type) => {
 const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const { compliancePeriod, complianceReportId } = useParams()
   const { currentReport: complianceReportData } = useComplianceReportStore()
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
@@ -389,6 +390,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
   // Calculate which accordions should actually be shown based on real data
   const accordionsWithData = useMemo(() => {
     const accordionsData = new Map()
+    const expandedSchedule = location.state?.expandedSchedule
 
     activityList.forEach((activity, index) => {
       const panelId = `panel${index}`
@@ -401,10 +403,11 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
           : dataResult?.data) ?? []
       const hasRealData = !isArrayEmpty(scheduleData)
 
-      // Show if has data OR if in editing mode
+      // Show if has data OR if in editing mode OR if it was recently edited
       const shouldShow =
         hasRealData ||
-        activity.name === t('report:supportingDocs')
+        activity.name === t('report:supportingDocs') ||
+        (expandedSchedule && activity.key === expandedSchedule)
 
       accordionsData.set(panelId, {
         shouldShow,
@@ -417,9 +420,15 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
       })
     })
     return accordionsData
-  }, [activityList, activityDataResults, t, currentStatus])
+  }, [
+    activityList,
+    activityDataResults,
+    t,
+    currentStatus,
+    location.state?.expandedSchedule
+  ])
 
-  // Auto-expand all panels once data is loaded
+  // Auto-expand panels once data is loaded
   useEffect(() => {
     if (hasAutoExpanded) return
 
@@ -429,10 +438,26 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
 
     if (allDataLoaded && accordionsWithData.size > 0) {
       const accordionsWithActualData = []
+      const expandedSchedule = location.state?.expandedSchedule
 
       accordionsWithData.forEach((accordionInfo, panelId) => {
-        // Expand if it should show AND has actual data (not empty)
+        let shouldExpand = false
+
+        // Always expand schedules that have actual data
         if (accordionInfo.shouldShow && accordionInfo.hasData) {
+          shouldExpand = true
+        }
+
+        // Additionally, if a specific schedule was recently modified, ensure it's expanded
+        if (
+          expandedSchedule &&
+          accordionInfo.activity.key === expandedSchedule &&
+          accordionInfo.shouldShow
+        ) {
+          shouldExpand = true
+        }
+
+        if (shouldExpand) {
           accordionsWithActualData.push(panelId)
         }
       })
@@ -440,7 +465,25 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
       setExpanded(accordionsWithActualData)
       setHasAutoExpanded(true)
     }
-  }, [activityDataResults, accordionsWithData, hasAutoExpanded])
+  }, [
+    activityDataResults,
+    accordionsWithData,
+    hasAutoExpanded,
+    location.state?.expandedSchedule
+  ])
+
+  // Clear the expandedSchedule state after processing to prevent re-expansion on next visit
+  useEffect(() => {
+    if (hasAutoExpanded && location.state?.expandedSchedule) {
+      navigate(location.pathname, {
+        replace: true,
+        state: {
+          ...location.state,
+          expandedSchedule: undefined
+        }
+      })
+    }
+  }, [hasAutoExpanded, location.state, location.pathname, navigate])
 
   const onExpandAll = useCallback(() => {
     // Expand all visible accordions

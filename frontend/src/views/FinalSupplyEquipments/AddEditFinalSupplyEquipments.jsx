@@ -279,9 +279,16 @@ export const AddEditFinalSupplyEquipments = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'finalSupplyEquipments',
+          message: t('finalSupplyEquipment:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   const onAddRows = useCallback(
     (numRows) => {

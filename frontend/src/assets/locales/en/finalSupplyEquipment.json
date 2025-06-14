@@ -34,5 +34,6 @@
   "postalCodeError": "Please enter a valid postal code.",
   "validateMsg": {
     "isRequired": "{{field}} is required"
-  }
+  },
+  "scheduleUpdated": "Final supply equipment schedule updated successfully"
 }
