@@ -302,9 +302,16 @@ export const AddEditFuelExports = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'fuelExports',
+          message: t('fuelExport:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   return (
     isFetched &&

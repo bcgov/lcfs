@@ -294,9 +294,16 @@ export const AddEditNotionalTransfers = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'notionalTransfers',
+          message: t('notionalTransfer:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   if (optionsLoading || transfersLoading) {
     return <Loading />
