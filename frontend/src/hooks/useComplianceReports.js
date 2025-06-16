@@ -142,12 +142,14 @@ export const useGetComplianceReport = (orgID, reportID, options = {}) => {
 }
 
 export const useComplianceReportWithCache = (reportId, options = {}) => {
-  
   const { getCachedReport, shouldFetchReport } = useComplianceReportStore()
 
   const cachedReport = getCachedReport(reportId)
   const needsFetch = shouldFetchReport(reportId)
-  const { data: currentUser } = useCurrentUser()
+  const { data: currentUser } = useCurrentUser({
+    enabled:
+      needsFetch && !!reportId && !!currentUser?.organization?.organizationId
+  })
   const queryResult = useGetComplianceReport(
     currentUser?.organization?.organizationId,
     reportId,

@@ -2,10 +2,14 @@ import { PropTypes } from 'prop-types'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useMutation } from '@tanstack/react-query'
 import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { useUser, useDeleteUser } from '@/hooks/useUser'
+import {
+  useUser,
+  useDeleteUser,
+  useUpdateUser,
+  useCreateUser
+} from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   userInfoSchema,
@@ -14,7 +18,6 @@ import {
   defaultValues,
   statusOptions
 } from './_schema'
-import { useApiService } from '@/services/useApiService'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { BCFormRadio, BCFormText } from '@/components/BCForm'
 import colors from '@/themes/base/colors'
@@ -51,7 +54,6 @@ export const AddEditUser = ({ userType = 'idir' }) => {
     isLoading: isCurrentUserLoading
   } = useCurrentUser()
   const navigate = useNavigate()
-  const apiService = useApiService()
   const { t } = useTranslation(['common', 'admin'])
   const { userID, orgID } = useParams()
   const [orgName, setOrgName] = useState('')
@@ -96,6 +98,59 @@ export const AddEditUser = ({ userType = 'idir' }) => {
   const status = watch('status')
   const readOnly = watch('readOnly')
   const bceidRoles = watch('bceidRoles')
+
+  // Success callback for user operations
+  const onUserOperationSuccess = () => {
+    if (hasRoles(roles.supplier)) {
+      navigate(ROUTES.ORGANIZATION.ORG)
+    } else if (orgID) {
+      navigate(buildPath(ROUTES.ORGANIZATIONS.VIEW, { orgID }), {
+        state: {
+          message: 'User has been successfully saved.',
+          severity: 'success'
+        }
+      })
+    } else {
+      navigate(ROUTES.ADMIN.USERS.LIST, {
+        state: {
+          message: 'User has been successfully saved.',
+          severity: 'success'
+        }
+      })
+    }
+  }
+
+  // Error callback for user operations
+  const onUserOperationError = (error) => {
+    console.error('Error saving user:', error)
+  }
+
+  // Update user hook
+  const {
+    mutate: updateUser,
+    isPending: isUpdating,
+    isError: isUpdateError
+  } = useUpdateUser({
+    onSuccess: onUserOperationSuccess,
+    onError: onUserOperationError,
+    isSupplier: hasRoles(roles.supplier),
+    organizationId: orgID || currentUser?.organization?.organizationId
+  })
+
+  // Create user hook
+  const {
+    mutate: createUser,
+    isPending: isCreating,
+    isError: isCreateError
+  } = useCreateUser({
+    onSuccess: onUserOperationSuccess,
+    onError: onUserOperationError,
+    isSupplier: hasRoles(roles.supplier),
+    organizationId: orgID || currentUser?.organization?.organizationId
+  })
+
+  // Delete mutation hook (only used for BCeID users)
+  const { mutate: deleteUser } = useDeleteUser()
 
   useEffect(() => {
     if (status !== 'Active') {
@@ -160,6 +215,7 @@ export const AddEditUser = ({ userType = 'idir' }) => {
       reset(userData)
     }
   }, [isUserFetched, data, reset])
+
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
     const payload = {
@@ -184,61 +240,24 @@ export const AddEditUser = ({ userType = 'idir' }) => {
             ]
           : []
     }
+
     if (orgID || hasRoles(roles.supplier)) {
       payload.roles = [...payload.roles, roles.supplier.toLocaleLowerCase()]
     } else {
       payload.roles = [...payload.roles, roles.government.toLocaleLowerCase()]
     }
-    mutate(payload)
+
+    // Call appropriate mutation based on whether we're creating or updating
+    if (userID) {
+      updateUser({ userID, payload })
+    } else {
+      createUser(payload)
+    }
   }
 
   const onErrors = (error) => {
     console.log(error)
   }
-  // useMutation hook from React Query for handling API request
-  const { mutate, isPending, isError } = useMutation({
-    mutationFn: async (payload) => {
-      if (hasRoles(roles.supplier)) {
-        const orgId = orgID || currentUser.organization?.organizationId
-        return userID
-          ? await apiService.put(
-              `/organization/${orgId}/users/${userID}`,
-              payload
-            )
-          : await apiService.post(`/organization/${orgId}/users`, payload)
-      }
-      return userID
-        ? await apiService.put(`/users/${userID}`, payload)
-        : await apiService.post('/users', payload)
-    },
-    onSuccess: () => {
-      // on success navigate somewhere
-      if (hasRoles(roles.supplier)) {
-        navigate(ROUTES.ORGANIZATION.ORG)
-      } else if (orgID) {
-        navigate(buildPath(ROUTES.ORGANIZATIONS.VIEW, { orgID }), {
-          state: {
-            message: 'User has been successfully saved.',
-            severity: 'success'
-          }
-        })
-      } else {
-        navigate(ROUTES.ADMIN.USERS.LIST, {
-          state: {
-            message: 'User has been successfully saved.',
-            severity: 'success'
-          }
-        })
-      }
-    },
-    onError: (error) => {
-      // handle axios errors here
-      console.error('Error saving user:', error)
-    }
-  })
-
-  // Delete mutation hook (only used for BCeID users)
-  const { mutate: deleteUser } = useDeleteUser()
 
   // Handler for confirming deletion
   const handleConfirmDelete = () => {
@@ -275,12 +294,15 @@ export const AddEditUser = ({ userType = 'idir' }) => {
     }
   }
 
+  const isPending = isUpdating || isCreating
+  const isError = isUpdateError || isCreateError
+
   if (isUserLoading || isCurrentUserLoading) {
     return <Loading message="Loading..." />
   }
 
   if (isPending) {
-    return <Loading message="Adding user..." />
+    return <Loading message={userID ? 'Updating user...' : 'Adding user...'} />
   }
 
   return (
