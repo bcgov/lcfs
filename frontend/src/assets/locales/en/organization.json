@@ -5,7 +5,8 @@
     "orgName": "Organization name",
     "complianceUnits": "Compliance units",
     "inReserve": "In reserve",
-    "status": "Status"
+    "status": "Status",
+    "earlyIssuance": "Early Issuance"
   },
   "orgId": "Organization ID",
   "noOrgsFound": "No organizations found",
