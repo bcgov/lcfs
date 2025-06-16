@@ -60,6 +60,7 @@
   },
   "actionBtns": {
     "saveDraftBtn": "Save draft report",
+    "deleteDraft": "Delete draft report",
     "submitReportBtn": "Submit report",
     "returnToAnalyst": "Return to analyst",
     "returnToManager": "Return to compliance manager",

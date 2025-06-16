@@ -139,6 +139,7 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
     mock_fuel_supply_repo,
     quarterly_quantities,
     mock_summary_repo,
+    mock_repo,  # Add mock_repo parameter
     reporting_frequency,
     fuel_supply_data,
     description,
@@ -162,6 +163,8 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
     mock_summary_repo.get_received_compliance_units.return_value = 300
     mock_summary_repo.get_issued_compliance_units.return_value = 200
+    # Mock get_assessed_compliance_report_by_period to return None for original reports (version 0)
+    mock_repo.get_assessed_compliance_report_by_period.return_value = None
     mock_trxn_repo.calculate_line_17_available_balance_for_period.return_value = 1000
     compliance_report_summary_service.calculate_fuel_supply_compliance_units = (
         AsyncMock(return_value=100)
@@ -215,7 +218,7 @@ async def test_calculate_low_carbon_fuel_target_summary_parametrized(
 
 @pytest.mark.anyio
 async def test_supplemental_low_carbon_fuel_target_summary(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo, mock_repo
 ):
     # Input setup: supplemental version (version = 2)
     compliance_period_start = datetime(2024, 1, 1)
@@ -246,6 +249,16 @@ async def test_supplemental_low_carbon_fuel_target_summary(
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 500
     mock_summary_repo.get_received_compliance_units.return_value = 300
     mock_summary_repo.get_issued_compliance_units.return_value = 200
+
+    # Mock assessed report for Line 15 and 16 values
+    mock_assessed_report = MagicMock()
+    mock_assessed_summary = MagicMock()
+    mock_assessed_summary.line_18_units_to_be_banked = 15
+    mock_assessed_summary.line_19_units_to_be_exported = 15
+    mock_assessed_report.summary = mock_assessed_summary
+    mock_repo.get_assessed_compliance_report_by_period.return_value = (
+        mock_assessed_report
+    )
 
     previous_summary_mock = MagicMock(
         spec=ComplianceReportSummary
@@ -317,7 +330,7 @@ async def test_supplemental_low_carbon_fuel_target_summary(
 
 @pytest.mark.anyio
 async def test_supplemental_report_uses_existing_summary_line_17(
-    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo
+    compliance_report_summary_service, mock_trxn_repo, mock_summary_repo, mock_repo
 ):
     """
     Tests that for a supplemental report with an existing summary,
@@ -358,6 +371,17 @@ async def test_supplemental_report_uses_existing_summary_line_17(
     mock_summary_repo.get_transferred_out_compliance_units.return_value = 100
     mock_summary_repo.get_received_compliance_units.return_value = 50
     mock_summary_repo.get_issued_compliance_units.return_value = 25
+
+    # Mock assessed report for Line 15 and 16 values
+    mock_assessed_report = MagicMock()
+    mock_assessed_summary = MagicMock()
+    mock_assessed_summary.line_18_units_to_be_banked = 10
+    mock_assessed_summary.line_19_units_to_be_exported = 5
+    mock_assessed_report.summary = mock_assessed_summary
+    mock_repo.get_assessed_compliance_report_by_period.return_value = (
+        mock_assessed_report
+    )
+
     # For version > 0, get_previous_summary will be called
     previous_summary_mock = MagicMock(spec=ComplianceReportSummary)
     previous_summary_mock.line_18_units_to_be_banked = 10

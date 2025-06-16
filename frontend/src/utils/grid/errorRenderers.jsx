@@ -9,22 +9,6 @@ export const StandardCellErrors = (params, errors) => {
     style = { ...style, borderColor: 'unset' }
   }
 
-  // For CREATE actions in supplemental reports, use the row-level green background but add disabled styling
-  // Only disable if this is actually a new supplemental entry (not government adjustment existing rows)
-  if (
-    params.data.actionType === 'CREATE' &&
-    params.data.isNewSupplementalEntry
-  ) {
-    // Add a subtle overlay to indicate the cells are disabled while preserving green background
-    style = {
-      ...style,
-      backgroundColor: 'rgba(0, 0, 0, 0.05)', // Very light overlay to show disabled state
-      pointerEvents: 'none', // Disable click interactions
-      cursor: 'not-allowed' // Show disabled cursor
-    }
-    return style
-  }
-
   const isEditable =
     typeof params.colDef.editable === 'function'
       ? params.colDef.editable(params)
