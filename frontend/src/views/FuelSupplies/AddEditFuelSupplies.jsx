@@ -65,7 +65,7 @@ export const AddEditFuelSupplies = () => {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
-      },
+      }
     }),
     [t, isSupplemental]
   )
@@ -310,9 +310,16 @@ export const AddEditFuelSupplies = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'fuelSupplies',
+          message: t('fuelSupply:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   return (
     isFetched &&
