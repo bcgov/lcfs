@@ -174,6 +174,10 @@ class ComplianceReportServices:
         latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
         if not latest_report:
             raise DataNotFoundException("Latest compliance report not found.")
+        if current_report.compliance_report_id != latest_report.compliance_report_id:
+            raise ServiceException(
+                "An analyst adjustment should be created on the latest report."
+            )
 
         new_version = latest_report.version + 1
 
@@ -243,6 +247,18 @@ class ComplianceReportServices:
         current_report = await self.repo.get_compliance_report_by_id(original_report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
+        # Get the group_uuid from the current report
+        group_uuid = current_report.compliance_report_group_uuid
+        # Fetch the latest version number for the given group_uuid
+        latest_report = await self.repo.get_latest_report_by_group_uuid(
+            current_report.compliance_report_group_uuid
+        )
+        if not latest_report:
+            raise DataNotFoundException("Latest compliance report not found.")
+        if current_report.compliance_report_id != latest_report.compliance_report_id:
+            raise ServiceException(
+                "A supplemental should be created on the latest report."
+            )
 
         # Validate that the user has permission to create a supplemental report
         if user.organization_id != current_report.organization_id:
@@ -258,14 +274,6 @@ class ComplianceReportServices:
         #     raise ServiceException(
         #         "A supplemental report can only be created if the current report's status is 'Assessed'."
         #     )
-
-        # Get the group_uuid from the current report
-        group_uuid = current_report.compliance_report_group_uuid
-
-        # Fetch the latest version number for the given group_uuid
-        latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
-        if not latest_report:
-            raise DataNotFoundException("Latest compliance report not found.")
 
         new_version = latest_report.version + 1
 
@@ -396,6 +404,10 @@ class ComplianceReportServices:
         if not latest_report:
             # Should not happen if current_report exists, but good practice to check
             raise DataNotFoundException("Latest compliance report not found for group.")
+        if current_report.compliance_report_id != latest_report.compliance_report_id:
+            raise ServiceException(
+                "A supplemental should be created on the latest report."
+            )
         new_version = latest_report.version + 1
 
         # 5. Create the new supplemental report object
@@ -615,6 +627,10 @@ class ComplianceReportServices:
         )
 
         is_newest = len(compliance_report_chain) - 1 == report.version
+        had_been_assessed = any(
+            report.current_status.status == ComplianceReportStatusEnum.Assessed.value
+            for report in compliance_report_chain
+        )
         filtered_chain = [
             chained_report
             for chained_report in compliance_report_chain
@@ -632,7 +648,10 @@ class ComplianceReportServices:
             for report in masked_chain
         ]
         return ChainedComplianceReportSchema(
-            report=report, chain=masked_chain, is_newest=is_newest
+            report=report,
+            chain=masked_chain,
+            is_newest=is_newest,
+            had_been_assessed=had_been_assessed,
         )
 
     @service_handler
