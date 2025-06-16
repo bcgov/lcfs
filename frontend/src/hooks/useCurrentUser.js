@@ -33,7 +33,7 @@ export const useCurrentUser = () => {
 
   /**
    * Checks if the current user has all the specified roles.
-   *    
+   *
    * @param {...string} roleNames - The names of the roles to check against.
    * @return {boolean} True if the user has all the roles.
    *
