@@ -47,5 +47,6 @@
   "validateMsg": {
     "isRequired": "{{field}} is required",
     "nonNegative": "Quantity supplied must be a non-negative number"
-  }
+  },
+  "scheduleUpdated": "Other uses schedule updated successfully"
 }

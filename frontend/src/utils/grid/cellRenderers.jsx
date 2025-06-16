@@ -30,7 +30,11 @@ export const LinkRenderer = (props) => {
     baseUrl +
     ((props.url && props.url({ data: props.data })) || props?.node?.id)
   return (
-    <Link to={targetUrl} style={{ color: '#000' }}>
+    <Link
+      to={targetUrl}
+      state={props.state && props.state(props.data)}
+      style={{ color: '#000' }}
+    >
       <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
         {props.valueFormatted || props.value}
       </BCBox>
