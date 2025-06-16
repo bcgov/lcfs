@@ -7,7 +7,6 @@ import {
   useUpdateComplianceReportSummary
 } from '@/hooks/useComplianceReports'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
-import { buttonClusterConfigFn } from '@/views/ComplianceReports/buttonConfigs'
 import { wrapper } from '@/tests/utils/wrapper'
 
 // Mock the custom hooks and components
@@ -18,7 +17,7 @@ vi.mock('../SigningAuthorityDeclaration', () => ({
     <input
       type="checkbox"
       data-test="signing-authority-checkbox"
-      onChange={(e) => onChange && onChange(e.target.checked)} // Safely calling onChange
+      onChange={(e) => onChange && onChange(e.target.checked)}
     />
   )
 }))
@@ -33,7 +32,7 @@ vi.mock('@react-keycloak/web', () => ({
 vi.mock('@mui/material', async (importOriginal) => {
   const actual = await importOriginal()
   return {
-    ...actual, // keep the actual MUI components
+    ...actual,
     Accordion: ({ children }) => <div data-test="accordion">{children}</div>,
     AccordionSummary: ({ children }) => (
       <div data-test="accordion-summary">{children}</div>
@@ -45,7 +44,10 @@ vi.mock('@mui/material', async (importOriginal) => {
     CircularProgress: () => <div>Loading...</div>,
     List: ({ children }) => <ul>{children}</ul>,
     ListItem: ({ children }) => <li>{children}</li>,
-    TextField: (props) => <input {...props} />
+    TextField: (props) => <input {...props} />,
+    Stack: ({ children }) => (
+      <div className="MuiStack-root css-ve6gns-MuiStack-root">{children}</div>
+    )
   }
 })
 
@@ -55,30 +57,83 @@ vi.mock('@/contexts/AuthorizationContext', () => ({
   })
 }))
 
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({
+    hasRoles: vi.fn(() => true),
+    data: { isGovernmentUser: false }
+  })
+}))
+
+vi.mock('@/hooks/useOrganizationSnapshot', () => ({
+  useOrganizationSnapshot: () => ({
+    data: {
+      headOfficeAddress: 'address',
+      recordsAddress: 'address',
+      someOtherField: 'value'
+    }
+  })
+}))
+
+vi.mock('@/components/TogglePanel', () => ({
+  TogglePanel: ({ offComponent }) => <div>{offComponent}</div>
+}))
+
+vi.mock('@/views/CompareReports/CompareReports', () => ({
+  CompareReports: () => <div>Compare Reports</div>
+}))
+
+vi.mock('@/components/BCTypography', () => ({
+  default: ({ children, ...props }) => <div {...props}>{children}</div>
+}))
+
+vi.mock('@/components/BCButton', () => ({
+  default: ({
+    children,
+    'data-test': dataTest,
+    disabled,
+    onClick,
+    ...props
+  }) => (
+    <button
+      data-test={dataTest}
+      disabled={disabled}
+      onClick={onClick}
+      {...props}
+    >
+      {children}
+    </button>
+  )
+}))
+
 describe('ComplianceReportSummary', () => {
   const mockReportID = '123'
-  const mockSetHasMet = vi.fn() // Mock hasMet functions
-  const mockHandleSubmit = vi.fn() // Mock handleSubmit function
+  const mockSetIsSigningAuthorityDeclared = vi.fn()
+  const mockHandleSubmit = vi.fn((handler) => handler) // Mock handleSubmit to return the handler
 
-  beforeAll(() => {
-    useUpdateComplianceReportSummary.mockReturnValue({})
+  beforeEach(() => {
+    vi.clearAllMocks()
+
+    useUpdateComplianceReportSummary.mockReturnValue({
+      mutate: vi.fn()
+    })
   })
 
   it('renders loading state', () => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: true,
       isError: false,
-      data: null
+      data: null,
+      isFetching: false
     })
 
     render(
       <ComplianceReportSummary
         reportID={mockReportID}
-        setHasMetRenewables={mockSetHasMet}
-        setHasMetLowCarbon={mockSetHasMet}
+        setIsSigningAuthorityDeclared={mockSetIsSigningAuthorityDeclared}
       />,
       { wrapper }
     )
+
     expect(
       screen.getByText('Loading compliance report summary...')
     ).toBeInTheDocument()
@@ -89,18 +144,18 @@ describe('ComplianceReportSummary', () => {
       isLoading: false,
       isError: true,
       error: { message: 'Error fetching data' },
-      data: null
+      data: null,
+      isFetching: false
     })
 
     const alertRef = React.createRef()
-    alertRef.current = { triggerAlert: vi.fn() } // Mock the triggerAlert method
+    alertRef.current = { triggerAlert: vi.fn() }
 
     render(
       <ComplianceReportSummary
         reportID={mockReportID}
-        setHasMetRenewables={mockSetHasMet}
-        setHasMetLowCarbon={mockSetHasMet}
-        alertRef={alertRef} // Pass the alertRef prop
+        setIsSigningAuthorityDeclared={mockSetIsSigningAuthorityDeclared}
+        alertRef={alertRef}
       />,
       { wrapper }
     )
@@ -108,11 +163,14 @@ describe('ComplianceReportSummary', () => {
     expect(screen.getByText('Error retrieving the record')).toBeInTheDocument()
   })
 
-  it('renders summary content along with signing authority checkbox, and enables submit button when checkbox is selected', async () => {
+  it('renders summary content along with signing authority checkbox, and button behavior', async () => {
     useGetComplianceReportSummary.mockReturnValue({
       isLoading: false,
       isError: false,
+      isFetching: false,
       data: {
+        complianceReportId: mockReportID,
+        canSign: true,
         renewableFuelTargetSummary: [
           { line: 1, gasoline: 100, diesel: 100, jetFuel: 100 },
           { line: 2, gasoline: 50, diesel: 50, jetFuel: 50 },
@@ -128,25 +186,40 @@ describe('ComplianceReportSummary', () => {
       }
     })
 
+    // Create a proper button cluster config that returns the expected button structure
+    const mockButtonClusterConfig = {
+      [COMPLIANCE_REPORT_STATUSES.DRAFT]: [
+        {
+          id: 'submit-report-btn',
+          label: 'Submit Report',
+          variant: 'contained',
+          color: 'primary',
+          disabled: true, // Initially disabled
+          handler: vi.fn(),
+          startIcon: null
+        },
+        {
+          id: 'delete-draft-btn',
+          label: 'Delete Draft',
+          variant: 'outlined',
+          color: 'error',
+          disabled: false,
+          handler: vi.fn(),
+          startIcon: null
+        }
+      ]
+    }
+
     render(
       <ComplianceReportSummary
         reportID={mockReportID}
         enableCompareMode={false}
         canEdit={true}
         currentStatus={COMPLIANCE_REPORT_STATUSES.DRAFT}
-        setHasMetRenewables={mockSetHasMet}
-        setHasMetLowCarbon={mockSetHasMet}
+        setIsSigningAuthorityDeclared={mockSetIsSigningAuthorityDeclared}
         methods={{ handleSubmit: mockHandleSubmit }}
-        buttonClusterConfig={buttonClusterConfigFn({
-          hasRoles: vi.fn(),
-          t: vi.fn(),
-          setModalData: vi.fn(),
-          updateComplianceReport: vi.fn(),
-          isGovernmentUser: false,
-          isSigningAuthorityDeclared: true,
-          compliancePeriod: '2023',
-          label: 'Button'
-        })}
+        buttonClusterConfig={mockButtonClusterConfig}
+        compliancePeriodYear="2023"
       />,
       { wrapper }
     )
@@ -167,12 +240,15 @@ describe('ComplianceReportSummary', () => {
     expect(submitButton).toBeInTheDocument()
     expect(submitButton).toBeDisabled()
 
+    // Check for delete button
+    const deleteButton = screen.getByTestId('delete-draft-btn')
+    expect(deleteButton).toBeInTheDocument()
+    expect(deleteButton).not.toBeDisabled()
+
     // Simulate clicking the signing authority checkbox
     fireEvent.click(screen.getByTestId('signing-authority-checkbox'))
 
-    // Ensure submit button gets enabled after checkbox selection
-    await waitFor(() => {
-      expect(submitButton).toBeDisabled()
-    })
+    // The component should call setIsSigningAuthorityDeclared
+    expect(mockSetIsSigningAuthorityDeclared).toHaveBeenCalledWith(true)
   })
 })

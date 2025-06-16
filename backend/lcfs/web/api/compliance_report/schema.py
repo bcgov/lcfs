@@ -155,6 +155,7 @@ class ChainedComplianceReportSchema(BaseSchema):
     report: ComplianceReportBaseSchema
     chain: Optional[List[ComplianceReportBaseSchema]] = []
     is_newest: bool
+    had_been_assessed: Optional[bool] = False
 
 
 class ComplianceReportCreateSchema(BaseSchema):
@@ -264,12 +265,47 @@ FUEL_SUPPLY_COLUMNS = [
     ExportColumn("Energy content"),
 ]
 
+# Quarterly column definitions for early issuance reports
+FUEL_SUPPLY_QUARTERLY_COLUMNS = [
+    ExportColumn("Compliance Units"),
+    ExportColumn("Fuel type"),
+    ExportColumn("Fuel type Other"),
+    ExportColumn("Fuel category"),
+    ExportColumn("End use"),
+    ExportColumn("Determining carbon intensity"),
+    ExportColumn("Fuel code"),
+    ExportColumn("Q1 Quantity"),
+    ExportColumn("Q2 Quantity"),
+    ExportColumn("Q3 Quantity"),
+    ExportColumn("Q4 Quantity"),
+    ExportColumn("Total Quantity"),
+    ExportColumn("Units"),
+    ExportColumn("Target CI"),
+    ExportColumn("RCI"),
+    ExportColumn("UCI"),
+    ExportColumn("Energy density"),
+    ExportColumn("EER"),
+    ExportColumn("Energy content"),
+]
+
 NOTIONAL_TRANSFER_COLUMNS = [
     ExportColumn("Legal name of trading partner"),
     ExportColumn("Address for service"),
     ExportColumn("Fuel category"),
     ExportColumn("Received OR Transferred"),
     ExportColumn("Quantity"),
+]
+
+NOTIONAL_TRANSFER_QUARTERLY_COLUMNS = [
+    ExportColumn("Legal name of trading partner"),
+    ExportColumn("Address for service"),
+    ExportColumn("Fuel category"),
+    ExportColumn("Received OR Transferred"),
+    ExportColumn("Q1 Quantity"),
+    ExportColumn("Q2 Quantity"),
+    ExportColumn("Q3 Quantity"),
+    ExportColumn("Q4 Quantity"),
+    ExportColumn("Total Quantity"),
 ]
 
 OTHER_USES_COLUMNS = [
@@ -316,6 +352,26 @@ ALLOCATION_AGREEMENT_COLUMNS = [
     ExportColumn("Fuel code"),
     ExportColumn("RCI"),
     ExportColumn("Quantity"),
+    ExportColumn("Units"),
+]
+
+ALLOCATION_AGREEMENT_QUARTERLY_COLUMNS = [
+    ExportColumn("Responsibility"),
+    ExportColumn("Legal name of transaction partner"),
+    ExportColumn("Address for service"),
+    ExportColumn("Email"),
+    ExportColumn("Phone"),
+    ExportColumn("Fuel type"),
+    ExportColumn("Fuel type other"),
+    ExportColumn("Fuel category"),
+    ExportColumn("Determining carbon intensity"),
+    ExportColumn("Fuel code"),
+    ExportColumn("RCI"),
+    ExportColumn("Q1 Quantity"),
+    ExportColumn("Q2 Quantity"),
+    ExportColumn("Q3 Quantity"),
+    ExportColumn("Q4 Quantity"),
+    ExportColumn("Total Quantity"),
     ExportColumn("Units"),
 ]
 

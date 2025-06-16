@@ -9,6 +9,40 @@ import { useGetComplianceReportStatuses } from '@/hooks/useComplianceReports'
 
 export const reportsColDefs = (t, isSupplier) => [
   {
+    field: 'status',
+    headerName: t('report:reportColLabels.status'),
+    width: 300,
+    valueGetter: ({ data }) => data.reportStatus || '',
+    filterParams: {
+      textFormatter: (value) => value.replace(/\s+/g, '_').toLowerCase(),
+      textCustomComparator: (filter, value, filterText) => {
+        // Split the filter text by comma and trim each value
+        const filterValues = filterText
+          .split(',')
+          .map((text) => text.trim().replace(/\s+/g, '_').toLowerCase())
+
+        const cleanValue = value.replace(/[\s]+/g, '_').toLowerCase()
+
+        // Return true if the value matches any of the filter values
+        return filterValues.some((filterValue) =>
+          cleanValue.includes(filterValue)
+        )
+      },
+      buttons: ['clear']
+    },
+    cellRenderer: ReportsStatusRenderer,
+    cellRendererParams: {
+      url: ({ data }) => `${data.compliancePeriod}/${data.complianceReportId}`
+    },
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      optionsQuery: useGetComplianceReportStatuses,
+      valueKey: 'status',
+      labelKey: 'status'
+    },
+    suppressFloatingFilterButton: true
+  },
+  {
     field: 'compliancePeriod',
     headerName: t('report:reportColLabels.compliancePeriod'),
     width: 210,
@@ -51,40 +85,6 @@ export const reportsColDefs = (t, isSupplier) => [
       valueKey: 'name',
       labelKey: 'name'
     }
-  },
-  {
-    field: 'status',
-    headerName: t('report:reportColLabels.status'),
-    width: 300,
-    valueGetter: ({ data }) => data.reportStatus || '',
-    filterParams: {
-      textFormatter: (value) => value.replace(/\s+/g, '_').toLowerCase(),
-      textCustomComparator: (filter, value, filterText) => {
-        // Split the filter text by comma and trim each value
-        const filterValues = filterText
-          .split(',')
-          .map((text) => text.trim().replace(/\s+/g, '_').toLowerCase())
-
-        const cleanValue = value.replace(/[\s]+/g, '_').toLowerCase()
-
-        // Return true if the value matches any of the filter values
-        return filterValues.some((filterValue) =>
-          cleanValue.includes(filterValue)
-        )
-      },
-      buttons: ['clear']
-    },
-    cellRenderer: ReportsStatusRenderer,
-    cellRendererParams: {
-      url: ({ data }) => `${data.compliancePeriod}/${data.complianceReportId}`
-    },
-    floatingFilterComponent: BCSelectFloatingFilter,
-    floatingFilterComponentParams: {
-      optionsQuery: useGetComplianceReportStatuses,
-      valueKey: 'status',
-      labelKey: 'status'
-    },
-    suppressFloatingFilterButton: true
   },
   {
     field: 'updateDate',

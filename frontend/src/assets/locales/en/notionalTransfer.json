@@ -47,5 +47,6 @@
   "validateMsg": {
     "isRequired": "{{field}} is required",
     "nonNegative": "Quantity must be a non-negative number"
-  }
+  },
+  "scheduleUpdated": "Notional transfers schedule updated successfully"
 }
