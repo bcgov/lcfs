@@ -352,9 +352,16 @@ export const AddEditOtherUses = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'otherUses',
+          message: t('otherUses:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   const columnDefs = useMemo(
     () => otherUsesColDefs(optionsData, errors, warnings, isSupplemental),
