@@ -678,7 +678,7 @@ export const fuelSupplyColDefs = (
   return baseColumns
 }
 
-export const fuelSupplySummaryColDef = (isEarlyIssuance) => {
+export const fuelSupplySummaryColDef = (isEarlyIssuance, showFuelTypeOther) => {
   const baseColumns = [
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.complianceUnits'),
@@ -689,6 +689,11 @@ export const fuelSupplySummaryColDef = (isEarlyIssuance) => {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelType'),
       field: 'fuelType',
       valueGetter: (params) => params.data.fuelType
+    },
+    {
+      field: 'fuelTypeOther',
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelTypeOther'),
+      hide: !showFuelTypeOther
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCategoryId'),
@@ -735,7 +740,18 @@ export const fuelSupplySummaryColDef = (isEarlyIssuance) => {
     },
     {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.energyDensity'),
-      field: 'energyDensity'
+      field: 'energyDensity',
+      valueGetter: (params) => {
+        if (isFuelTypeOther(params)) {
+          return params.data?.energyDensity
+            ? params.data?.energyDensity + ' MJ/' + params.data?.units
+            : 0
+        } else {
+          return params.data?.energyDensity
+            ? params.data?.energyDensity + ' MJ/' + params.data?.units
+            : ''
+        }
+      }
     },
     { headerName: i18n.t('fuelSupply:fuelSupplyColLabels.eer'), field: 'eer' },
     {

@@ -1,10 +1,31 @@
 import { numberFormatter } from '@/utils/formatters'
-import { LinkRenderer, OrgStatusRenderer } from '@/utils/grid/cellRenderers'
+import {
+  LinkRenderer,
+  OrgStatusRenderer,
+  YesNoTextRenderer
+} from '@/utils/grid/cellRenderers'
 import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
 import { useOrganizationStatuses } from '@/hooks/useOrganizations'
 import { usersColumnDefs } from '@/views/Admin/AdminMenu/components/_schema'
 
 export const organizationsColDefs = (t) => [
+  {
+    colId: 'status',
+    field: 'status',
+    headerName: t('org:orgColLabels.status'),
+    width: 300,
+    valueGetter: (params) => params.data.orgStatus.status,
+    cellRenderer: OrgStatusRenderer,
+    cellClass: 'vertical-middle',
+    filter: true,
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'status',
+      labelKey: 'status',
+      optionsQuery: useOrganizationStatuses
+    },
+    suppressFloatingFilterButton: true
+  },
   {
     colId: 'name',
     field: 'name',
@@ -12,6 +33,35 @@ export const organizationsColDefs = (t) => [
     cellRenderer: LinkRenderer,
     minWidth: 400,
     flex: 1
+  },
+  {
+    colId: 'hasEarlyIssuance',
+    field: 'hasEarlyIssuance',
+    headerName: t('org:orgColLabels.earlyIssuance'),
+    width: 200,
+    valueGetter: (params) => params.data.hasEarlyIssuance,
+    cellRenderer: YesNoTextRenderer,
+    cellClass: 'vertical-middle',
+    filter: true,
+    sortable: true,
+    filterParams: {
+      textMatcher: () => {
+        return true
+      }
+    },
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'value',
+      labelKey: 'label',
+      optionsQuery: () => ({
+        data: [
+          { value: true, label: 'Yes' },
+          { value: false, label: 'No' }
+        ],
+        isLoading: false
+      })
+    },
+    suppressFloatingFilterButton: true
   },
   {
     colId: 'complianceUnits',
@@ -34,23 +84,6 @@ export const organizationsColDefs = (t) => [
     cellRenderer: LinkRenderer,
     filter: false,
     sortable: false
-  },
-  {
-    colId: 'status',
-    field: 'status',
-    headerName: t('org:orgColLabels.status'),
-    width: 300,
-    valueGetter: (params) => params.data.orgStatus.status,
-    cellRenderer: OrgStatusRenderer,
-    cellClass: 'vertical-middle',
-    filter: true,
-    floatingFilterComponent: BCSelectFloatingFilter,
-    floatingFilterComponentParams: {
-      valueKey: 'status',
-      labelKey: 'status',
-      optionsQuery: useOrganizationStatuses
-    },
-    suppressFloatingFilterButton: true
   }
 ]
 

@@ -30,7 +30,11 @@ export const LinkRenderer = (props) => {
     baseUrl +
     ((props.url && props.url({ data: props.data })) || props?.node?.id)
   return (
-    <Link to={targetUrl} style={{ color: '#000' }}>
+    <Link
+      to={targetUrl}
+      state={props.state && props.state(props.data)}
+      style={{ color: '#000' }}
+    >
       <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
         {props.valueFormatted || props.value}
       </BCBox>
@@ -206,6 +210,13 @@ export const OrgStatusRenderer = (props) => {
     </Link>
   )
 }
+
+export const YesNoTextRenderer = (props) => (
+  <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
+    {props.value ? 'Yes' : 'No'}
+  </BCBox>
+)
+
 export const FuelCodeStatusRenderer = (props) => {
   const location = useLocation()
   const statusArr = getAllFuelCodeStatuses()

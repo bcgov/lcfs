@@ -94,6 +94,10 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
     }
   }, [data?.fuelSupplies, paginationOptions])
 
+  const showFuelTypeOther = paginatedData.data.fuelSupplies.some(
+    (item) => item.fuelType === 'Other'
+  )
+
   const gridOptions = useMemo(
     () => ({
       overlayNoRowsTemplate: t('fuelSupply:noFuelSuppliesFound'),
@@ -135,7 +139,10 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
         <BCGridViewer
           gridKey="fuel-supplies"
           gridRef={gridRef}
-          columnDefs={fuelSupplySummaryColDef(isEarlyIssuance)}
+          columnDefs={fuelSupplySummaryColDef(
+            isEarlyIssuance,
+            showFuelTypeOther
+          )}
           queryData={paginatedData}
           dataKey="fuelSupplies"
           getRowId={getRowId}

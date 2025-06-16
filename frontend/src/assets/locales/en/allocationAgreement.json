@@ -31,5 +31,6 @@
     "fuelTypeOther": "Fuel type other",
     "provisionOfTheAct": "Determining Carbon Intensity",
     "energyDensity": "Energy Density"
-  }
+  },
+  "scheduleUpdated": "Allocation agreements schedule updated successfully"
 }
