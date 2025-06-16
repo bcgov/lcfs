@@ -148,7 +148,7 @@ jobs:
           include-hidden-files: true
           retention-days: 1
 
-  merge-reports:
+  post-frontend-tests:
     if: ${{ !cancelled() }}
     needs: [frontend-tests]
 
@@ -187,16 +187,16 @@ jobs:
           fail_on: 'errors'
           report_individual_runs: 'true'
           deduplicate_classes_by_file_name: 'true'
-          
+
   teams-notification:
-    needs: [backend-tests, merge-reports]
+    needs: [backend-tests, post-frontend-tests]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Determine Test Status
         id: test_status
         run: |
-          if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.merge-reports.result, 'failure') }}" == "true" ]]; then
+          if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.post-frontend-tests.result, 'failure') }}" == "true" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "theme_color=FF0000" >> $GITHUB_OUTPUT
           else
@@ -216,7 +216,7 @@ jobs:
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.merge-reports.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
+          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
 
           COLOR="${{ steps.test_status.outputs.theme_color }}"
 
