@@ -15,7 +15,6 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelExportColDefs } from './_schema'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 
 export const AddEditFuelExports = () => {
@@ -57,8 +56,7 @@ export const AddEditFuelExports = () => {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
-      },
-      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
+      }
     }),
     [isSupplemental, t]
   )
@@ -304,9 +302,16 @@ export const AddEditFuelExports = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'fuelExports',
+          message: t('fuelExport:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   return (
     isFetched &&

@@ -166,7 +166,7 @@ class ComplianceReportRepository:
         self, organization_id: int, period: int
     ):
         """
-        Identify and retrieve the compliance report of an organization for the given compliance period
+        Identify and retrieve the latest assessed compliance report of an organization for the given compliance period
         """
         result = (
             (
@@ -206,11 +206,12 @@ class ComplianceReportRepository:
                             == ComplianceReportStatusEnum.Assessed,
                         )
                     )
+                    .order_by(ComplianceReport.version.desc())
                 )
             )
             .unique()
             .scalars()
-            .first()
+            .first()  # Gets the latest assessed report
         )
         return result
 
