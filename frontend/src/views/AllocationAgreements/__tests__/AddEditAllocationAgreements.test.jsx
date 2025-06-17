@@ -63,6 +63,15 @@ vi.mock('@/constants/config', () => ({
   isFeatureEnabled: vi.fn()
 }))
 
+
+vi.mock('@/constants/common', () => ({
+  REPORT_SCHEDULES: {
+    QUARTERLY: 'QUARTERLY',
+    ANNUAL: 'ANNUAL'
+  },
+  DEFAULT_CI_FUEL: {}
+}))
+
 vi.mock('@/services/useApiService', () => ({
   useApiService: () => ({
     download: vi.fn()
@@ -94,10 +103,6 @@ vi.mock('@/routes/routes', () => ({
     (route, params) =>
       `/reports/view/${params.compliancePeriod}/${params.complianceReportId}`
   )
-}))
-
-vi.mock('@/constants/common', () => ({
-  DEFAULT_CI_FUEL: {}
 }))
 
 vi.mock('@/constants/routes/apiRoutes', () => ({
