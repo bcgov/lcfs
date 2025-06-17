@@ -99,6 +99,9 @@ const globals = {
       "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
     '--ag-row-hover-color': rgba(background.secondary, 1)
   },
+  '.bc-grid-container': {
+    width: '100%'
+  },
   '.bc-grid-container .ag-grid-pagination-container': {
     border: 'none',
     borderBottom: `1px solid ${grey[700]}`,
