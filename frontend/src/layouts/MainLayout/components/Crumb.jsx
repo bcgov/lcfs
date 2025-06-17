@@ -17,7 +17,9 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
     fontWeight: theme.typography.fontWeightRegular,
     fontSize: theme.typography.pxToRem(16),
     borderRadius: theme.borders.borderRadius.xl,
-    padding: theme.spacing(1.8, 1),
+    '& span': {
+      padding: 0
+    },
     '&:hover, &:focus': {
       // backgroundColor: emphasize(backgroundColor, 0.06)
     },
@@ -63,7 +65,7 @@ const Crumb = () => {
           <NavigateNextIcon fontSize="small" aria-label="breadcrumb" />
         }
         sx={{
-          '& li': { marginX: '-2px' },
+          '& li': { marginX: 0 },
           '&>ol': { gap: 2 }
         }}
       >
@@ -78,6 +80,9 @@ const Crumb = () => {
               '& .MuiChip-label': {
                 color: 'link.main',
                 overflow: 'initial',
+                padding: 0
+              },
+              '& span': {
                 padding: 0
               },
               '& span:hover': {
@@ -129,6 +134,7 @@ const Crumb = () => {
                   displayName
                 }
                 sx={{
+                  padding: 0,
                   cursor: 'pointer',
                   '& .MuiChip-label': {
                     color: 'link.main',

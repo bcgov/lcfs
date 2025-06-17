@@ -546,7 +546,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   return (
     <>
       <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
-      <BCBox pl={2} pr={2}>
+      <BCBox>
         <BCModal
           open={!!modalData}
           onClose={() => setModalData(null)}
