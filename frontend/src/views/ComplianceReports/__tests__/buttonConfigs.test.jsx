@@ -1,394 +1,596 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { DateTime } from 'luxon'
 import { buttonClusterConfigFn } from '../buttonConfigs'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { roles } from '@/constants/roles'
 
-// Mock t function
-const t = (key) => key
-
-// Mock functions/props
-const mockSetModalData = vi.fn()
-const mockUpdateComplianceReport = vi.fn()
-const mockCreateIdirSupplementalReport = vi.fn()
-const mockDeleteComplianceReport = vi.fn()
-const mockCreateSupplementalReport = vi.fn()
-const mockCreateAnalystAdjustment = vi.fn()
-const mockCurrentUser = {
-  /* mock user structure if needed */
-}
-
-const baseProps = {
-  t,
-  setModalData: mockSetModalData,
-  updateComplianceReport: mockUpdateComplianceReport,
-  deleteComplianceReport: mockDeleteComplianceReport,
-  createSupplementalReport: mockCreateSupplementalReport,
-  createAnalystAdjustment: mockCreateAnalystAdjustment,
-  createIdirSupplementalReport: mockCreateIdirSupplementalReport,
-  compliancePeriod: '2023',
-  isGovernmentUser: false,
-  isSigningAuthorityDeclared: true,
-  supplementalInitiator: null,
-  hasDraftSupplemental: false,
-  currentUser: mockCurrentUser,
-  isSupplemental: false
-  // Add other props used by the function as needed
-}
-
 describe('buttonClusterConfigFn', () => {
-  // Example test - expand this
-  it('should return submit button for Draft status and Signing Authority', () => {
-    const props = {
-      ...baseProps,
-      hasRoles: (role) => role === roles.signing_authority
-    }
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
-    expect(buttons).toBeDefined()
-    expect(buttons.length).toBeGreaterThan(0)
-    expect(buttons[0].label).toBe('report:actionBtns.submitReportBtn')
-    // Add more assertions for other scenarios
-  })
+  let mockContext
 
-  // Add tests for IDIR supplemental logic here
-  it('shows recommend and returnToSupplier for Submitted (Analyst, no draft, reportVersion 0, before deadline)', () => {
-    // Set date to before March 31st of next year
-    vi.setSystemTime(new Date(2024, 1, 15)) // Feb 15, 2024 for compliancePeriod 2023
+  beforeEach(() => {
+    // Reset mock context before each test
+    mockContext = {
+      // Mock translation function
+      t: vi.fn((key) => key),
 
-    const props = {
-      ...baseProps,
-      isGovernmentUser: true,
-      hasRoles: (role) => role === roles.analyst,
+      // Mock role checking functions
+      hasAnyRole: vi.fn(),
+      hasRoles: vi.fn(),
+
+      // Mock handlers
+      setModalData: vi.fn(),
+      updateComplianceReport: vi.fn(),
+      deleteComplianceReport: vi.fn(),
+      createSupplementalReport: vi.fn(),
+      createIdirSupplementalReport: vi.fn(),
+      createAnalystAdjustment: vi.fn(),
+
+      // Default report properties
+      currentStatus: COMPLIANCE_REPORT_STATUSES.DRAFT,
+      isSigningAuthorityDeclared: true,
       hasDraftSupplemental: false,
-      reportVersion: 0
+      isEarlyIssuance: false,
+      hadBeenAssessed: false,
+      isAnalystAdjustment: false,
+      isOriginalReport: true,
+      reportVersion: 0,
+      compliancePeriod: '2024'
     }
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    expect(buttons).toBeDefined()
-    expect(buttons.length).toBe(2)
-    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
-    expect(buttons[0].disabled).toBe(false)
-    expect(buttons[1].label).toBe('report:actionBtns.returnToSupplier')
-    expect(buttons[1].disabled).toBe(false)
-
-    const createSupplementalButton = buttons.find(
-      (b) => b.id === 'create-idir-supplemental-report-btn'
-    )
-    expect(createSupplementalButton).toBeUndefined()
-
-    vi.useRealTimers() // Reset time
   })
 
-  it('shows recommend and createIdirSupplemental for Submitted (Analyst, no draft, reportVersion 0, after deadline)', () => {
-    // Set date to after March 31st of next year
-    vi.setSystemTime(new Date(2024, 3, 15)) // April 15, 2024 for compliancePeriod 2023
+  // =============================================================================
+  // USER TYPE DETECTION TESTS
+  // =============================================================================
 
-    const props = {
-      ...baseProps,
-      isGovernmentUser: true,
-      hasRoles: (role) => role === roles.analyst,
-      hasDraftSupplemental: false,
-      reportVersion: 0
-    }
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    expect(buttons).toBeDefined()
-    expect(buttons.length).toBe(2)
-    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
-    expect(buttons[0].disabled).toBe(false)
-    expect(buttons[1].label).toBe(
-      'report:actionBtns.createSupplementalReportBtn'
-    )
-    expect(buttons[1].disabled).toBe(false)
+  describe('User Type Detection', () => {
+    it('should identify BCEID_USER correctly', () => {
+      mockContext.hasAnyRole = vi.fn(() => false) // Not government user
+      mockContext.hasRoles = vi.fn(() => false) // Not signing authority
 
-    const returnButton = buttons.find(
-      (b) => b.id === 'return-report-supplier-btn'
-    )
-    expect(returnButton).toBeUndefined()
+      const result = buttonClusterConfigFn(mockContext)
 
-    vi.useRealTimers() // Reset time
-  })
-
-  it('disables Analyst actions for Submitted (reportVersion 0, before deadline) if draft exists', () => {
-    vi.setSystemTime(new Date(2024, 1, 15)) // Feb 15, 2024
-
-    const props = {
-      ...baseProps,
-      isGovernmentUser: true,
-      hasRoles: (role) => role === roles.analyst,
-      hasDraftSupplemental: true, // Draft exists
-      reportVersion: 0
-    }
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    expect(buttons).toBeDefined()
-    expect(buttons.length).toBe(2)
-    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
-    expect(buttons[0].disabled).toBe(true)
-    expect(buttons[1].label).toBe('report:actionBtns.returnToSupplier')
-    expect(buttons[1].disabled).toBe(true)
-
-    vi.useRealTimers()
-  })
-
-  it('disables Analyst actions for Submitted (reportVersion 0, after deadline) if draft exists', () => {
-    vi.setSystemTime(new Date(2024, 3, 15)) // April 15, 2024
-
-    const props = {
-      ...baseProps,
-      isGovernmentUser: true,
-      hasRoles: (role) => role === roles.analyst,
-      hasDraftSupplemental: true, // Draft exists
-      reportVersion: 0
-    }
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    expect(buttons).toBeDefined()
-    expect(buttons.length).toBe(2)
-    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
-    expect(buttons[0].disabled).toBe(true)
-    expect(buttons[1].label).toBe(
-      'report:actionBtns.createSupplementalReportBtn'
-    )
-    expect(buttons[1].disabled).toBe(true)
-
-    vi.useRealTimers()
-  })
-
-  it('disables Analyst actions for Submitted (reportVersion > 0) if draft exists', () => {
-    const props = {
-      ...baseProps,
-      isGovernmentUser: true,
-      hasRoles: (role) => role === roles.analyst,
-      hasDraftSupplemental: true, // Draft exists
-      reportVersion: 1 // Is a supplemental report
-    }
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    expect(buttons).toBeDefined()
-    expect(buttons.length).toBe(2)
-    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
-    expect(buttons[0].disabled).toBe(true)
-    expect(buttons[1].label).toBe('report:actionBtns.returnToSupplier')
-    expect(buttons[1].disabled).toBe(true)
-  })
-
-  it('shows enabled Analyst actions for Submitted (reportVersion > 0) if NO draft exists', () => {
-    const props = {
-      ...baseProps,
-      isGovernmentUser: true,
-      hasRoles: (role) => role === roles.analyst,
-      hasDraftSupplemental: false, // NO Draft exists
-      reportVersion: 1 // Is a supplemental report
-    }
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    expect(buttons).toBeDefined()
-    expect(buttons.length).toBe(2)
-    expect(buttons[0].label).toBe('report:actionBtns.recommendReportAnalystBtn')
-    expect(buttons[0].disabled).toBe(false) // Should be enabled
-    expect(buttons[1].label).toBe(
-      'report:actionBtns.returnToSupplier' // Changed from createSupplementalReportBtn
-    )
-    expect(buttons[1].disabled).toBe(false) // Should be enabled
-
-    // Verify no Create IDIR Supplemental Report button is present for this case
-    const createSupplementalButton = buttons.find(
-      (b) => b.id === 'create-idir-supplemental-report-btn'
-    )
-    expect(createSupplementalButton).toBeUndefined()
-  })
-
-  it('should disable Manager/Director actions when draft supplemental exists', () => {
-    const props = {
-      ...baseProps,
-      isGovernmentUser: true,
-      hasRoles: (role) => role === roles.compliance_manager, // Example: Manager
-      hasDraftSupplemental: true // Draft exists
-    }
-    // Test Recommended by Analyst status
-    let config = buttonClusterConfigFn(props)
-    let buttons = config[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]
-    expect(buttons[0].disabled).toBe(true) // Recommend Manager disabled
-    expect(buttons[1].disabled).toBe(true) // Return Analyst disabled
-
-    // Test Recommended by Manager status (need Director role)
-    props.hasRoles = (role) => role === roles.director
-    config = buttonClusterConfigFn(props)
-    buttons = config[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]
-    expect(buttons[0].disabled).toBe(true) // Assess disabled
-    expect(buttons[1].disabled).toBe(true) // Return Manager disabled
-
-    // Verify no Return to Supplier button
-    const returnButton = buttons.find(
-      (b) => b.id === 'return-report-supplier-btn'
-    )
-    expect(returnButton).toBeUndefined()
-  })
-
-  const findReturnToSupplierButton = (buttons) => {
-    return buttons?.find((b) => b.id === 'return-report-supplier-btn')
-  }
-
-  it('should show return to supplier button for Analyst role with reportVersion 0 before deadline', () => {
-    // Set date to before March 31st of next year
-    vi.setSystemTime(new Date(2024, 1, 15)) // Feb 15, 2024
-
-    const props = {
-      ...baseProps,
-      hasRoles: (role) => role === roles.analyst,
-      isGovernmentUser: true,
-      reportVersion: 0
-    }
-
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    const returnButton = findReturnToSupplierButton(buttons)
-
-    expect(returnButton).toBeDefined()
-    expect(returnButton.label).toBe('report:actionBtns.returnToSupplier')
-    expect(returnButton.disabled).toBe(false)
-  })
-
-  it('should not show return to supplier button for Analyst role with reportVersion 0 after deadline', () => {
-    // Set date to after March 31st of next year
-    vi.setSystemTime(new Date(2024, 4, 1)) // May 1, 2024
-
-    const props = {
-      ...baseProps,
-      hasRoles: (role) => role === roles.analyst,
-      isGovernmentUser: true,
-      reportVersion: 0
-    }
-
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    const returnButton = findReturnToSupplierButton(buttons)
-
-    expect(returnButton).toBeUndefined()
-  })
-
-  it('should show return to supplier button for supplemental reports even if past deadline', () => {
-    // Set date to after March 31st of next year
-    vi.setSystemTime(new Date(2024, 4, 1)) // May 1, 2024
-    const props = {
-      ...baseProps,
-      hasRoles: (role) => role === roles.analyst,
-      isGovernmentUser: true,
-      reportVersion: 1,
-      isSupplemental: true
-    }
-
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.SUBMITTED]
-    const returnButton = findReturnToSupplierButton(buttons)
-
-    expect(returnButton).toBeDefined()
-    expect(returnButton.label).toBe('report:actionBtns.returnToSupplier')
-    expect(returnButton.disabled).toBe(false)
-  })
-
-  it('should display assessment button for Director in Recommended by analyst status', () => {
-    const props = {
-      ...baseProps,
-      isGovernmentUser: true,
-      hasRoles: (role) => role === roles.director,
-      hasDraftSupplemental: false
-    }
-
-    // Test Recommended by Analyst status with Director role
-    const config = buttonClusterConfigFn(props)
-    const buttons = config[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]
-
-    // We should see the Director buttons (after the Manager buttons)
-    expect(buttons.length).toBe(2)
-    expect(buttons[0].id).toBe('assess-report-btn')
-    expect(buttons[0].label).toBe('report:actionBtns.assessReportBtn')
-    expect(buttons[0].disabled).toBe(false)
-
-    expect(buttons[1].id).toBe('return-report-manager-btn')
-    expect(buttons[1].label).toBe('report:actionBtns.returnToAnalyst')
-    expect(buttons[1].disabled).toBe(false)
-  })
-
-  // Tests for Government Adjustment draft delete button fix (Issue #2784)
-  describe('Draft status Government Adjustment delete button', () => {
-    it('shows delete button for Government Adjustments in draft mode for analysts', () => {
-      const props = {
-        ...baseProps,
-        isGovernmentUser: true,
-        hasRoles: (role) => role === roles.analyst,
-        supplementalInitiator: 'Government Reassessment'
-      }
-      const config = buttonClusterConfigFn(props)
-      const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
-
-      expect(buttons).toBeDefined()
-      expect(buttons.length).toBe(1)
-      expect(buttons[0].label).toBe(
-        'report:actionBtns.deleteAnalystAdjustmentBtn'
+      // BCeID user in draft status should only see deleteDraft button
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT]).toHaveLength(1)
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT][0].id).toBe(
+        'delete-draft-btn'
       )
-      expect(buttons[0].id).toBe('delete-compliance-report-btn')
     })
 
-    it('shows no buttons for regular supplemental reports in draft mode for analysts', () => {
-      const props = {
-        ...baseProps,
-        isGovernmentUser: true,
-        hasRoles: (role) => role === roles.analyst,
-        supplementalInitiator: 'Supplier Supplemental'
-      }
-      const config = buttonClusterConfigFn(props)
-      const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
+    it('should identify BCEID_SIGNER correctly', () => {
+      mockContext.hasAnyRole = vi.fn(() => false) // Not government user
+      mockContext.hasRoles = vi.fn((role) => role === roles.signing_authority)
 
-      expect(buttons).toBeDefined()
-      expect(buttons.length).toBe(0)
-    })
+      const result = buttonClusterConfigFn(mockContext)
 
-    it('shows no buttons for draft reports with no supplemental initiator for analysts', () => {
-      const props = {
-        ...baseProps,
-        isGovernmentUser: true,
-        hasRoles: (role) => role === roles.analyst,
-        supplementalInitiator: null
-      }
-      const config = buttonClusterConfigFn(props)
-      const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
-
-      expect(buttons).toBeDefined()
-      expect(buttons.length).toBe(0)
-    })
-
-    it('shows no buttons for Government Adjustments in draft mode for non-analyst government users', () => {
-      const props = {
-        ...baseProps,
-        isGovernmentUser: true,
-        hasRoles: (role) => role === roles.compliance_manager, // Not analyst
-        supplementalInitiator: 'Government Reassessment'
-      }
-      const config = buttonClusterConfigFn(props)
-      const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
-
-      expect(buttons).toBeDefined()
-      expect(buttons.length).toBe(0)
-    })
-
-    it('shows submit and delete buttons for suppliers with supplemental reports in draft mode', () => {
-      const props = {
-        ...baseProps,
-        isGovernmentUser: false,
-        hasRoles: (role) => role === roles.signing_authority,
-        supplementalInitiator: 'Supplier Supplemental'
-      }
-      const config = buttonClusterConfigFn(props)
-      const buttons = config[COMPLIANCE_REPORT_STATUSES.DRAFT]
-
-      expect(buttons).toBeDefined()
-      expect(buttons.length).toBe(2)
-      expect(buttons[0].label).toBe('report:actionBtns.submitReportBtn')
-      expect(buttons[1].label).toBe(
-        'report:actionBtns.deleteSupplementalReportBtn'
+      // BCeID signer in draft status should see submitReport and deleteDraft
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT]).toHaveLength(2)
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.DRAFT].map(
+        (btn) => btn.id
       )
+      expect(buttonIds).toContain('submit-report-btn')
+      expect(buttonIds).toContain('delete-draft-btn')
+    })
+
+    it('should identify IDIR_MANAGER correctly', () => {
+      mockContext.hasAnyRole = vi.fn(() => true) // Government user
+      mockContext.hasRoles = vi.fn((role) => role === roles.compliance_manager)
+      mockContext.currentStatus =
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      // Manager should see manager actions
+      expect(
+        result[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]
+      ).toHaveLength(2)
+      const buttonIds = result[
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+      ].map((btn) => btn.id)
+      expect(buttonIds).toContain('recommend-by-manager-btn')
+      expect(buttonIds).toContain('return-to-analyst-btn')
+    })
+
+    it('should identify IDIR_DIRECTOR correctly', () => {
+      mockContext.hasAnyRole = vi.fn(() => true) // Government user
+      mockContext.hasRoles = vi.fn((role) => role === roles.director)
+      mockContext.currentStatus =
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      // Director should see director actions
+      expect(
+        result[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]
+      ).toHaveLength(2)
+      const buttonIds = result[
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+      ].map((btn) => btn.id)
+      expect(buttonIds).toContain('issue-assessment-btn')
+      expect(buttonIds).toContain('return-to-manager-btn')
+    })
+  })
+
+  // =============================================================================
+  // BUTTON CONFIGURATION BY STATUS TESTS
+  // =============================================================================
+
+  describe('Draft Status', () => {
+    beforeEach(() => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.DRAFT
+    })
+
+    it('should show correct buttons for BCeID user in draft', () => {
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn(() => false)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT]).toHaveLength(1)
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT][0].id).toBe(
+        'delete-draft-btn'
+      )
+    })
+
+    it('should show correct buttons for BCeID signer in draft', () => {
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn((role) => role === roles.signing_authority)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT]).toHaveLength(2)
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.DRAFT].map(
+        (btn) => btn.id
+      )
+      expect(buttonIds).toContain('submit-report-btn')
+      expect(buttonIds).toContain('delete-draft-btn')
+    })
+
+    it('should disable submit button when signing authority not declared', () => {
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn((role) => role === roles.signing_authority)
+      mockContext.isSigningAuthorityDeclared = false
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      const submitButton = result[COMPLIANCE_REPORT_STATUSES.DRAFT].find(
+        (btn) => btn.id === 'submit-report-btn'
+      )
+      expect(submitButton.disabled).toBe(true)
+    })
+
+    it('should not show delete draft for IDIR users in draft', () => {
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT]).toHaveLength(0)
+    })
+  })
+
+  describe('Submitted Status', () => {
+    beforeEach(() => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+    })
+
+    it('should show analyst actions for submitted report before March 31 deadline', () => {
+      // Set up scenario: original report before deadline
+      mockContext.isOriginalReport = true
+      mockContext.reportVersion = 0
+      mockContext.compliancePeriod = '2024'
+
+      // Mock current time to be before March 31, 2025 deadline
+      vi.spyOn(DateTime, 'now').mockReturnValue(
+        DateTime.fromObject({
+          year: 2025,
+          month: 2, // February - before March 31
+          day: 15
+        })
+      )
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(result[COMPLIANCE_REPORT_STATUSES.SUBMITTED]).toHaveLength(2)
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].map(
+        (btn) => btn.id
+      )
+      expect(buttonIds).toContain('recommend-by-analyst-btn')
+      expect(buttonIds).toContain('return-to-supplier-btn')
+      expect(buttonIds).not.toContain('create-idir-supplemental-btn')
+    })
+
+    it('should show analyst actions for submitted report after March 31 deadline', () => {
+      // Set up scenario: original report after deadline
+      mockContext.isOriginalReport = true
+      mockContext.reportVersion = 0
+      mockContext.compliancePeriod = '2024'
+
+      // Mock current time to be after March 31, 2025 deadline
+      vi.spyOn(DateTime, 'now').mockReturnValue(
+        DateTime.fromObject({
+          year: 2025,
+          month: 4, // April - after March 31
+          day: 15
+        })
+      )
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(result[COMPLIANCE_REPORT_STATUSES.SUBMITTED]).toHaveLength(2)
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].map(
+        (btn) => btn.id
+      )
+      expect(buttonIds).toContain('recommend-by-analyst-btn')
+      expect(buttonIds).toContain('create-idir-supplemental-btn')
+      expect(buttonIds).not.toContain('return-to-supplier-btn')
+    })
+
+    it('should not show any buttons for BCeID users in submitted status', () => {
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn(() => false)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(result[COMPLIANCE_REPORT_STATUSES.SUBMITTED]).toHaveLength(0)
+    })
+  })
+
+  describe('Analyst Adjustment Status', () => {
+    beforeEach(() => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+      mockContext.isAnalystAdjustment = true
+    })
+
+    it('should show analyst actions for analyst adjustment', () => {
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(
+        result[COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT]
+      ).toHaveLength(2)
+      const buttonIds = result[
+        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      ].map((btn) => btn.id)
+      expect(buttonIds).toContain('recommend-by-analyst-btn')
+      expect(buttonIds).toContain('delete-analyst-adjustment-btn')
+    })
+  })
+
+  describe('Assessed Status', () => {
+    beforeEach(() => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.ASSESSED
+    })
+
+    it('should show no buttons for assessed status', () => {
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn(() => false)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(result[COMPLIANCE_REPORT_STATUSES.ASSESSED]).toHaveLength(0)
+    })
+  })
+
+  // =============================================================================
+  // CONDITIONAL LOGIC TESTS
+  // =============================================================================
+
+  describe('Delete Draft Conditions', () => {
+    beforeEach(() => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.DRAFT
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn(() => false)
+    })
+
+    it('should hide delete draft for early issuance if had been assessed', () => {
+      mockContext.isEarlyIssuance = true
+      mockContext.hadBeenAssessed = true
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT]).toHaveLength(0)
+    })
+
+    it('should show delete draft for early issuance if not assessed', () => {
+      mockContext.isEarlyIssuance = true
+      mockContext.hadBeenAssessed = false
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT]).toHaveLength(1)
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT][0].id).toBe(
+        'delete-draft-btn'
+      )
+    })
+  })
+
+  describe('Return to Supplier Conditions', () => {
+    beforeEach(() => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+      mockContext.isOriginalReport = true
+      mockContext.reportVersion = 0
+    })
+
+    it('should show return to supplier before March 31 deadline', () => {
+      // Mock current time to be before deadline
+      const pastYear = new Date().getFullYear() - 1
+      mockContext.compliancePeriod = pastYear.toString()
+
+      vi.spyOn(DateTime, 'now').mockReturnValue(
+        DateTime.fromObject({
+          year: pastYear + 1,
+          month: 2, // February - before March 31
+          day: 15
+        })
+      )
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].map(
+        (btn) => btn.id
+      )
+      expect(buttonIds).toContain('return-to-supplier-btn')
+      expect(buttonIds).not.toContain('create-idir-supplemental-btn')
+    })
+
+    it('should hide return to supplier after March 31 deadline', () => {
+      // Mock current time to be after deadline
+      const pastYear = new Date().getFullYear() - 1
+      mockContext.compliancePeriod = pastYear.toString()
+
+      vi.spyOn(DateTime, 'now').mockReturnValue(
+        DateTime.fromObject({
+          year: pastYear + 1,
+          month: 4, // April - after March 31
+          day: 15
+        })
+      )
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].map(
+        (btn) => btn.id
+      )
+      expect(buttonIds).not.toContain('return-to-supplier-btn')
+      expect(buttonIds).toContain('create-idir-supplemental-btn')
+    })
+  })
+
+  describe('IDIR Supplemental Conditions', () => {
+    beforeEach(() => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+      mockContext.isOriginalReport = true
+      mockContext.reportVersion = 0
+    })
+
+    it('should show create IDIR supplemental after March 31 deadline', () => {
+      const pastYear = new Date().getFullYear() - 1
+      mockContext.compliancePeriod = pastYear.toString()
+
+      vi.spyOn(DateTime, 'now').mockReturnValue(
+        DateTime.fromObject({
+          year: pastYear + 1,
+          month: 4, // April - after March 31
+          day: 15
+        })
+      )
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].map(
+        (btn) => btn.id
+      )
+      expect(buttonIds).toContain('create-idir-supplemental-btn')
+    })
+
+    it('should not show create IDIR supplemental for non-original reports', () => {
+      mockContext.isOriginalReport = false
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].map(
+        (btn) => btn.id
+      )
+      expect(buttonIds).not.toContain('create-idir-supplemental-btn')
+    })
+  })
+
+  describe('Analyst Adjustment Delete Conditions', () => {
+    beforeEach(() => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+    })
+
+    it('should show delete analyst adjustment when isAnalystAdjustment is true', () => {
+      mockContext.isAnalystAdjustment = true
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      const buttonIds = result[
+        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      ].map((btn) => btn.id)
+      expect(buttonIds).toContain('delete-analyst-adjustment-btn')
+    })
+
+    it('should hide delete analyst adjustment when isAnalystAdjustment is false', () => {
+      mockContext.isAnalystAdjustment = false
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      const buttonIds = result[
+        COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT
+      ].map((btn) => btn.id)
+      expect(buttonIds).not.toContain('delete-analyst-adjustment-btn')
+    })
+  })
+
+  // =============================================================================
+  // BUTTON PROPERTY TESTS
+  // =============================================================================
+
+  describe('Button Properties', () => {
+    beforeEach(() => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.DRAFT
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn((role) => role === roles.signing_authority)
+    })
+
+    it('should create buttons with correct properties', () => {
+      const result = buttonClusterConfigFn(mockContext)
+
+      const submitButton = result[COMPLIANCE_REPORT_STATUSES.DRAFT].find(
+        (btn) => btn.id === 'submit-report-btn'
+      )
+
+      expect(submitButton).toMatchObject({
+        variant: 'contained',
+        color: 'primary',
+        id: 'submit-report-btn',
+        label: 'report:actionBtns.submitReportBtn',
+        disabled: false
+      })
+      expect(submitButton.handler).toBeInstanceOf(Function)
+    })
+
+    it('should disable buttons based on conditions', () => {
+      mockContext.hasDraftSupplemental = true
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      const recommendButton = result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].find(
+        (btn) => btn.id === 'recommend-by-analyst-btn'
+      )
+      expect(recommendButton.disabled).toBe(true)
+    })
+  })
+
+  // =============================================================================
+  // BUTTON HANDLER TESTS
+  // =============================================================================
+
+  describe('Button Handlers', () => {
+    beforeEach(() => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.DRAFT
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn((role) => role === roles.signing_authority)
+    })
+
+    it('should call setModalData when button handler is executed', () => {
+      const result = buttonClusterConfigFn(mockContext)
+
+      const submitButton = result[COMPLIANCE_REPORT_STATUSES.DRAFT].find(
+        (btn) => btn.id === 'submit-report-btn'
+      )
+      const formData = { test: 'data' }
+
+      submitButton.handler(formData)
+
+      expect(mockContext.setModalData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          primaryButtonText: 'report:actionBtns.submitReportBtn',
+          secondaryButtonText: 'cancelBtn',
+          title: 'confirmation',
+          content: 'report:submitConfirmText'
+        })
+      )
+    })
+
+    it('should configure delete button with error color', () => {
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.DRAFT
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn(() => false)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      const deleteButton = result[COMPLIANCE_REPORT_STATUSES.DRAFT].find(
+        (btn) => btn.id === 'delete-draft-btn'
+      )
+
+      expect(deleteButton).toMatchObject({
+        variant: 'outlined',
+        color: 'error',
+        id: 'delete-draft-btn'
+      })
+
+      // Test handler
+      deleteButton.handler({ test: 'data' })
+      expect(mockContext.setModalData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          primaryButtonColor: 'error'
+        })
+      )
+    })
+  })
+
+  // =============================================================================
+  // EDGE CASES AND ERROR HANDLING
+  // =============================================================================
+
+  describe('Edge Cases', () => {
+    it('should handle unknown status gracefully', () => {
+      mockContext.currentStatus = 'UNKNOWN_STATUS'
+      mockContext.hasAnyRole = vi.fn(() => false)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      expect(result.UNKNOWN_STATUS).toEqual([])
+    })
+
+    it('should handle missing button methods gracefully', () => {
+      // This tests the optional chaining in actionFactory[buttonName]?.()
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.DRAFT
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn(() => false)
+
+      // Should not throw error even if a button method doesn't exist
+      expect(() => buttonClusterConfigFn(mockContext)).not.toThrow()
+    })
+  })
+
+  // =============================================================================
+  // INTEGRATION TESTS
+  // =============================================================================
+
+  describe('Integration Tests', () => {
+    it('should handle complex scenario with multiple conditions', () => {
+      // Early issuance, original report, analyst user, before deadline
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+      mockContext.isEarlyIssuance = true
+      mockContext.isOriginalReport = true
+      mockContext.reportVersion = 0
+      mockContext.hadBeenAssessed = false
+      mockContext.compliancePeriod = '2024'
+
+      // Mock to be before deadline
+      vi.spyOn(DateTime, 'now').mockReturnValue(
+        DateTime.fromObject({
+          year: 2025,
+          month: 2,
+          day: 15
+        })
+      )
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].map(
+        (btn) => btn.id
+      )
+      expect(buttonIds).toContain('recommend-by-analyst-btn')
+      expect(buttonIds).toContain('return-to-supplier-btn')
+      expect(buttonIds).not.toContain('create-idir-supplemental-btn')
     })
   })
 })
