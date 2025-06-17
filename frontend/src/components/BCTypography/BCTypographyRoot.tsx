@@ -2,8 +2,20 @@
 import Typography from '@mui/material/Typography'
 import { styled } from '@mui/material/styles'
 
-const BCTypographyRoot = styled(Typography)(({ theme, ownerState }) => {
-  const { palette, typography, functions = {} } = theme
+// Define the ownerState interface for BCTypography
+interface BCTypographyOwnerState {
+  color: string
+  textTransform: string
+  verticalAlign: string
+  fontWeight: string | false
+  opacity: number
+  textGradient: boolean
+}
+
+const BCTypographyRoot = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== 'ownerState'
+})<{ ownerState: BCTypographyOwnerState }>(({ theme, ownerState }) => {
+  const { palette, typography, functions = {} } = theme as any
   const {
     color,
     textTransform,
@@ -13,14 +25,14 @@ const BCTypographyRoot = styled(Typography)(({ theme, ownerState }) => {
     textGradient
   } = ownerState
 
-  const { gradients, transparent, white } = palette
+  const { gradients, transparent, white } = palette as any
   const {
     fontWeightLight,
     fontWeightRegular,
     fontWeightMedium,
     fontWeightBold
   } = typography
-  const { linearGradient } = functions
+  const { linearGradient } = functions as any
 
   // fontWeight styles
   const fontWeights = {
@@ -48,7 +60,9 @@ const BCTypographyRoot = styled(Typography)(({ theme, ownerState }) => {
 
   // color value
   let colorValue =
-    color === 'inherit' || !palette[color] ? 'inherit' : palette[color].main
+    color === 'inherit' || !(palette as any)[color]
+      ? 'inherit'
+      : (palette as any)[color].main
 
   if (color === 'dark') colorValue = white.main
 
@@ -58,8 +72,11 @@ const BCTypographyRoot = styled(Typography)(({ theme, ownerState }) => {
     verticalAlign,
     textDecoration: 'none',
     color: colorValue,
-    fontWeight: fontWeights[fontWeight] && fontWeights[fontWeight],
+    fontWeight:
+      fontWeights[fontWeight as keyof typeof fontWeights] &&
+      fontWeights[fontWeight as keyof typeof fontWeights],
     ...(textGradient && gradientStyles())
-  }
+  } as any
 })
+
 export default BCTypographyRoot
