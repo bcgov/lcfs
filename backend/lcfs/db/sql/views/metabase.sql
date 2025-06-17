@@ -1,22 +1,39 @@
 -- ==========================================
 -- Compliance Reports Analytics View
 -- ==========================================
-drop view if exists vw_compliance_report_analytics_base;
-CREATE OR REPLACE VIEW vw_compliance_report_analytics_base AS
-SELECT
-    *
-FROM (
-    SELECT
-        vcr.*,
-        ROW_NUMBER() OVER (PARTITION BY vcr.compliance_period, vcr.compliance_report_group_uuid, vcr.organization_id ORDER BY vcr.version DESC) AS rn
-    FROM
-        v_compliance_report vcr
-        JOIN compliance_report_status crs ON crs.compliance_report_status_id = vcr.report_status_id
-            AND crs.status NOT IN ('Draft'::compliancereportstatusenum, 'Analyst_adjustment'::compliancereportstatusenum)) ranked_reports
-WHERE
-    rn = 1;
+drop view if exists vw_compliance_report_base;
+CREATE OR REPLACE VIEW vw_compliance_report_base AS
+SELECT compliance_report_id,
+    compliance_report_group_uuid,
+    version,
+    compliance_period_id,
+    compliance_period,
+    organization_id,
+    organization_name,
+    report_type,
+    report_status_id,
+    report_status,
+    update_date,
+    supplemental_initiator,
+    rn
+   FROM ( SELECT vcr.compliance_report_id,
+            vcr.compliance_report_group_uuid,
+            vcr.version,
+            vcr.compliance_period_id,
+            vcr.compliance_period,
+            vcr.organization_id,
+            vcr.organization_name,
+            vcr.report_type,
+            vcr.report_status_id,
+            vcr.report_status,
+            vcr.update_date,
+            vcr.supplemental_initiator,
+            row_number() OVER (PARTITION BY vcr.compliance_period, vcr.compliance_report_group_uuid, vcr.organization_id ORDER BY vcr.version DESC) AS rn
+           FROM v_compliance_report vcr
+             JOIN compliance_report_status crs ON crs.compliance_report_status_id = vcr.report_status_id AND (crs.status <> ALL (ARRAY['Draft'::compliancereportstatusenum, 'Analyst_adjustment'::compliancereportstatusenum]))) ranked_reports
+  WHERE rn = 1;
 
-GRANT SELECT ON vw_compliance_report_analytics_base, compliance_report_history TO basic_lcfs_reporting_role;
+GRANT SELECT ON vw_compliance_report_base, compliance_report_history TO basic_lcfs_reporting_role;
 
 -- ==========================================
 -- Compliance Reports Waiting review
@@ -30,7 +47,7 @@ WITH latest_history AS (
         cr.compliance_report_group_uuid,
         ROW_NUMBER() OVER (PARTITION BY cr.compliance_report_group_uuid ORDER BY crh.create_date DESC) AS rn
     FROM
-        vw_compliance_report_analytics_base cr
+        vw_compliance_report_base cr
         JOIN compliance_report_history crh ON cr.compliance_report_id = crh.compliance_report_id
     WHERE
         crh.status_id != 1
@@ -43,7 +60,7 @@ SELECT
     DATE_PART('epoch', NOW() - lh.create_date) / 86400 AS days_in_status
 FROM
     latest_history lh
-    JOIN vw_compliance_report_analytics_base cr ON cr.compliance_report_id = lh.compliance_report_id
+    JOIN vw_compliance_report_base cr ON cr.compliance_report_id = lh.compliance_report_id
     JOIN compliance_report_status crs ON cr.report_status_id = crs.compliance_report_status_id
     JOIN compliance_period ON compliance_period.compliance_period_id = cr.compliance_period_id
     JOIN organization ON cr.organization_id = organization.organization_id
