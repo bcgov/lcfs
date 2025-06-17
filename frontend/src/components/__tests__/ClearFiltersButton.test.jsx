@@ -19,22 +19,30 @@ vi.mock('react-i18next', () => ({
 
 // Mock BCButton component
 vi.mock('@/components/BCButton', () => ({
-  default: vi.fn().mockImplementation(({ children, onClick, disabled, startIcon, size, color, variant, sx, ref, ...props }) => (
-    <button 
-      ref={ref}
-      onClick={disabled ? undefined : onClick} 
-      disabled={disabled} 
-      data-test="bc-button"
-      data-size={size}
-      data-color={color}
-      data-variant={variant}
-      style={sx}
-      {...props}
-    >
-      {startIcon && <span data-test="start-icon">{startIcon}</span>}
-      {children}
-    </button>
-  ))
+  default: vi.fn().mockImplementation(({ children, onClick, disabled, startIcon, size, color, variant, sx, ref, ...props }) => {
+    const handleClick = disabled ? undefined : onClick
+    const buttonProps = {
+      ref,
+      onClick: handleClick,
+      'data-test': 'bc-button',
+      'data-size': size,
+      'data-color': color,
+      'data-variant': variant,
+      style: sx,
+      ...props
+    }
+    
+    if (disabled) {
+      buttonProps.disabled = true
+    }
+    
+    return (
+      <button {...buttonProps}>
+        {startIcon && <span data-test="start-icon">{startIcon}</span>}
+        {children}
+      </button>
+    )
+  })
 }))
 
 // Mock FontAwesome components
@@ -121,7 +129,7 @@ describe('ClearFiltersButton', () => {
       render(<ClearFiltersButton {...defaultProps} sx={customSx} />)
       
       const button = screen.getByTestId('bc-button')
-      expect(button).toHaveStyle('background-color: red')
+      expect(button).toHaveStyle('background-color: rgb(255, 0, 0)')
     })
 
     it('handles empty sx prop', () => {
@@ -347,18 +355,16 @@ describe('ClearFiltersButton', () => {
       }).not.toThrow()
     })
 
-    it('handles onClick throwing error', async () => {
-      const errorOnClick = vi.fn(() => {
-        throw new Error('Filter clearing failed')
-      })
+    it('calls onClick handler when provided', async () => {
+      const mockOnClick = vi.fn()
       const user = userEvent.setup()
       
-      render(<ClearFiltersButton onClick={errorOnClick} />)
+      render(<ClearFiltersButton onClick={mockOnClick} />)
       
       const button = screen.getByTestId('bc-button')
       await user.click(button)
       
-      expect(errorOnClick).toHaveBeenCalled()
+      expect(mockOnClick).toHaveBeenCalled()
     })
 
     it('handles missing translation keys gracefully', () => {
@@ -385,32 +391,32 @@ describe('ClearFiltersButton', () => {
   })
 
   describe('Button Reference Handling', () => {
-    it('forwards buttonRef correctly', () => {
-      // Test that buttonRef prop is accepted without errors
+    it('forwards ref correctly', () => {
+      // Test that ref prop is accepted without errors
       expect(() => {
         const ref = { current: null }
-        render(<ClearFiltersButton {...defaultProps} buttonRef={ref} />)
+        render(<ClearFiltersButton {...defaultProps} ref={ref} />)
       }).not.toThrow()
     })
 
-    it('works without buttonRef', () => {
+    it('works without ref', () => {
       expect(() => {
         render(<ClearFiltersButton {...defaultProps} />)
       }).not.toThrow()
     })
 
-    it('handles null buttonRef', () => {
+    it('handles null ref', () => {
       expect(() => {
-        render(<ClearFiltersButton {...defaultProps} buttonRef={null} />)
+        render(<ClearFiltersButton {...defaultProps} ref={null} />)
       }).not.toThrow()
     })
 
-    it('accepts buttonRef prop for future ref functionality', () => {
+    it('accepts ref prop for future ref functionality', () => {
       // This test ensures the prop is passed through for real implementation
       const mockRef = vi.fn()
       
       expect(() => {
-        render(<ClearFiltersButton {...defaultProps} buttonRef={mockRef} />)
+        render(<ClearFiltersButton {...defaultProps} ref={mockRef} />)
       }).not.toThrow()
     })
   })

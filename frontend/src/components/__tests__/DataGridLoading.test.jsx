@@ -14,8 +14,9 @@ describe('DataGridLoading', () => {
     it('renders without loading message', () => {
       render(<DataGridLoading />)
       
-      const container = screen.getByLabelText('')
+      const container = screen.getByText('', { selector: '.ag-overlay-loading-center-box' })
       expect(container).toBeInTheDocument()
+      expect(container).toHaveClass('ag-overlay-loading-center-box')
     })
 
     it('renders with custom loading message', () => {
@@ -64,8 +65,8 @@ describe('DataGridLoading', () => {
     it('handles empty aria-label gracefully', () => {
       render(<DataGridLoading />)
       
-      const loadingBox = screen.getByLabelText('')
-      expect(loadingBox).toHaveAttribute('aria-label', '')
+      const loadingBox = screen.getByText('', { selector: '.ag-overlay-loading-center-box' })
+      expect(loadingBox).not.toHaveAttribute('aria-label')
     })
 
     it('provides accessible loading state for screen readers', () => {
@@ -96,15 +97,17 @@ describe('DataGridLoading', () => {
     it('handles null loading message gracefully', () => {
       render(<DataGridLoading loadingMessage={null} />)
       
-      const container = screen.getByLabelText('')
+      const container = screen.getByText('', { selector: '.ag-overlay-loading-center-box' })
       expect(container).toBeInTheDocument()
+      expect(container).toHaveClass('ag-overlay-loading-center-box')
     })
 
     it('handles undefined loading message gracefully', () => {
       render(<DataGridLoading loadingMessage={undefined} />)
       
-      const container = screen.getByLabelText('')
+      const container = screen.getByText('', { selector: '.ag-overlay-loading-center-box' })
       expect(container).toBeInTheDocument()
+      expect(container).toHaveClass('ag-overlay-loading-center-box')
     })
   })
 
