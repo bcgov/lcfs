@@ -94,7 +94,10 @@ const AddEditFuelCodeBase = () => {
         errors,
         !existingFuelCode,
         existingFuelCode?.fuelCodeStatus.status !==
-          FUEL_CODE_STATUSES.APPROVED && hasRoles(roles.analyst)
+          FUEL_CODE_STATUSES.APPROVED &&
+          existingFuelCode?.fuelCodeStatus.status !==
+            FUEL_CODE_STATUSES.RECOMMENDED &&
+          hasRoles(roles.analyst)
       )
       setColumnDefs(updatedColumnDefs)
     }
@@ -447,6 +450,9 @@ const AddEditFuelCodeBase = () => {
               {existingFuelCode?.fuelCodeStatus.status ===
                 FUEL_CODE_STATUSES.DRAFT && t('fuelCode:editFuelCodeTitle')}
               {existingFuelCode?.fuelCodeStatus.status ===
+                FUEL_CODE_STATUSES.RECOMMENDED &&
+                t('fuelCode:viewFuelCodeTitle')}
+              {existingFuelCode?.fuelCodeStatus.status ===
                 FUEL_CODE_STATUSES.APPROVED && t('fuelCode:viewFuelCodeTitle')}
             </BCTypography>
             <BCTypography variant="body2" mt={2} mb={3}>
@@ -471,28 +477,33 @@ const AddEditFuelCodeBase = () => {
             handlePaste={handlePaste}
           />
           {existingFuelCode?.fuelCodeStatus.status !==
-            FUEL_CODE_STATUSES.APPROVED && (
-            <Stack
-              direction={{ md: 'column', lg: 'row' }}
-              spacing={{ xs: 2, sm: 2, md: 3 }}
-              useFlexGap
-              flexWrap="wrap"
-            >
-              <BCButton
-                variant="contained"
-                size="medium"
-                color="primary"
-                startIcon={
-                  <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
-                }
-                onClick={handleOpenApprovalModal}
+            FUEL_CODE_STATUSES.APPROVED &&
+            existingFuelCode?.fuelCodeStatus.status !==
+              FUEL_CODE_STATUSES.RECOMMENDED && (
+              <Stack
+                direction={{ md: 'column', lg: 'row' }}
+                spacing={{ xs: 2, sm: 2, md: 3 }}
+                useFlexGap
+                flexWrap="wrap"
               >
-                <BCTypography variant="subtitle2">
-                  {t('fuelCode:approveFuelCodeBtn')}
-                </BCTypography>
-              </BCButton>
-            </Stack>
-          )}
+                <BCButton
+                  variant="contained"
+                  size="medium"
+                  color="primary"
+                  startIcon={
+                    <FontAwesomeIcon
+                      icon={faFloppyDisk}
+                      className="small-icon"
+                    />
+                  }
+                  onClick={handleOpenApprovalModal}
+                >
+                  <BCTypography variant="subtitle2">
+                    {t('fuelCode:approveFuelCodeBtn')}
+                  </BCTypography>
+                </BCButton>
+              </Stack>
+            )}
         </Grid2>
         <BCModal
           open={!!modalData}
