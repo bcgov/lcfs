@@ -172,7 +172,7 @@ async def get_transactions_paginated_for_org(
     return paginated_transactions
 
 
-@router.get(
+@router.post(
     "/transactions/export",
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
@@ -187,7 +187,9 @@ async def export_transactions_for_org(
     Endpoint to export information of all transactions for a specific organization
     """
     organization_id = request.user.organization.organization_id
-    return await txn_service.export_transactions(format, organization_id)
+    return await txn_service.export_transactions(
+        format, pagination=None, organization_id=organization_id
+    )
 
 
 @router.post(
