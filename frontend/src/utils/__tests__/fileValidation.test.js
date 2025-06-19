@@ -306,6 +306,16 @@ describe('fileValidation', () => {
       expect(SCHEDULE_IMPORT_FILE_TYPES.ACCEPT_STRING).toBe(
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       )
+      expect(SCHEDULE_IMPORT_FILE_TYPES.DESCRIPTION).toBe('Excel files (.xlsx)')
+    })
+
+    it('should include DESCRIPTION in error messages for SCHEDULE_IMPORT_FILE_TYPES', () => {
+      const invalidFile = createMockFile('test.pdf', 'application/pdf')
+      const result = validateFileMimeType(invalidFile, SCHEDULE_IMPORT_FILE_TYPES)
+
+      expect(result.isValid).toBe(false)
+      expect(result.errorMessage).toContain('Excel files (.xlsx)')
+      expect(result.errorMessage).not.toContain('undefined')
     })
 
     it('should generate correct accept strings', () => {
