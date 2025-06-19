@@ -4,6 +4,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useUpdateComplianceReport } from '@/hooks/useComplianceReports'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { useParams } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
 import { describe, beforeEach, test, expect, vi } from 'vitest'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 
@@ -78,6 +79,18 @@ const mockReportData = {
   }
 }
 
+// Test wrapper component that provides form context
+const TestWrapper = ({ children, initialValues = {} }) => {
+  const methods = useForm({
+    defaultValues: {
+      assessmentStatement: '',
+      ...initialValues
+    }
+  })
+
+  return <div>{children({ methods })}</div>
+}
+
 describe('AssessmentStatement Component', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -103,13 +116,21 @@ describe('AssessmentStatement Component', () => {
   })
 
   test('renders without errors', async () => {
-    render(<AssessmentStatement />)
+    render(
+      <TestWrapper>
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
     // Use querySelector directly to handle potential attribute differences
     expect(document.querySelector('[data-testid="bc-box"]')).not.toBeNull()
   })
 
   test('displays the correct headings', async () => {
-    render(<AssessmentStatement />)
+    render(
+      <TestWrapper>
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
 
     // Check for headings
     expect(screen.getByText('Director Statement')).toBeInTheDocument()
@@ -124,7 +145,11 @@ describe('AssessmentStatement Component', () => {
       hasRoles: vi.fn()
     })
 
-    render(<AssessmentStatement />)
+    render(
+      <TestWrapper>
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
 
     // Component should still render but without interactive elements when user is loading
     // Check that the main content is rendered but disabled
@@ -153,7 +178,11 @@ describe('AssessmentStatement Component', () => {
       }
     })
 
-    render(<AssessmentStatement />)
+    render(
+      <TestWrapper>
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
 
     // Check that the input is disabled
     const inputElement = screen.getByRole('textbox')
@@ -184,7 +213,11 @@ describe('AssessmentStatement Component', () => {
       }
     })
 
-    render(<AssessmentStatement />)
+    render(
+      <TestWrapper>
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
 
     // Check that the input is enabled
     const inputElement = screen.getByRole('textbox')
@@ -212,7 +245,13 @@ describe('AssessmentStatement Component', () => {
       }
     })
 
-    render(<AssessmentStatement />)
+    render(
+      <TestWrapper
+        initialValues={{ assessmentStatement: 'Initial assessment' }}
+      >
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
 
     // Find the input field and change its value
     const inputElement = screen.getByRole('textbox')
@@ -237,7 +276,7 @@ describe('AssessmentStatement Component', () => {
     )
   })
 
-  test('displays initial assessment statement from store', async () => {
+  test('displays initial assessment statement from form', async () => {
     useComplianceReportStore.mockReturnValue({
       currentReport: {
         report: {
@@ -247,7 +286,13 @@ describe('AssessmentStatement Component', () => {
       }
     })
 
-    render(<AssessmentStatement />)
+    render(
+      <TestWrapper
+        initialValues={{ assessmentStatement: 'Test initial statement' }}
+      >
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
 
     const inputElement = screen.getByRole('textbox')
     expect(inputElement.value).toBe('Test initial statement')
@@ -275,7 +320,11 @@ describe('AssessmentStatement Component', () => {
       }
     })
 
-    render(<AssessmentStatement />)
+    render(
+      <TestWrapper>
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
 
     // Should be enabled for Compliance Manager with RECOMMENDED_BY_ANALYST status
     const inputElement = screen.getByRole('textbox')
@@ -283,5 +332,55 @@ describe('AssessmentStatement Component', () => {
 
     const saveButton = screen.getByText('Save Statement')
     expect(saveButton).not.toBeDisabled()
+  })
+
+  test('form integration works correctly with getValues', async () => {
+    const mutateMock = vi.fn()
+
+    useUpdateComplianceReport.mockReturnValue({
+      mutate: mutateMock,
+      isPending: false
+    })
+
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
+        report: {
+          assessmentStatement: 'Initial assessment',
+          currentStatus: { status: COMPLIANCE_REPORT_STATUSES.SUBMITTED }
+        }
+      }
+    })
+
+    render(
+      <TestWrapper
+        initialValues={{ assessmentStatement: 'Form initial value' }}
+      >
+        {({ methods }) => <AssessmentStatement methods={methods} />}
+      </TestWrapper>
+    )
+
+    // The input should show the form's initial value
+    const inputElement = screen.getByRole('textbox')
+    expect(inputElement.value).toBe('Form initial value')
+
+    // Change the value and save
+    fireEvent.change(inputElement, {
+      target: { value: 'New assessment statement' }
+    })
+
+    const saveButton = screen.getByText('Save Statement')
+    fireEvent.click(saveButton)
+
+    // Verify the mutate function was called with the updated value from the form
+    expect(mutateMock).toHaveBeenCalledWith(
+      {
+        assessmentStatement: 'New assessment statement',
+        status: COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      },
+      expect.objectContaining({
+        onSuccess: expect.any(Function),
+        onError: expect.any(Function)
+      })
+    )
   })
 })
