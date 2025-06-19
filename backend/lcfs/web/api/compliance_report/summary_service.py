@@ -1033,9 +1033,7 @@ class ComplianceReportSummaryService:
         )  # line 20 = line 18 + line 19 - line 15 - line 16
 
         calculated_penalty_units = int(
-            available_balance_for_period
-            + compliance_units_curr_issued_for_fuel_supply
-            + compliance_units_curr_issued_for_fuel_export
+            available_balance_for_period + compliance_unit_balance_change_from_assessment
         )
         non_compliance_penalty_payable_units = (
             calculated_penalty_units if (calculated_penalty_units < 0) else 0
