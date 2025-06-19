@@ -4,7 +4,7 @@ from typing import List
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import asc, select, desc
 
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
@@ -178,7 +178,7 @@ class InternalCommentRepository:
                 UserProfile.keycloak_username == InternalComment.create_user,
             )
             .where(InternalComment.internal_comment_id.in_(distinct_comment_ids_query))
-            .order_by(desc(InternalComment.update_date))
+            .order_by(asc(InternalComment.create_date))
         )
 
         # Execute the query
