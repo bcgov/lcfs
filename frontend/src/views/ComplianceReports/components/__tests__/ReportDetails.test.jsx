@@ -2,12 +2,13 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { use } from 'chai'
 
 // Create mock functions at the top level
 const mockNavigate = vi.fn()
 const mockUseLocation = vi.fn()
 const mockUseCurrentUser = vi.fn()
-const mockUseComplianceReportStore = vi.fn()
+const mockUseComplianceReportWithCache = vi.fn()
 const mockUseComplianceReportDocuments = vi.fn()
 const mockUseGetFuelSupplies = vi.fn()
 const mockUseGetFinalSupplyEquipments = vi.fn()
@@ -55,12 +56,10 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockUseCurrentUser()
 }))
 
-vi.mock('@/stores/useComplianceReportStore', () => ({
-  default: () => mockUseComplianceReportStore()
-}))
 
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useComplianceReportDocuments: () => mockUseComplianceReportDocuments()
+  useComplianceReportDocuments: () => mockUseComplianceReportDocuments(),
+  useComplianceReportWithCache: () => mockUseComplianceReportWithCache()
 }))
 
 vi.mock('@/hooks/useFuelSupply', () => ({
@@ -199,7 +198,7 @@ describe('ReportDetails', () => {
   }
 
   const defaultComplianceReport = {
-    currentReport: {
+    data: {
       report: { version: 0, reportingFrequency: 'Annual' },
       chain: [{ complianceReportId: '12345', version: 0 }]
     }
@@ -217,7 +216,7 @@ describe('ReportDetails', () => {
     // Set up default mock returns
     mockUseLocation.mockReturnValue({ state: {} })
     mockUseCurrentUser.mockReturnValue(defaultCurrentUser)
-    mockUseComplianceReportStore.mockReturnValue(defaultComplianceReport)
+    mockUseComplianceReportWithCache.mockReturnValue(defaultComplianceReport)
     mockUseComplianceReportDocuments.mockReturnValue(emptyDataResponse)
     mockUseGetFuelSupplies.mockReturnValue({
       data: { fuelSupplies: [] },
@@ -279,8 +278,8 @@ describe('ReportDetails', () => {
 
   it('hides empty sections in non-editing status for non-supplemental reports', async () => {
     // Non-supplemental report with no data
-    mockUseComplianceReportStore.mockReturnValue({
-      currentReport: {
+    mockUseComplianceReportWithCache.mockReturnValue({
+      data: {
         report: { version: 0, reportingFrequency: 'Annual' },
         chain: [{ complianceReportId: '12345', version: 0 }]
       }
@@ -400,8 +399,8 @@ describe('ReportDetails', () => {
 
   it('shows "Edited" chip for modified data in supplemental reports', async () => {
     // Set up supplemental report
-    mockUseComplianceReportStore.mockReturnValue({
-      currentReport: {
+    mockUseComplianceReportWithCache.mockReturnValue({
+      data: {
         report: { version: 1, reportingFrequency: 'Annual' },
         chain: [
           { complianceReportId: '12345', version: 0 },
