@@ -62,9 +62,6 @@ export const HistoryCard = ({
     report.currentStatus?.status === COMPLIANCE_REPORT_STATUSES.ASSESSED
   const isSupplementalReport = reportVersion > 0
 
-  // Assessment hiding conditions
-  const shouldHideAssessmentLines = isGovernmentUser && isSupplementalReport
-
   // User permission checks
   const canEditAssessmentStatement = useMemo(() => {
     if (!isGovernmentUser) return false
@@ -90,13 +87,11 @@ export const HistoryCard = ({
   const shouldShowTopLevelAssessmentLines =
     isGovernmentUser &&
     !isCurrentAssessed &&
-    defaultExpanded &&
-    !shouldHideAssessmentLines
+    defaultExpanded
 
   const shouldShowDirectorStatement =
     assessedMessage &&
-    ((!isGovernmentUser && isCurrentAssessed) || isGovernmentUser) &&
-    !shouldHideAssessmentLines
+    ((!isGovernmentUser && isCurrentAssessed) || isGovernmentUser)
 
   const shouldShowEditableIndicator =
     isGovernmentUser && canEditAssessmentStatement
@@ -227,7 +222,7 @@ export const HistoryCard = ({
                   </ListItemText>
 
                   {/* Nested assessment – appears once the status is Assessed */}
-                  {showNestedAssessment && !shouldHideAssessmentLines && (
+                  {showNestedAssessment && (
                     <List sx={{ p: 0, m: 0 }}>
                       <AssessmentLines />
                     </List>

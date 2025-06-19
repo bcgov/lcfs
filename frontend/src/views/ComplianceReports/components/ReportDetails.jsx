@@ -20,7 +20,10 @@ import { REPORT_SCHEDULES } from '@/constants/common.js'
 import { roles } from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
-import { useComplianceReportDocuments } from '@/hooks/useComplianceReports'
+import {
+  useComplianceReportDocuments,
+  useComplianceReportWithCache
+} from '@/hooks/useComplianceReports'
 import { useGetFinalSupplyEquipments } from '@/hooks/useFinalSupplyEquipment'
 import { useGetFuelExports } from '@/hooks/useFuelExport'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply'
@@ -48,7 +51,6 @@ import {
   InfoOutlined,
   NewReleasesOutlined
 } from '@mui/icons-material'
-import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 const chipTypeMap = {
   deleted: 'warning',
@@ -85,7 +87,8 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { compliancePeriod, complianceReportId } = useParams()
-  const { currentReport: complianceReportData } = useComplianceReportStore()
+  const { data: complianceReportData, isLoading: currentReportLoading } =
+    useComplianceReportWithCache(complianceReportId)
   const [isFileDialogOpen, setFileDialogOpen] = useState(false)
   const [expanded, setExpanded] = useState([])
   const [hasAutoExpanded, setHasAutoExpanded] = useState(false)

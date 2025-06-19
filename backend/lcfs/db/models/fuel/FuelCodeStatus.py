@@ -6,6 +6,7 @@ import enum
 
 class FuelCodeStatusEnum(enum.Enum):
     Draft: str = "Draft"
+    Recommended: str = "Recommended"
     Approved: str = "Approved"
     Deleted: str = "Deleted"
 
