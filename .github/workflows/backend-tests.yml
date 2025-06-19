@@ -110,16 +110,31 @@ jobs:
       working-directory: ./backend
       run: poetry install --no-interaction
 
+    - name: Install service client tools
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y redis-tools
+
     - name: Wait for services to be ready
       run: |
+        echo "Waiting for services to become ready..."
+        
         # Wait for PostgreSQL
+        echo "Checking PostgreSQL..."
         timeout 60 bash -c 'until pg_isready -h localhost -p 5432 -U postgres; do sleep 1; done'
+        echo "✅ PostgreSQL is ready"
         
         # Wait for Redis
+        echo "Checking Redis..."
         timeout 60 bash -c 'until redis-cli -h localhost -p 6379 ping | grep -q PONG; do sleep 1; done'
+        echo "✅ Redis is ready"
         
         # Wait for RabbitMQ
+        echo "Checking RabbitMQ..."
         timeout 60 bash -c 'until curl -f http://localhost:15672; do sleep 1; done'
+        echo "✅ RabbitMQ is ready"
+        
+        echo "🚀 All services are ready!"
 
     - name: Run tests for ${{ matrix.test-group }}
       working-directory: ./backend
