@@ -624,7 +624,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
             <Introduction
               expanded={location.state?.newReport}
               compliancePeriod={compliancePeriod}
-              isEarlyIssuance={showEarlyIssuanceSummary}
+              isEarlyIssuance={isEarlyIssuance}
             />
           )}
           {shouldShowAssessmentSectionTitle && (
