@@ -17,7 +17,6 @@ function TabPanel({ children, value, index }) {
       hidden={value !== index}
       id={`organization-tabpanel-${index}`}
       aria-labelledby={`organization-tab-${index}`}
-      sx={{ p: 3 }}
     >
       {value === index && children}
     </BCBox>

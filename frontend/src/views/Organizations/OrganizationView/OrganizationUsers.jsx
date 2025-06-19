@@ -92,7 +92,7 @@ export const OrganizationUsers = () => {
   }
 
   return (
-    <BCBox mt={3}>
+    <BCBox mt={3} px={0}>
       {/* Title + buttons */}
       <BCBox my={2}>
         <BCTypography
