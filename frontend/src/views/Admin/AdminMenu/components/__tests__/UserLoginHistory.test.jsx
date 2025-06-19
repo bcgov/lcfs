@@ -19,11 +19,18 @@ vi.mock('@/hooks/useUser', () => ({
 }))
 
 // Mock constants
-vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
-  userLoginHistoryColDefs: (t) => [
-    { headerName: t('headerNameExample'), field: 'exampleField' }
-  ]
-}))
+vi.mock(
+  '@/views/Admin/AdminMenu/components/_schema',
+  async (importOriginal) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      userLoginHistoryColDefs: (t) => [
+        { headerName: t('headerNameExample'), field: 'exampleField' }
+      ]
+    }
+  }
+)
 
 // Mock BCGridViewer component
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({

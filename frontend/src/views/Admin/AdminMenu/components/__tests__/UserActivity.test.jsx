@@ -20,12 +20,19 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-vi.mock('@/views/Admin/AdminMenu/components/_schema', () => ({
-  userActivityColDefs: [
-    { headerName: 'Column 1', field: 'col1' },
-    { headerName: 'Column 2', field: 'col2' }
-  ]
-}))
+vi.mock(
+  '@/views/Admin/AdminMenu/components/_schema',
+  async (importOriginal) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      userActivityColDefs: [
+        { headerName: 'Column 1', field: 'col1' },
+        { headerName: 'Column 2', field: 'col2' }
+      ]
+    }
+  }
+)
 
 // -- Mock BCGridViewer so we can inspect its props --
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
