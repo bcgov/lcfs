@@ -4,7 +4,7 @@ import { FuelSupplyChangelog } from '../FuelSupplyChangelog'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
-  useGetComplianceReport,
+  useComplianceReportWithCache,
   useGetChangeLog
 } from '@/hooks/useComplianceReports'
 import { useParams, useSearchParams } from 'react-router-dom'
@@ -32,7 +32,7 @@ vi.mock('@/hooks/useCurrentUser', () => ({
 }))
 
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useGetComplianceReport: vi.fn(),
+  useComplianceReportWithCache: vi.fn(),
   useGetChangeLog: vi.fn()
 }))
 
@@ -60,7 +60,7 @@ describe('FuelSupplyChangelog', () => {
       }
     })
 
-    useGetComplianceReport.mockReturnValue({
+    useComplianceReportWithCache.mockReturnValue({
       data: {
         report: {
           nickname: 'Test Report'
@@ -99,7 +99,7 @@ describe('FuelSupplyChangelog', () => {
   })
 
   it('should show loading state', () => {
-    useGetComplianceReport.mockReturnValue({
+    useComplianceReportWithCache.mockReturnValue({
       data: null,
       isLoading: true
     })
@@ -113,7 +113,7 @@ describe('FuelSupplyChangelog', () => {
   })
 
   it('should handle latest assessed report', () => {
-    useGetComplianceReport.mockReturnValue({
+    useComplianceReportWithCache.mockReturnValue({
       data: {
         report: {
           complianceReportGroupUuid: 'uuid'
