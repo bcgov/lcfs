@@ -22,6 +22,11 @@ import {
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
+import {
+  formatFuelCodeOptions,
+  extractOriginalFuelCode,
+  formatFuelCodeWithCountryPrefix
+} from '@/utils/fuelCodeCountryPrefix'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_GHGENIUS =
@@ -368,7 +373,10 @@ export const fuelSupplyColDefs = (
           (obj) => params.data.fuelType === obj.fuelType
         )
         return {
-          options: fuelType?.fuelCodes.map((item) => item.fuelCode) || [],
+          options: formatFuelCodeOptions(
+            fuelType?.fuelCodes || [],
+            compliancePeriod
+          ),
           multiple: false,
           disableCloseOnSelect: false,
           freeSolo: false,
@@ -379,7 +387,7 @@ export const fuelSupplyColDefs = (
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
 
       suppressKeyboardEvent,
-      minWidth: 135,
+      minWidth: 175,
       editable: (params) => {
         const fuelType = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
@@ -393,33 +401,73 @@ export const fuelSupplyColDefs = (
         const fuelType = optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
         )
-        if (!fuelType) return params.data.fuelCode
+        if (!fuelType) {
+          // If we have a fuel code, format it with country prefix for display
+          if (params.data.fuelCode) {
+            // Find the fuel code details to get the country
+            const allFuelCodes =
+              optionsData?.fuelTypes?.flatMap((ft) => ft.fuelCodes) || []
+            const fuelCodeDetails = allFuelCodes.find(
+              (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
+            )
+            const country =
+              fuelCodeDetails?.fuelProductionFacilityCountry ||
+              fuelCodeDetails?.fuel_production_facility_country
+            return formatFuelCodeWithCountryPrefix(
+              params.data.fuelCode,
+              country,
+              compliancePeriod
+            )
+          }
+          return params.data.fuelCode
+        }
 
         const isFuelCodeScenario =
           params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
         const fuelCodes =
-          fuelType?.fuelCodes?.map((item) => item.fuelCode) || []
+          fuelType?.fuelCodes?.map((item) => item.fuelCode || item.fuel_code) ||
+          []
 
         if (isFuelCodeScenario && !params.data.fuelCode) {
           // If only one code is available, auto-populate
           if (fuelCodes.length === 1) {
             const singleFuelCode = fuelType.fuelCodes[0]
-            params.data.fuelCode = singleFuelCode.fuelCode
-            params.data.fuelCodeId = singleFuelCode.fuelCodeId
+            params.data.fuelCode =
+              singleFuelCode.fuelCode || singleFuelCode.fuel_code
+            params.data.fuelCodeId =
+              singleFuelCode.fuelCodeId || singleFuelCode.fuel_code_id
           }
+        }
+
+        // Format the fuel code with country prefix for display
+        if (params.data.fuelCode) {
+          const fuelCodeDetails = fuelType.fuelCodes.find(
+            (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
+          )
+          const country =
+            fuelCodeDetails?.fuelProductionFacilityCountry ||
+            fuelCodeDetails?.fuel_production_facility_country
+          return formatFuelCodeWithCountryPrefix(
+            params.data.fuelCode,
+            country,
+            compliancePeriod
+          )
         }
 
         return params.data.fuelCode
       },
       valueSetter: (params) => {
         if (params.newValue) {
-          params.data.fuelCode = params.newValue
+          // Extract the original fuel code from the formatted display value
+          const originalFuelCode = extractOriginalFuelCode(params.newValue)
+          params.data.fuelCode = originalFuelCode
+
           const fuelType = optionsData?.fuelTypes?.find(
             (obj) => params.data.fuelType === obj.fuelType
           )
           if (params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
             const matchingFuelCode = fuelType?.fuelCodes?.find(
-              (fuelCode) => params.data.fuelCode === fuelCode.fuelCode
+              (fuelCode) => originalFuelCode === fuelCode.fuelCode
             )
             if (matchingFuelCode) {
               params.data.fuelCodeId = matchingFuelCode.fuelCodeId
