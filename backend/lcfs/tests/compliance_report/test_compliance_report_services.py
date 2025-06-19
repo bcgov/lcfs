@@ -579,7 +579,7 @@ async def test_create_government_initiated_supplemental_report_success(
             SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL.value
         )  # Enum value
         mock_new_report.reporting_frequency = (
-            mock_compliance_report_submitted.reporting_frequency
+            ReportingFrequency.QUARTERLY
         )  # Use value from mock
         mock_new_report.supplemental_note = None
         mock_new_report.assessment_statement = None
@@ -633,7 +633,7 @@ async def test_create_government_initiated_supplemental_report_success(
         assert (
             call_args.current_status_id == mock_draft_status.compliance_report_status_id
         )
-        assert call_args.nickname == f"Supplemental Report {new_version}"
+        assert call_args.nickname == f"Early issuance - Supplemental report {new_version}"
         assert (
             call_args.supplemental_initiator
             == SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
