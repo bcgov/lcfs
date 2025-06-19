@@ -1,17 +1,22 @@
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import { useGetChangeLog } from '@/hooks/useComplianceReports'
+import {
+  useComplianceReportWithCache,
+  useGetChangeLog
+} from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules.js'
-import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
+import { useParams } from 'react-router-dom'
 
 export const FuelSupplyChangelog = () => {
-  const { currentReport } = useComplianceReportStore()
+  const { complianceReportId, compliancePeriod } = useParams()
+  const { data: currentReport, isLoading: currentReportLoading } =
+    useComplianceReportWithCache(complianceReportId)
   const { t } = useTranslation(['common', 'fuelSupply', 'report'])
 
   // State for pagination - one per changelog item
@@ -137,7 +142,7 @@ export const FuelSupplyChangelog = () => {
     }))
   }
 
-  if (changelogDataLoading) {
+  if (changelogDataLoading || currentReportLoading) {
     return <Loading />
   }
 

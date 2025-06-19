@@ -16,6 +16,7 @@ export const useUser = (id, options) => {
   return useQuery({
     queryKey: ['user', id],
     queryFn: async () => (await client.get(`/users/${id}`)).data,
+    enabled: !!id,
     ...options
   })
 }
