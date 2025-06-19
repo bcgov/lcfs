@@ -131,6 +131,7 @@ class FuelSupplyRepository:
                 FuelCodePrefix.fuel_code_prefix_id,
                 FuelCodePrefix.prefix,
                 FuelCode.carbon_intensity.label("fuel_code_carbon_intensity"),
+                FuelCode.fuel_production_facility_country,
             )
             .join(FuelInstance, FuelInstance.fuel_type_id == FuelType.fuel_type_id)
             .join(
