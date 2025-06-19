@@ -9,7 +9,6 @@ import {
   useSaveNotionalTransfer
 } from '@/hooks/useNotionalTransfer'
 import { isArrayEmpty } from '@/utils/array'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -295,9 +294,16 @@ export const AddEditNotionalTransfers = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'notionalTransfers',
+          message: t('notionalTransfer:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   if (optionsLoading || transfersLoading) {
     return <Loading />
@@ -343,9 +349,6 @@ export const AddEditNotionalTransfers = () => {
               onSave: handleNavigateBack,
               confirmText: t('report:incompleteReport'),
               confirmLabel: t('report:returnToReport')
-            }}
-            gridOptions={{
-              getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
             }}
           />
         </BCBox>

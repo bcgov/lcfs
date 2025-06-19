@@ -9,7 +9,6 @@ import {
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
@@ -353,20 +352,20 @@ export const AddEditOtherUses = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'otherUses',
+          message: t('otherUses:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   const columnDefs = useMemo(
     () => otherUsesColDefs(optionsData, errors, warnings, isSupplemental),
     [optionsData, errors, warnings, isSupplemental]
-  )
-
-  const gridOptions = useMemo(
-    () => ({
-      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
-    }),
-    [isSupplemental]
   )
 
   const saveButtonProps = useMemo(
@@ -422,7 +421,6 @@ export const AddEditOtherUses = () => {
         showAddRowsButton
         stopEditingWhenCellsLoseFocus
         saveButtonProps={saveButtonProps}
-        gridOptions={gridOptions}
       />
     </Grid2>
   )

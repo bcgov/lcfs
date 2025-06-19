@@ -965,6 +965,12 @@ class ComplianceReportSummaryService:
         if compliance_report.version > 0:
             previous_summary = await self.repo.get_previous_summary(compliance_report)
 
+        # For Line 15 and 16, we should only use values from assessed reports
+        # Get the last assessed report for this organization and compliance period
+        assessed_report = await self.cr_repo.get_assessed_compliance_report_by_period(
+            organization_id, compliance_period_start.year
+        )
+
         compliance_units_transferred_out = int(
             await self.repo.get_transferred_out_compliance_units(
                 compliance_period_start, compliance_period_end, organization_id
@@ -980,11 +986,17 @@ class ComplianceReportSummaryService:
                 compliance_period_start, compliance_period_end, organization_id
             )
         )  # line 14
+        # Line 15: Only use values from assessed reports
         compliance_units_prev_issued_for_fuel_supply = int(
-            previous_summary.line_18_units_to_be_banked if previous_summary else 0
+            assessed_report.summary.line_18_units_to_be_banked
+            if assessed_report and assessed_report.summary
+            else 0
         )  # line 15
+        # Line 16: Only use values from assessed reports
         compliance_units_prev_issued_for_fuel_export = int(
-            previous_summary.line_19_units_to_be_exported if previous_summary else 0
+            assessed_report.summary.line_19_units_to_be_exported
+            if assessed_report and assessed_report.summary
+            else 0
         )  # line 16
 
         # For supplemental reports with a locked summary, use the stored line_17 value
@@ -1003,7 +1015,8 @@ class ComplianceReportSummaryService:
             # Calculate the available balance using the specific period end formula for Line 17
             available_balance_for_period = int(
                 await self.trxn_repo.calculate_line_17_available_balance_for_period(
-                    organization_id, compliance_period_start.year
+                    organization_id,
+                    compliance_period_start.year,
                 )
             )  # line 17 - Available compliance unit balance on March 31, <compliance-year + 1>
         compliance_units_curr_issued_for_fuel_supply = (
@@ -1020,9 +1033,7 @@ class ComplianceReportSummaryService:
         )  # line 20 = line 18 + line 19 - line 15 - line 16
 
         calculated_penalty_units = int(
-            available_balance_for_period
-            + compliance_units_curr_issued_for_fuel_supply
-            + compliance_units_curr_issued_for_fuel_export
+            available_balance_for_period + compliance_unit_balance_change_from_assessment
         )
         non_compliance_penalty_payable_units = (
             calculated_penalty_units if (calculated_penalty_units < 0) else 0

@@ -229,9 +229,66 @@ class SpreadsheetBuilder:
                 ),
                 default=0,
             )
-            adjusted_width = max_length + 2  # Adding extra space.
+
+            # Get header length for comparison
+            header_cell = column[0]
+            header_length = len(str(header_cell.value)) if header_cell.value else 0
+
+            # Use the maximum of content length and header length
+            content_width = max(max_length, header_length)
+
+            # Set minimum width based on content type and typical requirements
+            # Default minimum width for readability
+            min_width = 12
+
+            # Adjust minimum width based on header content to handle different column types
+            header_text = str(header_cell.value).lower() if header_cell.value else ""
+
+            if any(
+                keyword in header_text
+                for keyword in ["name", "description", "address", "organization"]
+            ):
+                min_width = 25  # Wide columns for text content
+            elif any(
+                keyword in header_text
+                for keyword in ["fuel type", "fuel code", "manufacturer", "model"]
+            ):
+                min_width = 18  # Medium-wide for categorical data
+            elif any(keyword in header_text for keyword in ["email", "phone"]):
+                min_width = 20  # Contact information
+            elif any(
+                keyword in header_text for keyword in ["date", "serial", "registration"]
+            ):
+                min_width = 15  # Date and ID columns
+            elif any(
+                keyword in header_text
+                for keyword in [
+                    "quantity",
+                    "units",
+                    "compliance",
+                    "value",
+                    "ci",
+                    "density",
+                    "eer",
+                    "energy",
+                ]
+            ):
+                min_width = 14  # Numeric columns
+            elif any(keyword in header_text for keyword in ["line"]):
+                min_width = 8  # Short line number columns
+
+            # Calculate final width with padding
+            # Add extra padding for better readability (minimum 4 characters)
+            padding = max(4, int(content_width * 0.1))  # 10% padding, minimum 4 chars
+            calculated_width = content_width + padding
+
+            # Apply minimum and maximum constraints
+            final_width = max(min_width, calculated_width)
+            # Set reasonable maximum to prevent extremely wide columns
+            final_width = min(final_width, 50)
+
             column_letter = get_column_letter(column[0].column)
-            worksheet.column_dimensions[column_letter].width = adjusted_width
+            worksheet.column_dimensions[column_letter].width = final_width
 
     def _auto_adjust_column_width_xls(self, sheet, sheet_data):
         # Calculate the maximum width for each column using header and row values.

@@ -11,6 +11,7 @@ from starlette.responses import StreamingResponse
 from typing import List, Union, Any
 
 from lcfs.utils.constants import FILE_MEDIA_TYPE
+from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -23,10 +24,13 @@ from lcfs.web.api.compliance_report.schema import (
     ALLOCATION_AGREEMENTS_SHEET,
     FSE_EXPORT_SHEET,
     FUEL_SUPPLY_COLUMNS,
+    FUEL_SUPPLY_QUARTERLY_COLUMNS,
     NOTIONAL_TRANSFER_COLUMNS,
+    NOTIONAL_TRANSFER_QUARTERLY_COLUMNS,
     OTHER_USES_COLUMNS,
     EXPORT_FUEL_COLUMNS,
     ALLOCATION_AGREEMENT_COLUMNS,
+    ALLOCATION_AGREEMENT_QUARTERLY_COLUMNS,
     FSE_EXPORT_COLUMNS,
     RENEWABLE_REQUIREMENT_TITLE,
     LOW_CARBON_SUMMARY_TITLE,
@@ -34,6 +38,7 @@ from lcfs.web.api.compliance_report.schema import (
     TABLE_STYLE,
     SHOW_ROW_STRIPES,
     SHOW_COL_STRIPES,
+    ExportColumn,
 )
 from lcfs.web.api.compliance_report.summary_service import (
     ComplianceReportSummaryService,
@@ -83,14 +88,24 @@ class ComplianceReportExporter:
             FSE_EXPORT_SHEET: self._load_fse_data,
         }
 
-        # Column definitions mapping
-        self.column_definitions = {
+        # Annual column definitions mapping
+        self.annual_column_definitions = {
             FUEL_SUPPLY_SHEET: FUEL_SUPPLY_COLUMNS,
             NOTIONAL_TRANSFER_SHEET: NOTIONAL_TRANSFER_COLUMNS,
             OTHER_USES_SHEET: OTHER_USES_COLUMNS,
             EXPORT_FUEL_SHEET: EXPORT_FUEL_COLUMNS,
             ALLOCATION_AGREEMENTS_SHEET: ALLOCATION_AGREEMENT_COLUMNS,
             FSE_EXPORT_SHEET: FSE_EXPORT_COLUMNS,
+        }
+
+        # Quarterly column definitions mapping
+        self.quarterly_column_definitions = {
+            FUEL_SUPPLY_SHEET: FUEL_SUPPLY_QUARTERLY_COLUMNS,
+            NOTIONAL_TRANSFER_SHEET: NOTIONAL_TRANSFER_QUARTERLY_COLUMNS,
+            OTHER_USES_SHEET: OTHER_USES_COLUMNS,  # Other uses doesn't have quarterly
+            EXPORT_FUEL_SHEET: EXPORT_FUEL_COLUMNS,  # Export fuel doesn't have quarterly
+            ALLOCATION_AGREEMENTS_SHEET: ALLOCATION_AGREEMENT_QUARTERLY_COLUMNS,
+            FSE_EXPORT_SHEET: FSE_EXPORT_COLUMNS,  # FSE doesn't have quarterly
         }
 
     @service_handler
@@ -104,6 +119,7 @@ class ComplianceReportExporter:
         )
         uuid = report.compliance_report_group_uuid
         cid = report.compliance_report_id
+        is_quarterly = report.reporting_frequency == ReportingFrequency.QUARTERLY
 
         # Recalculate summary to ensure latest data and add summary sheet
         summary_schema = await self.summary_service.calculate_compliance_report_summary(
@@ -111,21 +127,21 @@ class ComplianceReportExporter:
         )
         await self._add_summary_sheet(wb, summary_schema)
 
-        # Add all schedule data sheets
-        tasks = []
-        sheet_names = []
+        # Choose column definitions based on reporting frequency
+        column_definitions = (
+            self.quarterly_column_definitions
+            if is_quarterly
+            else self.annual_column_definitions
+        )
 
+        # Add all schedule data sheets - run sequentially to avoid DB connection issues
         for sheet_name, loader in self.data_loaders.items():
-            sheet_names.append(sheet_name)
             if sheet_name in [FSE_EXPORT_SHEET, ALLOCATION_AGREEMENTS_SHEET]:
-                tasks.append(loader(cid))
+                data = await loader(cid, is_quarterly)
             else:
-                tasks.append(loader(uuid, cid, report.version))
-        # Concurrently gather results
-        results = await asyncio.gather(*tasks)
+                data = await loader(uuid, cid, report.version, is_quarterly)
 
-        # Process each result
-        for sheet_name, data in zip(sheet_names, results):
+            # Process each result
             if data:
                 await self._add_sheet(wb, sheet_name, data)
 
@@ -134,8 +150,9 @@ class ComplianceReportExporter:
         wb.save(stream)
         stream.seek(0)
 
-        # Generate filename
-        filename = f"CR-{report.organization.name}-{report.compliance_period.description}-{report.current_status.status.value}.xlsx"
+        # Generate filename - use EIR for early issuance reports, CR for annual reports
+        prefix = "EIR" if is_quarterly else "CR"
+        filename = f"{prefix}-{report.organization.name}-{report.compliance_period.description}-{report.current_status.status.value}.xlsx"
         headers = {"Content-Disposition": f'attachment; filename="{filename}"'}
 
         return StreamingResponse(
@@ -195,12 +212,69 @@ class ComplianceReportExporter:
         ws.add_table(tab)
 
     def _auto_size_columns(self, ws) -> None:
-        """Auto-size columns based on content."""
+        """Auto-size columns based on content with improved width calculation."""
         for col in ws.columns:
+            # Calculate content-based width
             max_length = max(len(str(cell.value)) if cell.value else 0 for cell in col)
-            ws.column_dimensions[get_column_letter(col[0].column)].width = (
-                max_length + 2
-            )
+
+            # Get header length for comparison
+            header_cell = col[0]
+            header_length = len(str(header_cell.value)) if header_cell.value else 0
+
+            # Use the maximum of content length and header length
+            content_width = max(max_length, header_length)
+
+            # Set minimum width based on content type and typical requirements
+            # Default minimum width for readability
+            min_width = 12
+
+            # Adjust minimum width based on header content to handle different column types
+            header_text = str(header_cell.value).lower() if header_cell.value else ""
+
+            if any(
+                keyword in header_text
+                for keyword in ["name", "description", "address", "organization"]
+            ):
+                min_width = 25  # Wide columns for text content
+            elif any(
+                keyword in header_text
+                for keyword in ["fuel type", "fuel code", "manufacturer", "model"]
+            ):
+                min_width = 18  # Medium-wide for categorical data
+            elif any(keyword in header_text for keyword in ["email", "phone"]):
+                min_width = 20  # Contact information
+            elif any(
+                keyword in header_text for keyword in ["date", "serial", "registration"]
+            ):
+                min_width = 15  # Date and ID columns
+            elif any(
+                keyword in header_text
+                for keyword in [
+                    "quantity",
+                    "units",
+                    "compliance",
+                    "value",
+                    "ci",
+                    "density",
+                    "eer",
+                    "energy",
+                ]
+            ):
+                min_width = 14  # Numeric columns
+            elif any(keyword in header_text for keyword in ["line"]):
+                min_width = 8  # Short line number columns
+
+            # Calculate final width with padding
+            # Add extra padding for better readability (minimum 4 characters)
+            padding = max(4, int(content_width * 0.1))  # 10% padding, minimum 4 chars
+            calculated_width = content_width + padding
+
+            # Apply minimum and maximum constraints
+            final_width = max(min_width, calculated_width)
+            # Set reasonable maximum to prevent extremely wide columns
+            final_width = min(final_width, 50)
+
+            ws.column_dimensions[get_column_letter(col[0].column)].width = final_width
 
     async def _add_summary_sheet(
         self, wb: Workbook, summary: ComplianceReportSummarySchema
@@ -322,65 +396,152 @@ class ComplianceReportExporter:
                 pass
         return str(val) if val else None
 
-    async def _load_fuel_supply_data(self, uuid, cid, version) -> List[List[Any]]:
+    async def _load_fuel_supply_data(
+        self, uuid, cid, version, is_quarterly
+    ) -> List[List[Any]]:
         """Load fuel supply data."""
         data = await self.fs_repo.get_effective_fuel_supplies(uuid, cid, version)
-        headers = [col.label for col in FUEL_SUPPLY_COLUMNS]
+
+        # Choose column definitions based on reporting frequency
+        columns = (
+            self.quarterly_column_definitions[FUEL_SUPPLY_SHEET]
+            if is_quarterly
+            else self.annual_column_definitions[FUEL_SUPPLY_SHEET]
+        )
+        headers = [col.label for col in columns]
 
         rows = []
         for fs in data:
-            rows.append(
-                [
-                    round(fs.compliance_units) if fs.compliance_units else None,
-                    fs.fuel_type.fuel_type if fs.fuel_type else None,
-                    fs.fuel_type_other,
-                    fs.fuel_category.category if fs.fuel_category else None,
-                    fs.end_use_type.type if fs.end_use_type else None,
-                    fs.provision_of_the_act.name if fs.provision_of_the_act else None,
-                    fs.fuel_code.fuel_code if fs.fuel_code else None,
-                    fs.quantity,
-                    fs.units.value if fs.units else None,
-                    fs.target_ci,
-                    fs.ci_of_fuel,
-                    fs.uci,
-                    fs.energy_density,
-                    fs.eer,
-                    fs.energy,
-                ]
-            )
+            if is_quarterly:
+                # Calculate total quantity for quarterly reports
+                total_quantity = (
+                    (fs.q1_quantity or 0)
+                    + (fs.q2_quantity or 0)
+                    + (fs.q3_quantity or 0)
+                    + (fs.q4_quantity or 0)
+                )
+                rows.append(
+                    [
+                        round(fs.compliance_units) if fs.compliance_units else None,
+                        fs.fuel_type.fuel_type if fs.fuel_type else None,
+                        fs.fuel_type_other,
+                        fs.fuel_category.category if fs.fuel_category else None,
+                        fs.end_use_type.type if fs.end_use_type else None,
+                        (
+                            fs.provision_of_the_act.name
+                            if fs.provision_of_the_act
+                            else None
+                        ),
+                        fs.fuel_code.fuel_code if fs.fuel_code else None,
+                        fs.q1_quantity,
+                        fs.q2_quantity,
+                        fs.q3_quantity,
+                        fs.q4_quantity,
+                        total_quantity if total_quantity > 0 else None,
+                        fs.units.value if fs.units else None,
+                        fs.target_ci,
+                        fs.ci_of_fuel,
+                        fs.uci,
+                        fs.energy_density,
+                        fs.eer,
+                        fs.energy,
+                    ]
+                )
+            else:
+                # Annual report format
+                rows.append(
+                    [
+                        round(fs.compliance_units) if fs.compliance_units else None,
+                        fs.fuel_type.fuel_type if fs.fuel_type else None,
+                        fs.fuel_type_other,
+                        fs.fuel_category.category if fs.fuel_category else None,
+                        fs.end_use_type.type if fs.end_use_type else None,
+                        (
+                            fs.provision_of_the_act.name
+                            if fs.provision_of_the_act
+                            else None
+                        ),
+                        fs.fuel_code.fuel_code if fs.fuel_code else None,
+                        fs.quantity,
+                        fs.units.value if fs.units else None,
+                        fs.target_ci,
+                        fs.ci_of_fuel,
+                        fs.uci,
+                        fs.energy_density,
+                        fs.eer,
+                        fs.energy,
+                    ]
+                )
 
         return [headers] + rows
 
-    async def _load_notional_transfer_data(self, uuid, cid, version) -> List[List[Any]]:
+    async def _load_notional_transfer_data(
+        self, uuid, cid, version, is_quarterly
+    ) -> List[List[Any]]:
         """Load notional transfer data."""
         data = await self.nt_repo.get_effective_notional_transfers(uuid, cid)
-        headers = [col.label for col in NOTIONAL_TRANSFER_COLUMNS]
+
+        # Choose column definitions based on reporting frequency
+        columns = (
+            self.quarterly_column_definitions[NOTIONAL_TRANSFER_SHEET]
+            if is_quarterly
+            else self.annual_column_definitions[NOTIONAL_TRANSFER_SHEET]
+        )
+        headers = [col.label for col in columns]
 
         rows = []
         for nt in data:
-            rows.append(
-                [
-                    nt.legal_name,
-                    nt.address_for_service,
-                    nt.fuel_category,
-                    (
-                        nt.received_or_transferred.value
-                        if nt.received_or_transferred
-                        else None
-                    ),
-                    nt.quantity,
-                ]
-            )
+            if is_quarterly:
+                # Calculate total quantity for quarterly reports
+                total_quantity = (
+                    (nt.q1_quantity or 0)
+                    + (nt.q2_quantity or 0)
+                    + (nt.q3_quantity or 0)
+                    + (nt.q4_quantity or 0)
+                )
+                rows.append(
+                    [
+                        nt.legal_name,
+                        nt.address_for_service,
+                        nt.fuel_category,
+                        (
+                            nt.received_or_transferred.value
+                            if nt.received_or_transferred
+                            else None
+                        ),
+                        nt.q1_quantity,
+                        nt.q2_quantity,
+                        nt.q3_quantity,
+                        nt.q4_quantity,
+                        total_quantity if total_quantity > 0 else None,
+                    ]
+                )
+            else:
+                # Annual report format
+                rows.append(
+                    [
+                        nt.legal_name,
+                        nt.address_for_service,
+                        nt.fuel_category,
+                        (
+                            nt.received_or_transferred.value
+                            if nt.received_or_transferred
+                            else None
+                        ),
+                        nt.quantity,
+                    ]
+                )
 
         return [headers] + rows
 
     async def _load_fuels_for_other_use_data(
-        self, uuid, cid, version
+        self, uuid, cid, version, is_quarterly
     ) -> List[List[Any]]:
         """Load fuels for other use data."""
         data: List[OtherUsesSchema] = await self.ou_repo.get_effective_other_uses(
             uuid, cid
         )
+        # Other uses doesn't have quarterly data, always use annual columns
         headers = [col.label for col in OTHER_USES_COLUMNS]
 
         rows = []
@@ -401,9 +562,12 @@ class ComplianceReportExporter:
 
         return [headers] + rows
 
-    async def _load_export_fuel_data(self, uuid, cid, version) -> List[List[Any]]:
+    async def _load_export_fuel_data(
+        self, uuid, cid, version, is_quarterly
+    ) -> List[List[Any]]:
         """Load export fuel data."""
         data = await self.ef_repo.get_effective_fuel_exports(uuid, cid)
+        # Export fuel doesn't have quarterly data, always use annual columns
         headers = [col.label for col in EXPORT_FUEL_COLUMNS]
 
         rows = []
@@ -431,34 +595,74 @@ class ComplianceReportExporter:
 
         return [headers] + rows
 
-    async def _load_allocation_agreement_data(self, cid) -> List[List[Any]]:
+    async def _load_allocation_agreement_data(
+        self, cid, is_quarterly
+    ) -> List[List[Any]]:
         """Load allocation agreement data."""
         data = await self.aa_repo.get_allocation_agreements(cid)
-        headers = [col.label for col in ALLOCATION_AGREEMENT_COLUMNS]
+
+        # Choose column definitions based on reporting frequency
+        columns = (
+            self.quarterly_column_definitions[ALLOCATION_AGREEMENTS_SHEET]
+            if is_quarterly
+            else self.annual_column_definitions[ALLOCATION_AGREEMENTS_SHEET]
+        )
+        headers = [col.label for col in columns]
 
         rows = []
         for aa in data:
-            rows.append(
-                [
-                    aa.allocation_transaction_type,
-                    aa.transaction_partner,
-                    aa.postal_address,
-                    aa.transaction_partner_email,
-                    aa.transaction_partner_phone,
-                    aa.fuel_type,
-                    aa.fuel_type_other,
-                    aa.fuel_category,
-                    aa.provision_of_the_act,
-                    aa.fuel_code,
-                    aa.ci_of_fuel,
-                    aa.quantity,
-                    aa.units,
-                ]
-            )
+            if is_quarterly:
+                # Calculate total quantity for quarterly reports
+                total_quantity = (
+                    (aa.q1_quantity or 0)
+                    + (aa.q2_quantity or 0)
+                    + (aa.q3_quantity or 0)
+                    + (aa.q4_quantity or 0)
+                )
+                rows.append(
+                    [
+                        aa.allocation_transaction_type,
+                        aa.transaction_partner,
+                        aa.postal_address,
+                        aa.transaction_partner_email,
+                        aa.transaction_partner_phone,
+                        aa.fuel_type,
+                        aa.fuel_type_other,
+                        aa.fuel_category,
+                        aa.provision_of_the_act,
+                        aa.fuel_code,
+                        aa.ci_of_fuel,
+                        aa.q1_quantity,
+                        aa.q2_quantity,
+                        aa.q3_quantity,
+                        aa.q4_quantity,
+                        total_quantity if total_quantity > 0 else None,
+                        aa.units,
+                    ]
+                )
+            else:
+                # Annual report format
+                rows.append(
+                    [
+                        aa.allocation_transaction_type,
+                        aa.transaction_partner,
+                        aa.postal_address,
+                        aa.transaction_partner_email,
+                        aa.transaction_partner_phone,
+                        aa.fuel_type,
+                        aa.fuel_type_other,
+                        aa.fuel_category,
+                        aa.provision_of_the_act,
+                        aa.fuel_code,
+                        aa.ci_of_fuel,
+                        aa.quantity,
+                        aa.units,
+                    ]
+                )
 
         return [headers] + rows
 
-    async def _load_fse_data(self, cid) -> List[List[Any]]:
+    async def _load_fse_data(self, cid, is_quarterly) -> List[List[Any]]:
         """Load final supply equipment data."""
         result = await self.fse_repo.get_fse_paginated(
             compliance_report_id=cid,
@@ -466,24 +670,25 @@ class ComplianceReportExporter:
                 page=1, size=1000, filters=[], sort_orders=[]
             ),
         )
-
+        data = result[0]  # get_fse_paginated returns a tuple (data, total_count)
+        # FSE doesn't have quarterly data, always use annual columns
         headers = [col.label for col in FSE_EXPORT_COLUMNS]
 
         rows = []
-        for fse in result[0]:
+        for fse in data:
             rows.append(
                 [
                     fse.organization_name,
                     self._format_date(fse.supply_from_date),
                     self._format_date(fse.supply_to_date),
                     fse.kwh_usage,
-                    fse.serial_nbr,
+                    fse.serial_number,
                     fse.manufacturer,
                     fse.model,
-                    fse.level_of_equipment.name if fse.level_of_equipment else None,
-                    fse.ports,
-                    ", ".join(ut.type for ut in fse.intended_use_types if ut),
-                    ", ".join(uut.type_name for uut in fse.intended_user_types if uut),
+                    fse.level_of_equipment,
+                    fse.port_count,
+                    fse.intended_use_types,
+                    fse.intended_user_types,
                     fse.street_address,
                     fse.city,
                     fse.postal_code,
