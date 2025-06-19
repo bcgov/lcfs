@@ -1,25 +1,44 @@
 -- ==========================================
 -- Compliance Reports Analytics View
 -- ==========================================
-CREATE OR REPLACE VIEW vw_compliance_report_analytics_base AS
-SELECT
-    *
-FROM (
-    SELECT
-        vcr.*,
-        ROW_NUMBER() OVER (PARTITION BY vcr.compliance_period, vcr.compliance_report_group_uuid, vcr.organization_id ORDER BY vcr.version DESC) AS rn
-    FROM
-        v_compliance_report vcr
-        JOIN compliance_report_status crs ON crs.compliance_report_status_id = vcr.report_status_id
-            AND crs.status NOT IN ('Draft'::compliancereportstatusenum, 'Analyst_adjustment'::compliancereportstatusenum)) ranked_reports
-WHERE
-    rn = 1;
+drop view if exists vw_compliance_report_base;
+CREATE OR REPLACE VIEW vw_compliance_report_base AS
+SELECT compliance_report_id,
+    compliance_report_group_uuid,
+    version,
+    compliance_period_id,
+    compliance_period,
+    organization_id,
+    organization_name,
+    report_type,
+    report_status_id,
+    report_status,
+    update_date,
+    supplemental_initiator,
+    rn
+   FROM ( SELECT vcr.compliance_report_id,
+            vcr.compliance_report_group_uuid,
+            vcr.version,
+            vcr.compliance_period_id,
+            vcr.compliance_period,
+            vcr.organization_id,
+            vcr.organization_name,
+            vcr.report_type,
+            vcr.report_status_id,
+            vcr.report_status,
+            vcr.update_date,
+            vcr.supplemental_initiator,
+            row_number() OVER (PARTITION BY vcr.compliance_period, vcr.compliance_report_group_uuid, vcr.organization_id ORDER BY vcr.version DESC) AS rn
+           FROM v_compliance_report vcr
+             JOIN compliance_report_status crs ON crs.compliance_report_status_id = vcr.report_status_id AND (crs.status <> ALL (ARRAY['Draft'::compliancereportstatusenum, 'Analyst_adjustment'::compliancereportstatusenum]))) ranked_reports
+  WHERE rn = 1;
 
-GRANT SELECT ON vw_compliance_report_analytics_base, compliance_report_history TO basic_lcfs_reporting_role;
+GRANT SELECT ON vw_compliance_report_base, compliance_report_history TO basic_lcfs_reporting_role;
 
 -- ==========================================
 -- Compliance Reports Waiting review
 -- ==========================================
+drop view if exists vw_reports_waiting_review;
 CREATE OR REPLACE VIEW vw_reports_waiting_review AS
 WITH latest_history AS (
     SELECT
@@ -28,7 +47,7 @@ WITH latest_history AS (
         cr.compliance_report_group_uuid,
         ROW_NUMBER() OVER (PARTITION BY cr.compliance_report_group_uuid ORDER BY crh.create_date DESC) AS rn
     FROM
-        vw_compliance_report_analytics_base cr
+        vw_compliance_report_base cr
         JOIN compliance_report_history crh ON cr.compliance_report_id = crh.compliance_report_id
     WHERE
         crh.status_id != 1
@@ -41,7 +60,7 @@ SELECT
     DATE_PART('epoch', NOW() - lh.create_date) / 86400 AS days_in_status
 FROM
     latest_history lh
-    JOIN vw_compliance_report_analytics_base cr ON cr.compliance_report_id = lh.compliance_report_id
+    JOIN vw_compliance_report_base cr ON cr.compliance_report_id = lh.compliance_report_id
     JOIN compliance_report_status crs ON cr.report_status_id = crs.compliance_report_status_id
     JOIN compliance_period ON compliance_period.compliance_period_id = cr.compliance_period_id
     JOIN organization ON cr.organization_id = organization.organization_id
@@ -56,6 +75,7 @@ GRANT SELECT ON vw_reports_waiting_review TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Compliance reports time per status
 -- ==========================================
+drop view if exists vw_compliance_reports_time_per_status;
 CREATE OR REPLACE VIEW vw_compliance_reports_time_per_status AS
 WITH time_diff AS (
     SELECT
@@ -121,6 +141,7 @@ GRANT SELECT ON vw_compliance_reports_time_per_status TO basic_lcfs_reporting_ro
 -- ==========================================
 -- Transfer base Analytics View
 -- ==========================================
+drop view if exists vw_transfer_base;
 CREATE OR REPLACE VIEW vw_transfer_base AS
 SELECT
     transfer.transfer_id,
@@ -157,6 +178,7 @@ GRANT SELECT ON organization, transfer_status, transfer_category, compliance_per
 -- ==========================================
 -- User Login Analytics Base View
 -- ==========================================
+drop view if exists vw_user_login_analytics_base cascade;
 CREATE OR REPLACE VIEW vw_user_login_analytics_base AS
 SELECT
     -- User identification
@@ -190,13 +212,14 @@ SELECT
     LOWER(keycloak_user_id)
     LIKE '%idir%' AS is_idir_user
 FROM
-    public.user_login_history;
+    user_login_history;
 
 GRANT SELECT ON vw_user_login_analytics_base TO basic_lcfs_reporting_role;
 
 -- ==========================================
 -- BCeID Daily Login Summary View
 -- ==========================================
+drop view if exists vw_bceid_daily_login_summary;
 CREATE OR REPLACE VIEW vw_bceid_daily_login_summary AS
 SELECT
     login_date,
@@ -236,6 +259,7 @@ GRANT SELECT ON vw_bceid_daily_login_summary TO basic_lcfs_reporting_role;
 -- ==========================================
 -- BCeID User Statistics View
 -- ==========================================
+drop view if exists vw_bceid_user_statistics;
 CREATE OR REPLACE VIEW vw_bceid_user_statistics AS
 WITH user_daily_stats AS (
     SELECT
@@ -285,6 +309,7 @@ GRANT SELECT ON vw_bceid_user_statistics TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Login Failures Analysis View
 -- ==========================================
+drop view if exists vw_login_failures_analysis;
 CREATE OR REPLACE VIEW vw_login_failures_analysis AS
 SELECT
     year_number,
@@ -317,6 +342,7 @@ GRANT SELECT ON vw_login_failures_analysis TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Fuel Supply Analytics Base View
 -- ==========================================
+drop view if exists vw_fuel_supply_analytics_base;
 CREATE OR REPLACE VIEW vw_fuel_supply_analytics_base AS
 WITH
   latest_fs AS (
@@ -340,6 +366,28 @@ WITH
     WHERE
       fs.action_type != 'DELETE'
   ),
+  finished_fuel_transport_modes_agg AS (
+    SELECT
+      fc.fuel_code_id,
+      ARRAY_AGG(tm.transport_mode ORDER BY tm.transport_mode) AS transport_modes
+    FROM
+      fuel_code fc
+      JOIN finished_fuel_transport_mode fftm ON fc.fuel_code_id = fftm.fuel_code_id
+      JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
+    GROUP BY
+      fc.fuel_code_id
+  ),
+  feedstock_fuel_transport_modes_agg AS (
+    SELECT
+      fc.fuel_code_id,
+      ARRAY_AGG(tm.transport_mode ORDER BY tm.transport_mode) AS transport_modes
+    FROM
+      fuel_code fc
+      JOIN feedstock_fuel_transport_mode fftm ON fc.fuel_code_id = fftm.fuel_code_id
+      JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
+    GROUP BY
+      fc.fuel_code_id
+  ),
   grouped_reports AS (
     SELECT
       compliance_report_id,
@@ -355,7 +403,7 @@ WITH
         SELECT
           vcrb.compliance_report_group_uuid
         FROM
-          vw_compliance_report_analytics_base vcrb
+          vw_compliance_report_base vcrb
       )
   )
 SELECT DISTINCT
@@ -366,37 +414,47 @@ SELECT DISTINCT
   org.name AS supplier_name,
   cp.description AS compliance_year,
   ft.fuel_type,
-  ft.renewable,
-  ft.fossil_derived,
-  ft.units as fuel_units,
   fcat.category as fuel_category,
-  concat(fcp.prefix, fc.fuel_suffix) AS fuel_code,
-  pa.description as provision_description,
   eut.type AS end_use_type,
-  fc.carbon_intensity,
+  pa.description as provision_description,
+  fs.quantity,
+  ft.units as fuel_units,
+  fs.target_ci,
+  fs.ci_of_fuel as rci,
+  fs.uci,
+  fs.energy_density,
+  fs.eer,
+  fs.energy as energy_content,
+  concat(fcp.prefix, fc.fuel_suffix) AS fuel_code,
   fc.company as fuel_code_company,
   fc.feedstock,
   fc.feedstock_location,
+  fc.feedstock_misc,
+  fc.effective_date,
+  fc.application_date,
+  fc.approval_date,
+  fc.expiration_date,
+  ft.renewable,
+  ft.fossil_derived,
+  fc.carbon_intensity,
   fc.fuel_production_facility_city,
   fc.fuel_production_facility_province_state,
   fc.fuel_production_facility_country,
   fc.facility_nameplate_capacity,
   fc.facility_nameplate_capacity_unit,
-  fc.application_date,
-  fc.approval_date,
-  fc.expiration_date,
+  finishedftma.transport_modes as Finished_fuel_transport_modes,
+  feedstockftma.transport_modes as Feedstock_fuel_transport_modes,
   fcs.status as fuel_code_status,
   fs.fuel_supply_id,
   fs.fuel_type_id,
   fs.fuel_code_id,
-  fs.quantity,
   fs.provision_of_the_act_id,
   fs.fuel_category_id,
   fs.end_use_id
 FROM
   selected_fs fs
   JOIN grouped_reports gr ON fs.compliance_report_id = gr.compliance_report_id
-  JOIN vw_compliance_report_analytics_base vcrb ON vcrb.compliance_report_group_uuid = gr.compliance_report_group_uuid
+  JOIN vw_compliance_report_base vcrb ON vcrb.compliance_report_group_uuid = gr.compliance_report_group_uuid
   JOIN compliance_period cp ON gr.compliance_period_id = cp.compliance_period_id
   JOIN organization org ON gr.organization_id = org.organization_id
   LEFT JOIN fuel_code fc ON fs.fuel_code_id = fc.fuel_code_id
@@ -405,13 +463,16 @@ FROM
   LEFT JOIN fuel_type ft ON fs.fuel_type_id = ft.fuel_type_id
   LEFT JOIN fuel_category fcat ON fcat.fuel_category_id = fs.fuel_category_id
   LEFT JOIN end_use_type eut ON fs.end_use_id = eut.end_use_type_id
-  LEFT JOIN provision_of_the_act pa ON fs.provision_of_the_act_id = pa.provision_of_the_act_id;
+  LEFT JOIN provision_of_the_act pa ON fs.provision_of_the_act_id = pa.provision_of_the_act_id
+  LEFT JOIN finished_fuel_transport_modes_agg finishedftma ON fc.fuel_code_id = finishedftma.fuel_code_id
+  LEFT JOIN feedstock_fuel_transport_modes_agg feedstockftma ON fc.fuel_code_id = feedstockftma.fuel_code_id;
 grant select on vw_fuel_supply_analytics_base to basic_lcfs_reporting_role;
 grant select on fuel_category, fuel_type, fuel_code, fuel_code_status, fuel_code_prefix, provision_of_the_act, end_use_type to basic_lcfs_reporting_role;
 
 -- ==========================================
 -- Transaction Base View
 -- ==========================================
+drop view if exists vw_transaction_base;
 CREATE OR REPLACE VIEW vw_transaction_base AS
 SELECT *
 FROM transaction
@@ -422,6 +483,7 @@ GRANT SELECT ON vw_transaction_base TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Fuel Supply Fuel Code Base View
 -- ==========================================
+drop view if exists vw_fuel_supply_fuel_code_base;
 CREATE OR REPLACE VIEW vw_fuel_supply_fuel_code_base AS
 SELECT
       "source"."compliance_report_id" AS "compliance_report_id",
@@ -574,6 +636,7 @@ GRANT SELECT ON vw_fuel_supply_fuel_code_base TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Fuel Supply Base View
 -- ==========================================
+drop view if exists vw_fuel_supply_base;
 CREATE OR REPLACE VIEW vw_fuel_supply_base AS
 WITH latest_fs AS (
       SELECT
@@ -643,6 +706,7 @@ GRANT SELECT ON vw_fuel_supply_base TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Compliance Report Fuel Supply Base View
 -- ==========================================
+drop view if exists vw_compliance_report_fuel_supply_base;
 CREATE OR REPLACE VIEW vw_compliance_report_fuel_supply_base AS
 SELECT
       "source"."fuel_supply_id" AS "fuel_supply_id",
@@ -788,6 +852,7 @@ GRANT SELECT ON vw_compliance_report_fuel_supply_base TO basic_lcfs_reporting_ro
 -- ==========================================
 -- Compliance Report Chained View
 -- ==========================================
+drop view if exists vw_compliance_report_chained;
 CREATE OR REPLACE VIEW vw_compliance_report_chained AS
 SELECT
       compliance_report_group_uuid AS group_uuid,
@@ -804,6 +869,7 @@ GRANT SELECT ON vw_compliance_report_chained TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Compliance Report Base View
 -- ==========================================
+drop view if exists vw_compliance_report_base cascade;
 CREATE OR REPLACE VIEW vw_compliance_report_base AS
 SELECT
       "compliance_report"."compliance_report_id" AS "compliance_report_id",
@@ -978,6 +1044,7 @@ GRANT SELECT ON vw_compliance_report_base TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Allocation Agreement Chained View
 -- ==========================================
+drop view if exists vw_allocation_agreement_chained;
 CREATE OR REPLACE VIEW vw_allocation_agreement_chained AS
 SELECT
       "allocation_agreement"."group_uuid" AS "group_uuid",
@@ -996,6 +1063,7 @@ GRANT SELECT ON vw_allocation_agreement_chained TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Allocation Agreement Base View
 -- ==========================================
+drop view if exists vw_allocation_agreement_base;
 CREATE OR REPLACE VIEW vw_allocation_agreement_base AS
 SELECT
       "source"."group_uuid" AS "group_uuid",
@@ -1358,8 +1426,8 @@ GRANT SELECT ON vw_allocation_agreement_base TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Fuel Code Base View
 -- ==========================================
-
-CREATE OR REPLACE VIEW public.vw_fuel_code_base AS
+drop view if exists vw_fuel_code_base cascade;
+CREATE OR REPLACE VIEW vw_fuel_code_base AS
 SELECT
     fuel_code.fuel_code_id AS "ID",
     fuel_code_prefix.prefix AS "Prefix",
@@ -1393,11 +1461,11 @@ WHERE
     fuel_code_status.status != 'Deleted';
 
 -- Grant permissions
-GRANT SELECT ON public.vw_fuel_code_base TO basic_lcfs_reporting_role;
+GRANT SELECT ON vw_fuel_code_base TO basic_lcfs_reporting_role;
 
 GRANT SELECT ON 
-    public.fuel_code, 
-    public.fuel_code_prefix, 
-    public.fuel_code_status, 
-    public.fuel_type 
+    fuel_code, 
+    fuel_code_prefix, 
+    fuel_code_status, 
+    fuel_type 
 TO basic_lcfs_reporting_role;
