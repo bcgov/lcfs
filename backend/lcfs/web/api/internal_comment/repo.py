@@ -150,11 +150,22 @@ class InternalCommentRepository:
         entity_ids = [entity_id]
         if entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
             # Get all related compliance report IDs in the same chain
-            entity_ids = (
-                await self.report_repo.get_related_compliance_report_ids(entity_id)
+            entity_ids = await self.report_repo.get_related_compliance_report_ids(
+                entity_id
             )
 
-        # Construct the base query
+        # First get distinct internal_comment_ids
+        distinct_comment_ids_query = (
+            select(InternalComment.internal_comment_id)
+            .join(
+                entity_model,
+                entity_model.internal_comment_id == InternalComment.internal_comment_id,
+            )
+            .where(where_condition.in_(entity_ids))
+            .distinct()
+        )
+
+        # Then get the full comment data with user info, ordered by update_date
         base_query = (
             select(
                 InternalComment,
@@ -163,15 +174,11 @@ class InternalCommentRepository:
                 ),
             )
             .join(
-                entity_model,
-                entity_model.internal_comment_id == InternalComment.internal_comment_id,
-            )
-            .join(
                 UserProfile,
                 UserProfile.keycloak_username == InternalComment.create_user,
             )
-            .where(where_condition.in_(entity_ids))
-            .order_by(desc(InternalComment.internal_comment_id))
+            .where(InternalComment.internal_comment_id.in_(distinct_comment_ids_query))
+            .order_by(desc(InternalComment.update_date))
         )
 
         # Execute the query
