@@ -13,7 +13,6 @@ export const useNotificationsCount = (options) => {
     staleTime: 1 * 60 * 1000, // 1 minute
     cacheTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 1 * 60 * 1000, // 1 minute
-    retry: 3,
     ...options
   })
 }
