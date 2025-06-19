@@ -103,6 +103,13 @@ function ImportDialog({
         setErrorMsg(
           t(`common:importExport.import.dialog.fileError.virusDetected`)
         )
+      } else if (error.response?.status === 400) {
+        // Backend validation errors (MIME type, file size, etc.)
+        const backendMessage = error.response?.data?.detail
+        setErrorMsg(
+          backendMessage ||
+            t(`common:importExport.import.dialog.fileError.uploadFailed`)
+        )
       } else {
         setErrorMsg(
           t(`common:importExport.import.dialog.fileError.uploadFailed`)

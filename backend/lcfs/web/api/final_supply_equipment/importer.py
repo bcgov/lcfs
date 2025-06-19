@@ -18,7 +18,7 @@ from lcfs.db.models import UserProfile
 from lcfs.services.clamav.client import ClamAVService
 from lcfs.services.redis.dependency import get_redis_client
 from lcfs.settings import settings
-from lcfs.utils.constants import POSTAL_REGEX
+from lcfs.utils.constants import POSTAL_REGEX, ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.final_supply_equipment.schema import (
@@ -81,6 +81,21 @@ class FinalSupplyEquipmentImporter:
 
         # Read file into memory once to enable scanning and openpyxl parsing
         file_contents = await file.read()
+
+        # Validate MIME type
+        if file.content_type not in ALLOWED_MIME_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File type '{file.content_type or 'unknown'}' is not allowed. Please upload files of the following types: {ALLOWED_FILE_TYPES}",
+            )
+
+        # Validate file size
+        file_size = len(file_contents)
+        if file_size > MAX_FILE_SIZE_BYTES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File size exceeds the maximum limit of {MAX_FILE_SIZE_MB} MB.",
+            )
 
         # Create an in-memory buffer and attach it to a new UploadFile
         buffer = io.BytesIO(file_contents)

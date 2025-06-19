@@ -30,19 +30,19 @@ export const validateFileMimeType = (file, fileTypes) => {
  */
 export const validateFile = (file, maxSizeBytes, fileTypes) => {
   // Check MIME type first
-  const mimeValidation = validateFileMimeType(file, fileTypes)
-  if (!mimeValidation.isValid) {
-    return mimeValidation
-  }
+  // const mimeValidation = validateFileMimeType(file, fileTypes)
+  // if (!mimeValidation.isValid) {
+  //   return mimeValidation
+  // }
 
-  // Check file size
-  if (file.size > maxSizeBytes) {
-    const maxSizeMB = Math.round(maxSizeBytes / 1024 / 1024)
-    return {
-      isValid: false,
-      errorMessage: `File size exceeds the maximum limit of ${maxSizeMB} MB`
-    }
-  }
+  // // Check file size
+  // if (file.size > maxSizeBytes) {
+  //   const maxSizeMB = Math.round(maxSizeBytes / 1024 / 1024)
+  //   return {
+  //     isValid: false,
+  //     errorMessage: `File size exceeds the maximum limit of ${maxSizeMB} MB`
+  //   }
+  // }
 
   return { isValid: true, errorMessage: null }
 }
