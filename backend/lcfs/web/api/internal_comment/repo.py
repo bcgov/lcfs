@@ -1,3 +1,4 @@
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 import structlog
 from typing import List
 
@@ -37,6 +38,7 @@ class InternalCommentRepository:
         self,
         db: AsyncSession = Depends(get_async_db_session),
         user_repo: UserRepository = Depends(),
+        report_repo: ComplianceReportRepository = Depends(),
     ):
         """
         Initializes the repository with an asynchronous database session.
@@ -46,6 +48,7 @@ class InternalCommentRepository:
         """
         self.db = db
         self.user_repo = user_repo
+        self.report_repo = report_repo
 
     @repo_handler
     async def create_internal_comment(
@@ -144,6 +147,12 @@ class InternalCommentRepository:
 
         # Get the specific model and where condition for the given entity_type
         entity_model, where_condition = entity_mapping[entity_type]
+        report_ids = [entity_id]
+        if entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
+            # Get all related compliance report IDs in the same chain
+            report_ids = (
+                await self.report_repo.get_related_compliance_report_ids(entity_id)
+            )
 
         # Construct the base query
         base_query = (
@@ -161,7 +170,7 @@ class InternalCommentRepository:
                 UserProfile,
                 UserProfile.keycloak_username == InternalComment.create_user,
             )
-            .where(where_condition == entity_id)
+            .where(where_condition.in_(report_ids))
             .order_by(desc(InternalComment.internal_comment_id))
         )
 
