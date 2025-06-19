@@ -847,3 +847,36 @@ class ComplianceReportRepository:
         except Exception as e:
             logger.error(f"Error in get_changelog_data: {e}", exc_info=True)
             raise
+
+    @repo_handler
+    async def get_related_compliance_report_ids(self, report_id: int) -> List[int]:
+        """
+        Retrieve all compliance report IDs that belong to the same chain (same group_uuid)
+        as the given report_id.
+
+        Args:
+            report_id: The compliance report ID to find related reports for
+
+        Returns:
+            List of all compliance report IDs in the same chain, ordered by version desc
+        """
+        # First, get the group_uuid for the given report_id
+        group_uuid_result = await self.db.execute(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == report_id
+            )
+        )
+        group_uuid = group_uuid_result.scalar_one_or_none()
+
+        if not group_uuid:
+            # Report not found, return empty list
+            return []
+
+        # Now get all report IDs with the same group_uuid
+        related_reports_result = await self.db.execute(
+            select(ComplianceReport.compliance_report_id)
+            .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
+            .order_by(ComplianceReport.version.desc())
+        )
+
+        return related_reports_result.scalars().all()

@@ -632,6 +632,20 @@ class TransactionRepository:
         return False
 
     @repo_handler
+    async def reinstate_transaction(self, transaction_id: int) -> bool:
+        """
+        Sets a transaction's action back to 'Reserved'. This is used when a
+        superseding report is deleted, putting the previous report back in play.
+        """
+        transaction = await self.get_transaction_by_id(transaction_id)
+        if not transaction:
+            return False
+        transaction.transaction_action = TransactionActionEnum.Reserved
+        self.db.add(transaction)
+        await self.db.commit()
+        return True
+
+    @repo_handler
     async def get_visible_statuses(self, entity_type: EntityType) -> List[str]:
         """
         Fetches transaction statuses visible to the specified entity type.

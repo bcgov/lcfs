@@ -5,22 +5,19 @@ import BCTypography from '@/components/BCTypography'
 import { useUpdateComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { InputBase } from '@mui/material'
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 import { roles } from '@/constants/roles.js'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
-export const AssessmentStatement = () => {
+export const AssessmentStatement = ({ methods }) => {
   const ref = useRef(null)
   const { t } = useTranslation(['common', 'report'])
   const { complianceReportId } = useParams()
   const { hasRoles } = useCurrentUser()
   const { currentReport } = useComplianceReportStore()
-  const [assessmentStatement, setAssessmentStatement] = useState(
-    currentReport?.report.assessmentStatement
-  )
 
   const { mutate: saveAssessmentStatement } =
     useUpdateComplianceReport(complianceReportId)
@@ -36,7 +33,10 @@ export const AssessmentStatement = () => {
       [roles.compliance_manager]: [
         COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
       ],
-      [roles.director]: [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]
+      [roles.director]: [
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST,
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+      ]
     }
 
     return Object.entries(roleStatusMap).some(
@@ -44,7 +44,8 @@ export const AssessmentStatement = () => {
     )
   }, [currentStatus, hasRoles])
 
-  const handleSaveAssessmentStatement = () =>
+  const handleSaveAssessmentStatement = () => {
+    const assessmentStatement = methods.getValues('assessmentStatement')
     saveAssessmentStatement(
       {
         assessmentStatement,
@@ -63,6 +64,7 @@ export const AssessmentStatement = () => {
           })
       }
     )
+  }
 
   return (
     <>
@@ -85,8 +87,7 @@ export const AssessmentStatement = () => {
                 width: '100%',
                 fontSize: '16px'
               }}
-              value={assessmentStatement}
-              onChange={(e) => setAssessmentStatement(e.target.value)}
+              {...methods.register('assessmentStatement')}
             />
           </BCBox>
           <BCButton
