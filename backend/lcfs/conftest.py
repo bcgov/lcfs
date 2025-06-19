@@ -252,7 +252,7 @@ class MockAuthenticationBackend(AuthenticationBackend):
         self.is_active = user_details["is_active"]
         self.organization_name = user_details["organization_name"]
 
-    async def authenticate(self, request):
+    async def authenticate(self, request) -> tuple:
         # Simulate a user object based on the role
         user = UserProfile(
             user_profile_id=self.user_profile_id,

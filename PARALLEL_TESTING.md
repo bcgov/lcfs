@@ -83,6 +83,14 @@ The workflow automatically triggers on:
 - Push to `main`, `develop`, or `release-*` branches (when backend files change)
 - Pull requests to `main`, `develop`, or `release-*` branches (when backend files change)
 
+### GitHub Actions Versions
+The workflow uses current stable versions:
+- `actions/checkout@v4`
+- `actions/setup-python@v5` 
+- `actions/cache@v4`
+- `actions/upload-artifact@v4`
+- `codecov/codecov-action@v4`
+
 ### Monitoring Execution
 1. Go to GitHub Actions tab in the repository
 2. Look for "Backend Tests (Parallel)" workflow
