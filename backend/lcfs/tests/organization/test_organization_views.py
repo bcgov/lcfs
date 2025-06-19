@@ -175,7 +175,7 @@ async def test_export_transactions_for_org_success(
     params = {"format": "xls"}
     url = fastapi_app.url_path_for("export_transactions_for_org")
 
-    response = await client.get(
+    response = await client.post(
         url,
         params=params,
     )
