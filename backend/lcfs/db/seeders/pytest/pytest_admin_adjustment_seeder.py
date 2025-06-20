@@ -6,7 +6,7 @@ from lcfs.db.models.admin_adjustment import AdminAdjustment
 logger = structlog.get_logger(__name__)
 
 
-async def seed_test_admin_adjustments(session):
+async def seed_pytest_admin_adjustments(session):
     """
     Seeds initial admin adjustments into the database, if they do not already exist.
     Args:
@@ -48,7 +48,7 @@ async def seed_test_admin_adjustments(session):
 
     except Exception as e:
         context = {
-            "function": "seed_test_admin_adjustments",
+            "function": "seed_pytest_admin_adjustments",
         }
         logger.error(
             "Error occurred while seeding admin adjustments",

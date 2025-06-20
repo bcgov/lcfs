@@ -13,22 +13,18 @@ import {
 import {
   useAllocationAgreementOptions,
   useGetAllocationAgreementsList,
-  useSaveAllocationAgreement
+  useSaveAllocationAgreement,
+  useImportAllocationAgreement,
+  useGetAllocationAgreementImportJobStatus
 } from '@/hooks/useAllocationAgreement'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import { v4 as uuid } from 'uuid'
 import { ROUTES, buildPath } from '@/routes/routes'
-import { DEFAULT_CI_FUEL } from '@/constants/common'
+import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules'
 import { useApiService } from '@/services/useApiService'
 import { apiRoutes } from '@/constants/routes/apiRoutes'
 import ImportDialog from '@/components/ImportDialog'
-import {
-  useImportAllocationAgreement,
-  useGetAllocationAgreementImportJobStatus
-} from '@/hooks/useAllocationAgreement'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { Menu, MenuItem } from '@mui/material'
 import BCButton from '@/components/BCButton'
@@ -63,17 +59,14 @@ export const AddEditAllocationAgreements = () => {
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
-  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
-  const { data: complianceReport, isLoading: complianceReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId,
-      { enabled: !currentUserLoading }
-    )
+  const { data: currentReport, isLoading } =
+    useComplianceReportWithCache(complianceReportId)
 
-  const version = complianceReport?.report?.version ?? 0
+  const version = currentReport?.report?.version ?? 0
   const isOriginalReport = version === 0
   const isSupplemental = version !== 0
+  const isEarlyIssuance =
+    currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   const {
     data: optionsData,
@@ -112,8 +105,7 @@ export const AddEditAllocationAgreements = () => {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
-      },
-      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
+      }
     }),
     [t, isSupplemental]
   )
@@ -184,31 +176,56 @@ export const AddEditAllocationAgreements = () => {
   )
 
   useEffect(() => {
+    const orgName = currentReport?.report?.organization?.name
     const updatedColumnDefs = allocationAgreementColDefs(
       optionsData,
-      currentUser,
+      orgName,
       errors,
       warnings,
-      isSupplemental
+      isSupplemental,
+      compliancePeriod,
+      isEarlyIssuance
     )
     setColumnDefs(updatedColumnDefs)
-  }, [optionsData, currentUser, errors, warnings, isSupplemental])
+  }, [
+    optionsData,
+    currentReport,
+    errors,
+    warnings,
+    isSupplemental,
+    compliancePeriod,
+    isEarlyIssuance
+  ])
 
   useEffect(() => {
     if (
       !allocationAgreementsLoading &&
       data?.allocationAgreements?.length > 0
     ) {
-      const updatedRowData = data.allocationAgreements.map((item) => ({
-        ...item,
-        complianceReportId,
-        compliancePeriod,
-        isNewSupplementalEntry:
-          isSupplemental && item.complianceReportId === +complianceReportId,
-        id: uuid()
-      }))
-
-      setRowData(updatedRowData)
+      const updatedRowData = data.allocationAgreements.map((item) => {
+        let matchingRow = rowData.find(
+          (row) => row.allocationAgreementId === item.allocationAgreementId
+        )
+        if (!matchingRow) {
+          matchingRow = rowData.find(
+            (row) =>
+              row.allocationAgreementId === undefined ||
+              row.allocationAgreementId === null
+          )
+        }
+        return {
+          ...item,
+          complianceReportId,
+          compliancePeriod,
+          isNewSupplementalEntry:
+            isSupplemental && item.complianceReportId === +complianceReportId,
+          id: matchingRow ? matchingRow.id : uuid()
+        }
+      })
+      setRowData([
+        ...updatedRowData,
+        { id: uuid(), complianceReportId, compliancePeriod }
+      ])
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
@@ -315,7 +332,7 @@ export const AddEditAllocationAgreements = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'transactionPartner') {
-        const orgName = currentUser.organization?.name
+        const orgName = currentReport?.report?.organization?.name
         if (
           params.newValue === orgName ||
           (typeof params.newValue === 'object' &&
@@ -453,15 +470,21 @@ export const AddEditAllocationAgreements = () => {
 
   const handleNavigateBack = useCallback(() => {
     navigate(
-      buildPath(ROUTES.REPORTS.VIEW, { compliancePeriod, complianceReportId })
+      buildPath(ROUTES.REPORTS.VIEW, { compliancePeriod, complianceReportId }),
+      {
+        state: {
+          expandedSchedule: 'allocationAgreements',
+          message: t('allocationAgreement:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   return (
     isFetched &&
     !allocationAgreementsLoading &&
-    !currentUserLoading &&
-    !complianceReportLoading && (
+    !isLoading && (
       <Grid2 className="add-edit-allocation-agreement-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">
@@ -481,105 +504,106 @@ export const AddEditAllocationAgreements = () => {
             ))}
           </BCBox>
         </div>
-        {isFeatureEnabled(FEATURE_FLAGS.ALLOCATION_AGREEMENT_IMPORT_EXPORT) && (
-          <BCBox>
-            <BCButton
-              color="primary"
-              variant="outlined"
-              aria-controls={isDownloadOpen ? 'download-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={isDownloadOpen ? 'true' : undefined}
-              onClick={handleDownloadClick}
-              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
-              isLoading={isDownloading}
-            >
-              {t('common:importExport.export.btn')}
-            </BCButton>
-            <Menu
-              id="download-menu"
-              anchorEl={downloadAnchorEl}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right'
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right'
-              }}
-              open={isDownloadOpen}
-              onClose={handleCloseDownloadMenu}
-            >
-              <MenuItem
-                disabled={isDownloading}
-                onClick={() => {
-                  handleDownload(true)
-                }}
+        {isFeatureEnabled(FEATURE_FLAGS.ALLOCATION_AGREEMENT_IMPORT_EXPORT) &&
+          !isEarlyIssuance && (
+            <BCBox>
+              <BCButton
+                color="primary"
+                variant="outlined"
+                aria-controls={isDownloadOpen ? 'download-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={isDownloadOpen ? 'true' : undefined}
+                onClick={handleDownloadClick}
+                endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+                isLoading={isDownloading}
               >
-                {t('common:importExport.export.withDataBtn')}
-              </MenuItem>
-              <MenuItem
-                disabled={isDownloading}
-                onClick={() => {
-                  handleDownload(false)
+                {t('common:importExport.export.btn')}
+              </BCButton>
+              <Menu
+                id="download-menu"
+                anchorEl={downloadAnchorEl}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right'
                 }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right'
+                }}
+                open={isDownloadOpen}
+                onClose={handleCloseDownloadMenu}
               >
-                {t('common:importExport.export.withoutDataBtn')}
-              </MenuItem>
-            </Menu>
-            <BCButton
-              style={{ marginLeft: '12px' }}
-              color="primary"
-              variant="outlined"
-              aria-controls={isImportOpen ? 'import-menu' : undefined}
-              aria-haspopup="true"
-              aria-expanded={isImportOpen ? 'true' : undefined}
-              onClick={handleImportClick}
-              endIcon={<FontAwesomeIcon icon={faCaretDown} />}
-            >
-              {t('common:importExport.import.btn')}
-            </BCButton>
-            <Menu
-              id="import-menu"
-              slotProps={{
-                paper: {
-                  style: {
-                    maxWidth: 240
+                <MenuItem
+                  disabled={isDownloading}
+                  onClick={() => {
+                    handleDownload(true)
+                  }}
+                >
+                  {t('common:importExport.export.withDataBtn')}
+                </MenuItem>
+                <MenuItem
+                  disabled={isDownloading}
+                  onClick={() => {
+                    handleDownload(false)
+                  }}
+                >
+                  {t('common:importExport.export.withoutDataBtn')}
+                </MenuItem>
+              </Menu>
+              <BCButton
+                style={{ marginLeft: '12px' }}
+                color="primary"
+                variant="outlined"
+                aria-controls={isImportOpen ? 'import-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={isImportOpen ? 'true' : undefined}
+                onClick={handleImportClick}
+                endIcon={<FontAwesomeIcon icon={faCaretDown} />}
+              >
+                {t('common:importExport.import.btn')}
+              </BCButton>
+              <Menu
+                id="import-menu"
+                slotProps={{
+                  paper: {
+                    style: {
+                      maxWidth: 240
+                    }
                   }
-                }
-              }}
-              anchorEl={importAnchorEl}
-              anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'right'
-              }}
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right'
-              }}
-              open={isImportOpen}
-              onClose={handleCloseImportMenu}
-            >
-              {!hideOverwrite && (
+                }}
+                anchorEl={importAnchorEl}
+                anchorOrigin={{
+                  vertical: 'bottom',
+                  horizontal: 'right'
+                }}
+                transformOrigin={{
+                  vertical: 'top',
+                  horizontal: 'right'
+                }}
+                open={isImportOpen}
+                onClose={handleCloseImportMenu}
+              >
+                {!hideOverwrite && (
+                  <MenuItem
+                    onClick={() => {
+                      openFileImportDialog(true)
+                      handleCloseImportMenu()
+                    }}
+                  >
+                    {t('common:importExport.import.dialog.buttons.overwrite')}
+                  </MenuItem>
+                )}
                 <MenuItem
                   onClick={() => {
-                    openFileImportDialog(true)
+                    openFileImportDialog(false)
                     handleCloseImportMenu()
                   }}
                 >
-                  {t('common:importExport.import.dialog.buttons.overwrite')}
+                  {t('common:importExport.import.dialog.buttons.append')}
                 </MenuItem>
-              )}
-              <MenuItem
-                onClick={() => {
-                  openFileImportDialog(false)
-                  handleCloseImportMenu()
-                }}
-              >
-                {t('common:importExport.import.dialog.buttons.append')}
-              </MenuItem>
-            </Menu>
-          </BCBox>
-        )}
+              </Menu>
+            </BCBox>
+          )}
         <BCBox my={2} component="div" style={{ height: '100%', width: '100%' }}>
           <BCGridEditor
             gridRef={gridRef}

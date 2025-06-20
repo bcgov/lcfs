@@ -19,6 +19,7 @@ from sqlalchemy import (
     or_,
     extract,
     delete,
+    join,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +30,14 @@ from lcfs.db.models.transaction.TransactionStatusView import TransactionStatusVi
 from lcfs.db.models.transaction.TransactionView import TransactionView
 from lcfs.db.models.transfer import TransferHistory
 from lcfs.db.models.transfer.TransferStatus import TransferStatus
+from lcfs.db.models.transfer.Transfer import Transfer
+from lcfs.db.models.admin_adjustment.AdminAdjustment import AdminAdjustment
+from lcfs.db.models.initiative_agreement.InitiativeAgreement import InitiativeAgreement
+from lcfs.db.models.compliance.ComplianceReportStatus import (
+    ComplianceReportStatus,
+    ComplianceReportStatusEnum,
+)
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.web.core.decorators import repo_handler
 
 
@@ -128,13 +137,18 @@ class TransactionRepository:
                     and_(
                         TransactionView.status == "Rescinded",
                         exists()
-                        .select_from(TransferHistory)
+                        .select_from(
+                            join(
+                                TransferHistory,
+                                TransferStatus,
+                                TransferHistory.transfer_status_id
+                                == TransferStatus.transfer_status_id,
+                            )
+                        )
                         .where(
                             and_(
                                 TransferHistory.transfer_id
                                 == TransactionView.transaction_id,
-                                TransferHistory.transfer_status_id
-                                == TransferStatus.transfer_status_id,
                                 TransferStatus.status == "Submitted",
                                 TransferHistory.create_date
                                 < TransactionView.update_date,
@@ -161,7 +175,9 @@ class TransactionRepository:
             query = query.order_by(direction(getattr(TransactionView, order.field)))
 
         # Execute count query for total records matching the filter
-        count_query = select(func.count()).select_from(query.subquery())
+        count_query = select(func.count(TransactionView.transaction_id)).where(
+            and_(*query_conditions)
+        )
         total_count_result = await self.db.execute(count_query)
         total_count = total_count_result.scalar_one()
 
@@ -360,6 +376,158 @@ class TransactionRepository:
         return available_balance
 
     @repo_handler
+    async def calculate_line_17_available_balance_for_period(
+        self, organization_id: int, compliance_period: int
+    ):
+        """
+        Calculate the available balance for Line 17 using the specific period end formula.
+
+        This formula includes:
+        - validations or compliance unit balance changes from assessments listed with compliance period or prior
+        - minus reductions listed with compliance period or prior
+        - plus compliance units purchased through credit transfers with effective date on or before end of compliance period
+        - minus compliance units sold through credit transfer with effective date on or before end of compliance period
+        - plus compliance units issued under IA/P3A with effective date on or before end of compliance period
+        - plus/minus admin adjustments with effective date on or before end of compliance period
+        - minus all future debits (such as transfers or reductions)
+
+        Args:
+            organization_id (int): The ID of the organization
+            compliance_period (int): The compliance period year
+
+        Returns:
+            int: The available balance for Line 17
+        """
+        vancouver_timezone = zoneinfo.ZoneInfo("America/Vancouver")
+        compliance_period_end = datetime.strptime(
+            f"{str(compliance_period + 1)}-03-31", "%Y-%m-%d"
+        )
+        compliance_period_end_local = compliance_period_end.replace(
+            hour=23, minute=59, second=59, microsecond=999999, tzinfo=vancouver_timezone
+        )
+
+        # 1. Compliance unit balance changes from assessments (compliance reports)
+        # Include assessed/reassessed compliance reports from the compliance period or prior
+        assessment_balance = await self.db.scalar(
+            select(func.coalesce(func.sum(Transaction.compliance_units), 0))
+            .select_from(Transaction)
+            .join(
+                ComplianceReport,
+                Transaction.transaction_id == ComplianceReport.transaction_id,
+            )
+            .join(
+                ComplianceReportStatus,
+                ComplianceReport.current_status_id
+                == ComplianceReportStatus.compliance_report_status_id,
+            )
+            .where(
+                and_(
+                    Transaction.organization_id == organization_id,
+                    ComplianceReportStatus.status.in_(
+                        [
+                            ComplianceReportStatusEnum.Assessed,
+                        ]
+                    ),
+                    Transaction.create_date <= compliance_period_end_local,
+                    Transaction.transaction_action == TransactionActionEnum.Adjustment,
+                )
+            )
+        )
+
+        # 2. Compliance units received through transfers (purchases)
+        # Include recorded transfers where this org is the receiver, effective date <= end of compliance period
+        transfer_purchases = await self.db.scalar(
+            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
+                and_(
+                    Transfer.to_organization_id == organization_id,
+                    Transfer.current_status_id == 6,  # Recorded status
+                    Transfer.transaction_effective_date
+                    <= compliance_period_end_local.date(),
+                )
+            )
+        )
+
+        # 3. Compliance units transferred away (sales)
+        # Include recorded transfers where this org is the sender, effective date <= end of compliance period
+        transfer_sales = await self.db.scalar(
+            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
+                and_(
+                    Transfer.from_organization_id == organization_id,
+                    Transfer.current_status_id == 6,  # Recorded status
+                    Transfer.transaction_effective_date
+                    <= compliance_period_end_local.date(),
+                )
+            )
+        )
+
+        # 4. Compliance units issued under IA/P3A (Initiative Agreements)
+        # Include approved initiative agreements with effective date <= end of compliance period
+        initiative_agreements = await self.db.scalar(
+            select(
+                func.coalesce(func.sum(InitiativeAgreement.compliance_units), 0)
+            ).where(
+                and_(
+                    InitiativeAgreement.to_organization_id == organization_id,
+                    InitiativeAgreement.current_status_id == 3,  # Approved status
+                    InitiativeAgreement.transaction_effective_date
+                    <= compliance_period_end_local.date(),
+                )
+            )
+        )
+
+        # 5. Admin adjustments
+        # Include approved admin adjustments with effective date <= end of compliance period
+        admin_adjustments = await self.db.scalar(
+            select(func.coalesce(func.sum(AdminAdjustment.compliance_units), 0)).where(
+                and_(
+                    AdminAdjustment.to_organization_id == organization_id,
+                    AdminAdjustment.current_status_id == 3,  # Approved status
+                    AdminAdjustment.transaction_effective_date
+                    <= compliance_period_end_local.date(),
+                )
+            )
+        )
+
+        # 6. Future debits (negative transactions after the compliance period end)
+        # This includes future transfers out and other future negative transactions
+        future_transfer_debits = await self.db.scalar(
+            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
+                and_(
+                    Transfer.from_organization_id == organization_id,
+                    Transfer.current_status_id == 6,  # Recorded status
+                    Transfer.transaction_effective_date
+                    > compliance_period_end_local.date(),
+                )
+            )
+        )
+
+        # Future negative adjustments and other transactions
+        future_negative_transactions = await self.db.scalar(
+            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
+                and_(
+                    Transaction.organization_id == organization_id,
+                    Transaction.create_date > compliance_period_end_local,
+                    Transaction.compliance_units < 0,
+                    Transaction.transaction_action != TransactionActionEnum.Released,
+                )
+            )
+        )
+
+        # Calculate the available balance using the TFRS formula
+        available_balance = (
+            (assessment_balance or 0)
+            + (transfer_purchases or 0)
+            - (transfer_sales or 0)
+            + (initiative_agreements or 0)
+            + (admin_adjustments or 0)
+            - (future_transfer_debits or 0)
+            - abs(future_negative_transactions or 0)
+        )
+
+        # Return the balance, ensuring it doesn't go below zero
+        return max(available_balance, 0)
+
+    @repo_handler
     async def create_transaction(
         self,
         transaction_action: TransactionActionEnum,
@@ -462,6 +630,20 @@ class TransactionRepository:
                 return True
         # If no rows were affected or transaction could not be retrieved, return False
         return False
+
+    @repo_handler
+    async def reinstate_transaction(self, transaction_id: int) -> bool:
+        """
+        Sets a transaction's action back to 'Reserved'. This is used when a
+        superseding report is deleted, putting the previous report back in play.
+        """
+        transaction = await self.get_transaction_by_id(transaction_id)
+        if not transaction:
+            return False
+        transaction.transaction_action = TransactionActionEnum.Reserved
+        self.db.add(transaction)
+        await self.db.commit()
+        return True
 
     @repo_handler
     async def get_visible_statuses(self, entity_type: EntityType) -> List[str]:

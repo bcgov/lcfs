@@ -1,5 +1,6 @@
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
 import { ActionsRenderer, ValidationRenderer2 } from './components'
+import colors from '@/themes/base/colors'
 
 export const validation = {
   colId: 'validation',
@@ -22,6 +23,30 @@ export const actions = (props) => ({
   headerName: 'Action',
   cellRenderer: ActionsRenderer,
   cellRendererParams: props,
+  cellStyle: (params) => {
+    // Apply yellow background to Action column for edited rows in supplemental reports
+    if (
+      params.data.isNewSupplementalEntry &&
+      params.data.actionType === 'UPDATE'
+    ) {
+      return { backgroundColor: colors.alerts.warning.background }
+    }
+    // Apply green background to Action column for added rows in supplemental reports
+    if (
+      params.data.isNewSupplementalEntry &&
+      params.data.actionType === 'CREATE'
+    ) {
+      return { backgroundColor: colors.alerts.success.background }
+    }
+    // Apply red background to Action column for deleted rows in supplemental reports
+    if (
+      params.data.isNewSupplementalEntry &&
+      params.data.actionType === 'DELETE'
+    ) {
+      return { backgroundColor: colors.alerts.error.background }
+    }
+    return {}
+  },
   pinned: 'left',
   maxWidth: 200,
   minWidth: 150,

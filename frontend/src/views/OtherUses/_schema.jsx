@@ -49,7 +49,7 @@ export const otherUsesColDefs = (
     cellEditor: AutocompleteCellEditor,
     minWidth: '280',
     cellEditorParams: {
-      options: optionsData.fuelTypes.map((obj) => obj.fuelType),
+      options: optionsData?.fuelTypes.map((obj) => obj.fuelType),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -253,7 +253,7 @@ export const otherUsesColDefs = (
     cellEditor: AutocompleteCellEditor,
     flex: 1,
     cellEditorParams: {
-      options: optionsData.expectedUses.map((obj) => obj.name),
+      options: optionsData?.expectedUses.map((obj) => obj.name),
       multiple: false,
       disableCloseOnSelect: false,
       freeSolo: false,
@@ -363,7 +363,7 @@ export const changelogCommonColDefs = (highlight = true) => [
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.fuelCode'),
-    field: 'endUseType.type',
+    field: 'fuelCode.fuelCode',
     cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {
@@ -403,8 +403,9 @@ export const changelogColDefs = (highlight = true) => [
     field: 'groupUuid',
     hide: true,
     sort: 'desc',
-    sortIndex: 1
+    sortIndex: 3
   },
+  { field: 'createDate', hide: true, sort: 'asc', sortIndex: 1 },
   { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
   {
     field: 'actionType',

@@ -392,6 +392,16 @@ async def test_get_fuel_code_status_enum(fuel_code_repo, mock_db):
 
 
 @pytest.mark.anyio
+async def test_get_fuel_code_status_recommended(fuel_code_repo, mock_db):
+    """Test getting Recommended fuel code status."""
+    fcs = FuelCodeStatus(fuel_code_status_id=3, status=FuelCodeStatusEnum.Recommended)
+    mock_db.scalar.return_value = fcs
+    result = await fuel_code_repo.get_fuel_code_status(FuelCodeStatusEnum.Recommended)
+    assert result == fcs
+    assert result.status == FuelCodeStatusEnum.Recommended
+
+
+@pytest.mark.anyio
 async def test_update_fuel_code(fuel_code_repo, mock_db, valid_fuel_code):
     mock_db.flush = AsyncMock()
     mock_db.refresh = AsyncMock()
@@ -824,6 +834,4 @@ async def test_get_standardized_fuel_data_unknown_no_codes_found_falls_back_to_d
 
     assert result.effective_carbon_intensity == 123.45
 
-    fuel_code_repo.get_default_carbon_intensity.assert_awaited_once_with(
-        1, "2024"
-    )
+    fuel_code_repo.get_default_carbon_intensity.assert_awaited_once_with(1, "2024")

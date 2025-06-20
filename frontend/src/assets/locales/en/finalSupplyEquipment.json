@@ -22,8 +22,8 @@
     "model": "Model",
     "levelOfEquipment": "Level of equipment",
     "ports": "Ports",
-    "intendedUses": "Intended use",
-    "intendedUsers": "Intended users",
+    "intendedUseTypes": "Intended use",
+    "intendedUserTypes": "Intended users",
     "streetAddress": "Street address",
     "city": "City",
     "postalCode": "Postal code",
@@ -34,5 +34,6 @@
   "postalCodeError": "Please enter a valid postal code.",
   "validateMsg": {
     "isRequired": "{{field}} is required"
-  }
+  },
+  "scheduleUpdated": "Final supply equipment schedule updated successfully"
 }

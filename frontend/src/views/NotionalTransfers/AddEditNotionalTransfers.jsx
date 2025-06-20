@@ -3,15 +3,12 @@ import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { ROUTES, buildPath } from '@/routes/routes'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useGetAllNotionalTransfersList,
   useNotionalTransferOptions,
   useSaveNotionalTransfer
 } from '@/hooks/useNotionalTransfer'
 import { isArrayEmpty } from '@/utils/array'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -19,6 +16,8 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, notionalTransferColDefs } from './_schema'
+import { REPORT_SCHEDULES } from '@/constants/common'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 
 export const AddEditNotionalTransfers = () => {
   const [rowData, setRowData] = useState([])
@@ -38,15 +37,14 @@ export const AddEditNotionalTransfers = () => {
   } = useNotionalTransferOptions()
   const { mutateAsync: saveRow } = useSaveNotionalTransfer(complianceReportId)
   const navigate = useNavigate()
-  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
-  const { data: complianceReport, isLoading: complianceReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId,
-      { enabled: !currentUserLoading }
-    )
+  const { data: currentReport, isLoading } =
+    useComplianceReportWithCache(complianceReportId)
+  const orgName = currentReport?.report?.organization?.name
 
-  const isSupplemental = complianceReport?.report?.version !== 0
+  const isSupplemental = currentReport?.report?.version !== 0
+  const isEarlyIssuance =
+    currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+
   const { data: notionalTransfers, isLoading: transfersLoading } =
     useGetAllNotionalTransfersList({
       complianceReportId,
@@ -142,7 +140,6 @@ export const AddEditNotionalTransfers = () => {
 
       // User cannot select their own organization as the transaction partner
       if (params.colDef.field === 'legalName') {
-        const orgName = currentUser.organization?.name
         if (
           (typeof params.newValue === 'object' &&
             params.newValue?.name === orgName) ||
@@ -232,35 +229,55 @@ export const AddEditNotionalTransfers = () => {
   }
 
   useEffect(() => {
-    if (!optionsLoading) {
-      const updatedColumnDefs = notionalTransferColDefs(
-        optionsData,
-        currentUser,
-        errors,
-        warnings,
-        isSupplemental
+    if (!optionsLoading && !isArrayEmpty(optionsData)) {
+      setColumnDefs(
+        notionalTransferColDefs(
+          optionsData,
+          orgName,
+          errors,
+          warnings,
+          isSupplemental,
+          compliancePeriod,
+          isEarlyIssuance
+        )
       )
-      setColumnDefs(updatedColumnDefs)
     }
   }, [
-    optionsData,
-    currentUser,
+    isSupplemental,
+    isEarlyIssuance,
     errors,
+    optionsData,
     warnings,
-    optionsLoading,
-    isSupplemental
+    orgName,
+    compliancePeriod
   ])
 
   useEffect(() => {
     if (!transfersLoading && !isArrayEmpty(notionalTransfers)) {
       const updatedRowData =
-        notionalTransfers?.map((item) => ({
-          ...item,
-          complianceReportId,
-          isNewSupplementalEntry:
-            isSupplemental && item.complianceReportId === +complianceReportId
-        })) ?? []
-      setRowData(updatedRowData)
+        notionalTransfers?.map((item) => {
+          let matchingRow = rowData.find(
+            (row) => row.notionalTransferId === item.notionalTransferId
+          )
+          if (!matchingRow) {
+            matchingRow = rowData.find(
+              (row) =>
+                row.notionalTransferId === undefined ||
+                row.notionalTransferId === null
+            )
+          }
+          return {
+            ...item,
+            complianceReportId,
+            isNewSupplementalEntry:
+              isSupplemental && item.complianceReportId === +complianceReportId,
+            id: matchingRow ? matchingRow.id : uuid()
+          }
+        }) ?? []
+      setRowData([
+        ...updatedRowData,
+        { id: uuid(), complianceReportId, compliancePeriod }
+      ])
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
@@ -277,9 +294,16 @@ export const AddEditNotionalTransfers = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'notionalTransfers',
+          message: t('notionalTransfer:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   if (optionsLoading || transfersLoading) {
     return <Loading />
@@ -288,8 +312,7 @@ export const AddEditNotionalTransfers = () => {
   return (
     isFetched &&
     !transfersLoading &&
-    !currentUserLoading &&
-    !complianceReportLoading && (
+    !isLoading && (
       <Grid2 className="add-edit-notional-transfer-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">
@@ -326,9 +349,6 @@ export const AddEditNotionalTransfers = () => {
               onSave: handleNavigateBack,
               confirmText: t('report:incompleteReport'),
               confirmLabel: t('report:returnToReport')
-            }}
-            gridOptions={{
-              getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
             }}
           />
         </BCBox>

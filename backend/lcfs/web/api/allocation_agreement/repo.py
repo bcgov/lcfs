@@ -174,7 +174,7 @@ class AllocationAgreementRepository:
                     AllocationAgreement.version == valid_agreements_subq.c.max_version,
                 ),
             )
-            .order_by(AllocationAgreement.allocation_agreement_id)
+            .order_by(AllocationAgreement.create_date)
         )
 
         result = await self.db.execute(allocation_agreements_select)
@@ -189,6 +189,10 @@ class AllocationAgreementRepository:
                 postal_address=allocation_agreement.postal_address,
                 ci_of_fuel=allocation_agreement.ci_of_fuel,
                 quantity=allocation_agreement.quantity,
+                q1_quantity=allocation_agreement.q1_quantity,
+                q2_quantity=allocation_agreement.q2_quantity,
+                q3_quantity=allocation_agreement.q3_quantity,
+                q4_quantity=allocation_agreement.q4_quantity,
                 units=allocation_agreement.units,
                 compliance_report_id=allocation_agreement.compliance_report_id,
                 allocation_transaction_type=allocation_agreement.allocation_transaction_type.type,

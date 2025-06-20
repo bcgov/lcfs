@@ -73,7 +73,7 @@ class ComplianceReportUpdateService:
         # Handle status changes
         if report_data.status in [status.value for status in ReturnStatus]:
             new_status, status_has_changed = await self._handle_return_status(
-                report_data
+                report_data, report
             )
             report_data.status = new_status
 
@@ -181,11 +181,20 @@ class ComplianceReportUpdateService:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
     async def _handle_return_status(
-        self, report_data: ComplianceReportUpdateSchema
+        self, report_data: ComplianceReportUpdateSchema, report: ComplianceReport
     ) -> Tuple[str, bool]:
         """Handle return status logic and return new status and change flag."""
-        mapped_status = RETURN_STATUS_MAPPER.get(report_data.status)
+        # Check if this is a government adjustment being returned to analyst
+        if (
+            report_data.status == ReturnStatus.ANALYST.value
+            and report.supplemental_initiator
+            == SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+        ):
+            # Government adjustments should return to "Analyst adjustment" status, not "Submitted"
+            return ComplianceReportStatusEnum.Analyst_adjustment.value, False
 
+        # Default mapping for all other cases
+        mapped_status = RETURN_STATUS_MAPPER.get(report_data.status)
         return mapped_status, False
 
     async def handle_submitted_status(
@@ -238,7 +247,9 @@ class ComplianceReportUpdateService:
             and report.supplemental_initiator
             == SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
         ):
-            summary = await self._calculate_and_lock_summary(report, user)
+            summary = await self._calculate_and_lock_summary(
+                report, user, skip_can_sign_check=True
+            )
             credit_change = summary.line_20_surplus_deficit_units
             await self._create_or_update_reserve_transaction(credit_change, report)
 
@@ -281,27 +292,40 @@ class ComplianceReportUpdateService:
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
+        # First ensure we have a summary and calculate credit change
+        calculated_summary = await self._calculate_and_lock_summary(
+            report, user, skip_can_sign_check=True
+        )
+        credit_change = calculated_summary.line_20_surplus_deficit_units
+
         if report.transaction:
             # Update the transaction to assessed
             report.transaction.transaction_action = TransactionActionEnum.Adjustment
             report.transaction.update_user = user.keycloak_username
+            report.transaction.compliance_units = credit_change
+        else:
+            # Create a new transaction if none exists (fixes Government adjustment issue)
+            await self._create_or_update_reserve_transaction(credit_change, report)
+            if report.transaction:
+                # Update the newly created transaction to Adjustment status
+                report.transaction.transaction_action = TransactionActionEnum.Adjustment
+                report.transaction.update_user = user.keycloak_username
+
         await self.repo.update_compliance_report(report)
 
     async def _create_or_update_reserve_transaction(self, credit_change, report):
+        available_balance = await self.org_service.calculate_available_balance(
+            report.organization_id
+        )
+        units_to_reserve = credit_change
+        # If not enough credits, reserve what is left
+        if credit_change < 0 and abs(credit_change) > available_balance:
+            units_to_reserve = available_balance * -1
         if report.transaction is not None:
-            report.transaction.compliance_units = credit_change
-        elif credit_change != 0:
-            available_balance = await self.org_service.calculate_available_balance(
-                report.organization_id
-            )
-            # Only need a Transaction if they have credits
-            if available_balance > 0:
-                units_to_reserve = credit_change
-
-                # If not enough credits, reserve what is left
-                if credit_change < 0 and abs(credit_change) > available_balance:
-                    units_to_reserve = available_balance * -1
-
+            # update existing transaction
+            report.transaction.compliance_units = units_to_reserve
+        # Only need a Transaction if they have credits or if it's a positive credit_change
+        elif credit_change != 0 and (available_balance > 0 or credit_change > 0):
                 report.transaction = await self.org_service.adjust_balance(
                     transaction_action=TransactionActionEnum.Reserved,
                     compliance_units=units_to_reserve,
@@ -309,7 +333,7 @@ class ComplianceReportUpdateService:
                 )
 
     async def _calculate_and_lock_summary(
-        self, report, user
+        self, report, user, skip_can_sign_check=False
     ) -> ComplianceReportSummary:
         # Fetch the existing summary from the database, if any
         existing_summary = await self.summary_repo.get_summary_by_report_id(
@@ -321,7 +345,8 @@ class ComplianceReportUpdateService:
                 report.compliance_report_id
             )
         )
-        if not calculated_summary.can_sign:
+        # Skip can_sign check for assessment operations
+        if not skip_can_sign_check and not calculated_summary.can_sign:
             raise ServiceException("ComplianceReportSummary is not able to be signed")
 
         # If there's an existing summary, preserve user-edited values

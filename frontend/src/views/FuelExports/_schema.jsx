@@ -602,7 +602,8 @@ export const fuelExportColDefs = (
       showStepperButtons: false
     },
     valueGetter: (params) => {
-      return params.data.energyDensity !== undefined
+      return params.data.energyDensity !== undefined &&
+        params.data.energyDensity !== null
         ? `${params.data.energyDensity} MJ/${params.data.units || 0}`
         : ''
     },
@@ -649,7 +650,7 @@ export const fuelExportColDefs = (
   }
 ]
 
-export const fuelExportSummaryColDefs = [
+export const fuelExportSummaryColDefs = (showFuelTypeOther) => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.complianceUnits'),
     field: 'complianceUnits',
@@ -659,6 +660,11 @@ export const fuelExportSummaryColDefs = [
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     field: 'fuelType',
     valueGetter: (params) => params.data.fuelType?.fuelType
+  },
+  {
+    field: 'fuelTypeOther',
+    headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeOther'),
+    hide: !showFuelTypeOther
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
@@ -709,7 +715,18 @@ export const fuelExportSummaryColDefs = [
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.energyDensity'),
-    field: 'energyDensity'
+    field: 'energyDensity',
+    valueGetter: (params) => {
+      if (isFuelTypeOther(params)) {
+        return params.data?.energyDensity
+          ? params.data?.energyDensity + ' MJ/' + params.data?.units
+          : 0
+      } else {
+        return params.data?.energyDensity
+          ? params.data?.energyDensity + ' MJ/' + params.data?.units
+          : ''
+      }
+    }
   },
   { headerName: i18n.t('fuelExport:fuelExportColLabels.eer'), field: 'eer' },
   {
@@ -739,18 +756,18 @@ export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelTypeId'),
     field: 'fuelType.fuelType',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelTypeId')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelType')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCategory'),
     field: 'fuelCategory.category',
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'fuelCategoryId')
+      highlight && changelogCellStyle(params, 'fuelCategory')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.endUseId'),
     field: 'endUseType.type',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'endUseId')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'endUseType')
   },
   {
     headerName: i18n.t(
@@ -758,12 +775,12 @@ export const changelogCommonColDefs = (highlight = true) => [
     ),
     field: 'provisionOfTheAct.name',
     cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'provisionOfTheActId')
+      highlight && changelogCellStyle(params, 'provisionOfTheAct')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
-    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCodeId')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {
     headerName: i18n.t('fuelExport:fuelExportColLabels.exportDate'),
@@ -821,8 +838,9 @@ export const changelogColDefs = (highlight = true) => [
     field: 'groupUuid',
     hide: true,
     sort: 'desc',
-    sortIndex: 1
+    sortIndex: 3
   },
+  { field: 'createDate', hide: true, sort: 'asc', sortIndex: 1 },
   { field: 'version', hide: true, sort: 'desc', sortIndex: 2 },
   {
     field: 'actionType',

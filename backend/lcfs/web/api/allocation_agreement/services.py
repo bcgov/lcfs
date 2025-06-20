@@ -36,6 +36,8 @@ ALLOCATION_AGREEMENT_EXCLUDE_FIELDS = {
     "user_type",
     "version",
     "action_type",
+    "is_new_supplemental_entry",
+    "compliance_report_id",
 }
 
 PROVISION_APPROVED_FUEL_CODE = "Fuel code - section 19 (b) (i)"
@@ -184,6 +186,10 @@ class AllocationAgreementServices:
                     postal_address=allocation_agreement.postal_address,
                     ci_of_fuel=allocation_agreement.ci_of_fuel,
                     quantity=allocation_agreement.quantity,
+                    q1_quantity=allocation_agreement.q1_quantity,
+                    q2_quantity=allocation_agreement.q2_quantity,
+                    q3_quantity=allocation_agreement.q3_quantity,
+                    q4_quantity=allocation_agreement.q4_quantity,
                     units=allocation_agreement.units,
                     allocation_transaction_type=allocation_agreement.allocation_transaction_type.type,
                     fuel_type=allocation_agreement.fuel_type.fuel_type,
@@ -296,6 +302,18 @@ class AllocationAgreementServices:
                 existing_allocation_agreement.fuel_type
             )
             existing_allocation_agreement.quantity = allocation_agreement_data.quantity
+            existing_allocation_agreement.q1_quantity = (
+                allocation_agreement_data.q1_quantity
+            )
+            existing_allocation_agreement.q2_quantity = (
+                allocation_agreement_data.q2_quantity
+            )
+            existing_allocation_agreement.q3_quantity = (
+                allocation_agreement_data.q3_quantity
+            )
+            existing_allocation_agreement.q4_quantity = (
+                allocation_agreement_data.q4_quantity
+            )
             existing_allocation_agreement.fuel_type_other = (
                 allocation_agreement_data.fuel_type_other
             )
@@ -303,9 +321,11 @@ class AllocationAgreementServices:
                 allocation_agreement_data.group_uuid
             )
             existing_allocation_agreement.version = (
-                existing_allocation_agreement.version + 1
+                existing_allocation_agreement.version
             )
-            existing_allocation_agreement.action_type = ActionTypeEnum.UPDATE
+            existing_allocation_agreement.action_type = (
+                existing_allocation_agreement.action_type
+            )
 
             updated_allocation_agreement = await self.repo.update_allocation_agreement(
                 existing_allocation_agreement
@@ -319,6 +339,10 @@ class AllocationAgreementServices:
                 postal_address=updated_allocation_agreement.postal_address,
                 ci_of_fuel=updated_allocation_agreement.ci_of_fuel,
                 quantity=updated_allocation_agreement.quantity,
+                q1_quantity=updated_allocation_agreement.q1_quantity,
+                q2_quantity=updated_allocation_agreement.q2_quantity,
+                q3_quantity=updated_allocation_agreement.q3_quantity,
+                q4_quantity=updated_allocation_agreement.q4_quantity,
                 units=updated_allocation_agreement.units,
                 compliance_report_id=updated_allocation_agreement.compliance_report_id,
                 allocation_transaction_type=updated_allocation_agreement.allocation_transaction_type.type,
@@ -359,6 +383,12 @@ class AllocationAgreementServices:
         allocation_agreement.version = (
             0 if not existing_record else existing_record.version + 1
         )
+        allocation_agreement.create_date = (
+            existing_record.create_date if existing_record else None
+        )
+        allocation_agreement.create_user = (
+            existing_record.create_user if existing_record else None
+        )
 
         created_allocation_agreement = await self.repo.create_allocation_agreement(
             allocation_agreement
@@ -388,6 +418,10 @@ class AllocationAgreementServices:
             postal_address=created_allocation_agreement.postal_address,
             ci_of_fuel=created_allocation_agreement.ci_of_fuel,
             quantity=created_allocation_agreement.quantity,
+            q1_quantity=created_allocation_agreement.q1_quantity,
+            q2_quantity=created_allocation_agreement.q2_quantity,
+            q3_quantity=created_allocation_agreement.q3_quantity,
+            q4_quantity=created_allocation_agreement.q4_quantity,
             units=created_allocation_agreement.units,
             compliance_report_id=created_allocation_agreement.compliance_report_id,
             allocation_transaction_type=allocation_transaction_type_value,
@@ -412,7 +446,21 @@ class AllocationAgreementServices:
                 allocation_agreement_data.group_uuid
             )
         )
-
+        if not existing_allocation_agreement:
+            raise HTTPException(
+                status_code=404, detail="Allocation agreement record not found."
+            )
+        # If the compliance report IDs match, also delete the original record
+        if (
+            existing_allocation_agreement.compliance_report_id
+            == allocation_agreement_data.compliance_report_id
+        ):
+            await self.repo.delete_allocation_agreement(
+                allocation_agreement_data.allocation_agreement_id
+            )
+            return DeleteAllocationAgreementResponseSchema(
+                success=True, message="Marked as deleted."
+            )
         # If the record is already deleted, just return success
         if existing_allocation_agreement.action_type == ActionTypeEnum.DELETE:
             return DeleteAllocationAgreementResponseSchema(message="Marked as deleted.")
@@ -431,15 +479,6 @@ class AllocationAgreementServices:
                 setattr(
                     deleted_entity, field, getattr(existing_allocation_agreement, field)
                 )
-
-        # If the compliance report IDs match, also delete the original record
-        if (
-            existing_allocation_agreement.compliance_report_id
-            == allocation_agreement_data.compliance_report_id
-        ):
-            await self.repo.delete_allocation_agreement(
-                allocation_agreement_data.allocation_agreement_id
-            )
 
         # Always create the deletion record
         await self.repo.create_allocation_agreement(deleted_entity)

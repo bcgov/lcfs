@@ -494,20 +494,20 @@ function enterFSEData(data) {
         startIndex
       )
 
-      cy.get('div.ag-cell[col-id="intendedUses"]')
+      cy.get('div.ag-cell[col-id="intendedUseTypes"]')
         .eq(startIndex)
         .click()
         .then(() => {
-          cy.wrap(row.intendedUses).each((use) => {
+          cy.wrap(row.intendedUseTypes).each((use) => {
             cy.get(`[data-testid="select-${use}"]`).click()
           })
         })
 
-      cy.get('div.ag-cell[col-id="intendedUsers"]')
+      cy.get('div.ag-cell[col-id="intendedUserTypes"]')
         .eq(startIndex)
         .click()
         .then(() => {
-          cy.wrap(row.intendedUsers).each((user) => {
+          cy.wrap(row.intendedUserTypes).each((user) => {
             cy.get(`[data-testid="select-${user}"]`).click()
           })
         })

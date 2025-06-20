@@ -1,5 +1,4 @@
 import warnings
-
 import os
 import structlog
 
@@ -83,8 +82,8 @@ async def _engine() -> AsyncGenerator[AsyncEngine, None]:
     # Create AsyncEngine instance
     engine = create_async_engine(str(settings.db_test_url))
 
-    # Seed the database with test data
-    await seed_database("test")
+    # Seed database with pytest test data
+    await seed_database("pytest")
 
     try:
         yield engine

@@ -10,10 +10,19 @@ vi.mock('@/services/useApiService', () => ({
 }))
 
 describe('SupportingDocumentSummary', () => {
-  const reportID = '123'
+  const parentID = '123'
+  const parentType = 'compliance_report'
   const data = [
-    { documentId: '1', fileName: 'example1.txt' },
-    { documentId: '2', fileName: 'example2.txt' }
+    {
+      documentId: '1',
+      fileName: 'example1.txt',
+      createDate: '2023-05-02T23:35:00Z'
+    },
+    {
+      documentId: '2',
+      fileName: 'example2.txt',
+      createDate: '2023-05-03T10:15:00Z'
+    }
   ]
 
   beforeEach(() => {
@@ -33,17 +42,31 @@ describe('SupportingDocumentSummary', () => {
   })
 
   it('renders without crashing', () => {
-    render(<SupportingDocumentSummary reportID={reportID} data={data} />, {
-      wrapper
-    })
+    render(
+      <SupportingDocumentSummary
+        parentID={parentID}
+        parentType={parentType}
+        data={data}
+      />,
+      {
+        wrapper
+      }
+    )
     expect(screen.getByText('example1.txt')).toBeInTheDocument()
     expect(screen.getByText('example2.txt')).toBeInTheDocument()
   })
 
   it('opens document when clicked', async () => {
-    render(<SupportingDocumentSummary reportID={reportID} data={data} />, {
-      wrapper
-    })
+    render(
+      <SupportingDocumentSummary
+        parentID={parentID}
+        parentType={parentType}
+        data={data}
+      />,
+      {
+        wrapper
+      }
+    )
     const firstDocumentLink = screen.getByText('example1.txt')
 
     window.open = vi.fn()
@@ -64,8 +87,15 @@ describe('SupportingDocumentSummary', () => {
   it('does not open document if documentID is missing', async () => {
     render(
       <SupportingDocumentSummary
-        reportID={reportID}
-        data={[{ documentId: '', fileName: 'example3.txt' }]}
+        parentID={parentID}
+        parentType={parentType}
+        data={[
+          {
+            documentId: '',
+            fileName: 'example3.txt',
+            createDate: '2023-05-04T14:20:00Z'
+          }
+        ]}
       />,
       { wrapper }
     )

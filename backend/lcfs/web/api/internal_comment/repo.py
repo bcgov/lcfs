@@ -1,9 +1,10 @@
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 import structlog
 from typing import List
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import asc, select, desc
 
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
@@ -14,9 +15,15 @@ from lcfs.db.models.user.UserProfile import UserProfile
 from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.web.api.internal_comment.schema import EntityTypeEnum
 from lcfs.db.models.comment.TransferInternalComment import TransferInternalComment
-from lcfs.db.models.comment.InitiativeAgreementInternalComment import InitiativeAgreementInternalComment
-from lcfs.db.models.comment.AdminAdjustmentInternalComment import AdminAdjustmentInternalComment
-from lcfs.db.models.comment.ComplianceReportInternalComment import ComplianceReportInternalComment
+from lcfs.db.models.comment.InitiativeAgreementInternalComment import (
+    InitiativeAgreementInternalComment,
+)
+from lcfs.db.models.comment.AdminAdjustmentInternalComment import (
+    AdminAdjustmentInternalComment,
+)
+from lcfs.db.models.comment.ComplianceReportInternalComment import (
+    ComplianceReportInternalComment,
+)
 
 
 logger = structlog.get_logger(__name__)
@@ -31,6 +38,7 @@ class InternalCommentRepository:
         self,
         db: AsyncSession = Depends(get_async_db_session),
         user_repo: UserRepository = Depends(),
+        report_repo: ComplianceReportRepository = Depends(),
     ):
         """
         Initializes the repository with an asynchronous database session.
@@ -40,6 +48,7 @@ class InternalCommentRepository:
         """
         self.db = db
         self.user_repo = user_repo
+        self.report_repo = report_repo
 
     @repo_handler
     async def create_internal_comment(
@@ -138,8 +147,25 @@ class InternalCommentRepository:
 
         # Get the specific model and where condition for the given entity_type
         entity_model, where_condition = entity_mapping[entity_type]
+        entity_ids = [entity_id]
+        if entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
+            # Get all related compliance report IDs in the same chain
+            entity_ids = await self.report_repo.get_related_compliance_report_ids(
+                entity_id
+            )
 
-        # Construct the base query
+        # First get distinct internal_comment_ids
+        distinct_comment_ids_query = (
+            select(InternalComment.internal_comment_id)
+            .join(
+                entity_model,
+                entity_model.internal_comment_id == InternalComment.internal_comment_id,
+            )
+            .where(where_condition.in_(entity_ids))
+            .distinct()
+        )
+
+        # Then get the full comment data with user info, ordered by update_date
         base_query = (
             select(
                 InternalComment,
@@ -148,15 +174,11 @@ class InternalCommentRepository:
                 ),
             )
             .join(
-                entity_model,
-                entity_model.internal_comment_id == InternalComment.internal_comment_id,
-            )
-            .join(
                 UserProfile,
                 UserProfile.keycloak_username == InternalComment.create_user,
             )
-            .where(where_condition == entity_id)
-            .order_by(desc(InternalComment.internal_comment_id))
+            .where(InternalComment.internal_comment_id.in_(distinct_comment_ids_query))
+            .order_by(asc(InternalComment.create_date))
         )
 
         # Execute the query
@@ -244,3 +266,44 @@ class InternalCommentRepository:
             internal_comment.create_user
         )
         return internal_comment
+
+    @repo_handler
+    async def get_internal_comment_ids_for_entity(
+        self, entity_type: EntityTypeEnum, entity_id: int
+    ) -> List[int]:
+        """
+        Retrieves the IDs of internal comments for a specific entity.
+
+        Args:
+            entity_type (EntityTypeEnum): The type of entity.
+            entity_id (int): The ID of the entity.
+
+        Returns:
+            List[int]: List of internal comment IDs.
+        """
+        # Mapping of entity types to their respective models and where conditions
+        entity_mapping = {
+            EntityTypeEnum.TRANSFER: (
+                TransferInternalComment,
+                TransferInternalComment.transfer_id,
+            ),
+            EntityTypeEnum.INITIATIVE_AGREEMENT: (
+                InitiativeAgreementInternalComment,
+                InitiativeAgreementInternalComment.initiative_agreement_id,
+            ),
+            EntityTypeEnum.ADMIN_ADJUSTMENT: (
+                AdminAdjustmentInternalComment,
+                AdminAdjustmentInternalComment.admin_adjustment_id,
+            ),
+            EntityTypeEnum.COMPLIANCE_REPORT: (
+                ComplianceReportInternalComment,
+                ComplianceReportInternalComment.compliance_report_id,
+            ),
+        }
+
+        entity_model, where_condition = entity_mapping[entity_type]
+        query = select(entity_model.internal_comment_id).where(
+            where_condition == entity_id
+        )
+        result = await self.db.execute(query)
+        return [row[0] for row in result.all()]

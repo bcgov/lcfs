@@ -233,6 +233,8 @@ export const finalSupplyEquipmentColDefs = (
         'finalSupplyEquipment:finalSupplyEquipmentColLabels.levelOfEquipment'
       ),
       cellEditor: AutocompleteCellEditor,
+      suppressKeyboardEvent,
+      minWidth: 400,
       cellEditorParams: {
         options: optionsData?.levelsOfEquipment?.map((obj) => obj.name) || [],
         multiple: false,
@@ -264,15 +266,16 @@ export const finalSupplyEquipmentColDefs = (
       },
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
-      cellRenderer: SelectRenderer
+      cellRenderer: SelectRenderer,
+      editable: true
     },
     {
-      field: 'intendedUses',
+      field: 'intendedUseTypes',
       headerComponent: RequiredHeader,
       headerName: i18n.t(
-        'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUseTypes'
       ),
-      valueGetter: (params) => params.data.intendedUseTypes,
+      valueGetter: (params) => params.data?.intendedUseTypes,
       cellEditor: AutocompleteCellEditor,
       cellEditorParams: {
         options: optionsData?.intendedUseTypes?.map((obj) => obj.type) || [],
@@ -288,10 +291,10 @@ export const finalSupplyEquipmentColDefs = (
       editable: true
     },
     {
-      field: 'intendedUsers',
+      field: 'intendedUserTypes',
       headerComponent: RequiredHeader,
       headerName: i18n.t(
-        'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
+        'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUserTypes'
       ),
       valueGetter: (params) => params.data?.intendedUserTypes,
       cellEditor: AutocompleteCellEditor,
@@ -304,11 +307,7 @@ export const finalSupplyEquipmentColDefs = (
       },
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings),
-      cellRenderer: (params) =>
-        (params.value && params.value !== '' && (
-          <CommonArrayRenderer disableLink {...params} />
-        )) ||
-        (!params.value && <BCTypography variant="body4">Select</BCTypography>),
+      cellRenderer: MultiSelectRenderer,
       suppressKeyboardEvent,
       minWidth: 315,
       editable: true
@@ -514,9 +513,9 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
   },
   {
     headerName: t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUses'
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUseTypes'
     ),
-    field: 'intendedUses',
+    field: 'intendedUseTypes',
     valueGetter: (params) => params.data.intendedUseTypes,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams:
@@ -526,9 +525,9 @@ export const finalSupplyEquipmentSummaryColDefs = (t, status) => [
   },
   {
     headerName: t(
-      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUsers'
+      'finalSupplyEquipment:finalSupplyEquipmentColLabels.intendedUserTypes'
     ),
-    field: 'intendedUsers',
+    field: 'intendedUserTypes',
     valueGetter: (params) => params.data.intendedUserTypes,
     cellRenderer: CommonArrayRenderer,
     cellRendererParams:

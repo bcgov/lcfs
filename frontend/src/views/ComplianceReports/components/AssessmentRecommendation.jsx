@@ -68,7 +68,13 @@ export const AssessmentRecommendation = ({
   }
 
   return (
-    <BCBox sx={{ mt: 2 }}>
+    <BCBox
+      sx={{
+        mt: 2,
+        border: '1px solid rgba(0, 0, 0, 0.28)',
+        padding: '20px'
+      }}
+    >
       {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
         currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED && (
           <BCTypography variant="body2">
@@ -113,7 +119,14 @@ export const AssessmentRecommendation = ({
                 variant="contained"
                 color="primary"
                 onClick={openReassessmentDialog}
-                startIcon={<Assignment />}
+                startIcon={
+                  <Assignment
+                    sx={{
+                      width: '1rem',
+                      height: '1rem'
+                    }}
+                  />
+                }
                 sx={{ mt: 2 }}
                 disabled={isLoading || !reportData.isNewest}
               >

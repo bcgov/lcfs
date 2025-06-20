@@ -61,7 +61,7 @@ class NotionalTransferRepository:
         result = await self.get_effective_notional_transfers(
             compliance_report_group_uuid=group_uuid,
             compliance_report_id=compliance_report_id,
-            changelog=changelog
+            changelog=changelog,
         )
         return result
 
@@ -127,7 +127,7 @@ class NotionalTransferRepository:
                     == valid_notional_transfers_subq.c.max_version,
                 ),
             )
-            .order_by(NotionalTransfer.notional_transfer_id)
+            .order_by(NotionalTransfer.create_date)
         )
 
         result = await self.db.execute(notional_transfers_select)
@@ -138,6 +138,10 @@ class NotionalTransferRepository:
                 notional_transfer_id=nt.notional_transfer_id,
                 compliance_report_id=nt.compliance_report_id,
                 quantity=nt.quantity,
+                q1_quantity=nt.q1_quantity,
+                q2_quantity=nt.q2_quantity,
+                q3_quantity=nt.q3_quantity,
+                q4_quantity=nt.q4_quantity,
                 legal_name=nt.legal_name,
                 address_for_service=nt.address_for_service,
                 fuel_category=nt.fuel_category.category,
@@ -195,6 +199,10 @@ class NotionalTransferRepository:
                         transfer.compliance_report_id
                     )
                     existing_transfer.quantity = transfer.quantity
+                    existing_transfer.q1_quantity = transfer.q1_quantity
+                    existing_transfer.q2_quantity = transfer.q2_quantity
+                    existing_transfer.q3_quantity = transfer.q3_quantity
+                    existing_transfer.q4_quantity = transfer.q4_quantity
                     existing_transfer.legal_name = transfer.legal_name
                     existing_transfer.address_for_service = transfer.address_for_service
                     existing_transfer.fuel_category_id = transfer.fuel_category_id
@@ -266,18 +274,17 @@ class NotionalTransferRepository:
         return result.scalars().first()
 
     @repo_handler
-    async def get_notional_transfer_version_by_user(
+    async def get_notional_transfer_version(
         self, group_uuid: str, version: int
     ) -> Optional[NotionalTransfer]:
         """
-        Retrieve a specific NotionalTransfer record by group UUID, version, and user_type.
+        Retrieve a specific NotionalTransfer record by group UUID and version.
         """
         query = (
             select(NotionalTransfer)
             .where(
                 NotionalTransfer.group_uuid == group_uuid,
                 NotionalTransfer.version == version,
-                NotionalTransfer.user_type == user_type,
             )
             .options(joinedload(NotionalTransfer.fuel_category))
         )

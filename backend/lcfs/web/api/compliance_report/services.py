@@ -46,6 +46,8 @@ from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotServ
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
+from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from lcfs.services.s3.client import DocumentService
@@ -62,6 +64,7 @@ class ComplianceReportServices:
         final_supply_equipment_service: FinalSupplyEquipmentServices = Depends(),
         document_service: DocumentService = Depends(),
         transaction_repo: TransactionRepository = Depends(),
+        internal_comment_service: InternalCommentService = Depends(),
     ) -> None:
         self.final_supply_equipment_service = final_supply_equipment_service
         self.org_repo = org_repo
@@ -69,6 +72,7 @@ class ComplianceReportServices:
         self.snapshot_services = snapshot_services
         self.document_service = document_service
         self.transaction_repo = transaction_repo
+        self.internal_comment_service = internal_comment_service
 
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
@@ -143,17 +147,25 @@ class ComplianceReportServices:
         """
         Creates a new analyst adjustment report.
         The report_id can be any report in the series (original or supplemental).
-        Analyst adjustments are only allowed if the status of the current report is 'Submitted'.
+        Analyst adjustments are only allowed if the status of the current report is 'Submitted' or 'Assessed'
         """
         # Fetch the current report using the provided report_id
         current_report = await self.repo.get_compliance_report_by_id(existing_report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
 
-        # Validate that the status of the current report is 'Submitted'
-        if current_report.current_status.status != ComplianceReportStatusEnum.Submitted:
+        # Validate that the status of the current report is 'Submitted' or 'Assessed'
+        # 'Submitted' - normal analyst adjustment workflow
+        # 'Assessed' - creating reassessments/government adjustments on assessed reports
+        allowed_statuses = [
+            ComplianceReportStatusEnum.Submitted,
+            ComplianceReportStatusEnum.Assessed,
+        ]
+
+        if current_report.current_status.status not in allowed_statuses:
             raise ServiceException(
-                "An analyst adjustment can only be created if the current report's status is 'Submitted'."
+                "An analyst adjustment can only be created if the current report's status is "
+                "'Submitted' or 'Assessed'."
             )
 
         # Get the group_uuid from the current report
@@ -163,6 +175,10 @@ class ComplianceReportServices:
         latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
         if not latest_report:
             raise DataNotFoundException("Latest compliance report not found.")
+        if current_report.compliance_report_id != latest_report.compliance_report_id:
+            raise ServiceException(
+                "An analyst adjustment should be created on the latest report."
+            )
 
         new_version = latest_report.version + 1
 
@@ -183,7 +199,11 @@ class ComplianceReportServices:
             compliance_report_group_uuid=group_uuid,  # Use the same group_uuid
             version=new_version,  # Increment the version
             supplemental_initiator=SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
-            nickname=f"Government adjustment {new_version}",
+            nickname=(
+                f"Supplemental report {new_version}"
+                if current_report.reporting_frequency == ReportingFrequency.ANNUAL
+                else f"Early issuance - Government adjustment {new_version}"
+            ),
             summary=ComplianceReportSummary(),  # Create an empty summary object
         )
 
@@ -212,6 +232,14 @@ class ComplianceReportServices:
             existing_report_id, new_report.compliance_report_id
         )
 
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
+            existing_report_id, new_report.compliance_report_id
+        )
+
+        # Release the transaction from the current report being superseded
+        await self._release_superseded_transaction(current_report)
+
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
@@ -227,6 +255,18 @@ class ComplianceReportServices:
         current_report = await self.repo.get_compliance_report_by_id(original_report_id)
         if not current_report:
             raise DataNotFoundException("Compliance report not found.")
+        # Get the group_uuid from the current report
+        group_uuid = current_report.compliance_report_group_uuid
+        # Fetch the latest version number for the given group_uuid
+        latest_report = await self.repo.get_latest_report_by_group_uuid(
+            current_report.compliance_report_group_uuid
+        )
+        if not latest_report:
+            raise DataNotFoundException("Latest compliance report not found.")
+        if current_report.compliance_report_id != latest_report.compliance_report_id:
+            raise ServiceException(
+                "A supplemental should be created on the latest report."
+            )
 
         # Validate that the user has permission to create a supplemental report
         if user.organization_id != current_report.organization_id:
@@ -242,14 +282,6 @@ class ComplianceReportServices:
         #     raise ServiceException(
         #         "A supplemental report can only be created if the current report's status is 'Assessed'."
         #     )
-
-        # Get the group_uuid from the current report
-        group_uuid = current_report.compliance_report_group_uuid
-
-        # Fetch the latest version number for the given group_uuid
-        latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
-        if not latest_report:
-            raise DataNotFoundException("Latest compliance report not found.")
 
         new_version = latest_report.version + 1
 
@@ -279,7 +311,7 @@ class ComplianceReportServices:
 
         # Get the current available balance for line 17
         current_available_balance = (
-            await self.transaction_repo.calculate_available_balance_for_period(
+            await self.transaction_repo.calculate_line_17_available_balance_for_period(
                 current_report.organization_id,
                 int(current_report.compliance_period.description),
             )
@@ -298,7 +330,11 @@ class ComplianceReportServices:
             compliance_report_group_uuid=group_uuid,  # Use the same group_uuid
             version=new_version,  # Increment the version
             supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
-            nickname=f"Supplemental report {new_version}",
+            nickname=(
+                f"Supplemental report {new_version}"
+                if current_report.reporting_frequency == ReportingFrequency.ANNUAL
+                else f"Early issuance - Supplemental report {new_version}"
+            ),
             summary=new_summary,
         )
 
@@ -324,6 +360,11 @@ class ComplianceReportServices:
 
         # Copy documents from the original report
         await self.document_service.copy_documents(
+            original_report_id, new_report.compliance_report_id
+        )
+
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
             original_report_id, new_report.compliance_report_id
         )
 
@@ -375,6 +416,10 @@ class ComplianceReportServices:
         if not latest_report:
             # Should not happen if current_report exists, but good practice to check
             raise DataNotFoundException("Latest compliance report not found for group.")
+        if current_report.compliance_report_id != latest_report.compliance_report_id:
+            raise ServiceException(
+                "A supplemental should be created on the latest report."
+            )
         new_version = latest_report.version + 1
 
         # 5. Create the new supplemental report object
@@ -386,7 +431,11 @@ class ComplianceReportServices:
             compliance_report_group_uuid=current_report.compliance_report_group_uuid,  # Same group
             version=new_version,
             supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,  # Supplier edits it
-            nickname=f"Supplemental Report {new_version}",  # Automatic nickname
+            nickname=(
+                f"Supplemental report {new_version}"
+                if current_report.reporting_frequency == ReportingFrequency.ANNUAL
+                else f"Early issuance - Supplemental report {new_version}"
+            ),  # Automatic nickname
             summary=ComplianceReportSummary(),  # Start with an empty summary
             create_user=user.keycloak_username,  # Log who created it
             update_user=user.keycloak_username,
@@ -417,6 +466,14 @@ class ComplianceReportServices:
         await self.document_service.copy_documents(
             existing_report_id, new_report.compliance_report_id
         )
+
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
+            existing_report_id, new_report.compliance_report_id
+        )
+
+        # Release the transaction from the current report being superseded
+        await self._release_superseded_transaction(current_report)
 
         # 10. Return the validated base schema
         return ComplianceReportBaseSchema.model_validate(new_report)
@@ -455,6 +512,15 @@ class ComplianceReportServices:
             raise ServiceException(
                 "A supplemental report can only be deleted if the status is 'Draft/Analyst_adjustment'."
             )
+
+        # Reinstate the previous report's transaction if we are deleting a superseding report
+        if current_report.current_status.status in [
+            ComplianceReportStatusEnum.Analyst_adjustment,
+        ] or (
+            current_report.current_status.status == ComplianceReportStatusEnum.Draft
+            and self.is_supplemental_requested_by_gov_user(current_report)
+        ):
+            await self._reinstate_previous_transaction(current_report)
 
         # Delete the compliance report
         await self.repo.delete_compliance_report(report_id)
@@ -499,18 +565,9 @@ class ComplianceReportServices:
         is_analyst = user_has_roles(user, [RoleEnum.ANALYST])
         is_supplier = user_has_roles(user, [RoleEnum.SUPPLIER])
 
-        becid_only_statuses = {
-            ComplianceReportStatusEnum.Recommended_by_analyst.underscore_value(),
-            ComplianceReportStatusEnum.Recommended_by_manager.underscore_value(),
-        }
-
         becid_only_statuses_regular = {
             ComplianceReportStatusEnum.Recommended_by_analyst.value,
             ComplianceReportStatusEnum.Recommended_by_manager.value,
-        }
-
-        analyst_only_statuses = {
-            ComplianceReportStatusEnum.Analyst_adjustment.underscore_value(),
         }
 
         analyst_only_statuses_regular = {
@@ -562,6 +619,26 @@ class ComplianceReportServices:
                         )
         return reports
 
+    def is_supplemental_requested_by_gov_user(self, chained_report):
+        """
+        Check if the supplemental report was requested by gov user:
+        """
+        if not hasattr(chained_report, "history") or not chained_report.history:
+            return False
+
+        for history_item in chained_report.history:
+            if (
+                hasattr(history_item, "status")
+                and hasattr(history_item.status, "status")
+                and history_item.status.status == ComplianceReportStatusEnum.Draft.value
+                and hasattr(history_item, "user_profile")
+                and hasattr(history_item.user_profile, "organization")
+                and history_item.user_profile.organization is None
+            ):
+                return True
+
+        return False
+
     @service_handler
     async def get_compliance_report_chain(
         self,
@@ -578,10 +655,17 @@ class ComplianceReportServices:
         )
 
         is_newest = len(compliance_report_chain) - 1 == report.version
+        had_been_assessed = any(
+            report.current_status.status == ComplianceReportStatusEnum.Assessed.value
+            for report in compliance_report_chain
+        )
         filtered_chain = [
             chained_report
             for chained_report in compliance_report_chain
-            if chained_report.version <= report.version
+            if (
+                chained_report.version <= report.version
+                or self.is_supplemental_requested_by_gov_user(chained_report)
+            )
         ]
 
         # Apply masking to each report in the chain
@@ -592,7 +676,10 @@ class ComplianceReportServices:
             for report in masked_chain
         ]
         return ChainedComplianceReportSchema(
-            report=report, chain=masked_chain, is_newest=is_newest
+            report=report,
+            chain=masked_chain,
+            is_newest=is_newest,
+            had_been_assessed=had_been_assessed,
         )
 
     @service_handler
@@ -616,6 +703,46 @@ class ComplianceReportServices:
         )
 
         return history_masked_report
+
+    async def _reinstate_previous_transaction(self, report: ComplianceReport):
+        """
+        Finds the previous report in the chain and reinstates its transaction.
+        This is used when a superseding report (e.g. analyst adjustment) is deleted.
+        """
+        if report.version == 0:
+            return  # Nothing to reinstate
+
+        report_chain = await self.repo.get_compliance_report_chain(
+            report.compliance_report_group_uuid
+        )
+        previous_report = next(
+            (r for r in report_chain if r.version == report.version - 1), None
+        )
+
+        if previous_report and previous_report.transaction_id:
+            await self.transaction_repo.reinstate_transaction(
+                previous_report.transaction_id
+            )
+
+    async def _release_superseded_transaction(self, current_report: ComplianceReport):
+        """
+        Release the transaction associated with the current report when it's being superseded
+        by a government initiated supplemental report.
+        """
+        if current_report.transaction_id:
+            # Get the full transaction to check its status
+            transaction = await self.transaction_repo.get_transaction_by_id(
+                current_report.transaction_id
+            )
+
+            # Release the transaction if it's currently Reserved
+            if (
+                transaction
+                and transaction.transaction_action == TransactionActionEnum.Reserved
+            ):
+                await self.transaction_repo.release_transaction(
+                    current_report.transaction_id
+                )
 
     def _mask_report_status_for_history(
         self, report: ComplianceReportBaseSchema, user: UserProfile

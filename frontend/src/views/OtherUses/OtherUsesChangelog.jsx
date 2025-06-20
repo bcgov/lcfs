@@ -2,33 +2,30 @@ import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import {
-  useGetChangeLog,
-  useGetComplianceReport
+  useComplianceReportWithCache,
+  useGetChangeLog
 } from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { defaultInitialPagination } from '@/constants/schedules.js'
 import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
+import { useParams } from 'react-router-dom'
 
 export const OtherUsesChangelog = () => {
-  const { complianceReportId } = useParams()
-  const { data: currentUser, isLoading: isCurrentUserLoading } =
-    useCurrentUser()
   const { t } = useTranslation(['common', 'otherUses', 'report'])
-  const { data: currentReportData, isLoading } = useGetComplianceReport(
-    currentUser?.organization?.organizationId,
-    complianceReportId,
-    {
-      enabled: !!complianceReportId && !isCurrentUserLoading
-    }
-  )
+  const { complianceReportId, compliancePeriod } = useParams()
+  const { data: currentReport, isLoading: currentReportLoading } =
+    useComplianceReportWithCache(complianceReportId)
+
+  // State for pagination - one per changelog item
+  const [paginationStates, setPaginationStates] = useState({})
 
   const { data: changelogData, isLoading: changelogDataLoading } =
     useGetChangeLog({
       complianceReportGroupUuid:
-        currentReportData.report.complianceReportGroupUuid,
+        currentReport?.report.complianceReportGroupUuid,
       dataType: 'other-uses'
     })
 
@@ -60,12 +57,103 @@ export const OtherUsesChangelog = () => {
     }
   })
 
-  if (isLoading || changelogDataLoading) {
+  // Client-side pagination function
+  const getPaginatedData = (otherUses, index, isCurrentOrOriginalVersion) => {
+    const shouldPaginate = isCurrentOrOriginalVersion || otherUses.length >= 10
+
+    if (!shouldPaginate) {
+      // No pagination for versions that don't meet criteria
+      return { data: { items: otherUses } }
+    }
+
+    const paginationOptions =
+      paginationStates[index] || defaultInitialPagination
+    let filteredData = [...otherUses]
+
+    // Apply filters if any
+    if (paginationOptions.filters && paginationOptions.filters.length > 0) {
+      paginationOptions.filters.forEach((filter) => {
+        if (filter.type === 'contains' && filter.filter) {
+          filteredData = filteredData.filter((item) => {
+            const fieldValue = item[filter.field]
+            return (
+              fieldValue &&
+              fieldValue
+                .toString()
+                .toLowerCase()
+                .includes(filter.filter.toLowerCase())
+            )
+          })
+        }
+      })
+    }
+
+    // Apply sorting if any
+    if (
+      paginationOptions.sortOrders &&
+      paginationOptions.sortOrders.length > 0
+    ) {
+      paginationOptions.sortOrders.forEach((sort) => {
+        filteredData.sort((a, b) => {
+          const aVal = a[sort.field]
+          const bVal = b[sort.field]
+
+          let comparison = 0
+          if (aVal > bVal) comparison = 1
+          if (aVal < bVal) comparison = -1
+
+          return sort.direction === 'desc' ? -comparison : comparison
+        })
+      })
+    }
+
+    const total = filteredData.length
+    const startIndex = (paginationOptions.page - 1) * paginationOptions.size
+    const endIndex = startIndex + paginationOptions.size
+    const paginatedItems = filteredData.slice(startIndex, endIndex)
+
+    return {
+      data: {
+        items: paginatedItems,
+        pagination: {
+          page: paginationOptions.page,
+          size: paginationOptions.size,
+          total
+        }
+      },
+      error: null,
+      isError: false,
+      isLoading: false
+    }
+  }
+
+  const handlePaginationChange = (index) => (newPagination) => {
+    setPaginationStates((prev) => ({
+      ...prev,
+      [index]: {
+        ...(prev[index] || defaultInitialPagination),
+        ...newPagination
+      }
+    }))
+  }
+
+  if (changelogDataLoading || currentReportLoading) {
     return <Loading />
   }
+
   return (
     <Box>
       {changelogData?.map((item, i) => {
+        const isCurrentOrOriginalVersion = i === 0 || item.version === 0
+        const shouldPaginate = item.otherUses.length >= 10
+        const paginationOptions =
+          paginationStates[i] || defaultInitialPagination
+        const queryData = getPaginatedData(
+          item.otherUses,
+          i,
+          isCurrentOrOriginalVersion
+        )
+
         return (
           <Box mb={4} key={i}>
             <BCTypography variant="h6" color="primary" component="div" mb={2}>
@@ -76,15 +164,15 @@ export const OtherUsesChangelog = () => {
                 key={i}
                 gridKey={`other-uses-changelog-${i}`}
                 columnDefs={
-                  i === 0 || i + 1 === changelogData.length
+                  isCurrentOrOriginalVersion
                     ? changelogCommonColDefs(false)
                     : changelogColDefs()
                 }
-                queryData={{ data: { items: item.otherUses } }}
+                queryData={queryData}
                 getRowId={getRowId}
-                suppressPagination
+                suppressPagination={!shouldPaginate}
                 gridOptions={
-                  i === 0 || i + 1 === changelogData.length
+                  isCurrentOrOriginalVersion
                     ? gridOptions(false)
                     : gridOptions()
                 }
@@ -93,6 +181,12 @@ export const OtherUsesChangelog = () => {
                   filter: false,
                   sortable: false
                 }}
+                paginationOptions={
+                  shouldPaginate ? paginationOptions : undefined
+                }
+                onPaginationChange={
+                  shouldPaginate ? handlePaginationChange(i) : undefined
+                }
               />
             </Box>
           </Box>

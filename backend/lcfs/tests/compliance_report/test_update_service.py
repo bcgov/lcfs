@@ -5,7 +5,10 @@ import pytest
 from fastapi import HTTPException
 
 from lcfs.db.models import UserProfile
-from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.compliance.ComplianceReport import (
+    ComplianceReport,
+    SupplementalInitiatorType,
+)
 from lcfs.db.models.compliance.ComplianceReportStatus import (
     ComplianceReportStatus,
     ComplianceReportStatusEnum,
@@ -18,6 +21,7 @@ from lcfs.web.api.compliance_report.schema import (
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryRowSchema,
     ComplianceReportSummarySchema,
+    ReturnStatus,
 )
 from lcfs.web.api.compliance_report.update_service import ComplianceReportUpdateService
 from lcfs.web.api.notification.services import NotificationService
@@ -250,12 +254,20 @@ async def test_handle_submitted_status_with_existing_summary(
             ),
         ],
         can_sign=True,
+        line_20_surplus_deficit_units=100,
     )
+
+    # Mock the returned summary from save_compliance_report_summary to have the proper attribute
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = 100
 
     # Set up mocks
     mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
     mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
+    )
+    mock_summary_repo.save_compliance_report_summary.return_value = (
+        mock_returned_summary
     )
 
     # Inject the mocked org_service into the service being tested
@@ -339,6 +351,7 @@ async def test_handle_submitted_status_without_existing_summary(
             ),
         ],
         can_sign=True,
+        line_20_surplus_deficit_units=150,
     )
 
     # Set up mocks
@@ -351,6 +364,10 @@ async def test_handle_submitted_status_without_existing_summary(
 
     # Mock the adjust_balance method to return a mocked transaction result
     mock_org_service.adjust_balance.return_value = MagicMock()
+    # Mock the returned summary from add_compliance_report_summary to have the proper attribute
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = 150
+    mock_summary_repo.add_compliance_report_summary.return_value = mock_returned_summary
     # Call the method
     await compliance_report_update_service.handle_submitted_status(
         mock_report, UserProfile()
@@ -437,12 +454,20 @@ async def test_handle_submitted_status_partial_existing_values(
             ),
         ],
         can_sign=True,
+        line_20_surplus_deficit_units=75,
     )
+    # Mock the returned summary from save_compliance_report_summary to have the proper attribute
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = 75
 
     # Set up mocks
     mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
     mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
+    )
+    # Mock save_compliance_report_summary to return the proper object
+    mock_summary_repo.save_compliance_report_summary.return_value = (
+        mock_returned_summary
     )
     # Inject the mocked org_service into the service being tested
     compliance_report_update_service.org_service = mock_org_service
@@ -531,12 +556,19 @@ async def test_handle_submitted_status_no_user_edits(
             ),
         ],
         can_sign=True,
+        line_20_surplus_deficit_units=200,
     )
-
+    # Mock the returned summary from save_compliance_report_summary to have the proper attribute
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = 200
     # Set up mocks
     mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
     mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
+    )
+    # Mock save_compliance_report_summary to return the proper object
+    mock_summary_repo.save_compliance_report_summary.return_value = (
+        mock_returned_summary
     )
     # Inject the mocked org_service into the service being tested
     compliance_report_update_service.org_service = mock_org_service
@@ -625,10 +657,7 @@ async def test_handle_submitted_status_no_credits(
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_id = report_id
     mock_report.organization_id = 123
-    # Deficit units is nonzero
-    mock_report.summary = MagicMock(
-        spec=ComplianceReportSummary, line_20_surplus_deficit_units=-100
-    )
+    mock_report.summary = None
     # No existing transaction
     mock_report.transaction = None
 
@@ -647,11 +676,15 @@ async def test_handle_submitted_status_no_credits(
         renewable_fuel_target_summary=[],
         low_carbon_fuel_target_summary=[],
         non_compliance_penalty_summary=[],
+        line_20_surplus_deficit_units=-100,
     )
     mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
-
+    # Mock the returned summary to have the proper attribute
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = -100
+    mock_summary_repo.add_compliance_report_summary.return_value = mock_returned_summary
     # available_balance = 0
     mock_org_service.calculate_available_balance.return_value = 0
     # If adjust_balance is called, we'll see an assertion fail
@@ -978,6 +1011,9 @@ async def test_handle_assessed_status_not_superseded(
     mock_report_model.transaction = MagicMock()
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
+        return_value=MagicMock(line_20_surplus_deficit_units=100)
+    )
 
     # Patch roles check to ensure it passes
     with patch(
@@ -1002,7 +1038,98 @@ async def test_handle_assessed_status_not_superseded(
         mock_report_model.transaction.update_user
         == mock_user_profile_director.keycloak_username
     )
+    # Verify compliance units were set to the calculated value
+    assert mock_report_model.transaction.compliance_units == 100
     mock_repo.update_compliance_report.assert_called_once_with(mock_report_model)
+
+
+@pytest.mark.anyio
+async def test_handle_assessed_status_government_adjustment_no_transaction(
+    compliance_report_update_service: ComplianceReportUpdateService,
+    mock_repo: AsyncMock,
+    mock_user_profile_director: MagicMock,
+    mock_summary_repo: AsyncMock,
+    mock_summary_service: AsyncMock,
+    mock_org_service: AsyncMock,
+):
+    """
+    Test that a transaction is created when assessing a government adjustment report
+    that doesn't already have a transaction.
+    This verifies the fix for the bug where government adjustment reports weren't
+    creating transactions when assessed.
+    """
+    # Arrange
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = 123
+    mock_report.compliance_report_group_uuid = "test-uuid"
+    mock_report.organization_id = 456
+    mock_report.version = 1
+    mock_report.transaction = None  # No existing transaction - the key bug case
+
+    # Set up supplemental initiator to indicate it's a government adjustment
+    mock_report.supplemental_initiator = (
+        SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    )
+
+    # Mock the summary that will be calculated during assessment
+    mock_summary = MagicMock()
+    mock_summary.line_20_surplus_deficit_units = 500  # Credit change amount
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
+        return_value=mock_summary
+    )
+
+    # Mock the new transaction that will be created
+    mock_transaction = MagicMock()
+    compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock()
+
+    # This is needed to simulate the transaction being created
+    def side_effect_create_transaction(credit_change, report):
+        report.transaction = mock_transaction
+        return mock_transaction
+
+    compliance_report_update_service._create_or_update_reserve_transaction.side_effect = (
+        side_effect_create_transaction
+    )
+
+    # Patch roles check to ensure it passes
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_assessed_status(
+            mock_report, mock_user_profile_director
+        )
+
+    # Assert
+    # Verify we called necessary preliminary checks
+    mock_repo.get_draft_report_by_group_uuid.assert_called_once_with(
+        mock_report.compliance_report_group_uuid
+    )
+
+    # Verify we calculated the summary
+    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
+        mock_report, mock_user_profile_director, skip_can_sign_check=True
+    )
+
+    # Verify we attempted to create a transaction with the correct credit change
+    compliance_report_update_service._create_or_update_reserve_transaction.assert_called_once_with(
+        500, mock_report
+    )
+
+    # Verify the transaction was marked as an adjustment and attributed to the director
+    assert (
+        mock_report.transaction.transaction_action == TransactionActionEnum.Adjustment
+    )
+    assert (
+        mock_report.transaction.update_user
+        == mock_user_profile_director.keycloak_username
+    )
+
+    # Verify the report was updated
+    mock_repo.update_compliance_report.assert_called_once_with(mock_report)
 
 
 @pytest.mark.anyio
@@ -1030,3 +1157,416 @@ async def test_handle_assessed_status_superseded(
     assert excinfo.value.status_code == 409
     assert "superseded by a draft" in excinfo.value.detail.lower()
     mock_repo.get_draft_report_by_group_uuid.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_calculate_and_lock_summary_can_sign_false_no_skip(
+    compliance_report_update_service,
+    mock_summary_repo,
+    mock_summary_service,
+):
+    """Test that _calculate_and_lock_summary raises exception when can_sign=False and skip_can_sign_check=False"""
+    # Mock data
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.summary = None
+    mock_user = MagicMock(spec=UserProfile)
+
+    # Mock existing summary
+    existing_summary = None
+    mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
+
+    # Mock calculated summary with can_sign=False
+    calculated_summary = ComplianceReportSummarySchema(
+        summary_id=100,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+        can_sign=False,  # This should trigger the exception
+    )
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # Test - should raise ServiceException
+    with pytest.raises(ServiceException) as exc_info:
+        await compliance_report_update_service._calculate_and_lock_summary(
+            mock_report, mock_user, skip_can_sign_check=False
+        )
+
+    assert "ComplianceReportSummary is not able to be signed" in str(exc_info.value)
+
+
+@pytest.mark.anyio
+async def test_calculate_and_lock_summary_can_sign_false_with_skip(
+    compliance_report_update_service,
+    mock_summary_repo,
+    mock_summary_service,
+):
+    """Test that _calculate_and_lock_summary succeeds when can_sign=False and skip_can_sign_check=True"""
+    # Mock data
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.summary = None
+    mock_user = MagicMock(spec=UserProfile)
+
+    # Mock existing summary
+    existing_summary = None
+    mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
+
+    # Mock calculated summary with can_sign=False
+    calculated_summary = ComplianceReportSummarySchema(
+        summary_id=100,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+        can_sign=False,  # This should NOT trigger the exception due to skip flag
+    )
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # Mock the repository save operation
+    mock_saved_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_summary_repo.add_compliance_report_summary = AsyncMock(
+        return_value=mock_saved_summary
+    )
+
+    # Test - should NOT raise ServiceException
+    result = await compliance_report_update_service._calculate_and_lock_summary(
+        mock_report, mock_user, skip_can_sign_check=True
+    )
+
+    # Verify the summary was processed despite can_sign=False
+    assert result == mock_saved_summary
+    mock_summary_repo.add_compliance_report_summary.assert_called_once()
+    # Verify the summary was locked
+    saved_summary_call = mock_summary_repo.add_compliance_report_summary.call_args[0][0]
+    assert saved_summary_call.is_locked == True
+
+
+@pytest.mark.anyio
+async def test_calculate_and_lock_summary_can_sign_true_no_skip(
+    compliance_report_update_service,
+    mock_summary_repo,
+    mock_summary_service,
+):
+    """Test that _calculate_and_lock_summary succeeds when can_sign=True regardless of skip flag"""
+    # Mock data
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.summary = None
+    mock_user = MagicMock(spec=UserProfile)
+
+    # Mock existing summary
+    existing_summary = None
+    mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
+
+    # Mock calculated summary with can_sign=True
+    calculated_summary = ComplianceReportSummarySchema(
+        summary_id=100,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+        can_sign=True,  # This should always allow processing
+    )
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # Mock the repository save operation
+    mock_saved_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_summary_repo.add_compliance_report_summary = AsyncMock(
+        return_value=mock_saved_summary
+    )
+
+    # Test - should succeed
+    result = await compliance_report_update_service._calculate_and_lock_summary(
+        mock_report, mock_user, skip_can_sign_check=False
+    )
+
+    # Verify the summary was processed
+    assert result == mock_saved_summary
+    mock_summary_repo.add_compliance_report_summary.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_handle_assessed_status_calls_calculate_with_skip_check(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_profile_director,
+):
+    """Test that handle_assessed_status calls _calculate_and_lock_summary with skip_can_sign_check=True"""
+    # Arrange
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_report.version = 1
+    mock_report.transaction = MagicMock()
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    # Mock the _calculate_and_lock_summary method
+    mock_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_summary.line_20_surplus_deficit_units = 150
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
+        return_value=mock_summary
+    )
+
+    # Patch roles check
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_assessed_status(
+            mock_report, mock_user_profile_director
+        )
+
+    # Assert that _calculate_and_lock_summary was called with skip_can_sign_check=True
+    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
+        mock_report, mock_user_profile_director, skip_can_sign_check=True
+    )
+
+
+@pytest.mark.anyio
+async def test_handle_recommended_by_analyst_government_reassessment_calls_with_skip_check(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_profile_analyst,
+):
+    """Test that handle_recommended_by_analyst_status calls _calculate_and_lock_summary with skip_can_sign_check=True for government reassessment"""
+    # Arrange
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_report.version = 1
+    mock_report.supplemental_initiator = (
+        SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    )
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    # Mock the _calculate_and_lock_summary method
+    mock_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_summary.line_20_surplus_deficit_units = 200
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
+        return_value=mock_summary
+    )
+
+    # Mock the _create_or_update_reserve_transaction method
+    compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock()
+
+    # Patch roles check
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_recommended_by_analyst_status(
+            mock_report, mock_user_profile_analyst
+        )
+
+    # Assert that _calculate_and_lock_summary was called with skip_can_sign_check=True
+    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
+        mock_report, mock_user_profile_analyst, skip_can_sign_check=True
+    )
+
+
+@pytest.mark.anyio
+async def test_handle_recommended_by_analyst_non_government_reassessment_no_calculate_call(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_profile_analyst,
+):
+    """Test that handle_recommended_by_analyst_status does NOT call _calculate_and_lock_summary for non-government supplemental reports"""
+    # Arrange
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_report.version = 1
+    mock_report.supplemental_initiator = (
+        SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+    )  # Not government
+
+    mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
+
+    # Mock the _calculate_and_lock_summary method
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock()
+
+    # Patch roles check
+    with patch(
+        "lcfs.web.api.compliance_report.update_service.user_has_roles",
+        return_value=True,
+    ):
+        # Act
+        await compliance_report_update_service.handle_recommended_by_analyst_status(
+            mock_report, mock_user_profile_analyst
+        )
+
+    # Assert that _calculate_and_lock_summary was NOT called
+    compliance_report_update_service._calculate_and_lock_summary.assert_not_called()
+
+
+@pytest.mark.anyio
+async def test_handle_submitted_status_does_not_skip_can_sign_check(
+    compliance_report_update_service,
+    mock_repo,
+    mock_summary_repo,
+    mock_user_has_roles,
+    mock_org_service,
+    mock_summary_service,
+):
+    """Test that handle_submitted_status calls _calculate_and_lock_summary WITHOUT skip_can_sign_check (default behavior)"""
+    # Mock data
+    report_id = 1
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.compliance_report_id = report_id
+    mock_report.summary = MagicMock(spec=ComplianceReportSummary)
+    mock_report.summary.line_20_surplus_deficit_units = 100
+    mock_report.transaction = None
+
+    # Mock user roles (user has required roles)
+    mock_user_has_roles.return_value = True
+    compliance_report_update_service.request = MagicMock()
+    compliance_report_update_service.request.user = MagicMock()
+
+    # Mock existing summary
+    existing_summary = None
+    mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
+
+    # Mock calculated summary with can_sign=True (so it doesn't fail)
+    calculated_summary = ComplianceReportSummarySchema(
+        summary_id=100,
+        compliance_report_id=report_id,
+        renewable_fuel_target_summary=[],
+        low_carbon_fuel_target_summary=[],
+        non_compliance_penalty_summary=[],
+        can_sign=True,  # Must be True to pass the check
+    )
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
+    )
+
+    # Mock the _calculate_and_lock_summary method to verify call parameters
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
+        return_value=mock_report.summary
+    )
+
+    # Mock the _create_or_update_reserve_transaction method
+    compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock()
+
+    # Call the method
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+
+    # Assert that _calculate_and_lock_summary was called WITHOUT skip_can_sign_check parameter
+    # (which means it defaults to False)
+    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
+        mock_report,
+        mock.ANY,  # The user profile parameter
+        # Note: no skip_can_sign_check parameter means it defaults to False
+    )
+
+
+# RETURN STATUS TESTS FOR GOVERNMENT ADJUSTMENT FIX
+
+
+@pytest.mark.anyio
+async def test_handle_return_status_government_adjustment_to_analyst():
+    """Test that government adjustments returned to analyst go to 'Analyst adjustment' status."""
+    # Create service instance
+    service = ComplianceReportUpdateService()
+
+    # Create mock report data for return to analyst
+    report_data = ComplianceReportUpdateSchema(status=ReturnStatus.ANALYST.value)
+
+    # Create mock government adjustment report
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.supplemental_initiator = (
+        SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    )
+
+    # Call the method
+    result_status, status_has_changed = await service._handle_return_status(
+        report_data, mock_report
+    )
+
+    # Assert that government adjustment returns to "Analyst adjustment" status
+    assert result_status == ComplianceReportStatusEnum.Analyst_adjustment.value
+    assert status_has_changed is False
+
+
+@pytest.mark.anyio
+async def test_handle_return_status_regular_report_to_analyst():
+    """Test that regular reports returned to analyst go to 'Submitted' status (existing behavior)."""
+    # Create service instance
+    service = ComplianceReportUpdateService()
+
+    # Create mock report data for return to analyst
+    report_data = ComplianceReportUpdateSchema(status=ReturnStatus.ANALYST.value)
+
+    # Create mock regular report (not government adjustment)
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.supplemental_initiator = SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+
+    # Call the method
+    result_status, status_has_changed = await service._handle_return_status(
+        report_data, mock_report
+    )
+
+    # Assert that regular report returns to "Submitted" status (default behavior)
+    assert result_status == ComplianceReportStatusEnum.Submitted.value
+    assert status_has_changed is False
+
+
+@pytest.mark.anyio
+async def test_handle_return_status_government_adjustment_to_manager():
+    """Test that government adjustments returned to manager use default mapping."""
+    # Create service instance
+    service = ComplianceReportUpdateService()
+
+    # Create mock report data for return to manager
+    report_data = ComplianceReportUpdateSchema(status=ReturnStatus.MANAGER.value)
+
+    # Create mock government adjustment report
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.supplemental_initiator = (
+        SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
+    )
+
+    # Call the method
+    result_status, status_has_changed = await service._handle_return_status(
+        report_data, mock_report
+    )
+
+    # Assert that return to manager uses default mapping (Recommended by analyst)
+    assert result_status == ComplianceReportStatusEnum.Recommended_by_analyst.value
+    assert status_has_changed is False
+
+
+@pytest.mark.anyio
+async def test_handle_return_status_no_supplemental_initiator():
+    """Test that reports with no supplemental_initiator use default mapping."""
+    # Create service instance
+    service = ComplianceReportUpdateService()
+
+    # Create mock report data for return to analyst
+    report_data = ComplianceReportUpdateSchema(status=ReturnStatus.ANALYST.value)
+
+    # Create mock report with no supplemental initiator
+    mock_report = MagicMock(spec=ComplianceReport)
+    mock_report.supplemental_initiator = None
+
+    # Call the method
+    result_status, status_has_changed = await service._handle_return_status(
+        report_data, mock_report
+    )
+
+    # Assert that report with no supplemental initiator uses default mapping
+    assert result_status == ComplianceReportStatusEnum.Submitted.value
+    assert status_has_changed is False

@@ -104,3 +104,21 @@ id_prefix_to_transaction_type_map = {
 FUEL_CATEGORIES = ["Diesel", "Gasoline", "Jet fuel"]
 
 POSTAL_REGEX = r"^[A-Za-z]\d[A-Za-z] \d[A-Za-z]\d$"
+
+
+ALLOWED_MIME_TYPES = [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/csv",
+    "text/plain",
+]
+ALLOWED_FILE_TYPES = "PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT"
+
+# File size limits
+MAX_FILE_SIZE_MB = 50
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes

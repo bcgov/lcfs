@@ -71,6 +71,10 @@ class NotionalTransferServices:
             notional_transfer_id=model.notional_transfer_id,
             compliance_report_id=model.compliance_report_id,
             quantity=model.quantity,
+            q1_quantity=model.q1_quantity,
+            q2_quantity=model.q2_quantity,
+            q3_quantity=model.q3_quantity,
+            q4_quantity=model.q4_quantity,
             legal_name=model.legal_name,
             address_for_service=model.address_for_service,
             fuel_category=model.fuel_category.category,
@@ -113,11 +117,7 @@ class NotionalTransferServices:
         notional_transfers = await self.repo.get_notional_transfers(
             compliance_report_id, changelog
         )
-        return NotionalTransfersAllSchema(
-            notional_transfers=[
-                NotionalTransferSchema.model_validate(nt) for nt in notional_transfers
-            ]
-        )
+        return NotionalTransfersAllSchema(notional_transfers=notional_transfers)
 
     @service_handler
     async def get_notional_transfers_paginated(
@@ -137,9 +137,7 @@ class NotionalTransferServices:
                 size=pagination.size,
                 total_pages=math.ceil(total_count / pagination.size),
             ),
-            notional_transfers=[
-                NotionalTransferSchema.model_validate(nt) for nt in notional_transfers
-            ],
+            notional_transfers=notional_transfers,
         )
 
     @service_handler
@@ -201,6 +199,12 @@ class NotionalTransferServices:
         )
         notional_transfer.version = (
             0 if not existing_record else existing_record.version + 1
+        )
+        notional_transfer.create_date = (
+            existing_record.create_date if existing_record else None
+        )
+        notional_transfer.create_user = (
+            existing_record.create_user if existing_record else None
         )
         created_transfer = await self.repo.create_notional_transfer(notional_transfer)
 

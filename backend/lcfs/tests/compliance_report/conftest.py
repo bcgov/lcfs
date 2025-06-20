@@ -120,6 +120,8 @@ def compliance_report_create_schema():
 @pytest.fixture
 def mock_repo():
     repo = AsyncMock(spec=ComplianceReportRepository)
+    # Add default mock for get_assessed_compliance_report_by_period
+    repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
     return repo
 
 
@@ -136,7 +138,9 @@ def mock_snapshot_service():
 
 @pytest.fixture
 def mock_trxn_repo():
-    return AsyncMock(spec=TransactionRepository)
+    repo = AsyncMock(spec=TransactionRepository)
+    repo.calculate_available_balance_for_period = AsyncMock(return_value=2000)
+    return repo
 
 
 @pytest.fixture
@@ -170,7 +174,10 @@ def mock_other_uses_repo():
 
 @pytest.fixture
 def mock_summary_repo():
-    return AsyncMock(spec=ComplianceReportSummaryRepository)
+    repo = AsyncMock(spec=ComplianceReportSummaryRepository)
+    # Add default mock for get_assessed_compliance_report_by_period
+    repo.get_assessed_compliance_report_by_period = AsyncMock(return_value=None)
+    return repo
 
 
 @pytest.fixture
@@ -248,6 +255,13 @@ def mock_org_service():
 
 
 @pytest.fixture
+def mock_internal_comment_service():
+    service = MagicMock()
+    service.copy_internal_comments = AsyncMock()
+    return service
+
+
+@pytest.fixture
 def compliance_report_service(
     mock_user_profile,
     mock_repo,
@@ -255,6 +269,8 @@ def compliance_report_service(
     mock_snapshot_service,
     mock_fse_services,
     mock_document_service,
+    mock_internal_comment_service,
+    mock_trxn_repo,
 ):
     service = ComplianceReportServices()
     service.repo = mock_repo
@@ -264,6 +280,8 @@ def compliance_report_service(
     service.snapshot_services = mock_snapshot_service
     service.final_supply_equipment_service = mock_fse_services
     service.document_service = mock_document_service
+    service.internal_comment_service = mock_internal_comment_service
+    service.transaction_repo = mock_trxn_repo
     return service
 
 
