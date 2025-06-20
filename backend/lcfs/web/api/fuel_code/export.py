@@ -64,8 +64,8 @@ class FuelCodeExporter:
             page=1, size=10000, filters=[], sort_orders=[]
         )
 
-        # Ignore client-side paging & sorting
-        pagination.page, pagination.size, pagination.sort_orders = 1, 10000, []
+        # Ignore client-side paging but preserve sorting
+        pagination.page, pagination.size = 1, 10000
 
         results = await self.repo.get_fuel_codes_paginated(pagination)
 

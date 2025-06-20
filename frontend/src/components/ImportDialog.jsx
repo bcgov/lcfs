@@ -10,6 +10,7 @@ import {
   MAX_FILE_SIZE_BYTES,
   SCHEDULE_IMPORT_FILE_TYPES
 } from '@/constants/common'
+import { validateFile } from '@/utils/fileValidation'
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 
@@ -101,6 +102,13 @@ function ImportDialog({
         setUploadedFile(null)
         setErrorMsg(
           t(`common:importExport.import.dialog.fileError.virusDetected`)
+        )
+      } else if (error.response?.status === 400) {
+        // Backend validation errors (MIME type, file size, etc.)
+        const backendMessage = error.response?.data?.detail
+        setErrorMsg(
+          backendMessage ||
+            t(`common:importExport.import.dialog.fileError.uploadFailed`)
         )
       } else {
         setErrorMsg(
@@ -202,6 +210,20 @@ function ImportDialog({
   const handleFileUpload = (file) => {
     setErrorMsg(null)
     if (!file) return
+
+    // Validate file type and size
+    const validation = validateFile(
+      file,
+      MAX_FILE_SIZE_BYTES,
+      SCHEDULE_IMPORT_FILE_TYPES
+    )
+    if (!validation.isValid) {
+      setUploadedFile(null)
+      setErrorMsg(
+        `Upload failed for "${file.name}": ${validation.errorMessage}`
+      )
+      return
+    }
 
     if (file.size > MAX_FILE_SIZE_BYTES) {
       setUploadedFile(null)
@@ -367,7 +389,7 @@ function ImportDialog({
             )}
 
             {!!errorMsg && (
-              <BCAlert sx={{ mt: 1 }} severity="error">
+              <BCAlert sx={{ mt: 1, width: '100%' }} severity="error">
                 {errorMsg}
               </BCAlert>
             )}
