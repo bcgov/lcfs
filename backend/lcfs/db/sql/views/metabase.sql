@@ -1,7 +1,7 @@
 -- ==========================================
 -- Compliance Reports Analytics View
 -- ==========================================
-drop view if exists vw_compliance_report_base;
+drop view if exists vw_compliance_report_base cascade;
 CREATE OR REPLACE VIEW vw_compliance_report_base AS
 SELECT compliance_report_id,
     compliance_report_group_uuid,

@@ -314,20 +314,18 @@ class ComplianceReportUpdateService:
         await self.repo.update_compliance_report(report)
 
     async def _create_or_update_reserve_transaction(self, credit_change, report):
+        available_balance = await self.org_service.calculate_available_balance(
+            report.organization_id
+        )
+        units_to_reserve = credit_change
+        # If not enough credits, reserve what is left
+        if credit_change < 0 and abs(credit_change) > available_balance:
+            units_to_reserve = available_balance * -1
         if report.transaction is not None:
-            report.transaction.compliance_units = credit_change
+            report.transaction.compliance_units = units_to_reserve
         elif credit_change != 0:
-            available_balance = await self.org_service.calculate_available_balance(
-                report.organization_id
-            )
-            # Only need a Transaction if they have credits
-            if available_balance > 0:
-                units_to_reserve = credit_change
-
-                # If not enough credits, reserve what is left
-                if credit_change < 0 and abs(credit_change) > available_balance:
-                    units_to_reserve = available_balance * -1
-
+            # Only need a Transaction if they have credits or if it's a positive credit_change
+            if available_balance > 0 or credit_change > 0:
                 report.transaction = await self.org_service.adjust_balance(
                     transaction_action=TransactionActionEnum.Reserved,
                     compliance_units=units_to_reserve,
