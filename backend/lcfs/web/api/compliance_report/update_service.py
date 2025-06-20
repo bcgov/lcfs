@@ -322,6 +322,7 @@ class ComplianceReportUpdateService:
         if credit_change < 0 and abs(credit_change) > available_balance:
             units_to_reserve = available_balance * -1
         if report.transaction is not None:
+            # update existing transaction
             report.transaction.compliance_units = units_to_reserve
         # Only need a Transaction if they have credits or if it's a positive credit_change
         elif credit_change != 0 and (available_balance > 0 or credit_change > 0):
