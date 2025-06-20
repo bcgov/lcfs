@@ -53,8 +53,8 @@ const Footer = (props) => {
   )
   const repoDetails = useMemo(
     () => ({
-      href: 'https://github.com/bcgov/lcfs/releases/tag/v1.0.7',
-      name: 'v1.0.7',
+      href: 'https://github.com/bcgov/lcfs/releases/tag/v1.1.0',
+      name: 'v1.1.0',
       id: 'footer-about-version',
       label: 'LCFS repository changelog'
     }),
