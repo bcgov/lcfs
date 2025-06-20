@@ -323,9 +323,8 @@ class ComplianceReportUpdateService:
             units_to_reserve = available_balance * -1
         if report.transaction is not None:
             report.transaction.compliance_units = units_to_reserve
-        elif credit_change != 0:
-            # Only need a Transaction if they have credits or if it's a positive credit_change
-            if available_balance > 0 or credit_change > 0:
+        # Only need a Transaction if they have credits or if it's a positive credit_change
+        elif credit_change != 0 and (available_balance > 0 or credit_change > 0):
                 report.transaction = await self.org_service.adjust_balance(
                     transaction_action=TransactionActionEnum.Reserved,
                     compliance_units=units_to_reserve,
