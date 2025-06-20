@@ -256,6 +256,7 @@ async def import_fse(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_editable(compliance_report)
 
     if compliance_report is None:
         raise HTTPException(status_code=404, detail="Compliance report not found")
