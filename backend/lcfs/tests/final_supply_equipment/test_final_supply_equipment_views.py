@@ -129,6 +129,7 @@ async def test_save_final_supply_equipment_create_success(
         mock_create_fse.return_value = valid_final_supply_equipment_schema
 
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
+
         url = fastapi_app.url_path_for("save_final_supply_equipment_row")
         payload = {
             "compliance_report_id": 456,
