@@ -63,7 +63,7 @@ services:
       - shared_network
 # TFRS database loaded with TFRS data
   tfrs:
-    image: postgres:14.2
+    image: postgres:17
     container_name: tfrs
     environment:
       POSTGRES_USER: tfrs
@@ -84,5 +84,4 @@ volumes:
 
 networks:
   shared_network:
-    external: true
     driver: bridge

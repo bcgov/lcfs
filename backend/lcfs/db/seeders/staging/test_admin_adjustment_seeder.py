@@ -14,6 +14,9 @@ async def seed_test_admin_adjustments(session):
         session: The database session for committing the new records.
     """
 
+    # Define a standard date for transaction_effective_date in 2024
+    transaction_effective_date = datetime(2024, 1, 1)
+
     # Define the admin adjustments to seed based on actual test database
     admin_adjustments_to_seed = [
         {
@@ -22,6 +25,7 @@ async def seed_test_admin_adjustments(session):
             "to_organization_id": 1,
             "transaction_id": 1,
             "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
         },
         {
             "admin_adjustment_id": 2,
@@ -29,6 +33,7 @@ async def seed_test_admin_adjustments(session):
             "to_organization_id": 2,
             "transaction_id": 2,
             "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
         },
         {
             "admin_adjustment_id": 3,
@@ -36,6 +41,7 @@ async def seed_test_admin_adjustments(session):
             "to_organization_id": 3,
             "transaction_id": 3,
             "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
         },
         {
             "admin_adjustment_id": 4,
@@ -43,6 +49,7 @@ async def seed_test_admin_adjustments(session):
             "to_organization_id": 4,
             "transaction_id": 4,
             "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
         },
         {
             "admin_adjustment_id": 5,
@@ -50,6 +57,7 @@ async def seed_test_admin_adjustments(session):
             "to_organization_id": 5,
             "transaction_id": 5,
             "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
         },
         {
             "admin_adjustment_id": 6,
@@ -57,6 +65,7 @@ async def seed_test_admin_adjustments(session):
             "to_organization_id": 6,
             "transaction_id": 6,
             "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
         },
         {
             "admin_adjustment_id": 7,
@@ -64,6 +73,7 @@ async def seed_test_admin_adjustments(session):
             "to_organization_id": 7,
             "transaction_id": 7,
             "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
         },
         {
             "admin_adjustment_id": 8,
@@ -71,6 +81,7 @@ async def seed_test_admin_adjustments(session):
             "to_organization_id": 8,
             "transaction_id": 8,
             "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
         },
         {
             "admin_adjustment_id": 9,
@@ -78,6 +89,7 @@ async def seed_test_admin_adjustments(session):
             "to_organization_id": 9,
             "transaction_id": 9,
             "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
         },
         {
             "admin_adjustment_id": 10,
@@ -85,6 +97,7 @@ async def seed_test_admin_adjustments(session):
             "to_organization_id": 10,
             "transaction_id": 10,
             "current_status_id": 3,
+            "transaction_effective_date": transaction_effective_date,
         },
     ]
 
