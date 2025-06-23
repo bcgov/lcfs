@@ -232,11 +232,6 @@ class ComplianceReportServices:
             existing_report_id, new_report.compliance_report_id
         )
 
-        # Copy internal comments from the original report
-        await self.internal_comment_service.copy_internal_comments(
-            existing_report_id, new_report.compliance_report_id
-        )
-
         # Release the transaction from the current report being superseded
         await self._release_superseded_transaction(current_report)
 
@@ -363,11 +358,6 @@ class ComplianceReportServices:
             original_report_id, new_report.compliance_report_id
         )
 
-        # Copy internal comments from the original report
-        await self.internal_comment_service.copy_internal_comments(
-            original_report_id, new_report.compliance_report_id
-        )
-
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
@@ -430,7 +420,7 @@ class ComplianceReportServices:
             reporting_frequency=current_report.reporting_frequency,
             compliance_report_group_uuid=current_report.compliance_report_group_uuid,  # Same group
             version=new_version,
-            supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,  # Supplier edits it
+            supplemental_initiator=SupplementalInitiatorType.GOVERNMENT_INITIATED,  # Supplier edits it
             nickname=(
                 f"Supplemental report {new_version}"
                 if current_report.reporting_frequency == ReportingFrequency.ANNUAL
@@ -464,11 +454,6 @@ class ComplianceReportServices:
 
         # Copy documents from the original report
         await self.document_service.copy_documents(
-            existing_report_id, new_report.compliance_report_id
-        )
-
-        # Copy internal comments from the original report
-        await self.internal_comment_service.copy_internal_comments(
             existing_report_id, new_report.compliance_report_id
         )
 
@@ -905,6 +890,7 @@ class ComplianceReportServices:
                     ComplianceReportStatusEnum.Not_recommended_by_analyst,
                     ComplianceReportStatusEnum.Not_recommended_by_manager,
                     ComplianceReportStatusEnum.Analyst_adjustment,
+                    ComplianceReportStatusEnum.Supplemental_requested,
                 ]
             ]
         return statuses
