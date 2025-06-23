@@ -16,6 +16,7 @@ from lcfs.db.models.compliance.ComplianceReportCountView import (
     ComplianceReportCountView,
 )
 from lcfs.db.models.fuel.FuelCodeCountView import FuelCodeCountView
+from lcfs.db.models.fuel.FuelCode import FuelCode
 
 logger = structlog.get_logger(__name__)
 
@@ -35,6 +36,16 @@ class DashboardRepository:
         counts = {
             row.transaction_type: row.count_for_review for row in result.fetchall()
         }
+
+        # Get fuel codes in recommended status (status_id = 4 for 'Recommended')
+        fuel_code_query = select(func.count(FuelCode.fuel_code_id)).where(
+            FuelCode.fuel_status_id == 4  # 4 is the ID for 'Recommended' status
+        )
+
+        fuel_code_result = await self.db.execute(fuel_code_query)
+        fuel_code_count = fuel_code_result.scalar_one()
+        counts["fuel_codes"] = fuel_code_count
+
         return counts
 
     @repo_handler
@@ -78,28 +89,23 @@ class DashboardRepository:
     @repo_handler
     async def get_compliance_report_counts(self):
         query = select(
-            func.coalesce(
-                func.sum(ComplianceReportCountView.count),
-                0
-            ).label('pending_reviews')
+            func.coalesce(func.sum(ComplianceReportCountView.count), 0).label(
+                "pending_reviews"
+            )
         )
 
         result = await self.db.execute(query)
         row = result.fetchone()
 
-        return {
-            "pending_reviews": row.pending_reviews
-        }
+        return {"pending_reviews": row.pending_reviews}
 
     @repo_handler
     async def get_fuel_code_counts(self):
-        query = select(
-            FuelCodeCountView.count
-        ).where(FuelCodeCountView.status == "Draft")
+        query = select(FuelCodeCountView.count).where(
+            FuelCodeCountView.status == "Draft"
+        )
 
         result = await self.db.execute(query)
         row = result.fetchone()
 
-        return {
-            "draft_fuel_codes": getattr(row, "count", 0)
-        }
+        return {"draft_fuel_codes": getattr(row, "count", 0)}
