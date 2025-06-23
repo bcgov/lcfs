@@ -9,7 +9,8 @@ import { ROUTES } from '@/routes/routes'
 import { FILTER_KEYS } from '@/constants/common'
 import {
   COMPLIANCE_REPORT_STATUSES,
-  TRANSFER_STATUSES
+  TRANSFER_STATUSES,
+  FUEL_CODE_STATUSES
 } from '@/constants/statuses'
 
 // Mock dependencies
@@ -76,7 +77,8 @@ describe('DirectorReviewCard Component', () => {
         transfers: 2,
         complianceReports: 3,
         initiativeAgreements: 1,
-        adminAdjustments: 4
+        adminAdjustments: 4,
+        fuelCodes: 5
       },
       isLoading: false
     })
@@ -91,6 +93,7 @@ describe('DirectorReviewCard Component', () => {
     expect(screen.getByText('3')).toBeInTheDocument()
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('4')).toBeInTheDocument()
+    expect(screen.getByText('5')).toBeInTheDocument()
 
     expect(
       screen.getByText(/Transfer\(s\) for your review and statutory decision/, {
@@ -98,17 +101,22 @@ describe('DirectorReviewCard Component', () => {
       })
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/Compliance report\(s\) awaiting your review/, {
+      screen.getByText(/Compliance report\(s\) for your review/, {
         exact: false
       })
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/Initiative agreement\(s\) awaiting your review/, {
+      screen.getByText(/Initiative agreement\(s\) for your review/, {
         exact: false
       })
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/Administrative adjustment\(s\) awaiting your review/, {
+      screen.getByText(/Administrative adjustment\(s\) for your review/, {
+        exact: false
+      })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/Fuel code\(s\) for your review/, {
         exact: false
       })
     ).toBeInTheDocument()
@@ -159,10 +167,9 @@ describe('DirectorReviewCard Component', () => {
     render(<DirectorReviewCard />, { wrapper })
 
     // Find and click the compliance reports link
-    const link = screen.getByText(
-      /Compliance report\(s\) awaiting your review/,
-      { exact: false }
-    )
+    const link = screen.getByText(/Compliance report\(s\) for your review/, {
+      exact: false
+    })
     fireEvent.click(link)
 
     // Check that sessionStorage was updated with the correct filter
@@ -181,13 +188,44 @@ describe('DirectorReviewCard Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.REPORTS.LIST)
   })
 
+  it('navigates to fuel codes page on link click with correct filter', () => {
+    useDirectorReviewCounts.mockReturnValue({
+      data: { fuelCodes: 2 },
+      isLoading: false
+    })
+
+    render(<DirectorReviewCard />, { wrapper })
+
+    // Find and click the fuel codes link
+    const link = screen.getByText(/Fuel code\(s\) for your review/, {
+      exact: false
+    })
+    fireEvent.click(link)
+
+    // Check that sessionStorage was updated with the correct filter
+    const expectedFilter = JSON.stringify({
+      status: {
+        filterType: 'text',
+        type: 'equals',
+        filter: FUEL_CODE_STATUSES.RECOMMENDED
+      }
+    })
+
+    expect(window.sessionStorage.setItem).toHaveBeenCalledWith(
+      FILTER_KEYS.FUEL_CODES_GRID,
+      expectedFilter
+    )
+    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.FUEL_CODES.LIST)
+  })
+
   it('handles zero counts correctly', () => {
     useDirectorReviewCounts.mockReturnValue({
       data: {
         transfers: 0,
         complianceReports: 0,
         initiativeAgreements: 0,
-        adminAdjustments: 0
+        adminAdjustments: 0,
+        fuelCodes: 0
       },
       isLoading: false
     })
@@ -195,6 +233,6 @@ describe('DirectorReviewCard Component', () => {
     render(<DirectorReviewCard />, { wrapper })
 
     // All counts should show 0
-    expect(screen.getAllByText('0').length).toBe(4)
+    expect(screen.getAllByText('0').length).toBe(5)
   })
 })
