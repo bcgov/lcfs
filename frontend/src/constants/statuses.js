@@ -61,6 +61,7 @@ export function getAllTerminalTransferStatuses() {
 
 export const FUEL_CODE_STATUSES = {
   DRAFT: 'Draft',
+  RECOMMENDED: 'Recommended',
   APPROVED: 'Approved',
   DELETED: 'Deleted'
 }
