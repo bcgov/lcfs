@@ -341,7 +341,7 @@ export const useInternalComments = (entityType, entityId, options = {}) => {
   }, [commentInput, addCommentMutation])
 
   const handleEditComment = useCallback(
-    (commentId, commentText) => {
+    ({ commentId, commentText }) => {
       return editCommentMutation.mutateAsync({ commentId, commentText })
     },
     [editCommentMutation]

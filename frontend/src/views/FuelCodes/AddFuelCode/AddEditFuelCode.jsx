@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Stack } from '@mui/material'
 import Grid2 from '@mui/material/Grid2'
@@ -58,6 +58,17 @@ const AddEditFuelCodeBase = () => {
     refetch
   } = useGetFuelCode(fuelCodeID)
 
+  const nonEditableStatuses = useMemo(
+    () => [FUEL_CODE_STATUSES.APPROVED, FUEL_CODE_STATUSES.RECOMMENDED],
+    []
+  )
+
+  const isEditable = useMemo(
+    () =>
+      !nonEditableStatuses.includes(existingFuelCode?.fuelCodeStatus.status),
+    [nonEditableStatuses, existingFuelCode?.fuelCodeStatus.status]
+  )
+
   useEffect(() => {
     // Only initialize rowData once when all data is available and the grid is ready
     if (!initialized && isFetched && !isLoadingExistingCode && isGridReady) {
@@ -93,12 +104,11 @@ const AddEditFuelCodeBase = () => {
         optionsData,
         errors,
         !existingFuelCode,
-        existingFuelCode?.fuelCodeStatus.status !==
-          FUEL_CODE_STATUSES.APPROVED && hasRoles(roles.analyst)
+        isEditable && hasRoles(roles.analyst)
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, optionsData, existingFuelCode])
+  }, [errors, optionsData, existingFuelCode, isEditable, hasRoles])
 
   useEffect(() => {
     if (existingFuelCode) {
@@ -447,6 +457,9 @@ const AddEditFuelCodeBase = () => {
               {existingFuelCode?.fuelCodeStatus.status ===
                 FUEL_CODE_STATUSES.DRAFT && t('fuelCode:editFuelCodeTitle')}
               {existingFuelCode?.fuelCodeStatus.status ===
+                FUEL_CODE_STATUSES.RECOMMENDED &&
+                t('fuelCode:viewFuelCodeTitle')}
+              {existingFuelCode?.fuelCodeStatus.status ===
                 FUEL_CODE_STATUSES.APPROVED && t('fuelCode:viewFuelCodeTitle')}
             </BCTypography>
             <BCTypography variant="body2" mt={2} mb={3}>
@@ -470,8 +483,7 @@ const AddEditFuelCodeBase = () => {
             context={{ errors }}
             handlePaste={handlePaste}
           />
-          {existingFuelCode?.fuelCodeStatus.status !==
-            FUEL_CODE_STATUSES.APPROVED && (
+          {isEditable && (
             <Stack
               direction={{ md: 'column', lg: 'row' }}
               spacing={{ xs: 2, sm: 2, md: 3 }}

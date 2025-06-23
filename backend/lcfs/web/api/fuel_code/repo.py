@@ -453,7 +453,7 @@ class FuelCodeRepository:
 
     @repo_handler
     async def get_fuel_code_statuses(self):
-        query = select(FuelCodeStatus).order_by(asc(FuelCodeStatus.status))
+        query = select(FuelCodeStatus).order_by(asc(FuelCodeStatus.display_order))
         status_results = await self.db.execute(query)
         return status_results.scalars().all()
 

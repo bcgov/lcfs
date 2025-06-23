@@ -1,21 +1,27 @@
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
-import { useGetChangeLog } from '@/hooks/useComplianceReports'
-import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import {
+  useComplianceReportWithCache,
+  useGetChangeLog
+} from '@/hooks/useComplianceReports'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 import colors from '@/themes/base/colors'
 import { Box } from '@mui/material'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { changelogColDefs, changelogCommonColDefs } from './_schema'
+import { useParams } from 'react-router-dom'
 
 export const AllocationAgreementChangelog = () => {
   const { t } = useTranslation(['common', 'allocationAgreement', 'report'])
   // State for pagination - one per changelog item
   const [paginationStates, setPaginationStates] = useState({})
 
-  const { currentReport } = useComplianceReportStore()
+  const { complianceReportId, compliancePeriod } = useParams()
+  const { data: currentReport, isLoading: currentReportLoading } =
+    useComplianceReportWithCache(complianceReportId)
+
   const { data: changelogData, isLoading: changelogDataLoading } =
     useGetChangeLog({
       complianceReportGroupUuid:
@@ -136,7 +142,7 @@ export const AllocationAgreementChangelog = () => {
     }))
   }
 
-  if (changelogDataLoading) {
+  if (changelogDataLoading || currentReportLoading) {
     return <Loading />
   }
 
