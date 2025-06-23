@@ -232,6 +232,11 @@ class ComplianceReportServices:
             existing_report_id, new_report.compliance_report_id
         )
 
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
+            existing_report_id, new_report.compliance_report_id
+        )
+
         # Release the transaction from the current report being superseded
         await self._release_superseded_transaction(current_report)
 
@@ -358,6 +363,11 @@ class ComplianceReportServices:
             original_report_id, new_report.compliance_report_id
         )
 
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
+            original_report_id, new_report.compliance_report_id
+        )
+
         return ComplianceReportBaseSchema.model_validate(new_report)
 
     @service_handler
@@ -454,6 +464,11 @@ class ComplianceReportServices:
 
         # Copy documents from the original report
         await self.document_service.copy_documents(
+            existing_report_id, new_report.compliance_report_id
+        )
+
+        # Copy internal comments from the original report
+        await self.internal_comment_service.copy_internal_comments(
             existing_report_id, new_report.compliance_report_id
         )
 
