@@ -682,13 +682,28 @@ class ComplianceReportExporter:
                     self._format_date(fse.supply_from_date),
                     self._format_date(fse.supply_to_date),
                     fse.kwh_usage,
-                    fse.serial_number,
+                    fse.serial_nbr,
                     fse.manufacturer,
                     fse.model,
-                    fse.level_of_equipment,
-                    fse.port_count,
-                    fse.intended_use_types,
-                    fse.intended_user_types,
+                    fse.level_of_equipment.name if fse.level_of_equipment else None,
+                    fse.ports,
+                    (
+                        ", ".join(
+                            [use_type.type for use_type in fse.intended_use_types]
+                        )
+                        if fse.intended_use_types
+                        else None
+                    ),
+                    (
+                        ", ".join(
+                            [
+                                user_type.type_name
+                                for user_type in fse.intended_user_types
+                            ]
+                        )
+                        if fse.intended_user_types
+                        else None
+                    ),
                     fse.street_address,
                     fse.city,
                     fse.postal_code,
