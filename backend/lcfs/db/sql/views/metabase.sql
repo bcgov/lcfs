@@ -403,7 +403,7 @@ WITH
         SELECT
           vcrb.compliance_report_group_uuid
         FROM
-          vw_compliance_report_base vcrb
+          vw_compliance_report_analytics_base vcrb
       )
   )
 SELECT DISTINCT
@@ -454,7 +454,7 @@ SELECT DISTINCT
 FROM
   selected_fs fs
   JOIN grouped_reports gr ON fs.compliance_report_id = gr.compliance_report_id
-  JOIN vw_compliance_report_base vcrb ON vcrb.compliance_report_group_uuid = gr.compliance_report_group_uuid
+  JOIN vw_compliance_report_analytics_base vcrb ON vcrb.compliance_report_group_uuid = gr.compliance_report_group_uuid
   JOIN compliance_period cp ON gr.compliance_period_id = cp.compliance_period_id
   JOIN organization org ON gr.organization_id = org.organization_id
   LEFT JOIN fuel_code fc ON fs.fuel_code_id = fc.fuel_code_id
