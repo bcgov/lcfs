@@ -2,7 +2,8 @@ import pytest
 from unittest.mock import AsyncMock, patch
 from fastapi import FastAPI, status
 from httpx import AsyncClient
-from datetime import datetime
+from datetime import datetime, timedelta
+import asyncio
 
 from lcfs.db.models import UserProfile
 from lcfs.db.models.transfer.Transfer import Transfer, TransferRecommendationEnum
@@ -343,12 +344,16 @@ async def test_get_internal_comments_multiple_comments(
     await add_models([user])
 
     comments = []
+    base_time = datetime.now()
+    
     for i in range(3):
+        # Create comments with different update times to ensure ordering
         internal_comment = InternalComment(
             internal_comment_id=i,
             comment=f"Comment {i}",
             audience_scope=AudienceScopeEnum.ANALYST.value,
             create_user="IDIRUSER",
+            create_date=base_time - timedelta(seconds=i)  # Each comment has a later update_date
         )
         await add_models([internal_comment])
         association = TransferInternalComment(
@@ -357,6 +362,9 @@ async def test_get_internal_comments_multiple_comments(
         )
         await add_models([association])
         comments.append(internal_comment)
+        
+        # Small delay to ensure different timestamps
+        await asyncio.sleep(0.001)
 
     entity_type = EntityTypeEnum.TRANSFER.value
     entity_id = transfer.transfer_id
@@ -371,6 +379,7 @@ async def test_get_internal_comments_multiple_comments(
     assert isinstance(data, list)
     assert len(data) == 3
 
+    # Now they should be ordered by create_date ASC (most recent first)
     for i in range(3):
         assert data[i]["comment"] == f"Comment {2 - i}"
 

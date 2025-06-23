@@ -104,6 +104,7 @@ export const SCHEDULE_IMPORT_FILE_TYPES = {
   MIME_TYPES: [
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
   ],
+  DESCRIPTION: 'Excel files (.xlsx)',
   get ACCEPT_STRING() {
     return this.MIME_TYPES.join(',')
   }

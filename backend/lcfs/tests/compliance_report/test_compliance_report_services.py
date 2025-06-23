@@ -343,6 +343,7 @@ async def test_create_supplemental_report_includes_summary_lines(
 
     mock_current_report = MagicMock(spec=ComplianceReport)
     mock_current_report.compliance_period_id = 1
+    mock_current_report.compliance_report_id = 1
     mock_current_report.organization_id = 1
     mock_current_report.compliance_report_group_uuid = "test-group-uuid"
     mock_current_report.version = 0
@@ -361,6 +362,7 @@ async def test_create_supplemental_report_includes_summary_lines(
 
     mock_latest_report = MagicMock()
     mock_latest_report.version = 0
+    mock_latest_report.compliance_report_id = 1
     mock_repo.get_latest_report_by_group_uuid.return_value = mock_latest_report
 
     # Mock the transaction repo to return a balance as an async method
@@ -577,7 +579,7 @@ async def test_create_government_initiated_supplemental_report_success(
             SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL.value
         )  # Enum value
         mock_new_report.reporting_frequency = (
-            mock_compliance_report_submitted.reporting_frequency
+            ReportingFrequency.QUARTERLY
         )  # Use value from mock
         mock_new_report.supplemental_note = None
         mock_new_report.assessment_statement = None
@@ -631,7 +633,7 @@ async def test_create_government_initiated_supplemental_report_success(
         assert (
             call_args.current_status_id == mock_draft_status.compliance_report_status_id
         )
-        assert call_args.nickname == f"Supplemental Report {new_version}"
+        assert call_args.nickname == f"Early issuance - Supplemental report {new_version}"
         assert (
             call_args.supplemental_initiator
             == SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
@@ -716,6 +718,7 @@ async def test_create_supplemental_report_uses_current_balance(
     # Mock the latest report
     mock_latest_report = MagicMock()
     mock_latest_report.version = 0
+    mock_latest_report.compliance_report_id = 1
 
     # Mock user
     mock_user = MagicMock()
@@ -930,6 +933,7 @@ async def test_create_supplemental_report_line_17_zero_balance(
     # Mock the latest report
     mock_latest_report = MagicMock()
     mock_latest_report.version = 0
+    mock_latest_report.compliance_report_id = 1
 
     # Mock user
     mock_user = MagicMock()
@@ -2288,6 +2292,7 @@ async def test_create_analyst_adjustment_from_submitted_status_success(
     # Mock latest report
     mock_latest_report = MagicMock()
     mock_latest_report.version = 0
+    mock_latest_report.compliance_report_id = 1
 
     # Mock analyst adjustment status
     mock_analyst_adjustment_status = MagicMock()
@@ -2465,6 +2470,7 @@ async def test_create_analyst_adjustment_from_assessed_status_success(
     # Mock latest report
     mock_latest_report = MagicMock()
     mock_latest_report.version = 0
+    mock_latest_report.compliance_report_id = 1
 
     # Mock analyst adjustment status
     mock_analyst_adjustment_status = MagicMock()

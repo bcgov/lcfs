@@ -97,13 +97,17 @@ jobs:
 
   frontend-tests:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shardIndex: [1, 2, 3, 4, 5, 6, 7, 8]
+        shardTotal: [8]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
 
@@ -132,34 +136,67 @@ jobs:
           npm run test:ci:memory
         env:
           CI: true
+          SHARD_INDEX: ${{ matrix.shardIndex }}
+          SHARD_TOTAL: ${{ matrix.shardTotal }}
 
-      - name: Upload Vitest results
-        if: always()
+      - name: Upload blob report to GitHub Actions Artifacts
+        if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: vitest-results
-          path: frontend/vitest-results.xml
+          name: blob-report-${{ matrix.shardIndex }}
+          path: frontend/.vitest-reports/*
+          include-hidden-files: true
+          retention-days: 1
+
+  post-frontend-tests:
+    if: ${{ !cancelled() }}
+    needs: [frontend-tests]
+
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Download blob reports from GitHub Actions Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: frontend/.vitest-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge reports
+        run: |
+          cd frontend
+          npx vitest@3.0.9 --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
 
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          files: frontend/vitest-results.xml
+          files: frontend/.vitest-reports/vitest-results.xml
           github_token: ${{ secrets.GITHUB_TOKEN }}
           comment_title: 'Frontend Test Results'
           check_name: 'Frontend Test Results'
           fail_on: 'errors'
           report_individual_runs: 'true'
           deduplicate_classes_by_file_name: 'true'
+
   teams-notification:
-    needs: [backend-tests, frontend-tests]
+    needs: [backend-tests, post-frontend-tests]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Determine Test Status
         id: test_status
         run: |
-          if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.frontend-tests.result, 'failure') }}" == "true" ]]; then
+          if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.post-frontend-tests.result, 'failure') }}" == "true" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "theme_color=FF0000" >> $GITHUB_OUTPUT
           else
@@ -179,7 +216,7 @@ jobs:
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
-          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
+          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
 
           COLOR="${{ steps.test_status.outputs.theme_color }}"
 
