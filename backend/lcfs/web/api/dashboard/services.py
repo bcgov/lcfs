@@ -8,7 +8,7 @@ from lcfs.web.api.dashboard.schema import (
     OrganizarionTransactionCountsSchema,
     OrgComplianceReportCountsSchema,
     ComplianceReportCountsSchema,
-    FuelCodeCountsSchema
+    FuelCodeCountsSchema,
 )
 
 logger = structlog.get_logger(__name__)
@@ -27,6 +27,7 @@ class DashboardServices:
             compliance_reports=counts.get("compliance_reports", 0),
             initiative_agreements=counts.get("initiative_agreements", 0),
             admin_adjustments=counts.get("admin_adjustments", 0),
+            fuel_codes=counts.get("fuel_codes", 0),
         )
 
     @service_handler
@@ -59,9 +60,7 @@ class DashboardServices:
         )
 
     @service_handler
-    async def get_compliance_report_counts(
-        self
-    ) -> ComplianceReportCountsSchema:
+    async def get_compliance_report_counts(self) -> ComplianceReportCountsSchema:
         counts = await self.repo.get_compliance_report_counts()
 
         return ComplianceReportCountsSchema(
@@ -69,11 +68,7 @@ class DashboardServices:
         )
 
     @service_handler
-    async def get_fuel_code_counts(
-        self
-    ) -> FuelCodeCountsSchema:
+    async def get_fuel_code_counts(self) -> FuelCodeCountsSchema:
         counts = await self.repo.get_fuel_code_counts()
 
-        return FuelCodeCountsSchema(
-            draft_fuel_codes=counts.get("draft_fuel_codes", 0)
-        )
+        return FuelCodeCountsSchema(draft_fuel_codes=counts.get("draft_fuel_codes", 0))

@@ -7,6 +7,7 @@ class DirectorReviewCountsSchema(BaseSchema):
     compliance_reports: int
     initiative_agreements: int
     admin_adjustments: int
+    fuel_codes: int
 
 
 class TransactionCountsSchema(BaseSchema):
