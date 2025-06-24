@@ -1,5 +1,6 @@
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
+import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import { roles } from '@/constants/roles'
 import {
   COMPLIANCE_REPORT_STATUSES,
@@ -674,5 +675,64 @@ export const RoleRenderer = (props) => {
         roleRenderOverflowChip(count, isGovernmentRole)
       }
     />
+  )
+}
+
+export const LastCommentRenderer = (props) => {
+  const location = useLocation()
+  const { lastComment } = props.data
+
+  // If no comment exists, return empty cell
+  if (!lastComment || !lastComment.fullName) {
+    return (
+      <Link
+        to={`${location.pathname}/${props.data.compliancePeriod}/${props.data.complianceReportId}`}
+        style={{ color: '#000' }}
+      >
+        <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
+          {/* Empty cell but still clickable */}
+        </BCBox>
+      </Link>
+    )
+  }
+
+  return (
+    <Link
+      to={`${location.pathname}/${props.data.compliancePeriod}/${props.data.complianceReportId}`}
+      style={{ color: '#000' }}
+    >
+      <BCBox
+        component="div"
+        sx={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          py: 1
+        }}
+      >
+        <BCUserInitials
+          fullName={lastComment.fullName}
+          tooltipText={lastComment.comment}
+          maxLength={500}
+          variant="filled"
+          sx={{
+            bgcolor: '#606060',
+            color: 'white',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            minWidth: '32px',
+            '& .MuiChip-label': {
+              padding: 0
+            },
+            '&:hover': {
+              bgcolor: '#505050'
+            }
+          }}
+        />
+      </BCBox>
+    </Link>
   )
 }

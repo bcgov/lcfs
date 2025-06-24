@@ -137,6 +137,12 @@ class ComplianceReportBaseSchema(BaseSchema):
     assessment_statement: Optional[str] = None
 
 
+class LastCommentSchema(BaseSchema):
+    comment: str
+    full_name: str
+    create_date: datetime
+
+
 class ComplianceReportViewSchema(BaseSchema):
     compliance_report_id: int
     compliance_report_group_uuid: str
@@ -149,6 +155,7 @@ class ComplianceReportViewSchema(BaseSchema):
     report_status_id: int
     report_status: str
     update_date: datetime
+    last_comment: Optional[LastCommentSchema] = None
 
 
 class ChainedComplianceReportSchema(BaseSchema):
