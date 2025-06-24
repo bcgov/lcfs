@@ -88,7 +88,7 @@ const FuelCodesBase = () => {
     filters: convertToBackendFilters(
       gridRef.current?.api?.getFilterModel?.() || {}
     ),
-    sortOrders: []
+    sortOrders: paginationOptions.sortOrders || []
   })
 
   const handleDownload = async () => {

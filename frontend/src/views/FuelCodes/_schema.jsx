@@ -13,6 +13,7 @@ export const fuelCodeColDefs = (t, status = null) => [
   {
     field: 'status',
     headerName: t('fuelCode:fuelCodeColLabels.status'),
+    minWidth: 200,
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       valueKey: 'status',

@@ -18,6 +18,7 @@ from lcfs.web.utils.schema_validators import fuel_suffix_format_validator
 
 class FuelCodeStatusEnumSchema(str, Enum):
     Draft = "Draft"
+    Recommended = "Recommended"
     Approved = "Approved"
     Deleted = "Deleted"
 

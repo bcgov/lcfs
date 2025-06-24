@@ -220,7 +220,7 @@ export const YesNoTextRenderer = (props) => (
 export const FuelCodeStatusRenderer = (props) => {
   const location = useLocation()
   const statusArr = getAllFuelCodeStatuses()
-  const statusColorArr = ['info', 'success', 'error']
+  const statusColorArr = ['info', 'info', 'success', 'error']
   const statusIndex = statusArr.indexOf(props.data.fuelCodeStatus.status)
   return (
     <Link
