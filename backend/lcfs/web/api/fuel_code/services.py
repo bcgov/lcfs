@@ -14,6 +14,7 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_code.schema import (
+    FuelCodeBaseSchema,
     FuelCodeCreateUpdateSchema,
     FuelCodeSchema,
     FuelCodesSchema,
@@ -134,7 +135,7 @@ class FuelCodeServices:
                 total_pages=math.ceil(total_count / pagination.size),
             ),
             fuel_codes=[
-                FuelCodeSchema.model_validate(fuel_code) for fuel_code in fuel_codes
+                FuelCodeBaseSchema.model_validate(fuel_code) for fuel_code in fuel_codes
             ],
         )
 
