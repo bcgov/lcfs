@@ -50,7 +50,8 @@ export const MainLayout = () => {
         <Container
           maxWidth="lg"
           sx={{
-            padding: '1rem',
+            paddingY: '1rem',
+            paddingX: '40px',
             flexGrow: 1,
             '@media (max-width: 920px)': {
               marginTop: '2rem'

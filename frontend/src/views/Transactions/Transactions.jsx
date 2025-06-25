@@ -299,13 +299,7 @@ export const Transactions = () => {
               downloadLabel={t('txn:downloadingTxnInfo')}
               dataTest="download-transactions-button"
             />
-            <ClearFiltersButton
-              onClick={handleClearFilters}
-              sx={{
-                minWidth: 'fit-content',
-                whiteSpace: 'nowrap'
-              }}
-            />
+            <ClearFiltersButton onClick={handleClearFilters} />
           </Box>
         </Grid>
         <Grid
