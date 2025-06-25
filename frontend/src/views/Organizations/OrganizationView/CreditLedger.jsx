@@ -10,26 +10,31 @@ import {
   useCreditLedger,
   useDownloadCreditLedger
 } from '@/hooks/useCreditLedger'
-import { useCurrentOrgBalance } from '@/hooks/useOrganization'
+import { useOrganizationBalance } from '@/hooks/useOrganization'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
 import { timezoneFormatter } from '@/utils/formatters'
 
-export const CreditLedger = () => {
+export const CreditLedger = ({ organizationId }) => {
   const { t } = useTranslation(['org', 'common'])
   const gridRef = useRef(null)
 
   const { data: currentUser } = useCurrentUser()
-  const orgID = currentUser?.organization?.organizationId
+  // Use passed organizationId prop, fallback to current user's org for backward compatibility
+  const orgID = organizationId ?? currentUser?.organization?.organizationId
 
   const [pagination, setPagination] = useState({ page: 1, size: 10 })
   const [selectedPeriod, setSelectedPeriod] = useState('')
 
   const { data: periodsRes, isLoading: periodsLoading } = useCompliancePeriod()
 
-  const allPeriods = periodsRes?.data ?? []
+  // The compliance periods endpoint returns the data directly, not wrapped in a data object
+  const allPeriods = periodsRes ?? []
   const currentYear = new Date().getFullYear()
+  
+  // Show all compliance periods up to the current year
+  // The credit ledger will naturally only show data for years with transactions
   const compliancePeriods = allPeriods
     .filter((p) => Number(p.description) <= currentYear)
     .sort((a, b) => Number(b.description) - Number(a.description))
@@ -41,7 +46,7 @@ export const CreditLedger = () => {
     period: selectedPeriod
   })
 
-  const { data: orgBalance } = useCurrentOrgBalance()
+  const { data: orgBalance } = useOrganizationBalance(orgID)
   const availableBalance = orgBalance?.totalBalance ?? 0
 
   const rowData = (ledgerRes?.ledger ?? []).map((r) => ({
@@ -152,7 +157,7 @@ export const CreditLedger = () => {
                 displayEmpty
                 value={selectedPeriod}
                 onChange={onPeriodChange}
-                renderValue={(v) => (v === '' ? t('org:select') : v)}
+                renderValue={(v) => (v === '' ? 'All years' : v)}
                 sx={{
                   height: '46px',
                   '& .MuiSelect-select': {
@@ -162,7 +167,7 @@ export const CreditLedger = () => {
                   }
                 }}
               >
-                <MenuItem value="">{t('org:select')}</MenuItem>
+                <MenuItem value="">All years</MenuItem>
                 {!periodsLoading &&
                   compliancePeriods.map((p) => (
                     <MenuItem
