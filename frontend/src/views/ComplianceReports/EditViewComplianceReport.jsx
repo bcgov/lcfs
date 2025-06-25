@@ -161,7 +161,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           ? new Date(updateDate)
           : now
 
-      // Get month (0-11) and calculate quarter
+      // Get month (0-11) and calculate quarter based on Early Issuance schedule
       const month = submittedDate.getMonth()
       const submittedYear = submittedDate.getFullYear()
       const currentYear = now.getFullYear()
@@ -170,14 +170,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         submittedYear > parseInt(compliancePeriod)
       ) {
         quarter = 4
-      } else if (month >= 0 && month <= 2) {
-        quarter = 1 // Jan-Mar: Q1
-      } else if (month >= 3 && month <= 5) {
-        quarter = 2 // Apr-Jun: Q2
+      } else if (month >= 2 && month <= 5) {
+        quarter = 1 // Mar-Jun: Q1
       } else if (month >= 6 && month <= 8) {
-        quarter = 3 // Jul-Sep: Q3
+        quarter = 2 // Jul-Sep: Q2
+      } else if (month >= 9 && month <= 11) {
+        quarter = 3 // Oct-Dec: Q3
       } else {
-        quarter = 4 // Oct-Dec: Q4
+        quarter = 4 // Jan-Feb: Q4
       }
     }
 
