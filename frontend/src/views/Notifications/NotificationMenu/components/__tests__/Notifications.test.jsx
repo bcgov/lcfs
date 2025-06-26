@@ -114,12 +114,16 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
   }
 })
 
-vi.mock('../_schema', () => ({
-  columnDefs: (t, currentUser) => [],
-  routesMapping: (currentUser) => ({
-    testService: '/test-route/:transactionId'
-  })
-}))
+vi.mock('../_schema', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    columnDefs: (t, currentUser) => [],
+    routesMapping: (currentUser) => ({
+      testService: '/test-route/:transactionId'
+    })
+  }
+})
 
 describe('Notifications Component', () => {
   beforeEach(() => {
