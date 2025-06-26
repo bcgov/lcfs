@@ -58,38 +58,52 @@ def anyio_backend() -> str:
 async def _engine() -> AsyncGenerator[AsyncEngine, None]:
     """
     Create engine and run Alembic migrations.
+    Supports parallel test execution with job-specific database names.
 
     :yield: new engine.
     """
-    # Create the test database
-    await create_test_database()
-
-    # Run Alembic migrations
+    # Get job-specific database name from environment
+    # Falls back to default if not running in parallel mode
+    job_db_name = os.getenv("LCFS_DB_BASE", settings.db_test)
+    
+    # Update settings temporarily for this job
+    original_db_test = settings.db_test
+    settings.db_test = job_db_name
+    
     try:
-        subprocess.run(
-            ["alembic", "upgrade", "head"],
-            cwd=f"{os.getcwd()}",
-            check=True,
-        )
-    except Exception as e:
-        logger.error(
-            "Error running migrations",
-            error=str(e),
-            exc_info=e,
-        )
-        raise
+        # Create the job-specific test database
+        await create_test_database()
 
-    # Create AsyncEngine instance
-    engine = create_async_engine(str(settings.db_test_url))
+        # Run Alembic migrations
+        try:
+            subprocess.run(
+                ["alembic", "upgrade", "head"],
+                cwd=f"{os.getcwd()}",
+                check=True,
+            )
+        except Exception as e:
+            logger.error(
+                "Error running migrations",
+                error=str(e),
+                job_db_name=job_db_name,
+                exc_info=e,
+            )
+            raise
 
-    # Seed database with pytest test data
-    await seed_database("pytest")
+        # Create AsyncEngine instance with job-specific database
+        engine = create_async_engine(str(settings.db_test_url))
 
-    try:
-        yield engine
+        # Seed database with pytest test data
+        await seed_database("pytest")
+
+        try:
+            yield engine
+        finally:
+            await engine.dispose()
+            await drop_test_database()
     finally:
-        await engine.dispose()
-        await drop_test_database()
+        # Restore original settings
+        settings.db_test = original_db_test
 
 
 @pytest.fixture
@@ -105,6 +119,10 @@ async def dbsession(
     :param _engine: current engine.
     :yields: async session.
     """
+    # Log which database is being used for debugging parallel execution
+    job_db_name = os.getenv("LCFS_DB_BASE", settings.db_test)
+    logger.debug("Using database for test session", database=job_db_name)
+    
     async with _engine.begin() as connection:
         session_maker = async_sessionmaker(
             connection,
@@ -234,7 +252,7 @@ class MockAuthenticationBackend(AuthenticationBackend):
         self.is_active = user_details["is_active"]
         self.organization_name = user_details["organization_name"]
 
-    async def authenticate(self, request):
+    async def authenticate(self, request) -> tuple:
         # Simulate a user object based on the role
         user = UserProfile(
             user_profile_id=self.user_profile_id,
