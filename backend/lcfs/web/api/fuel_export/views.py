@@ -26,6 +26,7 @@ from lcfs.web.api.fuel_export.schema import (
     FuelExportSchema,
 )
 from lcfs.web.api.fuel_export.services import FuelExportServices
+from lcfs.web.api.fuel_export.validation import FuelExportValidation
 from lcfs.web.core.decorators import view_handler
 
 router = APIRouter()
@@ -114,6 +115,7 @@ async def save_fuel_export_row(
     request_data: FuelExportCreateUpdateSchema = Body(...),
     action_service: FuelExportActionService = Depends(),
     report_validate: ComplianceReportValidation = Depends(),
+    fe_validate: FuelExportValidation = Depends(),
 ):
     """Endpoint to save single fuel export row"""
     compliance_report_id = request_data.compliance_report_id
@@ -127,6 +129,7 @@ async def save_fuel_export_row(
         # Use action service to handle delete logic
         return await action_service.delete_fuel_export(request_data)
     else:
+        await fe_validate.validate_other(request_data)
         if request_data.fuel_export_id:
             # Use action service to handle update logic
             return await action_service.update_fuel_export(
