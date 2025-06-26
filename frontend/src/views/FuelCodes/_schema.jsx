@@ -229,3 +229,5 @@ export const fuelCodeColDefs = (t, status = null) => [
     minWidth: 600
   }
 ]
+
+export const defaultSortModel = [{ field: 'lastUpdated', direction: 'desc' }]
