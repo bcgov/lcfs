@@ -358,7 +358,26 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       }
     })
 
-  const methods = useForm()
+  // Initialize useForm with assessmentStatement
+  const methods = useForm({
+    defaultValues: {
+      assessmentStatement: reportData?.report?.assessmentStatement || '',
+      supplementalNote: reportData?.report?.supplementalNote || ''
+    }
+  })
+
+  // Update form values when reportData changes
+  useEffect(() => {
+    if (reportData?.report?.assessmentStatement !== undefined) {
+      methods.setValue(
+        'assessmentStatement',
+        reportData.report.assessmentStatement
+      )
+    }
+    if (reportData?.report?.supplementalNote !== undefined) {
+      methods.setValue('supplementalNote', reportData.report.supplementalNote)
+    }
+  }, [reportData?.report, methods])
 
   // Memoized report context conditions
   const reportConditions = useMemo(() => {
@@ -546,7 +565,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   return (
     <>
       <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
-      <BCBox pl={2} pr={2}>
+      <BCBox>
         <BCModal
           open={!!modalData}
           onClose={() => setModalData(null)}
@@ -646,7 +665,9 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                 boxShadow: '0 1px 2px rgba(0,0,0,0.28)'
               }}
             >
-              {shouldShowAssessmentStatement && <AssessmentStatement />}
+              {shouldShowAssessmentStatement && (
+                <AssessmentStatement methods={methods} />
+              )}
               {shouldShowAssessmentRecommendation && (
                 <AssessmentRecommendation
                   reportData={reportData}

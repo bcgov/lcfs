@@ -172,7 +172,15 @@ class TransactionRepository:
         # Apply sorting
         for order in sort_orders:
             direction = asc if order.direction == "asc" else desc
-            query = query.order_by(direction(getattr(TransactionView, order.field)))
+
+            # Special handling for transaction_id sorting to sort by type first, then by id
+            if order.field == "transaction_id":
+                query = query.order_by(
+                    direction(TransactionView.transaction_type),
+                    direction(TransactionView.transaction_id),
+                )
+            else:
+                query = query.order_by(direction(getattr(TransactionView, order.field)))
 
         # Execute count query for total records matching the filter
         count_query = select(func.count(TransactionView.transaction_id)).where(
@@ -630,6 +638,20 @@ class TransactionRepository:
                 return True
         # If no rows were affected or transaction could not be retrieved, return False
         return False
+
+    @repo_handler
+    async def reinstate_transaction(self, transaction_id: int) -> bool:
+        """
+        Sets a transaction's action back to 'Reserved'. This is used when a
+        superseding report is deleted, putting the previous report back in play.
+        """
+        transaction = await self.get_transaction_by_id(transaction_id)
+        if not transaction:
+            return False
+        transaction.transaction_action = TransactionActionEnum.Reserved
+        self.db.add(transaction)
+        await self.db.commit()
+        return True
 
     @repo_handler
     async def get_visible_statuses(self, entity_type: EntityType) -> List[str]:

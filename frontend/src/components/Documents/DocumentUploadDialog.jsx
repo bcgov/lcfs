@@ -15,7 +15,11 @@ function DocumentUploadDialog({ open, close, parentType, parentID }) {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center'
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: '100%',
+        overflow: 'hidden',
+        boxSizing: 'border-box'
       }}
     >
       <BCTypography variant="body2" style={{ marginTop: '10px' }}>

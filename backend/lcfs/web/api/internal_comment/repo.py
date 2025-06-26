@@ -1,9 +1,10 @@
+from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 import structlog
 from typing import List
 
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import asc, select, desc
 
 from lcfs.web.exception.exceptions import DataNotFoundException
 from lcfs.db.dependencies import get_async_db_session
@@ -37,6 +38,7 @@ class InternalCommentRepository:
         self,
         db: AsyncSession = Depends(get_async_db_session),
         user_repo: UserRepository = Depends(),
+        report_repo: ComplianceReportRepository = Depends(),
     ):
         """
         Initializes the repository with an asynchronous database session.
@@ -46,6 +48,7 @@ class InternalCommentRepository:
         """
         self.db = db
         self.user_repo = user_repo
+        self.report_repo = report_repo
 
     @repo_handler
     async def create_internal_comment(
@@ -144,8 +147,25 @@ class InternalCommentRepository:
 
         # Get the specific model and where condition for the given entity_type
         entity_model, where_condition = entity_mapping[entity_type]
+        entity_ids = [entity_id]
+        if entity_type == EntityTypeEnum.COMPLIANCE_REPORT:
+            # Get all related compliance report IDs in the same chain
+            entity_ids = await self.report_repo.get_related_compliance_report_ids(
+                entity_id
+            )
 
-        # Construct the base query
+        # First get distinct internal_comment_ids
+        distinct_comment_ids_query = (
+            select(InternalComment.internal_comment_id)
+            .join(
+                entity_model,
+                entity_model.internal_comment_id == InternalComment.internal_comment_id,
+            )
+            .where(where_condition.in_(entity_ids))
+            .distinct()
+        )
+
+        # Then get the full comment data with user info, ordered by update_date
         base_query = (
             select(
                 InternalComment,
@@ -154,15 +174,11 @@ class InternalCommentRepository:
                 ),
             )
             .join(
-                entity_model,
-                entity_model.internal_comment_id == InternalComment.internal_comment_id,
-            )
-            .join(
                 UserProfile,
                 UserProfile.keycloak_username == InternalComment.create_user,
             )
-            .where(where_condition == entity_id)
-            .order_by(desc(InternalComment.internal_comment_id))
+            .where(InternalComment.internal_comment_id.in_(distinct_comment_ids_query))
+            .order_by(asc(InternalComment.create_date))
         )
 
         # Execute the query

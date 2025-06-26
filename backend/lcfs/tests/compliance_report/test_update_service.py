@@ -254,12 +254,20 @@ async def test_handle_submitted_status_with_existing_summary(
             ),
         ],
         can_sign=True,
+        line_20_surplus_deficit_units=100,
     )
+
+    # Mock the returned summary from save_compliance_report_summary to have the proper attribute
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = 100
 
     # Set up mocks
     mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
     mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
+    )
+    mock_summary_repo.save_compliance_report_summary.return_value = (
+        mock_returned_summary
     )
 
     # Inject the mocked org_service into the service being tested
@@ -343,6 +351,7 @@ async def test_handle_submitted_status_without_existing_summary(
             ),
         ],
         can_sign=True,
+        line_20_surplus_deficit_units=150,
     )
 
     # Set up mocks
@@ -355,6 +364,10 @@ async def test_handle_submitted_status_without_existing_summary(
 
     # Mock the adjust_balance method to return a mocked transaction result
     mock_org_service.adjust_balance.return_value = MagicMock()
+    # Mock the returned summary from add_compliance_report_summary to have the proper attribute
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = 150
+    mock_summary_repo.add_compliance_report_summary.return_value = mock_returned_summary
     # Call the method
     await compliance_report_update_service.handle_submitted_status(
         mock_report, UserProfile()
@@ -441,12 +454,20 @@ async def test_handle_submitted_status_partial_existing_values(
             ),
         ],
         can_sign=True,
+        line_20_surplus_deficit_units=75,
     )
+    # Mock the returned summary from save_compliance_report_summary to have the proper attribute
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = 75
 
     # Set up mocks
     mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
     mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
+    )
+    # Mock save_compliance_report_summary to return the proper object
+    mock_summary_repo.save_compliance_report_summary.return_value = (
+        mock_returned_summary
     )
     # Inject the mocked org_service into the service being tested
     compliance_report_update_service.org_service = mock_org_service
@@ -535,12 +556,19 @@ async def test_handle_submitted_status_no_user_edits(
             ),
         ],
         can_sign=True,
+        line_20_surplus_deficit_units=200,
     )
-
+    # Mock the returned summary from save_compliance_report_summary to have the proper attribute
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = 200
     # Set up mocks
     mock_summary_repo.get_summary_by_report_id.return_value = existing_summary
     mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
+    )
+    # Mock save_compliance_report_summary to return the proper object
+    mock_summary_repo.save_compliance_report_summary.return_value = (
+        mock_returned_summary
     )
     # Inject the mocked org_service into the service being tested
     compliance_report_update_service.org_service = mock_org_service
@@ -629,10 +657,7 @@ async def test_handle_submitted_status_no_credits(
     mock_report = MagicMock(spec=ComplianceReport)
     mock_report.compliance_report_id = report_id
     mock_report.organization_id = 123
-    # Deficit units is nonzero
-    mock_report.summary = MagicMock(
-        spec=ComplianceReportSummary, line_20_surplus_deficit_units=-100
-    )
+    mock_report.summary = None
     # No existing transaction
     mock_report.transaction = None
 
@@ -651,11 +676,15 @@ async def test_handle_submitted_status_no_credits(
         renewable_fuel_target_summary=[],
         low_carbon_fuel_target_summary=[],
         non_compliance_penalty_summary=[],
+        line_20_surplus_deficit_units=-100,
     )
     mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
-
+    # Mock the returned summary to have the proper attribute
+    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
+    mock_returned_summary.line_20_surplus_deficit_units = -100
+    mock_summary_repo.add_compliance_report_summary.return_value = mock_returned_summary
     # available_balance = 0
     mock_org_service.calculate_available_balance.return_value = 0
     # If adjust_balance is called, we'll see an assertion fail
