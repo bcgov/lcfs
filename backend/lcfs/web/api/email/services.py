@@ -134,11 +134,7 @@ class CHESEmailService:
     def _build_email_payload(
         self, recipients: List[str], context: Dict[str, Any], body: str
     ) -> Dict[str, Any]:
-        """
-        Build the payload for sending an email via CHES.
-        """
-        return {
-            "bcc": recipients,
+        payload = {
             "to": ["donotreply@gov.bc.ca"],
             "from": f"{settings.ches_sender_name} <{settings.ches_sender_email}>",
             "delayTS": 0,
@@ -149,6 +145,16 @@ class CHESEmailService:
             "tag": "lcfs_email",
             "bodyType": "html",
         }
+
+        # Filter out None or empty strings
+        valid_recipients = [email for email in recipients if email]
+
+        if valid_recipients:
+            payload["bcc"] = valid_recipients
+        else:
+            logger.warning("Attempted to send email with no valid BCC recipients.")
+
+        return payload
 
     async def _get_ches_token(self) -> Optional[str]:
         """
