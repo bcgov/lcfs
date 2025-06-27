@@ -83,6 +83,7 @@ class FuelCodeSchema(BaseSchema):
     fuel_code_prefix_id: int
     fuel_code: str
     fuel_code_carbon_intensity: float
+    fuel_production_facility_country: Optional[str] = None
 
 
 class FuelTypeOptionsSchema(BaseSchema):

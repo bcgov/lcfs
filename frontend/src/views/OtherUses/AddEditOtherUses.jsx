@@ -364,8 +364,15 @@ export const AddEditOtherUses = () => {
   }, [navigate, compliancePeriod, complianceReportId, t])
 
   const columnDefs = useMemo(
-    () => otherUsesColDefs(optionsData, errors, warnings, isSupplemental),
-    [optionsData, errors, warnings, isSupplemental]
+    () =>
+      otherUsesColDefs(
+        optionsData,
+        errors,
+        warnings,
+        isSupplemental,
+        compliancePeriod
+      ),
+    [optionsData, errors, warnings, isSupplemental, compliancePeriod]
   )
 
   const saveButtonProps = useMemo(
