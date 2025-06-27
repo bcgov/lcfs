@@ -18,6 +18,9 @@ class ComplianceReportStatusEnum(enum.Enum):
     Not_recommended_by_manager = "Not recommended by manager"
     Rejected = "Rejected"
 
+    # Display purpose only
+    Supplemental_requested = "Supplemental requested"
+
     def underscore_value(self) -> str:
         """
         Return the status as an underscored string.

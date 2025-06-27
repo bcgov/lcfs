@@ -23,6 +23,7 @@ class ReportingFrequency(enum.Enum):
 class SupplementalInitiatorType(enum.Enum):
     SUPPLIER_SUPPLEMENTAL = "Supplier Supplemental"
     GOVERNMENT_REASSESSMENT = "Government Reassessment"
+    GOVERNMENT_INITIATED = "Government Initiated"
 
 
 class Quarter(enum.Enum):

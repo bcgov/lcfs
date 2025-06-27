@@ -576,7 +576,7 @@ async def test_create_government_initiated_supplemental_report_success(
         )
         mock_new_report.nickname = f"Supplemental Report {new_version}"
         mock_new_report.supplemental_initiator = (
-            SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL.value
+            SupplementalInitiatorType.GOVERNMENT_INITIATED.value
         )  # Enum value
         mock_new_report.reporting_frequency = (
             ReportingFrequency.QUARTERLY
@@ -636,7 +636,7 @@ async def test_create_government_initiated_supplemental_report_success(
         assert call_args.nickname == f"Early issuance - Supplemental report {new_version}"
         assert (
             call_args.supplemental_initiator
-            == SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
+            == SupplementalInitiatorType.GOVERNMENT_INITIATED
         )
 
     # Verify the result is of the correct schema type
