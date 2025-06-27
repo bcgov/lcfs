@@ -8,6 +8,7 @@
     "organization": "Organization",
     "type": "Type",
     "status": "Current status",
+    "lastComment": "Last comment",
     "lastUpdated": "Last status update"
   },
   "noReportsFound": "No compliance reports found",
