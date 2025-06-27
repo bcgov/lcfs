@@ -137,7 +137,8 @@ describe('AddEditFuelSupplies', () => {
 
     render(<AddEditFuelSupplies />, { wrapper })
     const rows = await screen.findAllByTestId('grid-row')
-    expect(rows.length).toBe(2)
+    // Should contain 2 existing fuel supplies + 1 empty row at the end
+    expect(rows.length).toBe(3)
   })
 
   it('handles supplemental report correctly', () => {
