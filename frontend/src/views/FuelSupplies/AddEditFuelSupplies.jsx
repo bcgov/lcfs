@@ -48,15 +48,12 @@ export const AddEditFuelSupplies = () => {
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
   const { data: fuelSupplyData, isLoading: fuelSuppliesLoading } =
-    useGetFuelSuppliesList(
-      {
-        complianceReportId,
-        mode: isSupplemental
-          ? REPORT_SCHEDULES_VIEW.EDIT
-          : REPORT_SCHEDULES_VIEW.VIEW
-      },
-      {}
-    )
+    useGetFuelSuppliesList({
+      complianceReportId,
+      mode: isSupplemental
+        ? REPORT_SCHEDULES_VIEW.EDIT
+        : REPORT_SCHEDULES_VIEW.VIEW
+    })
 
   const gridOptions = useMemo(
     () => ({
@@ -116,7 +113,10 @@ export const AddEditFuelSupplies = () => {
             id: uuid()
           }
         })
-        setRowData([...updatedRowData, { id: uuid() }])
+        setRowData([
+          ...updatedRowData,
+          { id: uuid(), complianceReportId, compliancePeriod }
+        ])
       } else {
         setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
@@ -156,7 +156,10 @@ export const AddEditFuelSupplies = () => {
         }
       })
 
-      setRowData(updatedRowData)
+      setRowData([
+        ...updatedRowData,
+        { id: uuid(), complianceReportId, compliancePeriod }
+      ])
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
@@ -278,7 +281,7 @@ export const AddEditFuelSupplies = () => {
 
       params.node.updateData(updatedData)
     },
-    [saveRow, t]
+    [saveRow, t, complianceReportId, compliancePeriod]
   )
 
   const onAction = async (action, params) => {

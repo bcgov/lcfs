@@ -46,7 +46,8 @@
   },
   "validateMsg": {
     "isRequired": "{{field}} is required",
-    "nonNegative": "Quantity must be a non-negative number"
+    "nonNegative": "Quantity must be a non-negative number",
+    "duplicateTransfer": "Duplicate notional transfer detected. A transfer with the same trading partner, fuel category, transfer type, and quantities already exists in this compliance report."
   },
   "scheduleUpdated": "Notional transfers schedule updated successfully"
 }

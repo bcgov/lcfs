@@ -4,9 +4,10 @@
     "loadingMessage": "Loading director review items...",
     "thereAre": "There are:",
     "transfersForReview": "Transfer(s) for your review and statutory decision",
-    "complianceReportsForReview": "Compliance report(s) awaiting your review",
-    "initiativeAgreementsForReview": "Initiative agreement(s) awaiting your review",
-    "adminAdjustmentsForReview": "Administrative adjustment(s) awaiting your review"
+    "complianceReportsForReview": "Compliance report(s) for your review",
+    "initiativeAgreementsForReview": "Initiative agreement(s) for your review",
+    "adminAdjustmentsForReview": "Administrative adjustment(s) for your review",
+    "fuelCodesForReview": "Fuel code(s) for your review"
   },
   "orgTransactions": {
     "title": "Transactions",
