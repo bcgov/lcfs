@@ -221,25 +221,6 @@ class ButtonActionFactory {
     })
   }
 
-  createReassessment() {
-    return this.createButton({
-      style: BUTTON_STYLES.WARNING_OUTLINED,
-      id: 'create-reassessment-btn',
-      label: this.context.t('report:actionBtns.createReassessment'),
-      handler: (formData) =>
-        this.context.setModalData({
-          primaryButtonAction: () =>
-            this.context.createAnalystAdjustment(formData),
-          primaryButtonText: this.context.t(
-            'report:actionBtns.createReassessment'
-          ),
-          secondaryButtonText: this.context.t('cancelBtn'),
-          title: this.context.t('confirmation'),
-          content: this.context.t('report:createReassessmentConfirmText')
-        })
-    })
-  }
-
   deleteAnalystAdjustment() {
     return this.createButton({
       style: BUTTON_STYLES.ERROR_OUTLINED,
@@ -474,7 +455,6 @@ function shouldShowButton(buttonName, context) {
     'recommendByAnalyst',
     'returnToSupplier',
     'createIdirSupplemental',
-    'createReassessment',
     'recommendByManager',
     'returnToAnalyst',
     'issueAssessment',
@@ -525,10 +505,6 @@ function shouldShowButton(buttonName, context) {
     case 'amendPenalties':
       // Only available for original and supplemental reports
       return !context.isEarlyIssuance
-
-    case 'createReassessment':
-      // Additional condition: only show for specific conditions beyond draft supplemental check
-      return true
 
     default:
       return true
