@@ -6,6 +6,7 @@ from lcfs.db.models import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.schema import (
+    FuelCodeBaseSchema,
     FuelCodeCreateUpdateSchema,
     FuelCodeSchema,
     PaginationResponseSchema,
@@ -21,16 +22,17 @@ async def test_get_fuel_codes_success():
     service = FuelCodeServices(repo=repo_mock)
 
     mock_fuel_codes = [
-        FuelCodeSchema(
+        FuelCodeBaseSchema(
             fuel_code_id=1,
             company="XYZ Corp",
             prefix_id=1,
             fuel_suffix="001.0",
             carbon_intensity=10.5,
+            fuel_code_status_id=1,
             status="Draft",
             application_date="2023-10-01",
             last_updated="2023-10-01",
-            fuel="Diesel",
+            fuel_type="Diesel",
             fuel_type_id=1,
             prefix="BCLCF",
             edrms="EDRMS-123",
