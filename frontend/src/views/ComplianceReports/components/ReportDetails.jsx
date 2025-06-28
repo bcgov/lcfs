@@ -218,6 +218,7 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
     () => [
       {
         name: t('report:supportingDocs'),
+        key: 'supportingDocs',
         action: handleFileDialogOpen,
         useFetch: useComplianceReportDocuments,
         component: (data) => (
@@ -401,16 +402,17 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
 
       // check if they have actual data
       const scheduleData =
-        (!dataResult?.isLoading && activity.key
-          ? dataResult?.data?.[activity.key]
-          : dataResult?.data) ?? []
+        activity.key === 'supportingDocs'
+          ? dataResult?.data || []
+          : dataResult?.data?.[activity.key] || []
+
       const hasRealData = !isArrayEmpty(scheduleData)
 
       // Show if has data OR if in editing mode OR if it was recently edited
       const shouldShow =
         hasRealData ||
-        activity.name === t('report:supportingDocs') ||
-        (expandedSchedule && activity.key === expandedSchedule)
+        activity.key === 'supportingDocs' ||
+        expandedSchedule === activity.key
 
       accordionsData.set(panelId, {
         shouldShow,
@@ -517,6 +519,36 @@ const ReportDetails = ({ canEdit, currentStatus = 'Draft', hasRoles }) => {
     }),
     []
   )
+
+  // Auto expand/collapse supporting docs section based on document presence
+  const SUPPORTING_DOCS_KEY = 'supportingDocs'
+
+  const supportingDocsPanelId = useMemo(() => {
+    const idx = activityList.findIndex((a) => a.key === SUPPORTING_DOCS_KEY)
+    return idx >= 0 ? `panel${idx}` : null
+  }, [activityList])
+
+  // Derive current supporting-docs array from existing query result
+  const supportingDocsData = useMemo(() => {
+    const result = activityDataResults.find(
+      (r) => r.activity.key === SUPPORTING_DOCS_KEY
+    )
+    return result?.data ?? []
+  }, [activityDataResults])
+
+  useEffect(() => {
+    if (!supportingDocsPanelId) return
+
+    const hasDocs = !isArrayEmpty(supportingDocsData)
+
+    setExpanded((prev) => {
+      const isExpanded = prev.includes(supportingDocsPanelId)
+      if (hasDocs === isExpanded) return prev // no change
+      return hasDocs
+        ? [...prev, supportingDocsPanelId]
+        : prev.filter((p) => p !== supportingDocsPanelId)
+    })
+  }, [supportingDocsData, supportingDocsPanelId])
 
   return (
     <>
