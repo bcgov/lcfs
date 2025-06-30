@@ -178,7 +178,11 @@ async def save_notional_transfer_row(
 
     if request_data.deleted:
         return await service.delete_notional_transfer(request_data)
-    elif notional_transfer_id:
-        return await service.update_notional_transfer(request_data)
     else:
-        return await service.create_notional_transfer(request_data)
+        # Validate for duplicates before creating or updating
+        await validate.validate_no_duplicates(request_data)
+
+        if notional_transfer_id:
+            return await service.update_notional_transfer(request_data)
+        else:
+            return await service.create_notional_transfer(request_data)
