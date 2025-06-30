@@ -16,7 +16,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "413eef467edd"
-down_revision = "a1b2c3d4e5f6"
+down_revision = "2e2f6f7ff391"
 branch_labels = None
 depends_on = None
 
