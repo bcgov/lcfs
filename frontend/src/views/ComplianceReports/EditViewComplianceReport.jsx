@@ -613,30 +613,32 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               chain={reportData?.chain}
             />
           </Stack>
-          <>
-            <ReportDetails
-              canEdit={canEdit}
-              currentStatus={currentStatus}
-              hasRoles={hasRoles}
-              complianceReportData={reportData}
-            />
-            {!showEarlyIssuanceSummary && (
-              <ComplianceReportSummary
-                reportID={complianceReportId}
-                enableCompareMode={reportData?.chain?.length > 1}
-                canEdit={canEdit}
-                currentStatus={currentStatus}
-                compliancePeriodYear={compliancePeriod}
-                setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
-                buttonClusterConfig={buttonClusterConfig}
-                methods={methods}
-                alertRef={alertRef}
-              />
-            )}
-            {showEarlyIssuanceSummary && (
-              <ComplianceReportEarlyIssuanceSummary reportData={reportData} />
-            )}
-          </>
+          <ReportDetails
+            canEdit={canEdit}
+            currentStatus={currentStatus}
+            hasRoles={hasRoles}
+            complianceReportData={reportData}
+          />
+          {!location.state?.newReport && (
+            <>
+              {!showEarlyIssuanceSummary && (
+                <ComplianceReportSummary
+                  reportID={complianceReportId}
+                  enableCompareMode={reportData?.chain?.length > 1}
+                  canEdit={canEdit}
+                  currentStatus={currentStatus}
+                  compliancePeriodYear={compliancePeriod}
+                  setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
+                  buttonClusterConfig={buttonClusterConfig}
+                  methods={methods}
+                  alertRef={alertRef}
+                />
+              )}
+              {showEarlyIssuanceSummary && (
+                <ComplianceReportEarlyIssuanceSummary reportData={reportData} />
+              )}
+            </>
+          )}
           {!isGovernmentUser && (
             <Introduction
               expanded={location.state?.newReport}
