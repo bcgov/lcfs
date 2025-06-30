@@ -613,14 +613,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               chain={reportData?.chain}
             />
           </Stack>
+          <ReportDetails
+            canEdit={canEdit}
+            currentStatus={currentStatus}
+            hasRoles={hasRoles}
+            complianceReportData={reportData}
+          />
           {!location.state?.newReport && (
             <>
-              <ReportDetails
-                canEdit={canEdit}
-                currentStatus={currentStatus}
-                hasRoles={hasRoles}
-                complianceReportData={reportData}
-              />
               {!showEarlyIssuanceSummary && (
                 <ComplianceReportSummary
                   reportID={complianceReportId}
