@@ -75,11 +75,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
 
-  // Early return if report is deleted or being deleted
-  if (isDeleted || isDeleting) {
-    return <Loading />
-  }
-
   const scrollToTopOrBottom = () => {
     if (isScrollingUp) {
       window.scrollTo({
