@@ -11,7 +11,7 @@ export const reportsColDefs = (t, isSupplier) => [
   {
     field: 'status',
     headerName: t('report:reportColLabels.status'),
-    width: 300,
+    width: 220,
     valueGetter: ({ data }) => data.reportStatus || '',
     filterParams: {
       textFormatter: (value) => value.replace(/\s+/g, '_').toLowerCase(),

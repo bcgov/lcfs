@@ -139,21 +139,28 @@ export const useSaveFuelSupply = (params, options = {}) => {
     onSuccess: (data, variables, context) => {
       if (clearCache) {
         // Remove all fuel supplies related to this report
-        queryClient.removeQueries(['fuel-supplies', params.complianceReportId])
-        queryClient.removeQueries([
-          'fuel-supplies-list',
-          params.complianceReportId
-        ])
+        queryClient.removeQueries({
+          predicate: (query) => {
+            return (
+              (query.queryKey[0] === 'fuel-supplies' ||
+                query.queryKey[0] === 'fuel-supplies-list') &&
+              (query.queryKey.includes(params.complianceReportId) ||
+                query.queryKey.some((key) => key === params.complianceReportId))
+            )
+          }
+        })
       } else {
-        // Invalidate to refetch fresh data
-        queryClient.invalidateQueries([
-          'fuel-supplies',
-          params.complianceReportId
-        ])
-        queryClient.invalidateQueries([
-          'fuel-supplies-list',
-          params.complianceReportId
-        ])
+        // Invalidate all fuel supply queries for this report
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            return (
+              (query.queryKey[0] === 'fuel-supplies' ||
+                query.queryKey[0] === 'fuel-supplies-list') &&
+              (query.queryKey.includes(params.complianceReportId) ||
+                query.queryKey.some((key) => key === params.complianceReportId))
+            )
+          }
+        })
       }
 
       if (invalidateRelatedQueries) {
@@ -226,14 +233,17 @@ export const useUpdateFuelSupply = (params, options = {}) => {
           params.complianceReportId
         ])
       } else {
-        queryClient.invalidateQueries([
-          'fuel-supplies',
-          params.complianceReportId
-        ])
-        queryClient.invalidateQueries([
-          'fuel-supplies-list',
-          params.complianceReportId
-        ])
+        // Invalidate all fuel supply queries for this report (same method as FuelExports)
+        queryClient.invalidateQueries({
+          predicate: (query) => {
+            return (
+              (query.queryKey[0] === 'fuel-supplies' ||
+                query.queryKey[0] === 'fuel-supplies-list') &&
+              (query.queryKey.includes(params.complianceReportId) ||
+                query.queryKey.some((key) => key === params.complianceReportId))
+            )
+          }
+        })
       }
 
       if (invalidateRelatedQueries) {
