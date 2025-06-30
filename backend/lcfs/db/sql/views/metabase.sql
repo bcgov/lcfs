@@ -1429,46 +1429,57 @@ GRANT SELECT ON vw_allocation_agreement_base TO basic_lcfs_reporting_role;
 drop view if exists vw_fuel_code_base cascade;
 CREATE OR REPLACE VIEW vw_fuel_code_base AS
 SELECT
-    fuel_code.fuel_code_id AS "ID",
-    fuel_code_prefix.prefix AS "Prefix",
-    fuel_code.fuel_suffix AS "Suffix",
-    fuel_code_status.status AS "Status",
-    fuel_type.fuel_type AS "Fuel Type",
-    fuel_code.company AS "Company",
-    fuel_code.contact_name AS "Contact Name",
-    fuel_code.contact_email AS "Contact Email",
-    fuel_code.carbon_intensity AS "Carbon Intensity",
-    fuel_code.edrms AS "EDRMS",
-    fuel_code.last_updated AS "Last Updated",
-    fuel_code.application_date AS "Application Date",
-    fuel_code.approval_date AS "Approval Date",
-    fuel_code.feedstock AS "Feedstock",
-    fuel_code.feedstock_location AS "Feedstock Location",
-    fuel_code.feedstock_misc AS "Feedstock Misc",
-    fuel_code.fuel_production_facility_city AS "Facility City",
-    fuel_code.fuel_production_facility_province_state AS "Facility State",
-    fuel_code.fuel_production_facility_country AS "Facility Country",
-    fuel_code.facility_nameplate_capacity AS "Facility Capacity",
-    fuel_code.facility_nameplate_capacity_unit AS "Capacity Unit",
-    fuel_code.former_company AS "Former Company",
-    fuel_code.notes AS "Notes"
-FROM
-    fuel_code
-    JOIN fuel_code_prefix ON fuel_code.prefix_id = fuel_code_prefix.fuel_code_prefix_id
-    JOIN fuel_code_status ON fuel_code.fuel_status_id = fuel_code_status.fuel_code_status_id
-    JOIN fuel_type ON fuel_code.fuel_type_id = fuel_type.fuel_type_id
-WHERE
-    fuel_code_status.status != 'Deleted';
-
--- Grant permissions
+    fc.fuel_code_id,
+    fcp.fuel_code_prefix_id,
+    fcp.prefix,
+    fc.fuel_suffix,
+    fcs.fuel_code_status_id,
+    fcs.status,
+    ft.fuel_type_id,
+    ft.fuel_type,
+    fc.company,
+    fc.contact_name,
+    fc.contact_email,
+    fc.carbon_intensity,
+    fc.edrms,
+    fc.last_updated,
+    fc.application_date,
+    fc.approval_date,
+    fc.create_date,
+    fc.effective_date,
+    fc.expiration_date,
+    fc.effective_status,
+    fc.feedstock,
+    fc.feedstock_location,
+    fc.feedstock_misc,
+    fc.fuel_production_facility_city,
+    fc.fuel_production_facility_province_state,
+    fc.fuel_production_facility_country,
+    fc.facility_nameplate_capacity,
+    fc.facility_nameplate_capacity_unit,
+    fc.former_company,
+    finished_modes.transport_modes AS finished_fuel_transport_modes,
+    feedstock_modes.transport_modes AS feedstock_fuel_transport_modes,
+    fc.notes
+FROM fuel_code fc
+JOIN fuel_code_prefix fcp ON fc.prefix_id = fcp.fuel_code_prefix_id
+JOIN fuel_code_status fcs ON fc.fuel_status_id = fcs.fuel_code_status_id
+JOIN fuel_type ft ON fc.fuel_type_id = ft.fuel_type_id
+LEFT JOIN LATERAL (
+    SELECT ARRAY_AGG(tm.transport_mode ORDER BY tm.transport_mode) AS transport_modes
+    FROM finished_fuel_transport_mode fftm
+    JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
+    WHERE fftm.fuel_code_id = fc.fuel_code_id
+) finished_modes ON TRUE
+LEFT JOIN LATERAL (
+    SELECT ARRAY_AGG(tm.transport_mode ORDER BY tm.transport_mode) AS transport_modes
+    FROM feedstock_fuel_transport_mode fftm
+    JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
+    WHERE fftm.fuel_code_id = fc.fuel_code_id
+) feedstock_modes ON TRUE
+WHERE fcs.status != 'Deleted';
 GRANT SELECT ON vw_fuel_code_base TO basic_lcfs_reporting_role;
-
-GRANT SELECT ON 
-    fuel_code, 
-    fuel_code_prefix, 
-    fuel_code_status, 
-    fuel_type 
-TO basic_lcfs_reporting_role;
+GRANT SELECT ON fuel_code, fuel_code_prefix, fuel_code_status, fuel_type, fuel_category TO basic_lcfs_reporting_role;
 -- ==========================================
 -- Compliance Reports List View
 -- ==========================================
