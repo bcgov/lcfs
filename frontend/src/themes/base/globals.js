@@ -107,6 +107,10 @@ const globals = {
     borderBottom: `1px solid ${grey[700]}`,
     maxHeight: 'unset'
   },
+  '.bc-grid-container .ag-grid-pagination-container .MuiTablePagination-toolbar':
+    {
+      overflow: 'hidden'
+    },
   '.ag-theme-material .ag-floating-filter-input': {
     backgroundColor: white.main
   },
