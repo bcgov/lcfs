@@ -85,9 +85,7 @@ export const HistoryCard = ({
 
   // Display conditions - what to show/hide
   const shouldShowTopLevelAssessmentLines =
-    isGovernmentUser &&
-    !isCurrentAssessed &&
-    defaultExpanded
+    isGovernmentUser && !isCurrentAssessed && defaultExpanded
 
   const shouldShowDirectorStatement =
     assessedMessage &&
@@ -95,6 +93,23 @@ export const HistoryCard = ({
 
   const shouldShowEditableIndicator =
     isGovernmentUser && canEditAssessmentStatement
+
+  /**
+   * Helper functions to get the appropriate compliance values based on override state
+   */
+  const getRenewableTargetComplianceValue = () => {
+    if (report.summary.penaltyOverrideEnabled) {
+      return report.summary.renewablePenaltyOverride || 0
+    }
+    return report.summary.line11FossilDerivedBaseFuelTotal || 0
+  }
+
+  const getLowCarbonTargetComplianceValue = () => {
+    if (report.summary.penaltyOverrideEnabled) {
+      return report.summary.lowCarbonPenaltyOverride || 0
+    }
+    return report.summary.line21NonCompliancePenaltyPayable || 0
+  }
 
   /**
    * Helper: build the two assessment list items.
@@ -111,7 +126,7 @@ export const HistoryCard = ({
           {t('report:assessmentLn1', {
             name: report.organization.name,
             hasMet:
-              report.summary.line11FossilDerivedBaseFuelTotal <= 0
+              getRenewableTargetComplianceValue() <= 0
                 ? 'has met'
                 : 'has not met'
           })}
@@ -125,7 +140,7 @@ export const HistoryCard = ({
           {t('report:assessmentLn2', {
             name: report.organization.name,
             hasMet:
-              report.summary.line21NonCompliancePenaltyPayable <= 0
+              getLowCarbonTargetComplianceValue() <= 0
                 ? 'has met'
                 : 'has not met'
           })}

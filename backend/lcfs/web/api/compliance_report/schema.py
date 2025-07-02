@@ -196,6 +196,13 @@ class ComplianceReportSummarySchema(BaseSchema):
     is_locked: Optional[bool] = False
     quarter: Optional[int] = None
     early_issuance_summary: Optional[List[ComplianceReportSummaryRowSchema]] = None
+    
+    # Penalty override fields
+    penalty_override_enabled: Optional[bool] = False
+    renewable_penalty_override: Optional[float] = None
+    low_carbon_penalty_override: Optional[float] = None
+    penalty_override_date: Optional[datetime] = None
+    penalty_override_user: Optional[int] = None
 
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):
@@ -206,6 +213,13 @@ class ComplianceReportSummaryUpdateSchema(BaseSchema):
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
     summary_id: int
     is_locked: bool
+    
+    # Penalty override fields
+    penalty_override_enabled: Optional[bool] = False
+    renewable_penalty_override: Optional[float] = None
+    low_carbon_penalty_override: Optional[float] = None
+    penalty_override_date: Optional[datetime] = None
+    penalty_override_user: Optional[int] = None
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):

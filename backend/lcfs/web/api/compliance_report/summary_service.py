@@ -124,6 +124,11 @@ class ComplianceReportSummaryService:
             low_carbon_fuel_target_summary=[],
             non_compliance_penalty_summary=[],
             can_sign=False,
+            penalty_override_enabled=summary_obj.penalty_override_enabled,
+            renewable_penalty_override=summary_obj.renewable_penalty_override,
+            low_carbon_penalty_override=summary_obj.low_carbon_penalty_override,
+            penalty_override_date=summary_obj.penalty_override_date,
+            penalty_override_user=summary_obj.penalty_override_user,
         )
 
         for column in inspector.mapper.column_attrs:
@@ -665,6 +670,11 @@ class ComplianceReportSummaryService:
             non_compliance_penalty_summary=non_compliance_penalty_summary,
             can_sign=can_sign,
             early_issuance_summary=early_issuance_summary,
+            penalty_override_enabled=summary_model.penalty_override_enabled,
+            renewable_penalty_override=summary_model.renewable_penalty_override,
+            low_carbon_penalty_override=summary_model.low_carbon_penalty_override,
+            penalty_override_date=summary_model.penalty_override_date,
+            penalty_override_user=summary_model.penalty_override_user,
         )
         return summary
 

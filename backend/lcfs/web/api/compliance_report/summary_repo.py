@@ -106,14 +106,43 @@ class ComplianceReportSummaryRepository:
             )
 
         # Update non-compliance penalty summary
-        non_compliance_summary = summary.non_compliance_penalty_summary
-        for row in non_compliance_summary:
-            if row.line == 11:
-                summary_obj.line_11_fossil_derived_base_fuel_total = row.total_value
-            elif row.line == 21:
-                summary_obj.line_21_non_compliance_penalty_payable = row.total_value
-            elif row.line is None:  # Total row
-                summary_obj.total_non_compliance_penalty_payable = row.total_value
+        # Skip updating calculated penalty columns when penalty override is enabled
+        # to preserve original calculated values
+        penalty_override_enabled = getattr(summary, 'penalty_override_enabled', False)
+        
+        if not penalty_override_enabled:
+            non_compliance_summary = summary.non_compliance_penalty_summary
+            for row in non_compliance_summary:
+                if row.line == 11:
+                    summary_obj.line_11_fossil_derived_base_fuel_total = row.total_value
+                elif row.line == 21:
+                    summary_obj.line_21_non_compliance_penalty_payable = row.total_value
+                elif row.line is None:  # Total row
+                    summary_obj.total_non_compliance_penalty_payable = row.total_value
+
+        # Update penalty override fields
+        if hasattr(summary, 'penalty_override_enabled'):
+            summary_obj.penalty_override_enabled = summary.penalty_override_enabled
+        if hasattr(summary, 'renewable_penalty_override'):
+            summary_obj.renewable_penalty_override = summary.renewable_penalty_override
+        if hasattr(summary, 'low_carbon_penalty_override'):
+            summary_obj.low_carbon_penalty_override = summary.low_carbon_penalty_override
+        if hasattr(summary, 'penalty_override_date'):
+            summary_obj.penalty_override_date = summary.penalty_override_date
+        if hasattr(summary, 'penalty_override_user'):
+            summary_obj.penalty_override_user = summary.penalty_override_user
+
+        # Calculate and update total_non_compliance_penalty_payable based on override state
+        if summary_obj.penalty_override_enabled:
+            # When override is enabled, total is sum of override values
+            renewable_override = summary_obj.renewable_penalty_override or 0
+            low_carbon_override = summary_obj.low_carbon_penalty_override or 0
+            summary_obj.total_non_compliance_penalty_payable = renewable_override + low_carbon_override
+        else:
+            # When override is disabled, total is sum of calculated penalty values
+            line_11_total = summary_obj.line_11_fossil_derived_base_fuel_total or 0
+            line_21_total = summary_obj.line_21_non_compliance_penalty_payable or 0
+            summary_obj.total_non_compliance_penalty_payable = line_11_total + line_21_total
 
         self.db.add(summary_obj)
         await self.db.flush()

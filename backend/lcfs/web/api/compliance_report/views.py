@@ -130,7 +130,7 @@ async def get_compliance_report_summary(
     status_code=status.HTTP_200_OK,
 )
 @view_handler(
-    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST]
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST, RoleEnum.DIRECTOR]
 )
 async def update_compliance_report_summary(
     request: Request,
