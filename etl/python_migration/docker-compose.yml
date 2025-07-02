@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  # TFRS database for migration testing
+  tfrs:
+    image: postgres:17
+    container_name: tfrs-migration
+    environment:
+      POSTGRES_USER: tfrs
+      POSTGRES_PASSWORD: development_only
+      POSTGRES_DB: tfrs
+    ports:
+      - "5435:5432"
+    volumes:
+      - tfrs_migration_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tfrs -d tfrs"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - migration_network
+
+volumes:
+  tfrs_migration_data:
+
+networks:
+  migration_network:
+    driver: bridge
