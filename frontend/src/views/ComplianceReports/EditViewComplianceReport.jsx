@@ -75,11 +75,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
 
-  // Early return if report is deleted or being deleted
-  if (isDeleted || isDeleting) {
-    return <Loading />
-  }
-
   const scrollToTopOrBottom = () => {
     if (isScrollingUp) {
       window.scrollTo({
@@ -613,14 +608,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               chain={reportData?.chain}
             />
           </Stack>
+          <ReportDetails
+            canEdit={canEdit}
+            currentStatus={currentStatus}
+            hasRoles={hasRoles}
+            complianceReportData={reportData}
+          />
           {!location.state?.newReport && (
             <>
-              <ReportDetails
-                canEdit={canEdit}
-                currentStatus={currentStatus}
-                hasRoles={hasRoles}
-                complianceReportData={reportData}
-              />
               {!showEarlyIssuanceSummary && (
                 <ComplianceReportSummary
                   reportID={complianceReportId}
