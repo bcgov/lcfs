@@ -169,7 +169,13 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         (isDraft && currentYear > parseInt(compliancePeriod)) ||
         submittedYear > parseInt(compliancePeriod)
       ) {
-        quarter = 4
+        // For drafts created in Jan/Feb of years after the compliance period,
+        // treat them as Q1 instead of Q4 since they're early in the calendar year
+        if (isDraft && currentYear > parseInt(compliancePeriod) && (month === 0 || month === 1)) {
+          quarter = 1
+        } else {
+          quarter = 4
+        }
       } else if (month >= 2 && month <= 5) {
         quarter = 1 // Mar-Jun: Q1
       } else if (month >= 6 && month <= 8) {
