@@ -32,6 +32,7 @@ class TransactionStatusEnum(str, Enum):
     DELETED = "Deleted"
     DECLINED = "Declined"
     RESCINDED = "Rescinded"
+    ASSESSED = "Assessed"
 
 
 class TransactionStatusBase(BaseSchema):
