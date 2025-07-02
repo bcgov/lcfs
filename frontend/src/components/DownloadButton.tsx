@@ -6,11 +6,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { CircularProgress } from '@mui/material'
 
 interface DownloadButtonProps {
-  onDownload: () => void
+  onDownload?: () => void
   isDownloading: boolean
-  label: string
-  downloadLabel: string
-  dataTest: string
+  label?: string | null
+  downloadLabel?: string | null
+  dataTest?: string
 }
 
 export const DownloadButton = forwardRef<HTMLButtonElement, DownloadButtonProps>(({

@@ -6,7 +6,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { RefObject } from 'react'
 
 interface ClearFiltersButtonProps {
-  onClick: () => void
+  onClick?: () => void
   size?: 'small' | 'medium' | 'large'
   color?: 'primary' | 'secondary'
   sx?: Record<string, any>
