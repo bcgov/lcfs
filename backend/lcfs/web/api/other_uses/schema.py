@@ -16,6 +16,7 @@ from lcfs.web.utils.schema_validators import fuel_code_required_label
 
 class FuelCodeStatusEnumSchema(str, Enum):
     Draft = "Draft"
+    Recommended = "Recommended"
     Approved = "Approved"
     Deleted = "Deleted"
 

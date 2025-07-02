@@ -235,6 +235,18 @@ describe('buttonClusterConfigFn', () => {
 
       expect(result[COMPLIANCE_REPORT_STATUSES.SUBMITTED]).toHaveLength(0)
     })
+
+    it('should hide buttons when hasDraftSupplemental is true', () => {
+      mockContext.hasDraftSupplemental = true
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      // Buttons should be completely hidden when hasDraftSupplemental is true
+      expect(result[COMPLIANCE_REPORT_STATUSES.SUBMITTED]).toHaveLength(0)
+    })
   })
 
   describe('Analyst Adjustment Status', () => {
@@ -460,18 +472,19 @@ describe('buttonClusterConfigFn', () => {
       expect(submitButton.handler).toBeInstanceOf(Function)
     })
 
-    it('should disable buttons based on conditions', () => {
-      mockContext.hasDraftSupplemental = true
-      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
-      mockContext.hasAnyRole = vi.fn(() => true)
-      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+    it('should disable buttons based on other conditions (not hasDraftSupplemental)', () => {
+      mockContext.hasDraftSupplemental = false
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.DRAFT
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn((role) => role === roles.signing_authority)
+      mockContext.isSigningAuthorityDeclared = false
 
       const result = buttonClusterConfigFn(mockContext)
 
-      const recommendButton = result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].find(
-        (btn) => btn.id === 'recommend-by-analyst-btn'
+      const submitButton = result[COMPLIANCE_REPORT_STATUSES.DRAFT].find(
+        (btn) => btn.id === 'submit-report-btn'
       )
-      expect(recommendButton.disabled).toBe(true)
+      expect(submitButton.disabled).toBe(true)
     })
   })
 
@@ -591,6 +604,104 @@ describe('buttonClusterConfigFn', () => {
       expect(buttonIds).toContain('recommend-by-analyst-btn')
       expect(buttonIds).toContain('return-to-supplier-btn')
       expect(buttonIds).not.toContain('create-idir-supplemental-btn')
+    })
+  })
+
+  // =============================================================================
+  // DRAFT SUPPLEMENTAL BUTTON VISIBILITY TESTS
+  // =============================================================================
+
+  describe('Draft Supplemental Button Visibility', () => {
+    it('should hide analyst buttons when hasDraftSupplemental is true', () => {
+      mockContext.hasDraftSupplemental = true
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+      mockContext.isOriginalReport = true
+      mockContext.reportVersion = 0
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      // All analyst buttons should be hidden when hasDraftSupplemental is true
+      expect(result[COMPLIANCE_REPORT_STATUSES.SUBMITTED]).toHaveLength(0)
+    })
+
+    it('should hide manager buttons when hasDraftSupplemental is true', () => {
+      mockContext.hasDraftSupplemental = true
+      mockContext.currentStatus =
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.compliance_manager)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      // All manager buttons should be hidden when hasDraftSupplemental is true
+      expect(
+        result[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]
+      ).toHaveLength(0)
+    })
+
+    it('should hide director buttons when hasDraftSupplemental is true', () => {
+      mockContext.hasDraftSupplemental = true
+      mockContext.currentStatus =
+        COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.director)
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      // All director buttons should be hidden when hasDraftSupplemental is true
+      expect(
+        result[COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]
+      ).toHaveLength(0)
+    })
+
+    it('should show buttons when hasDraftSupplemental is false', () => {
+      mockContext.hasDraftSupplemental = false
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.SUBMITTED
+      mockContext.hasAnyRole = vi.fn(() => true)
+      mockContext.hasRoles = vi.fn((role) => role === roles.analyst)
+      mockContext.isOriginalReport = true
+      mockContext.reportVersion = 0
+
+      // Mock to be before deadline
+      vi.spyOn(DateTime, 'now').mockReturnValue(
+        DateTime.fromObject({
+          year: 2025,
+          month: 2, // February - before March 31
+          day: 15
+        })
+      )
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      // Buttons should be visible when hasDraftSupplemental is false
+      expect(
+        result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].length
+      ).toBeGreaterThan(0)
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.SUBMITTED].map(
+        (btn) => btn.id
+      )
+      expect(buttonIds).toContain('recommend-by-analyst-btn')
+      expect(buttonIds).toContain('return-to-supplier-btn')
+    })
+
+    it('should not affect BCeID buttons', () => {
+      mockContext.hasDraftSupplemental = true
+      mockContext.currentStatus = COMPLIANCE_REPORT_STATUSES.DRAFT
+      mockContext.hasAnyRole = vi.fn(() => false)
+      mockContext.hasRoles = vi.fn((role) => role === roles.signing_authority)
+      mockContext.isSigningAuthorityDeclared = true
+
+      const result = buttonClusterConfigFn(mockContext)
+
+      // BCeID buttons should not be affected by hasDraftSupplemental
+      expect(result[COMPLIANCE_REPORT_STATUSES.DRAFT].length).toBeGreaterThan(0)
+      const buttonIds = result[COMPLIANCE_REPORT_STATUSES.DRAFT].map(
+        (btn) => btn.id
+      )
+      expect(buttonIds).toContain('submit-report-btn')
+      expect(buttonIds).toContain('delete-draft-btn')
     })
   })
 })

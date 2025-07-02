@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
 import { faFilterCircleXmark } from '@fortawesome/free-solid-svg-icons'
@@ -14,19 +15,18 @@ interface ClearFiltersButtonProps {
   [key: string]: any // For spreading additional props
 }
 
-export const ClearFiltersButton = ({
+export const ClearFiltersButton = forwardRef<HTMLButtonElement, ClearFiltersButtonProps>(({
   onClick,
   size = 'small',
   color = 'primary',
   sx = {},
-  buttonRef = null,
   ...props
-}: ClearFiltersButtonProps) => {
+}: ClearFiltersButtonProps, ref) => {
   const { t } = useTranslation(['common'])
   
   return (
     <BCButton
-      ref={buttonRef}
+      ref={ref}
       variant="outlined"
       size={size}
       color={color}
@@ -38,4 +38,4 @@ export const ClearFiltersButton = ({
       {t('common:ClearFilters')}
     </BCButton>
   )
-}
+})

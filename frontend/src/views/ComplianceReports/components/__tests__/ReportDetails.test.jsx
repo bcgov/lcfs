@@ -2,12 +2,13 @@ import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
+import { use } from 'chai'
 
 // Create mock functions at the top level
 const mockNavigate = vi.fn()
 const mockUseLocation = vi.fn()
 const mockUseCurrentUser = vi.fn()
-const mockUseComplianceReportStore = vi.fn()
+const mockUseComplianceReportWithCache = vi.fn()
 const mockUseComplianceReportDocuments = vi.fn()
 const mockUseGetFuelSupplies = vi.fn()
 const mockUseGetFinalSupplyEquipments = vi.fn()
@@ -55,12 +56,10 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: () => mockUseCurrentUser()
 }))
 
-vi.mock('@/stores/useComplianceReportStore', () => ({
-  default: () => mockUseComplianceReportStore()
-}))
 
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useComplianceReportDocuments: () => mockUseComplianceReportDocuments()
+  useComplianceReportDocuments: () => mockUseComplianceReportDocuments(),
+  useComplianceReportWithCache: () => mockUseComplianceReportWithCache()
 }))
 
 vi.mock('@/hooks/useFuelSupply', () => ({
@@ -199,7 +198,7 @@ describe('ReportDetails', () => {
   }
 
   const defaultComplianceReport = {
-    currentReport: {
+    data: {
       report: { version: 0, reportingFrequency: 'Annual' },
       chain: [{ complianceReportId: '12345', version: 0 }]
     }
@@ -217,7 +216,7 @@ describe('ReportDetails', () => {
     // Set up default mock returns
     mockUseLocation.mockReturnValue({ state: {} })
     mockUseCurrentUser.mockReturnValue(defaultCurrentUser)
-    mockUseComplianceReportStore.mockReturnValue(defaultComplianceReport)
+    mockUseComplianceReportWithCache.mockReturnValue(defaultComplianceReport)
     mockUseComplianceReportDocuments.mockReturnValue(emptyDataResponse)
     mockUseGetFuelSupplies.mockReturnValue({
       data: { fuelSupplies: [] },
@@ -279,8 +278,8 @@ describe('ReportDetails', () => {
 
   it('hides empty sections in non-editing status for non-supplemental reports', async () => {
     // Non-supplemental report with no data
-    mockUseComplianceReportStore.mockReturnValue({
-      currentReport: {
+    mockUseComplianceReportWithCache.mockReturnValue({
+      data: {
         report: { version: 0, reportingFrequency: 'Annual' },
         chain: [{ complianceReportId: '12345', version: 0 }]
       }
@@ -400,8 +399,8 @@ describe('ReportDetails', () => {
 
   it('shows "Edited" chip for modified data in supplemental reports', async () => {
     // Set up supplemental report
-    mockUseComplianceReportStore.mockReturnValue({
-      currentReport: {
+    mockUseComplianceReportWithCache.mockReturnValue({
+      data: {
         report: { version: 1, reportingFrequency: 'Annual' },
         chain: [
           { complianceReportId: '12345', version: 0 },
@@ -550,42 +549,143 @@ describe('ReportDetails', () => {
     })
   })
 
-  // it('file dialog interaction works correctly', async () => {
-  //   mockUseCurrentUser.mockReturnValue({
-  //     data: {
-  //       organization: { organizationId: '1' },
-  //       isGovernmentUser: false
-  //     },
-  //     hasRoles: (role) => role === 'compliance_reporting',
-  //     isLoading: false
-  //   })
+  it('auto-expands supporting documents section when documents exist', async () => {
+    mockUseComplianceReportDocuments.mockReturnValue({
+      data: [
+        { documentId: 1, filename: 'document1.pdf' },
+        { documentId: 2, filename: 'document2.pdf' }
+      ],
+      isLoading: false,
+      error: null
+    })
 
-  //   render(
-  //     <ReportDetails
-  //       canEdit={true}
-  //       currentStatus="Draft"
-  //       hasRoles={(role) => role === 'compliance_reporting'}
-  //     />,
-  //     {
-  //       wrapper
-  //     }
-  //   )
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
+      wrapper
+    })
 
-  //   await waitFor(() => {
-  //     // Supporting docs should always be visible
-  //     expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
+    await waitFor(
+      () => {
+        // Check if supporting docs section exists
+        expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
 
-  //     // Look for edit buttons for supporting docs
-  //     const editButtons = screen.getAllByLabelText('edit')
-  //     if (editButtons.length > 0) {
-  //       // Click the first edit button (likely supporting docs)
-  //       fireEvent.click(editButtons[0])
-  //       // This should trigger the file dialog (internal state change)
-  //       expect(editButtons[0]).toBeInTheDocument()
-  //     } else {
-  //       // If no edit buttons, test still passes - this means Role component is working
-  //       expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
-  //     }
-  //   })
-  // })
+        // The section should be automatically expanded when documents exist
+        // Look for the expanded content by id
+        const supportingDocsPanel = screen.getByRole('region')
+        expect(supportingDocsPanel).toBeInTheDocument()
+        expect(supportingDocsPanel).toHaveAttribute('id', 'panel0-content')
+
+        // Also check for the Mui-expanded class on the accordion
+        const accordion = screen
+          .getByTestId('panel0-summary')
+          .closest('.MuiAccordion-root')
+        expect(accordion).toHaveClass('Mui-expanded')
+      },
+      { timeout: 2000 }
+    )
+  })
+
+  it('keeps supporting documents section collapsed when no documents exist', async () => {
+    mockUseComplianceReportDocuments.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null
+    })
+
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
+      wrapper
+    })
+
+    await waitFor(() => {
+      // Supporting docs section should exist
+      expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
+
+      // Check that the accordion is not expanded (no Mui-expanded class)
+      const accordionButton = screen.getByTestId('panel0-summary')
+      expect(accordionButton).toHaveAttribute('aria-expanded', 'false')
+
+      // Should show "Empty" chip
+      expect(screen.getByText('Empty')).toBeInTheDocument()
+    })
+  })
+
+  it('dynamically toggles supporting documents expansion based on data changes', async () => {
+    // Start with no documents
+    mockUseComplianceReportDocuments.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null
+    })
+
+    const { rerender } = render(
+      <ReportDetails currentStatus="Draft" hasRoles={() => true} />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      // Initially collapsed with no documents
+      expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
+      const accordionButton = screen.getByTestId('panel0-summary')
+      expect(accordionButton).toHaveAttribute('aria-expanded', 'false')
+    })
+
+    // Now mock having documents
+    mockUseComplianceReportDocuments.mockReturnValue({
+      data: [{ documentId: 1, filename: 'document1.pdf' }],
+      isLoading: false,
+      error: null
+    })
+
+    rerender(<ReportDetails currentStatus="Draft" hasRoles={() => true} />)
+
+    await waitFor(
+      () => {
+        // Should now be expanded with documents
+        const accordionButton = screen.getByTestId('panel0-summary')
+        expect(accordionButton).toHaveAttribute('aria-expanded', 'true')
+      },
+      { timeout: 2000 }
+    )
+  })
+
+  it('handles loading state for supporting documents', async () => {
+    mockUseComplianceReportDocuments.mockReturnValue({
+      data: null,
+      isLoading: true,
+      error: null
+    })
+
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
+      wrapper
+    })
+
+    await waitFor(() => {
+      // Supporting docs section should still be visible during loading
+      expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
+
+      // Should remain collapsed during loading
+      const supportingDocsDetails = screen.queryByTestId('panel0-details')
+      expect(supportingDocsDetails).not.toBeInTheDocument()
+    })
+  })
+
+  it('handles error state for supporting documents', async () => {
+    mockUseComplianceReportDocuments.mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: new Error('Failed to load documents')
+    })
+
+    render(<ReportDetails currentStatus="Draft" hasRoles={() => true} />, {
+      wrapper
+    })
+
+    await waitFor(() => {
+      // Supporting docs section should still be visible with error
+      expect(screen.getByText('report:supportingDocs')).toBeInTheDocument()
+
+      // Should remain collapsed with error
+      const supportingDocsDetails = screen.queryByTestId('panel0-details')
+      expect(supportingDocsDetails).not.toBeInTheDocument()
+    })
+  })
 })
