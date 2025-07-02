@@ -1,3 +1,4 @@
+from datetime import datetime
 import math
 
 import structlog
@@ -17,6 +18,7 @@ from lcfs.web.api.fuel_code.schema import (
     FuelCodeBaseSchema,
     FuelCodeCreateUpdateSchema,
     FuelCodeSchema,
+    FuelCodeStatusEnumSchema,
     FuelCodesSchema,
     FuelTypeSchema,
     SearchFuelCodeList,
@@ -262,17 +264,19 @@ class FuelCodeServices:
         return await self.repo.get_fuel_code(fuel_code_id)
 
     @service_handler
-    async def approve_fuel_code(self, fuel_code_id: int):
+    async def update_fuel_code_status(
+        self, fuel_code_id: int, status: FuelCodeStatusEnumSchema
+    ):
         fuel_code = await self.get_fuel_code(fuel_code_id)
         if not fuel_code:
             raise ValueError("Fuel code not found")
 
-        if fuel_code.fuel_code_status.status != FuelCodeStatusEnum.Draft:
-            raise ValueError("Fuel code is not in Draft")
+        # if fuel_code.fuel_code_status.status != FuelCodeStatusEnum.Draft:
+        #     raise ValueError("Fuel code is not in Draft")
 
-        fuel_code.fuel_code_status = await self.repo.get_fuel_code_status(
-            FuelCodeStatusEnum.Approved
-        )
+        fuel_code.fuel_code_status = await self.repo.get_fuel_code_status(status)
+        fuel_code.update_date = datetime.now()
+        fuel_code.last_updated = datetime.now()
 
         return await self.repo.update_fuel_code(fuel_code)
 

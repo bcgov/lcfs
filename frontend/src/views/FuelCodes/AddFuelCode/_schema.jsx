@@ -39,7 +39,13 @@ const createCellRenderer = (field, customRenderer = null) => {
   return CellRenderer
 }
 
-export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
+export const fuelCodeColDefs = (
+  optionsData,
+  errors,
+  isCreate,
+  canEdit,
+  isNotesRequired = false
+) => [
   validation,
   actions({
     enableDuplicate: isCreate,
@@ -607,9 +613,24 @@ export const fuelCodeColDefs = (optionsData, errors, isCreate, canEdit) => [
   {
     field: 'notes',
     editable: canEdit,
+    headerComponent: canEdit && isNotesRequired ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.notes'),
     cellEditor: 'agTextCellEditor',
     cellDataType: 'text',
+    cellRenderer: createCellRenderer('notes', (params) => {
+      // Highlight notes field if it's required and empty
+      const isEmpty = !params.value || params.value.trim() === ''
+      const style = {
+        color: isNotesRequired && isEmpty ? 'red' : 'inherit',
+        fontStyle: isNotesRequired && isEmpty ? 'italic' : 'normal'
+      }
+
+      return (
+        <div style={style}>
+          {params.value || (isNotesRequired && isEmpty ? 'Notes required' : '')}
+        </div>
+      )
+    }),
     minWidth: 600
   }
 ]

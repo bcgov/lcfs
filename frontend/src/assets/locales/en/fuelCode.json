@@ -14,12 +14,12 @@
   "fuelCodeAddSuccessMsg": "Fuel code(s) added successfully.",
   "fuelCodeDeleteSuccessMsg": "Fuel code deleted successfully.",
   "fuelCodeAddFailMsg": "Failed to add fuel code(s).",
-  "deleteFuelCodeBtn": "Delete Code",
   "deleteFuelCode": "Delete Fuel Code",
   "deleteConfirmText": "Are you sure you want to delete this fuel code?",
-  "approveFuelCodeBtn": "Approve Code",
   "approveFuelCode": "Approve Fuel Code",
   "approveConfirmText": "Are you sure you want to approve this fuel code?",
+  "editFuelCode": "Edit Fuel Code",
+  "editConfirmText": "This will set the fuel code to Draft status, during which it cannot be reported on until it is approved by the director again.",
   "addRow": "Add row",
   "rows": "rows",
   "fuelCodeColLabels": {
@@ -58,5 +58,13 @@
     "prefix": "Select valid prefix",
     "fuel": "Select valid fuel",
     "fuelCode": "Fuel code should be a valid number"
+  },
+  "actionBtns": {
+    "recommendToDirectorBtn": "Recommend to director",
+    "saveFuelCodeBtn": "Save",
+    "approveFuelCodeBtn": "Approve Code",
+    "editFuelCodeBtn": "Edit",
+    "returnToAnalystBtn": "Return to analyst",
+    "deleteFuelCodeBtn": "Delete Code"
   }
 }
