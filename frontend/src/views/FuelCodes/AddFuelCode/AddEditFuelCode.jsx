@@ -177,7 +177,7 @@ const AddEditFuelCodeBase = () => {
           ? t('fuelCode:editFuelCodeTitle')
           : t('fuelCode:viewFuelCodeTitle')
     }
-    debugger
+
     const showGuideText =
       !existingFuelCode ||
       existingFuelCode.fuelCodeStatus.status === FUEL_CODE_STATUSES.DRAFT
@@ -745,7 +745,6 @@ const AddEditFuelCodeBase = () => {
   const buttonContext = useMemo(() => {
     const baseHandlers = {
       handleSave: async () => {
-        debugger
         if (state.isButtonOperationInProgress) return
         try {
           setButtonOperationState(true, 'save')
@@ -766,7 +765,6 @@ const AddEditFuelCodeBase = () => {
       handleEdit: async () => {
         if (state.isButtonOperationInProgress) return
         try {
-          debugger
           setButtonOperationState(true, 'edit')
           if (originalStatus === null && existingFuelCode) {
             updateState({
