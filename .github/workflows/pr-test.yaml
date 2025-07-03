@@ -411,7 +411,7 @@ jobs:
           VITEST_POOL_THREADS: '4'
 
       - name: Upload blob report to GitHub Actions Artifacts
-        if: ${{ !cancelled() }}
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: blob-report-${{ matrix.shardIndex }}
@@ -422,7 +422,7 @@ jobs:
 
   post-frontend-tests:
     name: 'Publish Frontend Test Results'
-    if: ${{ !cancelled() }}
+    if: always()
     needs: [frontend-tests]
     runs-on: ubuntu-latest
     steps:
@@ -455,14 +455,14 @@ jobs:
           deduplicate_classes_by_file_name: 'true'
 
   teams-notification:
-    needs: [backend-tests, post-frontend-tests]
+    needs: [post-backend-tests, post-frontend-tests]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Determine Test Status
         id: test_status
         run: |
-          if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.post-frontend-tests.result, 'failure') }}" == "true" ]]; then
+          if [[ "${{ contains(needs.post-backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.post-frontend-tests.result, 'failure') }}" == "true" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "theme_color=FF0000" >> $GITHUB_OUTPUT
           else
@@ -480,7 +480,7 @@ jobs:
           AVATAR_URL="${{ github.event.pull_request.user.avatar_url }}"
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
+          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.post-backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
           COLOR="${{ steps.test_status.outputs.theme_color }}"
           cat <<EOF > teams_card.json
           {
