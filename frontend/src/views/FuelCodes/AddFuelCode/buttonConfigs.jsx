@@ -71,7 +71,7 @@ class FuelCodeButtonActionFactory {
   // Save action - for draft fuel codes
   save() {
     return this.createButton({
-      style: BUTTON_STYLES.PRIMARY_CONTAINED,
+      style: BUTTON_STYLES.PRIMARY_OUTLINED,
       id: 'save-fuel-code-btn',
       label: this.context.t('fuelCode:actionBtns.saveFuelCodeBtn'),
       icon: faFloppyDisk,
@@ -95,7 +95,7 @@ class FuelCodeButtonActionFactory {
   // Approve action - for directors
   approve() {
     return this.createButton({
-      style: BUTTON_STYLES.SUCCESS_CONTAINED,
+      style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'approve-fuel-code-btn',
       label: this.context.t('fuelCode:actionBtns.approveFuelCodeBtn'),
       icon: faCheck,
@@ -120,8 +120,11 @@ class FuelCodeButtonActionFactory {
       id: 'edit-fuel-code-btn',
       label: this.context.t('fuelCode:actionBtns.editFuelCodeBtn'),
       icon: faPencil,
-      handler: () =>
-        this.context.setModalData({
+      handler: () => {
+        if (this.context.currentStatus === FUEL_CODE_STATUSES.DRAFT)
+          return this.context.handleEdit()
+
+        return this.context.setModalData({
           primaryButtonAction: () => this.context.handleEdit(),
           primaryButtonText: this.context.t(
             'fuelCode:actionBtns.editFuelCodeBtn'
@@ -130,6 +133,7 @@ class FuelCodeButtonActionFactory {
           title: this.context.t('fuelCode:editFuelCode'),
           content: this.context.t('fuelCode:editConfirmText')
         })
+      }
     })
   }
 
@@ -183,17 +187,17 @@ class FuelCodeButtonActionFactory {
 const FUEL_CODE_BUTTON_RULES = {
   [FUEL_CODE_STATUSES.DRAFT]: {
     [USER_TYPES.ANALYST]: ['edit', 'save', 'recommendToDirector', 'delete'],
-    [USER_TYPES.DIRECTOR]: ['approve']
+    [USER_TYPES.DIRECTOR]: ['save', 'edit', 'approve']
   },
 
   [FUEL_CODE_STATUSES.RECOMMENDED]: {
     [USER_TYPES.ANALYST]: ['save', 'edit'],
-    [USER_TYPES.DIRECTOR]: ['edit', 'approve', 'returnToAnalyst']
+    [USER_TYPES.DIRECTOR]: ['save', 'edit', 'approve', 'returnToAnalyst']
   },
 
   [FUEL_CODE_STATUSES.APPROVED]: {
     [USER_TYPES.ANALYST]: ['save', 'edit'],
-    [USER_TYPES.DIRECTOR]: ['edit']
+    [USER_TYPES.DIRECTOR]: ['save', 'edit']
   }
 }
 

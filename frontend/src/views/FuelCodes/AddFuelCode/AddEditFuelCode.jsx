@@ -14,7 +14,7 @@ import {
 } from '@/hooks/useFuelCode'
 import withRole from '@/utils/withRole'
 import { defaultColDef, fuelCodeColDefs } from './_schema'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
@@ -27,14 +27,12 @@ import {
   buildFuelCodeButtonContext
 } from './buttonConfigs'
 
-// Constants moved outside component to prevent recreation
 const NON_EDITABLE_STATUSES = [
   FUEL_CODE_STATUSES.APPROVED,
   FUEL_CODE_STATUSES.RECOMMENDED
 ]
 const DEFAULT_PREFIX = 'BCLCF'
 
-// Utility functions moved outside component
 const transformExistingFuelCodeData = (existingFuelCode) => ({
   ...existingFuelCode,
   feedstockFuelTransportMode: existingFuelCode.feedstockFuelTransportModes.map(
@@ -70,6 +68,7 @@ const AddEditFuelCodeBase = () => {
   const gridRef = useRef(null)
   const alertRef = useRef()
   const { t } = useTranslation(['common', 'fuelCode'])
+  const navigate = useNavigate()
 
   // State
   const [rowData, setRowData] = useState([])
@@ -90,7 +89,6 @@ const AddEditFuelCodeBase = () => {
     refetch: refetchOptions
   } = useFuelCodeOptions()
 
-  // Single unified mutation hook
   const fuelCodeMutation = useFuelCodeMutation()
 
   const {
@@ -106,7 +104,6 @@ const AddEditFuelCodeBase = () => {
     }
   }, [existingFuelCode, originalStatus])
 
-  // Memoized values
   const isEditable = useMemo(
     () =>
       !NON_EDITABLE_STATUSES.includes(existingFuelCode?.fuelCodeStatus.status),
@@ -134,10 +131,10 @@ const AddEditFuelCodeBase = () => {
     if (!existingFuelCode) return t('fuelCode:newFuelCodeTitle')
 
     const status = existingFuelCode.fuelCodeStatus.status
-    if (status === FUEL_CODE_STATUSES.DRAFT)
+    if (status === FUEL_CODE_STATUSES.DRAFT && isInEditMode)
       return t('fuelCode:editFuelCodeTitle')
     return t('fuelCode:viewFuelCodeTitle')
-  }, [existingFuelCode, t])
+  }, [existingFuelCode, t, isInEditMode])
 
   const showGuideText = useMemo(
     () =>
@@ -195,7 +192,7 @@ const AddEditFuelCodeBase = () => {
         optionsData,
         errors,
         !existingFuelCode,
-        canEditGrid && isAnalyst,
+        canEditGrid,
         isNotesRequired
       )
       setColumnDefs(updatedColumnDefs)
@@ -239,12 +236,14 @@ const AddEditFuelCodeBase = () => {
     await refetch()
     setIsInEditMode(false)
     setModalData(null)
-    alertRef.current?.triggerAlert({
-      message: t(
-        'fuelCode:saveSuccessMessage',
-        'Fuel code saved successfully.'
-      ),
-      severity: 'success'
+    navigate(ROUTES.FUEL_CODES.LIST, {
+      state: {
+        message: t(
+          'fuelCode:saveSuccessMessage',
+          'Fuel code saved successfully.'
+        ),
+        severity: 'success'
+      }
     })
   }, [refetch, t])
 
@@ -342,7 +341,12 @@ const AddEditFuelCodeBase = () => {
       try {
         setErrors({})
 
-        const action = updatedData.fuelCodeId ? 'update' : 'create'
+        const action =
+          updatedData.validationStatus === 'pending'
+            ? 'save'
+            : updatedData.fuelCodeId
+              ? 'update'
+              : 'create'
         const result = await fuelCodeMutation.mutateAsync({
           action,
           data: updatedData,
@@ -557,25 +561,12 @@ const AddEditFuelCodeBase = () => {
         setModalData,
         handleSave: async () => {
           try {
-            // Validate notes requirement
             if (hasNotesValidationError) {
               alertRef.current?.triggerAlert({
-                message: t(
-                  'fuelCode:notesRequiredMessage',
-                  'Notes field is required when editing a fuel code that was previously recommended or approved.'
-                ),
+                message: t('fuelCode:notesRequiredMessage'),
                 severity: 'error'
               })
               return
-            }
-
-            const currentRow = rowData[0]
-            if (currentRow?.modified) {
-              const filteredData = filterNonNullValues(currentRow)
-              await updateRowWithValidation(
-                { node: { data: currentRow } },
-                filteredData
-              )
             }
 
             await handleSaveSuccess()
@@ -593,10 +584,7 @@ const AddEditFuelCodeBase = () => {
             await refetch()
             setModalData(null)
             alertRef.current?.triggerAlert({
-              message: t(
-                'fuelCode:recommendSuccessMessage',
-                'Fuel code recommended to director successfully.'
-              ),
+              message: t('fuelCode:recommendSuccessMessage'),
               severity: 'success'
             })
           } catch (error) {
@@ -613,10 +601,7 @@ const AddEditFuelCodeBase = () => {
             await refetch()
             setModalData(null)
             alertRef.current?.triggerAlert({
-              message: t(
-                'fuelCode:approveSuccessMessage',
-                'Fuel code approved successfully.'
-              ),
+              message: t('fuelCode:approveSuccessMessage'),
               severity: 'success'
             })
           } catch (error) {
@@ -629,20 +614,21 @@ const AddEditFuelCodeBase = () => {
             if (originalStatus === null && existingFuelCode) {
               setOriginalStatus(existingFuelCode.fuelCodeStatus.status)
             }
-
-            await fuelCodeMutation.mutateAsync({
-              action: 'update',
-              data: { status: FUEL_CODE_STATUSES.DRAFT },
-              fuelCodeId: fuelCodeID
-            })
-            await refetch()
+            if (
+              existingFuelCode.fuelCodeStatus.status !==
+              FUEL_CODE_STATUSES.DRAFT
+            ) {
+              await fuelCodeMutation.mutateAsync({
+                action: 'update',
+                data: { status: FUEL_CODE_STATUSES.DRAFT },
+                fuelCodeId: fuelCodeID
+              })
+              await refetch()
+            }
             setIsInEditMode(true)
             setModalData(null)
             alertRef.current?.triggerAlert({
-              message: t(
-                'fuelCode:editModeEnabledMessage',
-                'Edit mode enabled. You can now modify the fuel code.'
-              ),
+              message: t('fuelCode:editModeEnabledMessage'),
               severity: 'success'
             })
           } catch (error) {
@@ -657,14 +643,12 @@ const AddEditFuelCodeBase = () => {
                 fuelCodeId: fuelCodeID
               })
               setModalData(null)
-              alertRef.current?.triggerAlert({
-                message: t(
-                  'fuelCode:deleteSuccessMessage',
-                  'Fuel code deleted successfully.'
-                ),
-                severity: 'success'
+              navigate(ROUTES.FUEL_CODES.LIST, {
+                state: {
+                  message: t('fuelCode:deleteSuccessMessage'),
+                  severity: 'success'
+                }
               })
-              // Navigate away or refresh list
             }
           } catch (error) {
             handleError(error, `Error deleting fuel code: ${error.message}`)
@@ -685,10 +669,7 @@ const AddEditFuelCodeBase = () => {
             await refetch()
             setModalData(null)
             alertRef.current?.triggerAlert({
-              message: t(
-                'fuelCode:returnToAnalystSuccessMessage',
-                'Fuel code returned to analyst successfully.'
-              ),
+              message: t('fuelCode:returnToAnalystSuccessMessage'),
               severity: 'success'
             })
           } catch (error) {
@@ -698,7 +679,7 @@ const AddEditFuelCodeBase = () => {
         hasChanges: rowData.some((row) => row.modified),
         hasValidationErrors:
           Object.keys(errors).length > 0 || hasNotesValidationError,
-        isComplete: true, // Add your completion logic here
+        isComplete: true,
         canEdit: isEditable,
         canDelete:
           isEditable &&
@@ -798,10 +779,7 @@ const AddEditFuelCodeBase = () => {
           )}
           {isNotesRequired && (
             <BCTypography variant="body2" mt={2} mb={3} color="warning.main">
-              {t(
-                'fuelCode:notesRequiredWarning',
-                'Note: The Notes field is now required before saving any changes, as this fuel code was previously recommended or approved.'
-              )}
+              {t('fuelCode:notesRequiredWarning')}
             </BCTypography>
           )}
         </div>

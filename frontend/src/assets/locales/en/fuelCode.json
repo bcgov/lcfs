@@ -66,5 +66,14 @@
     "editFuelCodeBtn": "Edit",
     "returnToAnalystBtn": "Return to analyst",
     "deleteFuelCodeBtn": "Delete Code"
-  }
+  },
+  "notesRequiredMessage": "Notes field is required when editing a fuel code that was previously recommended or approved.",
+  "notesRequiredWarning": "Note: The Notes field is now required before saving any changes, as this fuel code was previously recommended or approved.",
+  "recommendSuccessMessage": "Fuel code recommended to director successfully.",
+  "approveSuccessMessage": "Fuel code approved successfully.",
+  "editModeEnabledMessage": "Edit mode enabled. You can now modify the fuel code.",
+  "deleteSuccessMessage": "Fuel code deleted successfully.",
+  "returnToAnalyst": "Return to analyst",
+  "returnToAnalystSuccessMessage": "Fuel code returned to analyst successfully.",
+  "returnToAnalystConfirmText": "Are you sure you want to return this fuel code back to analyst?"
 }

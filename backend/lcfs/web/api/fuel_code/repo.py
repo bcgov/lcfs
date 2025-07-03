@@ -11,7 +11,11 @@ from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
-from lcfs.db.models.fuel import CategoryCarbonIntensity, DefaultCarbonIntensity
+from lcfs.db.models.fuel import (
+    CategoryCarbonIntensity,
+    DefaultCarbonIntensity,
+    FuelCodeHistory,
+)
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
 from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
@@ -432,6 +436,41 @@ class FuelCodeRepository:
         await self.db.flush()
         result = await self.get_fuel_code(fuel_code.fuel_code_id)
         return result
+
+    @repo_handler
+    async def get_fuel_code_history(self, fuel_code_id: int, version=0) -> Optional[FuelCodeHistory]:
+        """
+        gets history entry for the fuel code
+        """
+        query = select(FuelCodeHistory).where(
+            and_(
+                FuelCodeHistory.fuel_code_id == fuel_code_id,
+                FuelCodeHistory.version == version,
+            )
+        )
+        return (await self.db.execute(query)).scalar_one_or_none()
+
+    @repo_handler
+    async def create_fuel_code_history(
+        self, history: FuelCodeHistory
+    ) -> FuelCodeHistory:
+        """
+        Updates the fuel code entry to history table
+        """
+        self.db.add(history)
+        await self.db.flush()
+        return True
+
+    @repo_handler
+    async def update_fuel_code_history(
+        self, history: FuelCodeHistory
+    ) -> FuelCodeHistory:
+        """
+        Audits the fuel code entry to history table
+        """
+        await self.db.flush()
+        await self.db.refresh(history)
+        return True
 
     @repo_handler
     async def get_fuel_code(self, fuel_code_id: int) -> FuelCode:

@@ -215,12 +215,11 @@ async def update_fuel_code_status(
     data: FuelCodeStatusSchema,
     service: FuelCodeServices = Depends(),
 ):
-    # TODO: Add Logic that checks if the code has necessary fields for approval
     return await service.update_fuel_code_status(fuel_code_id, data.status)
 
 
 @router.post("", status_code=status.HTTP_200_OK)
-@view_handler([RoleEnum.ANALYST])
+@view_handler([RoleEnum.ANALYST, RoleEnum.DIRECTOR])
 async def save_fuel_code(
     request: Request,
     fuel_code_data: FuelCodeCreateUpdateSchema,

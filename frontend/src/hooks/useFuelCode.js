@@ -91,6 +91,7 @@ export const useFuelCodeMutation = (options = {}) => {
     mutationFn: async ({ action, data, fuelCodeId }) => {
       switch (action) {
         case 'create':
+        case 'save':
           return await client.post(apiRoutes.saveFuelCode, data)
 
         case 'update':

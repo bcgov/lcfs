@@ -9,12 +9,12 @@ from sqlalchemy import (
     func,
     Enum,
 )
-from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+from lcfs.db.base import BaseModel, Auditable, EffectiveDates, Versioning
 from sqlalchemy.orm import relationship
 from .FuelType import QuantityUnitsEnum
 
 
-class FuelCode(BaseModel, Auditable, EffectiveDates):
+class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
     __tablename__ = "fuel_code"
     __table_args__ = {"comment": "Contains a list of all of fuel codes"}
 
@@ -102,6 +102,7 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
         back_populates="feedstock_fuel_code",
         primaryjoin="FuelCode.fuel_code_id == FeedstockFuelTransportMode.fuel_code_id",
         cascade="all, delete, delete-orphan",
+        lazy="selectin",
     )
 
     finished_fuel_transport_modes = relationship(
@@ -109,6 +110,7 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
         back_populates="finished_fuel_code",
         primaryjoin="FuelCode.fuel_code_id == FinishedFuelTransportMode.fuel_code_id",
         cascade="all, delete, delete-orphan",
+        lazy="selectin",
     )
 
     history_records = relationship(
@@ -116,6 +118,7 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
         back_populates="fuel_code",
         primaryjoin="FuelCode.fuel_code_id == FuelCodeHistory.fuel_code_id",
         foreign_keys="FuelCodeHistory.fuel_code_id",
+        lazy="selectin",
         cascade="all, delete, delete-orphan",
     )
 

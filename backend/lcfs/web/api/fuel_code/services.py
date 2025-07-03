@@ -1,6 +1,9 @@
 from datetime import datetime
 import math
+import uuid
 
+from lcfs.db.base import ActionTypeEnum
+from lcfs.db.models.fuel import FuelCodeHistory
 import structlog
 from fastapi import Depends
 
@@ -257,6 +260,15 @@ class FuelCodeServices:
         )
         fuel_code_model = await self.repo.create_fuel_code(fuel_code_model)
         result = FuelCodeSchema.model_validate(fuel_code_model)
+        history = FuelCodeHistory(
+            fuel_code_id=fuel_code_model.fuel_code_id,
+            fuel_status_id=fuel_code_model.fuel_status_id,
+            fuel_code_snapshot=result.model_dump(),
+            version=0,
+            group_uuid=str(uuid.uuid4()),
+            action_type=ActionTypeEnum.CREATE.value,
+        )
+        await self.repo.create_fuel_code_history(history)
         return result
 
     @service_handler
@@ -274,10 +286,25 @@ class FuelCodeServices:
         # if fuel_code.fuel_code_status.status != FuelCodeStatusEnum.Draft:
         #     raise ValueError("Fuel code is not in Draft")
 
-        fuel_code.fuel_code_status = await self.repo.get_fuel_code_status(status)
+        fuel_code_status = await self.repo.get_fuel_code_status(status)
+        fuel_code.fuel_code_status = fuel_code_status
         fuel_code.update_date = datetime.now()
         fuel_code.last_updated = datetime.now()
-
+        if fuel_code.group_uuid is None:
+            fuel_code.group_uuid = str(uuid.uuid4())
+        fuel_code.version += 1
+        fuel_code.action_type = ActionTypeEnum.UPDATE
+        history = FuelCodeHistory(
+            fuel_code_id=fuel_code.fuel_code_id,
+            fuel_status_id=fuel_code_status.fuel_code_status_id,
+            fuel_code_snapshot=FuelCodeSchema.model_validate(fuel_code).model_dump(
+                mode="json"
+            ),
+            version=fuel_code.version,
+            group_uuid=fuel_code.group_uuid,
+            action_type=fuel_code.action_type,
+        )
+        await self.repo.create_fuel_code_history(history)
         return await self.repo.update_fuel_code(fuel_code)
 
     @service_handler
@@ -327,8 +354,34 @@ class FuelCodeServices:
         fuel_code.facility_nameplate_capacity_unit = (
             facility_nameplate_capacity_units_enum
         )
+        fuel_code.last_updated = datetime.now()
+        fuel_code.action_type = ActionTypeEnum.UPDATE.value
 
-        return await self.repo.update_fuel_code(fuel_code)
+        if fuel_code.group_uuid is None:
+            fuel_code.group_uuid = str(uuid.uuid4())
+            fuel_code.version = 0
+        fuel_code = await self.repo.update_fuel_code(fuel_code)
+        history = await self.repo.get_fuel_code_history(
+            fuel_code_id=fuel_code.fuel_code_id, version=fuel_code.version
+        )
+        if history is None:
+            history = FuelCodeHistory(
+                fuel_code_id=fuel_code.fuel_code_id,
+                fuel_status_id=fuel_code.fuel_status_id,
+                fuel_code_snapshot=FuelCodeSchema.model_validate(fuel_code).model_dump(
+                    mode="json"
+                ),
+                version=fuel_code.version,
+                group_uuid=fuel_code.group_uuid,
+                action_type=fuel_code.action_type,
+            )
+            await self.repo.create_fuel_code_history(history)
+        else:
+            history.fuel_code_snapshot = FuelCodeSchema.model_validate(
+                fuel_code
+            ).model_dump(mode="json")
+            await self.repo.update_fuel_code_history(history)
+        return fuel_code
 
     @service_handler
     async def delete_fuel_code(self, fuel_code_id: int):
