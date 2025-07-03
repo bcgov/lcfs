@@ -22,9 +22,7 @@ from lcfs.db.models import (
     FuelType,
     FuelSupply,
 )
-from lcfs.db.models.compliance.ComplianceReport import (
-    ComplianceReport,
-)
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportSummaryUpdateSchema,
@@ -68,7 +66,7 @@ class ComplianceReportSummaryRepository:
 
     @repo_handler
     async def save_compliance_report_summary(
-        self, summary: ComplianceReportSummaryUpdateSchema
+        self, summary: ComplianceReportSummaryUpdateSchema, compliance_year: int = None
     ):
         """
         Save the compliance report summary to the database.
@@ -120,17 +118,25 @@ class ComplianceReportSummaryRepository:
                 elif row.line is None:  # Total row
                     summary_obj.total_non_compliance_penalty_payable = row.total_value
 
-        # Update penalty override fields
-        if hasattr(summary, 'penalty_override_enabled'):
-            summary_obj.penalty_override_enabled = summary.penalty_override_enabled
-        if hasattr(summary, 'renewable_penalty_override'):
-            summary_obj.renewable_penalty_override = summary.renewable_penalty_override
-        if hasattr(summary, 'low_carbon_penalty_override'):
-            summary_obj.low_carbon_penalty_override = summary.low_carbon_penalty_override
-        if hasattr(summary, 'penalty_override_date'):
-            summary_obj.penalty_override_date = summary.penalty_override_date
-        if hasattr(summary, 'penalty_override_user'):
-            summary_obj.penalty_override_user = summary.penalty_override_user
+        # Update penalty override fields - only for 2024 reports and later
+        if compliance_year and compliance_year >= 2024:
+            if hasattr(summary, 'penalty_override_enabled'):
+                summary_obj.penalty_override_enabled = summary.penalty_override_enabled
+            if hasattr(summary, 'renewable_penalty_override'):
+                summary_obj.renewable_penalty_override = summary.renewable_penalty_override
+            if hasattr(summary, 'low_carbon_penalty_override'):
+                summary_obj.low_carbon_penalty_override = summary.low_carbon_penalty_override
+            if hasattr(summary, 'penalty_override_date'):
+                summary_obj.penalty_override_date = summary.penalty_override_date
+            if hasattr(summary, 'penalty_override_user'):
+                summary_obj.penalty_override_user = summary.penalty_override_user
+        else:
+            # For pre-2024 reports, ensure penalty override fields are cleared
+            summary_obj.penalty_override_enabled = False
+            summary_obj.renewable_penalty_override = None
+            summary_obj.low_carbon_penalty_override = None
+            summary_obj.penalty_override_date = None
+            summary_obj.penalty_override_user = None
 
         # Calculate and update total_non_compliance_penalty_payable based on override state
         if summary_obj.penalty_override_enabled:

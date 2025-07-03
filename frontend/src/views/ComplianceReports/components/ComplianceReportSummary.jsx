@@ -256,6 +256,7 @@ const ComplianceReportSummary = ({
                   onCellEditStopped={penaltyOverrideEnabled ? handlePenaltyOverrideCellEdit : undefined}
                 />
                 {hasRoles(roles.director) &&
+                  parseInt(compliancePeriodYear) >= 2024 &&
                   (currentStatus ===
                     COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST ||
                     currentStatus ===
