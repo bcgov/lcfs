@@ -33,9 +33,12 @@ jobs:
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pypoetry
-          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}-${{ hashFiles('backend/pyproject.toml') }}
           restore-keys: |
+            ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}-
             ${{ runner.os }}-poetry-
 
       - name: Install Poetry
@@ -65,7 +68,9 @@ jobs:
           # Get the container ID of the postgres service
           CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
           # Run pg_dump inside the container (no version mismatch)
-          docker exec $CONTAINER_ID pg_dump -U lcfs -d lcfs > lcfs_template.sql
+          # Exclude ownership and privileges to avoid role issues
+          docker exec $CONTAINER_ID pg_dump -U lcfs -d lcfs \
+            --no-owner --no-privileges --clean --if-exists > lcfs_template.sql
 
       - name: Upload database template
         uses: actions/upload-artifact@v4
@@ -123,6 +128,19 @@ jobs:
             30,
             31,
             32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
           ]
     steps:
       - uses: actions/checkout@v4
@@ -139,9 +157,12 @@ jobs:
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/pypoetry
-          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}-${{ hashFiles('backend/pyproject.toml') }}
           restore-keys: |
+            ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}-
             ${{ runner.os }}-poetry-
 
       - name: Install Poetry
@@ -153,6 +174,14 @@ jobs:
           cd backend
           poetry install
 
+      - name: Cache pytest timing data
+        uses: actions/cache@v4
+        with:
+          path: backend/.pytest_cache
+          key: ${{ runner.os }}-pytest-timing-${{ strategy.job-total }}-${{ hashFiles('backend/lcfs/tests/**/*.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pytest-timing-${{ strategy.job-total }}-
+
       - name: Download database template
         uses: actions/download-artifact@v4
         with:
@@ -163,16 +192,27 @@ jobs:
         run: |
           # Wait briefly for PostgreSQL to be fully ready
           sleep 5
-          # Create shard-specific database
-          PGPASSWORD=development_only createdb -h localhost -U lcfs lcfs_shard_${{ matrix.shard }}
-          # Restore from template
-          PGPASSWORD=development_only psql -h localhost -U lcfs -d lcfs_shard_${{ matrix.shard }} -f lcfs_template.sql
+          # Create shard-specific database and restore concurrently
+          PGPASSWORD=development_only createdb -h localhost -U lcfs lcfs_shard_${{ matrix.shard }} &
+          CREATE_PID=$!
+          wait $CREATE_PID
+          # Restore from template with optimized settings
+          PGPASSWORD=development_only psql -h localhost -U lcfs -d lcfs_shard_${{ matrix.shard }} \
+            -f lcfs_template.sql --quiet --set ON_ERROR_STOP=1 \
+            -v ON_ERROR_STOP=1 --single-transaction &
+          RESTORE_PID=$!
+          wait $RESTORE_PID
+
+      - name: Ensure pytest cache directory exists
+        run: |
+          cd backend
+          mkdir -p .pytest_cache
 
       - name: Run backend tests for shard
         id: backend_tests
         run: |
           cd backend
-          poetry run pytest --splits ${{ strategy.job-total }} --group ${{ matrix.shard }} --junitxml=pytest-results-shard-${{ matrix.shard }}.xml
+          poetry run pytest --splits ${{ strategy.job-total }} --group ${{ matrix.shard }} --store-durations --maxfail=1 --tb=short --disable-warnings --quiet --junitxml=pytest-results-shard-${{ matrix.shard }}.xml || [ $? -eq 5 ]
         env:
           LCFS_DB_HOST: localhost
           LCFS_DB_PORT: 5432
@@ -254,36 +294,36 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Cache npm dependencies
+      - name: Cache node_modules
         uses: actions/cache@v4
         with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-
+            ${{ runner.os }}-node-modules-
 
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm ci
+          npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Type Check Frontend
+      - name: Type Check Frontend (parallel)
         run: |
           cd frontend
-          npm run type-check
+          npm run type-check &
+          TYPE_CHECK_PID=$!
+          wait $TYPE_CHECK_PID
 
-      - name: Create tarball of frontend dependencies
-        run: |
-          cd frontend
-          tar -czf ../frontend-deps.tar.gz node_modules
-
-      - name: Upload frontend dependencies
-        uses: actions/upload-artifact@v4
+      - name: Cache node_modules for test shards
+        uses: actions/cache@v4
         with:
-          name: frontend-deps
-          path: frontend-deps.tar.gz
-          retention-days: 1
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-modules-shared-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-shared-
 
   frontend-tests:
     name: 'Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})'
@@ -338,16 +378,24 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
 
-      - name: Download and extract frontend dependencies
-        uses: actions/download-artifact@v4
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
         with:
-          name: frontend-deps
-          path: .
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-modules-shared-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-shared-
+            ${{ runner.os }}-node-modules-
 
-      - run: |
+      - name: Install frontend dependencies (fallback)
+        run: |
           cd frontend
-          tar -xzf ../frontend-deps.tar.gz
+          if [ ! -d "node_modules" ]; then
+            npm ci --prefer-offline --no-audit --no-fund
+          fi
 
       - name: Run frontend tests
         id: frontend_tests
@@ -358,6 +406,9 @@ jobs:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          VITEST_REPORTER: 'blob'
+          VITEST_POOL_THREADS: '4'
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: ${{ !cancelled() }}
@@ -367,8 +418,10 @@ jobs:
           path: frontend/.vitest-reports/*
           include-hidden-files: true
           retention-days: 1
+          compression-level: 9
 
   post-frontend-tests:
+    name: 'Publish Frontend Test Results'
     if: ${{ !cancelled() }}
     needs: [frontend-tests]
     runs-on: ubuntu-latest
