@@ -5,6 +5,11 @@ on:
     branches:
       - '*'
 
+permissions:
+  contents: read
+  actions: write
+  checks: write
+
 jobs:
   backend-setup:
     name: 'Backend Setup'
