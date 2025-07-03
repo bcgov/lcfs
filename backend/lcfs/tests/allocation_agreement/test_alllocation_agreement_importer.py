@@ -76,6 +76,7 @@ def importer_instance(
 async def test_import_data_success(importer_instance, mock_redis):
     file_mock = MagicMock()
     file_mock.filename = "test.xlsx"
+    file_mock.content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     file_mock.read = AsyncMock(return_value=b"fake-excel-contents")
 
     user_mock = MagicMock()
@@ -108,6 +109,7 @@ async def test_import_data_with_clamav(importer_instance, mock_clamav, mock_redi
     with patch("lcfs.settings.settings.clamav_enabled", True):
         file_mock = MagicMock()
         file_mock.filename = "test.xlsx"
+        file_mock.content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         file_mock.read = AsyncMock(return_value=b"excel-data")
         user_mock = MagicMock()
         org_code = "TEST-ORG"
@@ -166,3 +168,58 @@ async def test_get_status_success(importer_instance, mock_redis):
     assert result["created"] == 10
     assert result["rejected"] == 5
     assert len(result["errors"]) == 2
+
+
+@pytest.mark.anyio
+async def test_import_data_invalid_mime_type(importer_instance):
+    """
+    Tests that import_data raises HTTPException for invalid MIME type.
+    """
+    from fastapi import HTTPException
+    
+    file_mock = MagicMock()
+    file_mock.filename = "test.txt"
+    file_mock.content_type = "text/html"  # Not allowed MIME type
+    file_mock.read = AsyncMock(return_value=b"some-content")
+    
+    user_mock = MagicMock()
+    
+    with pytest.raises(HTTPException) as exc_info:
+        await importer_instance.import_data(
+            compliance_report_id=123,
+            user=user_mock,
+            file=file_mock,
+            overwrite=False,
+        )
+    
+    assert exc_info.value.status_code == 400
+    assert "not allowed" in str(exc_info.value.detail)
+
+
+@pytest.mark.anyio
+async def test_import_data_file_too_large(importer_instance):
+    """
+    Tests that import_data raises HTTPException for oversized files.
+    """
+    from fastapi import HTTPException
+    
+    # Create a file content larger than 50MB
+    large_content = b"x" * (51 * 1024 * 1024)  # 51MB
+    
+    file_mock = MagicMock()
+    file_mock.filename = "test.xlsx"
+    file_mock.content_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    file_mock.read = AsyncMock(return_value=large_content)
+    
+    user_mock = MagicMock()
+    
+    with pytest.raises(HTTPException) as exc_info:
+        await importer_instance.import_data(
+            compliance_report_id=123,
+            user=user_mock,
+            file=file_mock,
+            overwrite=False,
+        )
+    
+    assert exc_info.value.status_code == 400
+    assert "exceeds the maximum limit" in str(exc_info.value.detail)

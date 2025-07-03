@@ -158,6 +158,7 @@ def compliance_report_schema(
         report_status_id: int = None,
         report_status: str = "Submitted",
         update_date: datetime = datetime(2024, 4, 1, 12, 0, 0),
+        is_latest: bool = True
     ):
         compliance_period_id = (
             compliance_period_id or compliance_period_schema.compliance_period_id
@@ -189,6 +190,7 @@ def compliance_report_schema(
             report_status_id=report_status_id,
             report_status=report_status,
             update_date=update_date,
+            is_latest=is_latest
         )
 
     return _create_compliance_report_schema

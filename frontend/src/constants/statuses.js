@@ -38,6 +38,7 @@ export const COMPLIANCE_REPORT_STATUSES = {
   ANALYST_ADJUSTMENT: 'Analyst adjustment',
   RECOMMENDED_BY_ANALYST: 'Recommended by analyst',
   RECOMMENDED_BY_MANAGER: 'Recommended by manager',
+  SUPPLEMENTAL_REQUESTED: 'Supplemental requested',
   ASSESSED: 'Assessed',
   REJECTED: 'Rejected',
   RETURN_TO_ANALYST: 'Return to analyst',
@@ -61,6 +62,7 @@ export function getAllTerminalTransferStatuses() {
 
 export const FUEL_CODE_STATUSES = {
   DRAFT: 'Draft',
+  RECOMMENDED: 'Recommended',
   APPROVED: 'Approved',
   DELETED: 'Deleted'
 }

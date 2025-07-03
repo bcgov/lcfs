@@ -220,8 +220,8 @@ export const YesNoTextRenderer = (props) => (
 export const FuelCodeStatusRenderer = (props) => {
   const location = useLocation()
   const statusArr = getAllFuelCodeStatuses()
-  const statusColorArr = ['info', 'success', 'error']
-  const statusIndex = statusArr.indexOf(props.data.fuelCodeStatus.status)
+  const statusColorArr = ['info', 'info', 'success', 'error']
+  const statusIndex = statusArr.indexOf(props.data?.status)
   return (
     <Link
       to={props.node?.id && location.pathname + '/' + props?.node?.id}
@@ -258,7 +258,7 @@ export const FuelCodeStatusRenderer = (props) => {
 
 export const FuelCodePrefixRenderer = (params) => {
   const location = useLocation()
-  const prefix = params.data.fuelCodePrefix.prefix
+  const prefix = params.data.prefix
   const countryName = params.data.fuelProductionFacilityCountry
   const countryCode = countryName ? getCode(countryName) : null
 
@@ -345,6 +345,7 @@ const STATUS_TO_COLOR_MAP = {
   [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: 'info',
   [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: 'info',
   [COMPLIANCE_REPORT_STATUSES.ASSESSED]: 'success',
+  [COMPLIANCE_REPORT_STATUSES.SUPPLEMENTAL_REQUESTED]: 'warning',
   [COMPLIANCE_REPORT_STATUSES.REJECTED]: 'error'
 }
 
@@ -422,10 +423,12 @@ const GenericChipRenderer = ({
 
   const options = Array.isArray(value)
     ? value.filter((item) => item !== '')
-    : value
-        .split(',')
-        .map((item) => item.trim())
-        .filter((item) => item !== '')
+    : value && value !== ''
+      ? value
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item !== '')
+      : []
 
   const calculateChipWidths = useCallback(() => {
     if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }

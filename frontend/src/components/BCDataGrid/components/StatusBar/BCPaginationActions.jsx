@@ -20,13 +20,13 @@ export function BCPaginationActions({
   const [currentPage, setCurrentPage] = useState(page + 1)
   // Reload grid
   const reloadGrid = useCallback(() => {
-    gridRef?.current?.api.resetColumnState()
-    gridRef?.current?.api.setFilterModel(null)
+    gridRef?.current?.api?.resetColumnState()
+    gridRef?.current?.api?.setFilterModel(null)
     // TODO: clear custom filters
   }, [gridRef])
 
   const handleCopyData = useCallback(() => {
-    const selectedRows = gridRef?.current?.api.getDataAsCsv({
+    const selectedRows = gridRef?.current?.api?.getDataAsCsv({
       allColumns: true,
       onlySelected: true,
       skipColumnHeaders: true
@@ -36,12 +36,12 @@ export function BCPaginationActions({
 
   const handleDownloadData = useCallback(() => {
     const rows = []
-    gridRef?.current?.api.forEachNodeAfterFilterAndSort((node) => {
+    gridRef?.current?.api?.forEachNodeAfterFilterAndSort((node) => {
       rows.push(node.data)
     })
 
     // Get column definitions and create a mapping from field to headerName
-    const columnDefs = gridRef?.current?.api.getColumnDefs()
+    const columnDefs = gridRef?.current?.api?.getColumnDefs()
     const fieldToHeaderNameMap = columnDefs.reduce((map, colDef) => {
       map[colDef.field] = colDef.headerName
       return map
@@ -94,7 +94,7 @@ export function BCPaginationActions({
       return
     }
     setCurrentPage(newPage)
-    gridRef?.current?.api.showLoadingOverlay()
+    gridRef?.current?.api?.showLoadingOverlay()
     onPageChange(event, newPage - 1)
   })
 

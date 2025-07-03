@@ -118,3 +118,7 @@ ALLOWED_MIME_TYPES = [
     "text/plain",
 ]
 ALLOWED_FILE_TYPES = "PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT"
+
+# File size limits
+MAX_FILE_SIZE_MB = 50
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024  # Convert MB to bytes

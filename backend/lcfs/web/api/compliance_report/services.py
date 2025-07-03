@@ -46,6 +46,7 @@ from lcfs.web.api.organization_snapshot.services import OrganizationSnapshotServ
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.web.api.role.schema import user_has_roles
 from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.web.api.internal_comment.services import InternalCommentService
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
@@ -235,6 +236,9 @@ class ComplianceReportServices:
         await self.internal_comment_service.copy_internal_comments(
             existing_report_id, new_report.compliance_report_id
         )
+
+        # Release the transaction from the current report being superseded
+        await self._release_superseded_transaction(current_report)
 
         return ComplianceReportBaseSchema.model_validate(new_report)
 
@@ -426,7 +430,7 @@ class ComplianceReportServices:
             reporting_frequency=current_report.reporting_frequency,
             compliance_report_group_uuid=current_report.compliance_report_group_uuid,  # Same group
             version=new_version,
-            supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,  # Supplier edits it
+            supplemental_initiator=SupplementalInitiatorType.GOVERNMENT_INITIATED,  # Government initiated Supplemental report for the supplier to make edits.
             nickname=(
                 f"Supplemental report {new_version}"
                 if current_report.reporting_frequency == ReportingFrequency.ANNUAL
@@ -468,6 +472,9 @@ class ComplianceReportServices:
             existing_report_id, new_report.compliance_report_id
         )
 
+        # Release the transaction from the current report being superseded
+        await self._release_superseded_transaction(current_report)
+
         # 10. Return the validated base schema
         return ComplianceReportBaseSchema.model_validate(new_report)
 
@@ -505,6 +512,15 @@ class ComplianceReportServices:
             raise ServiceException(
                 "A supplemental report can only be deleted if the status is 'Draft/Analyst_adjustment'."
             )
+
+        # Reinstate the previous report's transaction if we are deleting a superseding report
+        if current_report.current_status.status in [
+            ComplianceReportStatusEnum.Analyst_adjustment,
+        ] or (
+            current_report.current_status.status == ComplianceReportStatusEnum.Draft
+            and self.is_supplemental_requested_by_gov_user(current_report)
+        ):
+            await self._reinstate_previous_transaction(current_report)
 
         # Delete the compliance report
         await self.repo.delete_compliance_report(report_id)
@@ -688,6 +704,46 @@ class ComplianceReportServices:
 
         return history_masked_report
 
+    async def _reinstate_previous_transaction(self, report: ComplianceReport):
+        """
+        Finds the previous report in the chain and reinstates its transaction.
+        This is used when a superseding report (e.g. analyst adjustment) is deleted.
+        """
+        if report.version == 0:
+            return  # Nothing to reinstate
+
+        report_chain = await self.repo.get_compliance_report_chain(
+            report.compliance_report_group_uuid
+        )
+        previous_report = next(
+            (r for r in report_chain if r.version == report.version - 1), None
+        )
+
+        if previous_report and previous_report.transaction_id:
+            await self.transaction_repo.reinstate_transaction(
+                previous_report.transaction_id
+            )
+
+    async def _release_superseded_transaction(self, current_report: ComplianceReport):
+        """
+        Release the transaction associated with the current report when it's being superseded
+        by a government initiated supplemental report.
+        """
+        if current_report.transaction_id:
+            # Get the full transaction to check its status
+            transaction = await self.transaction_repo.get_transaction_by_id(
+                current_report.transaction_id
+            )
+
+            # Release the transaction if it's currently Reserved
+            if (
+                transaction
+                and transaction.transaction_action == TransactionActionEnum.Reserved
+            ):
+                await self.transaction_repo.release_transaction(
+                    current_report.transaction_id
+                )
+
     def _mask_report_status_for_history(
         self, report: ComplianceReportBaseSchema, user: UserProfile
     ) -> ComplianceReportBaseSchema:
@@ -849,6 +905,7 @@ class ComplianceReportServices:
                     ComplianceReportStatusEnum.Not_recommended_by_analyst,
                     ComplianceReportStatusEnum.Not_recommended_by_manager,
                     ComplianceReportStatusEnum.Analyst_adjustment,
+                    ComplianceReportStatusEnum.Supplemental_requested,
                 ]
             ]
         return statuses
