@@ -196,18 +196,18 @@ describe('DownloadButton', () => {
   describe('Error Handling', () => {
     it('handles missing onDownload prop gracefully', () => {
       const propsWithoutOnDownload = { ...defaultProps }
-      delete propsWithoutOnDownload.onDownload
+      const { onDownload, ...restProps } = propsWithoutOnDownload
       
       expect(() => {
-        render(<DownloadButton {...propsWithoutOnDownload} />)
+        render(<DownloadButton {...restProps} />)
       }).not.toThrow()
     })
 
     it('handles undefined labels gracefully', () => {
       const propsWithUndefined = {
         ...defaultProps,
-        label: undefined,
-        downloadLabel: undefined
+        label: undefined as string | undefined,
+        downloadLabel: undefined as string | undefined
       }
       
       render(<DownloadButton {...propsWithUndefined} />)
@@ -219,8 +219,8 @@ describe('DownloadButton', () => {
     it('handles null labels gracefully', () => {
       const propsWithNull = {
         ...defaultProps,
-        label: null,
-        downloadLabel: null
+        label: null as string | null,
+        downloadLabel: null as string | null
       }
       
       render(<DownloadButton {...propsWithNull} />)
@@ -280,9 +280,9 @@ describe('DownloadButton', () => {
 
     it('handles missing data-test attribute', () => {
       const propsWithoutDataTest = { ...defaultProps }
-      delete propsWithoutDataTest.dataTest
+      const { dataTest, ...restProps } = propsWithoutDataTest
       
-      render(<DownloadButton {...propsWithoutDataTest} />)
+      render(<DownloadButton {...restProps} />)
       
       const button = screen.getByRole('button')
       expect(button).toBeInTheDocument()
@@ -335,9 +335,9 @@ describe('DownloadButton', () => {
     })
 
     it('maintains proper state during async download operations', async () => {
-      let resolveDownload
+      let resolveDownload: (() => void) | undefined
       const asyncDownload = vi.fn(() => {
-        return new Promise((resolve) => {
+        return new Promise<void>((resolve) => {
           resolveDownload = resolve
         })
       })
@@ -353,7 +353,7 @@ describe('DownloadButton', () => {
       // Component should remain stable during async operation
       expect(button).toBeInTheDocument()
       
-      resolveDownload?.()
+      if (resolveDownload) resolveDownload()
     })
   })
 
