@@ -8,7 +8,7 @@ import * as useFuelCodeHooks from '@/hooks/useFuelCode'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 
-// Mock hooks
+// Mock hooks and update
 vi.mock('@/hooks/useFuelCode')
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/utils/withRole', () => ({ default: (Component) => Component }))
