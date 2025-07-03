@@ -75,7 +75,7 @@ class FuelCodeButtonActionFactory {
       id: 'save-fuel-code-btn',
       label: this.context.t('fuelCode:actionBtns.saveFuelCodeBtn'),
       icon: faFloppyDisk,
-      disabled: !this.context.hasChanges || this.context.hasValidationErrors,
+      disabled: this.context.hasValidationErrors, // || !this.context.hasChanges
       handler: () => this.context.handleSave()
     })
   }
@@ -209,7 +209,8 @@ function shouldShowButton(buttonName, context) {
   switch (buttonName) {
     case 'save':
       // Show save button if in edit mode or creating new fuel code, and there are changes
-      return context.shouldShowSaveButton && context.hasChanges
+      return context.shouldShowSaveButton
+      //  && context.hasChanges
 
     case 'edit':
       // Show edit button if not in edit mode and fuel code exists
@@ -299,7 +300,10 @@ export const buildFuelCodeButtonContext = ({
   canDelete = true,
   shouldShowEditButton = false,
   shouldShowSaveButton = false,
-  isInEditMode = false
+  isInEditMode = false,
+  isUpdating = false,
+  isButtonOperationInProgress = false,
+  currentButtonOperation = null
 }) => ({
   currentStatus: fuelCode?.fuelCodeStatus?.status || FUEL_CODE_STATUSES.DRAFT,
   hasRoles,
@@ -319,5 +323,8 @@ export const buildFuelCodeButtonContext = ({
   shouldShowEditButton,
   shouldShowSaveButton,
   isInEditMode,
+  isUpdating,
+  isButtonOperationInProgress,
+  currentButtonOperation,
   status: fuelCode?.fuelCodeStatus?.status
 })

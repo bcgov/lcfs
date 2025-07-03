@@ -6,7 +6,7 @@
   "fuelCodeDownloadFailMsg": "Failed to download fuel code information.",
   "fuelCodeLoadFailMsg": "Failed to load fuel code information.",
   "newFuelCodeTitle": "Add new fuel code(s)",
-  "fuelCodeEntryGuide": "Draft fuel codes are saved automatically when all mandatory fields have been entered and validated. Click “Approve code” to make it available in compliance reporting.",
+  "fuelCodeEntryGuide": "Draft fuel codes are saved automatically when all mandatory fields have been entered and validated. Click “Recommend to director” and get approved to make it available in compliance reporting.",
   "editFuelCodeTitle": "Edit draft fuel code",
   "viewFuelCodeTitle": "View fuel code",
   "approvedFuelCodeTitle": "Approved draft fuel code",

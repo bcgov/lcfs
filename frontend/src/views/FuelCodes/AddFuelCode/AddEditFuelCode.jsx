@@ -92,7 +92,9 @@ const AddEditFuelCodeBase = () => {
     isInEditMode: false,
     originalStatus: null,
     pendingUpdates: new Set(),
-    isUpdating: false
+    isUpdating: false,
+    isButtonOperationInProgress: false,
+    currentButtonOperation: null
   })
 
   const {
@@ -120,7 +122,16 @@ const AddEditFuelCodeBase = () => {
         typeof updater === 'function' ? updater(prev.pendingUpdates) : updater
     }))
   }, [])
-
+  const setButtonOperationState = useCallback(
+    (isLoading, operationName = null) => {
+      setState((prev) => ({
+        ...prev,
+        isButtonOperationInProgress: isLoading,
+        currentButtonOperation: isLoading ? operationName : null
+      }))
+    },
+    []
+  )
   // Hooks
   const { hasRoles } = useCurrentUser()
   const {
@@ -166,7 +177,7 @@ const AddEditFuelCodeBase = () => {
           ? t('fuelCode:editFuelCodeTitle')
           : t('fuelCode:viewFuelCodeTitle')
     }
-
+    debugger
     const showGuideText =
       !existingFuelCode ||
       existingFuelCode.fuelCodeStatus.status === FUEL_CODE_STATUSES.DRAFT
@@ -734,7 +745,10 @@ const AddEditFuelCodeBase = () => {
   const buttonContext = useMemo(() => {
     const baseHandlers = {
       handleSave: async () => {
+        debugger
+        if (state.isButtonOperationInProgress) return
         try {
+          setButtonOperationState(true, 'save')
           if (computedValues.hasNotesValidationError) {
             alertRef.current?.triggerAlert({
               message: t('fuelCode:notesRequiredMessage'),
@@ -745,10 +759,15 @@ const AddEditFuelCodeBase = () => {
           await handleSaveSuccess()
         } catch (error) {
           handleError(error, `Error saving fuel code: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
         }
       },
       handleEdit: async () => {
+        if (state.isButtonOperationInProgress) return
         try {
+          debugger
+          setButtonOperationState(true, 'edit')
           if (originalStatus === null && existingFuelCode) {
             updateState({
               originalStatus: existingFuelCode.fuelCodeStatus.status
@@ -771,10 +790,14 @@ const AddEditFuelCodeBase = () => {
           })
         } catch (error) {
           handleError(error, `Error enabling edit mode: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
         }
       },
       handleRecommend: async () => {
+        if (state.isButtonOperationInProgress) return
         try {
+          setButtonOperationState(true, 'recommend')
           await fuelCodeMutation.mutateAsync({
             action: 'update',
             data: { status: FUEL_CODE_STATUSES.RECOMMENDED },
@@ -788,10 +811,14 @@ const AddEditFuelCodeBase = () => {
           })
         } catch (error) {
           handleError(error, `Error recommending fuel code: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
         }
       },
       handleApprove: async () => {
+        if (state.isButtonOperationInProgress) return
         try {
+          setButtonOperationState(true, 'approve')
           await fuelCodeMutation.mutateAsync({
             action: 'update',
             data: { status: FUEL_CODE_STATUSES.APPROVED },
@@ -805,10 +832,14 @@ const AddEditFuelCodeBase = () => {
           })
         } catch (error) {
           handleError(error, `Error approving fuel code: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
         }
       },
       handleDelete: async () => {
+        if (state.isButtonOperationInProgress) return
         try {
+          setButtonOperationState(true, 'delete')
           if (fuelCodeID) {
             await fuelCodeMutation.mutateAsync({
               action: 'delete',
@@ -824,10 +855,14 @@ const AddEditFuelCodeBase = () => {
           }
         } catch (error) {
           handleError(error, `Error deleting fuel code: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
         }
       },
       handleReturnToAnalyst: async () => {
+        if (state.isButtonOperationInProgress) return
         try {
+          setButtonOperationState(true, 'return')
           // Set original status before changing to draft if not already set
           if (originalStatus === null && existingFuelCode) {
             setOriginalStatus(existingFuelCode.fuelCodeStatus.status)
@@ -846,6 +881,8 @@ const AddEditFuelCodeBase = () => {
           })
         } catch (error) {
           handleError(error, `Error returning to analyst: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
         }
       }
     }
@@ -870,7 +907,9 @@ const AddEditFuelCodeBase = () => {
       shouldShowEditButton: computedValues.shouldShowEditButton,
       shouldShowSaveButton: computedValues.shouldShowSaveButton,
       isInEditMode,
-      isUpdating
+      isUpdating,
+      isButtonOperationInProgress: state.isButtonOperationInProgress,
+      currentButtonOperation: state.currentButtonOperation
     })
   }, [
     existingFuelCode,
@@ -887,7 +926,10 @@ const AddEditFuelCodeBase = () => {
     handleError,
     fuelCodeMutation,
     refetch,
-    updateState
+    updateState,
+    state.isButtonOperationInProgress,
+    state.currentButtonOperation,
+    setButtonOperationState
   ])
 
   const buttonConfig = useMemo(() => {
@@ -911,7 +953,7 @@ const AddEditFuelCodeBase = () => {
           <BCTypography variant="h5" color="primary">
             {computedValues.titleText}
           </BCTypography>
-          {computedValues.showGuideText && (
+          {computedValues.showGuideText && isInEditMode && (
             <BCTypography variant="body2" mt={2} mb={3}>
               {t('fuelCode:fuelCodeEntryGuide')}
             </BCTypography>
@@ -942,6 +984,7 @@ const AddEditFuelCodeBase = () => {
           getRowStyle={getRowStyle}
           loading={isUpdating}
           loadingText="Updating data..."
+          showMandatoryColumns={isInEditMode}
         />
 
         <Stack
@@ -964,8 +1007,13 @@ const AddEditFuelCodeBase = () => {
                   />
                 )
               }
+              loading={state.isButtonOperationInProgress}
               onClick={button.handler}
-              disabled={button.disabled || isUpdating}
+              disabled={
+                button.disabled ||
+                isUpdating ||
+                state.isButtonOperationInProgress
+              }
             >
               <BCTypography variant="subtitle2">{button.label}</BCTypography>
             </BCButton>
@@ -975,8 +1023,20 @@ const AddEditFuelCodeBase = () => {
 
       <BCModal
         open={!!modalData}
-        onClose={() => updateState({ modalData: null })}
-        data={modalData}
+        onClose={() =>
+          !state.isButtonOperationInProgress && updateState({ modalData: null })
+        }
+        data={
+          modalData
+            ? {
+                ...modalData,
+                primaryButtonAction: state.isButtonOperationInProgress
+                  ? undefined
+                  : modalData.primaryButtonAction,
+                primaryButtonDisabled: state.isButtonOperationInProgress
+              }
+            : null
+        }
       />
     </>
   )
