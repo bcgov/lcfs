@@ -263,7 +263,7 @@ class FuelCodeServices:
         history = FuelCodeHistory(
             fuel_code_id=fuel_code_model.fuel_code_id,
             fuel_status_id=fuel_code_model.fuel_status_id,
-            fuel_code_snapshot=result.model_dump(),
+            fuel_code_snapshot=result.model_dump(mode="json"),
             version=0,
             group_uuid=str(uuid.uuid4()),
             action_type=ActionTypeEnum.CREATE.value,
@@ -319,6 +319,11 @@ class FuelCodeServices:
         fuel_code = await self.repo.get_fuel_code(fuel_code_data.fuel_code_id)
         if not fuel_code:
             raise ValueError("Fuel code not found")
+        if any(
+            h.fuel_status_id != 1 for h in fuel_code.history_records
+        ):  # if previously not recommended or approved then notes is not mandatory
+            if not fuel_code_data.notes:
+                raise ValueError("Notes is required")
 
         for field, value in fuel_code_data.model_dump(
             exclude={
