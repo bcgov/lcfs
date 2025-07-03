@@ -30,13 +30,6 @@ class FuelCodeHistory(BaseModel, Auditable, Versioning):
         comment="Fuel code status",
     )
 
-    # Change tracking
-    changed_fields = Column(
-        JSON,
-        nullable=True,
-        comment="JSON object containing fields that changed with before/after values",
-    )
-
     # Snapshot of fuel code at time of change
     fuel_code_snapshot = Column(
         JSON,

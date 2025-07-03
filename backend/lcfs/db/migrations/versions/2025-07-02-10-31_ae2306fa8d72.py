@@ -39,12 +39,6 @@ def upgrade() -> None:
             "fuel_status_id", sa.Integer(), nullable=True, comment="Fuel code status"
         ),
         sa.Column(
-            "changed_fields",
-            sa.JSON(),
-            nullable=True,
-            comment="JSON object containing fields that changed with before/after values",
-        ),
-        sa.Column(
             "fuel_code_snapshot",
             sa.JSON(),
             nullable=True,

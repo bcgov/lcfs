@@ -200,11 +200,6 @@ class FuelCodeHistorySchema(BaseSchema):
     fuel_code_history_id: int
     fuel_code_id: int
     fuel_status_id: int
-    # JSON field for changed fields - stores field names and their before/after values
-    changed_fields: Optional[Dict[str, Dict[str, Any]]] = Field(
-        None, 
-        description="JSON object containing field changes with before/after values"
-    )
     fuel_code_snapshot: Optional[Dict[str, Any]] = Field(
         None,
         description="Complete snapshot of fuel code data at time of change"
@@ -212,17 +207,6 @@ class FuelCodeHistorySchema(BaseSchema):
     group_uuid: Optional[str] = None
     version: Optional[int] = 0
     action_type: Optional[str] = None
-
-    @field_validator('changed_fields', mode='before')
-    @classmethod
-    def parse_changed_fields(cls, v):
-        """Parse changed_fields if it comes as a JSON string"""
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except json.JSONDecodeError:
-                return None
-        return v
 
     @field_validator('fuel_code_snapshot', mode='before')
     @classmethod
