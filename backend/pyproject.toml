@@ -97,8 +97,7 @@ filterwarnings = [
 ]
 env = [
     "APP_ENVIRONMENT=pytest",
-    # LCFS_DB_BASE is now set dynamically per job for parallel execution
-    # Defaults to lcfs_test when not set (for local development)
+    "LCFS_DB_BASE=lcfs_test",
 ]
 # Test discovery patterns
 testpaths = ["lcfs/tests"]

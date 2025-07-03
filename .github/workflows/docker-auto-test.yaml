@@ -9,23 +9,26 @@ jobs:
   backend-setup:
     name: 'Backend Setup'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: lcfs
+          POSTGRES_USER: lcfs
+          POSTGRES_PASSWORD: development_only
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           sparse-checkout: |
             backend
-            docker-compose.yml
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10.13'
-
-      - name: Install Docker Compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
 
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
@@ -44,37 +47,10 @@ jobs:
           cd backend
           poetry install
 
-      - name: Fix docker-compose.yml
-        run: |
-          sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose.yml
-
-      - name: Start database service
-        run: |
-          # Create a minimal docker-compose for just the database
-          cat > db-only-compose.yml << 'EOF'
-          services:
-            db:
-              container_name: db
-              restart: "no"
-              image: postgres:17
-              environment:
-                POSTGRES_DB: lcfs
-                POSTGRES_USER: lcfs
-                POSTGRES_PASSWORD: development_only
-              ports:
-                - 5432:5432
-              volumes:
-                - postgres_data:/var/lib/postgresql/data
-
-          volumes:
-            postgres_data:
-          EOF
-
-          docker-compose -f db-only-compose.yml up -d
-          sleep 10
-
       - name: Run migrations and create template database
         run: |
+          # Wait briefly for PostgreSQL to be fully ready
+          sleep 5
           cd backend
           poetry run alembic upgrade head
         env:
@@ -86,8 +62,10 @@ jobs:
 
       - name: Create database dump
         run: |
-          docker exec $(docker-compose -f db-only-compose.yml ps -q db) pg_dump -U lcfs -d lcfs -f /tmp/lcfs_template.sql
-          docker cp $(docker-compose -f db-only-compose.yml ps -q db):/tmp/lcfs_template.sql lcfs_template.sql
+          # Get the container ID of the postgres service
+          CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
+          # Run pg_dump inside the container (no version mismatch)
+          docker exec $CONTAINER_ID pg_dump -U lcfs -d lcfs > lcfs_template.sql
 
       - name: Upload database template
         uses: actions/upload-artifact@v4
@@ -96,14 +74,19 @@ jobs:
           path: lcfs_template.sql
           retention-days: 1
 
-      - name: Stop services
-        if: always()
-        run: docker-compose -f db-only-compose.yml down
-
   backend-tests:
     name: 'Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})'
     needs: backend-setup
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: lcfs
+          POSTGRES_USER: lcfs
+          POSTGRES_PASSWORD: development_only
+        ports:
+          - 5432:5432
     strategy:
       matrix:
         shard:
@@ -147,17 +130,11 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           sparse-checkout: |
             backend
-            docker-compose.yml
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10.13'
-
-      - name: Install Docker Compose
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose
 
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
@@ -182,45 +159,19 @@ jobs:
           name: db-template
           path: .
 
-      - name: Fix docker-compose.yml
+      - name: Restore database from template
         run: |
-          sed -i 's/: true/: "true"/g; s/: false/: "false"/g' docker-compose.yml
-
-      - name: Start services with unique database
-        run: |
-          # Create a minimal docker-compose for just the database
-          cat > db-only-compose.yml << 'EOF'
-          services:
-            db:
-              container_name: db
-              restart: "no"
-              image: postgres:17
-              environment:
-                POSTGRES_DB: lcfs
-                POSTGRES_USER: lcfs
-                POSTGRES_PASSWORD: development_only
-              ports:
-                - 5432:5432
-              volumes:
-                - postgres_data:/var/lib/postgresql/data
-
-          volumes:
-            postgres_data:
-          EOF
-
-          docker-compose -f db-only-compose.yml up -d
-          sleep 10
-
+          # Wait briefly for PostgreSQL to be fully ready
+          sleep 5
           # Create shard-specific database
-          docker exec $(docker-compose -f db-only-compose.yml ps -q db) createdb -U lcfs -O lcfs lcfs_shard_${{ matrix.shard }}
-          docker cp lcfs_template.sql $(docker-compose -f db-only-compose.yml ps -q db):/tmp/
-          docker exec $(docker-compose -f db-only-compose.yml ps -q db) psql -U lcfs -d lcfs_shard_${{ matrix.shard }} -f /tmp/lcfs_template.sql
+          PGPASSWORD=development_only createdb -h localhost -U lcfs lcfs_shard_${{ matrix.shard }}
+          # Restore from template
+          PGPASSWORD=development_only psql -h localhost -U lcfs -d lcfs_shard_${{ matrix.shard }} -f lcfs_template.sql
 
       - name: Run backend tests for shard
         id: backend_tests
         run: |
           cd backend
-          # Use pytest-split for automatic test distribution
           poetry run pytest --splits ${{ strategy.job-total }} --group ${{ matrix.shard }} --junitxml=pytest-results-shard-${{ matrix.shard }}.xml
         env:
           LCFS_DB_HOST: localhost
@@ -246,10 +197,6 @@ jobs:
           name: pytest-results-shard-${{ matrix.shard }}
           path: backend/pytest-results-shard-${{ matrix.shard }}.xml
 
-      - name: Stop services
-        if: always()
-        run: docker-compose -f db-only-compose.yml down
-
   post-backend-tests:
     name: 'Publish Backend Test Results'
     if: always()
@@ -264,24 +211,20 @@ jobs:
 
       - name: Merge test results
         run: |
-          # Use junitparser for proper XML merging
           pip install junitparser
           cat > merge_results.py << 'EOF'
           import glob
           from junitparser import JUnitXml
 
-          # Load all shard results
           suites = []
           for file in glob.glob('pytest-results-shard-*.xml'):
               suites.append(JUnitXml.fromfile(file))
 
-          # Merge all suites
           merged = JUnitXml()
           for suite in suites:
               for testsuite in suite:
                   merged.add_testsuite(testsuite)
 
-          # Write merged result
           merged.write('merged-pytest-results.xml')
           EOF
           python3 merge_results.py
@@ -428,7 +371,6 @@ jobs:
   post-frontend-tests:
     if: ${{ !cancelled() }}
     needs: [frontend-tests]
-
     runs-on: ubuntu-latest
     steps:
       - uses: actions/setup-node@v4
@@ -459,83 +401,78 @@ jobs:
           report_individual_runs: 'true'
           deduplicate_classes_by_file_name: 'true'
 
-  # teams-notification:
-  #   needs: [backend-tests, post-frontend-tests]
-  #   runs-on: ubuntu-latest
-  #   if: always()
-  #   steps:
-  #     - name: Determine Test Status
-  #       id: test_status
-  #       run: |
-  #         if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.post-frontend-tests.result, 'failure') }}" == "true" ]]; then
-  #           echo "status=failure" >> $GITHUB_OUTPUT
-  #           echo "theme_color=FF0000" >> $GITHUB_OUTPUT
-  #         else
-  #           echo "status=success" >> $GITHUB_OUTPUT
-  #           echo "theme_color=00FF00" >> $GITHUB_OUTPUT
-  #         fi
-
-  #     - name: Send custom Teams notification
-  #       run: |
-  #         PR_TITLE="${{ github.event.pull_request.title }}"
-  #         PR_URL="${{ github.event.pull_request.html_url }}"
-  #         REPO="${{ github.repository }}"
-  #         PR_NUMBER="${{ github.event.pull_request.number }}"
-  #         PR_AUTHOR="${{ github.event.pull_request.user.login }}"
-  #         COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
-  #         AVATAR_URL="${{ github.event.pull_request.user.avatar_url }}"
-  #         THREAD_ID="pr-${PR_NUMBER}"
-  #         WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-  #         MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
-
-  #         COLOR="${{ steps.test_status.outputs.theme_color }}"
-
-  #         cat <<EOF > teams_card.json
-  #         {
-  #           "@type": "MessageCard",
-  #           "@context": "http://schema.org/extensions",
-  #           "themeColor": "$COLOR",
-  #           "summary": "GitHub Notification for PR #$PR_NUMBER",
-  #           "sections": [
-  #             {
-  #               "activityTitle": "$PR_TITLE - PR #$PR_NUMBER",
-  #               "activitySubtitle": "Repository: $REPO, Author: $PR_AUTHOR",
-  #               "activityImage": "$AVATAR_URL",
-  #               "facts": [
-  #                 { "name": "Repository", "value": "$REPO" },
-  #                 { "name": "PR Title", "value": "$PR_TITLE" },
-  #                 { "name": "Branch", "value": "${{ github.head_ref }}" },
-  #                 { "name": "Commit", "value": "$COMMIT_SHA" },
-  #               ],
-  #               "text": "$MESSAGE",
-  #               "markdown": true
-  #             }
-  #           ],
-  #           "replyToId": "$THREAD_ID",
-  #           "potentialAction": [
-  #             {
-  #               "@type": "OpenUri",
-  #               "name": "View Pull Request",
-  #               "targets": [
-  #                 {
-  #                   "os": "default",
-  #                   "uri": "$PR_URL"
-  #                 }
-  #               ]
-  #             },
-  #             {
-  #               "@type": "OpenUri",
-  #               "name": "View Workflow Run",
-  #               "targets": [
-  #                 {
-  #                   "os": "default",
-  #                   "uri": "$WORKFLOW_URL"
-  #                 }
-  #               ]
-  #             }
-  #           ]
-  #         }
-  #         EOF
-
-  #         curl -H "Content-Type: application/json" -d @teams_card.json "${{ secrets.TEAMS_WEBHOOK_URL }}"
+  teams-notification:
+    needs: [backend-tests, post-frontend-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Determine Test Status
+        id: test_status
+        run: |
+          if [[ "${{ contains(needs.backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.post-frontend-tests.result, 'failure') }}" == "true" ]]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "theme_color=FF0000" >> $GITHUB_OUTPUT
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "theme_color=00FF00" >> $GITHUB_OUTPUT
+          fi
+      - name: Send custom Teams notification
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          REPO="${{ github.repository }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+          AVATAR_URL="${{ github.event.pull_request.user.avatar_url }}"
+          THREAD_ID="pr-${PR_NUMBER}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
+          COLOR="${{ steps.test_status.outputs.theme_color }}"
+          cat <<EOF > teams_card.json
+          {
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "themeColor": "$COLOR",
+            "summary": "GitHub Notification for PR #$PR_NUMBER",
+            "sections": [
+              {
+                "activityTitle": "$PR_TITLE - PR #$PR_NUMBER",
+                "activitySubtitle": "Repository: $REPO, Author: $PR_AUTHOR",
+                "activityImage": "$AVATAR_URL",
+                "facts": [
+                  { "name": "Repository", "value": "$REPO" },
+                  { "name": "PR Title", "value": "$PR_TITLE" },
+                  { "name": "Branch", "value": "${{ github.head_ref }}" },
+                  { "name": "Commit", "value": "$COMMIT_SHA" },
+                ],
+                "text": "$MESSAGE",
+                "markdown": true
+              }
+            ],
+            "replyToId": "$THREAD_ID",
+            "potentialAction": [
+              {
+                "@type": "OpenUri",
+                "name": "View Pull Request",
+                "targets": [
+                  {
+                    "os": "default",
+                    "uri": "$PR_URL"
+                  }
+                ]
+              },
+              {
+                "@type": "OpenUri",
+                "name": "View Workflow Run",
+                "targets": [
+                  {
+                    "os": "default",
+                    "uri": "$WORKFLOW_URL"
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          curl -H "Content-Type: application/json" -d @teams_card.json "${{ secrets.TEAMS_WEBHOOK_URL }}"
