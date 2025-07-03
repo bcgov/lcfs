@@ -1,7 +1,7 @@
 """Add fuel code versioning
 
 Revision ID: ae2306fa8d72
-Revises: 2e2f6f7ff391
+Revises: 413eef467edd
 Create Date: 2025-07-02 10:31:37.335578
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "ae2306fa8d72"
-down_revision = "2e2f6f7ff391"
+down_revision = "413eef467edd"
 branch_labels = None
 depends_on = None
 
