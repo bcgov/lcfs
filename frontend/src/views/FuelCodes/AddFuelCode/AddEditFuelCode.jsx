@@ -678,7 +678,7 @@ const AddEditFuelCodeBase = () => {
         hasChanges: rowData.some((row) => row.modified),
         hasValidationErrors:
           Object.keys(errors).length > 0 || hasNotesValidationError,
-        isComplete: true,
+        isComplete: existingFuelCode ? true : false,
         canEdit: isEditable,
         canDelete:
           isEditable &&
