@@ -44,7 +44,8 @@ export const fuelCodeColDefs = (
   errors,
   isCreate,
   canEdit,
-  isNotesRequired = false
+  isNotesRequired = false,
+  canEditCi = true,
 ) => [
   validation,
   actions({
@@ -150,8 +151,8 @@ export const fuelCodeColDefs = (
   },
   {
     field: 'carbonIntensity',
-    editable: canEdit,
-    headerComponent: canEdit ? RequiredHeader : undefined,
+    editable: canEdit && canEditCi,
+    headerComponent: canEdit && canEditCi ? RequiredHeader : undefined,
     headerName: i18n.t('fuelCode:fuelCodeColLabels.carbonIntensity'),
     cellEditor: 'agNumberCellEditor',
     cellEditorParams: {

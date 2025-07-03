@@ -2,9 +2,26 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import List, Dict, Any, Union, Optional, Sequence
 
+from lcfs.db.models.compliance import (
+    AllocationAgreement,
+    FuelExport,
+    FuelSupply,
+    OtherUses,
+)
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, func, text, update, distinct, desc, asc
+from sqlalchemy import (
+    and_,
+    exists,
+    or_,
+    select,
+    func,
+    text,
+    update,
+    distinct,
+    desc,
+    asc,
+)
 from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager, selectinload
@@ -438,7 +455,9 @@ class FuelCodeRepository:
         return result
 
     @repo_handler
-    async def get_fuel_code_history(self, fuel_code_id: int, version=0) -> Optional[FuelCodeHistory]:
+    async def get_fuel_code_history(
+        self, fuel_code_id: int, version=0
+    ) -> Optional[FuelCodeHistory]:
         """
         gets history entry for the fuel code
         """
@@ -1162,3 +1181,19 @@ class FuelCodeRepository:
         result = await self.db.execute(query)
         record = result.scalar_one_or_none()
         return record.category_carbon_intensity if record else 0.0
+
+    @repo_handler
+    async def is_fuel_code_used(self, fuel_code_id: int) -> bool:
+        """
+        Check if a fuel code is used in any of the compliance reports.
+        """
+        exists_query = select(
+            or_(
+                exists().where(FuelSupply.fuel_code_id == fuel_code_id),
+                exists().where(AllocationAgreement.fuel_code_id == fuel_code_id),
+                exists().where(FuelExport.fuel_code_id == fuel_code_id),
+                exists().where(OtherUses.fuel_code_id == fuel_code_id),
+            )
+        )
+        result = await self.db.execute(exists_query)
+        return result.scalar()

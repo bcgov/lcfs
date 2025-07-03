@@ -145,17 +145,15 @@ const AddEditFuelCodeBase = () => {
 
   // Check if notes are required (fuel code was returned from Recommended/Approved to Draft)
   const isNotesRequired = useMemo(() => {
-    if (!existingFuelCode || !originalStatus) return false
+    if (!existingFuelCode) return false
 
     const currentStatus = existingFuelCode.fuelCodeStatus.status
-    const wasRecommendedOrApproved =
-      originalStatus === FUEL_CODE_STATUSES.RECOMMENDED ||
-      originalStatus === FUEL_CODE_STATUSES.APPROVED
 
     return (
-      currentStatus === FUEL_CODE_STATUSES.DRAFT && wasRecommendedOrApproved
+      currentStatus === FUEL_CODE_STATUSES.DRAFT &&
+      existingFuelCode?.isNotesRequired
     )
-  }, [existingFuelCode, originalStatus])
+  }, [existingFuelCode])
 
   // Validation for notes field
   const hasNotesValidationError = useMemo(() => {
@@ -193,7 +191,8 @@ const AddEditFuelCodeBase = () => {
         errors,
         !existingFuelCode,
         canEditGrid,
-        isNotesRequired
+        isNotesRequired,
+        existingFuelCode?.canEditCi
       )
       setColumnDefs(updatedColumnDefs)
     }

@@ -273,13 +273,20 @@ class FuelCodeServices:
 
     @service_handler
     async def get_fuel_code(self, fuel_code_id: int):
-        return await self.repo.get_fuel_code(fuel_code_id)
+        fuel_code = await self.repo.get_fuel_code(fuel_code_id)
+        fc_schema = FuelCodeSchema.model_validate(fuel_code)
+        fc_schema.can_edit_ci = not (await self.repo.is_fuel_code_used(fuel_code_id))
+
+        fc_schema.is_notes_required = any(
+            h.fuel_status_id != 1 for h in fuel_code.history_records
+        )  # if previously not recommended or approved then notes is not mandatory
+        return fc_schema
 
     @service_handler
     async def update_fuel_code_status(
         self, fuel_code_id: int, status: FuelCodeStatusEnumSchema
     ):
-        fuel_code = await self.get_fuel_code(fuel_code_id)
+        fuel_code = await self.repo.get_fuel_code(fuel_code_id)
         if not fuel_code:
             raise ValueError("Fuel code not found")
 
@@ -309,7 +316,7 @@ class FuelCodeServices:
 
     @service_handler
     async def update_fuel_code(self, fuel_code_data: FuelCodeCreateUpdateSchema):
-        fuel_code = await self.get_fuel_code(fuel_code_data.fuel_code_id)
+        fuel_code = await self.repo.get_fuel_code(fuel_code_data.fuel_code_id)
         if not fuel_code:
             raise ValueError("Fuel code not found")
 
