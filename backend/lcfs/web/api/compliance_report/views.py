@@ -2,7 +2,6 @@ import structlog
 from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
 from starlette.responses import StreamingResponse
 from typing import List, Literal
-from fastapi_cache.decorator import cache
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
@@ -44,7 +43,6 @@ logger = structlog.get_logger(__name__)
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
-@cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_compliance_periods(
     request: Request, service: ComplianceReportServices = Depends()
 ) -> list[CompliancePeriodBaseSchema]:
@@ -74,7 +72,6 @@ async def get_compliance_reports(
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
-@cache(expire=60 * 60 * 24)
 async def get_compliance_report_statuses(
     request: Request,
     service: ComplianceReportServices = Depends(),
