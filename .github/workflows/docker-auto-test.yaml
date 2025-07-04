@@ -174,8 +174,7 @@ jobs:
       - name: Merge reports
         run: |
           cd frontend
-          rm -rf .vitest-reports
-          npx vitest@3.0.9 --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
+          npx vitest --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
 
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
