@@ -25,6 +25,7 @@ class FuelCodeSchema(BaseSchema):
     fuel_code_id: int
     fuel_code: str
     carbon_intensity: float
+    fuel_production_facility_country: Optional[str] = None
 
 
 class ProvisionOfTheActSchema(BaseSchema):

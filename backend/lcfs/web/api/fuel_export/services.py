@@ -94,6 +94,9 @@ class FuelExportServices:
                 ),
                 fuel_code_effective_date=row_data["fuel_code_effective_date"],
                 fuel_code_expiration_date=row_data["fuel_code_expiration_date"],
+                fuel_production_facility_country=row_data.get(
+                    "fuel_production_facility_country"
+                ),
             )
             if row_data["fuel_code_id"]
             else None

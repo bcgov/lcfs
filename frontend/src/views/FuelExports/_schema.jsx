@@ -23,6 +23,11 @@ import {
   StandardCellWarningAndErrors
 } from '@/utils/grid/errorRenderers'
 import { suppressKeyboardEvent } from '@/utils/grid/eventHandlers'
+import {
+  formatFuelCodeOptions,
+  extractOriginalFuelCode,
+  formatFuelCodeWithCountryPrefix
+} from '@/utils/fuelCodeCountryPrefix'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -31,7 +36,8 @@ export const fuelExportColDefs = (
   errors,
   warnings,
   gridReady,
-  isSupplemental
+  isSupplemental,
+  compliancePeriod
 ) => [
   validation,
   actions((params) => {
@@ -322,13 +328,16 @@ export const fuelExportColDefs = (
     headerName: i18n.t('fuelExport:fuelExportColLabels.fuelCode'),
     cellEditor: AutocompleteCellEditor,
     suppressKeyboardEvent,
-    minWidth: 135,
+    minWidth: 175,
     cellEditorParams: (params) => {
       const fuelTypeObj = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
       return {
-        options: fuelTypeObj?.fuelCodes?.map((item) => item.fuelCode) || [],
+        options: formatFuelCodeOptions(
+          fuelTypeObj?.fuelCodes || [],
+          compliancePeriod
+        ),
         multiple: false,
         disableCloseOnSelect: false,
         freeSolo: false,
@@ -354,36 +363,78 @@ export const fuelExportColDefs = (
       const fuelTypeObj = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
-      if (!fuelTypeObj) return params.data.fuelCode
+      if (!fuelTypeObj) {
+        // If we have a fuel code, format it with country prefix for display
+        if (params.data.fuelCode) {
+          // Find the fuel code details to get the country
+          const allFuelCodes =
+            optionsData?.fuelTypes?.flatMap((ft) => ft.fuelCodes) || []
+          const fuelCodeDetails = allFuelCodes.find(
+            (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
+          )
+          const country =
+            fuelCodeDetails?.fuelProductionFacilityCountry ||
+            fuelCodeDetails?.fuel_production_facility_country
+          return formatFuelCodeWithCountryPrefix(
+            params.data.fuelCode,
+            country,
+            compliancePeriod
+          )
+        }
+        return params.data.fuelCode
+      }
 
       const isFuelCodeScenario =
         params.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
       const fuelCodes =
-        fuelTypeObj.fuelCodes?.map((item) => item.fuelCode) || []
+        fuelTypeObj.fuelCodes?.map((item) => item.fuelCode || item.fuel_code) ||
+        []
 
       if (isFuelCodeScenario && !params.data.fuelCode) {
         // Autopopulate if only one fuel code is available
         if (fuelCodes.length === 1) {
           const singleFuelCode = fuelTypeObj.fuelCodes[0]
-          params.data.fuelCode = singleFuelCode.fuelCode
-          params.data.fuelCodeId = singleFuelCode.fuelCodeId
+          params.data.fuelCode =
+            singleFuelCode.fuelCode || singleFuelCode.fuel_code
+          params.data.fuelCodeId =
+            singleFuelCode.fuelCodeId || singleFuelCode.fuel_code_id
         }
+      }
+
+      // Format the fuel code with country prefix for display
+      if (params.data.fuelCode) {
+        const fuelCodeDetails = fuelTypeObj.fuelCodes.find(
+          (fc) => (fc.fuelCode || fc.fuel_code) === params.data.fuelCode
+        )
+        const country =
+          fuelCodeDetails?.fuelProductionFacilityCountry ||
+          fuelCodeDetails?.fuel_production_facility_country
+        return formatFuelCodeWithCountryPrefix(
+          params.data.fuelCode,
+          country,
+          compliancePeriod
+        )
       }
 
       return params.data.fuelCode
     },
     valueSetter: (params) => {
       const newCode = params.newValue
+      // Extract the original fuel code from the formatted display value
+      const originalFuelCode = extractOriginalFuelCode(newCode)
+
       const fuelTypeObj = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
       )
       const selectedFuelCodeObj = fuelTypeObj?.fuelCodes.find(
-        (item) => item.fuelCode === newCode
+        (item) => (item.fuelCode || item.fuel_code) === originalFuelCode
       )
 
       if (selectedFuelCodeObj) {
-        params.data.fuelCode = selectedFuelCodeObj.fuelCode
-        params.data.fuelCodeId = selectedFuelCodeObj.fuelCodeId
+        params.data.fuelCode =
+          selectedFuelCodeObj.fuelCode || selectedFuelCodeObj.fuel_code
+        params.data.fuelCodeId =
+          selectedFuelCodeObj.fuelCodeId || selectedFuelCodeObj.fuel_code_id
       } else {
         params.data.fuelCode = undefined
         params.data.fuelCodeId = undefined
@@ -901,11 +952,11 @@ export const changelogGridOptions = {
 }
 
 /**
- * Helper that picks either the category-level CI (if the fuel type is “Other”)
- * or else uses the fuel type’s defaultCarbonIntensity.
+ * Helper that picks either the category-level CI (if the fuel type is "Other")
+ * or else uses the fuel type's defaultCarbonIntensity.
  */
 function getDefaultCI(params, optionsData) {
-  // If it's “Other,” use the category's default
+  // If it's "Other," use the category's default
   if (isFuelTypeOther(params) && params.data.fuelCategory) {
     const fuelTypeObj = optionsData?.fuelTypes?.find(
       (obj) => obj.fuelType === params.data.fuelType
@@ -916,7 +967,7 @@ function getDefaultCI(params, optionsData) {
     return cat?.defaultAndPrescribedCi || 0
   }
 
-  // Otherwise just use the fuel type’s defaultCarbonIntensity
+  // Otherwise just use the fuel type's defaultCarbonIntensity
   const fuelTypeObj = optionsData?.fuelTypes?.find(
     (obj) => obj.fuelType === params.data.fuelType
   )
