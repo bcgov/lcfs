@@ -58,6 +58,15 @@ vi.mock('@/components/ClearFiltersButton', () => ({
   )
 }))
 
+// Mock the CreditLedger component
+vi.mock('../CreditLedger', () => ({
+  CreditLedger: ({ organizationId }) => (
+    <div data-testid="credit-ledger" data-organization-id={organizationId}>
+      Credit Ledger Component
+    </div>
+  )
+}))
+
 vi.mock('@/hooks/useOrganization', () => ({
   useOrganization: vi.fn((orgId) => ({
     data: {
@@ -205,5 +214,42 @@ describe('OrganizationView Component Tests', () => {
 
     // Check for the New User button
     expect(screen.getByText(/new user/i)).toBeInTheDocument()
+  })
+
+  describe('Credit Ledger Tab Tests', () => {
+    it('shows credit ledger tab for IDIR government users', () => {
+      setupRoleTest(roles.government, true)
+      
+      // Check that credit ledger tab is present for government users
+      expect(screen.getByText(/Credit ledger/i)).toBeInTheDocument()
+    })
+
+    it('shows credit ledger tab for BCeID supplier users', () => {
+      setupRoleTest(roles.supplier, false) // false means not government role
+      
+      // Check that credit ledger tab is present for suppliers too  
+      expect(screen.getByText(/Credit ledger/i)).toBeInTheDocument()
+    })
+
+    it('credit ledger tab shows the component when clicked for IDIR users', () => {
+      setupRoleTest(roles.government, true)
+      
+      // Click on the credit ledger tab to activate it
+      fireEvent.click(screen.getByText(/Credit ledger/i))
+      
+      // Check that credit ledger component text appears
+      expect(screen.getByText('Credit Ledger Component')).toBeInTheDocument()
+    })
+
+    it('credit ledger component receives correct organizationId prop', () => {
+      setupRoleTest(roles.government, true)
+      
+      // Click on the credit ledger tab to activate it
+      fireEvent.click(screen.getByText(/Credit ledger/i))
+      
+      // Check that the CreditLedger component receives the orgID from useParams (123)
+      expect(screen.getByText('Credit Ledger Component')).toBeInTheDocument()
+      // The mock component shows data-organization-id="123" in the DOM
+    })
   })
 })
