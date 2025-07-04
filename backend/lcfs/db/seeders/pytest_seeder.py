@@ -49,6 +49,14 @@ async def seed_pytest(session: AsyncSession):
     # Update sequences after all seeders have run
     await update_sequences(session)
 
+    # Refresh materialized views with the seeded data
+    try:
+        await session.execute(text("REFRESH MATERIALIZED VIEW mv_transaction_aggregate"))
+        await session.execute(text("REFRESH MATERIALIZED VIEW mv_credit_ledger"))
+        logger.info("Materialized views refreshed successfully.")
+    except Exception as e:
+        logger.warning(f"Failed to refresh materialized views: {e}")
+
     logger.info("Pytest database seeding completed successfully.")
 
 

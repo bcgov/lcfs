@@ -1,0 +1,536 @@
+name: Testing pipeline
+
+on:
+  pull_request:
+    branches:
+      - '*'
+
+permissions:
+  contents: read
+  actions: write
+  checks: write
+
+jobs:
+  backend-setup:
+    name: 'Backend Setup'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: lcfs
+          POSTGRES_USER: lcfs
+          POSTGRES_PASSWORD: development_only
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: |
+            backend
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.13'
+
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}-${{ hashFiles('backend/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}-
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
+        run: pip install poetry==1.6.1
+
+      - name: Install backend dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          cd backend
+          poetry install
+
+      - name: Run migrations and create template database
+        run: |
+          # Wait briefly for PostgreSQL to be fully ready
+          sleep 5
+          cd backend
+          poetry run alembic upgrade head
+        env:
+          LCFS_DB_HOST: localhost
+          LCFS_DB_PORT: 5432
+          LCFS_DB_USER: lcfs
+          LCFS_DB_PASS: development_only
+          LCFS_DB_BASE: lcfs
+
+      - name: Create database dump
+        run: |
+          # Get the container ID of the postgres service
+          CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
+          # Run pg_dump inside the container (no version mismatch)
+          # Exclude ownership and privileges to avoid role issues
+          docker exec $CONTAINER_ID pg_dump -U lcfs -d lcfs \
+            --no-owner --no-privileges --clean --if-exists > lcfs_template.sql
+
+      - name: Upload database template
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-template
+          path: lcfs_template.sql
+          retention-days: 1
+
+  backend-tests:
+    name: 'Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})'
+    needs: backend-setup
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: lcfs
+          POSTGRES_USER: lcfs
+          POSTGRES_PASSWORD: development_only
+        ports:
+          - 5432:5432
+    strategy:
+      matrix:
+        shard:
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+            33,
+            34,
+            35,
+            36,
+            37,
+            38,
+            39,
+            40,
+            41,
+            42,
+            43,
+            44,
+            45,
+          ]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: |
+            backend
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10.13'
+
+      - name: Cache Poetry dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pypoetry
+            backend/.venv
+          key: ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}-${{ hashFiles('backend/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-poetry-${{ hashFiles('backend/poetry.lock') }}-
+            ${{ runner.os }}-poetry-
+
+      - name: Install Poetry
+        run: pip install poetry==1.6.1
+
+      - name: Install backend dependencies
+        run: |
+          pip install --upgrade pip setuptools wheel
+          cd backend
+          poetry install
+
+      - name: Cache pytest timing data
+        uses: actions/cache@v4
+        with:
+          path: backend/.pytest_cache
+          key: ${{ runner.os }}-pytest-timing-${{ strategy.job-total }}-${{ hashFiles('backend/lcfs/tests/**/*.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pytest-timing-${{ strategy.job-total }}-
+
+      - name: Download database template
+        uses: actions/download-artifact@v4
+        with:
+          name: db-template
+          path: .
+
+      - name: Restore database from template
+        run: |
+          # Wait briefly for PostgreSQL to be fully ready
+          sleep 5
+          # Create shard-specific database and restore concurrently
+          PGPASSWORD=development_only createdb -h localhost -U lcfs lcfs_shard_${{ matrix.shard }} &
+          CREATE_PID=$!
+          wait $CREATE_PID
+          # Restore from template with optimized settings
+          PGPASSWORD=development_only psql -h localhost -U lcfs -d lcfs_shard_${{ matrix.shard }} \
+            -f lcfs_template.sql --quiet --set ON_ERROR_STOP=1 \
+            -v ON_ERROR_STOP=1 --single-transaction &
+          RESTORE_PID=$!
+          wait $RESTORE_PID
+
+      - name: Ensure pytest cache directory exists
+        run: |
+          cd backend
+          mkdir -p .pytest_cache
+
+      - name: Run backend tests for shard
+        id: backend_tests
+        run: |
+          cd backend
+          poetry run pytest --splits ${{ strategy.job-total }} --group ${{ matrix.shard }} --store-durations --maxfail=1 --tb=short --disable-warnings --quiet --junitxml=pytest-results-shard-${{ matrix.shard }}.xml || [ $? -eq 5 ]
+        env:
+          LCFS_DB_HOST: localhost
+          LCFS_DB_PORT: 5432
+          LCFS_DB_USER: lcfs
+          LCFS_DB_PASS: development_only
+          LCFS_DB_BASE: lcfs_shard_${{ matrix.shard }}
+          LCFS_REDIS_HOST: localhost
+          LCFS_REDIS_PORT: 6379
+          LCFS_REDIS_PASSWORD: development_only
+          APP_ENVIRONMENT: dev
+          LCFS_CHES_CLIENT_ID: mock_client_id
+          LCFS_CHES_CLIENT_SECRET: mock_client_secret
+          LCFS_CHES_AUTH_URL: http://mock_auth_url
+          LCFS_CHES_SENDER_EMAIL: noreply@gov.bc.ca
+          LCFS_CHES_SENDER_NAME: Mock Notification System
+          LCFS_CHES_EMAIL_URL: http://mock_email_url
+
+      - name: Upload pytest results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results-shard-${{ matrix.shard }}
+          path: backend/pytest-results-shard-${{ matrix.shard }}.xml
+
+  post-backend-tests:
+    name: 'Publish Backend Test Results'
+    if: always()
+    needs: backend-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: pytest-results-shard-*
+          merge-multiple: true
+
+      - name: Merge test results
+        run: |
+          pip install junitparser
+          cat > merge_results.py << 'EOF'
+          import glob
+          from junitparser import JUnitXml
+
+          suites = []
+          for file in glob.glob('pytest-results-shard-*.xml'):
+              suites.append(JUnitXml.fromfile(file))
+
+          merged = JUnitXml()
+          for suite in suites:
+              for testsuite in suite:
+                  merged.add_testsuite(testsuite)
+
+          merged.write('merged-pytest-results.xml')
+          EOF
+          python3 merge_results.py
+
+      - name: Publish Backend Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: merged-pytest-results.xml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          comment_title: 'Backend Test Results'
+          check_name: 'Backend Test Results'
+          fail_on: 'errors'
+          report_individual_runs: 'true'
+          deduplicate_classes_by_file_name: 'true'
+
+  frontend-setup:
+    name: 'Frontend Setup'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: |
+            frontend
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci --prefer-offline --no-audit --no-fund
+
+      - name: Type Check Frontend (parallel)
+        run: |
+          cd frontend
+          npm run type-check &
+          TYPE_CHECK_PID=$!
+          wait $TYPE_CHECK_PID
+
+      - name: Cache node_modules for test shards
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-modules-shared-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-shared-
+
+  frontend-tests:
+    name: 'Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})'
+    needs: frontend-setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shardIndex:
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31,
+            32,
+          ]
+        shardTotal: [32]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: |
+            frontend
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-modules-shared-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-modules-shared-
+            ${{ runner.os }}-node-modules-
+
+      - name: Install frontend dependencies (fallback)
+        run: |
+          cd frontend
+          if [ ! -d "node_modules" ]; then
+            npm ci --prefer-offline --no-audit --no-fund
+          fi
+
+      - name: Run frontend tests
+        id: frontend_tests
+        run: |
+          cd frontend
+          npm run test:ci:memory
+        env:
+          CI: true
+          SHARD_INDEX: ${{ matrix.shardIndex }}
+          SHARD_TOTAL: ${{ matrix.shardTotal }}
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          VITEST_REPORTER: 'blob'
+          VITEST_POOL_THREADS: '4'
+
+      - name: Upload blob report to GitHub Actions Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-${{ matrix.shardIndex }}
+          path: frontend/.vitest-reports/*
+          include-hidden-files: true
+          retention-days: 1
+          compression-level: 9
+
+  post-frontend-tests:
+    name: 'Publish Frontend Test Results'
+    if: always()
+    needs: [frontend-tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Download blob reports from GitHub Actions Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: frontend/.vitest-reports
+          pattern: blob-report-*
+          merge-multiple: true
+
+      - name: Merge reports
+        run: |
+          cd frontend
+          npx --yes vitest@3.0.9 --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
+
+      - name: Publish Frontend Test Results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: frontend/.vitest-reports/vitest-results.xml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          comment_title: 'Frontend Test Results'
+          check_name: 'Frontend Test Results'
+          fail_on: 'errors'
+          report_individual_runs: 'true'
+          deduplicate_classes_by_file_name: 'true'
+
+  teams-notification:
+    needs: [post-backend-tests, post-frontend-tests]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Determine Test Status
+        id: test_status
+        run: |
+          if [[ "${{ contains(needs.post-backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.post-frontend-tests.result, 'failure') }}" == "true" ]]; then
+            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "theme_color=FF0000" >> $GITHUB_OUTPUT
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "theme_color=00FF00" >> $GITHUB_OUTPUT
+          fi
+      - name: Send custom Teams notification
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          REPO="${{ github.repository }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
+          AVATAR_URL="${{ github.event.pull_request.user.avatar_url }}"
+          THREAD_ID="pr-${PR_NUMBER}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.post-backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
+          COLOR="${{ steps.test_status.outputs.theme_color }}"
+          cat <<EOF > teams_card.json
+          {
+            "@type": "MessageCard",
+            "@context": "http://schema.org/extensions",
+            "themeColor": "$COLOR",
+            "summary": "GitHub Notification for PR #$PR_NUMBER",
+            "sections": [
+              {
+                "activityTitle": "$PR_TITLE - PR #$PR_NUMBER",
+                "activitySubtitle": "Repository: $REPO, Author: $PR_AUTHOR",
+                "activityImage": "$AVATAR_URL",
+                "facts": [
+                  { "name": "Repository", "value": "$REPO" },
+                  { "name": "PR Title", "value": "$PR_TITLE" },
+                  { "name": "Branch", "value": "${{ github.head_ref }}" },
+                  { "name": "Commit", "value": "$COMMIT_SHA" },
+                ],
+                "text": "$MESSAGE",
+                "markdown": true
+              }
+            ],
+            "replyToId": "$THREAD_ID",
+            "potentialAction": [
+              {
+                "@type": "OpenUri",
+                "name": "View Pull Request",
+                "targets": [
+                  {
+                    "os": "default",
+                    "uri": "$PR_URL"
+                  }
+                ]
+              },
+              {
+                "@type": "OpenUri",
+                "name": "View Workflow Run",
+                "targets": [
+                  {
+                    "os": "default",
+                    "uri": "$WORKFLOW_URL"
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+          curl -H "Content-Type: application/json" -d @teams_card.json "${{ secrets.TEAMS_WEBHOOK_URL }}"

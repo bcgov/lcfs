@@ -59,6 +59,7 @@ autoflake = "^1.6.1"
 pytest-cov = "^4.0.0"
 anyio = "^3.6.2"
 pytest-env = "^0.8.1"
+pytest-split = "^0.10.0"
 fakeredis = "^2.5.0"
 rich = "^13.9.4"
 
@@ -97,6 +98,18 @@ filterwarnings = [
 env = [
     "APP_ENVIRONMENT=pytest",
     "LCFS_DB_BASE=lcfs_test",
+]
+# Test discovery patterns
+testpaths = ["lcfs/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# Disable warnings for cleaner output
+addopts = [
+    "--tb=short",
+    "--strict-markers",
+    "--disable-warnings",
+    "-v"
 ]
 
 [fastapi-template.options]
