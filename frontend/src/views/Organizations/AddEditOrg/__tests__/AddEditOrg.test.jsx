@@ -1,5 +1,6 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useForm, FormProvider } from 'react-hook-form'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
@@ -185,7 +186,7 @@ describe('AddEditOrg', () => {
 
   it('submits form data correctly', async () => {
     useOrganization.mockReturnValue({
-      data: mockedOrg,
+      data: null, // Start with no data for new organization
       isFetched: true
     })
 
@@ -209,45 +210,36 @@ describe('AddEditOrg', () => {
       isError: false
     }))
 
-    render(
-      <MockFormProvider>
-        <AddEditOrgForm />
-      </MockFormProvider>,
-      { wrapper }
-    )
+    render(<AddEditOrgForm />, { wrapper })
 
-    // Fill in the required form fields
-    fireEvent.change(screen.getByLabelText(/org:legalNameLabel/i), {
-      target: { value: 'New Test Org Legal' }
-    })
-    fireEvent.change(screen.getByLabelText(/org:operatingNameLabel/i), {
-      target: { value: 'New Test Org Operating' }
-    })
-    fireEvent.change(screen.getByLabelText(/org:emailAddrLabel/i), {
-      target: { value: 'new-test@example.com' }
-    })
-    fireEvent.change(screen.getByLabelText(/org:phoneNbrLabel/i), {
-      target: { value: '555-123-4567' }
-    })
-    // Supplier Type Radio (Assuming value '1' is valid)
-    fireEvent.click(screen.getByLabelText(/supplier/i))
+    const user = userEvent.setup()
+    
+    // Fill in the required form fields using specific input element selectors
+    await user.type(document.getElementById('orgLegalName'), 'New Test Org Legal')
+    await user.type(document.getElementById('orgOperatingName'), 'New Test Org Operating')
+    await user.type(document.getElementById('orgEmailAddress'), 'new-test@example.com')
+    await user.type(document.getElementById('orgPhoneNumber'), '555-123-4567')
+    
+    // Supplier Type Radio - click the correct radio button
+    await user.click(screen.getByTestId('orgSupplierType1'))
+    
     // Registered for Transfers Radio (value="2" is Yes)
-    fireEvent.click(screen.getByTestId('orgRegForTransfers2'))
-    // Service Address Fields
-    fireEvent.change(screen.getAllByLabelText(/org:streetAddrLabel/i)[0], {
-      target: { value: '100 Test Service St' }
-    })
-    fireEvent.change(screen.getAllByLabelText(/org:cityLabel/i)[0], {
-      target: { value: 'Testville' }
-    })
-    fireEvent.change(screen.getAllByLabelText(/org:poLabel/i)[0], {
-      target: { value: 'V8V 8V8' }
-    })
+    await user.click(screen.getByTestId('orgRegForTransfers2'))
+    
+    // Service Address Fields - handle the AddressAutocomplete field
+    // Find the autocomplete input for street address (it has a placeholder "Start typing address...")
+    const streetAddressInputs = screen.getAllByPlaceholderText('Start typing address...')
+    await user.type(streetAddressInputs[0], '100 Test Service St')
+    
+    // Fill other required address fields
+    await user.type(document.getElementById('orgCity'), 'Testville')
+    await user.type(document.getElementById('orgPostalCodeZipCode'), 'V8V8V8')
+    
     // Early Issuance Radio (value="yes" is Yes)
-    fireEvent.click(screen.getByTestId('hasEarlyIssuanceYes'))
+    await user.click(screen.getByTestId('hasEarlyIssuanceYes'))
 
     // Submit the form
-    fireEvent.click(screen.getByTestId('saveOrganization'))
+    await user.click(screen.getByTestId('saveOrganization'))
 
     // Wait for the API call to be made
     await waitFor(

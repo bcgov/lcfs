@@ -9,6 +9,7 @@ import {
   calculateTotalValue,
   currencyFormatter,
   dateFormatter,
+  dateToLongString,
   phoneNumberFormatter,
   formatNumberWithCommas,
   spacesFormatter,
@@ -374,5 +375,23 @@ describe('formatNumberWithoutCommas', () => {
 
   it('should return undefined for invalid numbers', () => {
     expect(formatNumberWithoutCommas('abc')).toEqual(undefined)
+  })
+})
+
+describe('dateToLongString', () => {
+  it('should format a date string to a long string format', () => {
+    expect(dateToLongString('2024-01-01')).toBe('January 1, 2024')
+    expect(dateToLongString('2025-12-31')).toBe('December 31, 2025')
+  })
+
+  it('should handle different valid date strings', () => {
+    expect(dateToLongString('2023-02-28T10:00:00Z')).toBe('February 28, 2023')
+  })
+
+  it('should return an empty string for invalid or empty input', () => {
+    expect(dateToLongString(null)).toBe('')
+    expect(dateToLongString(undefined)).toBe('')
+    expect(dateToLongString('')).toBe('')
+    expect(dateToLongString('not a date')).toBe('Invalid Date')
   })
 })
