@@ -1,6 +1,6 @@
 import { Given, When, Then } from '@badeball/cypress-cucumber-preprocessor'
 
-Given('the analyst logs in with valid credentials', () => {
+Given('the analyst logs in with valid credentials for transactions', () => {
   cy.loginWith(
     'idir',
     Cypress.env('ADMIN_IDIR_USERNAME'),

@@ -42,7 +42,7 @@ When('the IDIR user submits the form', () => {
   cy.get('button[data-test="saveUser"]').click()
 })
 
-Then('a success message is displayed', () => {
+Then('a success message is displayed for user creation', () => {
   cy.get("[data-test='alert-box'] .MuiBox-root").should(
     'contain',
     'User has been successfully saved.'
