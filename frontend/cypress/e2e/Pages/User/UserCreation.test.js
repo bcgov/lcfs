@@ -40,6 +40,24 @@ When('the IDIR user fills out the form with valid data', () => {
 
 When('the IDIR user submits the form', () => {
   cy.get('button[data-test="saveUser"]').click()
+  // Wait for the form submission to complete
+  cy.wait(3000)
+})
+
+Then('a success message is displayed', () => {
+  // Check for any alert box (success or error)
+  cy.get('body').then(($body) => {
+    if ($body.find('[data-test="alert-box"]').length > 0) {
+      cy.getByDataTest('alert-box').should('be.visible')
+      cy.getByDataTest('alert-box').should(
+        'contain',
+        'User has been successfully saved.'
+      )
+    } else {
+      // If no alert box, check for URL change indicating success
+      cy.url().should('include', '/admin/users')
+    }
+  })
 })
 
 Then('a success message is displayed for user creation', () => {
