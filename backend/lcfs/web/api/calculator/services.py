@@ -128,7 +128,7 @@ class CalculatorService:
         # Return Credits result
         return CreditsResultSchema(
             rci=round(fuel_data.effective_carbon_intensity, 2),
-            tci=round(fuel_data.target_ci, 2),
+            tci=round(fuel_data.target_ci, 5),
             eer=round(fuel_data.eer, 2),
             energy_density=round(fuel_data.energy_density or 0, 2),
             uci=fuel_data.uci,
