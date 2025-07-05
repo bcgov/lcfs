@@ -99,12 +99,16 @@ When('the director logs in with valid credentials', () => {
 When('the director selects a recommended transaction', () => {
   cy.get('a[href="/transactions"]').click()
   cy.wait(5000)
+  // Wait for the transactions to load and look for a recommended transaction
+  cy.get('[data-test="bc-grid-container"]', { timeout: 10000 }).should('exist')
   cy.get('div[row-index="0"]').click()
   cy.wait(5000)
 })
 
 When('the director approves the transaction', () => {
-  cy.get('#approve-btn').should('exist')
+  // Wait for the page to fully load before checking for the approve button
+  cy.wait(3000)
+  cy.get('#approve-btn', { timeout: 10000 }).should('be.visible')
   cy.get('#approve-btn').click()
   cy.get('.MuiDialog-container')
     .should('exist')

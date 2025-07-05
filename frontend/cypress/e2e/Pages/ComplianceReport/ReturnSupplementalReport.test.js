@@ -17,7 +17,7 @@ Given('the user is on the login page', () => {
   cy.visit('/', { timeout: 60000 })
 })
 
-Given('the analyst logs in with valid credentials', () => {
+Given('the analyst logs in with valid credentials for compliance reports', () => {
   cy.loginWith(
     'idir',
     Cypress.env('ADMIN_IDIR_USERNAME'),
@@ -67,7 +67,7 @@ Then('the supplemental report is set to Draft status', () => {
     .should('contain', 'Draft')
 })
 
-Then('a success message is displayed', () => {
+Then('a success message is displayed for report return', () => {
   // The exact message will depend on your implementation - check actual UI
   cy.contains(/report.*returned|returned.*report/i).should('be.visible')
 })
