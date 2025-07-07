@@ -1,8 +1,8 @@
 -- ==========================================
 -- Compliance Reports Analytics View
 -- ==========================================
-drop view if exists vw_compliance_report_base cascade;
-CREATE OR REPLACE VIEW vw_compliance_report_base AS
+drop view if exists vw_compliance_report_analytics_base cascade;
+CREATE OR REPLACE VIEW vw_compliance_report_analytics_base AS
 SELECT compliance_report_id,
     compliance_report_group_uuid,
     version,
@@ -33,7 +33,7 @@ SELECT compliance_report_id,
              JOIN compliance_report_status crs ON crs.compliance_report_status_id = vcr.report_status_id AND (crs.status <> ALL (ARRAY['Draft'::compliancereportstatusenum, 'Analyst_adjustment'::compliancereportstatusenum]))) ranked_reports
   WHERE rn = 1;
 
-GRANT SELECT ON vw_compliance_report_base, compliance_report_history TO basic_lcfs_reporting_role;
+GRANT SELECT ON vw_compliance_report_analytics_base, compliance_report_history TO basic_lcfs_reporting_role;
 
 -- ==========================================
 -- Compliance Reports Waiting review
@@ -47,7 +47,7 @@ WITH latest_history AS (
         cr.compliance_report_group_uuid,
         ROW_NUMBER() OVER (PARTITION BY cr.compliance_report_group_uuid ORDER BY crh.create_date DESC) AS rn
     FROM
-        vw_compliance_report_base cr
+        vw_compliance_report_analytics_base cr
         JOIN compliance_report_history crh ON cr.compliance_report_id = crh.compliance_report_id
     WHERE
         crh.status_id != 1
@@ -60,7 +60,7 @@ SELECT
     DATE_PART('epoch', NOW() - lh.create_date) / 86400 AS days_in_status
 FROM
     latest_history lh
-    JOIN vw_compliance_report_base cr ON cr.compliance_report_id = lh.compliance_report_id
+    JOIN vw_compliance_report_analytics_base cr ON cr.compliance_report_id = lh.compliance_report_id
     JOIN compliance_report_status crs ON cr.report_status_id = crs.compliance_report_status_id
     JOIN compliance_period ON compliance_period.compliance_period_id = cr.compliance_period_id
     JOIN organization ON cr.organization_id = organization.organization_id
@@ -403,7 +403,7 @@ WITH
         SELECT
           vcrb.compliance_report_group_uuid
         FROM
-          vw_compliance_report_base vcrb
+          vw_compliance_report_analytics_base vcrb
       )
   )
 SELECT DISTINCT
@@ -454,7 +454,7 @@ SELECT DISTINCT
 FROM
   selected_fs fs
   JOIN grouped_reports gr ON fs.compliance_report_id = gr.compliance_report_id
-  JOIN vw_compliance_report_base vcrb ON vcrb.compliance_report_group_uuid = gr.compliance_report_group_uuid
+  JOIN vw_compliance_report_analytics_base vcrb ON vcrb.compliance_report_group_uuid = gr.compliance_report_group_uuid
   JOIN compliance_period cp ON gr.compliance_period_id = cp.compliance_period_id
   JOIN organization org ON gr.organization_id = org.organization_id
   LEFT JOIN fuel_code fc ON fs.fuel_code_id = fc.fuel_code_id
@@ -1429,43 +1429,139 @@ GRANT SELECT ON vw_allocation_agreement_base TO basic_lcfs_reporting_role;
 drop view if exists vw_fuel_code_base cascade;
 CREATE OR REPLACE VIEW vw_fuel_code_base AS
 SELECT
-    fuel_code.fuel_code_id AS "ID",
-    fuel_code_prefix.prefix AS "Prefix",
-    fuel_code.fuel_suffix AS "Suffix",
-    fuel_code_status.status AS "Status",
-    fuel_type.fuel_type AS "Fuel Type",
-    fuel_code.company AS "Company",
-    fuel_code.contact_name AS "Contact Name",
-    fuel_code.contact_email AS "Contact Email",
-    fuel_code.carbon_intensity AS "Carbon Intensity",
-    fuel_code.edrms AS "EDRMS",
-    fuel_code.last_updated AS "Last Updated",
-    fuel_code.application_date AS "Application Date",
-    fuel_code.approval_date AS "Approval Date",
-    fuel_code.feedstock AS "Feedstock",
-    fuel_code.feedstock_location AS "Feedstock Location",
-    fuel_code.feedstock_misc AS "Feedstock Misc",
-    fuel_code.fuel_production_facility_city AS "Facility City",
-    fuel_code.fuel_production_facility_province_state AS "Facility State",
-    fuel_code.fuel_production_facility_country AS "Facility Country",
-    fuel_code.facility_nameplate_capacity AS "Facility Capacity",
-    fuel_code.facility_nameplate_capacity_unit AS "Capacity Unit",
-    fuel_code.former_company AS "Former Company",
-    fuel_code.notes AS "Notes"
-FROM
-    fuel_code
-    JOIN fuel_code_prefix ON fuel_code.prefix_id = fuel_code_prefix.fuel_code_prefix_id
-    JOIN fuel_code_status ON fuel_code.fuel_status_id = fuel_code_status.fuel_code_status_id
-    JOIN fuel_type ON fuel_code.fuel_type_id = fuel_type.fuel_type_id
-WHERE
-    fuel_code_status.status != 'Deleted';
-
--- Grant permissions
+    fc.fuel_code_id,
+    fcp.fuel_code_prefix_id,
+    fcp.prefix,
+    fc.fuel_suffix,
+    fcs.fuel_code_status_id,
+    fcs.status,
+    ft.fuel_type_id,
+    ft.fuel_type,
+    fc.company,
+    fc.contact_name,
+    fc.contact_email,
+    fc.carbon_intensity,
+    fc.edrms,
+    fc.last_updated,
+    fc.application_date,
+    fc.approval_date,
+    fc.create_date,
+    fc.effective_date,
+    fc.expiration_date,
+    fc.effective_status,
+    fc.feedstock,
+    fc.feedstock_location,
+    fc.feedstock_misc,
+    fc.fuel_production_facility_city,
+    fc.fuel_production_facility_province_state,
+    fc.fuel_production_facility_country,
+    fc.facility_nameplate_capacity,
+    fc.facility_nameplate_capacity_unit,
+    fc.former_company,
+    finished_modes.transport_modes AS finished_fuel_transport_modes,
+    feedstock_modes.transport_modes AS feedstock_fuel_transport_modes,
+    fc.notes
+FROM fuel_code fc
+JOIN fuel_code_prefix fcp ON fc.prefix_id = fcp.fuel_code_prefix_id
+JOIN fuel_code_status fcs ON fc.fuel_status_id = fcs.fuel_code_status_id
+JOIN fuel_type ft ON fc.fuel_type_id = ft.fuel_type_id
+LEFT JOIN LATERAL (
+    SELECT ARRAY_AGG(tm.transport_mode ORDER BY tm.transport_mode) AS transport_modes
+    FROM finished_fuel_transport_mode fftm
+    JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
+    WHERE fftm.fuel_code_id = fc.fuel_code_id
+) finished_modes ON TRUE
+LEFT JOIN LATERAL (
+    SELECT ARRAY_AGG(tm.transport_mode ORDER BY tm.transport_mode) AS transport_modes
+    FROM feedstock_fuel_transport_mode fftm
+    JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
+    WHERE fftm.fuel_code_id = fc.fuel_code_id
+) feedstock_modes ON TRUE
+WHERE fcs.status != 'Deleted';
 GRANT SELECT ON vw_fuel_code_base TO basic_lcfs_reporting_role;
-
-GRANT SELECT ON 
-    fuel_code, 
-    fuel_code_prefix, 
-    fuel_code_status, 
-    fuel_type 
-TO basic_lcfs_reporting_role;
+GRANT SELECT ON fuel_code, fuel_code_prefix, fuel_code_status, fuel_type, fuel_category TO basic_lcfs_reporting_role;
+-- ==========================================
+-- Compliance Reports List View
+-- ==========================================
+create or replace view v_compliance_report as
+WITH latest_versions AS (
+    -- Use window function instead of GROUP BY for better performance
+    SELECT DISTINCT
+        compliance_report_group_uuid,
+        FIRST_VALUE(version) OVER (
+            PARTITION BY compliance_report_group_uuid 
+            ORDER BY version DESC
+        ) as max_version,
+        FIRST_VALUE(current_status_id) OVER (
+            PARTITION BY compliance_report_group_uuid 
+            ORDER BY version DESC
+        ) as latest_status_id,
+        FIRST_VALUE(crs.status) OVER (
+            PARTITION BY compliance_report_group_uuid 
+            ORDER BY version DESC
+        ) as latest_status,
+        FIRST_VALUE(supplemental_initiator) OVER (
+            PARTITION BY compliance_report_group_uuid 
+            ORDER BY version DESC
+        ) as latest_supplemental_initiator,
+        FIRST_VALUE(cr.create_date) OVER (
+            PARTITION BY compliance_report_group_uuid 
+            ORDER BY version DESC
+        ) as latest_supplemental_create_date
+    FROM compliance_report cr
+    JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
+),
+versioned_reports AS (
+    -- Single scan to get both latest and second-latest with their statuses
+    SELECT 
+        cr.*,
+        crs.status,
+        ROW_NUMBER() OVER (
+            PARTITION BY cr.compliance_report_group_uuid 
+            ORDER BY cr.version DESC
+        ) as version_rank,
+        lws.latest_supplemental_initiator,
+        lws.latest_supplemental_create_date,
+        lws.latest_status
+    FROM compliance_report cr
+    JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
+    JOIN latest_versions lws ON cr.compliance_report_group_uuid = lws.compliance_report_group_uuid
+),
+selected_reports AS (
+    SELECT *
+    FROM versioned_reports vr
+    WHERE version_rank = 1  -- Always include latest
+       OR (version_rank = 2   -- Include second-latest when LATEST has these conditions
+           AND (vr.latest_status IN ('Draft','Analyst_adjustment') 
+                OR vr.latest_supplemental_initiator = 'GOVERNMENT_REASSESSMENT'))
+)
+SELECT DISTINCT
+    sr.compliance_report_id,
+    sr.compliance_report_group_uuid,
+    sr.version,
+    cp.compliance_period_id,
+    cp.description AS compliance_period,
+    o.organization_id,
+    o.name AS organization_name,
+    sr.nickname AS report_type,
+    sr.current_status_id AS report_status_id,
+    case when sr.latest_status = 'Draft'
+	      and sr.version_rank = 2 -- not the latest report
+	      and sr.latest_supplemental_initiator = 'GOVERNMENT_INITIATED'::supplementalinitiatortype 
+	      	then 'Supplemental_requested'::compliancereportstatusenum 
+	     else sr.status 
+	 end as report_status,
+    sr.update_date,
+    sr.supplemental_initiator,
+    sr.reporting_frequency,
+    sr.legacy_id,
+    sr.transaction_id,
+    sr.assessment_statement,
+    (sr.version_rank = 1) as is_latest,
+    sr.latest_supplemental_initiator as latest_report_supplemental_initiator,
+    sr.latest_supplemental_create_date,
+    sr.latest_status
+FROM selected_reports sr
+JOIN compliance_period cp ON sr.compliance_period_id = cp.compliance_period_id
+JOIN organization o ON sr.organization_id = o.organization_id
+ORDER BY sr.compliance_report_group_uuid, sr.version DESC;

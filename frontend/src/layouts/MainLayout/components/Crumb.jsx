@@ -17,9 +17,11 @@ const StyledBreadcrumb = styled(Chip)(({ theme }) => {
     fontWeight: theme.typography.fontWeightRegular,
     fontSize: theme.typography.pxToRem(16),
     borderRadius: theme.borders.borderRadius.xl,
-    padding: theme.spacing(1.8, 1),
+    '& span': {
+      padding: 0
+    },
     '&:hover, &:focus': {
-      backgroundColor: emphasize(backgroundColor, 0.06)
+      // backgroundColor: emphasize(backgroundColor, 0.06)
     },
     '&:active': {
       boxShadow: theme.shadows[1],
@@ -62,7 +64,10 @@ const Crumb = () => {
         separator={
           <NavigateNextIcon fontSize="small" aria-label="breadcrumb" />
         }
-        sx={{ '& li': { marginX: '-2px' } }}
+        sx={{
+          '& li': { marginX: 0 },
+          '&>ol': { gap: 2 }
+        }}
       >
         {pathnames.length > 0 && (
           <StyledBreadcrumb
@@ -71,9 +76,14 @@ const Crumb = () => {
             label={'Home'}
             sx={{
               cursor: 'pointer',
+              padding: 0,
               '& .MuiChip-label': {
                 color: 'link.main',
-                overflow: 'initial'
+                overflow: 'initial',
+                padding: 0
+              },
+              '& span': {
+                padding: 0
               },
               '& span:hover': {
                 textDecoration: 'underline'
@@ -81,6 +91,7 @@ const Crumb = () => {
             }}
           />
         )}
+
         {pathnames.map((name, index) => {
           const isLast = index === pathnames.length - 1
           const customCrumb = customBreadcrumbs[name] || {}
@@ -96,7 +107,7 @@ const Crumb = () => {
           return isLast ? (
             <StyledBreadcrumb
               component={Typography}
-              sx={{ textTransform: 'none' }}
+              sx={{ textTransform: 'none', padding: 0, '&>*': { padding: 0 } }}
               label={
                 title && title !== ''
                   ? title
@@ -123,6 +134,7 @@ const Crumb = () => {
                   displayName
                 }
                 sx={{
+                  padding: 0,
                   cursor: 'pointer',
                   '& .MuiChip-label': {
                     color: 'link.main',

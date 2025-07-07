@@ -75,11 +75,6 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
 
-  // Early return if report is deleted or being deleted
-  if (isDeleted || isDeleting) {
-    return <Loading />
-  }
-
   const scrollToTopOrBottom = () => {
     if (isScrollingUp) {
       window.scrollTo({
@@ -161,7 +156,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           ? new Date(updateDate)
           : now
 
-      // Get month (0-11) and calculate quarter
+      // Get month (0-11) and calculate quarter based on Early Issuance schedule
       const month = submittedDate.getMonth()
       const submittedYear = submittedDate.getFullYear()
       const currentYear = now.getFullYear()
@@ -169,15 +164,21 @@ export const EditViewComplianceReport = ({ isError, error }) => {
         (isDraft && currentYear > parseInt(compliancePeriod)) ||
         submittedYear > parseInt(compliancePeriod)
       ) {
-        quarter = 4
-      } else if (month >= 0 && month <= 2) {
-        quarter = 1 // Jan-Mar: Q1
-      } else if (month >= 3 && month <= 5) {
-        quarter = 2 // Apr-Jun: Q2
+        // For drafts created in Jan/Feb of years after the compliance period,
+        // treat them as Q1 instead of Q4 since they're early in the calendar year
+        if (isDraft && currentYear > parseInt(compliancePeriod) && (month === 0 || month === 1)) {
+          quarter = 1
+        } else {
+          quarter = 4
+        }
+      } else if (month >= 2 && month <= 5) {
+        quarter = 1 // Mar-Jun: Q1
       } else if (month >= 6 && month <= 8) {
-        quarter = 3 // Jul-Sep: Q3
+        quarter = 2 // Jul-Sep: Q2
+      } else if (month >= 9 && month <= 11) {
+        quarter = 3 // Oct-Dec: Q3
       } else {
-        quarter = 4 // Oct-Dec: Q4
+        quarter = 4 // Jan-Feb: Q4
       }
     }
 
@@ -565,7 +566,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   return (
     <>
       <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
-      <BCBox pl={2} pr={2}>
+      <BCBox>
         <BCModal
           open={!!modalData}
           onClose={() => setModalData(null)}
@@ -613,14 +614,14 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               chain={reportData?.chain}
             />
           </Stack>
+          <ReportDetails
+            canEdit={canEdit}
+            currentStatus={currentStatus}
+            hasRoles={hasRoles}
+            complianceReportData={reportData}
+          />
           {!location.state?.newReport && (
             <>
-              <ReportDetails
-                canEdit={canEdit}
-                currentStatus={currentStatus}
-                hasRoles={hasRoles}
-                complianceReportData={reportData}
-              />
               {!showEarlyIssuanceSummary && (
                 <ComplianceReportSummary
                   reportID={complianceReportId}
