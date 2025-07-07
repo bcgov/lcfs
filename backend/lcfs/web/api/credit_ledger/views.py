@@ -20,7 +20,7 @@ router = APIRouter()
     response_model=CreditLedgerListSchema,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.SUPPLIER])
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
 async def get_credit_ledger(
     request: Request,
     organization_id: int = Path(..., ge=1),

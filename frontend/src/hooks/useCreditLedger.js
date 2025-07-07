@@ -54,8 +54,12 @@ export const useCreditLedger = (
 export const useDownloadCreditLedger = (apiOpts) => {
   const api = useApiService(apiOpts)
   return ({ orgId, complianceYear, format = 'xlsx' }) =>
-    api.download(apiRoutes.exportCreditLedger.replace(':orgID', orgId), {
-      ...(complianceYear && { compliance_year: complianceYear }),
-      format
+    api.download({
+      url: apiRoutes.exportCreditLedger.replace(':orgID', orgId),
+      method: 'get',
+      params: {
+        ...(complianceYear && { compliance_year: complianceYear }),
+        format
+      }
     })
 }
