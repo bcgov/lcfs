@@ -4,20 +4,25 @@ import { FuelExportChangelog } from '../FuelExportChangelog'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
-  useGetComplianceReport,
+  useComplianceReportWithCache,
   useGetChangeLog
 } from '@/hooks/useComplianceReports'
 import { useParams, useSearchParams } from 'react-router-dom'
 
 // Mock Loading component
 vi.mock('@/components/Loading', () => ({
-  default: () => <div>Loading...</div>
+  default: () => <div data-test="loading">Loading...</div>
 }))
 
-// Mock BCDataGridServer component
-vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
-  default: ({ apiData }) => (
-    <div data-test={`grid-${apiData}`}>Grid Component</div>
+// Mock BCGridViewer component
+vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({
+  BCGridViewer: ({ gridKey, queryData }) => (
+    <div data-test="bc-grid-container">
+      <div data-test="grid-key">{gridKey}</div>
+      <div data-test="grid-data">
+        {JSON.stringify(queryData?.data?.items || [])}
+      </div>
+    </div>
   )
 }))
 
@@ -26,13 +31,45 @@ vi.mock('@/components/BCTypography', () => ({
   default: ({ children, ...props }) => <div {...props}>{children}</div>
 }))
 
+// Mock schema
+vi.mock('./_schema', () => ({
+  changelogColDefs: () => [
+    { field: 'fuelType', headerName: 'Fuel Type' },
+    { field: 'actionType', headerName: 'Action' }
+  ],
+  changelogCommonColDefs: (highlight) => [
+    { field: 'fuelType', headerName: 'Fuel Type' },
+    { field: 'quantity', headerName: 'Quantity' }
+  ]
+}))
+
+// Mock constants
+vi.mock('@/constants/schedules.js', () => ({
+  defaultInitialPagination: {
+    page: 1,
+    size: 10,
+    filters: [],
+    sortOrders: []
+  }
+}))
+
+// Mock colors
+vi.mock('@/themes/base/colors', () => ({
+  default: {
+    alerts: {
+      error: { background: '#ffebee' },
+      success: { background: '#e8f5e8' }
+    }
+  }
+}))
+
 // Mock the hooks
 vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn()
 }))
 
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useGetComplianceReport: vi.fn(),
+  useComplianceReportWithCache: vi.fn(),
   useGetChangeLog: vi.fn()
 }))
 
@@ -51,6 +88,8 @@ vi.mock('react-i18next', () => ({
 
 describe('FuelExportChangelog', () => {
   beforeEach(() => {
+    vi.resetAllMocks()
+
     // Setup mock return values
     useCurrentUser.mockReturnValue({
       data: {
@@ -60,12 +99,11 @@ describe('FuelExportChangelog', () => {
       }
     })
 
-    useGetComplianceReport.mockReturnValue({
+    useComplianceReportWithCache.mockReturnValue({
       data: {
         report: {
-          nickname: 'Test Report'
-        },
-        chain: []
+          complianceReportGroupUuid: 'test-group-uuid'
+        }
       },
       isLoading: false
     })
@@ -84,14 +122,14 @@ describe('FuelExportChangelog', () => {
     ])
   })
 
-  it('should render both data grids', () => {
+  it('should render changelog grid when data is available', () => {
     render(<FuelExportChangelog />, { wrapper })
 
-    // Debug the rendered output
-    screen.debug()
-
-    // Check if both grid components are rendered
+    // Check if grid component is rendered
     expect(screen.getByTestId('bc-grid-container')).toBeInTheDocument()
+    expect(screen.getByTestId('grid-key')).toHaveTextContent(
+      'fuel-exports-changelog-0'
+    )
   })
 
   it('should display report nickname', () => {
@@ -100,7 +138,7 @@ describe('FuelExportChangelog', () => {
   })
 
   it('should show loading state', () => {
-    useGetComplianceReport.mockReturnValue({
+    useComplianceReportWithCache.mockReturnValue({
       data: null,
       isLoading: true
     })
@@ -110,26 +148,30 @@ describe('FuelExportChangelog', () => {
     })
 
     render(<FuelExportChangelog />, { wrapper })
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+    expect(screen.getByTestId('loading')).toBeInTheDocument()
   })
 
-  it('should handle latest assessed report', () => {
-    useGetComplianceReport.mockReturnValue({
-      data: {
-        report: {
-          complianceReportGroupUuid: 'uuid'
-        }
-      },
-      isLoading: false
-    })
+  it('should handle changelog data with fuel exports', () => {
     useGetChangeLog.mockReturnValue({
-      data: [{ nickname: 'Test Report', fuelExports: [{}] }],
+      data: [
+        {
+          nickname: 'Test Report',
+          fuelExports: [
+            { fuelExportId: 1, fuelType: 'Diesel', actionType: 'CREATE' }
+          ]
+        }
+      ],
       isLoading: false
     })
 
     render(<FuelExportChangelog />, { wrapper })
 
-    // Both grids should be rendered
+    // Grid should be rendered with data
     expect(screen.getByTestId('bc-grid-container')).toBeInTheDocument()
+    expect(screen.getByText('Test Report')).toBeInTheDocument()
+    // Check that grid data contains the expected data
+    const gridData = screen.getByTestId('grid-data')
+    expect(gridData).toHaveTextContent('"fuelExportId":1')
+    expect(gridData).toHaveTextContent('"fuelType":"Diesel"')
   })
 })

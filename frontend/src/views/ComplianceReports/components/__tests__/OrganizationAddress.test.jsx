@@ -35,7 +35,7 @@ describe('OrganizationAddress', () => {
     }
 
     setIsEditingMock = vi.fn()
-    mockMutate = vi.fn()
+    mockMutate = vi.fn().mockResolvedValue({}) // Mock to return resolved promise
 
     // 5. By default, spy on the hooks and return "happy-path" data
     vi.spyOn(

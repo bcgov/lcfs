@@ -3,7 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { OtherUsesChangelog } from '../OtherUsesChangelog'
 import { wrapper } from '@/tests/utils/wrapper'
-import { useGetChangeLog } from '@/hooks/useComplianceReports'
+import {
+  useGetChangeLog,
+  useComplianceReportWithCache
+} from '@/hooks/useComplianceReports'
 
 // Mock hooks
 vi.mock('@/hooks/useComplianceReports')
@@ -106,6 +109,21 @@ vi.mock('@/themes/base/colors', () => ({
 describe('OtherUsesChangelog', () => {
   beforeEach(() => {
     vi.resetAllMocks()
+
+    // Set up default mocks for the hooks
+    vi.mocked(useComplianceReportWithCache).mockReturnValue({
+      data: {
+        report: {
+          complianceReportGroupUuid: 'test-group-uuid'
+        }
+      },
+      isLoading: false
+    })
+
+    vi.mocked(useGetChangeLog).mockReturnValue({
+      data: [],
+      isLoading: false
+    })
   })
 
   it('shows loading component when data is loading', () => {
