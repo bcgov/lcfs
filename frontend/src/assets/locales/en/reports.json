@@ -9,7 +9,8 @@
     "type": "Type",
     "status": "Current status",
     "lastUpdated": "Last status update",
-    "assignedAnalyst": "Assigned Analyst"
+    "assignedAnalyst": "Assigned Analyst",
+    "lastComment": "Last comment"
   },
   "noReportsFound": "No compliance reports found",
   "serviceAddrLabel": "Address for service",

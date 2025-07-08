@@ -176,6 +176,7 @@ class FuelCodeRepository:
                         "fuel_code_id": fc.fuel_code_id,
                         "fuel_code": fc.fuel_code,
                         "carbon_intensity": fc.carbon_intensity,
+                        "fuel_production_facility_country": fc.fuel_production_facility_country,
                     }
                     for fc in fuel_type.fuel_codes
                 ],

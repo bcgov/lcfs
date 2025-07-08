@@ -3,7 +3,10 @@ import {
   BCSelectFloatingFilter
 } from '@/components/BCDataGrid/components'
 import { SUMMARY } from '@/constants/common'
-import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
+import {
+  ReportsStatusRenderer,
+  LastCommentRenderer
+} from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
 import { useGetComplianceReportStatuses } from '@/hooks/useComplianceReports'
 import { AssignedAnalystCell } from './AssignedAnalystCell'
@@ -19,6 +22,18 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
     cellRendererParams: {
       onRefresh
     }
+  },
+  {
+    field: 'lastComment',
+    headerName: t('report:reportColLabels.lastComment'),
+    width: 160,
+    hide: isSupplier, // Only show for IDIR users
+    cellRenderer: LastCommentRenderer,
+    sortable: false,
+    filter: false,
+    floatingFilter: false,
+    suppressHeaderFilterButton: true,
+    valueGetter: ({ data }) => data.lastComment || null
   },
   {
     field: 'compliancePeriod',

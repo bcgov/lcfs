@@ -175,6 +175,12 @@ class ComplianceReportBaseSchema(BaseSchema):
         return cls(**data)
 
 
+class LastCommentSchema(BaseSchema):
+    comment: str
+    full_name: str
+    create_date: datetime
+
+
 class ComplianceReportViewSchema(BaseSchema):
     compliance_report_id: int
     compliance_report_group_uuid: str
@@ -187,6 +193,7 @@ class ComplianceReportViewSchema(BaseSchema):
     report_status_id: int
     report_status: str
     update_date: datetime
+    last_comment: Optional[LastCommentSchema] = None
     supplemental_initiator: Optional[SupplementalInitiatorType] = None
     report_frequency: Optional[ReportingFrequency] = None
     legacy_id: Optional[int] = None
