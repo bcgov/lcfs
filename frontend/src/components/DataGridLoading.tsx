@@ -1,21 +1,19 @@
-import PropTypes from 'prop-types'
+interface DataGridLoadingProps {
+  loadingMessage?: string | null
+}
 
-const DataGridLoading = (props) => {
+const DataGridLoading = ({ loadingMessage }: DataGridLoadingProps) => {
   return (
     <div className="ag-overlay-loading-center" style={{ position: 'fixed' }}>
       <div
         className="ag-overlay-loading-center-box"
-        aria-label={props.loadingMessage}
+        aria-label={loadingMessage || undefined}
       ></div>
       <div className="ag-overlay-loading-center-text">
-        {props.loadingMessage}
+        {loadingMessage}
       </div>
     </div>
   )
-}
-
-DataGridLoading.propTypes = {
-  loadingMessage: PropTypes.string
 }
 
 export default DataGridLoading
