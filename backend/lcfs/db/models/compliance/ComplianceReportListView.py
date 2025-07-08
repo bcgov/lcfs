@@ -1,7 +1,10 @@
-from sqlalchemy import Column, Integer, String, DateTime, Enum
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, Enum
 from sqlalchemy.orm import declarative_base
 
-from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
+from lcfs.db.models.compliance.ComplianceReport import (
+    ReportingFrequency,
+    SupplementalInitiatorType,
+)
 from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 
 Base = declarative_base()
@@ -27,3 +30,11 @@ class ComplianceReportListView(Base):
     report_status_id = Column(Integer)
     report_status = Column(Enum(ComplianceReportStatusEnum))
     update_date = Column(DateTime)
+    reporting_frequency = Column(Enum(ReportingFrequency))
+    legacy_id = Column(Integer)
+    transaction_id = Column(Integer)
+    assessment_statement = Column(String)
+    is_latest = Column(Boolean)
+    latest_report_supplemental_initiator = Column(Enum(SupplementalInitiatorType))
+    latest_supplemental_create_date = Column(DateTime)
+    latest_status = Column(Enum(ComplianceReportStatusEnum))

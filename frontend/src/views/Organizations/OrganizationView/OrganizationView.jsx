@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AppBar, Tab, Tabs } from '@mui/material'
 import BCBox from '@/components/BCBox'
 import BCAlert from '@/components/BCAlert'
@@ -30,10 +30,14 @@ export const OrganizationView = () => {
 
   const location = useLocation()
   const navigate = useNavigate()
+  const { orgID } = useParams()
   const [alert, setAlert] = useState(null)
 
-  const { hasRoles } = useCurrentUser()
+  const { data: currentUser, hasRoles } = useCurrentUser()
   const isIdir = hasRoles(roles.government)
+  
+  // Get the organization ID - either from URL params (IDIR users) or from current user (BCeID users)
+  const organizationId = orgID ?? currentUser?.organization?.organizationId
 
   useEffect(() => {
     if (location.state?.message) {
@@ -46,12 +50,11 @@ export const OrganizationView = () => {
   }, [location, navigate])
 
   const tabs = [{ label: t('org:usersTab'), content: <OrganizationUsers /> }]
-  if (!isIdir) {
-    tabs.push({
-      label: t('org:creditLedgerTab'),
-      content: <CreditLedger />
-    })
-  }
+  // Add credit ledger tab for all users (both IDIR and BCeID)
+  tabs.push({
+    label: t('org:creditLedgerTab'),
+    content: <CreditLedger organizationId={organizationId} />
+  })
 
   useEffect(() => {
     function handleResize() {
