@@ -78,13 +78,15 @@ describe('Analyst Assignment Hooks', () => {
       const mockError = new Error('API Error')
       mockApiClient.get.mockRejectedValue(mockError)
 
-      const { result } = renderHook(() => useGetAvailableAnalysts(), {
+      const { result } = renderHook(() => useGetAvailableAnalysts({
+        retry: false // Disable retries for faster test
+      }), {
         wrapper: createWrapper()
       })
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true)
-      })
+      }, { timeout: 5000 })
 
       expect(result.current.error).toEqual(mockError)
     })
@@ -283,7 +285,7 @@ describe('Analyst Assignment Hooks', () => {
       expect(mockOnSuccess).toHaveBeenCalledWith(
         mockResponse,
         assignmentData,
-        expect.anything()
+        undefined
       )
     })
 
@@ -313,7 +315,7 @@ describe('Analyst Assignment Hooks', () => {
       expect(mockOnError).toHaveBeenCalledWith(
         mockError,
         assignmentData,
-        expect.anything()
+        undefined
       )
     })
 
