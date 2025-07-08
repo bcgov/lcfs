@@ -54,7 +54,7 @@ def upgrade() -> None:
     connection.execute(sa.text("insert into compliance_report_status (compliance_report_status_id, status, effective_status) values(11, 'Supplemental_requested'::compliancereportstatusenum, true);"))
 
     # Step 2: Recreate the view from metabase.sql
-    recreate_compliance_reports_view()
+    # recreate_compliance_reports_view()
 
     # Step 3: Update the data to use the new enum value
     op.execute(
