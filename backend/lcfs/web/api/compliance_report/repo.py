@@ -369,6 +369,7 @@ class ComplianceReportRepository:
                 "report_status_id": report.report_status_id,
                 "report_status": report.report_status,
                 "update_date": report.update_date,
+                "is_latest": report.is_latest,
             }
 
             # Get latest comment for this report (only for government users)
