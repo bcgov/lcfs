@@ -24,4 +24,7 @@ TEMPLATE_MAPPING = {
     "IDIR_DIRECTOR__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION": "idir_director__compliance_report__manager_recommendation.html",
     "IDIR_DIRECTOR__INITIATIVE_AGREEMENT__ANALYST_RECOMMENDATION": "idir_director__initiative_agreement__analyst_recommendation.html",
     "IDIR_DIRECTOR__TRANSFER__ANALYST_RECOMMENDATION": "idir_director__transfer__analyst_recommendation.html",
+    "IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION": "idir_director__fuel_code__analyst_recommendation.html",
+    "IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED": "idir_analyst__fuel_code__director_returned.html",
+    "IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL": "idir_analyst__fuel_code__director_approval.html",
 }

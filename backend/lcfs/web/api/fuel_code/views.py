@@ -140,7 +140,9 @@ async def get_fuel_codes(
     return await service.search_fuel_codes(pagination)
 
 
-@router.post("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_fuel_codes(
     request: Request,
@@ -215,7 +217,10 @@ async def update_fuel_code_status(
     data: FuelCodeStatusSchema,
     service: FuelCodeServices = Depends(),
 ):
-    return await service.update_fuel_code_status(fuel_code_id, data.status)
+    current_user = request.user
+    return await service.update_fuel_code_status(
+        fuel_code_id, data.status, current_user
+    )
 
 
 @router.post("", status_code=status.HTTP_200_OK)

@@ -17,6 +17,15 @@ from lcfs.web.api.base import (
     PaginationResponseSchema,
 )
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.notification.services import NotificationService
+from lcfs.web.api.notification.schema import (
+    FUEL_CODE_STATUS_NOTIFICATION_MAPPER,
+    NotificationMessageSchema,
+    NotificationRequestSchema,
+)
+from lcfs.web.api.base import NotificationTypeEnum
+import json
+from lcfs.db.models import UserProfile
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeBaseSchema,
     FuelCodeCreateUpdateSchema,
@@ -36,8 +45,13 @@ logger = structlog.get_logger(__name__)
 
 
 class FuelCodeServices:
-    def __init__(self, repo: FuelCodeRepository = Depends(FuelCodeRepository)) -> None:
+    def __init__(
+        self,
+        repo: FuelCodeRepository = Depends(FuelCodeRepository),
+        notification_service: NotificationService = Depends(NotificationService),
+    ) -> None:
         self.repo = repo
+        self.notification_service = notification_service
 
     @service_handler
     async def search_fuel_code(self, fuel_code, prefix, distinct_search):
@@ -284,14 +298,14 @@ class FuelCodeServices:
 
     @service_handler
     async def update_fuel_code_status(
-        self, fuel_code_id: int, status: FuelCodeStatusEnumSchema
+        self, fuel_code_id: int, status: FuelCodeStatusEnumSchema, user: UserProfile
     ):
         fuel_code = await self.repo.get_fuel_code(fuel_code_id)
         if not fuel_code:
             raise ValueError("Fuel code not found")
 
-        # if fuel_code.fuel_code_status.status != FuelCodeStatusEnum.Draft:
-        #     raise ValueError("Fuel code is not in Draft")
+        # Store previous status for transition detection
+        previous_status = fuel_code.fuel_code_status.status
 
         fuel_code_status = await self.repo.get_fuel_code_status(status)
         fuel_code.fuel_code_status = fuel_code_status
@@ -312,7 +326,50 @@ class FuelCodeServices:
             action_type=fuel_code.action_type,
         )
         await self.repo.create_fuel_code_history(history)
-        return await self.repo.update_fuel_code(fuel_code)
+        updated_fuel_code = await self.repo.update_fuel_code(fuel_code)
+
+        # Send notifications based on status change
+        notifications = []
+
+        # Check for specific status transitions and new statuses
+        if status == FuelCodeStatusEnum.Recommended:
+            # Draft → Recommended: notify Director
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(status, [])
+        elif status == FuelCodeStatusEnum.Approved:
+            # Recommended → Approved: notify Analyst
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(status, [])
+        elif (
+            previous_status == FuelCodeStatusEnum.Recommended
+            and status == FuelCodeStatusEnum.Draft
+        ):
+            # Recommended → Draft: notify Analyst (returned by Director)
+            notifications = [
+                NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED
+            ]
+
+        if notifications:
+            message_data = {
+                "id": fuel_code_id,
+                "status": status.value,
+                "previousStatus": previous_status.value,
+                "fuelCode": fuel_code.fuel_code,
+                "company": fuel_code.company,
+            }
+            notification_data = NotificationMessageSchema(
+                type="Fuel Code Status Update",
+                message=json.dumps(message_data),
+                related_organization_id=None,  # Fuel codes don't have organization context
+                origin_user_profile_id=user.user_profile_id,
+                related_transaction_id=str(fuel_code_id),
+            )
+            await self.notification_service.send_notification(
+                NotificationRequestSchema(
+                    notification_types=notifications,
+                    notification_data=notification_data,
+                )
+            )
+
+        return updated_fuel_code
 
     @service_handler
     async def update_fuel_code(self, fuel_code_data: FuelCodeCreateUpdateSchema):
