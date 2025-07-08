@@ -71,7 +71,9 @@ class FuelSupplyServices:
         )
         eer = EnergyEffectivenessRatioSchema(
             eer_id=row_data["eer_id"],
-            energy_effectiveness_ratio=round(row_data["energy_effectiveness_ratio"]  or 1, 2),
+            energy_effectiveness_ratio=round(
+                row_data["energy_effectiveness_ratio"] or 1, 2
+            ),
             fuel_category=fuel_category,
             end_use_type=end_use_type,
         )
@@ -91,6 +93,9 @@ class FuelSupplyServices:
                 fuel_code_prefix_id=row_data["fuel_code_prefix_id"],
                 fuel_code_carbon_intensity=round(
                     row_data["fuel_code_carbon_intensity"] or 0, 2
+                ),
+                fuel_production_facility_country=row_data.get(
+                    "fuel_production_facility_country"
                 ),
             )
             if row_data["fuel_code_id"]
