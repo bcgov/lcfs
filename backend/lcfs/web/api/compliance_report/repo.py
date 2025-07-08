@@ -71,6 +71,44 @@ class ComplianceReportRepository:
         self.db = db
         self.fuel_supply_repo = fuel_supply_repo
 
+    def _get_base_report_options(self, include_transaction: bool = True):
+        """
+        Get common joinedload options for compliance reports.
+        
+        Args:
+            include_transaction: Whether to include transaction relationship (default: True)
+        """
+        options = [
+            joinedload(ComplianceReport.organization),
+            joinedload(ComplianceReport.compliance_period),
+            joinedload(ComplianceReport.current_status),
+            joinedload(ComplianceReport.summary),
+            joinedload(ComplianceReport.history).joinedload(
+                ComplianceReportHistory.status
+            ),
+            joinedload(ComplianceReport.history)
+            .joinedload(ComplianceReportHistory.user_profile)
+            .joinedload(UserProfile.organization),
+            joinedload(ComplianceReport.assigned_analyst),
+        ]
+        
+        if include_transaction:
+            options.append(joinedload(ComplianceReport.transaction))
+            
+        return options
+
+    def _get_minimal_report_options(self):
+        """
+        Get minimal joinedload options for basic compliance report queries.
+        """
+        return [
+            joinedload(ComplianceReport.organization),
+            joinedload(ComplianceReport.compliance_period),
+            joinedload(ComplianceReport.current_status),
+            joinedload(ComplianceReport.summary),
+            joinedload(ComplianceReport.assigned_analyst),
+        ]
+
     @repo_handler
     async def get_all_compliance_periods(self) -> Sequence[CompliancePeriod]:
         # Retrieve all compliance periods from the database
@@ -427,19 +465,7 @@ class ComplianceReportRepository:
         """
         result = await self.db.execute(
             select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history)
-                .joinedload(ComplianceReportHistory.user_profile)
-                .joinedload(UserProfile.organization),
-                joinedload(ComplianceReport.transaction),
-            )
+            .options(*self._get_base_report_options())
             .where(ComplianceReport.compliance_report_id == report_id)
         )
 
@@ -466,19 +492,7 @@ class ComplianceReportRepository:
         # Build base query with all necessary joins
         query = (
             select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ),
-                joinedload(ComplianceReport.transaction),
-            )
+            .options(*self._get_base_report_options())
             .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
         )
 
@@ -503,18 +517,7 @@ class ComplianceReportRepository:
             # Reload the report with all necessary relationships
             refreshed_report = await self.db.scalar(
                 select(ComplianceReport)
-                .options(
-                    joinedload(ComplianceReport.compliance_period),
-                    joinedload(ComplianceReport.organization),
-                    joinedload(ComplianceReport.current_status),
-                    joinedload(ComplianceReport.summary),
-                    joinedload(ComplianceReport.history).joinedload(
-                        ComplianceReportHistory.status
-                    ),
-                    joinedload(ComplianceReport.history).joinedload(
-                        ComplianceReportHistory.user_profile
-                    ),
-                )
+                .options(*self._get_base_report_options(include_transaction=False))
                 .where(
                     ComplianceReport.compliance_report_id == report.compliance_report_id
                 )
@@ -561,18 +564,7 @@ class ComplianceReportRepository:
         """
         result = await self.db.execute(
             select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ),
-            )
+            .options(*self._get_base_report_options(include_transaction=False))
             .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
             .order_by(ComplianceReport.version.desc())
             .limit(1)
@@ -597,12 +589,7 @@ class ComplianceReportRepository:
         # Query for a draft report in the group
         result = await self.db.execute(
             select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-            )
+            .options(*self._get_minimal_report_options())
             .where(
                 ComplianceReport.compliance_report_group_uuid == group_uuid,
                 ComplianceReport.current_status_id
@@ -617,19 +604,7 @@ class ComplianceReportRepository:
         """
         result = await self.db.execute(
             select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ),
-                joinedload(ComplianceReport.transaction),
-            )
+            .options(*self._get_base_report_options())
             .where(ComplianceReport.legacy_id == legacy_id)
         )
         return result.scalars().unique().first()
@@ -880,3 +855,52 @@ class ComplianceReportRepository:
         )
 
         return related_reports_result.scalars().all()
+
+    @repo_handler
+    async def assign_analyst_to_report(
+        self, report_id: int, assigned_analyst_id: Optional[int]
+    ) -> None:
+        """
+        Assign or unassign an analyst to/from a compliance report.
+        """
+        compliance_report = await self.get_compliance_report_by_id(report_id)
+        if compliance_report:
+            compliance_report.assigned_analyst_id = assigned_analyst_id
+            await self.db.flush()
+
+    @repo_handler
+    async def get_user_by_id(self, user_id: int) -> Optional[UserProfile]:
+        """
+        Get a user by their ID with roles loaded.
+        """
+        from lcfs.db.models.user.UserRole import UserRole
+        
+        result = await self.db.execute(
+            select(UserProfile)
+            .options(joinedload(UserProfile.user_roles).joinedload(UserRole.role))
+            .where(UserProfile.user_profile_id == user_id)
+        )
+        return result.unique().scalar_one_or_none()
+
+    @repo_handler
+    async def get_active_idir_analysts(self) -> List[UserProfile]:
+        """
+        Get all active IDIR users with Analyst role for assignment dropdown.
+        """
+        from lcfs.db.models.user.UserRole import UserRole
+        from lcfs.db.models.user.Role import Role
+        
+        result = await self.db.execute(
+            select(UserProfile)
+            .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
+            .join(Role, UserRole.role_id == Role.role_id)
+            .where(
+                and_(
+                    UserProfile.is_active == True,
+                    UserProfile.organization_id.is_(None),  # IDIR users have no organization
+                    Role.name == RoleEnum.ANALYST
+                )
+            )
+            .order_by(UserProfile.first_name, UserProfile.last_name)
+        )
+        return result.scalars().all()

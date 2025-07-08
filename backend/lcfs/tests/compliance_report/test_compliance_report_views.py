@@ -817,3 +817,128 @@ async def test_update_compliance_report_assessed_success(
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
         )
+
+
+# Analyst Assignment API Tests
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test successful analyst assignment API endpoint"""
+    with patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.assign_analyst_to_report"
+    ) as mock_assign_analyst, patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_chain, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access:
+        
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+        
+        # Mock responses
+        mock_report = MagicMock()
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_assign_analyst.return_value = None
+        mock_get_chain.return_value = {"report": {"complianceReportId": 1}}
+        
+        url = fastapi_app.url_path_for("assign_analyst_to_report", report_id=1)
+        payload = {"assignedAnalystId": 123}
+        
+        response = await client.put(url, json=payload)
+        
+        assert response.status_code == 200
+        mock_assign_analyst.assert_called_once_with(1, 123, mock.ANY)
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_unassign(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test unassigning analyst API endpoint"""
+    with patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.assign_analyst_to_report"
+    ) as mock_assign_analyst, patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_chain, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access:
+        
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+        
+        # Mock responses
+        mock_report = MagicMock()
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_assign_analyst.return_value = None
+        mock_get_chain.return_value = {"report": {"complianceReportId": 1}}
+        
+        url = fastapi_app.url_path_for("assign_analyst_to_report", report_id=1)
+        payload = {"assignedAnalystId": None}
+        
+        response = await client.put(url, json=payload)
+        
+        assert response.status_code == 200
+        mock_assign_analyst.assert_called_once_with(1, None, mock.ANY)
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test assignment endpoint with unauthorized role"""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    
+    url = fastapi_app.url_path_for("assign_analyst_to_report", report_id=1)
+    payload = {"assignedAnalystId": 123}
+    
+    response = await client.put(url, json=payload)
+    
+    assert response.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_get_available_analysts_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test get available analysts API endpoint"""
+    with patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_available_analysts"
+    ) as mock_get_analysts:
+        
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+        
+        # Mock response
+        mock_analysts = [
+            {"userProfileId": 1, "firstName": "John", "lastName": "Doe", "initials": "JD"},
+            {"userProfileId": 2, "firstName": "Jane", "lastName": "Smith", "initials": "JS"},
+        ]
+        mock_get_analysts.return_value = mock_analysts
+        
+        url = fastapi_app.url_path_for("get_available_analysts")
+        
+        response = await client.get(url)
+        
+        assert response.status_code == 200
+        assert len(response.json()) == 2
+        assert response.json()[0]["firstName"] == "John"
+        mock_get_analysts.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_get_available_analysts_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test get available analysts endpoint with unauthorized role"""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+    
+    url = fastapi_app.url_path_for("get_available_analysts")
+    
+    response = await client.get(url)
+    
+    assert response.status_code == 403
+EOF < /dev/null

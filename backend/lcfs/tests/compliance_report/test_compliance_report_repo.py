@@ -315,3 +315,114 @@ async def test_delete_compliance_report_success(compliance_report_repo, dbsessio
     assert result is True
     dbsession.execute.assert_called()  # Ensure delete commands were called
     dbsession.flush.assert_awaited_once()  # Ensure flush was called to commit changes
+
+
+# Analyst Assignment Tests
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_success(
+    compliance_report_repo, compliance_reports, users, dbsession
+):
+    """Test successful analyst assignment to a compliance report"""
+    report_id = compliance_reports[0].compliance_report_id
+    analyst_id = users[0].user_profile_id
+
+    # Mock flush
+    dbsession.flush = AsyncMock()
+
+    # Call the assignment function
+    await compliance_report_repo.assign_analyst_to_report(report_id, analyst_id)
+
+    # Verify the assignment was made
+    dbsession.flush.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_unassign(
+    compliance_report_repo, compliance_reports, dbsession
+):
+    """Test unassigning an analyst from a compliance report (null value)"""
+    report_id = compliance_reports[0].compliance_report_id
+
+    # Mock flush
+    dbsession.flush = AsyncMock()
+
+    # Call the assignment function with None to unassign
+    await compliance_report_repo.assign_analyst_to_report(report_id, None)
+
+    # Verify the unassignment was made
+    dbsession.flush.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_get_user_by_id_success(compliance_report_repo, users):
+    """Test successful user retrieval by ID"""
+    user_id = users[0].user_profile_id
+
+    user = await compliance_report_repo.get_user_by_id(user_id)
+
+    assert user is not None
+    assert user.user_profile_id == user_id
+    assert user.keycloak_username == users[0].keycloak_username
+
+
+@pytest.mark.anyio
+async def test_get_user_by_id_not_found(compliance_report_repo):
+    """Test user retrieval when user doesn't exist"""
+    non_existent_id = 99999
+
+    user = await compliance_report_repo.get_user_by_id(non_existent_id)
+
+    assert user is None
+
+
+@pytest.mark.anyio
+async def test_get_active_idir_analysts_success(compliance_report_repo, dbsession):
+    """Test retrieving active IDIR analysts"""
+    from lcfs.db.models.user.UserRole import UserRole
+    from lcfs.db.models.user.Role import Role, RoleEnum
+
+    # Create analyst role
+    analyst_role = Role(role_id=997, name=RoleEnum.ANALYST, description="Analyst")
+    dbsession.add(analyst_role)
+
+    # Create IDIR analyst user (no organization_id)
+    analyst_user = UserProfile(
+        user_profile_id=997,
+        keycloak_username="analyst@idir",
+        first_name="John",
+        last_name="Analyst",
+        is_active=True,
+        organization_id=None  # IDIR user
+    )
+    dbsession.add(analyst_user)
+
+    # Create user role assignment
+    user_role = UserRole(
+        user_profile_id=997,
+        role_id=997
+    )
+    dbsession.add(user_role)
+
+    await dbsession.commit()
+    await dbsession.refresh(analyst_user)
+
+    # Test the function
+    analysts = await compliance_report_repo.get_active_idir_analysts()
+
+    assert isinstance(analysts, list)
+    assert len(analysts) >= 1
+    # Verify it's an IDIR user with analyst role
+    found_analyst = next((a for a in analysts if a.user_profile_id == 997), None)
+    assert found_analyst is not None
+    assert found_analyst.organization_id is None
+
+
+@pytest.mark.anyio
+async def test_get_active_idir_analysts_empty(compliance_report_repo):
+    """Test retrieving analysts when none exist"""
+    
+    analysts = await compliance_report_repo.get_active_idir_analysts()
+
+    assert isinstance(analysts, list)
+    # Could be empty or have existing test data, but should return a list
+    assert isinstance(analysts, list)

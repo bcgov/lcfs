@@ -587,3 +587,59 @@ export const useGetChangeLog = (
     ...restOptions
   })
 }
+
+export const useGetAvailableAnalysts = (options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = STATIC_DATA_STALE_TIME,
+    cacheTime = STATIC_DATA_STALE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['available-analysts'],
+    queryFn: async () => {
+      const response = await client.get(apiRoutes.getAvailableAnalysts)
+      return response.data
+    },
+    enabled,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useAssignAnalyst = (options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async ({ reportId, assignedAnalystId }) => {
+      const path = apiRoutes.assignAnalyst.replace(':reportId', reportId)
+      return await client.put(path, { assignedAnalystId })
+    },
+    onSuccess: (data, variables, context) => {
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries(['compliance-reports'])
+        queryClient.invalidateQueries(['compliance-reports-list'])
+        queryClient.invalidateQueries(['compliance-report', variables.reportId])
+      }
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}

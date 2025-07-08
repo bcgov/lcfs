@@ -16,6 +16,8 @@ from lcfs.web.api.compliance_report.schema import (
     ChainedComplianceReportSchema,
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
+    AssignAnalystSchema,
+    AssignedAnalystSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
@@ -80,6 +82,22 @@ async def get_compliance_report_statuses(
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
     return await service.get_compliance_report_statuses(request.user)
+
+
+@router.get(
+    "/analysts",
+    response_model=List[AssignedAnalystSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+async def get_available_analysts(
+    request: Request,
+    service: ComplianceReportServices = Depends(),
+) -> List[AssignedAnalystSchema]:
+    """
+    Get a list of all active IDIR users with Analyst role for assignment dropdown.
+    """
+    return await service.get_available_analysts()
 
 
 @router.get(
@@ -296,3 +314,30 @@ async def get_changelog(
     return await service.get_changelog_data(
         compliance_report_group_uuid, data_type_snake
     )
+
+
+@router.put(
+    "/{report_id}/assign",
+    response_model=ChainedComplianceReportSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+async def assign_analyst_to_report(
+    request: Request,
+    report_id: int,
+    assignment_data: AssignAnalystSchema,
+    service: ComplianceReportServices = Depends(),
+    validate: ComplianceReportValidation = Depends(),
+) -> ChainedComplianceReportSchema:
+    """
+    Assign or unassign an analyst to/from a compliance report.
+    Set assigned_analyst_id to null to unassign.
+    """
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
+    
+    await service.assign_analyst_to_report(
+        report_id, assignment_data.assigned_analyst_id, request.user
+    )
+    
+    return await service.get_compliance_report_chain(report_id, request.user)

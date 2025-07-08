@@ -2546,3 +2546,90 @@ async def test_create_analyst_adjustment_from_assessed_status_success(
     assert result is not None
     mock_repo.get_compliance_report_by_id.assert_called_once_with(1)
     mock_repo.create_compliance_report.assert_called_once()
+
+
+# Analyst Assignment Service Tests
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_success(compliance_report_service, mock_repo):
+    """Test successful analyst assignment"""
+    # Arrange
+    report_id = 1
+    analyst_id = 123
+    mock_user = MagicMock()
+    
+    mock_report = MagicMock()
+    mock_report.compliance_report_id = report_id
+    
+    mock_analyst = MagicMock()
+    mock_analyst.user_profile_id = analyst_id
+    mock_analyst.organization_id = None  # IDIR user
+    mock_analyst.user_roles = [MagicMock()]
+    mock_analyst.user_roles[0].role.name = RoleEnum.ANALYST
+    
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    mock_repo.get_user_by_id.return_value = mock_analyst
+    mock_repo.assign_analyst_to_report.return_value = None
+    
+    # Act
+    await compliance_report_service.assign_analyst_to_report(report_id, analyst_id, mock_user)
+    
+    # Assert
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id)
+    mock_repo.get_user_by_id.assert_called_once_with(analyst_id)
+    mock_repo.assign_analyst_to_report.assert_called_once_with(report_id, analyst_id)
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_unassign(compliance_report_service, mock_repo):
+    """Test unassigning analyst (null value)"""
+    # Arrange
+    report_id = 1
+    mock_user = MagicMock()
+    
+    mock_report = MagicMock()
+    mock_report.compliance_report_id = report_id
+    
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    mock_repo.assign_analyst_to_report.return_value = None
+    
+    # Act
+    await compliance_report_service.assign_analyst_to_report(report_id, None, mock_user)
+    
+    # Assert
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id)
+    mock_repo.get_user_by_id.assert_not_called()  # Should not call when analyst_id is None
+    mock_repo.assign_analyst_to_report.assert_called_once_with(report_id, None)
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_report_not_found(compliance_report_service, mock_repo):
+    """Test assignment when compliance report doesnt exist"""
+    # Arrange
+    report_id = 999
+    analyst_id = 123
+    mock_user = MagicMock()
+    
+    mock_repo.get_compliance_report_by_id.return_value = None
+    
+    # Act & Assert
+    with pytest.raises(DataNotFoundException, match="Compliance report not found"):
+        await compliance_report_service.assign_analyst_to_report(report_id, analyst_id, mock_user)
+
+
+@pytest.mark.anyio
+async def test_get_available_analysts_success(compliance_report_service, mock_repo):
+    """Test retrieving available analysts"""
+    # Arrange
+    mock_analysts = [
+        MagicMock(user_profile_id=1, first_name="John", last_name="Doe"),
+        MagicMock(user_profile_id=2, first_name="Jane", last_name="Smith"),
+    ]
+    mock_repo.get_active_idir_analysts.return_value = mock_analysts
+    
+    # Act
+    result = await compliance_report_service.get_available_analysts()
+    
+    # Assert
+    assert len(result) == 2
+    mock_repo.get_active_idir_analysts.assert_called_once()
+

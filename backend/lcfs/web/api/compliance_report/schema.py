@@ -80,6 +80,25 @@ class ComplianceReportUserSchema(BaseSchema):
     organization: Optional[ComplianceReportOrganizationSchema] = None
 
 
+class AssignedAnalystSchema(BaseSchema):
+    user_profile_id: int
+    first_name: str
+    last_name: str
+    initials: Optional[str] = None
+    
+    @classmethod
+    def model_validate(cls, analyst):
+        if analyst is None:
+            return None
+        initials = f"{analyst.first_name[0] if analyst.first_name else ''}{analyst.last_name[0] if analyst.last_name else ''}".upper()
+        return cls(
+            user_profile_id=analyst.user_profile_id,
+            first_name=analyst.first_name or "",
+            last_name=analyst.last_name or "",
+            initials=initials
+        )
+
+
 class ComplianceReportHistorySchema(BaseSchema):
     compliance_report_history_id: int
     compliance_report_id: int
@@ -119,7 +138,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     compliance_report_id: int
     compliance_report_group_uuid: Optional[str]
     version: Optional[int]
-    supplemental_initiator: Optional[SupplementalInitiatorType]
+    supplemental_initiator: Optional[SupplementalInitiatorType] = None
     compliance_period_id: int
     compliance_period: CompliancePeriodBaseSchema
     organization_id: int
@@ -133,9 +152,27 @@ class ComplianceReportBaseSchema(BaseSchema):
     reporting_frequency: Optional[ReportingFrequency] = None
     update_date: Optional[datetime] = None
     history: Optional[List[ComplianceReportHistorySchema]] = None
-    has_supplemental: bool
+    has_supplemental: bool = False
     legacy_id: Optional[int] = None
     assessment_statement: Optional[str] = None
+    assigned_analyst: Optional[AssignedAnalystSchema] = None
+    
+    @classmethod
+    def model_validate(cls, obj):
+        # Handle assigned analyst conversion for the detailed view
+        assigned_analyst = None
+        if hasattr(obj, 'assigned_analyst') and obj.assigned_analyst:
+            assigned_analyst = AssignedAnalystSchema.model_validate(obj.assigned_analyst)
+        
+        # Get the base dictionary and remove private SQLAlchemy attributes
+        if hasattr(obj, '__dict__'):
+            data = {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
+        else:
+            data = {field: getattr(obj, field, None) for field in cls.model_fields.keys()}
+            
+        data['assigned_analyst'] = assigned_analyst
+        
+        return cls(**data)
 
 
 class ComplianceReportViewSchema(BaseSchema):
@@ -159,6 +196,33 @@ class ComplianceReportViewSchema(BaseSchema):
     latest_report_supplemental_initiator: Optional[SupplementalInitiatorType] = None
     latest_supplemental_create_date: Optional[datetime] = None
     latest_status: Optional[str] = None
+    assigned_analyst: Optional[AssignedAnalystSchema] = None
+    
+    @classmethod
+    def model_validate(cls, obj):
+        # Handle assigned analyst conversion from database view fields
+        assigned_analyst = None
+        if hasattr(obj, 'assigned_analyst_id') and obj.assigned_analyst_id:
+            first_name = getattr(obj, 'assigned_analyst_first_name', '') or ''
+            last_name = getattr(obj, 'assigned_analyst_last_name', '') or ''
+            initials = f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
+            
+            assigned_analyst = AssignedAnalystSchema(
+                user_profile_id=obj.assigned_analyst_id,
+                first_name=first_name,
+                last_name=last_name,
+                initials=initials
+            )
+        
+        # Get the base dictionary and add the assigned_analyst field
+        if hasattr(obj, '__dict__'):
+            data = obj.__dict__.copy()
+        else:
+            data = {field: getattr(obj, field, None) for field in cls.model_fields.keys()}
+        
+        data['assigned_analyst'] = assigned_analyst
+        
+        return cls(**data)
 
 
 class ChainedComplianceReportSchema(BaseSchema):
@@ -230,6 +294,10 @@ class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
     assessment_statement: Optional[str] = None
+
+
+class AssignAnalystSchema(BaseSchema):
+    assigned_analyst_id: Optional[int] = None
 
 
 class ExportColumn(NamedTuple):
