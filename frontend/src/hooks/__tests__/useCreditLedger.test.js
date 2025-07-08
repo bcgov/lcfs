@@ -268,9 +268,13 @@ describe('useDownloadCreditLedger', () => {
       format: 'xlsx'
     })
 
-    expect(mockDownload).toHaveBeenCalledWith(expect.stringContaining('123'), {
-      compliance_year: '2024',
-      format: 'xlsx'
+    expect(mockDownload).toHaveBeenCalledWith({
+      url: expect.stringContaining('123'),
+      method: 'get',
+      params: {
+        compliance_year: '2024',
+        format: 'xlsx'
+      }
     })
   })
 
@@ -282,9 +286,13 @@ describe('useDownloadCreditLedger', () => {
       complianceYear: '2024'
     })
 
-    expect(mockDownload).toHaveBeenCalledWith(expect.stringContaining('123'), {
-      compliance_year: '2024',
-      format: 'xlsx'
+    expect(mockDownload).toHaveBeenCalledWith({
+      url: expect.stringContaining('123'),
+      method: 'get',
+      params: {
+        compliance_year: '2024',
+        format: 'xlsx'
+      }
     })
   })
 
@@ -296,8 +304,12 @@ describe('useDownloadCreditLedger', () => {
       format: 'csv'
     })
 
-    expect(mockDownload).toHaveBeenCalledWith(expect.stringContaining('123'), {
-      format: 'csv'
+    expect(mockDownload).toHaveBeenCalledWith({
+      url: expect.stringContaining('123'),
+      method: 'get',
+      params: {
+        format: 'csv'
+      }
     })
   })
 
@@ -310,9 +322,13 @@ describe('useDownloadCreditLedger', () => {
       format: 'csv'
     })
 
-    expect(mockDownload).toHaveBeenCalledWith(expect.stringContaining('123'), {
-      compliance_year: '2024',
-      format: 'csv'
+    expect(mockDownload).toHaveBeenCalledWith({
+      url: expect.stringContaining('123'),
+      method: 'get',
+      params: {
+        compliance_year: '2024',
+        format: 'csv'
+      }
     })
   })
 
@@ -332,12 +348,13 @@ describe('useDownloadCreditLedger', () => {
     })
 
     // Should still call download even with undefined orgId
-    expect(mockDownload).toHaveBeenCalledWith(
-      expect.stringContaining('undefined'),
-      {
+    expect(mockDownload).toHaveBeenCalledWith({
+      url: expect.stringContaining('undefined'),
+      method: 'get',
+      params: {
         compliance_year: '2024',
         format: 'xlsx'
       }
-    )
+    })
   })
 })
