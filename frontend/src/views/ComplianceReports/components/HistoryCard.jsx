@@ -87,7 +87,8 @@ export const HistoryCard = ({
   const shouldShowTopLevelAssessmentLines =
     isGovernmentUser &&
     !isCurrentAssessed &&
-    defaultExpanded
+    defaultExpanded &&
+    report?.currentStatus?.status !== COMPLIANCE_REPORT_STATUSES.DRAFT
 
   const shouldShowDirectorStatement =
     assessedMessage &&
@@ -198,36 +199,44 @@ export const HistoryCard = ({
                 'AssessedBy'
               ].includes(item.status.status)
 
-              return (
-                <StyledListItem key={index} disablePadding>
-                  <ListItemText
-                    data-test="list-item"
-                    slotProps={{ primary: { variant: 'body4' } }}
-                  >
-                    <span
-                      dangerouslySetInnerHTML={{
-                        __html: t(
-                          `report:complianceReportHistory.${item.status.status}`,
-                          {
-                            createDate: timezoneFormatter({
-                              value: item.createDate
-                            }),
-                            displayName:
-                              item.displayName ||
-                              `${item.userProfile.firstName} ${item.userProfile.lastName}`
-                          }
-                        )
-                      }}
-                    />
-                  </ListItemText>
+              const hideHistoryLine =
+                report?.complianceReportId === item?.complianceReportId &&
+                report?.currentStatus.status ===
+                  COMPLIANCE_REPORT_STATUSES.DRAFT &&
+                item?.status?.status !== COMPLIANCE_REPORT_STATUSES.DRAFT
 
-                  {/* Nested assessment – appears once the status is Assessed */}
-                  {showNestedAssessment && (
-                    <List sx={{ p: 0, m: 0 }}>
-                      <AssessmentLines />
-                    </List>
-                  )}
-                </StyledListItem>
+              return (
+                !hideHistoryLine && (
+                  <StyledListItem key={index} disablePadding>
+                    <ListItemText
+                      data-test="list-item"
+                      slotProps={{ primary: { variant: 'body4' } }}
+                    >
+                      <span
+                        dangerouslySetInnerHTML={{
+                          __html: t(
+                            `report:complianceReportHistory.${item.status.status}`,
+                            {
+                              createDate: timezoneFormatter({
+                                value: item.createDate
+                              }),
+                              displayName:
+                                item.displayName ||
+                                `${item.userProfile.firstName} ${item.userProfile.lastName}`
+                            }
+                          )
+                        }}
+                      />
+                    </ListItemText>
+
+                    {/* Nested assessment – appears once the status is Assessed */}
+                    {showNestedAssessment && (
+                      <List sx={{ p: 0, m: 0 }}>
+                        <AssessmentLines />
+                      </List>
+                    )}
+                  </StyledListItem>
+                )
               )
             })}
           </List>

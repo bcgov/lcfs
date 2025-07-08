@@ -99,11 +99,18 @@ const globals = {
       "'BCSans', 'Noto Sans', 'Verdana', 'Arial', 'sans-serif'",
     '--ag-row-hover-color': rgba(background.secondary, 1)
   },
+  '.bc-grid-container': {
+    width: '100%'
+  },
   '.bc-grid-container .ag-grid-pagination-container': {
     border: 'none',
     borderBottom: `1px solid ${grey[700]}`,
     maxHeight: 'unset'
   },
+  '.bc-grid-container .ag-grid-pagination-container .MuiTablePagination-toolbar':
+    {
+      overflow: 'hidden'
+    },
   '.ag-theme-material .ag-floating-filter-input': {
     backgroundColor: white.main
   },
@@ -230,6 +237,9 @@ const globals = {
   },
   '.ag-grid-pagination': {
     fontSize: '0.875rem'
+  },
+  '.ag-grid-pagination .MuiTablePagination-toolbar': {
+    overflow: 'scroll'
   },
   '.ag-grid-pagination .MuiInputBase-root': {
     border: `1.2px solid ${grey[500]}`,

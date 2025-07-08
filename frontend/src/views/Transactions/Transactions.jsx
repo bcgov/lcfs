@@ -222,7 +222,7 @@ export const Transactions = () => {
   }, [location.state])
 
   const handleClearFilters = () => {
-    setPaginationOptions(defaultInitialPagination)
+    setPaginationOptions(initialPaginationOptions)
     setSelectedOrg({ organizationId: null, label: null })
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
@@ -299,13 +299,7 @@ export const Transactions = () => {
               downloadLabel={t('txn:downloadingTxnInfo')}
               dataTest="download-transactions-button"
             />
-            <ClearFiltersButton
-              onClick={handleClearFilters}
-              sx={{
-                minWidth: 'fit-content',
-                whiteSpace: 'nowrap'
-              }}
-            />
+            <ClearFiltersButton onClick={handleClearFilters} />
           </Box>
         </Grid>
         <Grid
@@ -333,7 +327,7 @@ export const Transactions = () => {
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
           gridRef={gridRef}
-          gridKey="transactions-grid"
+          gridKey="transactions-grid-v2"
           columnDefs={transactionsColDefs(t)}
           getRowId={getRowId}
           overlayNoRowsTemplate={t('txn:noTxnsFound')}

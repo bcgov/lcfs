@@ -430,7 +430,7 @@ class ComplianceReportServices:
             reporting_frequency=current_report.reporting_frequency,
             compliance_report_group_uuid=current_report.compliance_report_group_uuid,  # Same group
             version=new_version,
-            supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,  # Supplier edits it
+            supplemental_initiator=SupplementalInitiatorType.GOVERNMENT_INITIATED,  # Government initiated Supplemental report for the supplier to make edits.
             nickname=(
                 f"Supplemental report {new_version}"
                 if current_report.reporting_frequency == ReportingFrequency.ANNUAL
@@ -905,6 +905,7 @@ class ComplianceReportServices:
                     ComplianceReportStatusEnum.Not_recommended_by_analyst,
                     ComplianceReportStatusEnum.Not_recommended_by_manager,
                     ComplianceReportStatusEnum.Analyst_adjustment,
+                    ComplianceReportStatusEnum.Supplemental_requested,
                 ]
             ]
         return statuses
