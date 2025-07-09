@@ -5,6 +5,8 @@ from lcfs.web.api.compliance_report.schema import (
     AssignedAnalystSchema,
     ComplianceReportViewSchema,
     ComplianceReportBaseSchema,
+    ComplianceReportOrganizationSchema,
+    ComplianceReportStatusSchema,
 )
 
 
@@ -198,6 +200,33 @@ class TestComplianceReportBaseSchema:
         mock_obj.organization_id = 1
         mock_obj.current_status_id = 1
         mock_obj.has_supplemental = False
+        mock_obj.summary = None
+        mock_obj.transaction_id = None
+        mock_obj.nickname = None
+        mock_obj.supplemental_note = None
+        mock_obj.reporting_frequency = None
+        mock_obj.update_date = None
+        mock_obj.history = None
+        mock_obj.legacy_id = None
+        mock_obj.assessment_statement = None
+        
+        # Mock required relationship objects
+        from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
+        mock_obj.compliance_period = CompliancePeriodBaseSchema(
+            compliance_period_id=1,
+            description="2024"
+        )
+        
+        mock_obj.organization = ComplianceReportOrganizationSchema(
+            organization_id=1,
+            organization_code="ORG1",
+            name="Test Organization"
+        )
+        
+        mock_obj.current_status = ComplianceReportStatusSchema(
+            compliance_report_status_id=1,
+            status="Draft"
+        )
         
         # Mock assigned analyst relationship
         mock_analyst = MagicMock()
@@ -227,6 +256,34 @@ class TestComplianceReportBaseSchema:
         mock_obj.compliance_period_id = 1
         mock_obj.organization_id = 1
         mock_obj.current_status_id = 1
+        mock_obj.has_supplemental = False
+        mock_obj.summary = None
+        mock_obj.transaction_id = None
+        mock_obj.nickname = None
+        mock_obj.supplemental_note = None
+        mock_obj.reporting_frequency = None
+        mock_obj.update_date = None
+        mock_obj.history = None
+        mock_obj.legacy_id = None
+        mock_obj.assessment_statement = None
+        
+        # Mock required relationship objects
+        from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
+        mock_obj.compliance_period = CompliancePeriodBaseSchema(
+            compliance_period_id=1,
+            description="2024"
+        )
+        
+        mock_obj.organization = ComplianceReportOrganizationSchema(
+            organization_id=1,
+            organization_code="ORG1",
+            name="Test Organization"
+        )
+        
+        mock_obj.current_status = ComplianceReportStatusSchema(
+            compliance_report_status_id=1,
+            status="Draft"
+        )
         mock_obj.has_supplemental = False
         mock_obj.assigned_analyst = None
 

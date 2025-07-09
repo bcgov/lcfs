@@ -380,10 +380,21 @@ async def test_get_active_idir_analysts_success(compliance_report_repo, dbsessio
     """Test retrieving active IDIR analysts"""
     from lcfs.db.models.user.UserRole import UserRole
     from lcfs.db.models.user.Role import Role, RoleEnum
+    from sqlalchemy import select
 
-    # Create analyst role
-    analyst_role = Role(role_id=997, name=RoleEnum.ANALYST, description="Analyst")
-    dbsession.add(analyst_role)
+    # Get existing analyst role or create if it doesn't exist
+    existing_role = await dbsession.scalar(
+        select(Role).where(Role.name == RoleEnum.ANALYST)
+    )
+    
+    if not existing_role:
+        analyst_role = Role(role_id=997, name=RoleEnum.ANALYST, description="Analyst")
+        dbsession.add(analyst_role)
+        await dbsession.flush()
+        await dbsession.refresh(analyst_role)
+        analyst_role_id = analyst_role.role_id
+    else:
+        analyst_role_id = existing_role.role_id
 
     # Create IDIR analyst user (no organization_id)
     analyst_user = UserProfile(
@@ -399,7 +410,7 @@ async def test_get_active_idir_analysts_success(compliance_report_repo, dbsessio
     # Create user role assignment
     user_role = UserRole(
         user_profile_id=997,
-        role_id=997
+        role_id=analyst_role_id
     )
     dbsession.add(user_role)
 

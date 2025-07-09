@@ -565,15 +565,19 @@ async def test_create_government_initiated_supplemental_report_success(
         mock_new_report.compliance_report_id = 999
         mock_new_report.version = new_version
         mock_new_report.compliance_report_group_uuid = group_uuid
+        mock_new_report.compliance_period_id = mock_compliance_report_submitted.compliance_period_id
         mock_new_report.compliance_period = (
             mock_compliance_report_submitted.compliance_period
         )  # Pydantic schema
+        mock_new_report.organization_id = mock_compliance_report_submitted.organization_id
         mock_new_report.organization = (
             mock_compliance_report_submitted.organization
         )  # Pydantic schema
+        mock_new_report.current_status_id = mock_draft_status.compliance_report_status_id
         mock_new_report.current_status = (
             mock_draft_status  # Mock configured like schema
         )
+        mock_new_report.summary = None
         mock_new_report.nickname = f"Supplemental Report {new_version}"
         mock_new_report.supplemental_initiator = (
             SupplementalInitiatorType.GOVERNMENT_INITIATED.value
@@ -584,9 +588,14 @@ async def test_create_government_initiated_supplemental_report_success(
         mock_new_report.supplemental_note = None
         mock_new_report.assessment_statement = None
         mock_new_report.transaction_id = None
+        mock_new_report.has_supplemental = False
+        mock_new_report.legacy_id = None
+        mock_new_report.history = None
         # Set dummy create/update dates needed by BaseSchema
         mock_new_report.create_date = datetime.now()
         mock_new_report.update_date = datetime.now()
+        # Set assigned_analyst to None to avoid MagicMock issues
+        mock_new_report.assigned_analyst = None
         mock_repo.create_compliance_report = AsyncMock(return_value=mock_new_report)
 
         # Act
@@ -733,19 +742,30 @@ async def test_create_supplemental_report_uses_current_balance(
     mock_new_report = MagicMock(spec=ComplianceReport)
     mock_new_report.compliance_report_id = 2
     mock_new_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_new_report.version = 1
     mock_new_report.supplemental_initiator = (
         SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
     )
+    mock_new_report.compliance_period_id = mock_current_report.compliance_period_id
     mock_new_report.compliance_period = mock_current_report.compliance_period
+    mock_new_report.organization_id = mock_current_report.organization_id
     mock_new_report.organization = MagicMock()
     mock_new_report.organization.organizationCode = "ORG123"
     mock_new_report.organization.name = "Test Organization"
+    mock_new_report.current_status_id = mock_draft_status.compliance_report_status_id
     mock_new_report.current_status = MagicMock()
     mock_new_report.current_status.status = "Draft"
+    mock_new_report.summary = None
+    mock_new_report.transaction_id = None
+    mock_new_report.has_supplemental = False
+    mock_new_report.legacy_id = None
+    mock_new_report.history = None
+    mock_new_report.update_date = None
     mock_new_report.nickname = "Supplemental report 1"
     mock_new_report.supplemental_note = "Test supplemental note"
     mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
     mock_new_report.assessment_statement = "Test assessment statement"
+    mock_new_report.assigned_analyst = None
     mock_repo.create_compliance_report.return_value = mock_new_report
     mock_repo.add_compliance_report_history = AsyncMock()
 
@@ -948,19 +968,30 @@ async def test_create_supplemental_report_line_17_zero_balance(
     mock_new_report = MagicMock(spec=ComplianceReport)
     mock_new_report.compliance_report_id = 2
     mock_new_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_new_report.version = 1
     mock_new_report.supplemental_initiator = (
         SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
     )
+    mock_new_report.compliance_period_id = mock_current_report.compliance_period_id
     mock_new_report.compliance_period = mock_current_report.compliance_period
+    mock_new_report.organization_id = mock_current_report.organization_id
     mock_new_report.organization = MagicMock()
     mock_new_report.organization.organizationCode = "ORG123"
     mock_new_report.organization.name = "Test Organization"
+    mock_new_report.current_status_id = mock_draft_status.compliance_report_status_id
     mock_new_report.current_status = MagicMock()
     mock_new_report.current_status.status = "Draft"
+    mock_new_report.summary = None
+    mock_new_report.transaction_id = None
+    mock_new_report.has_supplemental = False
+    mock_new_report.legacy_id = None
+    mock_new_report.history = None
+    mock_new_report.update_date = None
     mock_new_report.nickname = "Supplemental report 1"
     mock_new_report.supplemental_note = "Test supplemental note"
     mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
     mock_new_report.assessment_statement = "Test assessment statement"
+    mock_new_report.assigned_analyst = None
     mock_repo.create_compliance_report.return_value = mock_new_report
     mock_repo.add_compliance_report_history = AsyncMock()
 
@@ -2317,6 +2348,12 @@ async def test_create_analyst_adjustment_from_submitted_status_success(
     mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
     mock_new_report.assessment_statement = ""
     mock_new_report.has_supplemental = True
+    mock_new_report.summary = None
+    mock_new_report.transaction_id = None
+    mock_new_report.legacy_id = None
+    mock_new_report.history = None
+    mock_new_report.update_date = None
+    mock_new_report.assigned_analyst = None
 
     # Mock nested objects
     mock_compliance_period = MagicMock()
@@ -2495,6 +2532,12 @@ async def test_create_analyst_adjustment_from_assessed_status_success(
     mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
     mock_new_report.assessment_statement = ""
     mock_new_report.has_supplemental = True
+    mock_new_report.summary = None
+    mock_new_report.transaction_id = None
+    mock_new_report.legacy_id = None
+    mock_new_report.history = None
+    mock_new_report.update_date = None
+    mock_new_report.assigned_analyst = None
 
     # Mock nested objects
     mock_compliance_period = MagicMock()

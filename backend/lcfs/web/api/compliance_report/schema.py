@@ -85,17 +85,32 @@ class AssignedAnalystSchema(BaseSchema):
     first_name: str
     last_name: str
     initials: Optional[str] = None
+    full_name: Optional[str] = None
     
     @classmethod
     def model_validate(cls, analyst):
         if analyst is None:
             return None
-        initials = f"{analyst.first_name[0] if analyst.first_name else ''}{analyst.last_name[0] if analyst.last_name else ''}".upper()
+        
+        # Handle both dictionary and object inputs  
+        if isinstance(analyst, dict):
+            user_profile_id = analyst.get('user_profile_id')
+            first_name = analyst.get('first_name', '') or ''
+            last_name = analyst.get('last_name', '') or ''
+        else:
+            user_profile_id = analyst.user_profile_id
+            first_name = analyst.first_name or ''
+            last_name = analyst.last_name or ''
+        
+        initials = f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
+        full_name = f"{initials} - {first_name} {last_name}" if initials else "Unassigned"
+        
         return cls(
-            user_profile_id=analyst.user_profile_id,
-            first_name=analyst.first_name or "",
-            last_name=analyst.last_name or "",
-            initials=initials
+            user_profile_id=user_profile_id,
+            first_name=first_name,
+            last_name=last_name,
+            initials=initials,
+            full_name=full_name
         )
 
 
@@ -209,23 +224,41 @@ class ComplianceReportViewSchema(BaseSchema):
     def model_validate(cls, obj):
         # Handle assigned analyst conversion from database view fields
         assigned_analyst = None
-        if hasattr(obj, 'assigned_analyst_id') and obj.assigned_analyst_id:
-            first_name = getattr(obj, 'assigned_analyst_first_name', '') or ''
-            last_name = getattr(obj, 'assigned_analyst_last_name', '') or ''
-            initials = f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
-            
-            assigned_analyst = AssignedAnalystSchema(
-                user_profile_id=obj.assigned_analyst_id,
-                first_name=first_name,
-                last_name=last_name,
-                initials=initials
-            )
         
-        # Get the base dictionary and add the assigned_analyst field
-        if hasattr(obj, '__dict__'):
-            data = obj.__dict__.copy()
+        # Handle both dictionary and object inputs
+        if isinstance(obj, dict):
+            assigned_analyst_id = obj.get('assigned_analyst_id')
+            if assigned_analyst_id:
+                first_name = obj.get('assigned_analyst_first_name', '') or ''
+                last_name = obj.get('assigned_analyst_last_name', '') or ''
+                initials = f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
+                
+                assigned_analyst = AssignedAnalystSchema(
+                    user_profile_id=assigned_analyst_id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    initials=initials
+                )
+            data = obj.copy()
         else:
-            data = {field: getattr(obj, field, None) for field in cls.model_fields.keys()}
+            # Handle object inputs
+            if hasattr(obj, 'assigned_analyst_id') and obj.assigned_analyst_id:
+                first_name = getattr(obj, 'assigned_analyst_first_name', '') or ''
+                last_name = getattr(obj, 'assigned_analyst_last_name', '') or ''
+                initials = f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
+                
+                assigned_analyst = AssignedAnalystSchema(
+                    user_profile_id=obj.assigned_analyst_id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    initials=initials
+                )
+            
+            # Get the base dictionary from object
+            if hasattr(obj, '__dict__'):
+                data = obj.__dict__.copy()
+            else:
+                data = {field: getattr(obj, field, None) for field in cls.model_fields.keys()}
         
         data['assigned_analyst'] = assigned_analyst
         

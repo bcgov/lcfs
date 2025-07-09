@@ -8,7 +8,7 @@ import {
   LastCommentRenderer
 } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
-import { useGetComplianceReportStatuses } from '@/hooks/useComplianceReports'
+import { useGetComplianceReportStatuses, useGetAvailableAnalysts } from '@/hooks/useComplianceReports'
 import { AssignedAnalystCell } from './AssignedAnalystCell'
 
 export const reportsColDefs = (t, isSupplier, onRefresh) => [
@@ -21,7 +21,26 @@ export const reportsColDefs = (t, isSupplier, onRefresh) => [
     cellRenderer: AssignedAnalystCell,
     cellRendererParams: {
       onRefresh
-    }
+    },
+    filter: 'agTextColumnFilter',
+    filterParams: {
+      textFormatter: (value) => value || '',
+      textCustomComparator: (filter, value, filterText) => {
+        // Handle filtering by initials
+        const cleanValue = (value || '').toLowerCase()
+        const cleanFilter = filterText.toLowerCase()
+        return cleanValue.includes(cleanFilter)
+      },
+      buttons: ['clear']
+    },
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      optionsQuery: useGetAvailableAnalysts,
+      valueKey: 'initials',
+      labelKey: 'fullName'
+    },
+    suppressFloatingFilterButton: true,
+    suppressHeaderFilterButton: true
   },
   {
     field: 'lastComment',

@@ -842,7 +842,58 @@ async def test_assign_analyst_to_report_success(
         mock_validate_org.return_value = mock_report
         mock_validate_access.return_value = None
         mock_assign_analyst.return_value = None
-        mock_get_chain.return_value = {"report": {"complianceReportId": 1}}
+        
+        # Create a proper mock for ChainedComplianceReportSchema
+        from lcfs.web.api.compliance_report.schema import (
+            ChainedComplianceReportSchema, 
+            ComplianceReportBaseSchema,
+            ComplianceReportOrganizationSchema,
+            ComplianceReportStatusSchema,
+            AssignedAnalystSchema
+        )
+        from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
+        
+        # Create mock report with assigned analyst
+        mock_assigned_analyst = AssignedAnalystSchema(
+            user_profile_id=123,
+            first_name="Test",
+            last_name="Analyst",
+            initials="TA"
+        )
+        
+        mock_base_report = ComplianceReportBaseSchema(
+            compliance_report_id=1,
+            compliance_report_group_uuid="test-uuid",
+            version=0,
+            compliance_period_id=1,
+            compliance_period=CompliancePeriodBaseSchema(
+                compliance_period_id=1,
+                description="2024"
+            ),
+            organization_id=1,
+            organization=ComplianceReportOrganizationSchema(
+                organization_id=1,
+                organization_code="TEST",
+                name="Test Organization"
+            ),
+            current_status_id=1,
+            current_status=ComplianceReportStatusSchema(
+                compliance_report_status_id=1,
+                status="Draft"
+            ),
+            has_supplemental=False,
+            summary=None,
+            assigned_analyst=mock_assigned_analyst
+        )
+        
+        mock_chained_report = ChainedComplianceReportSchema(
+            report=mock_base_report,
+            chain=[mock_base_report],
+            is_newest=True,
+            had_been_assessed=False
+        )
+        
+        mock_get_chain.return_value = mock_chained_report
         
         url = fastapi_app.url_path_for("assign_analyst_to_report", report_id=1)
         payload = {"assignedAnalystId": 123}
@@ -875,7 +926,50 @@ async def test_assign_analyst_to_report_unassign(
         mock_validate_org.return_value = mock_report
         mock_validate_access.return_value = None
         mock_assign_analyst.return_value = None
-        mock_get_chain.return_value = {"report": {"complianceReportId": 1}}
+        
+        # Create a proper mock for ChainedComplianceReportSchema
+        from lcfs.web.api.compliance_report.schema import (
+            ChainedComplianceReportSchema, 
+            ComplianceReportBaseSchema,
+            ComplianceReportOrganizationSchema,
+            ComplianceReportStatusSchema
+        )
+        from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
+        
+        # For unassign test, analyst should be None
+        mock_base_report = ComplianceReportBaseSchema(
+            compliance_report_id=1,
+            compliance_report_group_uuid="test-uuid",
+            version=0,
+            compliance_period_id=1,
+            compliance_period=CompliancePeriodBaseSchema(
+                compliance_period_id=1,
+                description="2024"
+            ),
+            organization_id=1,
+            organization=ComplianceReportOrganizationSchema(
+                organization_id=1,
+                organization_code="TEST",
+                name="Test Organization"
+            ),
+            current_status_id=1,
+            current_status=ComplianceReportStatusSchema(
+                compliance_report_status_id=1,
+                status="Draft"
+            ),
+            has_supplemental=False,
+            summary=None,
+            assigned_analyst=None  # No assigned analyst for unassign test
+        )
+        
+        mock_chained_report = ChainedComplianceReportSchema(
+            report=mock_base_report,
+            chain=[mock_base_report],
+            is_newest=True,
+            had_been_assessed=False
+        )
+        
+        mock_get_chain.return_value = mock_chained_report
         
         url = fastapi_app.url_path_for("assign_analyst_to_report", report_id=1)
         payload = {"assignedAnalystId": None}
@@ -941,4 +1035,3 @@ async def test_get_available_analysts_unauthorized(
     response = await client.get(url)
     
     assert response.status_code == 403
-EOF < /dev/null

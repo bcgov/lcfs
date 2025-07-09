@@ -1155,7 +1155,9 @@ class ComplianceReportServices:
         from lcfs.web.api.compliance_report.schema import AssignedAnalystSchema
         
         analysts = await self.repo.get_active_idir_analysts()
-        return [
+        analyst_list = [
             AssignedAnalystSchema.model_validate(analyst) 
             for analyst in analysts
         ]
+        
+        return analyst_list

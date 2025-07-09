@@ -629,11 +629,22 @@ export const useAssignAnalyst = (options = {}) => {
       const path = apiRoutes.assignAnalyst.replace(':reportId', reportId)
       return await client.put(path, { assignedAnalystId })
     },
-    onSuccess: (data, variables, context) => {
+    onSuccess: async (data, variables, context) => {
       if (invalidateRelatedQueries) {
-        queryClient.invalidateQueries(['compliance-reports'])
-        queryClient.invalidateQueries(['compliance-reports-list'])
-        queryClient.invalidateQueries(['compliance-report', variables.reportId])
+        // More aggressive cache clearing - remove and refetch everything
+        queryClient.removeQueries({ queryKey: ['compliance-reports-list'] })
+        queryClient.removeQueries({ queryKey: ['compliance-reports'] })
+        queryClient.invalidateQueries({ queryKey: ['compliance-report', variables.reportId] })
+        
+        // Small delay to ensure backend transaction is committed
+        await new Promise(resolve => setTimeout(resolve, 200))
+        
+        // Force refetch of all compliance report list queries with exact matching
+        await queryClient.refetchQueries({ 
+          queryKey: ['compliance-reports-list'],
+          exact: false,
+          type: 'active'
+        })
       }
       onSuccess?.(data, variables, context)
     },
