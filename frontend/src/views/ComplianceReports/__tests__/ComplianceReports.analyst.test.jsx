@@ -182,8 +182,8 @@ describe('ComplianceReports with Analyst Assignment', () => {
     it('should have all expected columns including assigned analyst', () => {
       customRender(<ComplianceReports />)
 
-      // Should have 6 columns: status, compliancePeriod, organization, assignedAnalyst, type, updateDate
-      expect(screen.getByTestId('column-count')).toHaveTextContent('6')
+      // Should have 7 columns: assignedAnalyst, lastComment, compliancePeriod, organization, type, status, updateDate
+      expect(screen.getByTestId('column-count')).toHaveTextContent('7')
     })
 
     it('should pass refresh function to assigned analyst column', () => {
@@ -214,7 +214,7 @@ describe('ComplianceReports with Analyst Assignment', () => {
       customRender(<ComplianceReports />)
 
       // Should still have same number of columns but some hidden
-      expect(screen.getByTestId('column-count')).toHaveTextContent('6')
+      expect(screen.getByTestId('column-count')).toHaveTextContent('7')
     })
   })
 

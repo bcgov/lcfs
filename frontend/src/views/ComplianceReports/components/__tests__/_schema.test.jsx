@@ -15,11 +15,13 @@ vi.mock('../AssignedAnalystCell', () => ({
 
 // Mock other dependencies
 vi.mock('@/hooks/useComplianceReports', () => ({
-  useGetComplianceReportStatuses: vi.fn()
+  useGetComplianceReportStatuses: vi.fn(),
+  useGetAvailableAnalysts: vi.fn()
 }))
 
 vi.mock('@/utils/grid/cellRenderers', () => ({
-  ReportsStatusRenderer: 'ReportsStatusRenderer'
+  ReportsStatusRenderer: 'ReportsStatusRenderer',
+  LastCommentRenderer: 'LastCommentRenderer'
 }))
 
 vi.mock('@/utils/formatters', () => ({
@@ -41,12 +43,13 @@ describe('ComplianceReports Schema', () => {
       const colDefs = reportsColDefs(mockT, isSupplier, mockOnRefresh)
 
       // Verify we have the right number of columns
-      expect(colDefs).toHaveLength(6)
+      expect(colDefs).toHaveLength(7)
 
       // Verify column fields
       const fields = colDefs.map(col => col.field)
       expect(fields).toEqual([
         'assignedAnalyst',
+        'lastComment',
         'compliancePeriod',
         'organization',
         'type',
