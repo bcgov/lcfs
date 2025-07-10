@@ -102,38 +102,53 @@ export const HistoryCard = ({
    * We use it twice – once top‑level for gov users (pre‑assessment)
    * and once nested under the Assessed history entry for all users.
    */
-  const AssessmentLines = () => (
-    <>
-      <StyledListItem disablePadding>
-        <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
-          <strong>
-            {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
-          </strong>
-          {t('report:assessmentLn1', {
-            name: report.organization.name,
-            hasMet:
-              report.summary.line11FossilDerivedBaseFuelTotal <= 0
-                ? 'has met'
-                : 'has not met'
-          })}
-        </ListItemText>
-      </StyledListItem>
-      <StyledListItem disablePadding>
-        <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
-          <strong>
-            {t('report:complianceReportHistory.lowCarbonTarget')}:&nbsp;
-          </strong>
-          {t('report:assessmentLn2', {
-            name: report.organization.name,
-            hasMet:
-              report.summary.line21NonCompliancePenaltyPayable <= 0
-                ? 'has met'
-                : 'has not met'
-          })}
-        </ListItemText>
-      </StyledListItem>
-    </>
-  )
+  const AssessmentLines = () => {
+    // Check if the report is marked as non-assessment
+    if (report.isNonAssessment) {
+      return (
+        <StyledListItem disablePadding>
+          <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+            <strong>{t('report:notSubjectToAssessment')}:&nbsp;</strong>
+            {t('report:notSubjectToAssessmentDescription')}
+          </ListItemText>
+        </StyledListItem>
+      )
+    }
+
+    // Default assessment lines for normal reports
+    return (
+      <>
+        <StyledListItem disablePadding>
+          <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+            <strong>
+              {t('report:complianceReportHistory.renewableTarget')}:&nbsp;
+            </strong>
+            {t('report:assessmentLn1', {
+              name: report.organization.name,
+              hasMet:
+                report.summary.line11FossilDerivedBaseFuelTotal <= 0
+                  ? 'has met'
+                  : 'has not met'
+            })}
+          </ListItemText>
+        </StyledListItem>
+        <StyledListItem disablePadding>
+          <ListItemText slotProps={{ primary: { variant: 'body4' } }}>
+            <strong>
+              {t('report:complianceReportHistory.lowCarbonTarget')}:&nbsp;
+            </strong>
+            {t('report:assessmentLn2', {
+              name: report.organization.name,
+              hasMet:
+                report.summary.line21NonCompliancePenaltyPayable <= 0
+                  ? 'has met'
+                  : 'has not met'
+            })}
+          </ListItemText>
+        </StyledListItem>
+      </>
+    )
+  }
 
   const sortedHistory = useMemo(() => {
     if (!Array.isArray(report.history) || report.history.length === 0) return []

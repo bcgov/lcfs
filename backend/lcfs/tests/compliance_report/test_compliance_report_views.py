@@ -15,6 +15,7 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.email.repo import CHESEmailRepository
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from fastapi import status
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 
 
 @pytest.fixture
@@ -817,3 +818,69 @@ async def test_update_compliance_report_assessed_success(
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
         )
+
+
+@pytest.mark.asyncio
+async def test_update_compliance_report_non_assessment_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_compliance_report_chain:
+        # Set up mock user with analyst role
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+
+        # Mock the compliance report
+        mock_compliance_report = compliance_report_base_schema()
+        mock_compliance_report.is_non_assessment = True
+        mock_validate_organization_access.return_value = None
+        mock_update_compliance_report.return_value = mock_compliance_report
+        mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
+            report=mock_compliance_report, chain=[], is_newest=True
+        )
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {
+            "status": ComplianceReportStatusEnum.Draft.value,
+            "isNonAssessment": True,
+            "supplementalNote": "Test note",
+        }
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+        assert response.json()["report"]["isNonAssessment"] is True
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_non_assessment_forbidden_for_non_analyst(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+):
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    url = fastapi_app.url_path_for(
+        "update_compliance_report",
+        report_id=1,
+    )
+
+    payload = {
+        "status": ComplianceReportStatusEnum.Submitted.value,
+        "supplementalNote": "Test note",
+        "isNonAssessment": True,
+    }
+
+    response = await client.put(url, json=payload)
+    assert response.status_code == 403

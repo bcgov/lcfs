@@ -1,0 +1,33 @@
+"""Add is_non_assessment field to compliance_report table
+
+Revision ID: 3eb97134895a
+Revises: 413eef467edd
+Create Date: 2025-07-07 23:23:47.891496
+
+"""
+
+import sqlalchemy as sa
+from alembic import op
+
+# revision identifiers, used by Alembic.
+revision = "7a9b2c3d4e5f"
+down_revision = "413eef467edd"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.add_column(
+        "compliance_report",
+        sa.Column(
+            "is_non_assessment",
+            sa.Boolean(),
+            nullable=False,
+            server_default="false",
+            comment="Flag indicating if report is not subject to assessment under the Low Carbon Fuels Act",
+        ),
+    )
+
+
+def downgrade() -> None:
+    op.drop_column("compliance_report", "is_non_assessment")
