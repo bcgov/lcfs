@@ -25,6 +25,12 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './testSetup.js',
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        singleFork: true
+      }
+    },
     coverage: {
       provider: 'v8',
       // thresholds: {
