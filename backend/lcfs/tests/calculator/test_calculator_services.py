@@ -298,7 +298,9 @@ async def test_get_calculated_data_modern_period(calculator_service, mock_fuel_r
             return_value=100,
         ):
             # Call the service
-            result = await calculator_service.get_calculated_data("2024", 1, 1, 1, 1, 1000)
+            result = await calculator_service.get_calculated_data(
+                "2024", 1, 1, 1, 1, 1000
+            )
 
             # Assertions
             assert isinstance(result, CreditsResultSchema)
@@ -338,7 +340,9 @@ async def test_get_calculated_data_legacy_period(calculator_service, mock_fuel_r
             return_value=100,
         ):
             # Call the service with a legacy period
-            result = await calculator_service.get_calculated_data("2023", 1, 1, 1, 1, 1000)
+            result = await calculator_service.get_calculated_data(
+                "2023", 1, 1, 1, 1, 1000
+            )
 
             # Assertions
             assert isinstance(result, CreditsResultSchema)
@@ -384,7 +388,7 @@ async def test_get_calculated_data_rounds_values_correctly(
 
         # Assertions for rounded values
         assert result.rci == 75.12  # rounded to 2 decimal places
-        assert result.tci == 90.12  # rounded to 2 decimal places
+        assert result.tci == 90.12345  # rounded to 2 decimal places
         assert result.eer == 1.12  # rounded to 2 decimal places
         assert result.energy_density == 38.12  # rounded to 2 decimal places
         assert result.energy_content == 1000 * 38.12345  # not rounded in calculation

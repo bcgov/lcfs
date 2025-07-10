@@ -172,7 +172,15 @@ class TransactionRepository:
         # Apply sorting
         for order in sort_orders:
             direction = asc if order.direction == "asc" else desc
-            query = query.order_by(direction(getattr(TransactionView, order.field)))
+
+            # Special handling for transaction_id sorting to sort by type first, then by id
+            if order.field == "transaction_id":
+                query = query.order_by(
+                    direction(TransactionView.transaction_type),
+                    direction(TransactionView.transaction_id),
+                )
+            else:
+                query = query.order_by(direction(getattr(TransactionView, order.field)))
 
         # Execute count query for total records matching the filter
         count_query = select(func.count(TransactionView.transaction_id)).where(
