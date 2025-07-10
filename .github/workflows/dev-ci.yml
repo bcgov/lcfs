@@ -135,15 +135,13 @@ jobs:
           ref: main
           ssh-key: ${{ secrets.MANIFEST_REPO_DEPLOY_KEY }}
 
-      - name: Update frontend tag
+      - name: Update tags
         uses: mikefarah/yq@v4.40.5
         with:
-          cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-dev.yaml
-
-      - name: Update backend tag
-        uses: mikefarah/yq@v4.40.5
-        with:
-          cmd: yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-dev.yaml
+          cmd: |
+            yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-frontend/values-dev.yaml
+            yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-backend/values-dev.yaml
+            yq -i '.image.tag = "${{ env.VERSION }}-${{ env.PRE_RELEASE }}"' lcfs/charts/lcfs-celery/values-dev.yaml
 
       - name: GitHub Commit & Push
         run: |
