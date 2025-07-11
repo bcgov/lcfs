@@ -40,6 +40,13 @@ origins = [
     "https://lowcarbonfuels.gov.bc.ca",
 ]
 
+# Regex pattern to match dev environment PR subdomains (e.g., lcfs-dev-3006)
+import re
+
+dev_origin_pattern = re.compile(
+    r"^https://lcfs-dev-\d+\.apps\.silver\.devops\.gov\.bc\.ca$"
+)
+
 
 class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
     """
@@ -55,9 +62,11 @@ class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
                 content={"status": exc.status_code, "detail": exc.detail},
             )
 
-            # Check if the request origin is in the allowed origins
+            # Check if the request origin is in the allowed origins or matches dev pattern
             request_origin = request.headers.get("origin")
-            if request_origin in origins:
+            if request_origin in origins or (
+                request_origin and dev_origin_pattern.match(request_origin)
+            ):
                 response.headers["Access-Control-Allow-Origin"] = request_origin
 
             return response
@@ -143,7 +152,8 @@ def get_app() -> FastAPI:
     # Set up CORS middleware options
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,  # Allows all origins from localhost:3000
+        allow_origins=origins,  # Allows specific origins
+        allow_origin_regex=r"https://lcfs-dev-\d+\.apps\.silver\.devops\.gov\.bc\.ca",  # Allows dev PR subdomains
         allow_credentials=True,
         allow_methods=["*"],  # Allows all methods
         allow_headers=["*"],  # Allows all headers
