@@ -278,7 +278,7 @@ export const OrganizationAddress = ({
             <ListItem key={name} sx={{ display: 'flex' }}>
               <strong>{label}:</strong>{' '}
               <span>
-                {displayAddressValue(snapshotData[name]) ||
+                {displayAddressValue(snapshotData?.[name]) ||
                   (requiredFields.includes(name) && (
                     <BCTypography variant="body4" color="error">
                       Required

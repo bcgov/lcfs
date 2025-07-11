@@ -54,6 +54,8 @@ RENEWABLE_FUEL_TARGET_DESCRIPTIONS = {
     },
 }
 
+# DEPRECATED: Legacy PART3 format - keeping for reference but no longer used
+# All reports now use LOW_CARBON_FUEL_TARGET_DESCRIPTIONS format
 PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
     12: {
         "description": "Total credits from fuel supplied (from Schedule B)",

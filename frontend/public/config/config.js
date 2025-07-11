@@ -12,7 +12,7 @@ export const config = {
   },
   feature_flags: {
     supplementalReporting: true,
-    fullLegacyReports: true,
+    fullLegacyReports: false,
     fseImportExport: true,
     allocationAgreementImportExport: true,
     governmentAdjustment: true

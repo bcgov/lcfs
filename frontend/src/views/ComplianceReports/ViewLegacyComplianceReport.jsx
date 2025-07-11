@@ -11,8 +11,6 @@ import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { LegacyAssessmentCard } from '@/views/ComplianceReports/components/LegacyAssessmentCard.jsx'
-import LegacyReportDetails from '@/views/ComplianceReports/legacy/LegacyReportDetails.jsx'
-import LegacyReportSummary from './legacy/LegacyReportSummary'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 
@@ -139,15 +137,6 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
             chain={reportData.chain}
           />
         </Stack>
-        {isFeatureEnabled(FEATURE_FLAGS.LEGACY_REPORT_DETAILS) && (
-          <>
-            <LegacyReportDetails currentStatus={currentStatus} />
-            <LegacyReportSummary
-              reportID={complianceReportId}
-              alertRef={alertRef}
-            />
-          </>
-        )}
 
         <BCTypography variant="h6" color="primary" sx={{ marginY: '16px' }}>
           {t('report:questions')}
