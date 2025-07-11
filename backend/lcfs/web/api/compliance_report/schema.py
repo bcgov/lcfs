@@ -36,6 +36,7 @@ RETURN_STATUS_MAPPER = {
 class SupplementalInitiatorType(str, Enum):
     SUPPLIER_SUPPLEMENTAL = "Supplier Supplemental"
     GOVERNMENT_REASSESSMENT = "Government Reassessment"
+    GOVERNMENT_INITIATED = "Government Initiated"
 
 
 class ReportingFrequency(str, Enum):
@@ -137,6 +138,12 @@ class ComplianceReportBaseSchema(BaseSchema):
     assessment_statement: Optional[str] = None
 
 
+class LastCommentSchema(BaseSchema):
+    comment: str
+    full_name: str
+    create_date: datetime
+
+
 class ComplianceReportViewSchema(BaseSchema):
     compliance_report_id: int
     compliance_report_group_uuid: str
@@ -149,6 +156,16 @@ class ComplianceReportViewSchema(BaseSchema):
     report_status_id: int
     report_status: str
     update_date: datetime
+    last_comment: Optional[LastCommentSchema] = None
+    supplemental_initiator: Optional[SupplementalInitiatorType] = None
+    report_frequency: Optional[ReportingFrequency] = None
+    legacy_id: Optional[int] = None
+    transaction_id: Optional[int] = None
+    assessment_statement: Optional[str] = None
+    is_latest: bool
+    latest_report_supplemental_initiator: Optional[SupplementalInitiatorType] = None
+    latest_supplemental_create_date: Optional[datetime] = None
+    latest_status: Optional[str] = None
 
 
 class ChainedComplianceReportSchema(BaseSchema):

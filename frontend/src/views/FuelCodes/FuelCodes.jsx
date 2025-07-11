@@ -18,7 +18,7 @@ import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { fuelCodeColDefs } from './_schema'
+import { fuelCodeColDefs, defaultSortModel } from './_schema'
 import { defaultInitialPagination } from '@/constants/schedules.js'
 
 const convertToBackendFilters = (model = {}) =>
@@ -31,6 +31,13 @@ const convertToBackendFilters = (model = {}) =>
     dateTo: cfg.dateTo
   }))
 
+const initialPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: defaultSortModel,
+  filters: []
+}
+
 const FuelCodesBase = () => {
   const gridRef = useRef(null)
 
@@ -41,7 +48,7 @@ const FuelCodesBase = () => {
   const downloadButtonRef = useRef(null)
 
   const [paginationOptions, setPaginationOptions] = useState(
-    defaultInitialPagination
+    initialPaginationOptions
   )
 
   const { t } = useTranslation(['common', 'fuelCodes'])
@@ -101,10 +108,7 @@ const FuelCodesBase = () => {
   }
 
   const handleClearFilters = () => {
-    setPaginationOptions({
-      ...paginationOptions,
-      filters: []
-    })
+    setPaginationOptions(initialPaginationOptions)
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
     }

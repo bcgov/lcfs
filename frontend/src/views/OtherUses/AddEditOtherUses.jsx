@@ -99,6 +99,14 @@ export const AddEditOtherUses = () => {
           item.complianceReportId === numericComplianceReportId
       }))
 
+      // Add a new empty row for user input when existing data is present
+      processedData.push({
+        id: uuid(),
+        complianceReportId: numericComplianceReportId,
+        compliancePeriod,
+        isValid: true
+      })
+
       return processedData
     },
     [ensureRowId, numericComplianceReportId, compliancePeriod, isSupplemental]
@@ -119,15 +127,7 @@ export const AddEditOtherUses = () => {
     if (usesLoading || !isFetched) return
 
     try {
-      const processedData = [
-        ...processRowData(otherUses),
-        {
-          id: uuid(),
-          complianceReportId: numericComplianceReportId,
-          compliancePeriod,
-          isValid: true
-        }
-      ]
+      const processedData = processRowData(otherUses)
       setRowData(processedData)
     } catch (error) {
       console.error('Error processing row data:', error)
@@ -201,7 +201,7 @@ export const AddEditOtherUses = () => {
       try {
         params.api.sizeColumnsToFit()
 
-        // Auto-focus the first editable cell after data is loaded
+        // Auto-focus the last row (new empty row for input) after data is loaded
         setTimeout(() => {
           const lastRowIndex = params.api.getLastDisplayedRowIndex()
           if (lastRowIndex >= 0) {
@@ -364,8 +364,15 @@ export const AddEditOtherUses = () => {
   }, [navigate, compliancePeriod, complianceReportId, t])
 
   const columnDefs = useMemo(
-    () => otherUsesColDefs(optionsData, errors, warnings, isSupplemental),
-    [optionsData, errors, warnings, isSupplemental]
+    () =>
+      otherUsesColDefs(
+        optionsData,
+        errors,
+        warnings,
+        isSupplemental,
+        compliancePeriod
+      ),
+    [optionsData, errors, warnings, isSupplemental, compliancePeriod]
   )
 
   const saveButtonProps = useMemo(
