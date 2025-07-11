@@ -6,14 +6,14 @@ import IDIRDirectorNotificationSettings from '../IDIRDirectorNotificationSetting
 // Mock the NotificationSettingsForm component
 vi.mock('../NotificationSettingsForm', () => ({
   default: ({ categories }) => (
-    <div data-testid="notification-settings-form">
+    <div data-test="notification-settings-form">
       {Object.keys(categories).map((categoryKey) => (
-        <div key={categoryKey} data-testid={`category-${categoryKey}`}>
+        <div key={categoryKey} data-test={`category-${categoryKey}`}>
           <h3>{categories[categoryKey].title}</h3>
           {Object.entries(categories[categoryKey])
             .filter(([key]) => key !== 'title')
             .map(([notificationKey, translationKey]) => (
-              <div key={notificationKey} data-testid={`notification-${notificationKey}`}>
+              <div key={notificationKey} data-test={`notification-${notificationKey}`}>
                 {notificationKey}: {translationKey}
               </div>
             ))}
@@ -63,7 +63,7 @@ describe('IDIRDirectorNotificationSettings', () => {
     expect(fuelCodesCategory).toHaveTextContent('idirDirector.categories.fuelCodes.title')
     
     // Check that it has exactly 1 fuel code notification for director
-    const fuelCodeNotifications = fuelCodesCategory.querySelectorAll('[data-testid^="notification-IDIR_DIRECTOR__FUEL_CODE"]')
+    const fuelCodeNotifications = fuelCodesCategory.querySelectorAll('[data-test^="notification-IDIR_DIRECTOR__FUEL_CODE"]')
     expect(fuelCodeNotifications).toHaveLength(1)
   })
 
@@ -79,10 +79,10 @@ describe('IDIRDirectorNotificationSettings', () => {
     render(<IDIRDirectorNotificationSettings />)
     
     const fuelCodesCategory = screen.getByTestId('category-idirDirector.categories.fuelCodes')
-    const allNotifications = fuelCodesCategory.querySelectorAll('[data-testid^="notification-"]')
+    const allNotifications = fuelCodesCategory.querySelectorAll('[data-test^="notification-"]')
     
     // Director should only have one fuel code notification
     expect(allNotifications).toHaveLength(1)
-    expect(allNotifications[0]).toHaveAttribute('data-testid', 'notification-IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION')
+    expect(allNotifications[0]).toHaveAttribute('data-test', 'notification-IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION')
   })
 })

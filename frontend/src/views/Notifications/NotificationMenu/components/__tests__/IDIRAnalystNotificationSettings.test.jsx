@@ -6,14 +6,14 @@ import IDIRAnalystNotificationSettings from '../IDIRAnalystNotificationSettings'
 // Mock the NotificationSettingsForm component
 vi.mock('../NotificationSettingsForm', () => ({
   default: ({ categories }) => (
-    <div data-testid="notification-settings-form">
+    <div data-test="notification-settings-form">
       {Object.keys(categories).map((categoryKey) => (
-        <div key={categoryKey} data-testid={`category-${categoryKey}`}>
+        <div key={categoryKey} data-test={`category-${categoryKey}`}>
           <h3>{categories[categoryKey].title}</h3>
           {Object.entries(categories[categoryKey])
             .filter(([key]) => key !== 'title')
             .map(([notificationKey, translationKey]) => (
-              <div key={notificationKey} data-testid={`notification-${notificationKey}`}>
+              <div key={notificationKey} data-test={`notification-${notificationKey}`}>
                 {notificationKey}: {translationKey}
               </div>
             ))}
@@ -70,7 +70,7 @@ describe('IDIRAnalystNotificationSettings', () => {
     expect(fuelCodesCategory).toHaveTextContent('idirAnalyst.categories.fuelCodes.title')
     
     // Check that it has exactly 2 fuel code notifications
-    const fuelCodeNotifications = fuelCodesCategory.querySelectorAll('[data-testid^="notification-IDIR_ANALYST__FUEL_CODE"]')
+    const fuelCodeNotifications = fuelCodesCategory.querySelectorAll('[data-test^="notification-IDIR_ANALYST__FUEL_CODE"]')
     expect(fuelCodeNotifications).toHaveLength(2)
   })
 
