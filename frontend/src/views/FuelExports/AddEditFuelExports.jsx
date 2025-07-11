@@ -115,7 +115,8 @@ export const AddEditFuelExports = () => {
         errors,
         warnings,
         gridReady,
-        isSupplemental
+        isSupplemental,
+        compliancePeriod
       )
       setColumnDefs(updatedColumnDefs)
     }

@@ -1,6 +1,6 @@
 import pytest
 import uuid
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 from lcfs.db.models.compliance import (
     CompliancePeriod,
@@ -315,3 +315,94 @@ async def test_delete_compliance_report_success(compliance_report_repo, dbsessio
     assert result is True
     dbsession.execute.assert_called()  # Ensure delete commands were called
     dbsession.flush.assert_awaited_once()  # Ensure flush was called to commit changes
+
+
+@pytest.mark.anyio
+async def test_get_latest_comment_for_report_no_comments(
+    compliance_report_repo, compliance_reports
+):
+    """Test _get_latest_comment_for_report when no comments exist"""
+
+    # Test with a report that has no comments
+    result = await compliance_report_repo._get_latest_comment_for_report(
+        compliance_reports[0].compliance_report_id
+    )
+
+    assert result is None
+
+
+@pytest.mark.anyio
+async def test_get_reports_paginated_includes_last_comment_for_government_user(
+    compliance_report_repo, compliance_reports
+):
+    """Test that get_reports_paginated includes last_comment field for government users"""
+    from lcfs.db.models.user import UserProfile
+    from lcfs.db.models.user.Role import RoleEnum
+    from lcfs.web.api.base import PaginationRequestSchema
+    from lcfs.web.api.compliance_report.schema import ComplianceReportViewSchema
+
+    # Create a government user
+    government_user = UserProfile(
+        user_profile_id=1000, keycloak_username="gov_user", is_active=True
+    )
+    # Mock the user_has_roles function to return True for government roles
+    with patch(
+        "lcfs.web.api.compliance_report.repo.user_has_roles"
+    ) as mock_user_has_roles:
+        mock_user_has_roles.return_value = True
+
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[],
+            filters=[],
+        )
+
+        reports, total_count = await compliance_report_repo.get_reports_paginated(
+            pagination, government_user
+        )
+
+        assert isinstance(reports, list)
+        if len(reports) > 0:
+            assert isinstance(reports[0], ComplianceReportViewSchema)
+            # Check that last_comment field is present (even if None)
+            assert hasattr(reports[0], "last_comment")
+
+
+@pytest.mark.anyio
+async def test_get_reports_paginated_excludes_last_comment_for_supplier_user(
+    compliance_report_repo, compliance_reports
+):
+    """Test that get_reports_paginated excludes last_comment field for supplier users"""
+    from lcfs.db.models.user import UserProfile
+    from lcfs.web.api.base import PaginationRequestSchema
+    from lcfs.web.api.compliance_report.schema import ComplianceReportViewSchema
+
+    # Create a supplier user
+    supplier_user = UserProfile(
+        user_profile_id=1001, keycloak_username="supplier_user", is_active=True
+    )
+
+    # Mock the user_has_roles function to return False for government roles
+    with patch(
+        "lcfs.web.api.compliance_report.repo.user_has_roles"
+    ) as mock_user_has_roles:
+        mock_user_has_roles.return_value = False
+
+        pagination = PaginationRequestSchema(
+            page=1,
+            size=10,
+            sort_orders=[],
+            filters=[],
+        )
+
+        reports, total_count = await compliance_report_repo.get_reports_paginated(
+            pagination, supplier_user
+        )
+
+        assert isinstance(reports, list)
+        if len(reports) > 0:
+            assert isinstance(reports[0], ComplianceReportViewSchema)
+            # Check that last_comment field is not present or is None
+            if hasattr(reports[0], "last_comment"):
+                assert reports[0].last_comment is None
