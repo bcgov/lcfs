@@ -14,12 +14,20 @@ import BCButton from '@/components/BCButton/index.jsx'
 import { useApiService } from '@/services/useApiService.js'
 import { FileDownload } from '@mui/icons-material'
 import { StyledChip } from '@/components/StyledChip'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { getQuarterDateRange } from '@/utils/dateQuarterUtils'
+import { dateToLongString } from '@/utils/formatters'
 
-export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
+export const ActivityLinksList = ({
+  currentStatus,
+  isQuarterlyReport,
+  reportQuarter
+}) => {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const apiService = useApiService()
   const { compliancePeriod, complianceReportId } = useParams()
+  const { data: currentUser } = useCurrentUser()
 
   const [isOpen, setIsOpen] = useState(false)
 
@@ -77,7 +85,7 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         false
       )
     ],
-    [t, navigate, compliancePeriod, complianceReportId, createActivity]
+    [t, navigate, compliancePeriod, complianceReportId]
   )
 
   const secondaryList = useMemo(
@@ -86,7 +94,7 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         'report:activityLists.finalSupplyEquipment',
         'report:activityLabels.finalSupplyEquipment',
         ROUTES.REPORTS.ADD.FINAL_SUPPLY_EQUIPMENTS,
-        false
+        true
       ),
       createActivity(
         'report:activityLists.allocationAgreements',
@@ -103,11 +111,25 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         enableForQuarterly: true
       }
     ],
-    [t, navigate, compliancePeriod, complianceReportId, createActivity]
+    [t, navigate, compliancePeriod, complianceReportId]
   )
+
+  const quarterAsStr = `Q${reportQuarter}`
+  const dateRange = getQuarterDateRange(quarterAsStr, compliancePeriod)
 
   return (
     <>
+      {isQuarterlyReport && (
+        <BCTypography variant="body4" color="text" component="p" sx={{ mb: 2 }}>
+          Did{' '}
+          <span style={{ fontWeight: 'bold' }}>
+            {currentUser?.organization?.name}
+          </span>{' '}
+          engage in any of the following activities between{' '}
+          {dateToLongString(dateRange.from)} and{' '}
+          {dateToLongString(dateRange.to)}?
+        </BCTypography>
+      )}
       <BCTypography
         variant="body4"
         color="text"
@@ -122,11 +144,17 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         sx={{ maxWidth: '100%', listStyleType: 'disc' }}
       >
         {primaryList
-          .filter(
-            (activity) =>
-              (isQuarterlyReport && activity.enableForQuarterly) ||
-              !isQuarterlyReport
-          )
+          .filter((activity) => {
+            if (!isQuarterlyReport) return true
+
+            // For Q1-Q3: only show activities with enableForQuarterly=true
+            if (reportQuarter && [1, 2, 3].includes(reportQuarter)) {
+              return activity.enableForQuarterly
+            }
+
+            // For Q4: show all activities (same as annual)
+            return true
+          })
           .map((activity) => (
             <Box
               sx={{ cursor: 'pointer' }}
@@ -164,11 +192,17 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         sx={{ maxWidth: '100%', listStyleType: 'disc' }}
       >
         {secondaryList
-          .filter(
-            (activity) =>
-              (isQuarterlyReport && activity.enableForQuarterly) ||
-              !isQuarterlyReport
-          )
+          .filter((activity) => {
+            if (!isQuarterlyReport) return true
+
+            // For Q1-Q3: only show activities with enableForQuarterly=true
+            if (reportQuarter && [1, 2, 3].includes(reportQuarter)) {
+              return activity.enableForQuarterly
+            }
+
+            // For Q4: show all activities (same as annual)
+            return true
+          })
           .map((activity) => (
             <Box
               sx={{ cursor: 'pointer' }}
@@ -231,6 +265,9 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         open={isOpen}
         close={() => {
           setIsOpen(false)
+        }}
+        onUploadSuccess={() => {
+          // any action on successful upload
         }}
       />
     </>

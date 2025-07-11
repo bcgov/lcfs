@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, Float, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable
@@ -109,6 +109,18 @@ class ComplianceReportSummary(BaseModel, Auditable):
     line_21_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
     total_non_compliance_penalty_payable = Column(Float, nullable=False, default=0)
 
+    # Penalty override fields for IDIR Director
+    penalty_override_enabled = Column(Boolean, nullable=False, default=False, comment="Whether penalty override is enabled (checkbox state)")
+    renewable_penalty_override = Column(Float, nullable=True, comment="Director override value for Line 11 renewable fuel penalty")
+    low_carbon_penalty_override = Column(Float, nullable=True, comment="Director override value for Line 21 low carbon fuel penalty")
+    penalty_override_date = Column(DateTime(timezone=True), nullable=True, comment="Timestamp when penalty was last overridden")
+    penalty_override_user = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="User who made the penalty override"
+    )
+
     # Legacy TFRS Columns
     credits_offset_a = Column(Integer)
     credits_offset_b = Column(Integer)
@@ -121,6 +133,7 @@ class ComplianceReportSummary(BaseModel, Auditable):
     early_issuance_credits_q4 = Column(Integer)
 
     compliance_report = relationship("ComplianceReport", back_populates="summary")
+    penalty_override_user_profile = relationship("UserProfile", foreign_keys=[penalty_override_user])
 
     def __repr__(self):
         return (
