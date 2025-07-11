@@ -321,7 +321,7 @@ export const lowCarbonColumns = (t) => [
   }
 ]
 
-export const nonComplianceColumns = (t) => [
+export const nonComplianceColumns = (t, editable = false) => [
   {
     id: 'description',
     label: t('report:nonCompliancePenaltySummary'),
@@ -331,7 +331,9 @@ export const nonComplianceColumns = (t) => [
     id: 'totalValue',
     label: t('report:summaryLabels.totalValue'),
     align: 'center',
-    width: '150px'
+    width: '150px',
+    editable: editable,
+    editableCells: editable ? [0, 1] : []
   }
 ]
 
