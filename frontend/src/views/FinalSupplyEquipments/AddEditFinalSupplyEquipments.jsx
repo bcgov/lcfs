@@ -27,6 +27,10 @@ import ImportDialog from '@/components/ImportDialog'
 
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
+import {
+  getCurrentQuarter,
+  getQuarterDateRange
+} from '@/utils/dateQuarterUtils'
 
 export const AddEditFinalSupplyEquipments = () => {
   const [rowData, setRowData] = useState([])
@@ -62,6 +66,24 @@ export const AddEditFinalSupplyEquipments = () => {
 
   const version = currentReport?.report?.version ?? 0
   const isOriginalReport = version === 0
+
+  // Determine if this is an early issuance report and get current quarter
+  const isEarlyIssuance =
+    currentReport?.report?.reportingFrequency === 'Quarterly'
+  const currentQuarter = isEarlyIssuance
+    ? getCurrentQuarter(compliancePeriod)
+    : null
+
+  // Calculate default dates based on report type
+  const defaultDates = useMemo(() => {
+    if (isEarlyIssuance && currentQuarter) {
+      return getQuarterDateRange(currentQuarter, compliancePeriod)
+    }
+    return {
+      from: `${compliancePeriod}-01-01`,
+      to: `${compliancePeriod}-12-31`
+    }
+  }, [isEarlyIssuance, currentQuarter, compliancePeriod])
 
   const { mutateAsync: saveRow } =
     useSaveFinalSupplyEquipment(complianceReportId)
@@ -116,8 +138,8 @@ export const AddEditFinalSupplyEquipments = () => {
           {
             id: uuid(),
             complianceReportId,
-            supplyFromDate: `${compliancePeriod}-01-01`,
-            supplyToDate: `${compliancePeriod}-12-31`
+            supplyFromDate: defaultDates.from,
+            supplyToDate: defaultDates.to
           }
         ])
       } else {
@@ -129,8 +151,8 @@ export const AddEditFinalSupplyEquipments = () => {
           {
             id: uuid(),
             complianceReportId,
-            supplyFromDate: `${compliancePeriod}-01-01`,
-            supplyToDate: `${compliancePeriod}-12-31`
+            supplyFromDate: defaultDates.from,
+            supplyToDate: defaultDates.to
           }
         ])
       }
@@ -144,7 +166,14 @@ export const AddEditFinalSupplyEquipments = () => {
         })
       }, 100)
     }
-  }, [compliancePeriod, complianceReportId, data, isGridReady, gridRef])
+  }, [
+    compliancePeriod,
+    complianceReportId,
+    data,
+    isGridReady,
+    gridRef,
+    defaultDates
+  ])
 
   useEffect(() => {
     if (optionsData?.levelsOfEquipment?.length > 0) {
@@ -209,8 +238,8 @@ export const AddEditFinalSupplyEquipments = () => {
         setRowData,
         {
           complianceReportId,
-          supplyFromDate: `${compliancePeriod}-01-01`,
-          supplyToDate: `${compliancePeriod}-12-31`
+          supplyFromDate: defaultDates.from,
+          supplyToDate: defaultDates.to
         }
       )
     }
@@ -297,13 +326,13 @@ export const AddEditFinalSupplyEquipments = () => {
         .map(() => ({
           id: uuid(),
           complianceReportId,
-          supplyFromDate: `${compliancePeriod}-01-01`,
-          supplyToDate: `${compliancePeriod}-12-31`,
+          supplyFromDate: defaultDates.from,
+          supplyToDate: defaultDates.to,
           validationStatus: 'error',
           modified: true
         }))
     },
-    [compliancePeriod, complianceReportId]
+    [complianceReportId, defaultDates]
   )
 
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null)

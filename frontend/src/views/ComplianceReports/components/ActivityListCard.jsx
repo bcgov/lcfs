@@ -2,15 +2,12 @@ import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { useTranslation } from 'react-i18next'
 import { ActivityLinksList } from './ActivityLinksList'
 import BCBox from '@/components/BCBox'
-import BCTypography from '@/components/BCTypography'
 import Box from '@mui/material/Box'
 
 export const ActivityListCard = ({
-  name,
-  period,
   currentStatus,
-  quarter='',
-  isQuarterlyReport=false
+  quarter = '',
+  isQuarterlyReport = false
 }) => {
   const { t } = useTranslation(['report'])
 
@@ -29,20 +26,11 @@ export const ActivityListCard = ({
             gap: 2
           }}
         >
-          <BCTypography
-            variant="body4"
-            color="text"
-            component="div"
-            dangerouslySetInnerHTML={{
-              __html: isQuarterlyReport
-                ? t('report:quarterlyActivityHdrLabel', { quarter })
-                : t('report:activityHdrLabel', { name, period })
-            }}
-          />
           <Box>
             <ActivityLinksList
               currentStatus={currentStatus}
               isQuarterlyReport={isQuarterlyReport}
+              reportQuarter={quarter}
             />
           </Box>
         </BCBox>
