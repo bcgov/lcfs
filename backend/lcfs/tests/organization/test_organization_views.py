@@ -175,7 +175,7 @@ async def test_export_transactions_for_org_success(
     params = {"format": "xls"}
     url = fastapi_app.url_path_for("export_transactions_for_org")
 
-    response = await client.get(
+    response = await client.post(
         url,
         params=params,
     )
@@ -288,7 +288,11 @@ async def test_create_compliance_report_success(
         "compliance_period_id": 1,
         "compliance_period": {"compliance_period_id": 1, "description": "2024"},
         "organization_id": 1,
-        "organization": {"organization_id": 1, "name": "org1"},
+        "organization": {
+            "organization_id": 1,
+            "organization_code": "ABC123",
+            "name": "org1",
+        },
         "current_status_id": 1,
         "current_status": {"compliance_report_status_id": 1, "status": "status"},
         "summary": {
@@ -391,15 +395,39 @@ async def test_get_compliance_report_by_id_success(
     )
 
     # Mock the compliance report service's method
-    mock_compliance_report_services.get_compliance_report_chain.return_value = (
-        ChainedComplianceReportSchema(
-            report=compliance_report_base_schema(),
-            chain=[],
-            is_newest=False,
-        )
+    mock_compliance_report_services.get_compliance_report_by_id.return_value = ChainedComplianceReportSchema(
+        report={
+            "compliance_report_id": 1,
+            "compliance_period_id": 1,
+            "compliance_period": {"compliance_period_id": 1, "description": "2024"},
+            "organization_id": 1,
+            "organization": {
+                "organization_id": 1,
+                "organization_code": "ABC123",
+                "name": "org1",
+            },
+            "current_status_id": 1,
+            "current_status": {"compliance_report_status_id": 1, "status": "status"},
+            "summary": {
+                "summary_id": 1,
+                "is_locked": False,
+                "line_11_fossil_derived_base_fuel_total": 0.0,
+                "line_21_non_compliance_penalty_payable": 0.0,
+            },
+            "compliance_report_group_uuid": "uuid",
+            "version": 0,
+            "supplemental_initiator": SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
+            "has_supplemental": False,
+        },
+        chain=[],
+        isNewest=True,
     )
 
-    # Create a mock for the validation service
+    # Make the chain call return the same serialisable object
+    mock_compliance_report_services.get_compliance_report_chain.return_value = (
+        mock_compliance_report_services.get_compliance_report_by_id.return_value
+    )
+
     mock_compliance_report_validation = AsyncMock()
     mock_compliance_report_validation.validate_organization_access.return_value = (
         ComplianceReport()

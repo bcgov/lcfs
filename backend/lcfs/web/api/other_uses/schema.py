@@ -16,6 +16,7 @@ from lcfs.web.utils.schema_validators import fuel_code_required_label
 
 class FuelCodeStatusEnumSchema(str, Enum):
     Draft = "Draft"
+    Recommended = "Recommended"
     Approved = "Approved"
     Deleted = "Deleted"
 
@@ -24,6 +25,7 @@ class FuelCodeSchema(BaseSchema):
     fuel_code_id: int
     fuel_code: str
     carbon_intensity: float
+    fuel_production_facility_country: Optional[str] = None
 
 
 class ProvisionOfTheActSchema(BaseSchema):

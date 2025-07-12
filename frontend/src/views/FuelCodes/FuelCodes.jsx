@@ -8,8 +8,7 @@ import { DownloadButton } from '@/components/DownloadButton'
 import { Role } from '@/components/Role'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
-import { useGetFuelCodes } from '@/hooks/useFuelCode'
-import { useApiService } from '@/services/useApiService'
+import { useGetFuelCodes, useDownloadFuelCodes } from '@/hooks/useFuelCode'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
 import withRole from '@/utils/withRole'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
@@ -19,23 +18,39 @@ import Grid2 from '@mui/material/Grid2'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { fuelCodeColDefs } from './_schema'
+import { fuelCodeColDefs, defaultSortModel } from './_schema'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+
+const convertToBackendFilters = (model = {}) =>
+  Object.entries(model).map(([field, cfg]) => ({
+    field,
+    filterType: cfg.filterType || 'text',
+    type: cfg.type,
+    filter: cfg.filter,
+    dateFrom: cfg.dateFrom,
+    dateTo: cfg.dateTo
+  }))
+
+const initialPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: defaultSortModel,
+  filters: []
+}
 
 const FuelCodesBase = () => {
   const gridRef = useRef(null)
 
-  const [isDownloadingFuelCodes, setIsDownloadingFuelCodes] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
   const downloadButtonRef = useRef(null)
 
   const [paginationOptions, setPaginationOptions] = useState(
-    defaultInitialPagination
+    initialPaginationOptions
   )
 
-  const apiService = useApiService()
   const { t } = useTranslation(['common', 'fuelCodes'])
   const navigate = useNavigate()
   const location = useLocation()
@@ -44,6 +59,7 @@ const FuelCodesBase = () => {
     cacheTime: 0,
     staleTime: 0
   })
+  const { mutateAsync: downloadFuelCodes } = useDownloadFuelCodes()
 
   useEffect(() => {
     if (location.state?.message) {
@@ -66,25 +82,33 @@ const FuelCodesBase = () => {
     []
   )
 
-  const handleDownloadFuelCodes = async () => {
-    setIsDownloadingFuelCodes(true)
+  const buildExportPayload = () => ({
+    page: 1,
+    size: 10000, // ignored by backend, but required by schema
+    filters: convertToBackendFilters(
+      gridRef.current?.api?.getFilterModel?.() || {}
+    ),
+    sortOrders: paginationOptions.sortOrders || []
+  })
+
+  const handleDownload = async () => {
+    setIsDownloading(true)
     setAlertMessage('')
     try {
-      await apiService.download(ROUTES.FUEL_CODES.EXPORT)
-      setIsDownloadingFuelCodes(false)
+      await downloadFuelCodes({ format: 'xlsx', body: buildExportPayload() })
+      setIsDownloading(false)
     } catch (error) {
       console.error('Error downloading fuel code information:', error)
-      setIsDownloadingFuelCodes(false)
+      setIsDownloading(false)
       setAlertMessage(t('fuelCode:fuelCodeDownloadFailMsg'))
       setAlertSeverity('error')
+    } finally {
+      setIsDownloading(false)
     }
   }
 
   const handleClearFilters = () => {
-    setPaginationOptions({
-      ...paginationOptions,
-      filters: []
-    })
+    setPaginationOptions(initialPaginationOptions)
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
     }
@@ -103,7 +127,7 @@ const FuelCodesBase = () => {
         {t('FuelCodes')}
       </BCTypography>
       <Stack
-        direction={{ md: 'coloumn', lg: 'row' }}
+        direction={{ md: 'column', lg: 'row' }}
         spacing={{ xs: 2, sm: 2, md: 3 }}
         useFlexGap
         flexWrap="wrap"
@@ -128,8 +152,8 @@ const FuelCodesBase = () => {
         </Role>
         <DownloadButton
           ref={downloadButtonRef}
-          onDownload={handleDownloadFuelCodes}
-          isDownloading={isDownloadingFuelCodes}
+          onDownload={handleDownload}
+          isDownloading={isDownloading}
           label={t('fuelCode:fuelCodeDownloadBtn')}
           downloadLabel={`${t('fuelCode:fuelCodeDownloadingMsg')}...`}
           dataTest="fuel-code-download-btn"

@@ -8,6 +8,7 @@ import { roles } from '@/constants/roles'
 import { apiRoutes } from '@/constants/routes/index.js'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { useCreateSupplementalReport } from '@/hooks/useComplianceReports'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import { useApiService } from '@/services/useApiService.js'
 import { HistoryCard } from '@/views/ComplianceReports/components/HistoryCard.jsx'
@@ -26,12 +27,12 @@ export const AssessmentCard = ({
   currentStatus,
   complianceReportId,
   alertRef,
-  chain,
-  isQuarterlyReport = false
+  chain
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
   const apiService = useApiService()
+  const { hasRoles } = useCurrentUser()
 
   const [isEditing, setIsEditing] = useState(false)
 
@@ -46,12 +47,11 @@ export const AssessmentCard = ({
   const onDownloadReport = async () => {
     setIsDownloading(true)
     try {
-      await apiService.download(
-        apiRoutes.exportComplianceReport.replace(
-          ':reportID',
-          complianceReportId
-        )
+      const endpoint = apiRoutes.exportComplianceReport.replace(
+        ':reportID',
+        complianceReportId
       )
+      await apiService.download({ url: endpoint })
     } finally {
       setIsDownloading(false)
     }
@@ -63,18 +63,17 @@ export const AssessmentCard = ({
         // Navigate to the new report's page
         const newReportId = data.data.complianceReportId
         const compliancePeriodYear = data.data.compliancePeriod.description
-        navigate(
-          `/compliance-reporting/${compliancePeriodYear}/${newReportId}`,
-          {
-            state: {
-              message: t('report:supplementalCreated'),
-              severity: 'success'
-            }
-          }
-        )
+
+        navigate(`/compliance-reporting/${compliancePeriodYear}/${newReportId}`)
+
+        // Use alertRef to display the success message
+        alertRef?.current?.triggerAlert({
+          message: t('report:supplementalCreated'),
+          severity: 'success'
+        })
       },
       onError: (error) => {
-        alertRef.current?.triggerAlert({
+        alertRef?.current?.triggerAlert({
           message: error.message,
           severity: 'error'
         })
@@ -82,8 +81,17 @@ export const AssessmentCard = ({
     })
 
   const filteredChain = useMemo(() => {
-    return chain.filter((report) => report.history && report.history.length > 0)
+    return chain?.filter((report) => report.history && report.history.length > 0)
   }, [chain])
+
+  const isAddressEditable = useMemo(() => {
+    return (
+      !isEditing &&
+      (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT ||
+        (hasRoles(roles.analyst) &&
+          currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED))
+    )
+  }, [isEditing, currentStatus, hasRoles])
 
   return (
     <BCWidgetCard
@@ -97,12 +105,11 @@ export const AssessmentCard = ({
           : t('report:orgDetails')
       }
       editButton={
-        (!isEditing &&
-          currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && {
-            onClick: onEdit,
-            text: 'Edit',
-            id: 'edit'
-          }) ||
+        (isAddressEditable && {
+          onClick: onEdit,
+          text: 'Edit',
+          id: 'edit'
+        }) ||
         null
       }
       content={
@@ -121,7 +128,7 @@ export const AssessmentCard = ({
                 setIsEditing={setIsEditing}
               />
             )}
-            {filteredChain.length > 0 &&
+            {filteredChain?.length > 0 &&
               currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
                 <>
                   <BCTypography
@@ -132,13 +139,32 @@ export const AssessmentCard = ({
                   >
                     {t('report:reportHistory')}
                   </BCTypography>
-                  {filteredChain.map((report, index) => (
-                    <HistoryCard
-                      defaultExpanded={index === 0}
-                      key={report.version}
-                      report={report}
-                    />
-                  ))}
+                  {filteredChain?.map((report, index) => {
+                    const assessmentStatement = filteredChain.find(
+                      (r) =>
+                        r?.assessmentStatement !== null &&
+                        r?.assessmentStatement !== undefined
+                    )?.assessmentStatement
+
+                    // Hide assessment statement for supplemental reports (version > 0) for IDIR users
+                    const shouldShowAssessment =
+                      index === 0 &&
+                      assessmentStatement &&
+                      !(isGovernmentUser && report.version > 0)
+
+                    return (
+                      <HistoryCard
+                        defaultExpanded={index === 0}
+                        key={report.version}
+                        report={report}
+                        assessedMessage={
+                          shouldShowAssessment ? assessmentStatement : false
+                        }
+                        reportVersion={report.version}
+                        currentStatus={currentStatus}
+                      />
+                    )
+                  })}
                 </>
               )}
             <Role roles={[roles.supplier]}>
@@ -167,7 +193,14 @@ export const AssessmentCard = ({
                           onClick={() => {
                             createSupplementalReport()
                           }}
-                          startIcon={<Assignment />}
+                          startIcon={
+                            <Assignment
+                              sx={{
+                                width: '1rem',
+                                height: '1rem'
+                              }}
+                            />
+                          }
                           sx={{ mt: 3 }}
                           disabled={isLoading}
                         >

@@ -18,6 +18,7 @@ from lcfs.web.utils.schema_validators import fuel_suffix_format_validator
 
 class FuelCodeStatusEnumSchema(str, Enum):
     Draft = "Draft"
+    Recommended = "Recommended"
     Approved = "Approved"
     Deleted = "Deleted"
 
@@ -190,6 +191,41 @@ class FuelCodeSchema(BaseSchema):
     )
 
 
+class FuelCodeBaseSchema(BaseSchema):
+    fuel_code_id: Optional[int] = None
+    prefix_id: int = Field(..., alias="fuel_code_prefix_id")
+    prefix: str
+    fuel_suffix: str
+    fuel_status_id: int = Field(..., alias="fuel_code_status_id")
+    status: Optional[str] = None
+    fuel_type_id: int
+    fuel_type: str
+    company: str
+    contact_name: Optional[str] = None
+    contact_email: Optional[str] = None
+    carbon_intensity: float
+    edrms: str
+    last_updated: datetime
+    application_date: datetime
+    approval_date: Optional[datetime] = None
+    create_date: Optional[datetime] = None
+    effective_date: Optional[datetime] = None
+    expiration_date: Optional[datetime] = None
+    effective_status: Optional[bool] = None
+    feedstock: str
+    feedstock_location: str
+    feedstock_misc: Optional[str] = None
+    fuel_production_facility_city: Optional[str] = None
+    fuel_production_facility_province_state: Optional[str] = None
+    fuel_production_facility_country: Optional[str] = None
+    facility_nameplate_capacity: Optional[int] = None
+    facility_nameplate_capacity_unit: Optional[str] = None
+    former_company: Optional[str] = None
+    finished_fuel_transport_modes: Optional[List[str]] = None
+    feedstock_fuel_transport_modes: Optional[List[str]] = None
+    notes: Optional[str] = None
+
+
 class FuelCodeCloneSchema(BaseSchema):
     fuel_code_id: Optional[int] = None
     fuel_status_id: Optional[int] = None
@@ -258,7 +294,7 @@ class SearchFuelCodeList(BaseSchema):
 
 
 class FuelCodesSchema(BaseSchema):
-    fuel_codes: List[FuelCodeSchema]
+    fuel_codes: List[FuelCodeBaseSchema]
     pagination: Optional[PaginationResponseSchema] = None
 
 

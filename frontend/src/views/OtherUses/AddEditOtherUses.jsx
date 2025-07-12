@@ -2,19 +2,16 @@ import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
 import Loading from '@/components/Loading'
 import { ROUTES, buildPath } from '@/routes/routes'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 import {
   useGetAllOtherUsesList,
   useOtherUsesOptions,
   useSaveOtherUses
 } from '@/hooks/useOtherUses'
-import { isArrayEmpty } from '@/utils/array'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Grid2'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
@@ -34,6 +31,7 @@ export const AddEditOtherUses = () => {
   const location = useLocation()
   const { t } = useTranslation(['common', 'otherUses', 'reports'])
   const { complianceReportId, compliancePeriod } = useParams()
+
   const {
     data: optionsData,
     isLoading: optionsLoading,
@@ -42,234 +40,263 @@ export const AddEditOtherUses = () => {
 
   const { mutateAsync: saveRow } = useSaveOtherUses(complianceReportId)
   const navigate = useNavigate()
-  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
+
   const { data: complianceReport, isLoading: complianceReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId,
-      { enabled: !currentUserLoading }
-    )
-  const isSupplemental = complianceReport?.report?.version !== 0
+    useComplianceReportWithCache(complianceReportId)
 
   const { data: otherUses, isLoading: usesLoading } = useGetAllOtherUsesList({
     complianceReportId,
-    changelog: isSupplemental
+    changelog: complianceReport?.report?.version !== 0
   })
 
+  const isSupplemental = useMemo(
+    () => complianceReport?.report?.version !== 0,
+    [complianceReport?.report?.version]
+  )
+
+  const numericComplianceReportId = useMemo(
+    () => +complianceReportId,
+    [complianceReportId]
+  )
+
+  // Utility function to ensure consistent row ID assignment
+  const ensureRowId = useCallback(
+    (row) => {
+      if (row.id) return row
+
+      return {
+        ...row,
+        id: uuid(),
+        isValid: true,
+        complianceReportId: numericComplianceReportId,
+        ...(isSupplemental &&
+          row.complianceReportId === numericComplianceReportId && {
+            isNewSupplementalEntry: true
+          })
+      }
+    },
+    [numericComplianceReportId, isSupplemental]
+  )
+
+  const processRowData = useCallback(
+    (data) => {
+      if (!data?.length) {
+        return [
+          {
+            id: uuid(),
+            complianceReportId: numericComplianceReportId,
+            compliancePeriod,
+            isValid: true
+          }
+        ]
+      }
+
+      const processedData = data.map((item) => ({
+        ...ensureRowId(item),
+        complianceReportId: numericComplianceReportId,
+        isNewSupplementalEntry:
+          isSupplemental &&
+          item.complianceReportId === numericComplianceReportId
+      }))
+
+      // Add a new empty row for user input when existing data is present
+      processedData.push({
+        id: uuid(),
+        complianceReportId: numericComplianceReportId,
+        compliancePeriod,
+        isValid: true
+      })
+
+      return processedData
+    },
+    [ensureRowId, numericComplianceReportId, compliancePeriod, isSupplemental]
+  )
+
+  // Handle location state alerts
   useEffect(() => {
     if (location.state?.message) {
-      alertRef.triggerAlert({
+      alertRef.current?.triggerAlert({
         message: location.state.message,
         severity: location.state.severity || 'info'
       })
     }
   }, [location.state])
 
-  // If otherUses data is available, set the rowData
+  // Initialize and update row data
   useEffect(() => {
-    if (otherUses && otherUses.length > 0) {
-      const ensureRowIds = (rows) =>
-        rows.map((row) => ({
-          ...row,
-          id: row.id || uuid(),
+    if (usesLoading || !isFetched) return
+
+    try {
+      const processedData = processRowData(otherUses)
+      setRowData(processedData)
+    } catch (error) {
+      console.error('Error processing row data:', error)
+      alertRef.current?.triggerAlert({
+        message: t('otherUses:otherUsesLoadFailMsg'),
+        severity: 'error'
+      })
+      // Fallback to empty row
+      setRowData([
+        {
+          id: uuid(),
+          complianceReportId: numericComplianceReportId,
+          compliancePeriod,
           isValid: true
-        }))
-
-      setRowData(ensureRowIds(otherUses))
-    }
-  }, [otherUses])
-
-  useEffect(() => {
-    if (!usesLoading && !isArrayEmpty(otherUses)) {
-      const updatedRowData = otherUses.map((item) => ({
-        ...item,
-        complianceReportId,
-        isNewSupplementalEntry:
-          isSupplemental && item.complianceReportId === +complianceReportId
-      }))
-      setRowData(updatedRowData)
-    } else {
-      setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
+        }
+      ])
     }
   }, [
-    compliancePeriod,
-    complianceReportId,
-    isSupplemental,
     otherUses,
-    usesLoading
+    usesLoading,
+    isFetched,
+    processRowData,
+    t,
+    numericComplianceReportId,
+    compliancePeriod
   ])
 
   const findCiOfFuel = useCallback((data, optionsData) => {
-    let ciOfFuel = 0
+    if (!optionsData?.fuelTypes || !data.fuelType) return 0
+
+    const fuelType = optionsData.fuelTypes.find(
+      (obj) => data.fuelType === obj.fuelType
+    )
+
+    if (!fuelType) return 0
+
     if (data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
-      const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => data.fuelType === obj.fuelType
-      )
-      const fuelCode = fuelType?.fuelCodes?.find(
+      const fuelCode = fuelType.fuelCodes?.find(
         (item) => item.fuelCode === data.fuelCode
       )
-      ciOfFuel = fuelCode?.carbonIntensity || 0
-    } else {
-      const fuelType = optionsData?.fuelTypes?.find(
-        (obj) => data.fuelType === obj.fuelType
-      )
-      ciOfFuel = fuelType?.defaultCarbonIntensity || 0
+      return fuelCode?.carbonIntensity || 0
     }
-    return ciOfFuel
+
+    return fuelType.defaultCarbonIntensity || 0
   }, [])
 
-  const validate = (
-    params,
-    validationFn,
-    errorMessage,
-    alertRef,
-    field = null
-  ) => {
-    const value = field ? params.node?.data[field] : params
+  const validate = useCallback(
+    (params, validationFn, errorMessage, field = null) => {
+      const value = field ? params.node?.data[field] : params
 
-    if (field && params.colDef.field !== field) {
+      if (field && params.colDef.field !== field) {
+        return true
+      }
+
+      if (!validationFn(value)) {
+        alertRef.current?.triggerAlert({
+          message: errorMessage,
+          severity: 'error'
+        })
+        return false
+      }
       return true
-    }
-
-    if (!validationFn(value)) {
-      alertRef.current?.triggerAlert({
-        message: errorMessage,
-        severity: 'error'
-      })
-      return false
-    }
-    return true // Proceed with the update
-  }
+    },
+    []
+  )
 
   const onGridReady = useCallback(
     (params) => {
-      const ensureRowIds = (rows) => {
-        return rows.map((row) => {
-          if (!row.id) {
-            return {
-              ...row,
-              complianceReportId, // This takes current reportId, important for versioning
-              isNewSupplementalEntry:
-                isSupplemental &&
-                row.complianceReportId === +complianceReportId,
-              id: uuid(),
-              isValid: true
-            }
+      if (!params?.api) return
+
+      try {
+        params.api.sizeColumnsToFit()
+
+        // Auto-focus the last row (new empty row for input) after data is loaded
+        setTimeout(() => {
+          const lastRowIndex = params.api.getLastDisplayedRowIndex()
+          if (lastRowIndex >= 0) {
+            params.api.startEditingCell({
+              rowIndex: lastRowIndex,
+              colKey: 'fuelType'
+            })
           }
-          return row
+        }, 100)
+      } catch (error) {
+        console.error('Error in onGridReady:', error)
+        alertRef.current?.triggerAlert({
+          message: t('otherUses:otherUsesLoadFailMsg'),
+          severity: 'error'
         })
       }
-
-      if (otherUses && otherUses.length > 0) {
-        try {
-          setRowData([
-            ...ensureRowIds(otherUses),
-            { id: uuid(), complianceReportId }
-          ])
-        } catch (error) {
-          alertRef.triggerAlert({
-            message: t('otherUses:otherUsesLoadFailMsg'),
-            severity: 'error'
-          })
-        }
-      } else {
-        setRowData([{ id: uuid, complianceReportId }])
-      }
-
-      params.api.sizeColumnsToFit()
-
-      setTimeout(() => {
-        const lastRowIndex = params.api.getLastDisplayedRowIndex()
-
-        params.api.startEditingCell({
-          rowIndex: lastRowIndex,
-          colKey: 'fuelType'
-        })
-      }, 100)
     },
-    [complianceReportId, isSupplemental, otherUses, t]
+    [t]
   )
 
-  const onAction = async (action, params) => {
-    if (action === 'delete' || action === 'undo') {
-      await handleScheduleDelete(
-        params,
-        'otherUsesId',
-        saveRow,
-        alertRef,
-        setRowData,
-        {
-          complianceReportId
-        }
-      )
+  const onAction = useCallback(
+    async (action, params) => {
+      if (action === 'delete' || action === 'undo') {
+        await handleScheduleDelete(
+          params,
+          'otherUsesId',
+          saveRow,
+          alertRef,
+          setRowData,
+          { complianceReportId: numericComplianceReportId }
+        )
+      }
+    },
+    [saveRow, numericComplianceReportId]
+  )
+
+  const updateNodeData = useCallback((node, field, value) => {
+    if (node?.setDataValue) {
+      node.setDataValue(field, value)
     }
-  }
+  }, [])
 
   const onCellValueChanged = useCallback(
     async (params) => {
       if (
-        ['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(
+        !['fuelType', 'fuelCode', 'provisionOfTheAct'].includes(
           params.colDef.field
         )
       ) {
-        const fuelType = optionsData?.fuelTypes?.find(
-          (obj) => params.data.fuelType === obj.fuelType
-        )
+        return
+      }
 
-        if (!fuelType) {
-          return
-        }
+      const fuelType = optionsData?.fuelTypes?.find(
+        (obj) => params.data.fuelType === obj.fuelType
+      )
 
-        const ciOfFuel = findCiOfFuel(params.data, optionsData)
-        params.node.setDataValue('ciOfFuel', ciOfFuel)
+      if (!fuelType) return
 
-        // Auto-populate fields based on the selected fuel type
-        if (params.colDef.field === 'fuelType') {
-          // Auto-populate the "units" field
-          if (fuelType.units) {
-            params.node.setDataValue('units', fuelType.units)
-          } else {
-            params.node.setDataValue('units', '')
-          }
+      const ciOfFuel = findCiOfFuel(params.data, optionsData)
+      updateNodeData(params.node, 'ciOfFuel', ciOfFuel)
 
-          // Auto-populate the "fuelCategory" field
-          const fuelCategoryOptions = fuelType.fuelCategories.map(
-            (item) => item.category
+      // Auto-populate fields based on the selected fuel type
+      if (params.colDef.field === 'fuelType') {
+        // Auto-populate units
+        updateNodeData(params.node, 'units', fuelType.units || '')
+
+        // Auto-populate fuel category
+        const fuelCategoryOptions =
+          fuelType.fuelCategories?.map((item) => item.category) || []
+        const categoryValue =
+          fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
+        updateNodeData(params.node, 'fuelCategory', categoryValue)
+
+        // Auto-populate provision of the act
+        const provisions =
+          fuelType.provisionOfTheAct?.map((provision) => provision.name) || []
+        const provisionValue = provisions.length === 1 ? provisions[0] : null
+        updateNodeData(params.node, 'provisionOfTheAct', provisionValue)
+      }
+
+      // Auto-populate fuel code for approved fuel code scenarios
+      if (params.node.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE) {
+        const fuelCodeOptions =
+          fuelType.fuelCodes?.map((code) => code.fuelCode) || []
+        if (fuelCodeOptions.length === 1) {
+          updateNodeData(params.node, 'fuelCode', fuelCodeOptions[0] || null)
+          updateNodeData(
+            params.node,
+            'fuelCodeId',
+            fuelType.fuelCodes[0]?.fuelCodeId || null
           )
-
-          const categoryValue =
-            fuelCategoryOptions.length === 1 ? fuelCategoryOptions[0] : null
-
-          params.node.setDataValue('fuelCategory', categoryValue)
-
-          // Auto populate the "provisionOfTheAct" field
-          const provisions = fuelType.provisionOfTheAct.map(
-            (provision) => provision.name
-          )
-
-          const provisionValue = provisions.length === 1 ? provisions[0] : null
-          params.node.setDataValue('provisionOfTheAct', provisionValue)
-        }
-
-        const isFuelCodeScenario =
-          params.node.data.provisionOfTheAct === PROVISION_APPROVED_FUEL_CODE
-
-        // Auto-populate the "fuelCode" field
-        if (isFuelCodeScenario) {
-          const fuelCodeOptions = fuelType.fuelCodes.map(
-            (code) => code.fuelCode
-          )
-          if (fuelCodeOptions.length === 1) {
-            params.node.setDataValue('fuelCode', fuelCodeOptions[0] ?? null)
-            params.node.setDataValue(
-              'fuelCodeId',
-              fuelType.fuelCodes[0]?.fuelCodeId ?? null
-            )
-          }
         }
       }
     },
-    [optionsData, findCiOfFuel]
+    [optionsData, findCiOfFuel, updateNodeData]
   )
 
   const onCellEditingStopped = useCallback(
@@ -278,19 +305,14 @@ export const AddEditOtherUses = () => {
 
       const isValid = validate(
         params,
-        (value) => {
-          return value !== null && !isNaN(value) && value > 0
-        },
+        (value) => value !== null && !isNaN(value) && value > 0,
         'Quantity supplied must be greater than 0.',
-        alertRef,
         'quantitySupplied'
       )
 
-      if (!isValid) {
-        return
-      }
+      if (!isValid) return
 
-      params.data.complianceReportId = complianceReportId
+      params.data.complianceReportId = numericComplianceReportId
       params.data.validationStatus = 'pending'
 
       alertRef.current?.triggerAlert({
@@ -298,24 +320,31 @@ export const AddEditOtherUses = () => {
         severity: 'pending'
       })
 
-      // clean up any null or empty string values
-      let updatedData = cleanEmptyStringValues(params.data)
+      try {
+        let updatedData = cleanEmptyStringValues(params.data)
 
-      updatedData = await handleScheduleSave({
-        alertRef,
-        idField: 'otherUsesId',
-        labelPrefix: 'otherUses:otherUsesColLabels',
-        params,
-        setErrors,
-        setWarnings,
-        saveRow,
-        t,
-        updatedData
-      })
+        updatedData = await handleScheduleSave({
+          alertRef,
+          idField: 'otherUsesId',
+          labelPrefix: 'otherUses:otherUsesColLabels',
+          params,
+          setErrors,
+          setWarnings,
+          saveRow,
+          t,
+          updatedData
+        })
 
-      params.node.updateData(updatedData)
+        params.node.updateData(updatedData)
+      } catch (error) {
+        console.error('Error saving row:', error)
+        alertRef.current?.triggerAlert({
+          message: t('common:saveError'),
+          severity: 'error'
+        })
+      }
     },
-    [complianceReportId, saveRow, t]
+    [numericComplianceReportId, saveRow, t, validate]
   )
 
   const handleNavigateBack = useCallback(() => {
@@ -323,66 +352,83 @@ export const AddEditOtherUses = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'otherUses',
+          message: t('otherUses:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
-  if (optionsLoading || usesLoading) {
+  const columnDefs = useMemo(
+    () =>
+      otherUsesColDefs(
+        optionsData,
+        errors,
+        warnings,
+        isSupplemental,
+        compliancePeriod
+      ),
+    [optionsData, errors, warnings, isSupplemental, compliancePeriod]
+  )
+
+  const saveButtonProps = useMemo(
+    () => ({
+      enabled: true,
+      text: t('report:saveReturn'),
+      onSave: handleNavigateBack,
+      confirmText: t('report:incompleteReport'),
+      confirmLabel: t('report:returnToReport')
+    }),
+    [t, handleNavigateBack]
+  )
+
+  const autoSizeStrategy = useMemo(
+    () => ({
+      type: 'fitGridWidth',
+      defaultMinWidth: 50,
+      defaultMaxWidth: 600
+    }),
+    []
+  )
+
+  // Show loading state
+  if (optionsLoading || usesLoading || complianceReportLoading) {
     return <Loading />
   }
 
   return (
-    isFetched &&
-    !usesLoading &&
-    !currentUserLoading &&
-    !complianceReportLoading && (
-      <Grid2 className="add-edit-other-uses-container" mx={-1}>
-        <div className="header">
-          <BCTypography variant="h5" color="primary">
-            {t('otherUses:newOtherUsesTitle')}
-          </BCTypography>
-          <BCTypography variant="body4" color="text" my={2} component="div">
-            {t('otherUses:newOtherUsesGuide')}
-          </BCTypography>
-        </div>
+    <Grid2 className="add-edit-other-uses-container" mx={-1}>
+      <div className="header">
+        <BCTypography variant="h5" color="primary">
+          {t('otherUses:newOtherUsesTitle')}
+        </BCTypography>
+        <BCTypography variant="body4" color="text" my={2} component="div">
+          {t('otherUses:newOtherUsesGuide')}
+        </BCTypography>
+      </div>
 
-        <BCGridEditor
-          gridRef={gridRef}
-          alertRef={alertRef}
-          getRowId={(params) => params.data.id}
-          columnDefs={otherUsesColDefs(
-            optionsData,
-            errors,
-            warnings,
-            isSupplemental
-          )}
-          defaultColDef={defaultColDef}
-          onGridReady={onGridReady}
-          rowData={rowData}
-          autoSizeStrategy={{
-            type: 'fitGridWidth',
-            defaultMinWidth: 50,
-            defaultMaxWidth: 600
-          }}
-          overlayNoRowsTemplate={t('otherUses:noOtherUsesFound')}
-          loading={optionsLoading || usesLoading}
-          onAction={onAction}
-          onCellValueChanged={onCellValueChanged}
-          onCellEditingStopped={onCellEditingStopped}
-          showAddRowsButton
-          stopEditingWhenCellsLoseFocus
-          saveButtonProps={{
-            enabled: true,
-            text: t('report:saveReturn'),
-            onSave: handleNavigateBack,
-            confirmText: t('report:incompleteReport'),
-            confirmLabel: t('report:returnToReport')
-          }}
-          gridOptions={{
-            getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
-          }}
-        />
-      </Grid2>
-    )
+      <BCGridEditor
+        gridRef={gridRef}
+        alertRef={alertRef}
+        getRowId={(params) => params.data.id}
+        columnDefs={columnDefs}
+        defaultColDef={defaultColDef}
+        onGridReady={onGridReady}
+        rowData={rowData}
+        autoSizeStrategy={autoSizeStrategy}
+        overlayNoRowsTemplate={t('otherUses:noOtherUsesFound')}
+        loading={optionsLoading || usesLoading}
+        onAction={onAction}
+        onCellValueChanged={onCellValueChanged}
+        onCellEditingStopped={onCellEditingStopped}
+        showAddRowsButton
+        stopEditingWhenCellsLoseFocus
+        saveButtonProps={saveButtonProps}
+      />
+    </Grid2>
   )
 }

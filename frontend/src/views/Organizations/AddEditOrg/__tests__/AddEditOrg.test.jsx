@@ -27,6 +27,20 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/services/useApiService')
 vi.mock('react-router-dom')
 
+// Mock the useMutation hook to properly handle onSuccess callback
+const mockMutate = vi.fn()
+vi.mock('@tanstack/react-query', async () => {
+  const actual = await vi.importActual('@tanstack/react-query')
+  return {
+    ...actual,
+    useMutation: vi.fn(() => ({
+      mutate: mockMutate,
+      isPending: false,
+      isError: false
+    }))
+  }
+})
+
 const MockFormProvider = ({ children }) => {
   const methods = useForm({
     resolver: yupResolver(schemaValidation)
@@ -176,6 +190,26 @@ describe('AddEditOrg', () => {
   it('submits form data correctly for CREATE', async () => {
     useParams.mockReturnValue({ orgID: undefined })
 
+    // Mock successful API response
+    apiSpy.post.mockResolvedValueOnce({
+      data: { organization_id: 1, name: 'New Test Org Legal' }
+    })
+
+    // Setup useMutation mock to call onSuccess when mutate is called
+    const { useMutation } = await import('@tanstack/react-query')
+    useMutation.mockImplementation(({ onSuccess }) => ({
+      mutate: vi.fn(async (payload) => {
+        // Simulate successful API call
+        await apiSpy.post('/organizations/create', payload)
+        // Call onSuccess immediately after API call
+        if (onSuccess) {
+          onSuccess()
+        }
+      }),
+      isPending: false,
+      isError: false
+    }))
+
     render(
       <MockFormProvider>
         <AddEditOrgForm />
@@ -213,14 +247,31 @@ describe('AddEditOrg', () => {
     // Early Issuance Radio (value="yes" is Yes)
     fireEvent.click(screen.getByTestId('hasEarlyIssuanceYes'))
 
+    // Submit the form
+    fireEvent.click(screen.getByTestId('saveOrganization'))
+
+    // Wait for the API call to be made
+    await waitFor(
+      () => {
+        expect(apiSpy.post).toHaveBeenCalledWith(
+          '/organizations/create',
+          expect.any(Object)
+        )
+      },
+      { timeout: 10000 }
+    )
+
     // Wait for the navigation side effect
-    await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST, {
-        state: {
-          message: 'Organization has been successfully added.',
-          severity: 'success'
-        }
-      })
-    })
-  }, 15000)
+    await waitFor(
+      () => {
+        expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST, {
+          state: {
+            message: 'Organization has been successfully added.',
+            severity: 'success'
+          }
+        })
+      },
+      { timeout: 5000 }
+    )
+  }, 20000) // Increase overall test timeout to 20 seconds
 })

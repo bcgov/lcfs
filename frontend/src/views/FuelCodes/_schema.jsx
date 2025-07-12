@@ -1,16 +1,26 @@
 import {
   CommonArrayRenderer,
+  FuelCodePrefixRenderer,
   FuelCodeStatusRenderer
 } from '@/utils/grid/cellRenderers'
-import { numberFormatter, timezoneFormatter } from '@/utils/formatters'
+import {
+  dateFormatter,
+  numberFormatter,
+  timezoneFormatter
+} from '@/utils/formatters'
 import BCTypography from '@/components/BCTypography'
-import { BCSelectFloatingFilter } from '@/components/BCDataGrid/components'
+import {
+  BCDateFloatingFilter,
+  BCSelectFloatingFilter
+} from '@/components/BCDataGrid/components'
 import { useFuelCodeStatuses, useTransportModes } from '@/hooks/useFuelCode'
+import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 
-export const fuelCodeColDefs = (t) => [
+export const fuelCodeColDefs = (t, status = null) => [
   {
     field: 'status',
     headerName: t('fuelCode:fuelCodeColLabels.status'),
+    minWidth: 200,
     floatingFilterComponent: BCSelectFloatingFilter,
     floatingFilterComponentParams: {
       valueKey: 'status',
@@ -18,14 +28,13 @@ export const fuelCodeColDefs = (t) => [
       optionsQuery: useFuelCodeStatuses
     },
     suppressFloatingFilterButton: true,
-    valueGetter: (params) => params.data.fuelCodeStatus.status,
     cellRenderer: FuelCodeStatusRenderer
   },
   {
     field: 'prefix',
     headerName: t('fuelCode:fuelCodeColLabels.prefix'),
-    suppressFloatingFilterButton: true,
-    valueGetter: (params) => params.data.fuelCodePrefix.prefix
+    suppressFloatingFilterButton: true
+    // cellRenderer: FuelCodePrefixRenderer,
   },
   {
     field: 'fuelSuffix',
@@ -70,27 +79,42 @@ export const fuelCodeColDefs = (t) => [
   {
     field: 'applicationDate',
     headerName: t('fuelCode:fuelCodeColLabels.applicationDate'),
-    filter: false
+    valueFormatter: dateFormatter,
+    filter: 'agDateColumnFilter',
+    width: 250,
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true
   },
   {
     field: 'approvalDate',
     headerName: t('fuelCode:fuelCodeColLabels.approvalDate'),
-    filter: false
+    valueFormatter: dateFormatter,
+    filter: 'agDateColumnFilter',
+    width: 250,
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true
   },
   {
     field: 'effectiveDate',
     headerName: t('fuelCode:fuelCodeColLabels.effectiveDate'),
-    filter: false
+    valueFormatter: dateFormatter,
+    filter: 'agDateColumnFilter',
+    width: 250,
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true
   },
   {
     field: 'expirationDate',
     headerName: t('fuelCode:fuelCodeColLabels.expirationDate'),
-    filter: false
+    valueFormatter: dateFormatter,
+    filter: 'agDateColumnFilter',
+    width: 250,
+    floatingFilterComponent: BCDateFloatingFilter,
+    suppressFloatingFilterButton: true
   },
   {
     field: 'fuelType',
-    headerName: t('fuelCode:fuelCodeColLabels.fuelType'),
-    valueGetter: (params) => params.data.fuelType.fuelType
+    headerName: t('fuelCode:fuelCodeColLabels.fuelType')
   },
   {
     field: 'feedstock',
@@ -136,7 +160,7 @@ export const fuelCodeColDefs = (t) => [
     minWidth: 290
   },
   {
-    field: 'feedstockFuelTransportMode',
+    field: 'feedstockFuelTransportModes',
     headerName: t('fuelCode:fuelCodeColLabels.feedstockFuelTransportMode'),
     sortable: false,
     floatingFilterComponent: BCSelectFloatingFilter,
@@ -146,15 +170,20 @@ export const fuelCodeColDefs = (t) => [
       optionsQuery: useTransportModes
     },
     suppressFloatingFilterButton: true,
+    filterParams: {
+      textMatcher: (filter) => true,
+      suppressFilterButton: true
+    },
     minWidth: 335,
-    valueGetter: (params) =>
-      params.data.feedstockFuelTransportModes.map(
-        (item) => item.feedstockFuelTransportMode?.transportMode || ''
-      ) || [],
-    cellRenderer: (props) => <CommonArrayRenderer {...props} />
+    cellRenderer: (props) => (
+      <CommonArrayRenderer
+        {...props}
+        disableLink={props.data?.status !== FUEL_CODE_STATUSES.DRAFT}
+      />
+    )
   },
   {
-    field: 'finishedFuelTransportMode',
+    field: 'finishedFuelTransportModes',
     headerName: t('fuelCode:fuelCodeColLabels.finishedFuelTransportMode'),
     sortable: false,
     floatingFilterComponent: BCSelectFloatingFilter,
@@ -165,11 +194,16 @@ export const fuelCodeColDefs = (t) => [
     },
     suppressFloatingFilterButton: true,
     minWidth: 335,
-    valueGetter: (params) =>
-      params.data.finishedFuelTransportModes.map(
-        (item) => item.finishedFuelTransportMode?.transportMode || ''
-      ) || [],
-    cellRenderer: (props) => <CommonArrayRenderer {...props} />
+    filterParams: {
+      textMatcher: (filter) => true,
+      suppressFilterButton: true
+    },
+    cellRenderer: (props) => (
+      <CommonArrayRenderer
+        {...props}
+        disableLink={props.data?.status !== FUEL_CODE_STATUSES.DRAFT}
+      />
+    )
   },
   {
     field: 'formerCompany',
@@ -195,3 +229,5 @@ export const fuelCodeColDefs = (t) => [
     minWidth: 600
   }
 ]
+
+export const defaultSortModel = [{ field: 'lastUpdated', direction: 'desc' }]

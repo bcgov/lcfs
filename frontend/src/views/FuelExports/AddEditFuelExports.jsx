@@ -15,9 +15,7 @@ import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { defaultColDef, fuelExportColDefs } from './_schema'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useGetComplianceReport } from '@/hooks/useComplianceReports'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 
 export const AddEditFuelExports = () => {
   const [rowData, setRowData] = useState([])
@@ -33,15 +31,10 @@ export const AddEditFuelExports = () => {
   const params = useParams()
   const { complianceReportId, compliancePeriod } = params
   const navigate = useNavigate()
-  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
-  const { data: complianceReport, isLoading: complianceReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId,
-      { enabled: !currentUserLoading }
-    )
+  const { data: currentReport, isLoading } =
+    useComplianceReportWithCache(complianceReportId)
 
-  const isSupplemental = complianceReport?.report?.version !== 0
+  const isSupplemental = currentReport?.report?.version !== 0
 
   const {
     data: optionsData,
@@ -63,8 +56,7 @@ export const AddEditFuelExports = () => {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
-      },
-      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
+      }
     }),
     [isSupplemental, t]
   )
@@ -83,6 +75,7 @@ export const AddEditFuelExports = () => {
       if (!isArrayEmpty(data)) {
         const updatedRowData = data.fuelExports.map((item) => ({
           ...item,
+          ciOfFuel: item.ciOfFuel,
           complianceReportId,
           compliancePeriod,
           fuelCategory: item.fuelCategory?.category,
@@ -94,7 +87,10 @@ export const AddEditFuelExports = () => {
             isSupplemental && item.complianceReportId === +complianceReportId,
           id: uuid()
         }))
-        setRowData([...updatedRowData, { id: uuid(), compliancePeriod }])
+        setRowData([
+          ...updatedRowData,
+          { id: uuid(), complianceReportId, compliancePeriod }
+        ])
       } else {
         setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
@@ -119,7 +115,8 @@ export const AddEditFuelExports = () => {
         errors,
         warnings,
         gridReady,
-        isSupplemental
+        isSupplemental,
+        compliancePeriod
       )
       setColumnDefs(updatedColumnDefs)
     }
@@ -140,7 +137,10 @@ export const AddEditFuelExports = () => {
           isSupplemental && item.complianceReportId === +complianceReportId,
         id: uuid()
       }))
-      setRowData(updatedRowData)
+      setRowData([
+        ...updatedRowData,
+        { id: uuid(), complianceReportId, compliancePeriod }
+      ])
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
@@ -206,6 +206,25 @@ export const AddEditFuelExports = () => {
           params.node.setDataValue('endUseType', endUseValue)
           params.node.setDataValue('provisionOfTheAct', provisionValue)
         }
+      }
+
+      const recalcFields = [
+        'fuelTypeId',
+        'fuelCategory',
+        'provisionOfTheAct',
+        'fuelCode',
+        'exportDate'
+      ]
+
+      if (recalcFields.includes(params.column.colId)) {
+        // remove the stored value so the getter recalculates
+        params.node.setDataValue('ciOfFuel', null)
+
+        // refresh the CI columns for immediate feedback
+        params.api.refreshCells({
+          rowNodes: [params.node],
+          columns: ['ciOfFuel', 'targetCi', 'uci', 'complianceUnits']
+        })
       }
     },
     [optionsData]
@@ -284,15 +303,21 @@ export const AddEditFuelExports = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'fuelExports',
+          message: t('fuelExport:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   return (
     isFetched &&
     !fuelExportsLoading &&
-    !currentUserLoading &&
-    !complianceReportLoading && (
+    !isLoading && (
       <Grid2 className="add-edit-fuel-export-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">

@@ -99,3 +99,34 @@ export const isLegacyCompliancePeriod = (compliancePeriod) => {
 }
 
 export const FUEL_CATEGORIES = ['Diesel', 'Gasoline', 'Jet fuel']
+
+// File upload constants for compliance reports
+export const COMPLIANCE_REPORT_FILE_TYPES = {
+  MIME_TYPES: [
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/csv',
+    'text/plain'
+  ],
+  DESCRIPTION:
+    'PDF, PNG, JPG/JPEG, Word Documents (.doc/.docx), Excel Spreadsheets (.xls/.xlsx), CSV, TXT',
+  get ACCEPT_STRING() {
+    return this.MIME_TYPES.join(',')
+  }
+}
+
+// File upload constants for schedule imports
+export const SCHEDULE_IMPORT_FILE_TYPES = {
+  MIME_TYPES: [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  ],
+  DESCRIPTION: 'Excel files (.xlsx)',
+  get ACCEPT_STRING() {
+    return this.MIME_TYPES.join(',')
+  }
+}

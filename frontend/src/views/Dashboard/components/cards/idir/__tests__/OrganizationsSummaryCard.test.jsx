@@ -1,4 +1,3 @@
-import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import OrganizationsSummaryCard from '../OrganizationsSummaryCard'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
@@ -23,6 +22,12 @@ describe('OrganizationsSummaryCards', () => {
       data: mockOrganizations,
       isLoading: false
     })
+  })
+
+  it('calls useOrganizationNames to fetch all organizations', () => {
+    render(<OrganizationsSummaryCard />, { wrapper })
+
+    expect(useOrganizationNames).toHaveBeenCalledWith()
   })
 
   it('renders correctly with default values', () => {

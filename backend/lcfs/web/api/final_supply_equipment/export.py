@@ -51,6 +51,7 @@ class FinalSupplyEquipmentExporter:
     async def export(
         self,
         compliance_report_id: int,
+        user: UserProfile,
         organization: Organization,
         include_data=True,
     ) -> StreamingResponse:

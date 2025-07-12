@@ -10,7 +10,10 @@ import { govRoles, roles } from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useDeleteComplianceReport,
-  useUpdateComplianceReport
+  useUpdateComplianceReport,
+  useCreateSupplementalReport,
+  useCreateAnalystAdjustment,
+  useCreateIdirSupplementalReport
 } from '@/hooks/useComplianceReports'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -26,7 +29,7 @@ import { AssessmentStatement } from '@/views/ComplianceReports/components/Assess
 import { useOrganization } from '@/hooks/useOrganization.js'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser.js'
-import { Fab, Stack, Tooltip } from '@mui/material'
+import { Fab, Stack, Tooltip, Alert, AlertTitle } from '@mui/material'
 import { Introduction } from '@/views/ComplianceReports/components/Introduction.jsx'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import colors from '@/themes/base/colors.js'
@@ -35,23 +38,40 @@ import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 import { FILTER_KEYS, REPORT_SCHEDULES } from '@/constants/common.js'
 import { isQuarterEditable } from '@/utils/grid/cellEditables.jsx'
 import ComplianceReportEarlyIssuanceSummary from '@/views/ComplianceReports/components/ComplianceReportEarlyIssuanceSummary.jsx'
+import { DateTime } from 'luxon'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import { useQueryClient } from '@tanstack/react-query'
 
 const iconStyle = {
   width: '2rem',
   height: '2rem',
   color: colors.white.main
 }
-export const EditViewComplianceReport = ({ reportData, isError, error }) => {
+
+export const EditViewComplianceReport = ({ isError, error }) => {
   const { t } = useTranslation(['common', 'report'])
   const location = useLocation()
   const [modalData, setModalData] = useState(null)
+  const [isDeleted, setIsDeleted] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const [isSigningAuthorityDeclared, setIsSigningAuthorityDeclared] =
     useState(false)
   const alertRef = useRef()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  // Store if we've already shown an alert for this location state to prevent duplicates
+  const [hasProcessedLocationAlert, setHasProcessedLocationAlert] =
+    useState(false)
 
   const { compliancePeriod, complianceReportId } = useParams()
+
+  // Get report data from store
+  const reportData = useComplianceReportStore((state) =>
+    state.getCachedReport(complianceReportId)
+  )
+
   const [isScrollingUp, setIsScrollingUp] = useState(false)
   const [lastScrollTop, setLastScrollTop] = useState(0)
 
@@ -68,6 +88,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       })
     }
   }
+
   const handleScroll = useCallback(() => {
     const scrollTop = window.scrollY || document.documentElement.scrollTop
     const scrollPosition = window.scrollY + window.innerHeight
@@ -87,14 +108,16 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [handleScroll])
 
+  // Get current user data - with conditional fetching
   const {
     data: currentUser,
     isLoading: isCurrentUserLoading,
     hasRoles,
     hasAnyRole
   } = useCurrentUser()
+
   const isGovernmentUser = currentUser?.isGovernmentUser
-  const currentStatus = reportData?.report.currentStatus?.status
+  const currentStatus = reportData?.report?.currentStatus?.status
   const canEdit =
     (currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT &&
       hasAnyRole(roles.compliance_reporting, roles.signing_authority)) ||
@@ -102,10 +125,18 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
       hasRoles(roles.analyst))
 
   const { data: orgData, isLoading } = useOrganization(
-    reportData?.report.organizationId
+    reportData?.report?.organizationId,
+    {
+      enabled: !isDeleted && !isDeleting && !!reportData?.report?.organizationId
+    }
   )
 
   const qReport = useMemo(() => {
+    // Don't calculate if report is being deleted
+    if (isDeleted || isDeleting || !reportData) {
+      return { quarter: null, isQuarterly: false }
+    }
+
     const isQuarterly =
       reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
     let quarter = null
@@ -113,7 +144,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     if (isQuarterly) {
       const isDraft = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
       const now = new Date()
-      const submittedHistory = reportData?.report?.history.find(
+      const submittedHistory = reportData?.report?.history?.find(
         (h) => h.status.status === COMPLIANCE_REPORT_STATUSES.SUBMITTED
       )
       const createDateFromHistory = submittedHistory?.createDate
@@ -125,7 +156,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
           ? new Date(updateDate)
           : now
 
-      // Get month (0-11) and calculate quarter
+      // Get month (0-11) and calculate quarter based on Early Issuance schedule
       const month = submittedDate.getMonth()
       const submittedYear = submittedDate.getFullYear()
       const currentYear = now.getFullYear()
@@ -133,15 +164,21 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
         (isDraft && currentYear > parseInt(compliancePeriod)) ||
         submittedYear > parseInt(compliancePeriod)
       ) {
-        quarter = 4
-      } else if (month >= 0 && month <= 2) {
-        quarter = 1 // Jan-Mar: Q1
-      } else if (month >= 3 && month <= 5) {
-        quarter = 2 // Apr-Jun: Q2
+        // For drafts created in Jan/Feb of years after the compliance period,
+        // treat them as Q1 instead of Q4 since they're early in the calendar year
+        if (isDraft && currentYear > parseInt(compliancePeriod) && (month === 0 || month === 1)) {
+          quarter = 1
+        } else {
+          quarter = 4
+        }
+      } else if (month >= 2 && month <= 5) {
+        quarter = 1 // Mar-Jun: Q1
       } else if (month >= 6 && month <= 8) {
-        quarter = 3 // Jul-Sep: Q3
+        quarter = 2 // Jul-Sep: Q2
+      } else if (month >= 9 && month <= 11) {
+        quarter = 3 // Oct-Dec: Q3
       } else {
-        quarter = 4 // Oct-Dec: Q4
+        quarter = 4 // Jan-Feb: Q4
       }
     }
 
@@ -154,8 +191,40 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     reportData?.report?.history,
     reportData?.report?.updateDate,
     currentStatus,
-    compliancePeriod
+    compliancePeriod,
+    isDeleted,
+    isDeleting
   ])
+
+  // Derive hasDraftSupplemental state
+  const [hasDraftSupplemental, setHasDraftSupplemental] = useState(false)
+  useEffect(() => {
+    if (reportData && !isDeleted && !isDeleting) {
+      // Simply use the isNewest flag from the backend
+      // If isNewest is false, there's a newer version (which would be a draft)
+      setHasDraftSupplemental(!reportData.isNewest)
+    } else {
+      setHasDraftSupplemental(false)
+    }
+  }, [reportData, isDeleted, isDeleting])
+
+  // Determine if the current report is a draft supplemental for the 30-day notice
+  const isDraftSupplemental =
+    reportData?.report?.currentStatus?.status ===
+      COMPLIANCE_REPORT_STATUSES.DRAFT && reportData?.report?.version > 0
+
+  let submissionDeadline = null
+  let daysRemaining = null
+  if (
+    isDraftSupplemental &&
+    reportData?.report?.createTimestamp &&
+    !isDeleted &&
+    !isDeleting
+  ) {
+    const creationDate = DateTime.fromISO(reportData.report.createTimestamp)
+    submissionDeadline = creationDate.plus({ days: 30 })
+    daysRemaining = Math.ceil(submissionDeadline.diffNow('days').days)
+  }
 
   const { mutate: updateComplianceReport } = useUpdateComplianceReport(
     complianceReportId,
@@ -187,14 +256,96 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
   )
 
   const { mutate: deleteComplianceReport } = useDeleteComplianceReport(
-    reportData?.report.organizationId,
+    currentUser?.organization?.organizationId,
     complianceReportId,
     {
+      onMutate: () => {
+        setIsDeleting(true)
+        setIsDeleted(true)
+      },
       onSuccess: () => {
         setModalData(null)
+
+        // Clean up React Query cache
+        queryClient.removeQueries({
+          queryKey: ['complianceReport', complianceReportId]
+        })
+        queryClient.removeQueries({
+          queryKey: ['organization', reportData?.report?.organizationId]
+        })
+
+        // Navigate to list page
         navigate(ROUTES.REPORTS.LIST, {
           state: {
             message: t('report:reportDeleteSuccessText'),
+            severity: 'success'
+          },
+          replace: true
+        })
+      },
+      onError: (error) => {
+        // Reset states on error
+        setIsDeleting(false)
+        setIsDeleted(false)
+        setModalData(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    }
+  )
+
+  const { mutate: createSupplementalReport } = useCreateSupplementalReport(
+    complianceReportId,
+    {
+      onSuccess: (res) => {
+        setModalData(null)
+        navigate(
+          `${ROUTES.REPORTS.LIST}/${res.data.compliancePeriod.description}/${res.data.complianceReportId}`
+        )
+      },
+      onError: (error) => {
+        setModalData(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    }
+  )
+
+  const { mutate: createAnalystAdjustment } = useCreateAnalystAdjustment(
+    complianceReportId,
+    {
+      onSuccess: (res) => {
+        setModalData(null)
+        navigate(
+          `${ROUTES.REPORTS.LIST}/${res.data.compliancePeriod.description}/${res.data.complianceReportId}`
+        )
+      },
+      onError: (error) => {
+        setModalData(null)
+        alertRef.current?.triggerAlert({
+          message: error.message,
+          severity: 'error'
+        })
+      }
+    }
+  )
+
+  const { mutate: createIdirSupplementalReport } =
+    useCreateIdirSupplementalReport(complianceReportId, {
+      onSuccess: (res) => {
+        setModalData(null)
+        // Clear Filters before navigating to ensure they can see the report
+        sessionStorage.setItem(FILTER_KEYS.COMPLIANCE_REPORT_GRID, '{}')
+        navigate(ROUTES.REPORTS.LIST, {
+          state: {
+            message: t(
+              'report:supplementalCreatedSuccessText',
+              'Supplemental report created successfully.'
+            ),
             severity: 'success'
           }
         })
@@ -206,54 +357,200 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
           severity: 'error'
         })
       }
-    }
-  )
-  const methods = useForm() // TODO we will need this for summary line inputs
+    })
 
-  const buttonClusterConfig = useMemo(
-    () =>
-      buttonClusterConfigFn({
-        hasRoles,
-        currentUser,
-        t,
-        setModalData,
-        updateComplianceReport,
-        deleteComplianceReport,
-        compliancePeriod,
-        isGovernmentUser,
-        isSigningAuthorityDeclared,
-        supplementalInitiator: reportData?.report?.supplementalInitiator
-      }),
-    [
+  // Initialize useForm with assessmentStatement
+  const methods = useForm({
+    defaultValues: {
+      assessmentStatement: reportData?.report?.assessmentStatement || '',
+      supplementalNote: reportData?.report?.supplementalNote || ''
+    }
+  })
+
+  // Update form values when reportData changes
+  useEffect(() => {
+    if (reportData?.report?.assessmentStatement !== undefined) {
+      methods.setValue(
+        'assessmentStatement',
+        reportData.report.assessmentStatement
+      )
+    }
+    if (reportData?.report?.supplementalNote !== undefined) {
+      methods.setValue('supplementalNote', reportData.report.supplementalNote)
+    }
+  }, [reportData?.report, methods])
+
+  // Memoized report context conditions
+  const reportConditions = useMemo(() => {
+    if (isDeleted || isDeleting || !reportData) {
+      return {
+        isSupplemental: false,
+        isEarlyIssuance: false,
+        showEarlyIssuanceSummary: false
+      }
+    }
+
+    const isSupplemental = reportData?.report?.hasSupplemental
+    const isEarlyIssuance =
+      reportData?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+    // TODO: Currently showing full summary instead of early issuance summary
+    // Original logic: const showEarlyIssuanceSummary = isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
+    const showEarlyIssuanceSummary = false // Always show full summary for now
+
+    return {
+      isSupplemental,
+      isEarlyIssuance,
+      showEarlyIssuanceSummary
+    }
+  }, [
+    reportData?.report?.hasSupplemental,
+    reportData?.report?.reportingFrequency,
+    isDeleted,
+    isDeleting
+  ])
+
+  // Memoized assessment section visibility - with deletion checks
+  const assessmentSectionConfig = useMemo(() => {
+    if (isDeleted || isDeleting) {
+      return {
+        shouldShowAssessmentStatement: false,
+        shouldShowAssessmentRecommendation: false,
+        shouldShowAssessmentSectionTitle: false
+      }
+    }
+
+    const shouldShowAssessmentStatement =
+      isGovernmentUser && !qReport?.isQuarterly && !hasDraftSupplemental
+
+    const shouldShowAssessmentRecommendation =
+      hasRoles(roles.analyst) && !qReport?.isQuarterly && !hasDraftSupplemental
+
+    const shouldShowAssessmentSectionTitle =
+      shouldShowAssessmentStatement || shouldShowAssessmentRecommendation
+
+    return {
+      shouldShowAssessmentStatement,
+      shouldShowAssessmentRecommendation,
+      shouldShowAssessmentSectionTitle
+    }
+  }, [
+    isGovernmentUser,
+    qReport?.isQuarterly,
+    hasDraftSupplemental,
+    hasRoles,
+    isDeleted,
+    isDeleting
+  ])
+
+  const { isSupplemental, isEarlyIssuance, showEarlyIssuanceSummary } =
+    reportConditions
+  const {
+    shouldShowAssessmentStatement,
+    shouldShowAssessmentRecommendation,
+    shouldShowAssessmentSectionTitle
+  } = assessmentSectionConfig
+
+  const buttonClusterConfig = useMemo(() => {
+    // Don't create button config if report is being deleted
+    if (isDeleted || isDeleting || !reportData) {
+      return {}
+    }
+
+    const context = {
+      // Required fields
+      currentStatus,
       hasRoles,
-      currentUser,
+      hasAnyRole,
       t,
       setModalData,
+
+      // Report metadata
+      reportVersion: reportData?.report?.version,
+      compliancePeriod,
+      isSigningAuthorityDeclared,
+
+      // Report type flags
+      isEarlyIssuance,
+      isOriginalReport: reportData?.report?.version === 0,
+      isAnalystAdjustment:
+        currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT,
+
+      // Conflict detection
+      hasDraftSupplemental,
+
+      // Business rules
+      hadBeenAssessed: reportData?.hadBeenAssessed,
+
+      // Action functions
       updateComplianceReport,
       deleteComplianceReport,
-      compliancePeriod,
-      isGovernmentUser,
-      isSigningAuthorityDeclared,
-      reportData?.report
-    ]
-  )
+      createSupplementalReport,
+      createIdirSupplementalReport,
+      createAnalystAdjustment,
+      amendPenalties: () => {}
+    }
+    return buttonClusterConfigFn(context)
+  }, [
+    hasRoles,
+    currentUser,
+    t,
+    setModalData,
+    updateComplianceReport,
+    deleteComplianceReport,
+    createSupplementalReport,
+    createAnalystAdjustment,
+    createIdirSupplementalReport,
+    compliancePeriod,
+    isGovernmentUser,
+    isSigningAuthorityDeclared,
+    hasDraftSupplemental,
+    reportData?.report?.version,
+    isSupplemental,
+    isDeleted,
+    isDeleting,
+    currentStatus,
+    isEarlyIssuance
+  ])
 
   useEffect(() => {
-    if (location.state?.message) {
+    // Don't process alerts if report is being deleted
+    if (isDeleted || isDeleting) return
+
+    // Only handle location state alerts if we haven't processed them yet
+    if (location.state?.message && !hasProcessedLocationAlert) {
       alertRef.current?.triggerAlert({
         message: location.state.message,
         severity: location.state.severity || 'info'
       })
+      // Mark that we've processed this alert
+      setHasProcessedLocationAlert(true)
+
+      // Clear the message from location state to prevent child components from showing it
+      navigate(location.pathname, {
+        replace: true,
+        state: { ...location.state, message: undefined, severity: undefined }
+      })
     }
+
     if (isError) {
       alertRef.current?.triggerAlert({
         message: error.response?.data?.detail || error.message,
         severity: 'error'
       })
     }
-  }, [location.state, isError, error])
+  }, [
+    location.state,
+    isError,
+    error,
+    navigate,
+    hasProcessedLocationAlert,
+    location.pathname,
+    isDeleted,
+    isDeleting
+  ])
 
-  if (isLoading || isCurrentUserLoading) {
+  // Don't render main content if report is being deleted
+  if (isLoading || isCurrentUserLoading || isDeleted || isDeleting) {
     return <Loading />
   }
 
@@ -266,15 +563,10 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
     )
   }
 
-  const isEarlyIssuance =
-    reportData.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
-  const showEarlyIssuanceSummary =
-    isEarlyIssuance && !isQuarterEditable(4, compliancePeriod)
-
   return (
     <>
       <FloatingAlert ref={alertRef} data-test="alert-box" delay={10000} />
-      <BCBox pl={2} pr={2}>
+      <BCBox>
         <BCModal
           open={!!modalData}
           onClose={() => setModalData(null)}
@@ -288,7 +580,7 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
           >
             {qReport?.isQuarterly
               ? `${compliancePeriod} ${t('report:complianceReportEarlyIssuance')} ${qReport?.quarter}`
-              : `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report.nickname}`}
+              : `${compliancePeriod} ${t('report:complianceReport')} - ${reportData?.report?.nickname}`}
           </BCTypography>
           <BCTypography
             variant="h6"
@@ -318,22 +610,22 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
               currentStatus={currentStatus}
               complianceReportId={complianceReportId}
               alertRef={alertRef}
-              hasSupplemental={reportData?.report.hasSupplemental}
-              chain={reportData.chain}
-              isQuarterlyReport={qReport?.isQuarterly}
+              hasSupplemental={reportData?.report?.hasSupplemental}
+              chain={reportData?.chain}
             />
           </Stack>
+          <ReportDetails
+            canEdit={canEdit}
+            currentStatus={currentStatus}
+            hasRoles={hasRoles}
+            complianceReportData={reportData}
+          />
           {!location.state?.newReport && (
             <>
-              <ReportDetails
-                canEdit={canEdit}
-                currentStatus={currentStatus}
-                userRoles={currentUser?.userRoles}
-              />
               {!showEarlyIssuanceSummary && (
                 <ComplianceReportSummary
                   reportID={complianceReportId}
-                  enableCompareMode={reportData.chain.length > 1}
+                  enableCompareMode={reportData?.chain?.length > 1}
                   canEdit={canEdit}
                   currentStatus={currentStatus}
                   compliancePeriodYear={compliancePeriod}
@@ -352,47 +644,95 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
             <Introduction
               expanded={location.state?.newReport}
               compliancePeriod={compliancePeriod}
+              isEarlyIssuance={isEarlyIssuance}
             />
           )}
-          {isGovernmentUser && !qReport?.isQuarterly && <AssessmentStatement />}
-          {hasRoles(roles.analyst) && !qReport?.isQuarterly && (
-            <AssessmentRecommendation
-              reportData={reportData}
-              complianceReportId={complianceReportId}
-              currentStatus={currentStatus}
-            />
+          {shouldShowAssessmentSectionTitle && (
+            <BCTypography
+              color="primary"
+              variant="h5"
+              mb={2}
+              mt={2}
+              component="div"
+            >
+              {t('report:assessmentRecommendation')}
+            </BCTypography>
           )}
-          {/* Internal Comments */}
-          {isGovernmentUser && (
-            <BCBox mt={4}>
-              <BCTypography variant="h6" color="primary">
-                {t(`report:internalComments`)}
-              </BCTypography>
-              <BCBox>
-                <Role roles={govRoles}>
-                  <InternalComments
-                    entityType="complianceReport"
-                    entityId={parseInt(complianceReportId)}
-                  />
-                </Role>
-              </BCBox>
-              <Stack direction="row" justifyContent="flex-start" mt={2} gap={2}>
+          {(shouldShowAssessmentSectionTitle || isGovernmentUser) && (
+            <BCBox
+              sx={{
+                border: '1px solid rgba(0, 0, 0, 0.28)',
+                padding: '20px',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.28)'
+              }}
+            >
+              {shouldShowAssessmentStatement && (
+                <AssessmentStatement methods={methods} />
+              )}
+              {shouldShowAssessmentRecommendation && (
+                <AssessmentRecommendation
+                  reportData={reportData}
+                  complianceReportId={complianceReportId}
+                  currentStatus={currentStatus}
+                />
+              )}
+              {/* Internal Comments */}
+              {isGovernmentUser && (
+                <BCBox mt={2}>
+                  <BCTypography variant="h6" color="primary">
+                    {t(`report:internalComments`)}
+                  </BCTypography>
+                  <BCBox>
+                    <Role roles={govRoles}>
+                      <InternalComments
+                        entityType="complianceReport"
+                        entityId={parseInt(complianceReportId)}
+                      />
+                    </Role>
+                  </BCBox>
+                </BCBox>
+              )}
+            </BCBox>
+          )}
+          {/* 30-Day Submission Notice for BCeID on Draft Supplementals */}
+          {!isGovernmentUser && isDraftSupplemental && submissionDeadline && (
+            <Alert
+              severity={daysRemaining < 0 ? 'error' : 'info'}
+              sx={{ mb: 2 }}
+            >
+              <AlertTitle>
+                {daysRemaining < 0
+                  ? 'Submission Period Overdue'
+                  : 'Supplemental Report Submission'}
+              </AlertTitle>
+              {daysRemaining >= 0
+                ? `Please submit this supplemental report by ${submissionDeadline.toLocaleString(DateTime.DATE_FULL)} (${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} remaining).`
+                : 'The suggested 30-day submission period for this supplemental report has passed.'}
+            </Alert>
+          )}
+          {/* Action Buttons */}
+          {buttonClusterConfig[currentStatus]?.length > 0 &&
+            buttonClusterConfig[currentStatus]?.some((config) => config) &&
+            currentStatus !== COMPLIANCE_REPORT_STATUSES.DRAFT && (
+              <Stack
+                direction="row"
+                justifyContent="flex-start"
+                mt={3}
+                mb={2}
+                gap={2}
+              >
                 {buttonClusterConfig[currentStatus]?.map(
                   (config) =>
                     config && (
                       <BCButton
                         key={config.id}
-                        data-test={config.id}
                         id={config.id}
+                        data-test={config.id}
                         size="small"
                         variant={config.variant}
                         color={config.color}
-                        onClick={methods.handleSubmit(() =>
-                          config.handler({
-                            assessmentStatement:
-                              reportData?.report.assessmentStatement
-                          })
-                        )}
+                        onClick={methods.handleSubmit(config.handler)}
+                        disabled={config.disabled}
                         startIcon={
                           config.startIcon && (
                             <FontAwesomeIcon
@@ -401,15 +741,13 @@ export const EditViewComplianceReport = ({ reportData, isError, error }) => {
                             />
                           )
                         }
-                        disabled={config.disabled}
                       >
                         {config.label}
                       </BCButton>
                     )
                 )}
               </Stack>
-            </BCBox>
-          )}
+            )}
         </Stack>
         <Tooltip
           title={

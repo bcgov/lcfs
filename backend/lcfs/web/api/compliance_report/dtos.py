@@ -36,13 +36,15 @@ class ExpectedUseDTO(BaseSchema):
 class ChangelogItemsBaseDTO(BaseModel):
     updated: Optional[bool] = None
     diff: Optional[List[str]] = None
+    update_date: Optional[datetime] = None
+    create_date: Optional[datetime] = None
 
 
 class FuelSupplyDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseDTO):
     fuel_supply_id: int
     compliance_report_id: int
 
-    quantity: int
+    quantity: Optional[int] = None
     units: str
 
     compliance_units: Optional[float] = None
@@ -67,8 +69,7 @@ class AllocationAgreementDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBa
 
     transaction_partner: str
     postal_address: str
-    transaction_partner: str
-    quantity: int
+    quantity: Optional[int] = None
     units: str
 
     transaction_partner_email: Optional[str] = None
@@ -90,7 +91,11 @@ class NotionalTransferDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseD
     legal_name: str
     address_for_service: str
     received_or_transferred: ReceivedOrTransferredEnum
-    quantity: int
+    quantity: Optional[int] = None
+    q1_quantity: Optional[int] = None
+    q2_quantity: Optional[int] = None
+    q3_quantity: Optional[int] = None
+    q4_quantity: Optional[int] = None
 
     fuel_category: Optional[FuelCategoryDTO] = None
 

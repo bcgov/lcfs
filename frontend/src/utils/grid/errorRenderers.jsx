@@ -1,5 +1,3 @@
-import colors from '@/themes/base/colors'
-
 export const StandardCellErrors = (params, errors) => {
   let style = {}
   if (
@@ -33,13 +31,11 @@ export const StandardCellWarningAndErrors = (
   warnings,
   isSupplemental = false
 ) => {
-  if (isSupplemental && params.data.isNewSupplementalEntry) {
-    if (params.data.actionType === 'UPDATE') {
-      return { backgroundColor: colors.alerts.warning.background }
-    }
-  } else {
+  // Don't override row-level styling for CREATE actions (let green background show through)
+  // But only disable interaction for actual new supplemental entries
+  if (params.data.actionType === 'CREATE') {
     let style = StandardCellErrors(params, errors)
-
+    // Only apply borders, not background colors
     if (
       warnings &&
       warnings[params.data.id] &&
@@ -47,9 +43,20 @@ export const StandardCellWarningAndErrors = (
     ) {
       style = { ...style, borderColor: '#fcba19', border: '2px solid #fcba19' }
     }
-
     return style
   }
+
+  let style = StandardCellErrors(params, errors)
+
+  if (
+    warnings &&
+    warnings[params.data.id] &&
+    warnings[params.data.id].includes(params.colDef.field)
+  ) {
+    style = { ...style, borderColor: '#fcba19', border: '2px solid #fcba19' }
+  }
+
+  return style
 }
 
 export const StandardCellStyle = (

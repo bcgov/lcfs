@@ -144,7 +144,7 @@ LOW_CARBON_FUEL_TARGET_DESCRIPTIONS = {
         "field": "surplus_deficit_ratio",
     },
     22: {
-        "description": "Available compliance unit balance after assessment",
+        "description": "Available compliance unit balance at the end of the compliance date for the period (March 31, {{COMPLIANCE_YEAR_PLUS_1}})",
         "field": "compliance_units_issued",
     },
 }

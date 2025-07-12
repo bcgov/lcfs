@@ -1,5 +1,6 @@
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
+import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import { roles } from '@/constants/roles'
 import {
   COMPLIANCE_REPORT_STATUSES,
@@ -12,6 +13,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import colors from '@/themes/base/colors'
 import { ArrowDropDown } from '@mui/icons-material'
+import { getCode } from 'country-list'
 
 export const TextRenderer = (props) => {
   return (
@@ -29,7 +31,11 @@ export const LinkRenderer = (props) => {
     baseUrl +
     ((props.url && props.url({ data: props.data })) || props?.node?.id)
   return (
-    <Link to={targetUrl} style={{ color: '#000' }}>
+    <Link
+      to={targetUrl}
+      state={props.state && props.state(props.data)}
+      style={{ color: '#000' }}
+    >
       <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
         {props.valueFormatted || props.value}
       </BCBox>
@@ -205,11 +211,18 @@ export const OrgStatusRenderer = (props) => {
     </Link>
   )
 }
+
+export const YesNoTextRenderer = (props) => (
+  <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
+    {props.value ? 'Yes' : 'No'}
+  </BCBox>
+)
+
 export const FuelCodeStatusRenderer = (props) => {
   const location = useLocation()
   const statusArr = getAllFuelCodeStatuses()
-  const statusColorArr = ['info', 'success', 'error']
-  const statusIndex = statusArr.indexOf(props.data.fuelCodeStatus.status)
+  const statusColorArr = ['info', 'info', 'success', 'error']
+  const statusIndex = statusArr.indexOf(props.data?.status)
   return (
     <Link
       to={props.node?.id && location.pathname + '/' + props?.node?.id}
@@ -240,6 +253,32 @@ export const FuelCodeStatusRenderer = (props) => {
           />
         </BCBox>
       </BCBox>
+    </Link>
+  )
+}
+
+export const FuelCodePrefixRenderer = (params) => {
+  const location = useLocation()
+  const prefix = params.data.prefix
+  const countryName = params.data.fuelProductionFacilityCountry
+  const countryCode = countryName ? getCode(countryName) : null
+
+  if (!countryCode) return prefix
+
+  // Use country flags API
+  return (
+    <Link
+      to={params.node?.id && location.pathname + '/' + params?.node?.id}
+      style={{ color: '#000' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <img
+          src={`https://flagcdn.com/${countryCode.toLowerCase()}.svg`}
+          style={{ width: '1.6rem', height: '1.4rem' }}
+          alt={countryName}
+        />
+        <span>{prefix}</span>
+      </div>
     </Link>
   )
 }
@@ -307,6 +346,7 @@ const STATUS_TO_COLOR_MAP = {
   [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: 'info',
   [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: 'info',
   [COMPLIANCE_REPORT_STATUSES.ASSESSED]: 'success',
+  [COMPLIANCE_REPORT_STATUSES.SUPPLEMENTAL_REQUESTED]: 'warning',
   [COMPLIANCE_REPORT_STATUSES.REJECTED]: 'error'
 }
 
@@ -384,10 +424,12 @@ const GenericChipRenderer = ({
 
   const options = Array.isArray(value)
     ? value.filter((item) => item !== '')
-    : value
-        .split(',')
-        .map((item) => item.trim())
-        .filter((item) => item !== '')
+    : value && value !== ''
+      ? value
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item !== '')
+      : []
 
   const calculateChipWidths = useCallback(() => {
     if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }
@@ -636,5 +678,64 @@ export const RoleRenderer = (props) => {
         roleRenderOverflowChip(count, isGovernmentRole)
       }
     />
+  )
+}
+
+export const LastCommentRenderer = (props) => {
+  const location = useLocation()
+  const { lastComment } = props.data
+
+  // If no comment exists, return empty cell
+  if (!lastComment || !lastComment.fullName) {
+    return (
+      <Link
+        to={`${location.pathname}/${props.data.compliancePeriod}/${props.data.complianceReportId}`}
+        style={{ color: '#000' }}
+      >
+        <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
+          {/* Empty cell but still clickable */}
+        </BCBox>
+      </Link>
+    )
+  }
+
+  return (
+    <Link
+      to={`${location.pathname}/${props.data.compliancePeriod}/${props.data.complianceReportId}`}
+      style={{ color: '#000' }}
+    >
+      <BCBox
+        component="div"
+        sx={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          py: 1
+        }}
+      >
+        <BCUserInitials
+          fullName={lastComment.fullName}
+          tooltipText={lastComment.comment}
+          maxLength={500}
+          variant="filled"
+          sx={{
+            bgcolor: '#606060',
+            color: 'white',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            minWidth: '32px',
+            '& .MuiChip-label': {
+              padding: 0
+            },
+            '&:hover': {
+              bgcolor: '#505050'
+            }
+          }}
+        />
+      </BCBox>
+    </Link>
   )
 }

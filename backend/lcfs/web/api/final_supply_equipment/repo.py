@@ -46,11 +46,10 @@ class FinalSupplyEquipmentRepository:
         """
         Retrieve all FSE options in a single database transaction
         """
-        async with self.db.begin_nested():
-            intended_use_types = await self.get_intended_use_types()
-            levels_of_equipment = await self.get_levels_of_equipment()
-            intended_user_types = await self.get_intended_user_types()
-            organization_names = await self.get_organization_names(organization)
+        intended_use_types = await self.get_intended_use_types()
+        levels_of_equipment = await self.get_levels_of_equipment()
+        intended_user_types = await self.get_intended_user_types()
+        organization_names = await self.get_organization_names(organization)
         ports = [PortsEnum.SINGLE.value, PortsEnum.DUAL.value]
         return (
             intended_use_types,

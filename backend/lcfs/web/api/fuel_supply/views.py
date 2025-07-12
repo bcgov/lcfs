@@ -79,7 +79,7 @@ async def get_fuel_supply(
             )
         else:
             return await service.get_fuel_supply_list(
-                compliance_report_id, request_data.changelog
+                compliance_report_id, request_data.mode
             )
     except HTTPException as http_ex:
         # Re-raise HTTP exceptions to preserve status code and message
@@ -114,6 +114,7 @@ async def save_fuel_supply_row(
     compliance_report = await report_validate.validate_organization_access(
         compliance_report_id
     )
+    await report_validate.validate_compliance_report_editable(compliance_report)
 
     if request_data.deleted:
         return await action_service.delete_fuel_supply(request_data)

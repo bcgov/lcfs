@@ -18,6 +18,11 @@
     "fuelCode": "Fuel code",
     "ciOfFuel": "RCI",
     "quantity": "Quantity",
+    "q1Quantity": "Q1 (Jan-Mar)",
+    "q2Quantity": "Q2 (Apr-Jun)",
+    "q3Quantity": "Q3 (Jul-Sep)",
+    "q4Quantity": "Q4 (Oct-Dec)",
+    "totalQuantity": "Total Quantity",
     "units": "Units",
     "agreementType": "Agreement Type",
     "allocationAgreement": "Allocation Agreement",
@@ -26,5 +31,6 @@
     "fuelTypeOther": "Fuel type other",
     "provisionOfTheAct": "Determining Carbon Intensity",
     "energyDensity": "Energy Density"
-  }
+  },
+  "scheduleUpdated": "Allocation agreements schedule updated successfully"
 }

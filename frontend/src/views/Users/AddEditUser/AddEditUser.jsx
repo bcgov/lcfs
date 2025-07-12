@@ -2,10 +2,14 @@ import { PropTypes } from 'prop-types'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useMutation } from '@tanstack/react-query'
 import { useForm, FormProvider } from 'react-hook-form'
 import { yupResolver } from '@hookform/resolvers/yup'
-import { useUser, useDeleteUser } from '@/hooks/useUser'
+import {
+  useUser,
+  useDeleteUser,
+  useUpdateUser,
+  useCreateUser
+} from '@/hooks/useUser'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   userInfoSchema,
@@ -14,7 +18,6 @@ import {
   defaultValues,
   statusOptions
 } from './_schema'
-import { useApiService } from '@/services/useApiService'
 import { ROUTES, buildPath } from '@/routes/routes'
 import { BCFormRadio, BCFormText } from '@/components/BCForm'
 import colors from '@/themes/base/colors'
@@ -32,7 +35,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Button,
   Tooltip
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
@@ -45,14 +47,13 @@ import { roles } from '@/constants/roles'
 import { useOrganizationUser } from '@/hooks/useOrganization'
 
 // switch between 'idir' and 'bceid'
-export const AddEditUser = ({ userType }) => {
+export const AddEditUser = ({ userType = 'idir' }) => {
   const {
     data: currentUser,
     hasRoles,
     isLoading: isCurrentUserLoading
   } = useCurrentUser()
   const navigate = useNavigate()
-  const apiService = useApiService()
   const { t } = useTranslation(['common', 'admin'])
   const { userID, orgID } = useParams()
   const [orgName, setOrgName] = useState('')
@@ -76,6 +77,8 @@ export const AddEditUser = ({ userType }) => {
 
   // Determine if user is safe to remove
   const safeToDelete = data?.isSafeToRemove
+  const isEditingGovernmentUser = data?.isGovernmentUser || false
+  const isCurrentUserGovernment = currentUser?.isGovernmentUser || false
 
   // User form hook and form validation
   const form = useForm({
@@ -95,6 +98,59 @@ export const AddEditUser = ({ userType }) => {
   const status = watch('status')
   const readOnly = watch('readOnly')
   const bceidRoles = watch('bceidRoles')
+
+  // Success callback for user operations
+  const onUserOperationSuccess = () => {
+    if (hasRoles(roles.supplier)) {
+      navigate(ROUTES.ORGANIZATION.ORG)
+    } else if (orgID) {
+      navigate(buildPath(ROUTES.ORGANIZATIONS.VIEW, { orgID }), {
+        state: {
+          message: 'User has been successfully saved.',
+          severity: 'success'
+        }
+      })
+    } else {
+      navigate(ROUTES.ADMIN.USERS.LIST, {
+        state: {
+          message: 'User has been successfully saved.',
+          severity: 'success'
+        }
+      })
+    }
+  }
+
+  // Error callback for user operations
+  const onUserOperationError = (error) => {
+    console.error('Error saving user:', error)
+  }
+
+  // Update user hook
+  const {
+    mutate: updateUser,
+    isPending: isUpdating,
+    isError: isUpdateError
+  } = useUpdateUser({
+    onSuccess: onUserOperationSuccess,
+    onError: onUserOperationError,
+    isSupplier: hasRoles(roles.supplier),
+    organizationId: orgID || currentUser?.organization?.organizationId
+  })
+
+  // Create user hook
+  const {
+    mutate: createUser,
+    isPending: isCreating,
+    isError: isCreateError
+  } = useCreateUser({
+    onSuccess: onUserOperationSuccess,
+    onError: onUserOperationError,
+    isSupplier: hasRoles(roles.supplier),
+    organizationId: orgID || currentUser?.organization?.organizationId
+  })
+
+  // Delete mutation hook (only used for BCeID users)
+  const { mutate: deleteUser } = useDeleteUser()
 
   useEffect(() => {
     if (status !== 'Active') {
@@ -159,6 +215,7 @@ export const AddEditUser = ({ userType }) => {
       reset(userData)
     }
   }, [isUserFetched, data, reset])
+
   // Prepare payload and call mutate function
   const onSubmit = (data) => {
     const payload = {
@@ -183,72 +240,40 @@ export const AddEditUser = ({ userType }) => {
             ]
           : []
     }
+
     if (orgID || hasRoles(roles.supplier)) {
       payload.roles = [...payload.roles, roles.supplier.toLocaleLowerCase()]
     } else {
       payload.roles = [...payload.roles, roles.government.toLocaleLowerCase()]
     }
-    mutate(payload)
+
+    // Call appropriate mutation based on whether we're creating or updating
+    if (userID) {
+      updateUser({ userID, payload })
+    } else {
+      createUser(payload)
+    }
   }
 
   const onErrors = (error) => {
     console.log(error)
   }
-  // useMutation hook from React Query for handling API request
-  const { mutate, isPending, isError } = useMutation({
-    mutationFn: async (payload) => {
-      if (hasRoles(roles.supplier)) {
-        const orgId = orgID || currentUser.organization?.organizationId
-        return userID
-          ? await apiService.put(
-              `/organization/${orgId}/users/${userID}`,
-              payload
-            )
-          : await apiService.post(`/organization/${orgId}/users`, payload)
-      }
-      return userID
-        ? await apiService.put(`/users/${userID}`, payload)
-        : await apiService.post('/users', payload)
-    },
-    onSuccess: () => {
-      // on success navigate somewhere
-      if (hasRoles(roles.supplier)) {
-        navigate(ROUTES.ORGANIZATION.ORG)
-      } else if (orgID) {
-        navigate(buildPath(ROUTES.ORGANIZATIONS.VIEW, { orgID }), {
-          state: {
-            message: 'User has been successfully saved.',
-            severity: 'success'
-          }
-        })
-      } else {
-        navigate(ROUTES.ADMIN.USERS.LIST, {
-          state: {
-            message: 'User has been successfully saved.',
-            severity: 'success'
-          }
-        })
-      }
-    },
-    onError: (error) => {
-      // handle axios errors here
-      console.error('Error saving user:', error)
-    }
-  })
-
-  // Delete mutation hook (only used for BCeID users)
-  const { mutate: deleteUser } = useDeleteUser()
 
   // Handler for confirming deletion
   const handleConfirmDelete = () => {
     deleteUser(userID, {
       onSuccess: () => {
-        navigate(ROUTES.ORGANIZATIONS_VIEW.replace(':orgID', orgID), {
-          state: {
-            message: t('admin:deleteUser.success'),
-            severity: 'success'
+        navigate(
+          buildPath(ROUTES.ORGANIZATIONS.VIEW, {
+            orgID: data?.organization?.organizationId
+          }),
+          {
+            state: {
+              message: t('admin:deleteUser.success'),
+              severity: 'success'
+            }
           }
-        })
+        )
       },
       onError: (error) => {
         console.error('Error deleting user:', error)
@@ -264,18 +289,20 @@ export const AddEditUser = ({ userType }) => {
 
   // Handler for delete button click – opens confirmation dialog
   const handleDelete = () => {
-    // Only allow deletion for BCeID users
-    if (userType === 'bceid' && safeToDelete) {
+    if (!isEditingGovernmentUser && isCurrentUserGovernment && safeToDelete) {
       setOpenConfirm(true)
     }
   }
+
+  const isPending = isUpdating || isCreating
+  const isError = isUpdateError || isCreateError
 
   if (isUserLoading || isCurrentUserLoading) {
     return <Loading message="Loading..." />
   }
 
   if (isPending) {
-    return <Loading message="Adding user..." />
+    return <Loading message={userID ? 'Updating user...' : 'Adding user...'} />
   }
 
   return (
@@ -296,7 +323,8 @@ export const AddEditUser = ({ userType }) => {
             <Grid2
               size={{
                 xs: 12,
-                md: 5
+                md: 5,
+                lg: 4
               }}
             >
               <Stack bgcolor={colors.background.grey} p={3} spacing={1} mb={3}>
@@ -315,7 +343,8 @@ export const AddEditUser = ({ userType }) => {
             <Grid2
               size={{
                 xs: 12,
-                md: 7
+                md: 7,
+                lg: 6
               }}
             >
               <Stack bgcolor={colors.background.grey} p={3} spacing={2} mb={3}>
@@ -345,7 +374,8 @@ export const AddEditUser = ({ userType }) => {
             <Grid2
               size={{
                 xs: 12,
-                md: 5
+                md: 5,
+                lg: 4
               }}
             >
               <Box
@@ -384,7 +414,8 @@ export const AddEditUser = ({ userType }) => {
                 </BCButton>
                 {/* Only render delete button for BCeID users */}
                 {userID &&
-                  userType === 'bceid' &&
+                  !isEditingGovernmentUser &&
+                  isCurrentUserGovernment &&
                   (safeToDelete ? (
                     <BCButton
                       variant="outlined"
@@ -504,10 +535,6 @@ export const AddEditUser = ({ userType }) => {
       </Dialog>
     </div>
   )
-}
-
-AddEditUser.defaultProps = {
-  userType: 'idir'
 }
 
 AddEditUser.propTypes = {

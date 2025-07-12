@@ -147,7 +147,6 @@ class FuelSupplyActionService:
         """
         # Assign a unique group UUID for the new fuel supply
         new_group_uuid = str(uuid.uuid4())
-        print(fs_data)
         fuel_supply = FuelSupply(
             **fs_data.model_dump(exclude=FUEL_SUPPLY_EXCLUDE_FIELDS),
             group_uuid=new_group_uuid,

@@ -23,6 +23,8 @@ from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 from lcfs.web.api.fuel_supply.services import FuelSupplyServices
 from lcfs.web.core.decorators import service_handler
+from lcfs.db.models.fuel.FuelCode import FuelCode
+from lcfs.db.models.fuel.FuelType import FuelType
 
 logger = structlog.get_logger(__name__)
 
@@ -35,7 +37,11 @@ ALLOCATION_AGREEMENT_EXCLUDE_FIELDS = {
     "user_type",
     "version",
     "action_type",
+    "is_new_supplemental_entry",
+    "compliance_report_id",
 }
+
+PROVISION_APPROVED_FUEL_CODE = "Fuel code - section 19 (b) (i)"
 
 
 class AllocationAgreementServices:
@@ -74,13 +80,15 @@ class AllocationAgreementServices:
 
         # Fetch fuel code only if provided, else set it to None
         fuel_code_id = None
+        fuel_code = None
         if allocation_agreement.fuel_code:
-            fuel_code = await self.fuel_repo.get_fuel_code_by_name(
+            fuel_code_obj = await self.fuel_repo.get_fuel_code_by_name(
                 allocation_agreement.fuel_code
             )
-            fuel_code_id = fuel_code.fuel_code_id
+            fuel_code_id = fuel_code_obj.fuel_code_id
+            fuel_code = fuel_code_obj
 
-        return AllocationAgreement(
+        result = AllocationAgreement(
             **allocation_agreement.model_dump(
                 exclude={
                     "allocation_agreement_id",
@@ -90,6 +98,8 @@ class AllocationAgreementServices:
                     "provision_of_the_act",
                     "fuel_code",
                     "deleted",
+                    "ci_of_fuel",
+                    "units",
                 }
             ),
             allocation_transaction_type_id=allocation_transaction_type.allocation_transaction_type_id,
@@ -98,6 +108,18 @@ class AllocationAgreementServices:
             provision_of_the_act_id=provision_of_the_act.provision_of_the_act_id,
             fuel_code_id=fuel_code_id
         )
+
+        # Now recalc and assign ci_of_fuel and units
+        recalculated_ci = await self.calculate_ci_of_fuel(
+            fuel_type=fuel_type,
+            fuel_category=fuel_category,
+            provision_of_the_act=allocation_agreement.provision_of_the_act,
+            fuel_code=fuel_code,
+        )
+        result.ci_of_fuel = recalculated_ci
+        result.units = self.calculate_units(fuel_type)
+
+        return result
 
     @service_handler
     async def get_table_options(
@@ -212,7 +234,34 @@ class AllocationAgreementServices:
                 size=pagination.size,
                 total_pages=math.ceil(total_count / pagination.size),
             ),
-            allocation_agreements=allocation_agreements_response,
+            allocation_agreements=[
+                AllocationAgreementSchema(
+                    allocation_agreement_id=allocation_agreement.allocation_agreement_id,
+                    transaction_partner=allocation_agreement.transaction_partner,
+                    transaction_partner_email=allocation_agreement.transaction_partner_email,
+                    transaction_partner_phone=allocation_agreement.transaction_partner_phone,
+                    postal_address=allocation_agreement.postal_address,
+                    ci_of_fuel=allocation_agreement.ci_of_fuel,
+                    quantity=allocation_agreement.quantity,
+                    q1_quantity=allocation_agreement.q1_quantity,
+                    q2_quantity=allocation_agreement.q2_quantity,
+                    q3_quantity=allocation_agreement.q3_quantity,
+                    q4_quantity=allocation_agreement.q4_quantity,
+                    units=allocation_agreement.units,
+                    allocation_transaction_type=allocation_agreement.allocation_transaction_type.type,
+                    fuel_type=allocation_agreement.fuel_type.fuel_type,
+                    fuel_category=allocation_agreement.fuel_category.category,
+                    provision_of_the_act=allocation_agreement.provision_of_the_act.name,
+                    # Set fuel_code only if it exists
+                    fuel_code=(
+                        allocation_agreement.fuel_code.fuel_code
+                        if allocation_agreement.fuel_code
+                        else None
+                    ),
+                    compliance_report_id=allocation_agreement.compliance_report_id,
+                )
+                for allocation_agreement in allocation_agreements_response
+            ],
         )
 
     @service_handler
@@ -299,11 +348,29 @@ class AllocationAgreementServices:
             existing_allocation_agreement.postal_address = (
                 allocation_agreement_data.postal_address
             )
-            existing_allocation_agreement.ci_of_fuel = (
-                allocation_agreement_data.ci_of_fuel
+            recalculated_ci = await self.calculate_ci_of_fuel(
+                fuel_type=existing_allocation_agreement.fuel_type,
+                fuel_category=existing_allocation_agreement.fuel_category,
+                provision_of_the_act=existing_allocation_agreement.provision_of_the_act.name,
+                fuel_code=existing_allocation_agreement.fuel_code,
+            )
+            existing_allocation_agreement.ci_of_fuel = recalculated_ci
+            existing_allocation_agreement.units = self.calculate_units(
+                existing_allocation_agreement.fuel_type
             )
             existing_allocation_agreement.quantity = allocation_agreement_data.quantity
-            existing_allocation_agreement.units = allocation_agreement_data.units
+            existing_allocation_agreement.q1_quantity = (
+                allocation_agreement_data.q1_quantity
+            )
+            existing_allocation_agreement.q2_quantity = (
+                allocation_agreement_data.q2_quantity
+            )
+            existing_allocation_agreement.q3_quantity = (
+                allocation_agreement_data.q3_quantity
+            )
+            existing_allocation_agreement.q4_quantity = (
+                allocation_agreement_data.q4_quantity
+            )
             existing_allocation_agreement.fuel_type_other = (
                 allocation_agreement_data.fuel_type_other
             )
@@ -311,9 +378,11 @@ class AllocationAgreementServices:
                 allocation_agreement_data.group_uuid
             )
             existing_allocation_agreement.version = (
-                existing_allocation_agreement.version + 1
+                existing_allocation_agreement.version
             )
-            existing_allocation_agreement.action_type = ActionTypeEnum.UPDATE
+            existing_allocation_agreement.action_type = (
+                existing_allocation_agreement.action_type
+            )
 
             updated_allocation_agreement = await self.repo.update_allocation_agreement(
                 existing_allocation_agreement
@@ -327,6 +396,10 @@ class AllocationAgreementServices:
                 postal_address=updated_allocation_agreement.postal_address,
                 ci_of_fuel=updated_allocation_agreement.ci_of_fuel,
                 quantity=updated_allocation_agreement.quantity,
+                q1_quantity=updated_allocation_agreement.q1_quantity,
+                q2_quantity=updated_allocation_agreement.q2_quantity,
+                q3_quantity=updated_allocation_agreement.q3_quantity,
+                q4_quantity=updated_allocation_agreement.q4_quantity,
                 units=updated_allocation_agreement.units,
                 compliance_report_id=updated_allocation_agreement.compliance_report_id,
                 allocation_transaction_type=updated_allocation_agreement.allocation_transaction_type.type,
@@ -375,6 +448,12 @@ class AllocationAgreementServices:
         allocation_agreement.version = (
             0 if not existing_record else existing_record.version + 1
         )
+        allocation_agreement.create_date = (
+            existing_record.create_date if existing_record else None
+        )
+        allocation_agreement.create_user = (
+            existing_record.create_user if existing_record else None
+        )
 
         created_allocation_agreement = await self.repo.create_allocation_agreement(
             allocation_agreement
@@ -404,6 +483,10 @@ class AllocationAgreementServices:
             postal_address=created_allocation_agreement.postal_address,
             ci_of_fuel=created_allocation_agreement.ci_of_fuel,
             quantity=created_allocation_agreement.quantity,
+            q1_quantity=created_allocation_agreement.q1_quantity,
+            q2_quantity=created_allocation_agreement.q2_quantity,
+            q3_quantity=created_allocation_agreement.q3_quantity,
+            q4_quantity=created_allocation_agreement.q4_quantity,
             units=created_allocation_agreement.units,
             compliance_report_id=created_allocation_agreement.compliance_report_id,
             allocation_transaction_type=allocation_transaction_type_value,
@@ -436,7 +519,21 @@ class AllocationAgreementServices:
                 allocation_agreement_data.group_uuid
             )
         )
-
+        if not existing_allocation_agreement:
+            raise HTTPException(
+                status_code=404, detail="Allocation agreement record not found."
+            )
+        # If the compliance report IDs match, also delete the original record
+        if (
+            existing_allocation_agreement.compliance_report_id
+            == allocation_agreement_data.compliance_report_id
+        ):
+            await self.repo.delete_allocation_agreement(
+                allocation_agreement_data.allocation_agreement_id
+            )
+            return DeleteAllocationAgreementResponseSchema(
+                success=True, message="Marked as deleted."
+            )
         # If the record is already deleted, just return success
         if existing_allocation_agreement.action_type == ActionTypeEnum.DELETE:
             return DeleteAllocationAgreementResponseSchema(message="Marked as deleted.")
@@ -456,19 +553,35 @@ class AllocationAgreementServices:
                     deleted_entity, field, getattr(existing_allocation_agreement, field)
                 )
 
-        # If the compliance report IDs match, also delete the original record
-        if (
-            existing_allocation_agreement.compliance_report_id
-            == allocation_agreement_data.compliance_report_id
-        ):
-            await self.repo.delete_allocation_agreement(
-                allocation_agreement_data.allocation_agreement_id
-            )
-
         # Always create the deletion record
         await self.repo.create_allocation_agreement(deleted_entity)
 
         return DeleteAllocationAgreementResponseSchema(message="Marked as deleted.")
+
+    @service_handler
+    async def delete_all(self, compliance_report_id: int, current_user: str) -> None:
+        """
+        Deletes all allocation agreements associated with a compliance report.
+
+        Args:
+            compliance_report_id: The ID of the compliance report whose allocation agreements will be deleted.
+            current_user: The username of the user performing the deletion.
+
+        Returns:
+            None
+        """
+
+        # Allow bulk delete only when the target compliance report is version 0
+        compliance_report = await self.get_compliance_report_by_id(compliance_report_id)
+        if compliance_report.version != 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Bulk delete is permitted only on original reports (version 0). "
+                ),
+            )
+
+        await self.repo.delete_all_for_report(compliance_report_id)
 
     @service_handler
     async def get_compliance_report_by_id(self, compliance_report_id: int):
@@ -486,3 +599,49 @@ class AllocationAgreementServices:
             )
 
         return compliance_report
+
+    async def calculate_ci_of_fuel(
+        self,
+        fuel_type: FuelType,
+        fuel_category: object,
+        provision_of_the_act: Optional[str] = None,
+        fuel_code: Optional[FuelCode] = None,
+    ) -> float:
+        """
+        Calculate carbon intensity of fuel based on provided parameters.
+        Uses fuel code CI if available with approved provision, otherwise uses default CI from fuel type.
+
+        Args:
+            fuel_type: Fuel type model
+            provision_of_the_act: Optional provision specification
+            fuel_code: Optional fuel code model
+
+        Returns:
+            float: Carbon intensity value
+        """
+
+        # Approved fuel code scenario
+        if provision_of_the_act == PROVISION_APPROVED_FUEL_CODE and fuel_code:
+            return float(fuel_code.carbon_intensity or 0.0)
+
+            # Unrecognized fuel type: use the category’s default carbon intensity
+        if fuel_type.unrecognized:
+            return float(getattr(fuel_category, "default_carbon_intensity", 0.0) or 0.0)
+
+        # Normal scenario – the fuel_type itself has default_carbon_intensity
+        return float(fuel_type.default_carbon_intensity or 0.0)
+
+    def calculate_units(self, fuel_type: FuelType) -> str:
+        """
+        Retrieves the string representation of a fuel type's quantity units.
+
+        Args:
+            fuel_type (FuelType): The fuel type object containing units information.
+
+        Returns:
+            str: String representation of the quantity units enum value.
+
+        Example:
+            If fuel_type.units is QuantityUnitsEnum.KILOGRAMS, returns "kilograms".
+        """
+        return fuel_type.units.value

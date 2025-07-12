@@ -105,7 +105,7 @@ class CalculatorRepository:
         if not is_legacy:
             query = query.where(FuelType.is_legacy == False)
         if lcfs_only:
-            query = query.where(and_(FuelType.renewable == False))
+            query = query.where(and_(FuelType.fossil_derived == False))
 
         result = (await self.db.execute(query)).all()
         return [FuelTypeSchema.model_validate(ft) for ft in result]
@@ -294,19 +294,12 @@ class CalculatorRepository:
         else:
             query = query.where(ProvisionOfTheAct.is_legacy == True)
         if lcfs_only:
-            query = query.where(and_(FuelType.renewable == False))
+            query = query.where(and_(FuelType.fossil_derived == False))
         if fuel_category_id:
             query = query.where(FuelCategory.fuel_category_id == fuel_category_id)
         if fuel_type_id:
             query = query.where(FuelType.fuel_type_id == fuel_type_id)
-            print("Generated SQL Query:")
-        from sqlalchemy.dialects import postgresql
 
-        print(
-            query.compile(
-                dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}
-            )
-        )
         fuel_type_results = (await self.db.execute(query)).all()
 
         return {

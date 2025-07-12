@@ -13,31 +13,38 @@ export const BCDateFloatingFilter = ({
   disabled = false,
   minDate = '2013-01-01',
   maxDate = '2040-01-01',
-  initialFilterType = 'equals',
+  initialFilterType = 'any',
   label = 'Select Date'
 }) => {
   const [selectedDate, setSelectedDate] = useState(null)
   const [open, setOpen] = useState(false)
 
-  const handleChange = useCallback((newDate) => {
-    setSelectedDate(newDate)
+  const handleChange = useCallback(
+    (newDate) => {
+      setSelectedDate(newDate)
 
-    if (newDate && isValid(newDate)) {
-      onModelChange({
-        type: initialFilterType,
-        dateFrom: format(newDate, 'yyyy-MM-dd'),
-        dateTo: null,
-        filterType: 'date'
-      })
-    } else {
-      onModelChange(null)
-    }
-  }, [])
+      if (newDate && isValid(newDate)) {
+        const filterModel = {
+          filterType: 'date',
+          type: initialFilterType,
+          dateFrom: format(newDate, 'yyyy-MM-dd'),
+          dateTo:
+            initialFilterType === 'inRange'
+              ? format(newDate, 'yyyy-MM-dd')
+              : undefined
+        }
+        onModelChange(filterModel)
+      } else {
+        onModelChange(undefined)
+      }
+    },
+    [onModelChange, initialFilterType]
+  )
 
   const handleClear = (event) => {
     event.stopPropagation()
     setSelectedDate(null)
-    onModelChange(null)
+    onModelChange(undefined)
   }
 
   const handleOpen = () => {

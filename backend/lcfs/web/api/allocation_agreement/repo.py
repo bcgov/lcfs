@@ -18,9 +18,16 @@ from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.repo import FuelCodeRepository
+from lcfs.web.api.allocation_agreement.schema import AllocationAgreementSchema
 from lcfs.web.core.decorators import repo_handler
+from sqlalchemy import and_, select, delete, func, text
 
 logger = structlog.get_logger(__name__)
+
+
+ALLOCATION_AGREEMENT_BULK_DELETE_EXCLUDE_FIELDS = {
+    "allocation_agreement_id",
+}
 
 
 class AllocationAgreementRepository:
@@ -168,12 +175,44 @@ class AllocationAgreementRepository:
                     AllocationAgreement.version == valid_agreements_subq.c.max_version,
                 ),
             )
-            .order_by(AllocationAgreement.allocation_agreement_id)
+            .order_by(AllocationAgreement.create_date)
         )
 
         result = await self.db.execute(allocation_agreements_select)
         allocation_agreements = result.unique().scalars().all()
-        return allocation_agreements
+
+        return [
+            AllocationAgreementSchema(
+                allocation_agreement_id=allocation_agreement.allocation_agreement_id,
+                transaction_partner=allocation_agreement.transaction_partner,
+                transaction_partner_email=allocation_agreement.transaction_partner_email,
+                transaction_partner_phone=allocation_agreement.transaction_partner_phone,
+                postal_address=allocation_agreement.postal_address,
+                ci_of_fuel=allocation_agreement.ci_of_fuel,
+                quantity=allocation_agreement.quantity,
+                q1_quantity=allocation_agreement.q1_quantity,
+                q2_quantity=allocation_agreement.q2_quantity,
+                q3_quantity=allocation_agreement.q3_quantity,
+                q4_quantity=allocation_agreement.q4_quantity,
+                units=allocation_agreement.units,
+                compliance_report_id=allocation_agreement.compliance_report_id,
+                allocation_transaction_type=allocation_agreement.allocation_transaction_type.type,
+                fuel_type=allocation_agreement.fuel_type.fuel_type,
+                fuel_type_other=allocation_agreement.fuel_type_other,
+                fuel_category=allocation_agreement.fuel_category.category,
+                provision_of_the_act=allocation_agreement.provision_of_the_act.name,
+                # Set fuel_code only if it exists
+                fuel_code=(
+                    allocation_agreement.fuel_code.fuel_code
+                    if allocation_agreement.fuel_code
+                    else None
+                ),
+                group_uuid=allocation_agreement.group_uuid,
+                version=allocation_agreement.version,
+                action_type=allocation_agreement.action_type,
+            )
+            for allocation_agreement in allocation_agreements
+        ]
 
     @repo_handler
     async def get_allocation_agreements_paginated(
@@ -311,3 +350,14 @@ class AllocationAgreementRepository:
 
         result = await self.db.execute(query)
         return result.unique().scalars().first()
+
+    async def delete_all_for_report(self, compliance_report_id: int):
+        """
+        Delete every AllocationAgreement linked to a compliance report
+        """
+        await self.db.execute(
+            delete(AllocationAgreement).where(
+                AllocationAgreement.compliance_report_id == compliance_report_id
+            )
+        )
+        await self.db.flush()

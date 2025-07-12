@@ -78,7 +78,9 @@ describe('ActivityLinksList', () => {
     await user.click(screen.getByTestId('download-report'))
 
     await waitFor(() => {
-      expect(mockDownload).toHaveBeenCalledWith('/reports/12345/export')
+      expect(mockDownload).toHaveBeenCalledWith({
+        url: '/reports/12345/export'
+      })
     })
   })
 

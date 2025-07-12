@@ -58,11 +58,11 @@ async def test_export_success():
     assert isinstance(response, StreamingResponse)
     assert response.media_type == "text/csv"
     assert "attachment; filename=" in response.headers["Content-Disposition"]
-    repo_mock.get_fuel_codes_paginated.assert_called_once_with(
-        pagination=PaginationRequestSchema(
-            page=1, size=10000, filters=[], sort_orders=[]
-        )
+
+    expected_pagination = PaginationRequestSchema(
+        page=1, size=10000, filters=[], sort_orders=[]
     )
+    repo_mock.get_fuel_codes_paginated.assert_called_once_with(expected_pagination)
 
     # Verify file content
     headers = await response.body_iterator.__anext__()

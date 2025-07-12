@@ -247,13 +247,17 @@ async def test_get_fuel_codes_success(
                 {
                     "fuel_code_id": 1,
                     "company": "ABC Corp",
-                    "fuel_suffix": "001.0",
-                    "prefixId": 1,
+                    "fuelSuffix": "001.0",
+                    "fuel_code_prefix_id": 1,
+                    "prefix": "lcfs",
+                    "fuel_code_status_id": 1,
+                    "status": "Approved",
                     "carbonIntensity": 25.0,
                     "edrms": "EDRMS-123",
                     "lastUpdated": "2023-10-01",
                     "applicationDate": "2023-09-15",
                     "fuelTypeId": 2,
+                    "fuelType": "Diesel",
                     "feedstock": "Corn",
                     "feedstockLocation": "Canada",
                 }
@@ -591,7 +595,10 @@ async def test_get_fuel_code_statuses_success(
                 fuel_code_status_id=1, status=FuelCodeStatusEnum.Draft
             ),
             FuelCodeStatusSchema(
-                fuel_code_status_id=2, status=FuelCodeStatusEnum.Approved
+                fuel_code_status_id=2, status=FuelCodeStatusEnum.Recommended
+            ),
+            FuelCodeStatusSchema(
+                fuel_code_status_id=3, status=FuelCodeStatusEnum.Approved
             ),
         ]
 
@@ -603,11 +610,13 @@ async def test_get_fuel_code_statuses_success(
         assert response.status_code == status.HTTP_200_OK
         result = response.json()
         assert isinstance(result, list)
-        assert len(result) == 2
+        assert len(result) == 3
         assert result[0]["fuelCodeStatusId"] == 1
         assert result[0]["status"] == "Draft"
         assert result[1]["fuelCodeStatusId"] == 2
-        assert result[1]["status"] == "Approved"
+        assert result[1]["status"] == "Recommended"
+        assert result[2]["fuelCodeStatusId"] == 3
+        assert result[2]["status"] == "Approved"
 
 
 @pytest.mark.anyio

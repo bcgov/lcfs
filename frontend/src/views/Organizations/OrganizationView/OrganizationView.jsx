@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AppBar, Tab, Tabs } from '@mui/material'
 import BCBox from '@/components/BCBox'
+import BCAlert from '@/components/BCAlert'
 import { OrganizationDetailsCard } from './OrganizationDetailsCard'
 import { OrganizationUsers } from './OrganizationUsers'
 import { CreditLedger } from './CreditLedger'
@@ -15,7 +17,6 @@ function TabPanel({ children, value, index }) {
       hidden={value !== index}
       id={`organization-tabpanel-${index}`}
       aria-labelledby={`organization-tab-${index}`}
-      sx={{ p: 3 }}
     >
       {value === index && children}
     </BCBox>
@@ -27,16 +28,33 @@ export const OrganizationView = () => {
   const [tabIndex, setTabIndex] = useState(0)
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
 
-  const { hasRoles } = useCurrentUser()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const { orgID } = useParams()
+  const [alert, setAlert] = useState(null)
+
+  const { data: currentUser, hasRoles } = useCurrentUser()
   const isIdir = hasRoles(roles.government)
+  
+  // Get the organization ID - either from URL params (IDIR users) or from current user (BCeID users)
+  const organizationId = orgID ?? currentUser?.organization?.organizationId
+
+  useEffect(() => {
+    if (location.state?.message) {
+      setAlert({
+        message: location.state.message,
+        severity: location.state.severity || 'info'
+      })
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+  }, [location, navigate])
 
   const tabs = [{ label: t('org:usersTab'), content: <OrganizationUsers /> }]
-  if (!isIdir) {
-    tabs.push({
-      label: t('org:creditLedgerTab'),
-      content: <CreditLedger />
-    })
-  }
+  // Add credit ledger tab for all users (both IDIR and BCeID)
+  tabs.push({
+    label: t('org:creditLedgerTab'),
+    content: <CreditLedger organizationId={organizationId} />
+  })
 
   useEffect(() => {
     function handleResize() {
@@ -57,12 +75,16 @@ export const OrganizationView = () => {
 
   return (
     <BCBox>
+      {alert && (
+        <BCAlert severity={alert.severity} sx={{ mb: 4 }}>
+          {alert.message}
+        </BCAlert>
+      )}
+
       <OrganizationDetailsCard />
 
       {tabs.length === 1 ? (
-        <BCBox mt={3}>
-          {tabs[0].content}
-        </BCBox>
+        <BCBox mt={3}>{tabs[0].content}</BCBox>
       ) : (
         <BCBox sx={{ mt: 2, bgcolor: 'background.paper' }}>
           <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>

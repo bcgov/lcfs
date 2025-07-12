@@ -21,6 +21,7 @@ from typing import List, Optional, TypedDict, Type, Any, Coroutine, Sequence
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import CompliancePeriod
 from lcfs.db.models.comment import ComplianceReportInternalComment
+from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.compliance import (
     CompliancePeriod,
     ComplianceReportListView,
@@ -54,6 +55,7 @@ from lcfs.web.api.base import (
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportViewSchema,
+    LastCommentSchema,
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.api.role.schema import user_has_roles
@@ -166,7 +168,7 @@ class ComplianceReportRepository:
         self, organization_id: int, period: int
     ):
         """
-        Identify and retrieve the compliance report of an organization for the given compliance period
+        Identify and retrieve the latest assessed compliance report of an organization for the given compliance period
         """
         result = (
             (
@@ -206,11 +208,12 @@ class ComplianceReportRepository:
                             == ComplianceReportStatusEnum.Assessed,
                         )
                     )
+                    .order_by(ComplianceReport.version.desc())
                 )
             )
             .unique()
             .scalars()
-            .first()
+            .first()  # Gets the latest assessed report
         )
         return result
 
@@ -351,11 +354,80 @@ class ComplianceReportRepository:
         total_count_query = select(func.count()).select_from(query)
         total_count = (await self.db.execute(total_count_query)).scalar()
 
-        # Transform results into Pydantic schemas
-        reports = [
-            ComplianceReportViewSchema.model_validate(report) for report in query_result
-        ]
+        # Transform results into Pydantic schemas and fetch latest comments
+        reports = []
+        for report in query_result:
+            report_dict = {
+                "compliance_report_id": report.compliance_report_id,
+                "compliance_report_group_uuid": report.compliance_report_group_uuid,
+                "version": report.version,
+                "compliance_period_id": report.compliance_period_id,
+                "compliance_period": report.compliance_period,
+                "organization_id": report.organization_id,
+                "organization_name": report.organization_name,
+                "report_type": report.report_type,
+                "report_status_id": report.report_status_id,
+                "report_status": report.report_status,
+                "update_date": report.update_date,
+                "is_latest": report.is_latest,
+            }
+
+            # Get latest comment for this report (only for government users)
+            if user_has_roles(user, [RoleEnum.GOVERNMENT]):
+                latest_comment = await self._get_latest_comment_for_report(
+                    report.compliance_report_id
+                )
+                report_dict["last_comment"] = latest_comment
+
+            reports.append(ComplianceReportViewSchema.model_validate(report_dict))
+
         return reports, total_count
+
+    async def _get_latest_comment_for_report(
+        self, compliance_report_id: int
+    ) -> Optional[LastCommentSchema]:
+        """
+        Retrieve the latest internal comment for a compliance report
+        """
+        # Get all related compliance report IDs for this report (including chain)
+        related_ids = await self.get_related_compliance_report_ids(compliance_report_id)
+
+        # Query for the latest comment across all related reports
+        query = (
+            select(
+                InternalComment.comment,
+                InternalComment.create_date,
+                (UserProfile.first_name + " " + UserProfile.last_name).label(
+                    "full_name"
+                ),
+            )
+            .join(
+                ComplianceReportInternalComment,
+                ComplianceReportInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
+            .join(
+                UserProfile,
+                UserProfile.keycloak_username == InternalComment.create_user,
+            )
+            .where(
+                ComplianceReportInternalComment.compliance_report_id.in_(related_ids)
+            )
+            .order_by(InternalComment.create_date.desc())
+            .limit(1)
+        )
+
+        result = await self.db.execute(query)
+        row = result.first()
+
+        if row:
+            return LastCommentSchema(
+                comment=row.comment,
+                full_name=row.full_name,
+                create_date=row.create_date,
+            )
+
+        return None
 
     def _apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
@@ -575,6 +647,38 @@ class ComplianceReportRepository:
             .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
             .order_by(ComplianceReport.version.desc())
             .limit(1)
+        )
+        return result.scalars().first()
+
+    @repo_handler
+    async def get_draft_report_by_group_uuid(
+        self, group_uuid: str
+    ) -> Optional[ComplianceReport]:
+        """
+        Retrieve a draft compliance report for a given group_uuid if one exists.
+        This is used to check if a draft already exists before creating a new one.
+        """
+        # Get the Draft status ID
+        draft_status = await self.get_compliance_report_status_by_desc(
+            ComplianceReportStatusEnum.Draft.value
+        )
+        if not draft_status:
+            return None
+
+        # Query for a draft report in the group
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+            )
+            .where(
+                ComplianceReport.compliance_report_group_uuid == group_uuid,
+                ComplianceReport.current_status_id
+                == draft_status.compliance_report_status_id,
+            )
         )
         return result.scalars().first()
 
@@ -814,3 +918,36 @@ class ComplianceReportRepository:
         except Exception as e:
             logger.error(f"Error in get_changelog_data: {e}", exc_info=True)
             raise
+
+    @repo_handler
+    async def get_related_compliance_report_ids(self, report_id: int) -> List[int]:
+        """
+        Retrieve all compliance report IDs that belong to the same chain (same group_uuid)
+        as the given report_id.
+
+        Args:
+            report_id: The compliance report ID to find related reports for
+
+        Returns:
+            List of all compliance report IDs in the same chain, ordered by version desc
+        """
+        # First, get the group_uuid for the given report_id
+        group_uuid_result = await self.db.execute(
+            select(ComplianceReport.compliance_report_group_uuid).where(
+                ComplianceReport.compliance_report_id == report_id
+            )
+        )
+        group_uuid = group_uuid_result.scalar_one_or_none()
+
+        if not group_uuid:
+            # Report not found, return empty list
+            return []
+
+        # Now get all report IDs with the same group_uuid
+        related_reports_result = await self.db.execute(
+            select(ComplianceReport.compliance_report_id)
+            .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
+            .order_by(ComplianceReport.version.desc())
+        )
+
+        return related_reports_result.scalars().all()

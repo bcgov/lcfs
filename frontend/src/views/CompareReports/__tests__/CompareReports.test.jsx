@@ -1,36 +1,49 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { vi } from 'vitest'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import {
-  useGetComplianceReport,
-  useGetComplianceReportSummary,
-  useListComplianceReports
-} from '@/hooks/useComplianceReports'
+import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 import { CompareReports } from '@/views/CompareReports/CompareReports'
 import { wrapper } from '@/tests/utils/wrapper'
 
-// Mock hooks
+// Mock hooks and stores
 vi.mock('@/hooks/useCurrentUser')
 vi.mock('@/hooks/useComplianceReports')
+vi.mock('@/stores/useComplianceReportStore')
+
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key) => key // Simple mock that returns the key
+  })
+}))
 
 describe('CompareReports Component', () => {
   beforeEach(() => {
     useCurrentUser.mockReturnValue({
       hasRoles: true,
-      data: { organization: { organizationId: 1 } }
+      data: { organization: { organizationId: 1 } },
+      isLoading: false
     })
 
-    useGetComplianceReport.mockReturnValue({
-      data: {
+    // Mock the compliance report store with currentReport
+    useComplianceReportStore.mockReturnValue({
+      currentReport: {
         chain: [
-          { nickname: 'Original Report', complianceReportId: 1 },
+          {
+            nickname: 'Original Report',
+            complianceReportId: 1,
+            timestamp: '2021-01-01'
+          },
           {
             nickname: 'Supplemental Report 1',
-            complianceReportId: 2
+            complianceReportId: 2,
+            timestamp: '2021-02-01'
           },
           {
             nickname: 'Government Adjustment 2',
-            complianceReportId: 3
+            complianceReportId: 3,
+            timestamp: '2021-03-01'
           }
         ],
         report: {
@@ -144,59 +157,148 @@ describe('CompareReports Component', () => {
     })
   })
 
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('initializes with default report selections in correct order', () => {
+    render(<CompareReports />, { wrapper })
+
+    const report1Select = screen.getAllByRole('combobox')[0]
+    const report2Select = screen.getAllByRole('combobox')[1]
+
+    // Earliest report should be on the left (report1), most recent on the right (report2)
+    expect(report1Select).toHaveTextContent('Supplemental Report 1')
+    expect(report2Select).toHaveTextContent('Government Adjustment 2')
+  })
+
+  it('ensures column ordering follows chronological order (earliest left, latest right)', () => {
+    render(<CompareReports />, { wrapper })
+
+    const report1Select = screen.getAllByRole('combobox')[0]
+    const report2Select = screen.getAllByRole('combobox')[1]
+
+    expect(report1Select).toHaveTextContent('Supplemental Report 1')
+    expect(report2Select).toHaveTextContent('Government Adjustment 2')
+
+    fireEvent.mouseDown(report2Select)
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
+
+    fireEvent.mouseDown(report1Select)
+    fireEvent.click(
+      screen.getByRole('option', { name: 'Government Adjustment 2' })
+    )
+
+    expect(report1Select).toHaveTextContent('Government Adjustment 2')
+    expect(report2Select).toHaveTextContent('Original Report')
+  })
+
   it('allows selecting different reports', async () => {
     render(<CompareReports />, { wrapper })
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
 
+    // Open first dropdown and select a different option
     fireEvent.mouseDown(report1Select)
-
-    fireEvent.click(
-      screen.getByRole('option', { name: 'Government Adjustment 2' })
-    )
-
-    fireEvent.mouseDown(report2Select)
     fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
 
-    expect(report1Select).toHaveTextContent('Government Adjustment 2')
-    expect(report2Select).toHaveTextContent('Original Report')
+    // Verify selection was made
+    expect(report1Select).toHaveTextContent('Original Report')
+    expect(report2Select).toHaveTextContent('Government Adjustment 2')
+
+    // Open second dropdown and select a different option
+    fireEvent.mouseDown(report2Select)
+    fireEvent.click(
+      screen.getByRole('option', { name: 'Supplemental Report 1' })
+    )
+
+    // Verify both selections
+    expect(report1Select).toHaveTextContent('Original Report')
+    expect(report2Select).toHaveTextContent('Supplemental Report 1')
   })
 
-  it('should not allow comparing the same report to itself', async () => {
+  it('should not allow selecting the same report in both dropdowns', async () => {
     render(<CompareReports />, { wrapper })
 
     const report1Select = screen.getAllByRole('combobox')[0]
     const report2Select = screen.getAllByRole('combobox')[1]
 
-    fireEvent.mouseDown(report1Select)
-    const elements = screen.queryByRole('option', { name: 'Original Report' })
-    expect(elements).not.toBeInTheDocument()
+    // Initially Supplemental Report 1 (left) and Government Adjustment 2 (right) are selected
 
+    // Select Original Report in first dropdown
+    fireEvent.mouseDown(report1Select)
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
+
+    // Open second dropdown to check options
     fireEvent.mouseDown(report2Select)
-    const elements2 = screen.queryByRole('option', {
-      name: 'Supplemental report 1'
-    })
-    expect(report2Select).toHaveTextContent('Original Report')
-    expect(elements2).not.toBeInTheDocument()
+
+    // Original Report should not be an option in second dropdown
+    expect(
+      screen.queryByRole('option', { name: 'Original Report' })
+    ).not.toBeInTheDocument()
+
+    // Government Adjustment 2 and Supplemental Report 1 should be options
+    expect(
+      screen.getByRole('option', { name: 'Government Adjustment 2' })
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('option', { name: 'Supplemental Report 1' })
+    ).toBeInTheDocument()
   })
 
-  it('displays correct data in CompareTable', async () => {
+  it('displays data in CompareTable when reports are selected by default', async () => {
     render(<CompareReports />, { wrapper })
 
+    // The component automatically selects the two most recent reports,
+    // so we should see data in the tables immediately
     expect(
-      screen.getByText(/renewable fuel target summary/i)
-    ).toBeInTheDocument()
+      screen.getAllByText(/renewableFuelTargetSummary/i).length
+    ).toBeGreaterThan(0)
     expect(
-      screen.getByText(/low carbon fuel target summary/i)
-    ).toBeInTheDocument()
+      screen.getAllByText(/lowCarbonFuelTargetSummary/i).length
+    ).toBeGreaterThan(0)
 
-    // Check if the data rows are rendered correctly
-    expect(screen.getByText(/renewableFuelTargetSummary/i)).toBeInTheDocument()
-    expect(screen.getByText(/lowCarbonFuelTargetSummary/i)).toBeInTheDocument()
-    expect(screen.getByText('100')).toBeInTheDocument()
-    expect(screen.getByText('250')).toBeInTheDocument()
-    expect(screen.getByText('50')).toBeInTheDocument()
-    expect(screen.getByText('70')).toBeInTheDocument()
+    // Data values should be present with default selections
+    const value250Elements = screen.getAllByText('250')
+    const value70Elements = screen.getAllByText('70')
+
+    expect(value250Elements.length).toBeGreaterThan(0)
+    expect(value70Elements.length).toBeGreaterThan(0)
+  })
+
+  it('displays correct data in CompareTable after changing report selections', async () => {
+    render(<CompareReports />, { wrapper })
+
+    const report1Select = screen.getAllByRole('combobox')[0]
+    const report2Select = screen.getAllByRole('combobox')[1]
+
+    // Change selections
+    fireEvent.mouseDown(report1Select)
+    fireEvent.click(screen.getByRole('option', { name: 'Original Report' }))
+
+    fireEvent.mouseDown(report2Select)
+    fireEvent.click(
+      screen.getByRole('option', { name: 'Supplemental Report 1' })
+    )
+
+    // Check if the data rows are rendered correctly after selection
+    expect(
+      screen.getAllByText(/renewableFuelTargetSummary/i).length
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText(/lowCarbonFuelTargetSummary/i).length
+    ).toBeGreaterThan(0)
+
+    // Check that values are present after selection
+    const value100Elements = screen.getAllByText('100')
+    const value250Elements = screen.getAllByText('250')
+    const value50Elements = screen.getAllByText('50')
+    const value70Elements = screen.getAllByText('70')
+
+    expect(value100Elements.length).toBeGreaterThan(0)
+    expect(value250Elements.length).toBeGreaterThan(0)
+    expect(value50Elements.length).toBeGreaterThan(0)
+    expect(value70Elements.length).toBeGreaterThan(0)
   })
 })

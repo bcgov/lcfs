@@ -36,6 +36,7 @@ RETURN_STATUS_MAPPER = {
 class SupplementalInitiatorType(str, Enum):
     SUPPLIER_SUPPLEMENTAL = "Supplier Supplemental"
     GOVERNMENT_REASSESSMENT = "Government Reassessment"
+    GOVERNMENT_INITIATED = "Government Initiated"
 
 
 class ReportingFrequency(str, Enum):
@@ -69,6 +70,7 @@ class SnapshotSchema(BaseSchema):
 
 class ComplianceReportOrganizationSchema(BaseSchema):
     organization_id: int
+    organization_code: str
     name: str
 
 
@@ -136,6 +138,12 @@ class ComplianceReportBaseSchema(BaseSchema):
     assessment_statement: Optional[str] = None
 
 
+class LastCommentSchema(BaseSchema):
+    comment: str
+    full_name: str
+    create_date: datetime
+
+
 class ComplianceReportViewSchema(BaseSchema):
     compliance_report_id: int
     compliance_report_group_uuid: str
@@ -148,12 +156,23 @@ class ComplianceReportViewSchema(BaseSchema):
     report_status_id: int
     report_status: str
     update_date: datetime
+    last_comment: Optional[LastCommentSchema] = None
+    supplemental_initiator: Optional[SupplementalInitiatorType] = None
+    report_frequency: Optional[ReportingFrequency] = None
+    legacy_id: Optional[int] = None
+    transaction_id: Optional[int] = None
+    assessment_statement: Optional[str] = None
+    is_latest: bool
+    latest_report_supplemental_initiator: Optional[SupplementalInitiatorType] = None
+    latest_supplemental_create_date: Optional[datetime] = None
+    latest_status: Optional[str] = None
 
 
 class ChainedComplianceReportSchema(BaseSchema):
     report: ComplianceReportBaseSchema
     chain: Optional[List[ComplianceReportBaseSchema]] = []
     is_newest: bool
+    had_been_assessed: Optional[bool] = False
 
 
 class ComplianceReportCreateSchema(BaseSchema):
@@ -263,12 +282,47 @@ FUEL_SUPPLY_COLUMNS = [
     ExportColumn("Energy content"),
 ]
 
+# Quarterly column definitions for early issuance reports
+FUEL_SUPPLY_QUARTERLY_COLUMNS = [
+    ExportColumn("Compliance Units"),
+    ExportColumn("Fuel type"),
+    ExportColumn("Fuel type Other"),
+    ExportColumn("Fuel category"),
+    ExportColumn("End use"),
+    ExportColumn("Determining carbon intensity"),
+    ExportColumn("Fuel code"),
+    ExportColumn("Q1 Quantity"),
+    ExportColumn("Q2 Quantity"),
+    ExportColumn("Q3 Quantity"),
+    ExportColumn("Q4 Quantity"),
+    ExportColumn("Total Quantity"),
+    ExportColumn("Units"),
+    ExportColumn("Target CI"),
+    ExportColumn("RCI"),
+    ExportColumn("UCI"),
+    ExportColumn("Energy density"),
+    ExportColumn("EER"),
+    ExportColumn("Energy content"),
+]
+
 NOTIONAL_TRANSFER_COLUMNS = [
     ExportColumn("Legal name of trading partner"),
     ExportColumn("Address for service"),
     ExportColumn("Fuel category"),
     ExportColumn("Received OR Transferred"),
     ExportColumn("Quantity"),
+]
+
+NOTIONAL_TRANSFER_QUARTERLY_COLUMNS = [
+    ExportColumn("Legal name of trading partner"),
+    ExportColumn("Address for service"),
+    ExportColumn("Fuel category"),
+    ExportColumn("Received OR Transferred"),
+    ExportColumn("Q1 Quantity"),
+    ExportColumn("Q2 Quantity"),
+    ExportColumn("Q3 Quantity"),
+    ExportColumn("Q4 Quantity"),
+    ExportColumn("Total Quantity"),
 ]
 
 OTHER_USES_COLUMNS = [
@@ -315,6 +369,26 @@ ALLOCATION_AGREEMENT_COLUMNS = [
     ExportColumn("Fuel code"),
     ExportColumn("RCI"),
     ExportColumn("Quantity"),
+    ExportColumn("Units"),
+]
+
+ALLOCATION_AGREEMENT_QUARTERLY_COLUMNS = [
+    ExportColumn("Responsibility"),
+    ExportColumn("Legal name of transaction partner"),
+    ExportColumn("Address for service"),
+    ExportColumn("Email"),
+    ExportColumn("Phone"),
+    ExportColumn("Fuel type"),
+    ExportColumn("Fuel type other"),
+    ExportColumn("Fuel category"),
+    ExportColumn("Determining carbon intensity"),
+    ExportColumn("Fuel code"),
+    ExportColumn("RCI"),
+    ExportColumn("Q1 Quantity"),
+    ExportColumn("Q2 Quantity"),
+    ExportColumn("Q3 Quantity"),
+    ExportColumn("Q4 Quantity"),
+    ExportColumn("Total Quantity"),
     ExportColumn("Units"),
 ]
 

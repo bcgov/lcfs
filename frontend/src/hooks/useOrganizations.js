@@ -11,16 +11,23 @@ export const useOrganizationStatuses = (options) => {
   })
 }
 
-export const useOrganizationNames = (onlyRegistered = true, options) => {
+export const useOrganizationNames = (statuses = null, options) => {
   const client = useApiService()
 
   return useQuery({
-    queryKey: ['organization-names', onlyRegistered],
+    queryKey: ['organization-names', statuses],
     queryFn: async () => {
-      const response = await client.get(`/organizations/names/?only_registered=${onlyRegistered}`)
+      let url = `/organizations/names/`
+      if (statuses && Array.isArray(statuses)) {
+        const statusParams = statuses
+          .map((status) => `statuses=${status}`)
+          .join('&')
+        url += `?${statusParams}`
+      }
+      const response = await client.get(url)
       return response.data
     },
-    ...options,
+    ...options
   })
 }
 

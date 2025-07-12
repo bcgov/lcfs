@@ -2,6 +2,7 @@ from fastapi import HTTPException
 import os
 import uuid
 
+from lcfs.utils.constants import ALLOWED_MIME_TYPES, ALLOWED_FILE_TYPES
 from lcfs.db.models.admin_adjustment.AdminAdjustment import (
     admin_adjustment_document_association,
     AdminAdjustment,
@@ -69,6 +70,13 @@ class DocumentService:
 
         file_id = uuid.uuid4()
         file_key = f"{settings.s3_docs_path}/{parent_type}/{parent_id}/{file_id}"
+
+        # Validate MIME type
+        if file.content_type not in ALLOWED_MIME_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"File type '{file.content_type or 'unknown'}' is not allowed. Please upload files of the following types: {ALLOWED_FILE_TYPES}",
+            )
 
         # Scan file size
         file_size = os.fstat(file.file.fileno()).st_size
@@ -165,7 +173,7 @@ class DocumentService:
         if (
             RoleEnum.SUPPLIER in user.role_names
             and compliance_report.current_status.status
-            != ComplianceReportStatusEnum.Draft.value
+            != ComplianceReportStatusEnum.Draft
         ):
             raise HTTPException(
                 status_code=400,

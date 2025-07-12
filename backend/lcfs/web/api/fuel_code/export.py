@@ -48,22 +48,26 @@ class FuelCodeExporter:
         self.repo = repo
 
     @service_handler
-    async def export(self, export_format) -> StreamingResponse:
+    async def export(
+        self,
+        export_format: str,
+        pagination: PaginationRequestSchema | None = None,
+    ) -> StreamingResponse:
         """
         Prepares a list of users in a file that is downloadable
         """
         if not export_format in ["xls", "xlsx", "csv"]:
             raise DataNotFoundException("Export format not supported")
 
-        # Query database for the list of users. Exclude government users.
-        results = await self.repo.get_fuel_codes_paginated(
-            pagination=PaginationRequestSchema(
-                page=1,
-                size=10000,
-                filters=[],
-                sort_orders=[],
-            )
+        # Normalise incoming pagination
+        pagination = pagination or PaginationRequestSchema(
+            page=1, size=10000, filters=[], sort_orders=[]
         )
+
+        # Ignore client-side paging but preserve sorting
+        pagination.page, pagination.size = 1, 10000
+
+        results = await self.repo.get_fuel_codes_paginated(pagination)
 
         # Prepare data for the spreadsheet
         data = []

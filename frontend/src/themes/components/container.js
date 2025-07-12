@@ -12,8 +12,6 @@ const XL = `@media (min-width: ${xl}px)`
 const XXL = `@media (min-width: ${xxl}px)`
 
 const sharedClasses = {
-  paddingRight: `${pxToRem(12)} !important`,
-  paddingLeft: `${pxToRem(12)} !important`,
   marginLeft: 'auto !important',
   marginRight: 'auto !important',
   marginTop: '2rem',
@@ -49,7 +47,7 @@ const container = {
   [XXL]: {
     '.MuiContainer-root': {
       ...sharedClasses,
-      maxWidth: '1620px !important'
+      maxWidth: 'none !important'
     }
   }
 }

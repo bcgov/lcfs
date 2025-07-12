@@ -144,7 +144,10 @@ class ComplianceReportSummaryRepository:
             )
             .limit(1)
         )
-        return result.scalars().first().summary
+        previous_report = result.scalars().first()
+        if previous_report is not None:
+            return previous_report.summary
+        return None
 
     @repo_handler
     async def get_transferred_out_compliance_units(
@@ -213,13 +216,17 @@ class ComplianceReportSummaryRepository:
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
                 fuel_category = self._format_category(record.fuel_category.category)
-                fuel_quantities[fuel_category] += record.quantity
+                fuel_quantities[fuel_category] = fuel_quantities.get(
+                    fuel_category, 0
+                ) + (record.quantity or 0)
             elif (
                 isinstance(record, OtherUses)
                 and record.fuel_type.fossil_derived == fossil_derived
             ):
                 fuel_category = self._format_category(record.fuel_category.category)
-                fuel_quantities[fuel_category] += record.quantity_supplied
+                fuel_quantities[fuel_category] = fuel_quantities.get(
+                    fuel_category, 0
+                ) + (record.quantity_supplied or 0)
 
         return dict(fuel_quantities)
 

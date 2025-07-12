@@ -144,8 +144,8 @@ async def test_convert_to_fse_model(
         MagicMock(type_name="VIP"),
     ]
 
-    valid_final_supply_equipment_create_schema.intended_uses = ["Public", "Fleet"]
-    valid_final_supply_equipment_create_schema.intended_users = [
+    valid_final_supply_equipment_create_schema.intended_use_types = ["Public", "Fleet"]
+    valid_final_supply_equipment_create_schema.intended_user_types = [
         "General Public",
         "VIP",
     ]

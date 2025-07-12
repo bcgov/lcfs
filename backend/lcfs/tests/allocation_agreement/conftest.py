@@ -27,6 +27,10 @@ def create_mock_schema(overrides: dict):
         ci_of_fuel=100.21,
         provision_of_the_act="Default carbon intensity - section 19 (b) (ii)",
         quantity=100,
+        q1_quantity=None,
+        q2_quantity=None,
+        q3_quantity=None,
+        q4_quantity=None,
         units="L",
         fuel_category="Diesel",
         fuel_code=None,
@@ -58,6 +62,10 @@ def create_mock_update_schema(overrides: dict):
         ci_of_fuel=100.21,
         provision_of_the_act="Default carbon intensity - section 19 (b) (ii)",
         quantity=100,
+        q1_quantity=None,
+        q2_quantity=None,
+        q3_quantity=None,
+        q4_quantity=None,
         units="L",
         fuel_category="Diesel",
         fuel_code=None,
@@ -223,6 +231,10 @@ def create_mock_allocation_agreement():
         mock_agreement.fuel_type_other = data.get("fuel_type_other", None)
         mock_agreement.ci_of_fuel = data.get("ci_of_fuel", 100.21)
         mock_agreement.quantity = data.get("quantity", 100)
+        mock_agreement.q1_quantity = data.get("q1_quantity", None)
+        mock_agreement.q2_quantity = data.get("q2_quantity", None)
+        mock_agreement.q3_quantity = data.get("q3_quantity", None)
+        mock_agreement.q4_quantity = data.get("q4_quantity", None)
         mock_agreement.units = data.get("units", "L")
         mock_agreement.compliance_report_id = data.get("compliance_report_id", 1)
 
@@ -323,7 +335,11 @@ def mock_allocation_agreement_full(
         )
         mock_agreement.fuel_type_other = data.get("fuel_type_other", None)
         mock_agreement.ci_of_fuel = data.get("ci_of_fuel", 100.21)
-        mock_agreement.quantity = data.get("quantity", 100)
+        mock_agreement.quantity = data.get("quantity", None)  # Don't default to 100 for quarterly reports
+        mock_agreement.q1_quantity = data.get("q1_quantity", None)
+        mock_agreement.q2_quantity = data.get("q2_quantity", None)
+        mock_agreement.q3_quantity = data.get("q3_quantity", None)
+        mock_agreement.q4_quantity = data.get("q4_quantity", None)
         mock_agreement.units = data.get("units", "L")
         mock_agreement.compliance_report_id = data.get("compliance_report_id", 1)
 

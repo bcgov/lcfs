@@ -7,14 +7,6 @@
   ],
   "newFinalSupplyEquipmentBtn": "New final supply equipment",
   "noFinalSupplyEquipmentsFound": "No final supply equipments found",
-  "downloadBtn": "Download Excel template",
-  "downloadWithDataBtn": "Include data",
-  "downloadWithoutDataBtn": "Do not include data",
-  "importBtn": "Upload Excel spreadsheet",
-  "importOverwriteBtn": "Overwrite existing rows",
-  "importAppendBtn": "Append to exiting rows",
-  "importDialogHeader": "Select the Excel template (maximum size 50MB)",
-  "importSelectorText": "Drag and drop your XLSX file here or click to select from your machine to upload.",
   "addRow": "Add row",
   "rows": "rows",
   "finalSupplyEquipmentColLabels": {
@@ -30,8 +22,8 @@
     "model": "Model",
     "levelOfEquipment": "Level of equipment",
     "ports": "Ports",
-    "intendedUses": "Intended use",
-    "intendedUsers": "Intended users",
+    "intendedUseTypes": "Intended use",
+    "intendedUserTypes": "Intended users",
     "streetAddress": "Street address",
     "city": "City",
     "postalCode": "Postal code",
@@ -42,5 +34,6 @@
   "postalCodeError": "Please enter a valid postal code.",
   "validateMsg": {
     "isRequired": "{{field}} is required"
-  }
+  },
+  "scheduleUpdated": "Final supply equipment schedule updated successfully"
 }

@@ -32,7 +32,29 @@ class AllocationAgreement(BaseModel, Auditable, Versioning, DisplayOrder):
         Numeric(10, 2), nullable=True, comment="The Carbon intensity of fuel"
     )
     quantity = Column(
-        Integer, nullable=False, comment="Quantity of fuel involved in the transaction"
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel involved in the transaction",
+    )
+    q1_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel involved in Q1 (early issuance only)",
+    )
+    q2_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel involved in Q2 (early issuance only)",
+    )
+    q3_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel involved in Q3 (early issuance only)",
+    )
+    q4_quantity = Column(
+        Integer,
+        nullable=True,
+        comment="Quantity of fuel involved in Q4 (early issuance only)",
     )
     quantity_not_sold = Column(
         Integer,

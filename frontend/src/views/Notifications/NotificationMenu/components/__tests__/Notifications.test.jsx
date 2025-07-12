@@ -3,6 +3,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
+import { Notifications } from '../Notifications'
+
 const navigateMock = vi.fn()
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
@@ -112,14 +114,16 @@ vi.mock('@/components/BCDataGrid/BCGridViewer', () => {
   }
 })
 
-vi.mock('../_schema', () => ({
-  columnDefs: (t, currentUser) => [],
-  routesMapping: (currentUser) => ({
-    testService: '/test-route/:transactionId'
-  })
-}))
-
-import { Notifications } from '../Notifications'
+vi.mock('../_schema', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    columnDefs: (t, currentUser) => [],
+    routesMapping: (currentUser) => ({
+      testService: '/test-route/:transactionId'
+    })
+  }
+})
 
 describe('Notifications Component', () => {
   beforeEach(() => {

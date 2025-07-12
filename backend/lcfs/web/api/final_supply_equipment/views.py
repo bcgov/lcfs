@@ -19,6 +19,7 @@ from starlette.responses import StreamingResponse, JSONResponse
 from lcfs.db import dependencies
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
+from lcfs.web.api.final_supply_equipment.repo import FinalSupplyEquipmentRepository
 from lcfs.web.api.compliance_report.schema import (
     CommonPaginatedReportRequestSchema,
 )
@@ -133,6 +134,7 @@ async def save_final_supply_equipment_row(
         compliance_report_id
     )
     await report_validate.validate_compliance_report_access(compliance_report)
+    await report_validate.validate_compliance_report_editable(compliance_report)
 
     if request_data.deleted:
         # Delete existing final supply equipment row
@@ -174,7 +176,9 @@ async def search_table_options(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def export(
     request: Request,
     report_id: str,
@@ -191,10 +195,15 @@ async def export(
             status_code=400, detail="Invalid report id. Must be an integer."
         )
 
-    await report_validate.validate_organization_access(compliance_report_id)
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
+    if compliance_report is None:
+        raise HTTPException(status_code=404, detail="Compliance report not found")
 
-    organization = request.user.organization
-    return await exporter.export(compliance_report_id, request.user, organization, True)
+    return await exporter.export(
+        compliance_report_id, request.user, compliance_report.organization, True
+    )
 
 
 @router.post(
@@ -202,12 +211,15 @@ async def export(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def import_fse(
     request: Request,
     report_id: str,
     file: UploadFile = File(...),
     report_validate: ComplianceReportValidation = Depends(),
+    fse_repo: FinalSupplyEquipmentRepository = Depends(),
     importer: FinalSupplyEquipmentImporter = Depends(),
     overwrite: bool = Form(...),
 ):
@@ -241,10 +253,34 @@ async def import_fse(
             status_code=400, detail="Invalid report id. Must be an integer."
         )
 
-    await report_validate.validate_organization_access(compliance_report_id)
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
+    await report_validate.validate_compliance_report_editable(compliance_report)
 
+    if compliance_report is None:
+        raise HTTPException(status_code=404, detail="Compliance report not found")
+
+    await report_validate.validate_compliance_report_editable(compliance_report)
+
+    version = compliance_report.version
+    is_original = version == 0
+
+    if overwrite:
+        existing_fse = await fse_repo.get_fse_list(compliance_report_id)
+        if not is_original and len(existing_fse) > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Overwrite not allowed: this is a non-initial report with existing data",
+            )
+
+    # Import data
     job_id = await importer.import_data(
-        compliance_report_id, request.user, file, overwrite
+        compliance_report_id,
+        request.user,
+        compliance_report.organization.organization_code,
+        file,
+        overwrite,
     )
     return JSONResponse(content={"jobId": job_id})
 
@@ -254,7 +290,9 @@ async def import_fse(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_template(
     request: Request,
     report_id: str,
@@ -271,9 +309,13 @@ async def get_template(
             status_code=400, detail="Invalid report id. Must be an integer."
         )
 
-    await report_validate.validate_organization_access(compliance_report_id)
+    compliance_report = await report_validate.validate_organization_access(
+        compliance_report_id
+    )
+    if compliance_report is None:
+        raise HTTPException(status_code=404, detail="Compliance report not found")
 
-    organization = request.user.organization
+    organization = compliance_report.organization
     return await exporter.export(
         compliance_report_id, request.user, organization, False
     )
@@ -284,7 +326,9 @@ async def get_template(
     response_class=StreamingResponse,
     status_code=status.HTTP_200_OK,
 )
-@view_handler([RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY])
+@view_handler(
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.GOVERNMENT]
+)
 async def get_job_status(
     request: Request,
     job_id: str,

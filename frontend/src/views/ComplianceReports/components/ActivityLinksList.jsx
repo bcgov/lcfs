@@ -40,12 +40,11 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
   const onDownloadReport = async () => {
     setIsDownloading(true)
     try {
-      await apiService.download(
-        apiRoutes.exportComplianceReport.replace(
-          ':reportID',
-          complianceReportId
-        )
+      const endpoint = apiRoutes.exportComplianceReport.replace(
+        ':reportID',
+        complianceReportId
       )
+      await apiService.download({ url: endpoint })
     } finally {
       setIsDownloading(false)
     }
@@ -63,7 +62,7 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         'report:activityLists.notionalTransfers',
         'report:activityLabels.notionalTransfers',
         ROUTES.REPORTS.ADD.NOTIONAL_TRANSFERS,
-        false
+        true
       ),
       createActivity(
         'report:activityLists.fuelsOtherUse',
@@ -93,7 +92,7 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         'report:activityLists.allocationAgreements',
         'report:activityLabels.allocationAgreements',
         ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS,
-        false
+        true
       ),
       {
         name: t('report:activityLists.uploadDocuments'),
@@ -122,32 +121,34 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         component="div"
         sx={{ maxWidth: '100%', listStyleType: 'disc' }}
       >
-        {primaryList.map(
-          (activity) =>
-            ((isQuarterlyReport && activity.enableForQuarterly) ||
-              !isQuarterlyReport) && (
-              <Box
-                sx={{ cursor: 'pointer' }}
-                component="a"
-                key={activity.name}
-                alignItems="flex-start"
-                onClick={activity.action}
-                data-test={activity.label}
+        {primaryList
+          .filter(
+            (activity) =>
+              (isQuarterlyReport && activity.enableForQuarterly) ||
+              !isQuarterlyReport
+          )
+          .map((activity) => (
+            <Box
+              sx={{ cursor: 'pointer' }}
+              component="a"
+              key={activity.name}
+              alignItems="flex-start"
+              onClick={activity.action}
+              data-test={activity.label}
+            >
+              <BCTypography
+                variant="subtitle2"
+                color="link"
+                sx={{
+                  textDecoration: 'underline',
+                  '&:hover': { color: 'info.main' }
+                }}
               >
-                <BCTypography
-                  variant="subtitle2"
-                  color="link"
-                  sx={{
-                    textDecoration: 'underline',
-                    '&:hover': { color: 'info.main' }
-                  }}
-                >
-                  <StyledChip color="primary" label={activity.label} />
-                  {activity.name}
-                </BCTypography>
-              </Box>
-            )
-        )}
+                <StyledChip color="primary" label={activity.label} />
+                {activity.name}
+              </BCTypography>
+            </Box>
+          ))}
       </List>
       <BCTypography
         variant="body4"
@@ -162,32 +163,34 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
         component="div"
         sx={{ maxWidth: '100%', listStyleType: 'disc' }}
       >
-        {secondaryList.map(
-          (activity) =>
-            ((isQuarterlyReport && activity.enableForQuarterly) ||
-              !isQuarterlyReport) && (
-              <Box
-                sx={{ cursor: 'pointer' }}
-                component="a"
-                key={activity.name}
-                alignItems="flex-start"
-                onClick={activity.action}
-                data-test={activity.label}
+        {secondaryList
+          .filter(
+            (activity) =>
+              (isQuarterlyReport && activity.enableForQuarterly) ||
+              !isQuarterlyReport
+          )
+          .map((activity) => (
+            <Box
+              sx={{ cursor: 'pointer' }}
+              component="a"
+              key={activity.name}
+              alignItems="flex-start"
+              onClick={activity.action}
+              data-test={activity.label}
+            >
+              <BCTypography
+                variant="subtitle2"
+                color="link"
+                sx={{
+                  textDecoration: 'underline',
+                  '&:hover': { color: 'info.main' }
+                }}
               >
-                <BCTypography
-                  variant="subtitle2"
-                  color="link"
-                  sx={{
-                    textDecoration: 'underline',
-                    '&:hover': { color: 'info.main' }
-                  }}
-                >
-                  <StyledChip color="primary" label={activity.label} />
-                  {activity.name}
-                </BCTypography>
-              </Box>
-            )
-        )}
+                <StyledChip color="primary" label={activity.label} />
+                {activity.name}
+              </BCTypography>
+            </Box>
+          ))}
       </List>
       {currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT && (
         <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
@@ -212,6 +215,7 @@ export const ActivityLinksList = ({ currentStatus, isQuarterlyReport }) => {
               color="link"
               onClick={onDownloadReport}
               sx={{
+                cursor: 'pointer',
                 textDecoration: 'underline',
                 '&:hover': { color: 'info.main' }
               }}

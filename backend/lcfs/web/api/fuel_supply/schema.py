@@ -10,11 +10,19 @@ from lcfs.web.api.base import (
 )
 from lcfs.web.api.fuel_type.schema import FuelTypeQuantityUnitsEnumSchema
 from lcfs.web.utils.schema_validators import fuel_code_required, fuel_quantity_required
+from sqlalchemy import Enum
+
+
+class ModeEnum(str, Enum):
+    VIEW = "view"
+    EDIT = "edit"
+    CHANGELOG = "changelog"
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
     compliance_report_id: int = Field(..., alias="complianceReportId")
     changelog: Optional[bool] = None
+    mode: Optional[str] = ModeEnum.VIEW
     filters: Optional[List[FilterModel]] = None
     page: Optional[int] = None
     size: Optional[int] = None
@@ -75,6 +83,7 @@ class FuelCodeSchema(BaseSchema):
     fuel_code_prefix_id: int
     fuel_code: str
     fuel_code_carbon_intensity: float
+    fuel_production_facility_country: Optional[str] = None
 
 
 class FuelTypeOptionsSchema(BaseSchema):

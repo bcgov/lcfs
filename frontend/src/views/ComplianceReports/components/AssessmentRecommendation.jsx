@@ -68,21 +68,39 @@ export const AssessmentRecommendation = ({
   }
 
   return (
-    <BCBox sx={{ mt: 2 }}>
+    <BCBox
+      sx={{
+        mt: 2,
+        border: '1px solid rgba(0, 0, 0, 0.28)',
+        padding: '20px'
+      }}
+    >
       {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
         currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED && (
           <BCTypography variant="body2">
             The analyst can make changes to the reported activity information if
             it is known to be incorrect, click to put the report in edit mode:
             <br />
-            <BCButton
-              onClick={openAdjustmentDialog}
-              sx={{ mt: 2 }}
-              color="primary"
-              variant="outlined"
+            <Tooltip
+              title={
+                reportData.isNewest
+                  ? ''
+                  : 'Supplier has a supplemental report in progress.'
+              }
+              placement="right"
             >
-              Analyst adjustment
-            </BCButton>
+              <span>
+                <BCButton
+                  onClick={openAdjustmentDialog}
+                  sx={{ mt: 2 }}
+                  color="primary"
+                  variant="outlined"
+                  disabled={!reportData.isNewest}
+                >
+                  Analyst adjustment
+                </BCButton>
+              </span>
+            </Tooltip>
           </BCTypography>
         )}
       {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
@@ -101,7 +119,14 @@ export const AssessmentRecommendation = ({
                 variant="contained"
                 color="primary"
                 onClick={openReassessmentDialog}
-                startIcon={<Assignment />}
+                startIcon={
+                  <Assignment
+                    sx={{
+                      width: '1rem',
+                      height: '1rem'
+                    }}
+                  />
+                }
                 sx={{ mt: 2 }}
                 disabled={isLoading || !reportData.isNewest}
               >

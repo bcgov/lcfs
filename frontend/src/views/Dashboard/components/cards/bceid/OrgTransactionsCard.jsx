@@ -42,7 +42,11 @@ const OrgTransactionsCard = () => {
         status: {
           filterType: 'set',
           type: 'set',
-          filter: [TRANSFER_STATUSES.SENT, TRANSFER_STATUSES.SUBMITTED]
+          filter: [
+            TRANSFER_STATUSES.SENT,
+            TRANSFER_STATUSES.SUBMITTED,
+            TRANSFER_STATUSES.RECOMMENDED
+          ]
         },
         transactionType: {
           filterType: 'text',

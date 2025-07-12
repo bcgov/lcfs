@@ -3,6 +3,7 @@ import uuid
 from datetime import datetime
 
 import pytest
+from unittest.mock import MagicMock
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema, FilterModel, SortOrder
@@ -98,7 +99,7 @@ def compliance_period_schema():
 @pytest.fixture
 def compliance_report_organization_schema():
     return ComplianceReportOrganizationSchema(
-        organization_id=1, name="Acme Corporation"
+        organization_id=1, organization_code="ACME123", name="Acme Corporation"
     )
 
 
@@ -157,6 +158,7 @@ def compliance_report_schema(
         report_status_id: int = None,
         report_status: str = "Submitted",
         update_date: datetime = datetime(2024, 4, 1, 12, 0, 0),
+        is_latest: bool = True
     ):
         compliance_period_id = (
             compliance_period_id or compliance_period_schema.compliance_period_id
@@ -188,6 +190,7 @@ def compliance_report_schema(
             report_status_id=report_status_id,
             report_status=report_status,
             update_date=update_date,
+            is_latest=is_latest
         )
 
     return _create_compliance_report_schema
@@ -260,3 +263,9 @@ def compliance_report_base_schema(
         )
 
     return _create_compliance_report_base_schema
+
+
+@pytest.fixture
+def mock_transaction_repo():
+    """Fixture to provide a mock transaction repository."""
+    return MagicMock()

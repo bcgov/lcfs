@@ -282,21 +282,31 @@ class OrganizationsService:
 
     @service_handler
     async def get_organization_names(
-        self, only_registered: bool = False, order_by=("name", "asc")
+        self,
+        order_by=("name", "asc"),
+        statuses: List[str] = None,
     ) -> List[OrganizationSummaryResponseSchema]:
         """
         Fetches all organization names and their detailed information, formatted as per OrganizationSummaryResponseSchema.
 
         Parameters:
-            only_registered (bool): If true, fetches only registered organizations.
             order_by (tuple): Tuple containing the field name to sort by and the direction ('asc' or 'desc').
+            statuses (List[str]): List of statuses to filter by. If None, returns all organizations.
 
         Returns:
             List[OrganizationSummaryResponseSchema]: List of organizations with their summary information.
         """
         conditions = []
-        if only_registered:
-            conditions.append(OrganizationStatus.status == OrgStatusEnum.Registered)
+
+        if statuses:
+            # If specific statuses are provided, filter by those
+            status_enums = [
+                OrgStatusEnum(status)
+                for status in statuses
+                if status in [e.value for e in OrgStatusEnum]
+            ]
+            if status_enums:
+                conditions.append(OrganizationStatus.status.in_(status_enums))
 
         # The order_by tuple directly specifies both the sort field and direction
         organization_data = await self.repo.get_organization_names(conditions, order_by)
@@ -308,6 +318,7 @@ class OrganizationsService:
                 operating_name=org["operating_name"],
                 total_balance=org["total_balance"],
                 reserved_balance=org["reserved_balance"],
+                org_status=org["status"],
             )
             for org in organization_data
         ]

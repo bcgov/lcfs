@@ -9,6 +9,13 @@ import { defaultInitialPagination } from '@/constants/schedules.js'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { useAuditLogs } from '@/hooks/useAuditLog.js'
 
+const initialPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: defaultAuditLogSortModel,
+  filters: []
+}
+
 export const AuditLog = () => {
   const { t } = useTranslation(['common', 'admin'])
   const gridRef = useRef()
@@ -24,7 +31,7 @@ export const AuditLog = () => {
   }, [])
 
   const [paginationOptions, setPaginationOptions] = useState(
-    defaultInitialPagination
+    initialPaginationOptions
   )
 
   const queryData = useAuditLogs(paginationOptions, {
@@ -43,7 +50,7 @@ export const AuditLog = () => {
   )
 
   const handleClearFilters = () => {
-    setPaginationOptions(defaultInitialPagination)
+    setPaginationOptions(initialPaginationOptions)
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
     }
@@ -69,6 +76,11 @@ export const AuditLog = () => {
         enableCopyButton={false}
         enableExportButton={true}
         exportName="AuditLog"
+        autoSizeStrategy={{
+          type: 'fitGridWidth',
+          defaultMinWidth: 50,
+          defaultMaxWidth: 600
+        }}
         defaultColDef={defaultColDef}
         paginationOptions={paginationOptions}
         onPaginationChange={(newPagination) =>

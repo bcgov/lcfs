@@ -9,6 +9,7 @@ import {
 import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { buildPath, ROUTES } from '@/routes/routes'
 import {
   useFuelSupplyOptions,
   useGetFuelSuppliesList,
@@ -16,7 +17,6 @@ import {
 } from '@/hooks/useFuelSupply'
 import { isArrayEmpty } from '@/utils/array.js'
 import { cleanEmptyStringValues } from '@/utils/formatters'
-import { changelogRowStyle } from '@/utils/grid/changelogCellStyle'
 import { handleScheduleDelete, handleScheduleSave } from '@/utils/schedules.js'
 import Grid2 from '@mui/material/Grid2'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -25,6 +25,9 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import * as schema from './_schema'
 import * as legacySchema from './_legacySchema'
+import { defaultColDef, fuelSupplyColDefs } from './_schema'
+import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
+import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 
 export const AddEditFuelSupplies = () => {
   const [rowData, setRowData] = useState([])
@@ -36,20 +39,14 @@ export const AddEditFuelSupplies = () => {
   const alertRef = useRef()
   const location = useLocation()
   const { t } = useTranslation(['common', 'fuelSupply', 'reports'])
-  const params = useParams()
-  const { complianceReportId, compliancePeriod } = params
+  const { complianceReportId, compliancePeriod } = useParams()
   const navigate = useNavigate()
-  const { data: currentUser, isLoading: currentUserLoading } = useCurrentUser()
-  const { data: complianceReport, isLoading: complianceReportLoading } =
-    useGetComplianceReport(
-      currentUser?.organization?.organizationId,
-      complianceReportId,
-      { enabled: !currentUserLoading }
-    )
+  const { data: currentReport, isLoading } =
+    useComplianceReportWithCache(complianceReportId)
 
-  const isSupplemental = complianceReport?.report?.version !== 0
+  const isSupplemental = currentReport?.report?.version !== 0
   const isEarlyIssuance =
-    complianceReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
+    currentReport?.report?.reportingFrequency === REPORT_SCHEDULES.QUARTERLY
 
   const {
     data: optionsData,
@@ -60,13 +57,12 @@ export const AddEditFuelSupplies = () => {
   const { mutateAsync: saveRow } = useSaveFuelSupply({ complianceReportId })
 
   const { data: fuelSupplyData, isLoading: fuelSuppliesLoading } =
-    useGetFuelSuppliesList(
-      {
-        complianceReportId,
-        changelog: isSupplemental
-      },
-      {}
-    )
+    useGetFuelSuppliesList({
+      complianceReportId,
+      mode: isSupplemental
+        ? REPORT_SCHEDULES_VIEW.EDIT
+        : REPORT_SCHEDULES_VIEW.VIEW
+    })
 
   const gridOptions = useMemo(
     () => ({
@@ -75,8 +71,7 @@ export const AddEditFuelSupplies = () => {
         type: 'fitCellContents',
         defaultMinWidth: 50,
         defaultMaxWidth: 600
-      },
-      getRowStyle: (params) => changelogRowStyle(params, isSupplemental)
+      }
     }),
     [t, isSupplemental]
   )
@@ -127,7 +122,10 @@ export const AddEditFuelSupplies = () => {
             id: uuid()
           }
         })
-        setRowData([...updatedRowData, { id: uuid() }])
+        setRowData([
+          ...updatedRowData,
+          { id: uuid(), complianceReportId, compliancePeriod }
+        ])
       } else {
         setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
       }
@@ -172,7 +170,10 @@ export const AddEditFuelSupplies = () => {
         }
       })
 
-      setRowData(updatedRowData)
+      setRowData([
+        ...updatedRowData,
+        { id: uuid(), complianceReportId, compliancePeriod }
+      ])
     } else {
       setRowData([{ id: uuid(), complianceReportId, compliancePeriod }])
     }
@@ -294,7 +295,7 @@ export const AddEditFuelSupplies = () => {
 
       params.node.updateData(updatedData)
     },
-    [saveRow, t]
+    [saveRow, t, complianceReportId, compliancePeriod]
   )
 
   const onAction = async (action, params) => {
@@ -326,15 +327,21 @@ export const AddEditFuelSupplies = () => {
       buildPath(ROUTES.REPORTS.VIEW, {
         compliancePeriod,
         complianceReportId
-      })
+      }),
+      {
+        state: {
+          expandedSchedule: 'fuelSupplies',
+          message: t('fuelSupply:scheduleUpdated'),
+          severity: 'success'
+        }
+      }
     )
-  }, [navigate, compliancePeriod, complianceReportId])
+  }, [navigate, compliancePeriod, complianceReportId, t])
 
   return (
     isFetched &&
     !fuelSuppliesLoading &&
-    !currentUserLoading &&
-    !complianceReportLoading && (
+    !isLoading && (
       <Grid2 className="add-edit-fuel-supply-container" mx={-1}>
         <div className="header">
           <BCTypography variant="h5" color="primary">

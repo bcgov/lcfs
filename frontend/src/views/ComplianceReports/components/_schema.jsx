@@ -3,54 +3,18 @@ import {
   BCSelectFloatingFilter
 } from '@/components/BCDataGrid/components'
 import { SUMMARY } from '@/constants/common'
-import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
+import {
+  ReportsStatusRenderer,
+  LastCommentRenderer
+} from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
 import { useGetComplianceReportStatuses } from '@/hooks/useComplianceReports'
 
 export const reportsColDefs = (t, isSupplier) => [
   {
-    field: 'compliancePeriod',
-    headerName: t('report:reportColLabels.compliancePeriod'),
-    width: 210,
-    valueGetter: ({ data }) => data.compliancePeriod || '',
-    filterParams: {
-      buttons: ['clear']
-    }
-  },
-  {
-    field: 'organization',
-    headerName: t('report:reportColLabels.organization'),
-    flex: 2,
-    hide: isSupplier,
-    valueGetter: ({ data }) => data.organizationName || ''
-  },
-  {
-    field: 'type',
-    headerName: t('report:reportColLabels.type'),
-    flex: 2,
-    valueGetter: ({ data }) => data.reportType,
-    floatingFilterComponent: BCSelectFloatingFilter,
-    floatingFilterComponentParams: {
-      optionsQuery: () => ({
-        data: [
-          { id: 1, name: 'Original Report' },
-          { id: 2, name: 'Supplemental Report' },
-          {
-            id: 3,
-            name: 'Government adjustment'
-          }
-        ],
-        isLoading: false
-      }),
-      initialFilterType: 'contains',
-      valueKey: 'name',
-      labelKey: 'name'
-    }
-  },
-  {
     field: 'status',
     headerName: t('report:reportColLabels.status'),
-    width: 300,
+    width: 220,
     valueGetter: ({ data }) => data.reportStatus || '',
     filterParams: {
       textFormatter: (value) => value.replace(/\s+/g, '_').toLowerCase(),
@@ -80,6 +44,62 @@ export const reportsColDefs = (t, isSupplier) => [
       labelKey: 'status'
     },
     suppressFloatingFilterButton: true
+  },
+  {
+    field: 'lastComment',
+    headerName: t('report:reportColLabels.lastComment'),
+    width: 160,
+    hide: isSupplier, // Only show for IDIR users
+    cellRenderer: LastCommentRenderer,
+    sortable: false,
+    filter: false,
+    floatingFilter: false,
+    suppressHeaderFilterButton: true,
+    valueGetter: ({ data }) => data.lastComment || null
+  },
+  {
+    field: 'compliancePeriod',
+    headerName: t('report:reportColLabels.compliancePeriod'),
+    width: 210,
+    valueGetter: ({ data }) => data.compliancePeriod || '',
+    filterParams: {
+      buttons: ['clear']
+    }
+  },
+  {
+    field: 'organization',
+    headerName: t('report:reportColLabels.organization'),
+    flex: 2,
+    hide: isSupplier,
+    valueGetter: ({ data }) => data.organizationName || ''
+  },
+  {
+    field: 'type',
+    headerName: t('report:reportColLabels.type'),
+    flex: 2,
+    valueGetter: ({ data }) => data.reportType,
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      optionsQuery: () => ({
+        data: [
+          { id: 1, name: 'Early issuance' },
+          { id: 2, name: 'Original report' },
+          { id: 3, name: 'Supplemental report' },
+          {
+            id: 4,
+            name: 'Government adjustment'
+          },
+          {
+            id: 5,
+            name: 'Reassessment'
+          }
+        ],
+        isLoading: false
+      }),
+      initialFilterType: 'contains',
+      valueKey: 'name',
+      labelKey: 'name'
+    }
   },
   {
     field: 'updateDate',

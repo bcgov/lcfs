@@ -41,7 +41,7 @@ export const BCGridViewer = forwardRef(
     exportName = 'ExportData',
 
     ...props
-  }) => {
+  }, ref) => {
     const { data, error, isError, isLoading } = queryData
 
     const onGridReady = useCallback(
@@ -113,7 +113,11 @@ export const BCGridViewer = forwardRef(
           })
         ]
 
-        onPaginationChange({ ...paginationOptions, page: 1, filters: filterArr })
+        onPaginationChange({
+          ...paginationOptions,
+          page: 1,
+          filters: filterArr
+        })
         sessionStorage.setItem(`${gridKey}-filter`, JSON.stringify(gridFilters))
       },
       [gridKey, onPaginationChange, paginationOptions.filters]
@@ -184,7 +188,7 @@ export const BCGridViewer = forwardRef(
           defaultColDef={{ ...defaultColDefParams, ...defaultColDef }}
           columnDefs={columnDefs}
           gridOptions={gridOptions}
-          rowData={!isLoading && data[dataKey]}
+          rowData={!isLoading && ((data && data[dataKey]) || [])}
           onGridReady={onGridReady}
           onSortChanged={handleSortChanged}
           onFilterChanged={handleFilterChanged}

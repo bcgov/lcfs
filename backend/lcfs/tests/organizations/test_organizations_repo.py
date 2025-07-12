@@ -243,3 +243,80 @@ async def test_search_organizations_case_insensitive(organizations_repo, add_mod
     assert (
         results_lower[0].organization_id == results_upper[0].organization_id == 104
     ), "Expected matching organization_id for both case variations"
+
+
+@pytest.mark.anyio
+async def test_get_organization_names_no_conditions(organizations_repo):
+    """Test get_organization_names with no conditions returns all organizations"""
+    result = await organizations_repo.get_organization_names()
+
+    assert isinstance(result, list)
+    assert len(result) > 0
+    # Check that each result has the expected structure
+    for org in result:
+        assert "organization_id" in org
+        assert "name" in org
+        assert "total_balance" in org
+        assert "reserved_balance" in org
+
+
+@pytest.mark.anyio
+async def test_get_organization_names_with_status_conditions(organizations_repo):
+    """Test get_organization_names with status filtering"""
+    from lcfs.db.models.organization.OrganizationStatus import (
+        OrganizationStatus,
+        OrgStatusEnum,
+    )
+
+    # Test with registered organizations only
+    registered_conditions = [OrganizationStatus.status == OrgStatusEnum.Registered]
+    registered_result = await organizations_repo.get_organization_names(
+        registered_conditions
+    )
+
+    # Test with multiple statuses
+    multi_status_conditions = [
+        OrganizationStatus.status.in_(
+            [OrgStatusEnum.Registered, OrgStatusEnum.Unregistered]
+        )
+    ]
+    multi_result = await organizations_repo.get_organization_names(
+        multi_status_conditions
+    )
+
+    assert isinstance(registered_result, list)
+    assert isinstance(multi_result, list)
+
+    # Multi-status result should have at least as many organizations as registered-only
+    assert len(multi_result) >= len(registered_result)
+
+    # Check structure of results
+    for org in registered_result:
+        assert "organization_id" in org
+        assert "name" in org
+        assert "total_balance" in org
+        assert "reserved_balance" in org
+
+
+@pytest.mark.anyio
+async def test_get_organization_names_ordering(organizations_repo):
+    """Test get_organization_names respects ordering parameters"""
+    # Test ascending order by name
+    result_asc = await organizations_repo.get_organization_names(
+        order_by=("name", "asc")
+    )
+
+    # Test descending order by name
+    result_desc = await organizations_repo.get_organization_names(
+        order_by=("name", "desc")
+    )
+
+    assert len(result_asc) == len(result_desc)
+
+    if len(result_asc) > 1:
+        # Check that first result in asc is last in desc (if unique names)
+        first_asc = result_asc[0]["name"]
+        last_desc = result_desc[-1]["name"]
+        # They should be the same if all names are unique
+        assert first_asc <= result_asc[-1]["name"]  # Ascending order
+        assert result_desc[0]["name"] >= last_desc  # Descending order

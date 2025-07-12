@@ -1,21 +1,17 @@
 import React, { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   lowCarbonColumns,
   nonCompliancePenaltyColumns,
   renewableFuelColumns
 } from '@/views/CompareReports/_schema'
-import {
-  useGetComplianceReport,
-  useGetComplianceReportSummary
-} from '@/hooks/useComplianceReports'
+import { useGetComplianceReportSummary } from '@/hooks/useComplianceReports'
 import { Icon, MenuItem, Select } from '@mui/material'
 import Box from '@mui/material/Box'
 import Loading from '@/components/Loading'
 import CompareTable from '@/views/CompareReports/components/CompareTable'
 import { styled } from '@mui/material/styles'
-import { useParams } from 'react-router-dom'
+import useComplianceReportStore from '@/stores/useComplianceReportStore'
 
 const Controls = styled(Box)({
   width: '66%'
@@ -24,35 +20,32 @@ const Controls = styled(Box)({
 export const CompareReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [isLoading, setIsLoading] = useState(true)
-  const { data: currentUser, isLoading: isCurrentUserLoading } =
-    useCurrentUser()
   const [reportChain, setReportChain] = useState([])
 
-  const { complianceReportId } = useParams()
-  const { data: complianceReport } = useGetComplianceReport(
-    currentUser?.organization?.organizationId,
-    complianceReportId,
-    {
-      enabled: !!complianceReportId && !isCurrentUserLoading
-    }
-  )
+  const { currentReport } = useComplianceReportStore()
 
   const [report1ID, setReport1ID] = useState(null)
   const [report2ID, setReport2ID] = useState(null)
   const [fuelType, setFuelType] = useState('gasoline')
+
   useEffect(() => {
-    if (complianceReport) {
-      const { chain } = complianceReport
-      if (chain?.length > 0) {
-        setReport2ID(chain[0].complianceReportId)
-      }
-      if (chain?.length > 1) {
-        setReport1ID(chain[1].complianceReportId)
-      }
+    if (currentReport) {
+      const { chain } = currentReport
       setReportChain(chain)
+
+      // Set default selections to the two most recent reports
+      // with the oldest on the left (report1) and newest on the right (report2)
+      if (chain.length >= 2) {
+        const sortedChain = [...chain].sort(
+          (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+        )
+        setReport1ID(sortedChain[1].complianceReportId)
+        setReport2ID(sortedChain[0].complianceReportId)
+      }
+
       setIsLoading(false)
     }
-  }, [complianceReport])
+  }, [currentReport])
 
   const { data: report1Summary } = useGetComplianceReportSummary(report1ID, {
     enabled: !!report1ID
@@ -65,6 +58,7 @@ export const CompareReports = () => {
   const [lowCarbonSummary, setLowCarbonSummary] = useState([])
   const [nonCompliancePenaltySummary, setNonCompliancePenaltySummary] =
     useState([])
+
   useEffect(() => {
     const renewableSummary = []
     const lowCarbonSummary = []
@@ -91,7 +85,8 @@ export const CompareReports = () => {
           line: row.line,
           description: row.description,
           format: row.format,
-          report1: row.value
+          report1:
+            row.value || row.totalValue || row.amount || row[fuelType] || 0
         })
       }
     }
@@ -107,15 +102,30 @@ export const CompareReports = () => {
         const matchingRow = report2Summary.lowCarbonFuelTargetSummary.find(
           (row2) => row2.line === row.line
         )
-        row.report2 = matchingRow.value
-        row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+        if (matchingRow) {
+          row.report2 = matchingRow.value
+          row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+        } else {
+          row.report2 = null
+          row.delta = null
+        }
       }
       for (const row of nonCompliancePenaltySummary) {
         const matchingRow = report2Summary.nonCompliancePenaltySummary.find(
           (row2) => row2.line === row.line
         )
-        row.report2 = matchingRow.value
-        row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+        if (matchingRow) {
+          row.report2 =
+            matchingRow.value ||
+            matchingRow.totalValue ||
+            matchingRow.amount ||
+            matchingRow[fuelType] ||
+            0
+          row.delta = row.report2 !== null ? row.report2 - row.report1 : null
+        } else {
+          row.report2 = null
+          row.delta = null
+        }
       }
     }
     setRenewableSummary(renewableSummary)
@@ -124,11 +134,37 @@ export const CompareReports = () => {
   }, [report1Summary, report2Summary, fuelType])
 
   function onSelectReport1(event) {
-    setReport1ID(event.target.value)
+    const newReport1ID = event.target.value
+    setReport1ID(newReport1ID)
+
+    if (newReport1ID === report2ID && reportChain.length > 1) {
+      const availableReports = reportChain.filter(
+        (report) => report.complianceReportId !== newReport1ID
+      )
+
+      if (availableReports.length > 0) {
+        setReport2ID(availableReports[0].complianceReportId)
+      } else {
+        setReport2ID(null)
+      }
+    }
   }
 
   function onSelectReport2(event) {
-    setReport2ID(event.target.value)
+    const newReport2ID = event.target.value
+    setReport2ID(newReport2ID)
+
+    if (newReport2ID === report1ID && reportChain.length > 1) {
+      const availableReports = reportChain.filter(
+        (report) => report.complianceReportId !== newReport2ID
+      )
+
+      if (availableReports.length > 0) {
+        setReport1ID(availableReports[0].complianceReportId)
+      } else {
+        setReport1ID(null)
+      }
+    }
   }
 
   if (isLoading) {
@@ -137,12 +173,12 @@ export const CompareReports = () => {
 
   const selectedReportName1 = report1ID
     ? reportChain.find((report) => report.complianceReportId === report1ID)
-        .nickname
+        ?.nickname || ''
     : ''
 
   const selectedReportName2 = report2ID
     ? reportChain.find((report) => report.complianceReportId === report2ID)
-        .nickname
+        ?.nickname || ''
     : ''
 
   return (
@@ -165,9 +201,10 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report1ID}
+              value={report1ID || ''}
               variant="outlined"
               onChange={onSelectReport1}
+              displayEmpty
             >
               {reportChain
                 .filter((report) => report.complianceReportId !== report2ID)
@@ -190,9 +227,10 @@ export const CompareReports = () => {
                 padding: '8px',
                 borderRadius: 1
               }}
-              value={report2ID}
+              value={report2ID || ''}
               variant="outlined"
               onChange={onSelectReport2}
+              displayEmpty
             >
               {reportChain
                 .filter((report) => report.complianceReportId !== report1ID)
@@ -230,8 +268,8 @@ export const CompareReports = () => {
         title={t('report:nonCompliancePenaltySummary')}
         columns={nonCompliancePenaltyColumns(
           t,
-          report1ID ? `CR${report1ID.compliancePeriod}` : '',
-          report2ID ? `CR${report2ID.compliancePeriod}` : ''
+          selectedReportName1 || '',
+          selectedReportName2 || ''
         )}
         data={nonCompliancePenaltySummary}
       />
