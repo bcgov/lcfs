@@ -519,7 +519,7 @@ jobs:
           fail_on: "errors"
           report_individual_runs: "true"
           deduplicate_classes_by_file_name: "true"
-          comment_mode: "create new" # Added: Ensure new comments are created
+          comment_mode: "always"
 
   teams-notification:
     needs: [post-backend-tests, post-frontend-tests]
