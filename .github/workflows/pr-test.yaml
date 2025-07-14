@@ -728,8 +728,8 @@ jobs:
         run: |
           cd frontend
 
-          # Create a comprehensive merge script
-          cat > process_blobs.js << 'EOF'
+          # Create a comprehensive merge script (use .cjs extension for CommonJS)
+          cat > process_blobs.cjs << 'EOF'
           const { execSync, spawn } = require('child_process');
           const fs = require('fs');
           const path = require('path');
@@ -791,7 +791,7 @@ jobs:
               console.log('🔧 Creating manual JUnit report from blob analysis...');
               
               // Read the test summary if available
-              let testData = { totalTests: 0, totalPassed: 0, totalFailed: 0, totalDuration: 0 };
+              let testData = { totalTests: 0, totalPassed: 0, totalFailed: 0, totalDuration: 0, testFiles: 0 };
               
               if (fs.existsSync('../test-summary.json')) {
                 testData = JSON.parse(fs.readFileSync('../test-summary.json', 'utf8'));
@@ -805,6 +805,7 @@ jobs:
               ${generateTestCases(testData)}
               <system-out>
                 Processed ${testData.shardCount || 0} test shards
+                Test Files: ${testData.testFiles || 0}
                 Success Rate: ${testData.successRate || 0}%
                 Generated from blob report analysis
               </system-out>
@@ -822,19 +823,24 @@ jobs:
 
           function generateTestCases(testData) {
             if (!testData.totalTests || testData.totalTests === 0) {
-              return '<testcase name="No tests found" classname="Frontend" time="0"><skipped message="No test results available"/></testcase>';
+              return '<testcase name="No tests executed" classname="Frontend.System" time="0"><skipped message="No test results available from blob reports"/></testcase>';
             }
             
             let testCases = '';
+            const avgDuration = testData.totalTests > 0 ? (testData.totalDuration / testData.totalTests).toFixed(3) : '0';
             
             // Generate passed test cases
             for (let i = 0; i < (testData.totalPassed || 0); i++) {
-              testCases += `<testcase name="Test ${i + 1}" classname="Frontend.Passed" time="${(testData.totalDuration / testData.totalTests || 0).toFixed(3)}"/>`;
+              testCases += `
+              <testcase name="Passed Test ${i + 1}" classname="Frontend.Test" time="${avgDuration}"/>`;
             }
             
             // Generate failed test cases
             for (let i = 0; i < (testData.totalFailed || 0); i++) {
-              testCases += `<testcase name="Failed Test ${i + 1}" classname="Frontend.Failed" time="0"><failure message="Test failed"/></testcase>`;
+              testCases += `
+              <testcase name="Failed Test ${i + 1}" classname="Frontend.Test" time="0">
+                <failure message="Test failed">Test execution failed</failure>
+              </testcase>`;
             }
             
             return testCases;
@@ -847,7 +853,12 @@ jobs:
           <testsuites name="vitest tests" tests="1" failures="0" errors="1" time="0">
             <testsuite name="Frontend Tests" tests="1" failures="0" errors="1" time="0">
               <testcase name="Report Generation" classname="Frontend.System" time="0">
-                <error message="Unable to process blob reports">Blob report processing failed</error>
+                <error message="Unable to process blob reports" type="ProcessingError">
+                  Blob report processing failed. This could be due to:
+                  - Invalid blob file format
+                  - Missing blob files
+                  - Vitest version compatibility issues
+                </error>
               </testcase>
               <system-out>Fallback report generated due to blob processing failure</system-out>
             </testsuite>
@@ -860,8 +871,12 @@ jobs:
           processBlobs();
           EOF
 
-          node process_blobs.cjs
+          # Verify the script was created correctly
+          echo "📁 Script file created:"
+          ls -la process_blobs.cjs
 
+          # Run the script
+          node process_blobs.cjs
       - name: Verify and validate results file
         run: |
           cd frontend
