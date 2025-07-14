@@ -860,7 +860,7 @@ jobs:
           processBlobs();
           EOF
 
-          node process_blobs.js
+          node process_blobs.cjs
 
       - name: Verify and validate results file
         run: |
