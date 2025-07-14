@@ -108,7 +108,7 @@ const AddEditFuelCodeBase = () => {
       )
       setColumnDefs(updatedColumnDefs)
     }
-  }, [errors, optionsData, existingFuelCode, isEditable, hasRoles])
+  }, [errors, optionsData, existingFuelCode, isEditable])
 
   useEffect(() => {
     if (existingFuelCode) {
