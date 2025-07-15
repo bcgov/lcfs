@@ -33,6 +33,13 @@ export default defineConfig({
         singleThread: true
       }
     },
+    deps: {
+      optimizer: {
+        web: {
+          exclude: ['entities', 'parse5']
+        }
+      }
+    },
     coverage: {
       provider: 'v8',
       // thresholds: {

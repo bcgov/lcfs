@@ -137,7 +137,7 @@
     "eslint-plugin-storybook": "^0.12.0",
     "husky": "^9.1.7",
     "jsdoc": "^4.0.4",
-    "jsdom": "^26.0.0",
+    "jsdom": "^25.0.1",
     "lint-staged": "^15.5.0",
     "mochawesome": "^7.1.3",
     "msw": "^2.7.3",
@@ -151,5 +151,11 @@
   },
   "optionalDependencies": {
     "@rollup/rollup-linux-x64-gnu": "4.6.1"
+  },
+  "overrides": {
+    "entities": "^4.5.0"
+  },
+  "resolutions": {
+    "entities": "^4.5.0"
   }
 }
