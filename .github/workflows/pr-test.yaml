@@ -301,8 +301,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -338,41 +336,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        shardIndex:
-          [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            18,
-            19,
-            20,
-            21,
-            22,
-            23,
-            24,
-            25,
-            26,
-            27,
-            28,
-            29,
-            30,
-            31,
-            32,
-          ]
+        shardIndex: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32]
         shardTotal: [32]
     steps:
       - uses: actions/checkout@v4
@@ -385,8 +349,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Restore node_modules cache
         uses: actions/cache@v4
@@ -403,12 +365,6 @@ jobs:
           if [ ! -d "node_modules" ]; then
             npm ci --prefer-offline --no-audit --no-fund
           fi
-
-      - name: Create reports directory
-        run: |
-          cd frontend
-          mkdir -p .vitest-reports
-          mkdir -p .vitest-reports/raw
 
       - name: Run frontend tests
         id: frontend_tests
@@ -432,6 +388,7 @@ jobs:
           include-hidden-files: true
           retention-days: 1
           compression-level: 9
+
   post-frontend-tests:
     name: 'Publish Frontend Test Results'
     if: always()
@@ -450,12 +407,6 @@ jobs:
           path: frontend/.vitest-reports
           pattern: blob-report-*
           merge-multiple: true
-
-      - name: Download test analysis
-        uses: actions/download-artifact@v4
-        with:
-          name: test-analysis
-          path: .
 
       - name: Merge reports
         run: |
