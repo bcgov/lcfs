@@ -3,7 +3,7 @@ name: Testing pipeline
 on:
   pull_request:
     branches:
-      - "*"
+      - '*'
 
 permissions:
   contents: read
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   backend-setup:
-    name: "Backend Setup"
+    name: 'Backend Setup'
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -35,7 +35,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10.13"
+          python-version: '3.10.13'
 
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
@@ -87,7 +87,7 @@ jobs:
           retention-days: 1
 
   backend-tests:
-    name: "Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})"
+    name: 'Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})'
     needs: backend-setup
     runs-on: ubuntu-latest
     services:
@@ -159,7 +159,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.10.13"
+          python-version: '3.10.13'
 
       - name: Cache Poetry dependencies
         uses: actions/cache@v4
@@ -245,7 +245,7 @@ jobs:
           path: backend/pytest-results-shard-${{ matrix.shard }}.xml
 
   post-backend-tests:
-    name: "Publish Backend Test Results"
+    name: 'Publish Backend Test Results'
     if: always()
     needs: backend-tests
     runs-on: ubuntu-latest
@@ -281,14 +281,14 @@ jobs:
         with:
           files: merged-pytest-results.xml
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: "Backend Test Results"
-          check_name: "Backend Test Results"
-          fail_on: "errors"
-          report_individual_runs: "true"
-          deduplicate_classes_by_file_name: "true"
+          comment_title: 'Backend Test Results'
+          check_name: 'Backend Test Results'
+          fail_on: 'errors'
+          report_individual_runs: 'true'
+          deduplicate_classes_by_file_name: 'true'
 
   frontend-setup:
-    name: "Frontend Setup"
+    name: 'Frontend Setup'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -300,8 +300,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
       - name: Cache node_modules
@@ -333,7 +333,7 @@ jobs:
             ${{ runner.os }}-node-modules-shared-
 
   frontend-tests:
-    name: "Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})"
+    name: 'Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})'
     needs: frontend-setup
     runs-on: ubuntu-latest
     strategy:
@@ -384,8 +384,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
       - name: Restore node_modules cache
@@ -414,287 +414,42 @@ jobs:
         id: frontend_tests
         run: |
           cd frontend
-
-          # Debug Vitest configuration
-          echo "🔍 Debugging Vitest setup..."
-          echo "NODE_ENV: $NODE_ENV"
-          echo "CI: $CI"
-          echo "SHARD_INDEX: $SHARD_INDEX"
-          echo "SHARD_TOTAL: $SHARD_TOTAL"
-
-          # Check if vitest.config is properly configured
-          if [ -f "vitest.config.js" ] || [ -f "vitest.config.ts" ]; then
-            echo "✅ Vitest config file found"
-          else
-            echo "⚠️  No vitest config file found"
-          fi
-
-          # Run tests with explicit blob reporter configuration
           npm run test:ci:memory
         env:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
-          NODE_OPTIONS: "--max-old-space-size=4096"
-          VITEST_REPORTER: "blob"
-          VITEST_POOL_THREADS: "4"
-
-      - name: Validate blob report generation
-        run: |
-          cd frontend/.vitest-reports
-          echo "🔍 Checking generated blob reports:"
-          echo "Directory contents:"
-          ls -la
-
-          # Check if blob files exist and are not empty
-          if find . -name "*.blob" -size +0c | grep -q .; then
-            echo "✅ Blob reports generated successfully"
-            echo "📁 Found blob files:"
-            find . -name "*.blob" -exec echo "  - {} ($(stat -f%z {} 2>/dev/null || stat -c%s {} 2>/dev/null) bytes)" \;
-            
-            # Sample blob content for debugging
-            FIRST_BLOB=$(find . -name "*.blob" | head -1)
-            if [ -n "$FIRST_BLOB" ]; then
-              echo "📄 Sample blob content (first 500 chars):"
-              head -c 500 "$FIRST_BLOB"
-              echo ""
-            fi
-          else
-            echo "❌ No valid blob reports found"
-            echo "📁 All files in directory:"
-            find . -type f
-            
-            # Create a minimal blob report to prevent pipeline failure
-            echo "🆘 Creating emergency blob report..."
-            mkdir -p raw
-            echo '["1","2","3","4","5",0]' > emergency-report.blob
-            echo "✅ Emergency blob created"
-          fi
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          VITEST_REPORTER: 'blob'
+          VITEST_POOL_THREADS: '4'
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: blob-report-${{ matrix.shardIndex }}
-          path: frontend/.vitest-reports/
+          path: frontend/.vitest-reports/*
           include-hidden-files: true
           retention-days: 1
           compression-level: 9
-
-  analyze-blob-reports:
-    name: "Analyze Blob Reports"
-    needs: frontend-tests
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: |
-            frontend
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Download all blob reports
-        uses: actions/download-artifact@v4
-        with:
-          path: blob-reports
-          pattern: blob-report-*
-          merge-multiple: false
-
-      - name: Analyze blob reports structure
-        run: |
-          echo "Analyzing blob report structure:"
-          echo "================================"
-
-          # Create enhanced analysis script (using .cjs extension for CommonJS)
-          cat > analyze_blobs.cjs << 'EOF'
-          const fs = require('fs');
-          const path = require('path');
-
-          function analyzeBlobReports() {
-            const blobDir = './blob-reports';
-            let totalTests = 0;
-            let totalPassed = 0;
-            let totalFailed = 0;
-            let totalDuration = 0;
-            let shardCount = 0;
-            let testFiles = new Set();
-            
-            console.log('📊 Blob Report Analysis');
-            console.log('='.repeat(50));
-            
-            try {
-              const shardDirs = fs.readdirSync(blobDir);
-              
-              for (const shardDir of shardDirs) {
-                const shardPath = path.join(blobDir, shardDir);
-                if (!fs.statSync(shardPath).isDirectory()) continue;
-                
-                console.log(`\n🔍 Analyzing ${shardDir}:`);
-                
-                const files = fs.readdirSync(shardPath);
-                const blobFiles = files.filter(f => f.endsWith('.blob'));
-                
-                if (blobFiles.length === 0) {
-                  console.log('  ⚠️  No blob files found');
-                  continue;
-                }
-                
-                shardCount++;
-                
-                for (const blobFile of blobFiles) {
-                  try {
-                    const blobPath = path.join(shardPath, blobFile);
-                    const content = fs.readFileSync(blobPath, 'utf8');
-                    
-                    console.log(`  📄 ${blobFile}: ${content.length} bytes`);
-                    
-                    // Parse the Vitest blob format more accurately
-                    try {
-                      const data = JSON.parse(content);
-                      
-                      if (Array.isArray(data) && data.length > 6) {
-                        // Vitest blob format: [version, config, files, failed, passed, ...]
-                        const files = data[2] || [];
-                        const failed = data[3] || [];
-                        const passed = data[4] || [];
-                        
-                        console.log(`    📁 Files: ${files.length}`);
-                        console.log(`    ❌ Failed: ${failed.length}`);
-                        console.log(`    ✅ Passed: ${passed.length}`);
-                        
-                        totalFailed += failed.length;
-                        totalPassed += passed.length;
-                        
-                        // Add file paths to set
-                        files.forEach(file => testFiles.add(file));
-                      }
-                    } catch (parseError) {
-                      // Fallback: count test states in string content
-                      const passedMatches = content.match(/"state":"passed"/g) || [];
-                      const failedMatches = content.match(/"state":"failed"/g) || [];
-                      const durationMatches = content.match(/"duration":(\d+(?:\.\d+)?)/g) || [];
-                      
-                      const shardPassed = passedMatches.length;
-                      const shardFailed = failedMatches.length;
-                      
-                      totalPassed += shardPassed;
-                      totalFailed += shardFailed;
-                      
-                      let shardDuration = 0;
-                      durationMatches.forEach(match => {
-                        const duration = parseFloat(match.match(/(\d+(?:\.\d+)?)/)[1]);
-                        shardDuration += duration;
-                      });
-                      
-                      totalDuration += shardDuration;
-                      
-                      console.log(`    ✅ Passed: ${shardPassed} (fallback count)`);
-                      console.log(`    ❌ Failed: ${shardFailed} (fallback count)`);
-                      console.log(`    ⏱️  Duration: ${(shardDuration / 1000).toFixed(2)}s`);
-                    }
-                    
-                  } catch (err) {
-                    console.log(`  ❌ Error parsing ${blobFile}: ${err.message}`);
-                  }
-                }
-              }
-              
-              totalTests = totalPassed + totalFailed;
-              
-              console.log('\n📈 Summary Statistics:');
-              console.log('='.repeat(30));
-              console.log(`🧪 Total Shards: ${shardCount}`);
-              console.log(`📁 Test Files: ${testFiles.size}`);
-              console.log(`✅ Total Passed: ${totalPassed}`);
-              console.log(`❌ Total Failed: ${totalFailed}`);
-              console.log(`📊 Total Tests: ${totalTests}`);
-              console.log(`⏱️  Total Duration: ${(totalDuration / 1000).toFixed(2)} seconds`);
-              console.log(`📈 Success Rate: ${totalTests > 0 ? ((totalPassed / totalTests) * 100).toFixed(1) : 0}%`);
-              
-              // Write summary to file for later use
-              const summary = {
-                shardCount,
-                testFiles: testFiles.size,
-                totalTests,
-                totalPassed,
-                totalFailed,
-                totalDuration: totalDuration / 1000,
-                successRate: totalTests > 0 ? (totalPassed / totalTests) * 100 : 0
-              };
-              
-              fs.writeFileSync('test-summary.json', JSON.stringify(summary, null, 2));
-              console.log('\n📝 Summary written to test-summary.json');
-              
-            } catch (err) {
-              console.error('Error analyzing blob reports:', err);
-              
-              // Create empty summary on error
-              const emptySummary = {
-                shardCount: 0,
-                testFiles: 0,
-                totalTests: 0,
-                totalPassed: 0,
-                totalFailed: 0,
-                totalDuration: 0,
-                successRate: 0,
-                error: err.message
-              };
-              
-              fs.writeFileSync('test-summary.json', JSON.stringify(emptySummary, null, 2));
-              console.log('📝 Empty summary written due to error');
-            }
-          }
-
-          analyzeBlobReports();
-          EOF
-
-          node analyze_blobs.cjs
-
-      - name: Upload analysis results
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-analysis
-          path: test-summary.json
-
   post-frontend-tests:
-    name: "Publish Frontend Test Results"
+    name: 'Publish Frontend Test Results'
     if: always()
-    needs: [frontend-tests, analyze-blob-reports]
+    needs: [frontend-tests]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: |
-            frontend
-
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci --prefer-offline --no-audit --no-fund
-
-      - name: Create reports directory
-        run: |
-          cd frontend
-          mkdir -p .vitest-reports
-          mkdir -p .vitest-reports/merged
 
       - name: Download blob reports from GitHub Actions Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: frontend/.vitest-reports/raw
+          path: frontend/.vitest-reports
           pattern: blob-report-*
-          merge-multiple: false
+          merge-multiple: true
 
       - name: Download test analysis
         uses: actions/download-artifact@v4
@@ -702,229 +457,31 @@ jobs:
           name: test-analysis
           path: .
 
-      - name: Display test summary
-        run: |
-          if [ -f "test-summary.json" ]; then
-            echo "📊 Frontend Test Summary:"
-            cat test-summary.json | jq '.'
-          fi
-
-      - name: Organize blob files for merging
-        run: |
-          cd frontend/.vitest-reports
-          echo "📁 Organizing blob reports for merging..."
-
-          # Move all blob files to a single directory for Vitest to process
-          find raw -name "*.blob" -type f | while read blob_file; do
-            filename=$(basename "$blob_file")
-            echo "Moving $blob_file to merged/$filename"
-            cp "$blob_file" "merged/$filename"
-          done
-
-          echo "📊 Total blob files organized: $(find merged -name "*.blob" | wc -l)"
-          ls -la merged/
-
-      - name: Process blob reports with Vitest
+      - name: Merge reports
         run: |
           cd frontend
-
-          # Create a comprehensive merge script
-          cat > process_blobs.cjs << 'EOF'
-          const { execSync, spawn } = require('child_process');
-          const fs = require('fs');
-          const path = require('path');
-
-          function processBlobs() {
-            try {
-              console.log('🔄 Processing Vitest blob reports...');
-              
-              const mergedDir = '.vitest-reports/merged';
-              const blobFiles = fs.readdirSync(mergedDir).filter(f => f.endsWith('.blob'));
-              
-              if (blobFiles.length === 0) {
-                console.log('❌ No blob files found in merged directory');
-                createFallbackReport();
-                return;
-              }
-              
-              console.log(`📄 Found ${blobFiles.length} blob files to process`);
-              
-              // Try using Vitest's merge-reports command
-              try {
-                console.log('🔧 Attempting Vitest merge-reports...');
-                
-                const blobFiles = fs.readdirSync(mergedDir).filter(f => f.endsWith('.blob')).map(f => path.join(mergedDir, f)).join(' ');
-                const result = execSync(`npx vitest --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml ${blobFiles}`, {
-                  encoding: 'utf8',
-                  timeout: 120000, // 2 minute timeout
-                  stdio: ['pipe', 'pipe', 'pipe']
-                });
-                
-                console.log('✅ Vitest merge completed successfully');
-                console.log('Output:', result);
-                
-                // Verify the output file exists and has content
-                if (fs.existsSync('.vitest-reports/vitest-results.xml')) {
-                  const xmlContent = fs.readFileSync('.vitest-reports/vitest-results.xml', 'utf8');
-                  if (xmlContent.includes('<testsuites') && xmlContent.length > 200) {
-                    console.log('✅ Valid JUnit XML generated');
-                    return;
-                  }
-                }
-                
-                console.log('⚠️  Generated XML appears invalid, creating manual report...');
-                createManualReport();
-                
-              } catch (vitestError) {
-                console.log('⚠️  Vitest merge failed:', vitestError.message);
-                console.log('🔄 Attempting manual blob processing...');
-                createManualReport();
-              }
-              
-            } catch (error) {
-              console.error('❌ Error processing blobs:', error);
-              createFallbackReport();
-            }
-          }
-
-          function createManualReport() {
-            try {
-              console.log('🔧 Creating manual JUnit report from blob analysis...');
-              
-              // Read the test summary if available
-              let testData = { totalTests: 0, totalPassed: 0, totalFailed: 0, totalDuration: 0 };
-              
-              if (fs.existsSync('../test-summary.json')) {
-                testData = JSON.parse(fs.readFileSync('../test-summary.json', 'utf8'));
-                console.log('📊 Using test summary data:', testData);
-              }
-              
-              // Create JUnit XML with actual test data
-              const xml = `<?xml version="1.0" encoding="UTF-8"?>
-          <testsuites name="vitest tests" tests="${testData.totalTests || 0}" failures="${testData.totalFailed || 0}" errors="0" time="${testData.totalDuration || 0}">
-            <testsuite name="Frontend Tests" tests="${testData.totalTests || 0}" failures="${testData.totalFailed || 0}" errors="0" time="${testData.totalDuration || 0}">
-              ${generateTestCases(testData)}
-              <system-out>
-                Processed ${testData.shardCount || 0} test shards
-                Success Rate: ${testData.successRate || 0}%
-                Generated from blob report analysis
-              </system-out>
-            </testsuite>
-          </testsuites>`;
-              
-              fs.writeFileSync('.vitest-reports/vitest-results.xml', xml);
-              console.log('📝 Manual JUnit XML report created successfully');
-              
-            } catch (error) {
-              console.error('❌ Error creating manual report:', error);
-              createFallbackReport();
-            }
-          }
-
-          function generateTestCases(testData) {
-            if (!testData.totalTests || testData.totalTests === 0) {
-              return '<testcase name="No tests found" classname="Frontend" time="0"><skipped message="No test results available"/></testcase>';
-            }
-            
-            let testCases = '';
-            
-            // Generate passed test cases
-            for (let i = 0; i < (testData.totalPassed || 0); i++) {
-              testCases += `<testcase name="Test ${i + 1}" classname="Frontend.Passed" time="${(testData.totalDuration / testData.totalTests || 0).toFixed(3)}"/>`;
-            }
-            
-            // Generate failed test cases
-            for (let i = 0; i < (testData.totalFailed || 0); i++) {
-              testCases += `<testcase name="Failed Test ${i + 1}" classname="Frontend.Failed" time="0"><failure message="Test failed"/></testcase>`;
-            }
-            
-            return testCases;
-          }
-
-          function createFallbackReport() {
-            console.log('🆘 Creating fallback report...');
-            
-            const xml = `<?xml version="1.0" encoding="UTF-8"?>
-          <testsuites name="vitest tests" tests="1" failures="0" errors="1" time="0">
-            <testsuite name="Frontend Tests" tests="1" failures="0" errors="1" time="0">
-              <testcase name="Report Generation" classname="Frontend.System" time="0">
-                <error message="Unable to process blob reports">Blob report processing failed</error>
-              </testcase>
-              <system-out>Fallback report generated due to blob processing failure</system-out>
-            </testsuite>
-          </testsuites>`;
-            
-            fs.writeFileSync('.vitest-reports/vitest-results.xml', xml);
-            console.log('📝 Fallback report created');
-          }
-
-          processBlobs();
-          EOF
-
-          ls -la
-
-          node process_blobs.cjs
-
-      - name: Verify and validate results file
-        run: |
-          cd frontend
-          if [ -f ".vitest-reports/vitest-results.xml" ]; then
-            echo "✅ Results file created successfully"
-            echo "📄 File size: $(stat -f%z .vitest-reports/vitest-results.xml 2>/dev/null || stat -c%s .vitest-reports/vitest-results.xml) bytes"
-            echo "📋 First 20 lines:"
-            head -20 .vitest-reports/vitest-results.xml
-            
-            # Validate XML structure
-            if command -v xmllint >/dev/null 2>&1; then
-              echo "🔍 Validating XML structure..."
-              xmllint --noout .vitest-reports/vitest-results.xml && echo "✅ XML is valid" || echo "⚠️  XML validation failed"
-            fi
-          else
-            echo "❌ Results file not found, creating emergency placeholder"
-            mkdir -p .vitest-reports
-            cat > .vitest-reports/vitest-results.xml << 'EOF'
-          <?xml version="1.0" encoding="UTF-8"?>
-          <testsuites name="vitest tests" tests="0" failures="0" errors="0" time="0">
-            <testsuite name="Emergency placeholder" tests="0" failures="0" errors="0" time="0">
-              <system-out>Emergency placeholder - original results file missing</system-out>
-            </testsuite>
-          </testsuites>
-          EOF
-          fi
-
+          npx --yes vitest@3.0.9 --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
           files: frontend/.vitest-reports/vitest-results.xml
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          comment_title: "Frontend Test Results"
-          check_name: "Frontend Test Results"
-          fail_on: "errors"
-          report_individual_runs: "true"
-          deduplicate_classes_by_file_name: "true"
-          comment_mode: "always"
+          comment_title: 'Frontend Test Results'
+          check_name: 'Frontend Test Results'
+          fail_on: 'errors'
+          report_individual_runs: 'true'
+          deduplicate_classes_by_file_name: 'true'
+          comment_mode: 'always'
 
   teams-notification:
-    needs: [post-backend-tests, post-frontend-tests, analyze-blob-reports]
+    needs: [post-backend-tests, post-frontend-tests]
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Download test analysis
-        uses: actions/download-artifact@v4
-        with:
-          name: test-analysis
-          path: .
-
       - name: Determine Test Status
         id: test_status
         run: |
-          # Read test summary if available
-          FRONTEND_SUMMARY=""
-          if [ -f "test-summary.json" ]; then
-            FRONTEND_SUMMARY=$(cat test-summary.json | jq -r '"Frontend: " + (.totalPassed|tostring) + " passed, " + (.totalFailed|tostring) + " failed (" + (.successRate|tostring) + "% success)"')
-          fi
-
           if [[ "${{ contains(needs.post-backend-tests.result, 'failure') }}" == "true" || "${{ contains(needs.post-frontend-tests.result, 'failure') }}" == "true" ]]; then
             echo "status=failure" >> $GITHUB_OUTPUT
             echo "theme_color=FF0000" >> $GITHUB_OUTPUT
@@ -933,10 +490,7 @@ jobs:
             echo "theme_color=00FF00" >> $GITHUB_OUTPUT
           fi
 
-          echo "frontend_summary=$FRONTEND_SUMMARY" >> $GITHUB_OUTPUT
-
       - name: Send custom Teams notification
-        if: vars.TEAMS_WEBHOOK_URL != ''
         run: |
           # Replace double quotes with single quotes in PR title to prevent JSON issues
           PR_TITLE_RAW="${{ github.event.pull_request.title }}"
@@ -950,7 +504,7 @@ jobs:
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           FRONTEND_SUMMARY="${{ steps.test_status.outputs.frontend_summary }}"
-          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.post-backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n- $FRONTEND_SUMMARY\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
+          MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.post-backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
           COLOR="${{ steps.test_status.outputs.theme_color }}"
 
           cat <<EOF > teams_card.json
@@ -968,7 +522,7 @@ jobs:
                   { "name": "Repository", "value": "$REPO" },
                   { "name": "PR Title", "value": "$PR_TITLE" },
                   { "name": "Branch", "value": "${{ github.head_ref }}" },
-                  { "name": "Commit", "value": "$COMMIT_SHA" }
+                  { "name": "Commit", "value": "$COMMIT_SHA" },
                 ],
                 "text": "$MESSAGE",
                 "markdown": true
@@ -999,5 +553,4 @@ jobs:
             ]
           }
           EOF
-
           curl -H "Content-Type: application/json" -d @teams_card.json "${{ secrets.TEAMS_WEBHOOK_URL }}"
