@@ -63,7 +63,6 @@ export const BCGridEditor = ({
       const foundRequired = props.columnDefs.some(
         (colDef) => colDef.headerComponent === RequiredHeader
       )
-
       if (foundRequired) {
         setShowRequiredIndicator(true)
       }
