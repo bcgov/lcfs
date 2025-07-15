@@ -46,7 +46,11 @@ vi.mock('@/components/BCDataGrid/BCGridEditor', () => ({
       <button onClick={() => onAction?.('duplicate', { data: { fuelCodeId: 123 } })}>
         Duplicate
       </button>
-      <button onClick={() => onAction?.('delete', { data: { fuelCodeId: 123 } })}>
+      <button onClick={() => onAction?.('delete', { 
+        data: { fuelCodeId: 123 }, 
+        node: { data: { fuelCodeId: 123 } },
+        api: { applyTransaction: vi.fn() }
+      })}>
         Delete
       </button>
       <button onClick={() => onAction?.('add', {})}>
