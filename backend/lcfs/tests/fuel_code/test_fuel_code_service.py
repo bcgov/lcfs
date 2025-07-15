@@ -66,6 +66,7 @@ def create_mock_fuel_code_model():
         def __init__(self):
             self.fuel_code_id = 1
             self.fuel_status_id = 1
+            self.fuel_code = "BCLCF001"
             self.company = "XYZ Corp"
             self.carbon_intensity = 20.5
             self.fuel_suffix = "001.0"
@@ -328,10 +329,15 @@ async def test_get_fuel_code_success():
 async def test_update_fuel_code_status_success():
     # Arrange
     repo_mock = AsyncMock()
-    service = FuelCodeServices(repo=repo_mock)
+    notif_service_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock, notification_service=notif_service_mock)
 
     fuel_code_id = 1
     new_status = FuelCodeStatusEnum.Approved
+    
+    # Mock user
+    mock_user = MagicMock()
+    mock_user.user_profile_id = 1
 
     # Mock existing fuel code
     mock_fuel_code = create_mock_fuel_code_model()
@@ -349,7 +355,7 @@ async def test_update_fuel_code_status_success():
     repo_mock.create_fuel_code_history.return_value = None
 
     # Act
-    result = await service.update_fuel_code_status(fuel_code_id, new_status)
+    result = await service.update_fuel_code_status(fuel_code_id, new_status, mock_user)
 
     # Assert
     assert result == mock_fuel_code
@@ -363,15 +369,21 @@ async def test_update_fuel_code_status_success():
 async def test_update_fuel_code_status_not_found():
     # Arrange
     repo_mock = AsyncMock()
-    service = FuelCodeServices(repo=repo_mock)
+    notif_service_mock = AsyncMock()
+    service = FuelCodeServices(repo=repo_mock, notification_service=notif_service_mock)
 
     fuel_code_id = 9999
     new_status = FuelCodeStatusEnum.Approved
+    
+    # Mock user
+    mock_user = MagicMock()
+    mock_user.user_profile_id = 1
+    
     repo_mock.get_fuel_code.return_value = None
 
     # Act & Assert
     with pytest.raises(ValueError, match="Fuel code not found"):
-        await service.update_fuel_code_status(fuel_code_id, new_status)
+        await service.update_fuel_code_status(fuel_code_id, new_status, mock_user)
 
     repo_mock.get_fuel_code.assert_called_once_with(fuel_code_id)
 
@@ -459,7 +471,7 @@ async def test_get_fuel_code_statuses_success():
     assert result[0].fuel_code_status_id == 1
     assert (
         result[0].status == FuelCodeStatusEnumSchema.Draft
-    )  # Fixed: Compare with schema enum
+    )  # Compare with schema enum (service converts model enum to schema enum)
     repo_mock.get_fuel_code_statuses.assert_called_once()
 
 

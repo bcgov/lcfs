@@ -27,10 +27,8 @@ class TestFuelCodeNotificationLogic:
         assert approved_notifications is not None
         assert NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL in approved_notifications
 
-        # Test Return to analyst (triggers analyst notification)
-        return_notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get("Return to analyst")
-        assert return_notifications is not None
-        assert NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED in return_notifications
+        # Note: "Return to analyst" (Recommended → Draft) is handled as a special case 
+        # in the service logic, not in the mapper
 
     @pytest.mark.anyio
     async def test_fuel_code_service_notification_integration_mocked(self):
@@ -168,10 +166,11 @@ class TestFuelCodeNotificationLogic:
         assert expected_notification in notifications
 
     def test_return_to_analyst_notification(self):
-        """Test return to analyst notification mapping"""
+        """Test return to analyst notification logic"""
+        # "Return to analyst" is not in the mapper, it's handled as a special case
+        # when previous_status is Recommended and new status is Draft
         notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get("Return to analyst")
-        assert notifications is not None
-        assert NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED in notifications
+        assert notifications is None  # This should be None since it's handled specially
 
     def test_no_notification_for_unmapped_status(self):
         """Test that unmapped statuses don't trigger notifications"""
@@ -190,9 +189,7 @@ class TestFuelCodeNotificationLogic:
         assert NotificationTypeEnum.IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION in recommended_notifications
         
         # Requirement 2: Analyst - Recommended → Draft (Return)
-        return_notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get("Return to analyst")
-        assert return_notifications is not None
-        assert NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED in return_notifications
+        # Note: This is handled as a special case in the service, not in the mapper
         
         # Requirement 3: Analyst - Recommended → Approved
         approved_notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Approved)

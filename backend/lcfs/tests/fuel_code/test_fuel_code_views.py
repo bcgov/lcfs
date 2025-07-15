@@ -795,7 +795,11 @@ async def test_update_fuel_code_status_success(
         assert response.status_code == status.HTTP_200_OK
         result = response.json()
         assert result["message"] == "Status updated successfully"
-        mock_update_status.assert_called_once_with(1, "Approved")
+        # Verify the service was called with correct parameters
+        call_args = mock_update_status.call_args
+        assert call_args[0][0] == 1  # fuel_code_id
+        assert call_args[0][1].value == "Approved"  # status enum
+        # Third parameter is the user object from request.user
 
 
 @pytest.mark.anyio

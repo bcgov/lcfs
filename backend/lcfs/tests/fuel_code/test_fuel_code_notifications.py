@@ -17,6 +17,7 @@ from lcfs.web.api.notification.schema import (
     FUEL_CODE_STATUS_NOTIFICATION_MAPPER,
 )
 from lcfs.web.api.email.services import CHESEmailService
+from lcfs.web.exception.exceptions import ServiceException
 
 
 @pytest.fixture
@@ -51,7 +52,7 @@ def mock_director_user():
 def mock_fuel_code():
     """Create a mock fuel code"""
     # Create mock objects instead of using the actual SQLAlchemy model
-    fuel_code = MagicMock()
+    fuel_code = MagicMock(spec=FuelCode)
     fuel_code.fuel_code_id = 1
     fuel_code.fuel_code = "BCLCF001"
     fuel_code.company = "Test Company"
@@ -61,11 +62,67 @@ def mock_fuel_code():
     fuel_code.group_uuid = "test-uuid-123"
     fuel_code.create_date = datetime.now()
     fuel_code.update_date = datetime.now()
+    fuel_code.last_updated = datetime.now()
     fuel_code.fuel_suffix = "001"
+    fuel_code.contact_name = "Test Contact"
+    fuel_code.contact_email = "test@example.com"
+    fuel_code.edrms = "EDRMS123"
+    fuel_code.application_date = datetime.now().date()
+    fuel_code.approval_date = None
+    fuel_code.effective_date = None
+    fuel_code.expiration_date = None
+    fuel_code.feedstock = "Test Feedstock"
+    fuel_code.feedstock_location = "Test Location"
+    fuel_code.feedstock_misc = None
+    fuel_code.fuel_production_facility_city = "Vancouver"
+    fuel_code.fuel_production_facility_province_state = "BC"
+    fuel_code.fuel_production_facility_country = "Canada"
+    fuel_code.facility_nameplate_capacity = 100000
+    fuel_code.facility_nameplate_capacity_unit = "L"
+    fuel_code.former_company = None
+    fuel_code.notes = None
+    fuel_code.deleted = False
+    fuel_code.action_type = "CREATE"
+    fuel_code.history_records = []
     
     # Mock the prefix relationship
     fuel_code.fuel_code_prefix = MagicMock()
     fuel_code.fuel_code_prefix.prefix = "BCLCF"
+    fuel_code.fuel_code_prefix.fuel_code_prefix_id = 1
+    fuel_code.fuel_code_prefix.next_fuel_code = "BCLCF002"
+    fuel_code.prefix_id = 1
+    
+    # Configure access to nested attributes as strings
+    fuel_code.fuel_code_prefix.configure_mock(**{
+        'nextFuelCode': 'BCLCF002'
+    })
+    
+    # Mock the fuel type relationship
+    fuel_code.fuel_type = MagicMock()
+    fuel_code.fuel_type.fuel_type = "Biodiesel"
+    fuel_code.fuel_type.fuel_type_id = 1
+    fuel_code.fuel_type.units = "L"
+    fuel_code.fuel_type.provision_1 = MagicMock()
+    fuel_code.fuel_type.provision_1.name = "Provision 1"
+    fuel_code.fuel_type.provision_2 = MagicMock()
+    fuel_code.fuel_type.provision_2.name = "Provision 2"
+    fuel_code.fuel_type_id = 1
+    
+    # Configure access to nested attributes as strings
+    fuel_code.fuel_type.configure_mock(**{
+        'fuelType': 'Biodiesel',
+        'provision1.name': 'Provision 1', 
+        'provision2.name': 'Provision 2'
+    })
+    
+    # Mock the fuel code status relationship
+    fuel_code.fuel_code_status = MagicMock()
+    fuel_code.fuel_code_status.status = FuelCodeStatusEnum.Draft
+    fuel_code.fuel_code_status.fuel_code_status_id = 1
+    
+    # Mock transport modes
+    fuel_code.feedstock_fuel_transport_modes = []
+    fuel_code.finished_fuel_transport_modes = []
     
     return fuel_code
 
@@ -205,16 +262,23 @@ class TestFuelCodeNotificationIntegration:
         """Test that returning fuel code to analyst (Recommended to Draft) sends notification"""
         service, mock_repo, mock_notification_service = fuel_code_service_with_notifications
         
-        # Setup mocks - this would be handled by special "Return to analyst" action
-        mock_fuel_code.fuel_status_id = 2  # Currently Recommended
+        # Setup mocks - fuel code is currently Recommended
+        mock_fuel_code.fuel_code_status = mock_fuel_code_status[FuelCodeStatusEnum.Recommended]
+        mock_fuel_code.fuel_status_id = 2
         mock_repo.get_fuel_code.return_value = mock_fuel_code
         mock_repo.get_fuel_code_status.return_value = mock_fuel_code_status[FuelCodeStatusEnum.Draft]
         mock_repo.update_fuel_code.return_value = mock_fuel_code
         mock_repo.create_fuel_code_history = AsyncMock()
         
-        # Test the mapping for "Return to analyst" action
-        notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get("Return to analyst")
-        assert notifications == [NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED]
+        # Update status from Recommended to Draft
+        await service.update_fuel_code_status(1, FuelCodeStatusEnum.Draft, mock_director_user)
+        
+        # Verify notification was sent
+        mock_notification_service.send_notification.assert_called_once()
+        
+        # Verify notification type
+        call_args = mock_notification_service.send_notification.call_args[0][0]
+        assert NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED in call_args.notification_types
 
     @pytest.mark.anyio
     async def test_no_notification_for_draft_to_draft(
@@ -249,7 +313,6 @@ class TestFuelCodeNotificationIntegration:
         # Verify the mapper has the expected entries
         assert FuelCodeStatusEnum.Recommended in FUEL_CODE_STATUS_NOTIFICATION_MAPPER
         assert FuelCodeStatusEnum.Approved in FUEL_CODE_STATUS_NOTIFICATION_MAPPER
-        assert "Return to analyst" in FUEL_CODE_STATUS_NOTIFICATION_MAPPER
         
         # Verify the notification types are correct
         recommended_notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER[FuelCodeStatusEnum.Recommended]
@@ -258,8 +321,8 @@ class TestFuelCodeNotificationIntegration:
         approved_notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER[FuelCodeStatusEnum.Approved]
         assert NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL in approved_notifications
         
-        return_notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER["Return to analyst"]
-        assert NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED in return_notifications
+        # Note: "Return to analyst" (Recommended → Draft) is handled as a special case in the service,
+        # not in the mapper
 
     @pytest.mark.anyio
     async def test_notification_data_structure_is_correct(
@@ -348,10 +411,10 @@ class TestFuelCodeNotificationIntegration:
         # Make notification service fail
         mock_notification_service.send_notification.side_effect = Exception("Notification service error")
         
-        # Execute status change - it should still complete successfully
+        # Execute status change - the service decorator will convert the exception
         # Note: In a real implementation, you might want to catch and log the error
         # rather than letting it propagate, depending on business requirements
-        with pytest.raises(Exception, match="Notification service error"):
+        with pytest.raises(ServiceException):
             await service.update_fuel_code_status(
                 fuel_code_id=1,
                 status=FuelCodeStatusEnum.Recommended,
