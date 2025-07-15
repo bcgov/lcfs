@@ -863,7 +863,7 @@ const AddEditFuelCodeBase = () => {
           setButtonOperationState(true, 'return')
           // Set original status before changing to draft if not already set
           if (originalStatus === null && existingFuelCode) {
-            setOriginalStatus(existingFuelCode.fuelCodeStatus.status)
+            updateState({ originalStatus: existingFuelCode.fuelCodeStatus.status })
           }
 
           await fuelCodeMutation.mutateAsync({

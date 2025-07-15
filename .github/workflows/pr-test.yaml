@@ -395,12 +395,6 @@ jobs:
     needs: [frontend-tests]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          sparse-checkout: |
-            frontend
-
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -421,7 +415,7 @@ jobs:
       - name: Merge reports
         run: |
           cd frontend
-          npx vitest@3.2.4 --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
+          npx --yes vitest@$(node -p "require('./package.json').devDependencies.vitest || require('./package.json').dependencies.vitest") --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
