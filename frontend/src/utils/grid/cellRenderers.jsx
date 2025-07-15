@@ -10,7 +10,7 @@ import {
   TRANSFER_STATUSES
 } from '@/constants/statuses'
 import { Link, useLocation } from 'react-router-dom'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import colors from '@/themes/base/colors'
 import { ArrowDropDown } from '@mui/icons-material'
 import { getCode } from 'country-list'
@@ -422,14 +422,18 @@ const GenericChipRenderer = ({
   const [visibleChips, setVisibleChips] = useState([])
   const [hiddenChipsCount, setHiddenChipsCount] = useState(0)
 
-  const options = Array.isArray(value)
-    ? value.filter((item) => item !== '')
-    : value && value !== ''
-      ? value
-          .split(',')
-          .map((item) => item.trim())
-          .filter((item) => item !== '')
-      : []
+  const options = useMemo(
+    () =>
+      Array.isArray(value)
+        ? value.filter((item) => item !== '')
+        : value && value !== ''
+          ? value
+              .split(',')
+              .map((item) => item.trim())
+              .filter((item) => item !== '')
+          : [],
+    [value]
+  )
 
   const calculateChipWidths = useCallback(() => {
     if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }
