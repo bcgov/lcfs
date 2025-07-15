@@ -64,12 +64,7 @@ export const BCGridEditor = ({
         (colDef) => colDef.headerComponent === RequiredHeader
       )
 
-      const hasEditableField = props.columnDefs.some(
-        (colDef) =>
-          colDef.editable === true || typeof colDef.editable === 'function'
-      )
-
-      if (foundRequired || hasEditableField) {
+      if (foundRequired) {
         setShowRequiredIndicator(true)
       }
     }
