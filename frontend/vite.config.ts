@@ -27,16 +27,17 @@ export default defineConfig({
     setupFiles: './testSetup.js',
     testTimeout: 30000,
     hookTimeout: 30000,
-    pool: 'threads',
+    pool: 'forks',
     poolOptions: {
-      threads: {
-        singleThread: true
+      forks: {
+        singleFork: true
       }
     },
     deps: {
+      external: ['entities'],
       optimizer: {
         web: {
-          exclude: ['entities', 'parse5']
+          exclude: ['entities', 'parse5', 'jsdom']
         }
       }
     },
