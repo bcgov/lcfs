@@ -9,8 +9,8 @@ permissions:
   contents: read
   actions: write
   checks: write
-  pull-requests: write # Added: Required for commenting on PRs
-  issues: write # Added: Required for issue comments
+  pull-requests: write
+  issues: write
 
 jobs:
   backend-setup:
@@ -729,7 +729,7 @@ jobs:
           cd frontend
 
           # Create a comprehensive merge script
-          cat > process_blobs.js << 'EOF'
+          cat > process_blobs.cjs << 'EOF'
           const { execSync, spawn } = require('child_process');
           const fs = require('fs');
           const path = require('path');
@@ -859,6 +859,8 @@ jobs:
 
           processBlobs();
           EOF
+
+          ls -la
 
           node process_blobs.cjs
 
