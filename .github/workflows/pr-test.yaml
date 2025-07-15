@@ -399,7 +399,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # Remove built-in cache - no checkout in this job so cache path doesn't exist
 
       - name: Download blob reports from GitHub Actions Artifacts
         uses: actions/download-artifact@v4
@@ -411,7 +410,7 @@ jobs:
       - name: Merge reports
         run: |
           cd frontend
-          npx --yes vitest --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
+          npx --yes vitest@$(node -p "require('./package.json').devDependencies.vitest || require('./package.json').dependencies.vitest") --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
