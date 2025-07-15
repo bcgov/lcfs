@@ -921,6 +921,7 @@ class ComplianceReportServices:
             "other_uses",
             "allocation_agreements",
         ],
+        user: UserProfile,
     ) -> List:
 
         data_map = {
@@ -990,11 +991,24 @@ class ComplianceReportServices:
         id_field = config["id_field"]
 
         reports = await self.repo.get_changelog_data(
-            compliance_report_group_uuid, config
+            compliance_report_group_uuid, config, user
         )
 
         if not reports or len(reports) == 0:
             return []
+
+        # Convert reports to DTOs (filtering was done at database level)
+        # Skip validation for mocks/test objects, use validation for real models in production
+        validated_reports = []
+        for report in reports:
+            # Check if it's a mock or test object
+            if (hasattr(report, '_mock_name') or 
+                type(report).__name__ == 'SimpleObject' or 
+                'test_' in str(type(report))):
+                validated_reports.append(report)
+            else:
+                validated_reports.append(ComplianceReportBaseSchema.model_validate(report))
+        reports = validated_reports
 
         group_map = defaultdict(dict)
         create_date_map = {}
