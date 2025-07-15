@@ -25,22 +25,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './testSetup.js',
-    testTimeout: 30000,
-    hookTimeout: 30000,
-    pool: 'forks',
-    poolOptions: {
-      forks: {
-        singleFork: true
-      }
-    },
-    deps: {
-      external: ['entities'],
-      optimizer: {
-        web: {
-          exclude: ['entities', 'parse5', 'jsdom']
-        }
-      }
-    },
     coverage: {
       provider: 'v8',
       // thresholds: {
