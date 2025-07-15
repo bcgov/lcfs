@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { createElement } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -17,11 +17,11 @@ vi.mock('@/components/RequireAuth', () => ({
     const { isError, error } = useCurrentUser()
     
     if (isError) {
-      return React.createElement('div', {'data-test': 'user-error'}, `User Error: ${error?.response?.data?.detail || 'Unknown error'}`)
+      return createElement('div', {'data-test': 'user-error'}, `User Error: ${error?.response?.data?.detail || 'Unknown error'}`)
     }
     
     if (!keycloak || !keycloak.authenticated) {
-      return React.createElement('div', {'data-test': 'redirect-to-login'}, `Redirecting to ${redirectTo}`)
+      return createElement('div', {'data-test': 'redirect-to-login'}, `Redirecting to ${redirectTo}`)
     }
     
     // Check for redirect from sessionStorage
@@ -34,7 +34,7 @@ vi.mock('@/components/RequireAuth', () => ({
         
         const REDIRECT_TIMER = 60 * 1000 // 1 minute
         if (timestamp + REDIRECT_TIMER > Date.now()) {
-          return React.createElement('div', {'data-test': 'redirect-preserved'}, `Redirecting to ${pathname}`)
+          return createElement('div', {'data-test': 'redirect-preserved'}, `Redirecting to ${pathname}`)
         }
       } catch (e) {
         // Handle malformed JSON gracefully
@@ -50,8 +50,8 @@ vi.mock('@/components/RequireAuth', () => ({
 vi.mock('@/layouts/MainLayout', () => {
   const { Outlet } = require('react-router-dom')
   return {
-    MainLayout: () => React.createElement('div', {'data-test': 'main-layout'}, 
-      React.createElement(Outlet)
+    MainLayout: () => createElement('div', {'data-test': 'main-layout'}, 
+      createElement(Outlet)
     )
   }
 })

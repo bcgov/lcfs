@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router-dom'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
@@ -97,7 +97,7 @@ vi.mock('@/components/Role', () => ({
 
 // Test component to track loader calls
 const LoaderTestComponent = ({ onLoaderCall }) => {
-  React.useEffect(() => {
+  useEffect(() => {
     onLoaderCall?.('loader-called')
   }, [onLoaderCall])
   

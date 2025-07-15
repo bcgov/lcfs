@@ -8,7 +8,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { testQueryClient } from '@/tests/utils/wrapper'
 
-// Mock all the layout and view components
+// Simplified mocks but keep Outlet for routing functionality
 vi.mock('@/layouts/MainLayout', () => {
   const { Outlet } = require('react-router-dom')
   return {
@@ -216,6 +216,10 @@ describe('Router Configuration', () => {
 
   afterEach(() => {
     vi.clearAllMocks()
+    // Clear any potential router state
+    sessionStorage.clear()
+    // Reset query client to prevent state leakage
+    testQueryClient.clear()
   })
 
   describe('Router Creation', () => {
