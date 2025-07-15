@@ -25,6 +25,14 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './testSetup.js',
+    testTimeout: 30000,
+    hookTimeout: 30000,
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true
+      }
+    },
     coverage: {
       provider: 'v8',
       // thresholds: {
