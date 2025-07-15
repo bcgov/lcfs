@@ -27,6 +27,7 @@ from lcfs.web.exception.exceptions import ValidationErrorException
 from lcfs.web.exception.exception_handler import (
     validation_error_exception_handler_no_details,
     validation_exception_handler,
+    global_exception_handler,
 )
 from lcfs.web.lifetime import register_shutdown_event, register_startup_event
 
@@ -186,21 +187,3 @@ def get_app() -> FastAPI:
     app.include_router(router=api_router, prefix="/api")
 
     return app
-
-
-async def global_exception_handler(request: Request, exc: Exception):
-    """Handle uncaught exceptions."""
-    logger = structlog.get_logger(__name__)
-    logger.error(
-        "Unhandled exception",
-        error=str(exc),
-        exc_info=True,
-        request_url=str(request.url),
-        method=request.method,
-        headers=dict(request.headers),
-        correlation_id=correlation_id_var.get(),
-    )
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "Internal Server Error"},
-    )
