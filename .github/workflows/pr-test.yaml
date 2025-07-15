@@ -407,7 +407,7 @@ jobs:
         id: frontend_tests
         run: |
           cd frontend
-          npm run test:ci:memory
+          npm run test:ci
         env:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
