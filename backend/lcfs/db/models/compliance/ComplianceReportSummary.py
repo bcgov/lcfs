@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Float, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, Float, ForeignKey, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -116,6 +116,35 @@ class ComplianceReportSummary(BaseModel, Auditable):
         comment="Contains historical data from pre-2024 TFRS system for data retention and analysis purposes.",
     )
 
+    # Penalty override fields for IDIR Director
+    penalty_override_enabled = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Whether penalty override is enabled (checkbox state)",
+    )
+    renewable_penalty_override = Column(
+        Float,
+        nullable=True,
+        comment="Director override value for Line 11 renewable fuel penalty",
+    )
+    low_carbon_penalty_override = Column(
+        Float,
+        nullable=True,
+        comment="Director override value for Line 21 low carbon fuel penalty",
+    )
+    penalty_override_date = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="Timestamp when penalty was last overridden",
+    )
+    penalty_override_user = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="User who made the penalty override",
+    )
+
     # Early Issuance Columns
     early_issuance_credits_q1 = Column(Integer)
     early_issuance_credits_q2 = Column(Integer)
@@ -123,6 +152,9 @@ class ComplianceReportSummary(BaseModel, Auditable):
     early_issuance_credits_q4 = Column(Integer)
 
     compliance_report = relationship("ComplianceReport", back_populates="summary")
+    penalty_override_user_profile = relationship(
+        "UserProfile", foreign_keys=[penalty_override_user]
+    )
 
     def __repr__(self):
         return (

@@ -109,7 +109,7 @@ class ComplianceReportSummaryService:
         self.compliance_data_service = compliance_data_service
 
     def convert_summary_to_dict(
-        self, summary_obj: ComplianceReportSummary
+        self, summary_obj: ComplianceReportSummary, compliance_report: ComplianceReport = None
     ) -> ComplianceReportSummarySchema:
         """
         Convert a ComplianceReportSummary object to a dictionary representation.
@@ -124,6 +124,11 @@ class ComplianceReportSummaryService:
             low_carbon_fuel_target_summary=[],
             non_compliance_penalty_summary=[],
             can_sign=False,
+            penalty_override_enabled=summary_obj.penalty_override_enabled if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else False,
+            renewable_penalty_override=summary_obj.renewable_penalty_override if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
+            low_carbon_penalty_override=summary_obj.low_carbon_penalty_override if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
+            penalty_override_date=summary_obj.penalty_override_date if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
+            penalty_override_user=summary_obj.penalty_override_user if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
         )
 
         for column in inspector.mapper.column_attrs:
@@ -352,7 +357,13 @@ class ComplianceReportSummaryService:
         """
         Autosave compliance report summary details for a specific summary by ID.
         """
-        await self.repo.save_compliance_report_summary(summary_data)
+        # Get compliance report to determine the year for penalty override validation
+        compliance_report = await self.cr_repo.get_compliance_report_by_id(report_id)
+        compliance_year = None
+        if compliance_report and compliance_report.compliance_period:
+            compliance_year = int(compliance_report.compliance_period.description)
+            
+        await self.repo.save_compliance_report_summary(summary_data, compliance_year)
         summary_data = await self.calculate_compliance_report_summary(report_id)
 
         return summary_data
@@ -384,7 +395,7 @@ class ComplianceReportSummaryService:
         # After the report has been submitted, the summary becomes locked
         # so we can return the existing summary rather than re-calculating
         if summary_model.is_locked:
-            return self.convert_summary_to_dict(compliance_report.summary)
+            return self.convert_summary_to_dict(compliance_report.summary, compliance_report)
 
         compliance_period_start = compliance_report.compliance_period.effective_date
         compliance_period_end = compliance_report.compliance_period.expiration_date
@@ -606,6 +617,11 @@ class ComplianceReportSummaryService:
             non_compliance_penalty_summary=non_compliance_penalty_summary,
             can_sign=can_sign,
             early_issuance_summary=early_issuance_summary,
+            penalty_override_enabled=summary_model.penalty_override_enabled if int(compliance_report.compliance_period.description) >= 2024 else False,
+            renewable_penalty_override=summary_model.renewable_penalty_override if int(compliance_report.compliance_period.description) >= 2024 else None,
+            low_carbon_penalty_override=summary_model.low_carbon_penalty_override if int(compliance_report.compliance_period.description) >= 2024 else None,
+            penalty_override_date=summary_model.penalty_override_date if int(compliance_report.compliance_period.description) >= 2024 else None,
+            penalty_override_user=summary_model.penalty_override_user if int(compliance_report.compliance_period.description) >= 2024 else None,
         )
         return summary
 

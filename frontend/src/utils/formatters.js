@@ -94,6 +94,19 @@ export const dateFormatter = (params) => {
 }
 
 /**
+ * Formats a date to Month Day, Year format.
+ * e.g. January 1, 2024
+ *
+ * @param {string} dateString - The date string to format
+ * @returns {string} - The formatted date string
+ */
+export const dateToLongString = (dateString) => {
+  if (!dateString) return ''
+  const date = dayjs(dateString)
+  return date.format('MMMM D, YYYY')
+}
+
+/**
  * Formats a phone number to (123) 456-7890 format.
  *
  * @param {Object} params - The input parameter which should have a `value` property.

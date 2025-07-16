@@ -9,6 +9,8 @@ permissions:
   contents: read
   actions: write
   checks: write
+  pull-requests: write
+  issues: write
 
 jobs:
   backend-setup:
@@ -299,8 +301,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Cache node_modules
         uses: actions/cache@v4
@@ -336,41 +336,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        shardIndex:
-          [
-            1,
-            2,
-            3,
-            4,
-            5,
-            6,
-            7,
-            8,
-            9,
-            10,
-            11,
-            12,
-            13,
-            14,
-            15,
-            16,
-            17,
-            18,
-            19,
-            20,
-            21,
-            22,
-            23,
-            24,
-            25,
-            26,
-            27,
-            28,
-            29,
-            30,
-            31,
-            32,
-          ]
+        shardIndex: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32]
         shardTotal: [32]
     steps:
       - uses: actions/checkout@v4
@@ -383,8 +349,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
 
       - name: Restore node_modules cache
         uses: actions/cache@v4
@@ -431,7 +395,8 @@ jobs:
     needs: [frontend-tests]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
@@ -445,8 +410,7 @@ jobs:
       - name: Merge reports
         run: |
           cd frontend
-          npx --yes vitest@3.0.9 --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
-
+          npx --yes vitest@$(node -p "require('./package.json').devDependencies.vitest || require('./package.json').dependencies.vitest") --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
@@ -458,6 +422,7 @@ jobs:
           fail_on: 'errors'
           report_individual_runs: 'true'
           deduplicate_classes_by_file_name: 'true'
+          comment_mode: 'always'
 
   teams-notification:
     needs: [post-backend-tests, post-frontend-tests]
@@ -474,9 +439,12 @@ jobs:
             echo "status=success" >> $GITHUB_OUTPUT
             echo "theme_color=00FF00" >> $GITHUB_OUTPUT
           fi
+
       - name: Send custom Teams notification
         run: |
-          PR_TITLE="${{ github.event.pull_request.title }}"
+          # Replace double quotes with single quotes in PR title to prevent JSON issues
+          PR_TITLE_RAW="${{ github.event.pull_request.title }}"
+          PR_TITLE="${PR_TITLE_RAW//\"/\'}"
           PR_URL="${{ github.event.pull_request.html_url }}"
           REPO="${{ github.repository }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
@@ -485,8 +453,10 @@ jobs:
           AVATAR_URL="${{ github.event.pull_request.user.avatar_url }}"
           THREAD_ID="pr-${PR_NUMBER}"
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          FRONTEND_SUMMARY="${{ steps.test_status.outputs.frontend_summary }}"
           MESSAGE="**Test Results**\n- Backend Tests: ${{ needs.post-backend-tests.result }}\n- Frontend Tests: ${{ needs.post-frontend-tests.result }}\n\n**Status:** $([[ '${{ steps.test_status.outputs.status }}' == 'failure' ]] && echo '❌ Failed' || echo '✅ Passed')"
           COLOR="${{ steps.test_status.outputs.theme_color }}"
+
           cat <<EOF > teams_card.json
           {
             "@type": "MessageCard",
