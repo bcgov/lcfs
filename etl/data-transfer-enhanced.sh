@@ -5,21 +5,22 @@ set -e
 #
 # Expected parameters:
 # $1 = 'tfrs' or 'lcfs' (application)
-# $2 = 'test', 'prod', or 'dev' (environment)
+# $2 = 'test', 'prod', 'dev', or custom pod name (environment/pod)
 # $3 = 'import' or 'export' (direction of data transfer)
 # $4 = local container name or id
 # $5 = (optional) table name to dump (e.g., compliance_report_history)
 #
 # Example commands:
 # . data-transfer-enhanced.sh lcfs dev export 398cd4661173 compliance_report_history
+# . data-transfer-enhanced.sh lcfs lcfs-postgres-dev-3006-postgresql-0 export 398cd4661173
 # . data-transfer-enhanced.sh tfrs prod import 398cd4661173
 
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
     echo "Passed $# parameters. Expected 4 or 5."
-    echo "Usage: $0 <application> <environment> <direction> <local_container> [<table>]"
+    echo "Usage: $0 <application> <environment_or_pod> <direction> <local_container> [<table>]"
     echo "Where:"
     echo "  <application> is 'tfrs' or 'lcfs'"
-    echo "  <environment> is 'test', 'prod', or 'dev'"
+    echo "  <environment_or_pod> is 'test', 'prod', 'dev', or a specific pod name"
     echo "  <direction> is 'import' or 'export'"
     echo "  <local_container> is the name or id of your local Docker container"
     echo "  <table> (optional) is the table name to dump (e.g., compliance_report_history)"
@@ -27,7 +28,7 @@ if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
 fi
 
 application=$1
-env=$2
+env_or_pod=$2
 direction=$3
 local_container=$4
 
@@ -73,6 +74,25 @@ print_status "Checking Openshift creds"
 oc whoami
 echo "logged in"
 echo
+
+# Check if this is a custom pod name (contains hyphens and doesn't match standard env names)
+if [[ "$env_or_pod" =~ ^[a-zA-Z0-9\-]+$ ]] && [[ "$env_or_pod" != "test" ]] && [[ "$env_or_pod" != "prod" ]] && [[ "$env_or_pod" != "dev" ]]; then
+    # Custom pod name provided
+    custom_pod_name="pod/$env_or_pod"
+    
+    # Determine project from current context or pod name
+    if [[ "$env_or_pod" == *"prod"* ]]; then
+        env="prod"
+    elif [[ "$env_or_pod" == *"dev"* ]]; then
+        env="dev"
+    else
+        env="test"
+    fi
+else
+    # Standard environment name
+    env="$env_or_pod"
+    custom_pod_name=""
+fi
 
 # Set project, app label, database name, and credentials
 case $application in
@@ -131,12 +151,40 @@ get_leader_pod() {
 }
 
 # Get the appropriate pod
-pod_name=$(get_leader_pod $project_name $app_label)
-if [ -z "$pod_name" ]; then
-    print_error "No leader pod identified."
-    exit 1
+if [ -n "$custom_pod_name" ]; then
+    pod_name="$custom_pod_name"
+    print_status "Using custom pod: $pod_name"
+    
+    # Verify the custom pod exists and is accessible
+    if ! oc get $pod_name >/dev/null 2>&1; then
+        print_error "Custom pod $pod_name not found or not accessible"
+        exit 1
+    fi
+    
+    # Auto-detect database credentials for custom pods
+    print_status "Auto-detecting database credentials..."
+    pod_env=$(oc exec $pod_name -- env 2>/dev/null | grep -E "POSTGRES_USER|POSTGRES_PASSWORD|POSTGRES_DATABASE" || true)
+    
+    if echo "$pod_env" | grep -q "POSTGRES_PASSWORD="; then
+        detected_password=$(echo "$pod_env" | grep "POSTGRES_PASSWORD=" | cut -d'=' -f2 || echo "")
+        detected_database=$(echo "$pod_env" | grep "POSTGRES_DATABASE=" | cut -d'=' -f2 || echo "$db_name")
+        
+        # For custom pods, use 'postgres' as the default superuser with detected password
+        if [ -n "$detected_password" ]; then
+            remote_db_user="postgres"
+            remote_db_password="$detected_password"
+            db_name="$detected_database"
+            print_status "Detected credentials - User: $remote_db_user, Database: $db_name, Password: [HIDDEN]"
+        fi
+    fi
+else
+    pod_name=$(get_leader_pod $project_name $app_label)
+    if [ -z "$pod_name" ]; then
+        print_error "No leader pod identified."
+        exit 1
+    fi
+    print_status "Leader pod identified: $pod_name"
 fi
-print_status "Leader pod identified: $pod_name"
 
 # Set up table option for pg_dump if a table name is provided.
 table_option=""
@@ -306,6 +354,39 @@ if [ "$direction" = "import" ]; then
 elif [ "$direction" = "export" ]; then
     print_status "Starting database export process..."
     
+    # Show export details and ask for confirmation
+    echo
+    echo "=========================================="
+    echo "EXPORT CONFIRMATION"
+    echo "=========================================="
+    echo "Source (Local):"
+    echo "  Container: $local_container"
+    echo "  Database: $db_name"
+    echo "  User: $local_db_user"
+    if [ -n "$table" ]; then
+        echo "  Table: $table"
+    else
+        echo "  Scope: Full database"
+    fi
+    echo
+    echo "Destination (OpenShift):"
+    echo "  Project: $project_name"
+    echo "  Pod: $pod_name"
+    echo "  Database: $db_name"
+    echo "  User: $remote_db_user"
+    echo
+    print_warning "This will OVERWRITE the destination database!"
+    echo
+    read -p "Do you want to proceed with this export? (yes/no): " confirm
+    
+    if [[ "$confirm" != "yes" ]] && [[ "$confirm" != "y" ]] && [[ "$confirm" != "Y" ]]; then
+        print_status "Export cancelled by user"
+        exit 0
+    fi
+    
+    print_status "Export confirmed. Proceeding..."
+    echo
+    
     print_status "Creating pg_dump on local container (using local user $local_db_user)"
     docker exec $local_container bash -c "pg_dump -U $local_db_user $table_option -F t --no-privileges --no-owner -c -d $db_name > /tmp/${file_suffix}.tar"
     
@@ -330,10 +411,16 @@ elif [ "$direction" = "export" ]; then
     oc cp ./tmp_transfer/${file_suffix}.tar ${pod_name#pod/}:/tmp/tmp_transfer/${file_suffix}.tar
     
     print_status "Restoring database on OpenShift pod (using remote user $remote_db_user)"
-    oc exec $pod_name -- bash -c "pg_restore -U $remote_db_user --dbname=$db_name --no-owner --clean --if-exists --verbose /tmp/tmp_transfer/${file_suffix}.tar" || true
+    # Use password if detected
+    if [ -n "$remote_db_password" ]; then
+        print_status "Using detected password for authentication"
+        oc exec ${pod_name#pod/} -- bash -c "PGPASSWORD='$remote_db_password' pg_restore -U '$remote_db_user' --dbname='$db_name' --no-owner --clean --if-exists --verbose '/tmp/tmp_transfer/${file_suffix}.tar'" || true
+    else
+        oc exec ${pod_name#pod/} -- pg_restore -U "$remote_db_user" --dbname="$db_name" --no-owner --clean --if-exists --verbose "/tmp/tmp_transfer/${file_suffix}.tar" || true
+    fi
     
     print_status "Cleaning up temporary files on OpenShift pod"
-    oc exec $pod_name -- bash -c "rm -rf /tmp/tmp_transfer"
+    oc exec ${pod_name#pod/} -- bash -c "rm -rf /tmp/tmp_transfer"
     
     print_status "Cleaning up dump file from local container"
     docker exec $local_container bash -c "rm -f /tmp/${file_suffix}.tar" || true
