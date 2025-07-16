@@ -98,12 +98,19 @@ class ComplianceReportServices:
         if not draft_status:
             raise DataNotFoundException(f"Status '{report_data.status}' not found.")
 
-        organization = await self.org_repo.get_organization(organization_id)
+        # Determine reporting frequency based on early issuance setting for the compliance period
+        early_issuance_record = await self.org_repo.get_early_issuance_by_year(
+            organization_id, report_data.compliance_period
+        )
 
-        # Determine reporting frequency
+        # Use year-specific setting if it exists, otherwise default to False
+        has_early_issuance = (
+            early_issuance_record.has_early_issuance if early_issuance_record else False
+        )
+
         reporting_frequency = (
             ReportingFrequency.QUARTERLY
-            if organization.has_early_issuance
+            if has_early_issuance
             else ReportingFrequency.ANNUAL
         )
 

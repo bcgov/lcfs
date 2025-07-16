@@ -32,6 +32,7 @@ import { useOrganization } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { AddressAutocomplete } from '@/components/BCForm/index.js'
 import colors from '@/themes/base/colors'
+import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
 
 // Component for adding a new organization
 export const AddEditOrgForm = () => {
@@ -83,6 +84,10 @@ export const AddEditOrgForm = () => {
         orgEDRMSRecord: data.edrmsRecord,
         recordsAddress: data.recordsAddress || '',
         hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
+        orgSupplierType:
+          data.organizationTypeId?.toString() ||
+          data.orgType?.organizationTypeId?.toString() ||
+          '1',
         orgRegForTransfers:
           data.orgStatus.organizationStatusId === 2 ? '2' : '1',
         orgStreetAddress: data.orgAddress?.streetAddress || '',
@@ -195,7 +200,8 @@ export const AddEditOrgForm = () => {
   const {
     mutate: createOrg,
     isPending: isCreateOrgPending,
-    isError: isCreateOrgError
+    isError: isCreateOrgError,
+    error: createOrgError
   } = useMutation({
     mutationFn: async (userData) =>
       await apiService.post('/organizations/create', userData),
@@ -217,7 +223,8 @@ export const AddEditOrgForm = () => {
   const {
     mutate: updateOrg,
     isPending: isUpdateOrgPending,
-    isError: isUpdateOrgError
+    isError: isUpdateOrgError,
+    error: updateOrgError
   } = useMutation({
     mutationFn: async (payload) =>
       await apiService.put(`/organizations/${orgID}`, payload),
@@ -308,7 +315,11 @@ export const AddEditOrgForm = () => {
     >
       {/* Error Alert */}
       {(isCreateOrgError || isUpdateOrgError) && (
-        <BCAlert severity="error">{t('common:submitError')}</BCAlert>
+        <BCAlert severity="error">
+          {updateOrgError?.response?.data?.detail ||
+            createOrgError?.response?.data?.detail ||
+            t('common:submitError')}
+        </BCAlert>
       )}
       <Box
         component="form"
@@ -512,7 +523,10 @@ export const AddEditOrgForm = () => {
                           <Grid item xs={4} mt={0.5}>
                             <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
                               <BCTypography variant="body3">
-                                {t('org:earlyIssuanceLabel')}:
+                                {t('org:earlyIssuanceLabel', {
+                                  year: CURRENT_COMPLIANCE_YEAR
+                                })}
+                                :
                               </BCTypography>
                             </FormLabel>
                           </Grid>
@@ -708,7 +722,12 @@ export const AddEditOrgForm = () => {
                 <Controller
                   name="recordsAddress"
                   control={control}
-                  render={({ field }) => <AddressAutocomplete className='recordsAddress' {...field} />}
+                  render={({ field }) => (
+                    <AddressAutocomplete
+                      className="recordsAddress"
+                      {...field}
+                    />
+                  )}
                 />
               </Box>
             </Box>

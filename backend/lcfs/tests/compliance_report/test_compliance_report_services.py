@@ -68,7 +68,7 @@ async def test_create_compliance_report_success(
     mock_snapshot_service,
 ):
     mock_user = MagicMock()
-    mock_org_repo.get_organization.return_value = Mock(has_early_issuance=False)
+    mock_org_repo.get_early_issuance_by_year.return_value = None
 
     # Mock the compliance period
     mock_compliance_period = CompliancePeriod(
@@ -117,7 +117,9 @@ async def test_create_compliance_report_quarterly_success(
     mock_snapshot_service,
 ):
     mock_user = MagicMock()
-    mock_org_repo.get_organization.return_value = Mock(has_early_issuance=True)
+    mock_org_repo.get_early_issuance_by_year.return_value = Mock(
+        has_early_issuance=True
+    )
 
     # Mock the compliance period
     mock_compliance_period = CompliancePeriod(

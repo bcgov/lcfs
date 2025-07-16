@@ -1,11 +1,19 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
+import unittest
 from lcfs.web.api.organizations.services import OrganizationsService
-from lcfs.web.api.organizations.schema import OrganizationSummaryResponseSchema
+from lcfs.web.api.organizations.schema import (
+    OrganizationSummaryResponseSchema,
+    OrganizationCreateSchema,
+    OrganizationUpdateSchema,
+    OrganizationAddressSchema,
+)
 from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
     OrgStatusEnum,
 )
+from lcfs.web.api.base import PaginationRequestSchema, FilterModel
+from unittest.mock import patch
 
 
 def create_mock_org_status(status_enum: OrgStatusEnum):
@@ -186,3 +194,135 @@ async def test_get_organization_names_invalid_statuses(
 
     # Result should be valid even with invalid statuses passed
     assert isinstance(result, list)
+
+
+@pytest.mark.anyio
+async def test_create_organization_with_early_issuance(
+    organizations_service, mock_repo
+):
+    """Test creating an organization with the early issuance flag."""
+    create_data = OrganizationCreateSchema(
+        name="Test Org",
+        operating_name="Test Op Org",
+        email="test@test.com",
+        phone="1234567890",
+        edrms_record="12345",
+        organization_status_id=1,
+        organization_type_id=1,
+        address=OrganizationAddressSchema(
+            name="Test Org",
+            street_address="123 Main St",
+            city="Anytown",
+            postalCode_zipCode="12345",
+            provinceState="BC",
+            country="Canada",
+        ),
+        attorney_address=OrganizationAddressSchema(
+            name="Test Org",
+            street_address="456 Law St",
+            city="Legaltown",
+            postalCode_zipCode="67890",
+            provinceState="BC",
+            country="Canada",
+        ),
+        has_early_issuance=True,
+    )
+
+    mock_repo.create_organization = AsyncMock(return_value=MagicMock(organization_id=1))
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+
+    with patch(
+        "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
+        return_value="2023",
+    ), patch(
+        "lcfs.web.api.organizations.services.FastAPICache.clear", new_callable=AsyncMock
+    ):
+        await organizations_service.create_organization(create_data, user=MagicMock())
+
+    mock_repo.update_early_issuance_by_year.assert_called_once_with(
+        1, "2023", True, unittest.mock.ANY
+    )
+
+
+@pytest.mark.anyio
+async def test_update_organization_with_early_issuance_change(
+    organizations_service, mock_repo
+):
+    """Test updating an organization's early issuance flag."""
+    update_data = OrganizationUpdateSchema(
+        has_early_issuance=True,
+        address={
+            "name": "Test Org",
+            "streetAddress": "123 Main St",
+            "city": "Anytown",
+            "postalcodeZipcode": "12345",
+            "provinceState": "BC",
+            "country": "Canada",
+        },
+        attorney_address={
+            "name": "Test Org",
+            "streetAddress": "456 Law St",
+            "city": "Legaltown",
+            "postalcodeZipcode": "67890",
+            "provinceState": "BC",
+            "country": "Canada",
+        },
+    )
+    organization_id = 1
+
+    mock_repo.get_organization = AsyncMock(
+        return_value=MagicMock(
+            organization_address_id=1, organization_attorney_address_id=1
+        )
+    )
+    mock_repo.get_organization_address = AsyncMock(return_value=MagicMock())
+    mock_repo.get_organization_attorney_address = AsyncMock(return_value=MagicMock())
+    mock_repo.get_current_year_early_issuance = AsyncMock(return_value=False)
+    mock_repo.update_early_issuance_by_year = AsyncMock()
+    mock_repo.update_organization = AsyncMock()
+
+    with patch(
+        "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
+        return_value="2023",
+    ):
+        await organizations_service.update_organization(
+            organization_id, update_data, user=MagicMock()
+        )
+
+    mock_repo.update_early_issuance_by_year.assert_called_once_with(
+        organization_id, "2023", True, unittest.mock.ANY
+    )
+
+
+@pytest.mark.anyio
+async def test_apply_organization_filters_with_early_issuance(organizations_service):
+    """Test applying organization filters with early issuance."""
+    pagination = PaginationRequestSchema(
+        filters=[
+            FilterModel(
+                field="has_early_issuance",
+                filter=1,
+                type="equals",
+                filter_type="number",
+            )
+        ]
+    )
+    conditions = []
+
+    # Mock the get_early_issuance_field method
+    organizations_service.repo.get_early_issuance_field = MagicMock(
+        return_value=MagicMock()
+    )
+
+    # Mock the apply_filter_conditions to avoid comparison errors
+    with patch(
+        "lcfs.web.api.organizations.services.apply_filter_conditions"
+    ) as mock_apply_filter:
+        mock_apply_filter.return_value = MagicMock()
+        organizations_service.apply_organization_filters(pagination, conditions)
+
+        # Verify that apply_filter_conditions was called
+        mock_apply_filter.assert_called_once()
+
+        # Verify that conditions were modified
+        assert len(conditions) == 1
