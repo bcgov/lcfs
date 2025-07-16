@@ -140,7 +140,7 @@ def create_mock_response_schema(overrides: dict):
         provision_of_the_act=ProvisionOfTheActSchema(
             provision_of_the_act_id=1,
             name="Default carbon intensity - section 19 (b) (ii)",
-        ).name,
+        ),
         quantity=100,
         units="L",
         fuel_code=None,
@@ -185,7 +185,7 @@ def create_mock_update_response_schema(overrides: dict):
         provision_of_the_act=ProvisionOfTheActSchema(
             provision_of_the_act_id=1,
             name="Default carbon intensity - section 19 (b) (ii)",
-        ).name,
+        ),
         quantity=100,
         units="L",
         fuel_code=None,

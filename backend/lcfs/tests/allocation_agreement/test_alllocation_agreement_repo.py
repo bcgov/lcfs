@@ -144,10 +144,10 @@ async def test_get_effective_allocation_agreements(
     # Verify the result
     assert len(result) == 1
     assert result[0].allocation_agreement_id == 1
-    # Compare against the enum member itself
-    assert result[0].action_type == ActionTypeEnum.CREATE
-    # Access the attribute of the nested mock object
-    assert result[0].fuel_type.fuel_type == "Biodiesel"
+    # Compare against the enum value (string)
+    assert result[0].action_type == ActionTypeEnum.CREATE.value
+    # fuel_type is now a string instead of an object
+    assert result[0].fuel_type == "Biodiesel"
     assert result[0].transaction_partner == "LCFS Org 2"
     assert result[0].postal_address == "789 Stellar Lane Floor 10"
 
@@ -176,7 +176,7 @@ async def test_create_allocation_agreement(
 
     # Verify result
     assert result.version == 0
-    assert result.action_type == ActionTypeEnum.CREATE
+    assert result.action_type == ActionTypeEnum.CREATE.value
 
     # Verify that the mock methods were called with correct arguments
     mock_db_session.add.assert_called_once_with(mock_agreement)

@@ -90,9 +90,9 @@ async def test_get_fuel_supply_options_non_legacy(fuel_supply_service):
             compliance_period  # Check for positional argument
         )
 
-        # Assert the mapper was called with the repo data
+        # Assert the mapper was called with the repo data (now iterates over each row)
         mock_mapper.assert_called_once_with(
-            compliance_period, [], expected_repo_options["fuel_types"]
+            compliance_period, [], expected_repo_options["fuel_types"][0]
         )
 
         # Assert the final response structure (mapper is mocked, so fuel_types will be empty)
@@ -102,47 +102,8 @@ async def test_get_fuel_supply_options_non_legacy(fuel_supply_service):
         )  # Because mapper is mocked to return None and modify list in-place
 
 
-@pytest.mark.anyio
-async def test_get_fuel_supply_options_legacy(fuel_supply_service):
-    """Test get_fuel_supply_options for a legacy year (< 2024)"""
-    service, mock_repo, mock_fuel_code_repo = fuel_supply_service
-    compliance_period = "2023"
-    # Mocked structure returned by the legacy repo
-    expected_legacy_repo_options = {"fuel_types": [{"db_col": "legacy_value"}]}
-
-    # Create a mock instance for the legacy repo
-    mock_legacy_repo_instance = MagicMock(spec=LegacyFuelSupplyRepository)
-    mock_legacy_repo_instance.get_fuel_supply_table_options = AsyncMock(
-        return_value=expected_legacy_repo_options
-    )
-
-    # Patch the LegacyFuelSupplyRepository class AND the row mapper
-    with patch(
-        "lcfs.web.api.fuel_supply.services.LegacyFuelSupplyRepository",
-        return_value=mock_legacy_repo_instance,
-    ) as mock_legacy_repo_class, patch.object(
-        service, "fuel_type_row_mapper", return_value=None
-    ) as mock_mapper:
-
-        response = await service.get_fuel_supply_options(compliance_period)
-
-        # Assert legacy repo was instantiated
-        mock_legacy_repo_class.assert_called_once()
-        # Assert legacy repo's method was called with positional arg
-        mock_legacy_repo_instance.get_fuel_supply_table_options.assert_awaited_once_with(
-            compliance_period  # Check for positional argument
-        )
-        # Ensure non-legacy repo method was *not* called
-        mock_repo.get_fuel_supply_table_options.assert_not_called()
-
-        # Assert the mapper was called with the legacy repo data
-        mock_mapper.assert_called_once_with(
-            compliance_period, [], expected_legacy_repo_options["fuel_types"]
-        )
-
-        # Assert the final response structure (mapper is mocked)
-        assert isinstance(response, FuelTypeOptionsResponse)
-        assert response.fuel_types == []  # Because mapper is mocked
+# Legacy test removed - LegacyFuelSupplyRepository no longer exists
+# The service now handles all years uniformly without legacy-specific logic
 
 
 @pytest.mark.anyio
