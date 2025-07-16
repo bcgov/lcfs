@@ -307,5 +307,5 @@ async def get_changelog(
     router.routes[-1].response_model = List[response_model_map[data_type_snake]]
 
     return await service.get_changelog_data(
-        compliance_report_group_uuid, data_type_snake
+        compliance_report_group_uuid, data_type_snake, request.user
     )
