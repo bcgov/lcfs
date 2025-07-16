@@ -10,9 +10,6 @@ import colors from '@/themes/base/colors.js'
 import { useTranslation } from 'react-i18next'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
-import { AssessmentCard } from '@/views/ComplianceReports/components/AssessmentCard.jsx'
-import LegacyReportDetails from '@/views/ComplianceReports/legacy/LegacyReportDetails.jsx'
-import ComplianceReportSummary from './components/ComplianceReportSummary'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
 
@@ -145,22 +142,6 @@ export const ViewLegacyComplianceReport = ({ reportData, error, isError }) => {
             compliancePeriod={compliancePeriod}
           />
         </Stack>
-        {isFeatureEnabled(FEATURE_FLAGS.LEGACY_REPORT_DETAILS) && (
-          <>
-            <LegacyReportDetails currentStatus={currentStatus} />
-            <ComplianceReportSummary
-              reportID={complianceReportId}
-              alertRef={alertRef}
-              compliancePeriodYear={compliancePeriod}
-              currentStatus={currentStatus}
-              canEdit={false}
-              enableCompareMode={false}
-              buttonClusterConfig={dummyButtonClusterConfig}
-              methods={dummyMethods}
-              setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
-            />
-          </>
-        )}
 
         <BCTypography variant="h6" color="primary" sx={{ marginY: '16px' }}>
           {t('report:questions')}

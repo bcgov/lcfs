@@ -67,10 +67,7 @@ class ComplianceSummaryMigrator:
                 crs.diesel_class_obligation,
                 crs.diesel_class_previously_retained,
                 crs.gasoline_class_obligation,
-                crs.gasoline_class_previously_retained,
-                crs.credits_offset_a,
-                crs.credits_offset_b,
-                crs.credits_offset_c
+                crs.gasoline_class_previously_retained
             FROM
                 public.compliance_report cr
             JOIN
@@ -100,9 +97,6 @@ class ComplianceSummaryMigrator:
                     "diesel_class_previously_retained": row[8],
                     "gasoline_class_obligation": row[9],
                     "gasoline_class_previously_retained": row[10],
-                    "credits_offset_a": row[11],
-                    "credits_offset_b": row[12],
-                    "credits_offset_c": row[13],
                 }
             )
 
@@ -198,9 +192,6 @@ class ComplianceSummaryMigrator:
             "line_11_fossil_derived_base_fuel_total": None,
             "line_21_non_compliance_penalty_payable": None,
             "total_non_compliance_penalty_payable": None,
-            "credits_offset_a": safe_int(source_record["credits_offset_a"]),
-            "credits_offset_b": safe_int(source_record["credits_offset_b"]),
-            "credits_offset_c": safe_int(source_record["credits_offset_c"]),
             "create_date": current_timestamp,
             "update_date": current_timestamp,
             "create_user": "etl_user",
@@ -262,10 +253,7 @@ class ComplianceSummaryMigrator:
                 line_11_fossil_derived_base_fuel_jet_fuel,
                 line_11_fossil_derived_base_fuel_total,
                 line_21_non_compliance_penalty_payable,
-                total_non_compliance_penalty_payable,
-                credits_offset_a,
-                credits_offset_b,
-                credits_offset_c,
+                total_non_compliance_penalty_payable
                 create_date,
                 update_date,
                 create_user,
@@ -371,9 +359,6 @@ class ComplianceSummaryMigrator:
                 0.0,  # fossil total (repeat)
                 0.0,  # penalty payable
                 0.0,  # total penalty payable
-                record["credits_offset_a"],
-                record["credits_offset_b"],
-                record["credits_offset_c"],
                 record["create_date"],
                 record["update_date"],
                 record["create_user"],

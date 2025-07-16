@@ -18,7 +18,6 @@ from lcfs.db.models.compliance.OtherUses import OtherUses
 from lcfs.utils.constants import LCFS_Constants
 from lcfs.web.api.allocation_agreement.repo import AllocationAgreementRepository
 from lcfs.web.api.compliance_report.constants import (
-    PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
     RENEWABLE_FUEL_TARGET_DESCRIPTIONS,
     LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
     NON_COMPLIANCE_PENALTY_SUMMARY_DESCRIPTIONS,
@@ -45,6 +44,16 @@ from lcfs.web.utils.calculations import calculate_compliance_units
 
 logger = structlog.get_logger(__name__)
 
+# REFACTORING NOTE: Legacy Report Handling
+# This service has been refactored to always use modern format for all reports.
+# Previously, reports were formatted differently based on compliance year (pre/post 2024).
+# Legacy-specific code has been deprecated but kept for reference.
+# Key changes:
+# - All reports now use LOW_CARBON_FUEL_TARGET_DESCRIPTIONS (modern format)
+# - Legacy PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS is deprecated
+# - Line formatting always uses modern numbering (no "line | line+11" format)
+# - Frontend feature flags control display, not backend logic
+
 
 class ComplianceDataService:
     def __init__(self):
@@ -63,7 +72,13 @@ class ComplianceDataService:
     def get_nickname(self) -> Optional[str]:
         return self.nickname
 
+    # DEPRECATED: Legacy year checking - keeping for reference but no longer used
+    # All reports now use modern format regardless of year
     def is_legacy_year(self) -> bool:
+        """
+        DEPRECATED: This method is no longer used as all reports now use modern format.
+        Keeping for reference and potential future use.
+        """
         return (
             self.compliance_period < int(LCFS_Constants.LEGISLATION_TRANSITION_YEAR)
             if self.compliance_period is not None
@@ -109,7 +124,9 @@ class ComplianceReportSummaryService:
         self.compliance_data_service = compliance_data_service
 
     def convert_summary_to_dict(
-        self, summary_obj: ComplianceReportSummary, compliance_report: ComplianceReport = None
+        self,
+        summary_obj: ComplianceReportSummary,
+        compliance_report: ComplianceReport = None,
     ) -> ComplianceReportSummarySchema:
         """
         Convert a ComplianceReportSummary object to a dictionary representation.
@@ -124,11 +141,36 @@ class ComplianceReportSummaryService:
             low_carbon_fuel_target_summary=[],
             non_compliance_penalty_summary=[],
             can_sign=False,
-            penalty_override_enabled=summary_obj.penalty_override_enabled if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else False,
-            renewable_penalty_override=summary_obj.renewable_penalty_override if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
-            low_carbon_penalty_override=summary_obj.low_carbon_penalty_override if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
-            penalty_override_date=summary_obj.penalty_override_date if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
-            penalty_override_user=summary_obj.penalty_override_user if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
+            penalty_override_enabled=(
+                summary_obj.penalty_override_enabled
+                if compliance_report
+                and int(compliance_report.compliance_period.description) >= 2024
+                else False
+            ),
+            renewable_penalty_override=(
+                summary_obj.renewable_penalty_override
+                if compliance_report
+                and int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            low_carbon_penalty_override=(
+                summary_obj.low_carbon_penalty_override
+                if compliance_report
+                and int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            penalty_override_date=(
+                summary_obj.penalty_override_date
+                if compliance_report
+                and int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            penalty_override_user=(
+                summary_obj.penalty_override_user
+                if compliance_report
+                and int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
         )
 
         for column in inspector.mapper.column_attrs:
@@ -154,13 +196,19 @@ class ComplianceReportSummaryService:
             if column.key == "total_non_compliance_penalty_payable":
                 self._handle_summary_lines(summary, summary_obj, column.key, line)
 
-        # Simply sort by line number
+        # DB Columns are not in the same order as display, so sort them
         summary.low_carbon_fuel_target_summary.sort(key=lambda row: int(row.line))
 
         return summary
 
     def _get_line_value(self, line: int, is_legacy: bool = False) -> Union[str, int]:
-        """Helper method to return the line number directly"""
+        """
+        Helper method to format line values - always use modern format
+
+        DEPRECATED: The is_legacy parameter is no longer used as all reports now use modern format.
+        Previously this would format legacy lines as "line | line+11" format.
+        Keeping the parameter for compatibility but it's ignored.
+        """
         return line
 
     def _extract_line_number(self, column_key: str) -> Optional[int]:
@@ -197,11 +245,12 @@ class ComplianceReportSummaryService:
         self, summary, summary_obj, column_key, line: int
     ) -> None:
         """Populate the low_carbon_fuel_target_summary section"""
-        # No early returns for any line numbers
-
-        description = LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["description"]
-
-        # Special description handling
+        # Always use modern format for all reports
+        description = self._format_description(
+            line=line,
+            descriptions_dict=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS,
+        )
+        desc = None
         if line == 21:
             desc = self._non_compliance_special_description(
                 line, summary_obj, LOW_CARBON_FUEL_TARGET_DESCRIPTIONS
@@ -222,7 +271,7 @@ class ComplianceReportSummaryService:
 
         summary.low_carbon_fuel_target_summary.append(
             ComplianceReportSummaryRowSchema(
-                line=self._get_line_value(line),
+                line=line,
                 format=(FORMATS.CURRENCY.value if line == 21 else FORMATS.NUMBER.value),
                 description=desc,
                 field=LOW_CARBON_FUEL_TARGET_DESCRIPTIONS[line]["field"],
@@ -266,7 +315,7 @@ class ComplianceReportSummaryService:
         The 'line' is stored as a string internally.
         """
         existing_element = next(
-            (el for el in target_list if el.line == self._get_line_value(line)),
+            (el for el in target_list if el.line == line),
             None,
         )
         if existing_element:
@@ -282,7 +331,7 @@ class ComplianceReportSummaryService:
 
         # Create and append the new row
         new_element = ComplianceReportSummaryRowSchema(
-            line=self._get_line_value(line),
+            line=line,
             format=default_format,
             description=description,
             field=default_descriptions[line]["field"],
@@ -308,18 +357,15 @@ class ComplianceReportSummaryService:
         """
         Builds a description string from the dictionary.
         """
-        is_legacy_year = compliance_data_service.is_legacy_year()
-        if is_legacy_year and line == 11:
-            return descriptions_dict[line]["legacy"]
-        else:
-            return descriptions_dict[line]["description"]
+        base_desc = descriptions_dict[line].get("description")
+        return base_desc  # By default, no fancy placeholders used here.
 
     def _renewable_special_description(self, line, summary_obj, descriptions_dict):
         """
         For lines 6 and 8, format the description with placeholders
         (line_4_eligible_renewable_fuel_required_* * 0.05).
         """
-        base_desc = descriptions_dict[line]["description"]
+        base_desc = descriptions_dict[line].get("description")
         return base_desc.format(
             "{:,}".format(
                 int(summary_obj.line_4_eligible_renewable_fuel_required_gasoline * 0.05)
@@ -336,17 +382,19 @@ class ComplianceReportSummaryService:
         """
         For line 21, format with summary_obj.line_21_non_compliance_penalty_payable / 600
         """
-        base_desc = descriptions_dict[line]["description"]
+        base_desc = descriptions_dict[line].get("description")
         return base_desc.format(
             "{:,}".format(int(summary_obj.line_21_non_compliance_penalty_payable / 600))
         )
 
-    def _part3_special_description(self, line, descriptions_dict):
-        """
-        For special line formatting with nickname
-        """
-        base_desc = descriptions_dict[line]["description"]
-        return base_desc.format("{:}".format(compliance_data_service.get_nickname()))
+    # DEPRECATED: Legacy PART3 formatting - keeping for reference but no longer used
+    # def _part3_special_description(self, line, descriptions_dict):
+    #     """
+    #     DEPRECATED: For line 26a and 26b, your original code does .format(...) with compliance report nick name
+    #     This was used for legacy PART3_LOW_CARBON_FUEL_TARGET_DESCRIPTIONS format
+    #     """
+    #     base_desc = descriptions_dict[line].get("description")
+    #     return base_desc.format("{:}".format(compliance_data_service.get_nickname()))
 
     @service_handler
     async def update_compliance_report_summary(
@@ -362,7 +410,7 @@ class ComplianceReportSummaryService:
         compliance_year = None
         if compliance_report and compliance_report.compliance_period:
             compliance_year = int(compliance_report.compliance_period.description)
-            
+
         await self.repo.save_compliance_report_summary(summary_data, compliance_year)
         summary_data = await self.calculate_compliance_report_summary(report_id)
 
@@ -395,7 +443,9 @@ class ComplianceReportSummaryService:
         # After the report has been submitted, the summary becomes locked
         # so we can return the existing summary rather than re-calculating
         if summary_model.is_locked:
-            return self.convert_summary_to_dict(compliance_report.summary, compliance_report)
+            return self.convert_summary_to_dict(
+                compliance_report.summary, compliance_report
+            )
 
         compliance_period_start = compliance_report.compliance_period.effective_date
         compliance_period_end = compliance_report.compliance_period.expiration_date
@@ -617,11 +667,31 @@ class ComplianceReportSummaryService:
             non_compliance_penalty_summary=non_compliance_penalty_summary,
             can_sign=can_sign,
             early_issuance_summary=early_issuance_summary,
-            penalty_override_enabled=summary_model.penalty_override_enabled if int(compliance_report.compliance_period.description) >= 2024 else False,
-            renewable_penalty_override=summary_model.renewable_penalty_override if int(compliance_report.compliance_period.description) >= 2024 else None,
-            low_carbon_penalty_override=summary_model.low_carbon_penalty_override if int(compliance_report.compliance_period.description) >= 2024 else None,
-            penalty_override_date=summary_model.penalty_override_date if int(compliance_report.compliance_period.description) >= 2024 else None,
-            penalty_override_user=summary_model.penalty_override_user if int(compliance_report.compliance_period.description) >= 2024 else None,
+            penalty_override_enabled=(
+                summary_model.penalty_override_enabled
+                if int(compliance_report.compliance_period.description) >= 2024
+                else False
+            ),
+            renewable_penalty_override=(
+                summary_model.renewable_penalty_override
+                if int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            low_carbon_penalty_override=(
+                summary_model.low_carbon_penalty_override
+                if int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            penalty_override_date=(
+                summary_model.penalty_override_date
+                if int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            penalty_override_user=(
+                summary_model.penalty_override_user
+                if int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
         )
         return summary
 

@@ -1,4 +1,4 @@
-// src/views/ComplianceReports/legacy/__test__/LegacyReportSummary.test.jsx
+// src/views/ComplianceReports/legacy-deprecated/__test__/LegacyReportSummary.test.jsx
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import LegacyReportSummary from '../LegacyReportSummary'

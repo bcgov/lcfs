@@ -67,10 +67,7 @@ try {
             crs.diesel_class_obligation,
             crs.diesel_class_previously_retained,
             crs.gasoline_class_obligation,
-            crs.gasoline_class_previously_retained,
-            crs.credits_offset_a,
-            crs.credits_offset_b,
-            crs.credits_offset_c
+            crs.gasoline_class_previously_retained
         FROM
             public.compliance_report cr
         JOIN
@@ -146,9 +143,6 @@ try {
             line_11_fossil_derived_base_fuel_total,
             line_21_non_compliance_penalty_payable,
             total_non_compliance_penalty_payable,
-            credits_offset_a,
-            credits_offset_b,
-            credits_offset_c,
             create_date,
             update_date,
             create_user,
@@ -185,9 +179,6 @@ try {
         def dieselClassPreviouslyRetained = rs.getBigDecimal('diesel_class_previously_retained')
         def gasolineClassObligation = rs.getBigDecimal('gasoline_class_obligation')
         def gasolineClassPreviouslyRetained = rs.getBigDecimal('gasoline_class_previously_retained')
-        def creditsOffsetA = rs.getInt('credits_offset_a')
-        def creditsOffsetB = rs.getInt('credits_offset_b')
-        def creditsOffsetC = rs.getInt('credits_offset_c')
 
         // Map source compliance_report_id (legacy_id) to LCFS compliance_report_id
         def lcfsComplianceReportId = legacyToLcfsIdMap[sourceComplianceReportLegacyId]
@@ -265,9 +256,6 @@ try {
             line_11_fossil_derived_base_fuel_total         : null, // No direct mapping
             line_21_non_compliance_penalty_payable         : null, // No direct mapping
             total_non_compliance_penalty_payable           : null, // No direct mapping
-            credits_offset_a                                : creditsOffsetA,
-            credits_offset_b                                : creditsOffsetB,
-            credits_offset_c                                : creditsOffsetC,
             create_date                                     : new Timestamp(System.currentTimeMillis()),
             update_date                                     : new Timestamp(System.currentTimeMillis()),
             create_user                                     : "etl_user",
@@ -351,26 +339,17 @@ try {
             // 54. total_non_compliance_penalty_payable (float8) NOT NULL
             destinationStmt.setDouble(53, 0.0) // No mapping
 
-            // 55. credits_offset_a (int4)
-            destinationStmt.setInt(54, summaryRecord.credits_offset_a)
+            // 54. create_date (timestamptz)
+            destinationStmt.setTimestamp(54, summaryRecord.create_date)
 
-            // 56. credits_offset_b (int4)
-            destinationStmt.setInt(55, summaryRecord.credits_offset_b)
+            // 55. update_date (timestamptz)
+            destinationStmt.setTimestamp(55, summaryRecord.update_date)
 
-            // 57. credits_offset_c (int4)
-            destinationStmt.setInt(56, summaryRecord.credits_offset_c)
+            // 56. create_user (varchar)
+            destinationStmt.setString(56, summaryRecord.create_user)
 
-            // 58. create_date (timestamptz)
-            destinationStmt.setTimestamp(57, summaryRecord.create_date)
-
-            // 59. update_date (timestamptz)
-            destinationStmt.setTimestamp(58, summaryRecord.update_date)
-
-            // 60. create_user (varchar)
-            destinationStmt.setString(59, summaryRecord.create_user)
-
-            // 61. update_user (varchar)
-            destinationStmt.setString(60, summaryRecord.update_user)
+            // 57. update_user (varchar)
+            destinationStmt.setString(57, summaryRecord.update_user)
 
             // Add to batch
             destinationStmt.addBatch()

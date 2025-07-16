@@ -9,7 +9,7 @@ import { useLocation, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { scheduleBSummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
+import { scheduleBSummaryColDefs } from '@/views/ComplianceReports/legacy-deprecated/_schema.jsx'
 
 export const ScheduleBSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')

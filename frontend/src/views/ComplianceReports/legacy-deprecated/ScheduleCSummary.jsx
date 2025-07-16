@@ -1,31 +1,30 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
-import { useGetNotionalTransfers } from '@/hooks/useNotionalTransfer'
-import Grid2 from '@mui/material/Grid2'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useParams } from 'react-router-dom'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { LinkRenderer } from '@/utils/grid/cellRenderers.jsx'
-import { scheduleASummaryColDefs } from '@/views/ComplianceReports/legacy/_schema.jsx'
+import Grid2 from '@mui/material/Grid2'
+import { scheduleCSummaryColDefs } from '@/views/ComplianceReports/legacy-deprecated/_schema.jsx'
 import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+import { useGetOtherUses } from '@/hooks/useOtherUses.js'
 
-export const ScheduleASummary = ({ data, status }) => {
-  const ref = useRef(null)
-
+export const ScheduleCSummary = ({ data, status }) => {
   const [alertMessage, setAlertMessage] = useState('')
   const [alertSeverity, setAlertSeverity] = useState('info')
+  const { t } = useTranslation(['common', 'otherUses', 'legacy'])
+
   const { complianceReportId } = useParams()
+
+  const location = useLocation()
 
   const [paginationOptions, setPaginationOptions] = useState(
     defaultInitialPagination
   )
 
-  const { t } = useTranslation(['common', 'notionalTransfers', 'legacy'])
-  const location = useLocation()
-
-  const queryData = useGetNotionalTransfers(
+  const queryData = useGetOtherUses(
     { ...paginationOptions, complianceReportId },
     {
       cacheTime: 0,
@@ -40,8 +39,6 @@ export const ScheduleASummary = ({ data, status }) => {
     }
   }, [location.state])
 
-  const getRowId = (params) => params.data.notionalTransferId.toString()
-
   const defaultColDef = useMemo(
     () => ({
       floatingFilter: false,
@@ -49,18 +46,20 @@ export const ScheduleASummary = ({ data, status }) => {
       cellRenderer:
         status === COMPLIANCE_REPORT_STATUSES.DRAFT ? LinkRenderer : undefined,
       cellRendererParams: {
-        url: () => 'notional-transfers'
+        url: () => 'fuels-other-use'
       }
     }),
     [status]
   )
 
   const columns = useMemo(() => {
-    return scheduleASummaryColDefs(t)
+    return scheduleCSummaryColDefs(t)
   }, [t])
 
+  const getRowId = (params) => params.data.otherUsesId.toString()
+
   return (
-    <Grid2 className="notional-transfer-container" mx={-1}>
+    <Grid2 className="other-uses-container" data-test="container" mx={-1}>
       <div>
         {alertMessage && (
           <BCAlert data-test="alert-box" severity={alertSeverity}>
@@ -70,13 +69,12 @@ export const ScheduleASummary = ({ data, status }) => {
       </div>
       <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
         <BCGridViewer
-          ref={ref}
-          gridKey="notional-transfers"
-          columnDefs={columns}
+          gridKey="other-uses"
           getRowId={getRowId}
+          columnDefs={columns}
           defaultColDef={defaultColDef}
           queryData={queryData}
-          dataKey="notionalTransfers"
+          dataKey="otherUses"
           suppressPagination={data?.length <= 10}
           paginationOptions={paginationOptions}
           onPaginationChange={(newPagination) =>
@@ -97,4 +95,4 @@ export const ScheduleASummary = ({ data, status }) => {
   )
 }
 
-ScheduleASummary.displayName = 'ScheduleASummary'
+ScheduleCSummary.displayName = 'ScheduleCSummary'

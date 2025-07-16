@@ -6,7 +6,6 @@ import {
   REPORT_SCHEDULES,
   isLegacyCompliancePeriod
 } from '@/constants/common'
-import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetComplianceReport } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { buildPath, ROUTES } from '@/routes/routes'
