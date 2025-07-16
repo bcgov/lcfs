@@ -15,6 +15,20 @@ beforeAll(async () => {
   vi.stubGlobal('lcfs_config', config)
   testServer.listen({ onUnhandledRequest: 'bypass' })
   vi.mock('react-snowfall')
+  
+  // Mock problematic leaflet components
+  vi.mock('react-leaflet-custom-control', () => ({
+    default: ({ children }) => children
+  }))
+  
+  vi.mock('react-leaflet', () => ({
+    useMap: () => ({
+      fitBounds: vi.fn()
+    }),
+    Marker: ({ children }) => children,
+    Popup: ({ children }) => children,
+    TileLayer: () => null
+  }))
 })
 
 afterEach(() => {
