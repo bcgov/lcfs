@@ -176,7 +176,7 @@ async def test_create_allocation_agreement(
 
     # Verify result
     assert result.version == 0
-    assert result.action_type == ActionTypeEnum.CREATE.value
+    assert result.action_type == ActionTypeEnum.CREATE
 
     # Verify that the mock methods were called with correct arguments
     mock_db_session.add.assert_called_once_with(mock_agreement)
