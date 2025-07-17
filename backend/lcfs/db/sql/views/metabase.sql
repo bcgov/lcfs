@@ -1041,7 +1041,7 @@ SELECT
     fc.edrms,
     fc.last_updated AS "Last Updated",
     fc.application_date AS "Application Date",
-    fc.approval_dateAS "Approval Date",
+    fc.approval_date AS "Approval Date",
     fc.create_date,
     fc.effective_date,
     fc.expiration_date,
