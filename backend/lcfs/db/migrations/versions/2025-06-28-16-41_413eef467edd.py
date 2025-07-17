@@ -1,7 +1,7 @@
 """Supplemental Draft status update
 
 Revision ID: 413eef467edd
-Revises: 2e2f6f7ff391
+Revises: 840a9375c9f2
 Create Date: 2025-06-20 16:41:55.294035
 
 """
@@ -16,7 +16,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "413eef467edd"
-down_revision = "2e2f6f7ff391"
+down_revision = "840a9375c9f2"
 branch_labels = None
 depends_on = None
 

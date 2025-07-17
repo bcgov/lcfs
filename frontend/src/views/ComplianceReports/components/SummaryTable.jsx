@@ -12,7 +12,8 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Input
+  Input,
+  InputAdornment
 } from '@mui/material'
 
 const SummaryTable = ({
@@ -55,22 +56,20 @@ const SummaryTable = ({
 
   const handleCellChange = (e, rowIndex, columnId) => {
     const enteredValue = e.target.value
-
-    // Convert to number
-    let numValue =
-      enteredValue === '' ? 0 : parseInt(enteredValue.replace(/\D/g, ''), 10)
-
-    // Check min and max constraints
-    const { min, max } = getCellConstraints(rowIndex, columnId)
-    if (min !== undefined && numValue < min) {
-      numValue = min
-    } else if (max !== undefined && numValue > max) {
-      numValue = max
+    const column = columns.find((col) => col.id === columnId)
+    
+    let value
+    if (column.editable && column.editableCells && column.editableCells.includes(rowIndex)) {
+      // For currency inputs (penalty fields), store as string to preserve decimal input
+      value = enteredValue.replace(/[^0-9.]/g, '')
+    } else {
+      // Convert to integer for non-currency fields
+      value = enteredValue === '' ? 0 : parseInt(enteredValue.replace(/\D/g, ''), 10)
     }
 
     setData((prevData) => {
       const newData = [...prevData]
-      newData[rowIndex] = { ...newData[rowIndex], [columnId]: numValue }
+      newData[rowIndex] = { ...newData[rowIndex], [columnId]: value }
       return newData
     })
     setEditingCell({ rowIndex, columnId })
@@ -82,6 +81,20 @@ const SummaryTable = ({
       editingCell.rowIndex === rowIndex &&
       editingCell.columnId === columnId
     ) {
+      const column = columns.find((col) => col.id === columnId)
+      
+      // Convert string values to numbers for currency fields when editing stops
+      if (column.editable && column.editableCells && column.editableCells.includes(rowIndex)) {
+        setData((prevData) => {
+          const newData = [...prevData]
+          const currentValue = newData[rowIndex][columnId]
+          const numValue = currentValue === '' ? 0 : parseFloat(currentValue) || 0
+          // Round to 2 decimal places for currency
+          newData[rowIndex][columnId] = Math.round(numValue * 100) / 100
+          return newData
+        })
+      }
+      
       if (onCellEditStopped) {
         onCellEditStopped(data)
       }
@@ -151,18 +164,27 @@ const SummaryTable = ({
                 >
                   {isCellEditable(rowIndex, column.id) ? (
                     <Input
-                      value={formatNumberWithCommas({
-                        value: row[column.id]
-                      })}
+                      value={
+                        column.editable && column.editableCells && column.editableCells.includes(rowIndex)
+                          ? row[column.id]
+                          : formatNumberWithCommas({
+                              value: row[column.id]
+                            })
+                      }
                       onChange={(e) => handleCellChange(e, rowIndex, column.id)}
                       onBlur={() => handleBlur(rowIndex, column.id)}
                       type="text"
                       inputProps={{
-                        inputMode: 'numeric',
-                        pattern: '[0-9]*',
+                        inputMode: column.editable && column.editableCells && column.editableCells.includes(rowIndex) ? 'decimal' : 'numeric',
+                        pattern: column.editable && column.editableCells && column.editableCells.includes(rowIndex) ? '[0-9]*\\.?[0-9]*' : '[0-9]*',
                         ...getCellConstraints(rowIndex, column.id),
                         ...props.inputProps
                       }}
+                      startAdornment={
+                        column.editable && column.editableCells && column.editableCells.includes(rowIndex) ? (
+                          <InputAdornment position="start">$</InputAdornment>
+                        ) : null
+                      }
                       sx={{
                         width: '100%',
                         height: '100%',
