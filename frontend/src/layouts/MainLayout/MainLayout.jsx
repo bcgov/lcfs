@@ -59,7 +59,7 @@ export const MainLayout = () => {
           }}
           disableGutters
         >
-          <Stack container spacing={2}>
+          <Stack container="true" spacing={2}>
             <BCBox mt={-2} size={12}>
               <Crumb />
             </BCBox>
