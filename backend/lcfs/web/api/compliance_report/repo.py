@@ -21,6 +21,7 @@ from typing import List, Optional, TypedDict, Type, Any, Coroutine, Sequence
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import CompliancePeriod
 from lcfs.db.models.comment import ComplianceReportInternalComment
+from lcfs.db.models.comment.InternalComment import InternalComment
 from lcfs.db.models.compliance import (
     CompliancePeriod,
     ComplianceReportListView,
@@ -54,9 +55,10 @@ from lcfs.web.api.base import (
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportViewSchema,
+    LastCommentSchema,
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.role.schema import user_has_roles, is_government_user
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -352,11 +354,80 @@ class ComplianceReportRepository:
         total_count_query = select(func.count()).select_from(query)
         total_count = (await self.db.execute(total_count_query)).scalar()
 
-        # Transform results into Pydantic schemas
-        reports = [
-            ComplianceReportViewSchema.model_validate(report) for report in query_result
-        ]
+        # Transform results into Pydantic schemas and fetch latest comments
+        reports = []
+        for report in query_result:
+            report_dict = {
+                "compliance_report_id": report.compliance_report_id,
+                "compliance_report_group_uuid": report.compliance_report_group_uuid,
+                "version": report.version,
+                "compliance_period_id": report.compliance_period_id,
+                "compliance_period": report.compliance_period,
+                "organization_id": report.organization_id,
+                "organization_name": report.organization_name,
+                "report_type": report.report_type,
+                "report_status_id": report.report_status_id,
+                "report_status": report.report_status,
+                "update_date": report.update_date,
+                "is_latest": report.is_latest,
+            }
+
+            # Get latest comment for this report (only for government users)
+            if user_has_roles(user, [RoleEnum.GOVERNMENT]):
+                latest_comment = await self._get_latest_comment_for_report(
+                    report.compliance_report_id
+                )
+                report_dict["last_comment"] = latest_comment
+
+            reports.append(ComplianceReportViewSchema.model_validate(report_dict))
+
         return reports, total_count
+
+    async def _get_latest_comment_for_report(
+        self, compliance_report_id: int
+    ) -> Optional[LastCommentSchema]:
+        """
+        Retrieve the latest internal comment for a compliance report
+        """
+        # Get all related compliance report IDs for this report (including chain)
+        related_ids = await self.get_related_compliance_report_ids(compliance_report_id)
+
+        # Query for the latest comment across all related reports
+        query = (
+            select(
+                InternalComment.comment,
+                InternalComment.create_date,
+                (UserProfile.first_name + " " + UserProfile.last_name).label(
+                    "full_name"
+                ),
+            )
+            .join(
+                ComplianceReportInternalComment,
+                ComplianceReportInternalComment.internal_comment_id
+                == InternalComment.internal_comment_id,
+            )
+            .join(
+                UserProfile,
+                UserProfile.keycloak_username == InternalComment.create_user,
+            )
+            .where(
+                ComplianceReportInternalComment.compliance_report_id.in_(related_ids)
+            )
+            .order_by(InternalComment.create_date.desc())
+            .limit(1)
+        )
+
+        result = await self.db.execute(query)
+        row = result.first()
+
+        if row:
+            return LastCommentSchema(
+                comment=row.comment,
+                full_name=row.full_name,
+                create_date=row.create_date,
+            )
+
+        return None
 
     def _apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
@@ -453,8 +524,26 @@ class ComplianceReportRepository:
         """
         Retrieve a compliance report mapped to its schema from the database by ID
         """
+        # Do the query and schema conversion in the same session to avoid async context issues
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history)
+                .joinedload(ComplianceReportHistory.user_profile)
+                .joinedload(UserProfile.organization),
+                joinedload(ComplianceReport.transaction),
+            )
+            .where(ComplianceReport.compliance_report_id == report_id)
+        )
 
-        compliance_report = await self.get_compliance_report_by_id(report_id)
+        compliance_report = result.scalars().unique().first()
 
         if not compliance_report:
             return None
@@ -804,6 +893,7 @@ class ComplianceReportRepository:
         self,
         compliance_report_group_uuid: str,
         config: ConfigType,
+        user: UserProfile,
     ) -> List:
         try:
 
@@ -820,21 +910,72 @@ class ComplianceReportRepository:
                 .limit(1)
             )
 
+            # Build base query conditions
+            query_conditions = [
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                exists(subquery),
+                # Always filter out reports with no current_status (NULL)
+                ComplianceReport.current_status_id.is_not(None),
+            ]
+
+            # Add status filtering for government users
+            if is_government_user(user):
+                logger.info(
+                    "Government user detected, adding draft status filter to query",
+                    user_id=user.user_profile_id,
+                    username=user.keycloak_username,
+                )
+                # Filter out draft reports at the database level
+                query_conditions.append(
+                    ComplianceReport.current_status_id
+                    != select(ComplianceReportStatus.compliance_report_status_id)
+                    .where(
+                        ComplianceReportStatus.status
+                        == ComplianceReportStatusEnum.Draft
+                    )
+                    .scalar_subquery()
+                )
+            else:
+                logger.info(
+                    "Non-government user, no additional status filtering applied",
+                    user_id=user.user_profile_id,
+                    username=user.keycloak_username,
+                )
+
+            # Get the specific schedule relationship for this data type
+            schedule_relationships = set()
+            for rel, _ in relationships:
+                schedule_relationships.add(rel)
+
             # Build the main query
             reports_query = (
                 select(ComplianceReport)
-                .where(
-                    ComplianceReport.compliance_report_group_uuid
-                    == compliance_report_group_uuid,
-                    exists(subquery),
-                )
+                .where(and_(*query_conditions))
                 .options(
+                    joinedload(ComplianceReport.organization),
+                    joinedload(ComplianceReport.compliance_period),
+                    joinedload(ComplianceReport.current_status),
+                    joinedload(ComplianceReport.summary),
+                    joinedload(ComplianceReport.history).joinedload(
+                        ComplianceReportHistory.status
+                    ),
+                    joinedload(ComplianceReport.history)
+                    .joinedload(ComplianceReportHistory.user_profile)
+                    .joinedload(UserProfile.organization),
+                    joinedload(ComplianceReport.transaction),
+                    # Load the base schedule relationships first
+                    *[
+                        joinedload(getattr(ComplianceReport, rel))
+                        for rel in schedule_relationships
+                    ],
+                    # Then load their sub-relationships
                     *[
                         joinedload(getattr(ComplianceReport, rel)).joinedload(
                             getattr(model, sub_rel)
                         )
                         for rel, sub_rel in relationships
-                    ]
+                    ],
                 )
                 .order_by(ComplianceReport.version.desc())
             )
@@ -842,8 +983,13 @@ class ComplianceReportRepository:
             # Execute the query and fetch results
             reports = (await self.db.execute(reports_query)).scalars().unique().all()
 
-            # Return the results as DTO objects
-            return [dto.model_validate(report) for report in reports]
+            logger.info(
+                "Changelog data query executed",
+                user_id=user.user_profile_id,
+                total_reports_returned=len(reports),
+            )
+
+            return reports
         except Exception as e:
             logger.error(f"Error in get_changelog_data: {e}", exc_info=True)
             raise

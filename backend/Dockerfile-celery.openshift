@@ -1,0 +1,47 @@
+FROM artifacts.developer.gov.bc.ca/docker-remote/python:3.11-bullseye
+RUN apt-get update && apt-get install -y --no-install-recommends procps \
+  gcc \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN pip install poetry==1.6.1
+
+# Configuring poetry
+RUN poetry config virtualenvs.create true
+
+# Copying requirements of a project
+COPY pyproject.toml poetry.lock /app/
+WORKDIR /app
+
+# Set PYTHONPATH to include the lcfs directory
+ENV PYTHONPATH="${PYTHONPATH}:/app/lcfs"
+
+ENV POETRY_CACHE_DIR=/.cache/pypoetry
+
+# Installing requirements
+RUN poetry install --only main
+
+# Removing gcc
+RUN apt-get purge -y \
+  gcc \
+  && rm -rf /var/lib/apt/lists/*
+
+# Copying the actual application, wait-for-it script, and prestart script
+COPY . /app/
+
+# Note: We mount the local directory using docker-compose so ensure these scripts also have execute permissions 
+# by running the following command on your host machine from the root of this project:
+# chmod +x ./backend/wait-for-it.sh ./backend/lcfs/prestart.sh ./backend/lcfs/start.sh ./backend/lcfs/start-reload.sh
+
+# Update the group ownership and grant the read/write permission for /app
+RUN chgrp -R root /app && \
+    chmod -R g+rw /app && \
+    chgrp -R root /.cache && \
+    chmod -R g+rw /.cache
+# Make all startup scripts executable
+RUN chmod +x /app/wait-for-it.sh /app/lcfs/prestart.sh /app/lcfs/start.sh
+
+# Set the APP_ENVIRONMENT variable to 'production'
+ENV APP_ENVIRONMENT=prod
+
+# default to launching a Celery worker
+CMD ["celery", "-A", "tasks", "worker", "--loglevel=info"]

@@ -148,9 +148,9 @@ describe('DataGridLoading', () => {
       const centerBox = screen.getByLabelText('Loading...')
       const textDiv = screen.getByText('Loading...')
       
-      expect(centerDiv.children).toHaveLength(2)
-      expect(centerDiv.children[0]).toBe(centerBox)
-      expect(centerDiv.children[1]).toBe(textDiv)
+      expect(centerDiv?.children).toHaveLength(2)
+      expect(centerDiv?.children[0]).toBe(centerBox)
+      expect(centerDiv?.children[1]).toBe(textDiv)
     })
   })
 })

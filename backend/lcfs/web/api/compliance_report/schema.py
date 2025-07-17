@@ -36,6 +36,7 @@ RETURN_STATUS_MAPPER = {
 class SupplementalInitiatorType(str, Enum):
     SUPPLIER_SUPPLEMENTAL = "Supplier Supplemental"
     GOVERNMENT_REASSESSMENT = "Government Reassessment"
+    GOVERNMENT_INITIATED = "Government Initiated"
 
 
 class ReportingFrequency(str, Enum):
@@ -137,6 +138,12 @@ class ComplianceReportBaseSchema(BaseSchema):
     assessment_statement: Optional[str] = None
 
 
+class LastCommentSchema(BaseSchema):
+    comment: str
+    full_name: str
+    create_date: datetime
+
+
 class ComplianceReportViewSchema(BaseSchema):
     compliance_report_id: int
     compliance_report_group_uuid: str
@@ -149,6 +156,16 @@ class ComplianceReportViewSchema(BaseSchema):
     report_status_id: int
     report_status: str
     update_date: datetime
+    last_comment: Optional[LastCommentSchema] = None
+    supplemental_initiator: Optional[SupplementalInitiatorType] = None
+    report_frequency: Optional[ReportingFrequency] = None
+    legacy_id: Optional[int] = None
+    transaction_id: Optional[int] = None
+    assessment_statement: Optional[str] = None
+    is_latest: bool
+    latest_report_supplemental_initiator: Optional[SupplementalInitiatorType] = None
+    latest_supplemental_create_date: Optional[datetime] = None
+    latest_status: Optional[str] = None
 
 
 class ChainedComplianceReportSchema(BaseSchema):
@@ -196,6 +213,13 @@ class ComplianceReportSummarySchema(BaseSchema):
     is_locked: Optional[bool] = False
     quarter: Optional[int] = None
     early_issuance_summary: Optional[List[ComplianceReportSummaryRowSchema]] = None
+    
+    # Penalty override fields
+    penalty_override_enabled: Optional[bool] = False
+    renewable_penalty_override: Optional[float] = None
+    low_carbon_penalty_override: Optional[float] = None
+    penalty_override_date: Optional[datetime] = None
+    penalty_override_user: Optional[int] = None
 
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):
@@ -206,6 +230,13 @@ class ComplianceReportSummaryUpdateSchema(BaseSchema):
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
     summary_id: int
     is_locked: bool
+    
+    # Penalty override fields
+    penalty_override_enabled: Optional[bool] = False
+    renewable_penalty_override: Optional[float] = None
+    low_carbon_penalty_override: Optional[float] = None
+    penalty_override_date: Optional[datetime] = None
+    penalty_override_user: Optional[int] = None
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
