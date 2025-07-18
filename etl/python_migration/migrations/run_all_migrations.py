@@ -19,6 +19,7 @@ from core.utils import setup_logging
 from core.database import tfrs_db, lcfs_db
 
 # Import all migration modules
+from .migrate_data_cleanup import DataCleanupMigrator
 from .migrate_compliance_summaries import ComplianceSummaryMigrator
 from .migrate_compliance_summary_updates import ComplianceSummaryUpdater
 from .migrate_compliance_report_history import ComplianceReportHistoryMigrator
@@ -113,6 +114,7 @@ class MigrationRunner:
 
         # Define migration order and configurations
         migrations = [
+            (DataCleanupMigrator, "Data Cleanup Migration (Pre-migration)"),
             (ComplianceSummaryMigrator, "Compliance Summary Migration"),
             (ComplianceSummaryUpdater, "Compliance Summary Update"),
             (ComplianceReportHistoryMigrator, "Compliance Report History Migration"),
@@ -168,7 +170,17 @@ class MigrationRunner:
             overall_duration, total_processed, total_records, failed_migrations
         )
 
-        return len(failed_migrations) == 0
+        # Return detailed results for orchestrator
+        results_dict = {}
+        for result in self.results:
+            results_dict[result["name"]] = {
+                "success": result["success"],
+                "message": result["message"],
+                "records_processed": result["processed"],
+                "total_records": result["total"],
+            }
+
+        return results_dict
 
     def print_summary(
         self,
@@ -217,9 +229,12 @@ def main():
         sys.exit(1)
 
     # Run all migrations
-    success = runner.run_all_migrations()
+    results = runner.run_all_migrations()
 
-    if success:
+    # Check if all migrations succeeded
+    all_success = all(result.get("success", False) for result in results.values())
+
+    if all_success:
         logger.info("🎉 All migrations completed successfully!")
         sys.exit(0)
     else:

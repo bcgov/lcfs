@@ -225,7 +225,10 @@ reset-tfrs:
 
 reset-lcfs:
 	@echo "🔄 Resetting LCFS database from existing .tar file..."
-	@python setup/database_manager.py reset lcfs lcfs
+	@python setup/database_manager.py reset lcfs db
+	@echo "🔧 Running Alembic database migrations..."
+	@cd ../../backend && poetry run alembic upgrade head
+	@echo "✅ Database schema updated to latest version"
 
 reset: reset-lcfs
 	@echo "✅ LCFS database has been reset from the existing dump file"

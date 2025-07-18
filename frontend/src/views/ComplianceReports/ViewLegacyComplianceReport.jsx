@@ -12,6 +12,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useOrganization } from '@/hooks/useOrganization'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material'
+import { AssessmentCard } from '@/views/ComplianceReports/components/AssessmentCard.jsx'
 
 const iconStyle = {
   width: '2rem',

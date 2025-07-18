@@ -196,11 +196,27 @@ class AllocationAgreementRepository:
                 q4_quantity=allocation_agreement.q4_quantity,
                 units=allocation_agreement.units,
                 compliance_report_id=allocation_agreement.compliance_report_id,
-                allocation_transaction_type=allocation_agreement.allocation_transaction_type.type,
-                fuel_type=allocation_agreement.fuel_type.fuel_type,
+                allocation_transaction_type=(
+                    allocation_agreement.allocation_transaction_type.type
+                    if allocation_agreement.allocation_transaction_type
+                    else None
+                ),
+                fuel_type=(
+                    allocation_agreement.fuel_type.fuel_type
+                    if allocation_agreement.fuel_type
+                    else None
+                ),
                 fuel_type_other=allocation_agreement.fuel_type_other,
-                fuel_category=allocation_agreement.fuel_category.category,
-                provision_of_the_act=allocation_agreement.provision_of_the_act.name,
+                fuel_category=(
+                    allocation_agreement.fuel_category.category
+                    if allocation_agreement.fuel_category
+                    else None
+                ),
+                provision_of_the_act=(
+                    allocation_agreement.provision_of_the_act.name
+                    if allocation_agreement.provision_of_the_act
+                    else None
+                ),
                 # Set fuel_code only if it exists
                 fuel_code=(
                     allocation_agreement.fuel_code.fuel_code
