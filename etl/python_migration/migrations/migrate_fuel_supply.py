@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-Fuel Supply Migration Script
+Fixed Fuel Supply Migration Script
 
-Migrates fuel supply (Schedule B) data from TFRS to LCFS database.
-This script replicates the functionality of fuel_supply.groovy
+Migrates fuel supply (Schedule B) data from TFRS to LCFS database with proper record-level versioning.
 """
 
 import os
@@ -159,15 +158,6 @@ class FuelSupplyMigrator:
                 return None
         return None
 
-    def fetch_sql_fallback_data(self, tfrs_cursor, legacy_id: int) -> List[Dict]:
-        """Fallback: Retrieve fuel supply data from TFRS using SQL"""
-        # DISABLED: This query causes "relation 'fuel_supply' does not exist" errors
-        # because the TFRS database doesn't have a fuel_supply table with this structure
-        logger.warning(
-            f"SQL fallback disabled for legacy_id {legacy_id} - using snapshot data only"
-        )
-        return []
-
     def lookup_fuel_category_id(self, lcfs_cursor, fuel_category: str) -> Optional[int]:
         """Look up fuel category ID by name"""
         if not fuel_category:
@@ -233,59 +223,6 @@ class FuelSupplyMigrator:
         available_provisions = [row[0] for row in lcfs_cursor.fetchall()]
         logger.info(f"Available provisions: {available_provisions}")
         return None
-
-    def lookup_fuel_code_id(
-        self, lcfs_cursor, fuel_code_prefix: str, fuel_code_suffix: str = None
-    ) -> Optional[int]:
-        """Look up fuel code ID by prefix and suffix"""
-        if not fuel_code_prefix:
-            return None
-
-        try:
-            # First, find the prefix_id from the fuel_code_prefix table
-            prefix_query = (
-                "SELECT fuel_code_prefix_id FROM fuel_code_prefix WHERE prefix = %s"
-            )
-            lcfs_cursor.execute(prefix_query, (fuel_code_prefix,))
-            prefix_result = lcfs_cursor.fetchone()
-
-            if not prefix_result:
-                logger.debug(f"No fuel code prefix found for: {fuel_code_prefix}")
-                return None
-
-            prefix_id = prefix_result[0]
-
-            # Now find the fuel code using prefix_id and suffix
-            if fuel_code_suffix:
-                fuel_code_query = """
-                    SELECT fuel_code_id FROM fuel_code 
-                    WHERE prefix_id = %s AND fuel_suffix = %s
-                    AND fuel_status_id != 3  -- Exclude deleted fuel codes
-                """
-                lcfs_cursor.execute(fuel_code_query, (prefix_id, fuel_code_suffix))
-            else:
-                fuel_code_query = """
-                    SELECT fuel_code_id FROM fuel_code 
-                    WHERE prefix_id = %s AND fuel_suffix IS NULL
-                    AND fuel_status_id != 3  -- Exclude deleted fuel codes
-                """
-                lcfs_cursor.execute(fuel_code_query, (prefix_id,))
-
-            result = lcfs_cursor.fetchone()
-            if result:
-                logger.debug(
-                    f"Found fuel_code_id {result[0]} for prefix '{fuel_code_prefix}' suffix '{fuel_code_suffix}'"
-                )
-                return result[0]
-            else:
-                logger.debug(
-                    f"No fuel code found for prefix '{fuel_code_prefix}' suffix '{fuel_code_suffix}'"
-                )
-                return None
-
-        except Exception as e:
-            logger.error(f"Error looking up fuel code: {e}")
-            return None
 
     def lookup_fuel_code_by_full_code(
         self, lcfs_cursor, full_fuel_code: str
@@ -520,7 +457,6 @@ class FuelSupplyMigrator:
         legacy_id: int,
         group_uuid: str,
         version: int,
-        action_type: str,
         lcfs_cursor,
     ) -> bool:
         """Process a single Schedule B record for fuel supply"""
@@ -684,9 +620,9 @@ class FuelSupplyMigrator:
                 )
                 debits = self.safe_get_number(record, "debits", use_snapshot, legacy_id)
                 if credits is not None:
-                    compliance_units = -credits
+                    compliance_units = credits  # Credits are positive compliance units
                 elif debits is not None:
-                    compliance_units = debits
+                    compliance_units = -debits  # Debits are negative compliance units
             else:
                 # SQL fallback
                 compliance_units = self.safe_get_number(
@@ -793,7 +729,7 @@ class FuelSupplyMigrator:
 
             # Extract "other" fields - only use fuel_type_other since that's the only one that exists
             fuel_type_other = record.get("fuel_type_other")
-
+            
             lcfs_cursor.execute(
                 insert_query,
                 (
@@ -865,11 +801,6 @@ class FuelSupplyMigrator:
             logger.info(
                 f"No snapshot data available for legacy_id {legacy_id}, using SQL fallback"
             )
-            sql_records = self.fetch_sql_fallback_data(tfrs_cursor, legacy_id)
-            for record in sql_records:
-                normalized_record = self.normalize_tfrs_record(record)
-                if normalized_record:
-                    records.append(normalized_record)
 
         logger.info(
             f"Final count: {len(records)} processed records for legacy_id {legacy_id}"
@@ -927,7 +858,7 @@ class FuelSupplyMigrator:
         try:
             # Get the full record data
             full_record = record_data.get("_full_record", record_data)
-
+            
             # Process the record using existing logic
             return self.process_schedule_b_record(
                 full_record,
@@ -936,7 +867,6 @@ class FuelSupplyMigrator:
                 0,  # legacy_id (not used in new logic)
                 group_uuid,
                 version,
-                "CREATE" if version == 1 else "UPDATE",
                 lcfs_cursor,
             )
         except Exception as e:
@@ -1111,11 +1041,11 @@ class FuelSupplyMigrator:
         self, record, compliance_report_id, logical_records, lcfs_cursor
     ):
         """Process an individual fuel supply record"""
-        # Generate logical record key
+        # Generate logical record key based on business identifiers
         record_key = self.generate_logical_record_key(record)
 
-        # Normalize record data
-        normalized_data = self.normalize_tfrs_record(record)
+        # Record is already normalized from get_fuel_supply_records_for_report
+        normalized_data = record
         if not normalized_data:
             logger.debug("Skipped record due to normalization failure")
             return False
@@ -1196,31 +1126,39 @@ class FuelSupplyMigrator:
 
     def generate_logical_record_key(self, record: Dict) -> str:
         """Generate a stable key that identifies a logical fuel supply record across compliance reports
-
+        
         This key represents the business identity of a fuel supply record, independent of
         which compliance report version it appears in.
         """
+        # Extract values from the full record if available
+        full_record = record.get("_full_record", record)
+        
         # Use business identifiers that define a unique logical fuel supply record
         key_parts = [
-            str(record.get("fuel_type", "")).strip(),
-            str(record.get("fuel_category", "")).strip(),
-            str(record.get("provision_act", "")).strip(),
-            str(record.get("fuel_code_prefix", "")).strip(),
-            str(record.get("fuel_code_suffix", "")).strip(),
-            str(record.get("end_use", "")).strip(),
+            str(full_record.get("fuel_type", "")).strip(),
+            str(full_record.get("fuel_class", "") or full_record.get("fuel_category", "")).strip(),
+            str(full_record.get("provision_of_the_act_description", "") or full_record.get("provision_act", "")).strip(),
+            str(full_record.get("fuel_code", "")).strip(),  # This is the TFRS numeric ID
+            str(full_record.get("fuel_code_description", "")).strip(),  # This is the actual fuel code string
+            str(full_record.get("end_use", "")).strip(),
             # Add other business identifiers that make a record unique
-            str(record.get("fuel_type_other", "")).strip(),
+            str(full_record.get("fuel_type_other", "")).strip(),
         ]
         return "|".join(key_parts)
 
     def records_are_different(self, new_data: Dict, old_data: Dict) -> bool:
         """Check if the data content of a logical record has changed"""
+        # Extract full records for comparison
+        new_full = new_data.get("_full_record", new_data)
+        old_full = old_data.get("_full_record", old_data)
+        
         # Compare the meaningful data fields (excluding metadata)
         data_fields = [
             "quantity",
-            "units",
-            "ci_of_fuel",
-            "compliance_units",
+            "unit_of_measure",
+            "credits",
+            "debits",
+            "effective_carbon_intensity",
             "target_ci",
             "energy_density",
             "eer",
@@ -1228,151 +1166,18 @@ class FuelSupplyMigrator:
         ]
 
         for field in data_fields:
-            new_val = str(new_data.get(field, "")).strip()
-            old_val = str(old_data.get(field, "")).strip()
+            new_val = str(new_full.get(field, "")).strip()
+            old_val = str(old_full.get(field, "")).strip()
             if new_val != old_val:
+                logger.debug(f"Field '{field}' changed from '{old_val}' to '{new_val}'")
                 return True
 
         return False
 
-    def get_standardized_fuel_data(
-        self,
-        lcfs_cursor,
-        fuel_type_id: int,
-        fuel_category_id: int,
-        end_use_id: int,
-        compliance_period: str,
-        fuel_code_id: Optional[int] = None,
-        provision_id: Optional[int] = None,
-    ) -> Dict[str, Optional[float]]:
-        """
-        Fetch standardized fuel data similar to LCFS backend logic.
-        Returns calculated values for RCI, TCI, EER, energy_density, UCI.
-        """
-        result = {
-            "effective_carbon_intensity": None,  # RCI
-            "target_ci": None,  # TCI
-            "eer": 1.0,  # EER (default to 1.0)
-            "energy_density": None,  # Energy Density
-            "uci": None,  # UCI
-        }
-
-        try:
-            # Get compliance period ID
-            lcfs_cursor.execute(
-                "SELECT compliance_period_id FROM compliance_period WHERE description = %s",
-                (compliance_period,),
-            )
-            compliance_period_row = lcfs_cursor.fetchone()
-            if not compliance_period_row:
-                logger.warning(f"No compliance period found for '{compliance_period}'")
-                return result
-            compliance_period_id = compliance_period_row[0]
-
-            # Get fuel type details
-            lcfs_cursor.execute(
-                "SELECT unrecognized, default_carbon_intensity FROM fuel_type WHERE fuel_type_id = %s",
-                (fuel_type_id,),
-            )
-            fuel_type_row = lcfs_cursor.fetchone()
-            if not fuel_type_row:
-                logger.warning(f"No fuel type found for ID {fuel_type_id}")
-                return result
-            is_unrecognized, default_ci = fuel_type_row
-
-            # Get energy density for this fuel type and compliance period
-            lcfs_cursor.execute(
-                """
-                SELECT density FROM energy_density 
-                WHERE fuel_type_id = %s AND compliance_period_id <= %s 
-                ORDER BY compliance_period_id DESC LIMIT 1
-            """,
-                (fuel_type_id, compliance_period_id),
-            )
-            energy_density_row = lcfs_cursor.fetchone()
-            if energy_density_row:
-                result["energy_density"] = float(energy_density_row[0])
-
-            # Get effective carbon intensity (RCI)
-            if fuel_code_id:
-                # Use fuel code carbon intensity if available
-                lcfs_cursor.execute(
-                    "SELECT carbon_intensity FROM fuel_code WHERE fuel_code_id = %s",
-                    (fuel_code_id,),
-                )
-                fuel_code_row = lcfs_cursor.fetchone()
-                if fuel_code_row:
-                    result["effective_carbon_intensity"] = float(fuel_code_row[0])
-
-            if not result["effective_carbon_intensity"]:
-                if is_unrecognized:
-                    # Use category carbon intensity for unrecognized fuels
-                    lcfs_cursor.execute(
-                        """
-                        SELECT cci.category_carbon_intensity 
-                        FROM category_carbon_intensity cci
-                        WHERE cci.fuel_category_id = %s AND cci.compliance_period_id = %s
-                    """,
-                        (fuel_category_id, compliance_period_id),
-                    )
-                    category_ci_row = lcfs_cursor.fetchone()
-                    if category_ci_row:
-                        result["effective_carbon_intensity"] = float(category_ci_row[0])
-                else:
-                    # Use default carbon intensity from fuel type
-                    if default_ci:
-                        result["effective_carbon_intensity"] = float(default_ci)
-
-            # Get target carbon intensity (TCI)
-            lcfs_cursor.execute(
-                """
-                SELECT target_carbon_intensity 
-                FROM target_carbon_intensity 
-                WHERE fuel_category_id = %s AND compliance_period_id = %s
-            """,
-                (fuel_category_id, compliance_period_id),
-            )
-            tci_row = lcfs_cursor.fetchone()
-            if tci_row:
-                result["target_ci"] = float(tci_row[0])
-
-            # Get energy effectiveness ratio (EER)
-            if end_use_id:
-                lcfs_cursor.execute(
-                    """
-                    SELECT ratio FROM energy_effectiveness_ratio 
-                    WHERE fuel_type_id = %s AND fuel_category_id = %s 
-                    AND compliance_period_id = %s AND end_use_type_id = %s
-                """,
-                    (fuel_type_id, fuel_category_id, compliance_period_id, end_use_id),
-                )
-                eer_row = lcfs_cursor.fetchone()
-                if eer_row:
-                    result["eer"] = float(eer_row[0])
-
-            # Get additional carbon intensity (UCI)
-            if end_use_id:
-                lcfs_cursor.execute(
-                    """
-                    SELECT intensity FROM additional_carbon_intensity 
-                    WHERE fuel_type_id = %s AND end_use_type_id = %s 
-                    AND compliance_period_id = %s
-                """,
-                    (fuel_type_id, end_use_id, compliance_period_id),
-                )
-                uci_row = lcfs_cursor.fetchone()
-                if uci_row:
-                    result["uci"] = float(uci_row[0])
-
-        except Exception as e:
-            logger.error(f"Error getting standardized fuel data: {e}")
-
-        return result
-
 
 def main():
     setup_logging()
-    logger.info("Starting Fuel Supply Migration")
+    logger.info("Starting Fixed Fuel Supply Migration")
 
     migrator = FuelSupplyMigrator()
 
