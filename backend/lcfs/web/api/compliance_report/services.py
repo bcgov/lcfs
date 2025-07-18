@@ -661,6 +661,12 @@ class ComplianceReportServices:
             report.compliance_report_group_uuid
         )
 
+        # Convert SQLAlchemy objects to Pydantic schemas to avoid async context issues
+        compliance_report_chain = [
+            ComplianceReportBaseSchema.model_validate(report)
+            for report in compliance_report_chain
+        ]
+
         is_newest = len(compliance_report_chain) - 1 == report.version
         had_been_assessed = any(
             report.current_status.status == ComplianceReportStatusEnum.Assessed.value
@@ -698,11 +704,10 @@ class ComplianceReportServices:
         """
         Fetches a specific compliance report by ID.
         """
-        report = await self.repo.get_compliance_report_by_id(report_id)
-        if report is None:
+        validated_report = await self.repo.get_compliance_report_schema_by_id(report_id)
+        if validated_report is None:
             raise DataNotFoundException("Compliance report not found.")
 
-        validated_report = ComplianceReportBaseSchema.model_validate(report)
         masked_report = self._mask_report_status([validated_report], user)[0]
 
         history_masked_report = self._mask_report_status_for_history(
@@ -928,6 +933,7 @@ class ComplianceReportServices:
             "other_uses",
             "allocation_agreements",
         ],
+        user: UserProfile,
     ) -> List:
 
         data_map = {
@@ -997,11 +1003,12 @@ class ComplianceReportServices:
         id_field = config["id_field"]
 
         reports = await self.repo.get_changelog_data(
-            compliance_report_group_uuid, config
+            compliance_report_group_uuid, config, user
         )
 
         if not reports or len(reports) == 0:
             return []
+
 
         group_map = defaultdict(dict)
         create_date_map = {}
@@ -1085,7 +1092,10 @@ class ComplianceReportServices:
         for group_uuid, versions in group_map.items():
             latest_version = max(versions.keys())
             latest_item = versions[latest_version]
-            if hasattr(latest_item, "compliance_units"):
+            if (
+                hasattr(latest_item, "compliance_units")
+                and latest_item.compliance_units is not None
+            ):
                 latest_item.compliance_units = round(latest_item.compliance_units)
 
             if latest_item.action_type == "DELETE":

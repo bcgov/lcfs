@@ -58,7 +58,7 @@ from lcfs.web.api.compliance_report.schema import (
     LastCommentSchema,
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
-from lcfs.web.api.role.schema import user_has_roles
+from lcfs.web.api.role.schema import user_has_roles, is_government_user
 from lcfs.web.core.decorators import repo_handler
 
 logger = structlog.get_logger(__name__)
@@ -524,8 +524,26 @@ class ComplianceReportRepository:
         """
         Retrieve a compliance report mapped to its schema from the database by ID
         """
+        # Do the query and schema conversion in the same session to avoid async context issues
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history)
+                .joinedload(ComplianceReportHistory.user_profile)
+                .joinedload(UserProfile.organization),
+                joinedload(ComplianceReport.transaction),
+            )
+            .where(ComplianceReport.compliance_report_id == report_id)
+        )
 
-        compliance_report = await self.get_compliance_report_by_id(report_id)
+        compliance_report = result.scalars().unique().first()
 
         if not compliance_report:
             return None
@@ -875,6 +893,7 @@ class ComplianceReportRepository:
         self,
         compliance_report_group_uuid: str,
         config: ConfigType,
+        user: UserProfile,
     ) -> List:
         try:
 
@@ -891,21 +910,72 @@ class ComplianceReportRepository:
                 .limit(1)
             )
 
+            # Build base query conditions
+            query_conditions = [
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid,
+                exists(subquery),
+                # Always filter out reports with no current_status (NULL)
+                ComplianceReport.current_status_id.is_not(None),
+            ]
+
+            # Add status filtering for government users
+            if is_government_user(user):
+                logger.info(
+                    "Government user detected, adding draft status filter to query",
+                    user_id=user.user_profile_id,
+                    username=user.keycloak_username,
+                )
+                # Filter out draft reports at the database level
+                query_conditions.append(
+                    ComplianceReport.current_status_id
+                    != select(ComplianceReportStatus.compliance_report_status_id)
+                    .where(
+                        ComplianceReportStatus.status
+                        == ComplianceReportStatusEnum.Draft
+                    )
+                    .scalar_subquery()
+                )
+            else:
+                logger.info(
+                    "Non-government user, no additional status filtering applied",
+                    user_id=user.user_profile_id,
+                    username=user.keycloak_username,
+                )
+
+            # Get the specific schedule relationship for this data type
+            schedule_relationships = set()
+            for rel, _ in relationships:
+                schedule_relationships.add(rel)
+
             # Build the main query
             reports_query = (
                 select(ComplianceReport)
-                .where(
-                    ComplianceReport.compliance_report_group_uuid
-                    == compliance_report_group_uuid,
-                    exists(subquery),
-                )
+                .where(and_(*query_conditions))
                 .options(
+                    joinedload(ComplianceReport.organization),
+                    joinedload(ComplianceReport.compliance_period),
+                    joinedload(ComplianceReport.current_status),
+                    joinedload(ComplianceReport.summary),
+                    joinedload(ComplianceReport.history).joinedload(
+                        ComplianceReportHistory.status
+                    ),
+                    joinedload(ComplianceReport.history)
+                    .joinedload(ComplianceReportHistory.user_profile)
+                    .joinedload(UserProfile.organization),
+                    joinedload(ComplianceReport.transaction),
+                    # Load the base schedule relationships first
+                    *[
+                        joinedload(getattr(ComplianceReport, rel))
+                        for rel in schedule_relationships
+                    ],
+                    # Then load their sub-relationships
                     *[
                         joinedload(getattr(ComplianceReport, rel)).joinedload(
                             getattr(model, sub_rel)
                         )
                         for rel, sub_rel in relationships
-                    ]
+                    ],
                 )
                 .order_by(ComplianceReport.version.desc())
             )
@@ -913,8 +983,13 @@ class ComplianceReportRepository:
             # Execute the query and fetch results
             reports = (await self.db.execute(reports_query)).scalars().unique().all()
 
-            # Return the results as DTO objects
-            return [dto.model_validate(report) for report in reports]
+            logger.info(
+                "Changelog data query executed",
+                user_id=user.user_profile_id,
+                total_reports_returned=len(reports),
+            )
+
+            return reports
         except Exception as e:
             logger.error(f"Error in get_changelog_data: {e}", exc_info=True)
             raise
