@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from lcfs.web.api.base import BaseSchema
@@ -46,8 +46,8 @@ class TaskResponse(BaseSchema):
     failure_count: int
     task_function: str
     parameters: Optional[Dict[str, Any]]
-    created_at: datetime
-    updated_at: Optional[datetime] = None
+    create_date: datetime
+    update_date: Optional[datetime] = None
 
     class Config:
         arbitrary_types_allowed = True

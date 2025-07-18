@@ -1,6 +1,6 @@
-import datetime
+from datetime import datetime
 from typing import List
-import croniter
+from croniter import croniter
 from fastapi import Depends
 from lcfs.web.api.tasks.repo import TaskRepository
 from lcfs.db.models.tasks import ScheduledTask
@@ -19,7 +19,7 @@ class TaskService:
 
     @service_handler
     async def get_task_by_id(self, task_id: int) -> TaskResponse:
-        task = await self.repo.get_task(task_id)
+        task = await self.repo.get_task_by_id(task_id)
         return TaskResponse.model_validate(task)
 
     @service_handler

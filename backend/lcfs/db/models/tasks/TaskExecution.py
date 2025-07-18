@@ -8,6 +8,7 @@ class TaskExecution(BaseModel, Auditable):
     """
 
     __tablename__ = "task_executions"
+    __table_args__ = {"comment": "Represents an scheduled batch tasks"}
 
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, index=True, nullable=False)

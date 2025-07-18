@@ -13,10 +13,10 @@ logger = structlog.get_logger(__name__)
 class TaskRepository:
     def __init__(
         self,
-        session: AsyncSession = Depends(get_async_db_session),
+        db: AsyncSession = Depends(get_async_db_session),
         request: Request = None,
     ):
-        self.session = session
+        self.db = db
         self.request = request
 
     @repo_handler
@@ -42,6 +42,7 @@ class TaskRepository:
     @repo_handler
     async def create_task(self, task: ScheduledTask):
         self.db.add(task)
+        await self.db.flush()
         await self.db.refresh(task)
         return task
 
