@@ -1025,10 +1025,8 @@ class FuelSupplyMigrator:
             try:
                 # Load mappings first
                 self.load_mappings(lcfs_cursor)
-                # Clear existing fuel supply data
-                logger.info("About to clear existing fuel supply data...")
-                lcfs_cursor.execute("DELETE FROM fuel_supply")
-                logger.info("Successfully cleared existing fuel supply data")
+                # Skip clearing data - migration should be additive only
+                logger.info("Migration running in additive mode - no existing data will be deleted")
                 lcfs_conn.commit()
                 logger.info("Setup completed successfully")
             except Exception as e:
