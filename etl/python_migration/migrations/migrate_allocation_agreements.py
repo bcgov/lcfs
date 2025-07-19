@@ -212,13 +212,13 @@ class AllocationAgreementMigrator:
     def generate_logical_record_key(self, record_data: Dict) -> str:
         """Generate a logical key for allocation agreement versioning based on business data"""
         # Use key business fields that define a unique logical allocation agreement
+        # NOTE: Quantity is excluded so that quantity changes create new versions, not new records
         transaction_partner = record_data.get("transaction_partner", "").strip()
         responsibility = record_data.get("responsibility", "").strip()
         fuel_type = record_data.get("fuel_type", "").strip()
-        quantity = str(record_data.get("quantity", "")).strip()
         
-        # Create a logical key from the business identifiers
-        logical_key = f"{transaction_partner}|{responsibility}|{fuel_type}|{quantity}"
+        # Create a logical key from the business identifiers (excluding quantity)
+        logical_key = f"{transaction_partner}|{responsibility}|{fuel_type}"
         return logical_key
 
     def insert_version_row(
