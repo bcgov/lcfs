@@ -181,54 +181,7 @@ class AllocationAgreementRepository:
         result = await self.db.execute(allocation_agreements_select)
         allocation_agreements = result.unique().scalars().all()
 
-        return [
-            AllocationAgreementSchema(
-                allocation_agreement_id=allocation_agreement.allocation_agreement_id,
-                transaction_partner=allocation_agreement.transaction_partner,
-                transaction_partner_email=allocation_agreement.transaction_partner_email,
-                transaction_partner_phone=allocation_agreement.transaction_partner_phone,
-                postal_address=allocation_agreement.postal_address,
-                ci_of_fuel=allocation_agreement.ci_of_fuel,
-                quantity=allocation_agreement.quantity,
-                q1_quantity=allocation_agreement.q1_quantity,
-                q2_quantity=allocation_agreement.q2_quantity,
-                q3_quantity=allocation_agreement.q3_quantity,
-                q4_quantity=allocation_agreement.q4_quantity,
-                units=allocation_agreement.units,
-                compliance_report_id=allocation_agreement.compliance_report_id,
-                allocation_transaction_type=(
-                    allocation_agreement.allocation_transaction_type.type
-                    if allocation_agreement.allocation_transaction_type
-                    else None
-                ),
-                fuel_type=(
-                    allocation_agreement.fuel_type.fuel_type
-                    if allocation_agreement.fuel_type
-                    else None
-                ),
-                fuel_type_other=allocation_agreement.fuel_type_other,
-                fuel_category=(
-                    allocation_agreement.fuel_category.category
-                    if allocation_agreement.fuel_category
-                    else None
-                ),
-                provision_of_the_act=(
-                    allocation_agreement.provision_of_the_act.name
-                    if allocation_agreement.provision_of_the_act
-                    else None
-                ),
-                # Set fuel_code only if it exists
-                fuel_code=(
-                    allocation_agreement.fuel_code.fuel_code
-                    if allocation_agreement.fuel_code
-                    else None
-                ),
-                group_uuid=allocation_agreement.group_uuid,
-                version=allocation_agreement.version,
-                action_type=allocation_agreement.action_type,
-            )
-            for allocation_agreement in allocation_agreements
-        ]
+        return allocation_agreements
 
     @repo_handler
     async def get_allocation_agreements_paginated(

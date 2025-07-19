@@ -122,19 +122,19 @@ class AllocationAgreementChangelogSchema(BaseSchema):
     allocation_transaction_type: str
     transaction_partner: str
     postal_address: str
-    transaction_partner_email: str
-    transaction_partner_phone: str
+    transaction_partner_email: Optional[str] = None
+    transaction_partner_phone: Optional[str] = None
     fuel_type: AllocationAgreementChangelogFuelTypeSchema
     fuel_type_other: Optional[str] = None
     ci_of_fuel: float
-    provision_of_the_act: str
+    provision_of_the_act: Optional[str] = None
     quantity: Optional[int] = None
     q1_quantity: Optional[int] = None
     q2_quantity: Optional[int] = None
     q3_quantity: Optional[int] = None
     q4_quantity: Optional[int] = None
     units: str
-    fuel_category: FuelCategorySchema
+    fuel_category: Optional[FuelCategorySchema] = None
     fuel_code: Optional[FuelCodeSchema] = None
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None
@@ -154,19 +154,19 @@ class AllocationAgreementCreateSchema(BaseSchema):
     allocation_transaction_type: str
     transaction_partner: str
     postal_address: str
-    transaction_partner_email: str
-    transaction_partner_phone: str
+    transaction_partner_email: Optional[str] = None
+    transaction_partner_phone: Optional[str] = None
     fuel_type: str
     fuel_type_other: Optional[str] = None
     ci_of_fuel: Optional[float] = 0
-    provision_of_the_act: str
+    provision_of_the_act: Optional[str] = None
     quantity: Optional[int] = None
     q1_quantity: Optional[int] = None
     q2_quantity: Optional[int] = None
     q3_quantity: Optional[int] = None
     q4_quantity: Optional[int] = None
     units: Optional[str] = None
-    fuel_category: str
+    fuel_category: Optional[str] = None
     fuel_code: Optional[str] = None
     deleted: Optional[bool] = None
     group_uuid: Optional[str] = None

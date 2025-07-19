@@ -224,6 +224,41 @@ class FuelSupplyMigrator:
         logger.info(f"Available provisions: {available_provisions}")
         return None
 
+    def lookup_fuel_code_id(
+        self, lcfs_cursor, fuel_code_prefix: str, fuel_code_suffix: str
+    ) -> Optional[int]:
+        """Look up LCFS fuel code ID by prefix and suffix"""
+        if not fuel_code_prefix:
+            return None
+
+        try:
+            # Try to find exact match for prefix and suffix
+            lcfs_cursor.execute(
+                """
+                SELECT fc.fuel_code_id 
+                FROM fuel_code fc
+                JOIN fuel_code_prefix fcp ON fc.prefix_id = fcp.fuel_code_prefix_id
+                WHERE fcp.prefix = %s AND fc.fuel_suffix = %s
+                AND fc.fuel_status_id != 3  -- Exclude deleted fuel codes
+                """,
+                (fuel_code_prefix, fuel_code_suffix),
+            )
+            result = lcfs_cursor.fetchone()
+            if result:
+                logger.debug(
+                    f"Found LCFS fuel code ID {result[0]} for prefix={fuel_code_prefix}, suffix={fuel_code_suffix}"
+                )
+                return result[0]
+
+            logger.warning(
+                f"Could not find LCFS fuel code for prefix={fuel_code_prefix}, suffix={fuel_code_suffix}"
+            )
+            return None
+
+        except Exception as e:
+            logger.error(f"Error looking up fuel code by prefix/suffix: {e}")
+            return None
+
     def lookup_fuel_code_by_full_code(
         self, lcfs_cursor, full_fuel_code: str
     ) -> Optional[int]:
@@ -249,6 +284,26 @@ class FuelSupplyMigrator:
                     f"Found exact LCFS fuel code match for {full_fuel_code}: {result[0]}"
                 )
                 return result[0]
+
+            # If exact match fails, try with "C-" prefix (TFRS vs LCFS fuel code format difference)
+            if full_fuel_code.startswith("BCLCF"):
+                prefixed_fuel_code = f"C-{full_fuel_code}"
+                lcfs_cursor.execute(
+                    """
+                    SELECT fc.fuel_code_id 
+                    FROM fuel_code fc
+                    JOIN fuel_code_prefix fcp ON fc.prefix_id = fcp.fuel_code_prefix_id
+                    WHERE CONCAT(fcp.prefix, fc.fuel_suffix) = %s
+                    AND fc.fuel_status_id != 3  -- Exclude deleted fuel codes
+                    """,
+                    (prefixed_fuel_code,),
+                )
+                result = lcfs_cursor.fetchone()
+                if result:
+                    logger.debug(
+                        f"Found LCFS fuel code with C- prefix for {full_fuel_code} -> {prefixed_fuel_code}: {result[0]}"
+                    )
+                    return result[0]
 
             # If no exact match, try parsing the fuel code to extract prefix and suffix
             # Look for patterns like BCLCF236.1 where BCLCF is prefix and 236.1 is suffix
@@ -877,7 +932,6 @@ class FuelSupplyMigrator:
     def migrate(self) -> Tuple[int, int]:
         """Migrate fuel supply data from TFRS to LCFS with proper independent record versioning"""
         # Initialize tracking variables
-        logical_records = {}
         processed_count = 0
         total_count = 0
         total_reports_processed = 0
@@ -897,40 +951,51 @@ class FuelSupplyMigrator:
                 f"Found {len(compliance_reports)} compliance reports to process"
             )
 
-            # Step 3: Process each compliance report
+            # Step 3: Group reports by organization + period and process each group
+            report_groups = {}
             for report_data in compliance_reports:
-                compliance_report_id, legacy_id, org_id, period_id, version = (
-                    report_data
-                )
-                total_reports_processed += 1
+                compliance_report_id, legacy_id, org_id, period_id, version = report_data
+                group_key = (org_id, period_id)
+                if group_key not in report_groups:
+                    report_groups[group_key] = []
+                report_groups[group_key].append(report_data)
 
-                logger.info(
-                    f"Processing CR {compliance_report_id} (legacy {legacy_id}), org {org_id}, period {period_id}, version {version}"
-                )
+            # Process each organization/period group with its own logical_records dictionary
+            for (org_id, period_id), group_reports in report_groups.items():
+                logical_records = {}  # Reset for each organization + period combination
+                logger.info(f"Processing organization {org_id}, period {period_id} with {len(group_reports)} reports")
+                
+                for report_data in group_reports:
+                    compliance_report_id, legacy_id, org_id, period_id, version = report_data
+                    total_reports_processed += 1
 
-                try:
-                    # Process this compliance report
-                    report_stats = self._process_single_compliance_report(
-                        compliance_report_id, legacy_id, logical_records
+                    logger.info(
+                        f"Processing CR {compliance_report_id} (legacy {legacy_id}), org {org_id}, period {period_id}, version {version}"
                     )
 
-                    # Update counters
-                    total_records_found += report_stats["records_found"]
-                    total_count += report_stats["records_found"]
-                    processed_count += report_stats["records_processed"]
-                    total_records_processed += report_stats["records_processed"]
-                    total_records_skipped += report_stats["records_skipped"]
-                    total_errors += report_stats["errors"]
+                    try:
+                        # Process this compliance report
+                        report_stats = self._process_single_compliance_report(
+                            compliance_report_id, legacy_id, logical_records
+                        )
 
-                    if report_stats["records_found"] == 0:
-                        reports_with_no_records += 1
+                        # Update counters
+                        total_records_found += report_stats["records_found"]
+                        total_count += report_stats["records_found"]
+                        processed_count += report_stats["records_processed"]
+                        total_records_processed += report_stats["records_processed"]
+                        total_records_skipped += report_stats["records_skipped"]
+                        total_errors += report_stats["errors"]
 
-                except Exception as e:
-                    total_errors += 1
-                    logger.error(
-                        f"Error processing compliance report {compliance_report_id}: {e}"
-                    )
-                    continue
+                        if report_stats["records_found"] == 0:
+                            reports_with_no_records += 1
+
+                    except Exception as e:
+                        total_errors += 1
+                        logger.error(
+                            f"Error processing compliance report {compliance_report_id}: {e}"
+                        )
+                        continue
 
             # Enhanced summary logging
             logger.info("=== MIGRATION SUMMARY ===")
@@ -943,7 +1008,7 @@ class FuelSupplyMigrator:
             logger.info(f"Records Successfully Processed: {total_records_processed}")
             logger.info(f"Records Skipped: {total_records_skipped}")
             logger.info(f"Errors Encountered: {total_errors}")
-            logger.info(f"Unique Logical Records Created: {len(logical_records)}")
+            logger.info(f"Migration completed for {len(report_groups)} organization/period groups")
             logger.info(f"LCFS Record Versions Created: {processed_count}")
             logger.info("=========================")
 

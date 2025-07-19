@@ -122,6 +122,18 @@ class AllocationAgreementMigrator:
         lcfs_cursor.execute(query)
         return [row[1] for row in lcfs_cursor.fetchall()]  # Return legacy_ids
 
+    def get_lcfs_reports_with_org_period_info(self, lcfs_cursor) -> List[Tuple[int, int, int]]:
+        """Get LCFS compliance reports with their organization and period info for proper versioning scope"""
+        query = """
+        SELECT cr.legacy_id, cr.organization_id, cr.compliance_period_id
+        FROM compliance_report cr
+        WHERE cr.legacy_id IS NOT NULL
+        ORDER BY cr.organization_id, cr.compliance_period_id, cr.legacy_id
+        """
+
+        lcfs_cursor.execute(query)
+        return [(row[0], row[1], row[2]) for row in lcfs_cursor.fetchall()]
+
     def get_allocation_agreement_records(self, tfrs_cursor, tfrs_id: int) -> List[Dict]:
         """Get allocation agreement records for a given TFRS compliance report"""
         query = """
@@ -197,6 +209,18 @@ class AllocationAgreementMigrator:
             )
             return None
 
+    def generate_logical_record_key(self, record_data: Dict) -> str:
+        """Generate a logical key for allocation agreement versioning based on business data"""
+        # Use key business fields that define a unique logical allocation agreement
+        transaction_partner = record_data.get("transaction_partner", "").strip()
+        responsibility = record_data.get("responsibility", "").strip()
+        fuel_type = record_data.get("fuel_type", "").strip()
+        quantity = str(record_data.get("quantity", "")).strip()
+        
+        # Create a logical key from the business identifiers
+        logical_key = f"{transaction_partner}|{responsibility}|{fuel_type}|{quantity}"
+        return logical_key
+
     def insert_version_row(
         self, lcfs_cursor, lcfs_cr_id: int, row_data: Dict, action: str
     ) -> bool:
@@ -204,11 +228,15 @@ class AllocationAgreementMigrator:
         try:
             record_id = row_data["agreement_record_id"]
 
-            # Retrieve or create a stable group_uuid
-            group_uuid = self.record_uuid_map.get(record_id)
+            # Generate logical key for this allocation agreement
+            logical_key = self.generate_logical_record_key(row_data)
+
+            # Retrieve or create a stable group_uuid based on logical key
+            group_uuid = self.record_uuid_map.get(logical_key)
             if not group_uuid:
                 group_uuid = str(uuid.uuid4())
-                self.record_uuid_map[record_id] = group_uuid
+                self.record_uuid_map[logical_key] = group_uuid
+                logger.debug(f"Created new group_uuid {group_uuid} for logical key: {logical_key}")
 
             # Retrieve current highest version for this group_uuid
             current_ver = self.get_current_version(lcfs_cursor, group_uuid)
@@ -290,51 +318,64 @@ class AllocationAgreementMigrator:
                     # Load mappings
                     self.load_mappings(lcfs_cursor)
 
-                    # Get all LCFS compliance reports with legacy IDs
+                    # Get all LCFS compliance reports with legacy IDs and their org/period info
                     logger.info(
                         "Retrieving LCFS compliance reports with legacy_id != NULL"
                     )
-                    tfrs_ids = self.get_lcfs_reports_with_legacy_ids(lcfs_cursor)
-                    logger.info(f"Found {len(tfrs_ids)} reports to process")
+                    reports_data = self.get_lcfs_reports_with_org_period_info(lcfs_cursor)
+                    logger.info(f"Found {len(reports_data)} reports to process")
 
-                    # Process each TFRS compliance report
-                    for tfrs_id in tfrs_ids:
-                        logger.info(f"Processing TFRS compliance_report.id = {tfrs_id}")
+                    # Group reports by organization + period to ensure proper versioning scope
+                    report_groups = {}
+                    for report_data in reports_data:
+                        tfrs_id, org_id, period_id = report_data
+                        group_key = (org_id, period_id)
+                        if group_key not in report_groups:
+                            report_groups[group_key] = []
+                        report_groups[group_key].append(tfrs_id)
 
-                        # Look up the original LCFS compliance_report record by legacy_id
-                        lcfs_cr_id = self.legacy_to_lcfs_mapping.get(tfrs_id)
-                        if not lcfs_cr_id:
-                            logger.warning(
-                                f"No LCFS compliance_report found for TFRS legacy id {tfrs_id}; skipping allocation agreement processing."
-                            )
-                            total_skipped += 1
-                            continue
+                    # Process each organization/period group with its own record_uuid_map
+                    for (org_id, period_id), tfrs_ids in report_groups.items():
+                        self.record_uuid_map = {}  # Reset for each organization + period combination
+                        logger.info(f"Processing organization {org_id}, period {period_id} with {len(tfrs_ids)} reports")
+                        
+                        for tfrs_id in tfrs_ids:
+                            logger.info(f"Processing TFRS compliance_report.id = {tfrs_id}")
 
-                        # Retrieve allocation agreement records from source for the given TFRS report
-                        allocation_records = self.get_allocation_agreement_records(
-                            tfrs_cursor, tfrs_id
-                        )
-
-                        if not allocation_records:
-                            logger.warning(
-                                f"No allocation agreement records found in source for TFRS report ID: {tfrs_id} (or cr.exclusion_agreement_id was NULL)."
-                            )
-                            continue
-
-                        # Process each allocation agreement record
-                        for record_data in allocation_records:
-                            rec_id = record_data["agreement_record_id"]
-                            logger.info(
-                                f"Found source allocation record ID: {rec_id} for TFRS report ID: {tfrs_id}. Preparing for LCFS insert."
-                            )
-
-                            # Insert each allocation agreement record with versioning
-                            if self.insert_version_row(
-                                lcfs_cursor, lcfs_cr_id, record_data, "CREATE"
-                            ):
-                                total_inserted += 1
-                            else:
+                            # Look up the original LCFS compliance_report record by legacy_id
+                            lcfs_cr_id = self.legacy_to_lcfs_mapping.get(tfrs_id)
+                            if not lcfs_cr_id:
+                                logger.warning(
+                                    f"No LCFS compliance_report found for TFRS legacy id {tfrs_id}; skipping allocation agreement processing."
+                                )
                                 total_skipped += 1
+                                continue
+
+                            # Retrieve allocation agreement records from source for the given TFRS report
+                            allocation_records = self.get_allocation_agreement_records(
+                                tfrs_cursor, tfrs_id
+                            )
+
+                            if not allocation_records:
+                                logger.warning(
+                                    f"No allocation agreement records found in source for TFRS report ID: {tfrs_id} (or cr.exclusion_agreement_id was NULL)."
+                                )
+                                continue
+
+                            # Process each allocation agreement record
+                            for record_data in allocation_records:
+                                rec_id = record_data["agreement_record_id"]
+                                logger.info(
+                                    f"Found source allocation record ID: {rec_id} for TFRS report ID: {tfrs_id}. Preparing for LCFS insert."
+                                )
+
+                                # Insert each allocation agreement record with versioning
+                                if self.insert_version_row(
+                                    lcfs_cursor, lcfs_cr_id, record_data, "CREATE"
+                                ):
+                                    total_inserted += 1
+                                else:
+                                    total_skipped += 1
 
                     # Commit all changes
                     lcfs_conn.commit()
