@@ -45,7 +45,7 @@ class OtherUsesValidator(BaseValidator):
             fields=[
                 "fuel_category_id",
                 "fuel_type_id",
-                "expected_use_type_id",
+                "expected_use_id",
                 "quantity_supplied",
             ],
             where_clause="WHERE create_user::text = 'ETL'",
@@ -161,7 +161,7 @@ class OtherUsesValidator(BaseValidator):
                                 FROM other_uses ou
                                 JOIN compliance_report cr ON cr.compliance_report_id = ou.compliance_report_id
                                 JOIN fuel_type ft ON ft.fuel_type_id = ou.fuel_type_id
-                                JOIN expected_use_type et ON et.expected_use_type_id = ou.expected_use_type_id
+                                JOIN expected_use_type et ON et.expected_use_type_id = ou.expected_use_id
                                 WHERE cr.legacy_id = %s
                                 AND ft.fuel_type = %s
                                 AND ABS(ou.quantity_supplied - %s) < 0.01
@@ -189,7 +189,7 @@ class OtherUsesValidator(BaseValidator):
         query = """
             SELECT et.name, COUNT(*) AS count
             FROM other_uses ou
-            JOIN expected_use_type et ON et.expected_use_type_id = ou.expected_use_type_id
+            JOIN expected_use_type et ON et.expected_use_type_id = ou.expected_use_id
             WHERE ou.create_user::text = 'ETL'
             GROUP BY et.name
             ORDER BY count DESC
