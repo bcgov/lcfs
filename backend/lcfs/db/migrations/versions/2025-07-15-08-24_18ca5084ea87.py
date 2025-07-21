@@ -1,7 +1,7 @@
 """Fuel Export Metabase view
 
 Revision ID: 18ca5084ea87
-Revises: 413eef467edd
+Revises: a1b2c3d4e5f7
 Create Date: 2025-07-15 08:24:13.197219
 
 """
@@ -14,7 +14,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "18ca5084ea87"
-down_revision = "413eef467edd"
+down_revision = "a1b2c3d4e5f7"
 branch_labels = None
 depends_on = None
 
