@@ -28,6 +28,7 @@ class UserAuthentication(AuthenticationBackend):
         redis_client: Redis,
         session_factory: async_sessionmaker,
         settings: Settings,
+        public_endpoints: list = None,
     ):
         self.session_factory = session_factory
         self.settings = settings
@@ -35,6 +36,7 @@ class UserAuthentication(AuthenticationBackend):
         self.jwks = None
         self.jwks_uri = None
         self.test_keycloak_user = None
+        self.public_endpoints = public_endpoints or []
 
     async def refresh_jwk(self):
         """
@@ -83,6 +85,9 @@ class UserAuthentication(AuthenticationBackend):
             )
 
     async def authenticate(self, request):
+        # Check if this endpoint should skip authentication
+        if request.url.path in self.public_endpoints:
+            return None  # Skip authentication for public endpoints
         # Extract the authorization header from the request
         auth = request.headers.get("Authorization")
         if not auth:

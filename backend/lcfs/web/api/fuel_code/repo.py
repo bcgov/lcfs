@@ -1126,9 +1126,7 @@ class FuelCodeRepository:
         return record.category_carbon_intensity if record else 0.0
 
     @repo_handler
-    async def get_expiring_fuel_codes(
-        self, start_date: date, end_date: date
-    ) -> List[FuelCode]:
+    async def get_expiring_fuel_codes(self, start_date: date) -> List[FuelCode]:
         """
         Get all fuel codes that are expiring within a given date range.
         """
@@ -1141,8 +1139,7 @@ class FuelCodeRepository:
             )
             .where(
                 and_(
-                    FuelCode.expiration_date >= start_date,
-                    FuelCode.expiration_date <= end_date,
+                    FuelCode.expiration_date <= start_date,
                     FuelCodeStatus.status == FuelCodeStatusEnum.Approved,
                 )
             )

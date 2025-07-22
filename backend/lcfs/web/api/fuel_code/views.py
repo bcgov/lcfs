@@ -200,6 +200,20 @@ async def get_transport_modes(
     """Fetch all fuel code transport modes"""
     return await service.get_transport_modes()
 
+@router.get(
+    "/expiring",
+    response_model=List[ExpiringFuelCodesSchema],
+    status_code=status.HTTP_200_OK,
+)
+async def get_expiring_fuel_codes(
+    from_date: date = Query(
+        default_factory=lambda: (date.today() + timedelta(days=90)).isoformat(),
+        description="Start of the expiration window (defaults to 88 days from today)",
+    ),
+    service: FuelCodeServices = Depends(),
+) -> List[ExpiringFuelCodesSchema]:
+    """Fetch all fuel codes expiring within a given date range (88-119 days from today by default)"""
+    return await service.send_fuel_code_expiry_notifications(from_date)
 
 @router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)
 @view_handler(["*"])
@@ -243,24 +257,3 @@ async def delete_fuel_code(
 ):
     return await service.delete_fuel_code(fuel_code_id)
 
-
-@router.get(
-    "/expiring",
-    response_model=List[ExpiringFuelCodesSchema],
-    status_code=status.HTTP_200_OK,
-)
-@view_handler([RoleEnum.GOVERNMENT])
-async def get_expiring_fuel_codes(
-    request: Request,
-    from_date: str = Query(
-        default_factory=lambda: (date.today() + timedelta(days=88)).isoformat(),
-        description="Start of the expiration window (defaults to 88 days from today)",
-    ),
-    to_date: str = Query(
-        default_factory=lambda: (date.today() + timedelta(days=119)).isoformat(),
-        description="End of the expiration window (defaults to 119 days from today)",
-    ),
-    service: FuelCodeServices = Depends(),
-) -> List[ExpiringFuelCodesSchema]:
-    """Fetch all fuel codes expiring within a given date range (88-119 days from today by default)"""
-    return await service.get_expiring_fuel_codes(from_date, to_date)

@@ -40,19 +40,18 @@ class CHESEmailService:
     async def send_fuel_code_expiry_notifications(
         self,
         notification_type: NotificationTypeEnum,
-        fuel_codes: ExpiringFuelCodesSchema,
         email: EmailStr,
         notification_context: Dict[str, Any] = None,
     ) -> bool:
         """
         Send an email notification to users subscribed to the specified notification type.
         """
-        if not settings.ches_enabled:
-            return False
+        # if not settings.ches_enabled:
+        #     return False
 
         # Validate configuration before performing any operations
-        if not self._validate_configuration():
-            return
+        # if not self._validate_configuration():
+            # return
 
         # Retrieve subscribed user emails
         recipient_emails = [email]

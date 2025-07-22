@@ -108,17 +108,15 @@
                                         <th>Fuel Type</th>
                                         <th>Company</th>
                                         <th>Expiration Date</th>
-                                        <th>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for fuel_code in fuel_codes %}
                                     <tr>
                                         <td>{{ fuel_code.fuel_code }}</td>
-                                        <td>{{ fuel_code.fuel_type }}</td>
+                                        <td>{{ fuel_code.fuel_type.fuel_type }}</td>
                                         <td>{{ fuel_code.company }}</td>
                                         <td>{{ fuel_code.expiration_date }}</td>
-                                        <td>{{ fuel_code.status }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
