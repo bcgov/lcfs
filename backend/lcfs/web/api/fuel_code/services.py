@@ -26,6 +26,7 @@ from lcfs.web.api.notification.schema import (
 from lcfs.web.api.base import NotificationTypeEnum
 import json
 from lcfs.db.models import UserProfile
+from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.fuel_code.schema import (
     FuelCodeBaseSchema,
     FuelCodeCreateUpdateSchema,
@@ -332,17 +333,19 @@ class FuelCodeServices:
         notifications = []
 
         # Check for specific status transitions and new statuses
-        if status == FuelCodeStatusEnum.Recommended:
+        if status == FuelCodeStatusEnumSchema.Recommended:
             # Draft → Recommended: notify Director
-            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(status, [])
-        elif status == FuelCodeStatusEnum.Approved:
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Recommended, [])
+        elif status == FuelCodeStatusEnumSchema.Approved:
             # Recommended → Approved: notify Analyst
-            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(status, [])
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Approved, [])
         elif (
             previous_status == FuelCodeStatusEnum.Recommended
-            and status == FuelCodeStatusEnum.Draft
+            and status == FuelCodeStatusEnumSchema.Draft
+            and user.role_names and RoleEnum.DIRECTOR.name in user.role_names
         ):
             # Recommended → Draft: notify Analyst (returned by Director)
+            # Only send this notification if it's actually a Director making the change
             notifications = [
                 NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED
             ]
