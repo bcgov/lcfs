@@ -17,6 +17,7 @@ from lcfs.web.api.allocation_agreement.schema import (
     AllocationTransactionTypeSchema,
     DeleteAllocationAgreementResponseSchema,
     AllocationAgreementResponseSchema,
+    ProvisionOfTheActSchema,
 )
 from lcfs.web.api.base import PaginationRequestSchema, PaginationResponseSchema
 from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
@@ -174,7 +175,10 @@ class AllocationAgreementServices:
                 fuel_type_other=aa.fuel_type_other,
                 ci_of_fuel=aa.ci_of_fuel,
                 provision_of_the_act=(
-                    aa.provision_of_the_act.name if aa.provision_of_the_act else None
+                    ProvisionOfTheActSchema(
+                        provision_of_the_act_id=aa.provision_of_the_act.provision_of_the_act_id,
+                        name=aa.provision_of_the_act.name
+                    ) if aa.provision_of_the_act else None
                 ),
                 quantity=aa.quantity,
                 units=aa.units,
@@ -216,7 +220,10 @@ class AllocationAgreementServices:
                 fuel_type_other=aa.fuel_type_other,
                 ci_of_fuel=aa.ci_of_fuel,
                 provision_of_the_act=(
-                    aa.provision_of_the_act.name if aa.provision_of_the_act else None
+                    ProvisionOfTheActSchema(
+                        provision_of_the_act_id=aa.provision_of_the_act.provision_of_the_act_id,
+                        name=aa.provision_of_the_act.name
+                    ) if aa.provision_of_the_act else None
                 ),
                 quantity=aa.quantity,
                 units=aa.units,
