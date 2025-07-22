@@ -253,7 +253,7 @@ class ComplianceSummaryMigrator:
                 line_11_fossil_derived_base_fuel_jet_fuel,
                 line_11_fossil_derived_base_fuel_total,
                 line_21_non_compliance_penalty_payable,
-                total_non_compliance_penalty_payable
+                total_non_compliance_penalty_payable,
                 create_date,
                 update_date,
                 create_user,

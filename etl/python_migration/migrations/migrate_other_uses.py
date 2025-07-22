@@ -12,6 +12,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import argparse
 import logging
 import sys
 import uuid
@@ -31,9 +32,22 @@ logger = logging.getLogger(__name__)
 
 
 class OtherUsesMigrator:
-    def __init__(self):
+    def __init__(self, dry_run: bool = False):
         self.record_uuid_map: Dict[int, str] = {}
         self.legacy_to_lcfs_mapping: Dict[int, int] = {}
+        self.dry_run = dry_run
+        
+        # Statistics for dry run
+        self.stats = {
+            'tfrs_reports_found': 0,
+            'schedule_c_records_found': 0,
+            'creates': 0,
+            'updates': 0,
+            'skipped_no_lcfs_match': 0,
+            'fuel_type_mappings': {},
+            'fuel_category_mappings': {},
+            'expected_use_mappings': {}
+        }
 
     def map_fuel_category_id(self, fuel_class_id: int) -> Optional[int]:
         """Maps TFRS fuel_class_id to LCFS fuel_category_id"""
@@ -41,7 +55,12 @@ class OtherUsesMigrator:
             1: 2,  # Diesel
             2: 1,  # Gasoline
         }
-        return mapping.get(fuel_class_id)
+        result = mapping.get(fuel_class_id)
+        # Track mapping usage for stats
+        if result:
+            key = f"{fuel_class_id}->{result}"
+            self.stats['fuel_category_mappings'][key] = self.stats['fuel_category_mappings'].get(key, 0) + 1
+        return result
 
     def map_fuel_type_id(self, tfrs_type_id: int) -> int:
         """Maps TFRS fuel type ID to LCFS fuel type ID"""
@@ -61,7 +80,11 @@ class OtherUsesMigrator:
             20: 17,  # Petroleum-based gasoline -> Fossil-derived gasoline
             21: 15,  # Renewable naphtha
         }
-        return mapping.get(tfrs_type_id, 19)  # Default to 'Other' if no match found
+        result = mapping.get(tfrs_type_id, 19)  # Default to 'Other' if no match found
+        # Track mapping usage for stats
+        key = f"{tfrs_type_id}->{result}"
+        self.stats['fuel_type_mappings'][key] = self.stats['fuel_type_mappings'].get(key, 0) + 1
+        return result
 
     def map_expected_use_id(self, tfrs_expected_use_id: int) -> int:
         """Maps TFRS expected use ID to LCFS expected use ID"""
@@ -69,7 +92,11 @@ class OtherUsesMigrator:
             2: 1,  # Heating Oil
             1: 2,  # Other
         }
-        return mapping.get(tfrs_expected_use_id, 2)  # Default to 'Other' (id: 2)
+        result = mapping.get(tfrs_expected_use_id, 2)  # Default to 'Other' (id: 2)
+        # Track mapping usage for stats
+        key = f"{tfrs_expected_use_id}->{result}"
+        self.stats['expected_use_mappings'][key] = self.stats['expected_use_mappings'].get(key, 0) + 1
+        return result
 
     def is_record_changed(self, old_row: Optional[Dict], new_row: Dict) -> bool:
         """Checks if any relevant fields in a schedule_c record differ between old and new"""
@@ -162,10 +189,15 @@ class OtherUsesMigrator:
                 "ETL",
             ]
 
-            lcfs_cursor.execute(insert_sql, params)
-            logger.info(
-                f"Inserted other_uses row: recordId={record_id}, action={action}, groupUuid={group_uuid}, version={next_ver}"
-            )
+            if self.dry_run:
+                logger.info(
+                    f"[DRY RUN] Would insert other_uses row: recordId={record_id}, action={action}, groupUuid={group_uuid}, version={next_ver}"
+                )
+            else:
+                lcfs_cursor.execute(insert_sql, params)
+                logger.info(
+                    f"Inserted other_uses row: recordId={record_id}, action={action}, groupUuid={group_uuid}, version={next_ver}"
+                )
             return True
 
         except Exception as e:
@@ -276,6 +308,7 @@ class OtherUsesMigrator:
                         "Retrieving LCFS compliance_report with legacy_id != null"
                     )
                     tfrs_ids = self.get_lcfs_reports_with_legacy_ids(lcfs_cursor)
+                    self.stats['tfrs_reports_found'] = len(tfrs_ids)
                     logger.info(f"Found {len(tfrs_ids)} reports to process")
 
                     # Process each TFRS compliance report
@@ -309,6 +342,7 @@ class OtherUsesMigrator:
                             current_records = self.get_schedule_c_records(
                                 tfrs_cursor, chain_tfrs_id
                             )
+                            self.stats['schedule_c_records_found'] += len(current_records)
 
                             # Find corresponding LCFS compliance report
                             lcfs_cr_id = self.get_lcfs_compliance_report_id(
@@ -318,6 +352,7 @@ class OtherUsesMigrator:
                                 logger.warning(
                                     f"TFRS #{chain_tfrs_id} not found in LCFS; skipping diff."
                                 )
+                                self.stats['skipped_no_lcfs_match'] += len(current_records)
                                 previous_records = current_records
                                 continue
 
@@ -327,6 +362,7 @@ class OtherUsesMigrator:
                                     self.insert_version_row(
                                         lcfs_cursor, lcfs_cr_id, new_data, "CREATE"
                                     )
+                                    self.stats['creates'] += 1
                                     total_processed += 1
                                 elif self.is_record_changed(
                                     previous_records.get(rec_id), new_data
@@ -334,13 +370,17 @@ class OtherUsesMigrator:
                                     self.insert_version_row(
                                         lcfs_cursor, lcfs_cr_id, new_data, "UPDATE"
                                     )
+                                    self.stats['updates'] += 1
                                     total_processed += 1
 
                             previous_records = current_records
 
                     # Commit all changes
-                    lcfs_conn.commit()
-                    logger.info(f"Successfully committed {total_processed} records")
+                    if not self.dry_run:
+                        lcfs_conn.commit()
+                        logger.info(f"Successfully committed {total_processed} records")
+                    else:
+                        logger.info(f"[DRY RUN] Would commit {total_processed} records")
 
                     tfrs_cursor.close()
                     lcfs_cursor.close()
@@ -351,18 +391,67 @@ class OtherUsesMigrator:
 
         return total_processed, total_skipped
 
+    def print_statistics(self):
+        """Print comprehensive migration statistics"""
+        logger.info("=" * 60)
+        logger.info("OTHER USES MIGRATION STATISTICS")
+        logger.info("=" * 60)
+        
+        logger.info(f"📊 Source Data:")
+        logger.info(f"  • TFRS Compliance Reports Found: {self.stats['tfrs_reports_found']}")
+        logger.info(f"  • Schedule C Records Found: {self.stats['schedule_c_records_found']}")
+        
+        logger.info(f"🔄 Actions to Perform:")
+        logger.info(f"  • CREATE operations: {self.stats['creates']}")
+        logger.info(f"  • UPDATE operations: {self.stats['updates']}")
+        logger.info(f"  • Records skipped (no LCFS match): {self.stats['skipped_no_lcfs_match']}")
+        
+        total_actions = self.stats['creates'] + self.stats['updates']
+        logger.info(f"  • Total records to process: {total_actions}")
+        
+        if self.stats['fuel_type_mappings']:
+            logger.info(f"🔗 Fuel Type Mappings:")
+            for mapping, count in sorted(self.stats['fuel_type_mappings'].items()):
+                logger.info(f"  • {mapping}: {count} records")
+        
+        if self.stats['fuel_category_mappings']:
+            logger.info(f"🔗 Fuel Category Mappings:")
+            for mapping, count in sorted(self.stats['fuel_category_mappings'].items()):
+                logger.info(f"  • {mapping}: {count} records")
+        
+        if self.stats['expected_use_mappings']:
+            logger.info(f"🔗 Expected Use Mappings:")
+            for mapping, count in sorted(self.stats['expected_use_mappings'].items()):
+                logger.info(f"  • {mapping}: {count} records")
+        
+        logger.info("=" * 60)
+
 
 def main():
+    parser = argparse.ArgumentParser(description="Migrate Other Uses (Schedule C) data from TFRS to LCFS")
+    parser.add_argument(
+        "--dry-run", 
+        action="store_true", 
+        help="Run migration in dry-run mode (no database changes, statistics only)"
+    )
+    args = parser.parse_args()
+    
     setup_logging()
-    logger.info("Starting Other Uses (Schedule C) Migration")
+    mode = "DRY RUN" if args.dry_run else "PRODUCTION"
+    logger.info(f"Starting Other Uses (Schedule C) Migration - {mode} MODE")
 
-    migrator = OtherUsesMigrator()
+    migrator = OtherUsesMigrator(dry_run=args.dry_run)
 
     try:
         processed, skipped = migrator.migrate()
-        logger.info(
-            f"Migration completed successfully. Processed: {processed}, Skipped: {skipped}"
-        )
+        
+        # Print statistics
+        migrator.print_statistics()
+        
+        if args.dry_run:
+            logger.info(f"[DRY RUN] Migration analysis completed. Would process: {processed}, Would skip: {skipped}")
+        else:
+            logger.info(f"Migration completed successfully. Processed: {processed}, Skipped: {skipped}")
     except Exception as e:
         logger.error(f"Migration failed: {e}")
         sys.exit(1)
