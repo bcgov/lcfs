@@ -37,14 +37,14 @@ def mock_user():
 @pytest.fixture
 def mock_director_user():
     """Create a mock director user profile"""
-    user = UserProfile(
-        user_profile_id=2,
-        keycloak_username="test_director",
-        first_name="Test",
-        last_name="Director",
-        email="test.director@gov.bc.ca",
-        is_active=True,
-    )
+    user = MagicMock(spec=UserProfile)
+    user.user_profile_id = 2
+    user.keycloak_username = "test_director"
+    user.first_name = "Test"
+    user.last_name = "Director"
+    user.email = "test.director@gov.bc.ca"
+    user.is_active = True
+    user.role_names = [RoleEnum.DIRECTOR.name]
     return user
 
 
@@ -194,7 +194,7 @@ class TestFuelCodeNotificationIntegration:
         # Execute status change
         await service.update_fuel_code_status(
             fuel_code_id=1,
-            status=FuelCodeStatusEnum.Recommended,
+            status=FuelCodeStatusEnumSchema.Recommended,
             user=mock_user
         )
         
@@ -240,7 +240,7 @@ class TestFuelCodeNotificationIntegration:
         # Execute status change
         await service.update_fuel_code_status(
             fuel_code_id=1,
-            status=FuelCodeStatusEnum.Approved,
+            status=FuelCodeStatusEnumSchema.Approved,
             user=mock_director_user
         )
         
@@ -271,7 +271,7 @@ class TestFuelCodeNotificationIntegration:
         mock_repo.create_fuel_code_history = AsyncMock()
         
         # Update status from Recommended to Draft
-        await service.update_fuel_code_status(1, FuelCodeStatusEnum.Draft, mock_director_user)
+        await service.update_fuel_code_status(1, FuelCodeStatusEnumSchema.Draft, mock_director_user)
         
         # Verify notification was sent
         mock_notification_service.send_notification.assert_called_once()
@@ -300,7 +300,7 @@ class TestFuelCodeNotificationIntegration:
         # Execute status change
         await service.update_fuel_code_status(
             fuel_code_id=1,
-            status=FuelCodeStatusEnum.Draft,
+            status=FuelCodeStatusEnumSchema.Draft,
             user=mock_user
         )
         
@@ -344,7 +344,7 @@ class TestFuelCodeNotificationIntegration:
         # Execute status change
         await service.update_fuel_code_status(
             fuel_code_id=1,
-            status=FuelCodeStatusEnum.Recommended,
+            status=FuelCodeStatusEnumSchema.Recommended,
             user=mock_user
         )
         
@@ -384,7 +384,7 @@ class TestFuelCodeNotificationIntegration:
         with pytest.raises(ValueError, match="Fuel code not found"):
             await service.update_fuel_code_status(
                 fuel_code_id=999,
-                status=FuelCodeStatusEnum.Recommended,
+                status=FuelCodeStatusEnumSchema.Recommended,
                 user=mock_user
             )
         
@@ -417,7 +417,7 @@ class TestFuelCodeNotificationIntegration:
         with pytest.raises(ServiceException):
             await service.update_fuel_code_status(
                 fuel_code_id=1,
-                status=FuelCodeStatusEnum.Recommended,
+                status=FuelCodeStatusEnumSchema.Recommended,
                 user=mock_user
             )
         
