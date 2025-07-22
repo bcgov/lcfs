@@ -28,6 +28,30 @@
                 color: #666;
                 font-size: 12px;
             }
+            .fuel-codes-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+                font-size: 12px;
+            }
+            .fuel-codes-table th {
+                background-color: #f5f5f5;
+                border: 1px solid #ddd;
+                padding: 10px 8px;
+                text-align: left;
+                font-weight: bold;
+            }
+            .fuel-codes-table td {
+                border: 1px solid #ddd;
+                padding: 8px;
+                text-align: left;
+            }
+            .fuel-codes-table tr:nth-child(even) {
+                background-color: #f9f9f9;
+            }
+            .fuel-codes-table tr:hover {
+                background-color: #f1f1f1;
+            }
         </style>
     </head>
     <body>
@@ -74,6 +98,32 @@
                                     </a>
                                 {% endif %}
                             </p>
+
+                            {% if fuel_codes and fuel_codes|length > 0 %}
+                            <h3 style="color: #003366; margin-top: 25px;">Fuel Codes Expiring Soon</h3>
+                            <table class="fuel-codes-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fuel Code</th>
+                                        <th>Fuel Type</th>
+                                        <th>Company</th>
+                                        <th>Expiration Date</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for fuel_code in fuel_codes %}
+                                    <tr>
+                                        <td>{{ fuel_code.fuel_code }}</td>
+                                        <td>{{ fuel_code.fuel_type }}</td>
+                                        <td>{{ fuel_code.company }}</td>
+                                        <td>{{ fuel_code.expiration_date }}</td>
+                                        <td>{{ fuel_code.status }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% endif %}
 
                             <p>
                                 You received this email because you subscribed at the

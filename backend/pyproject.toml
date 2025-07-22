@@ -19,9 +19,9 @@ yarl = "^1.8.2"
 ujson = "^5.7.0"
 SQLAlchemy = { version = "^2.0.0", extras = ["asyncio"] }
 alembic = "^1.12.1"
-asyncpg = { version = "^0.27.0", extras = ["sa"] }
+asyncpg = { version = "^0.30.0", extras = ["sa"] }
 redis = { version = "^4.4.2", extras = ["hiredis"] }
-httptools = "^0.5.0"
+httptools = "^0.6.0"
 prometheus-fastapi-instrumentator = "6.0.0"
 distlib = "^0.3.8"
 pydantic-settings = "^2.0.3"

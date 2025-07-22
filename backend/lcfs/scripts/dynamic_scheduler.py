@@ -33,9 +33,9 @@ try:
     from sqlalchemy.orm import sessionmaker
 
     # Import your application modules
-    from lcfs.db.dependencies import get_async_db_session
     from lcfs.web.api.task.models import ScheduledTask, TaskExecution, TaskStatus
     from lcfs.web.api.notification.tasks import TASK_REGISTRY
+    from lcfs.settings import settings
 
 except ImportError as e:
     print(f"Failed to import required modules: {e}")
@@ -62,6 +62,10 @@ class DynamicTaskScheduler:
         self.worker_id = self._get_worker_id()
         self.app_version = os.getenv("APP_VERSION", "unknown")
 
+        # Initialize async database engine and session factory
+        self.engine = create_async_engine(str(settings.db_url))
+        self.session = sessionmaker(bind=self.engine, class_=AsyncSession)
+
         logger.info(f"Initializing Dynamic Task Scheduler")
         logger.info(f"Worker ID: {self.worker_id}")
         logger.info(f"App Version: {self.app_version}")
@@ -78,9 +82,9 @@ class DynamicTaskScheduler:
         Fetch all enabled tasks from database
         """
         try:
-            async for db in get_async_db_session():
+            async with self.session() as session:
                 # Query enabled tasks
-                result = await db.execute(
+                result = await session.execute(
                     select(ScheduledTask).where(ScheduledTask.enabled == True)
                 )
                 tasks = result.scalars().all()
@@ -265,52 +269,63 @@ class DynamicTaskScheduler:
         Update task status and create execution record
         """
         try:
-            async for db in get_async_db_session():
-                # Update task record
-                if execution_result["success"]:
-                    task.status = TaskStatus.SUCCESS
-                    task.execution_count += 1
-                else:
-                    task.status = TaskStatus.FAILURE
-                    task.failure_count += 1
+            async with self.session() as session:
+                async with session.begin():
+                    try:
+                        # Update task record
+                        if execution_result["success"]:
+                            task.status = TaskStatus.SUCCESS
+                            task.execution_count += 1
+                        else:
+                            task.status = TaskStatus.FAILURE
+                            task.failure_count += 1
 
-                task.last_run = execution_result["start_time"]
+                        task.last_run = execution_result["start_time"]
 
-                # Calculate next run time
-                if croniter.is_valid(task.schedule):
-                    cron = croniter(task.schedule, datetime.now())
-                    task.next_run = cron.get_next(datetime)
+                        # Calculate next run time
+                        if croniter.is_valid(task.schedule):
+                            cron = croniter(task.schedule, datetime.now())
+                            task.next_run = cron.get_next(datetime)
 
-                # Create execution record
-                execution = TaskExecution(
-                    task_id=task.id,
-                    started_at=execution_result["start_time"],
-                    completed_at=execution_result["end_time"],
-                    status=(
-                        TaskStatus.SUCCESS
-                        if execution_result["success"]
-                        else TaskStatus.FAILURE
-                    ),
-                    result=execution_result.get("result_message")
-                    or execution_result.get("error_message"),
-                    execution_time_seconds=execution_result["duration_seconds"],
-                    worker_id=self.worker_id,
-                    version=self.app_version,
-                )
+                        # Create execution record
+                        execution = TaskExecution(
+                            task_id=task.id,
+                            started_at=execution_result["start_time"],
+                            completed_at=execution_result["end_time"],
+                            status=(
+                                TaskStatus.SUCCESS
+                                if execution_result["success"]
+                                else TaskStatus.FAILURE
+                            ),
+                            result=execution_result.get("result_message")
+                            or execution_result.get("error_message"),
+                            execution_time_seconds=execution_result["duration_seconds"],
+                            worker_id=self.worker_id,
+                            version=self.app_version,
+                        )
 
-                if not self.dry_run:
-                    db.add(execution)
-                    await db.commit()
-                    logger.info(f"Updated task '{task.name}' status in database")
-                else:
-                    logger.info(
-                        f"DRY RUN: Would update task '{task.name}' status in database"
-                    )
+                        if not self.dry_run:
+                            # Merge the updated task back to the session
+                            session.add(task)
+                            session.add(execution)
+                            # Commit is handled by the context manager
+                            await session.commit()
+                            logger.info(
+                                f"Updated task '{task.name}' status in database"
+                            )
+                        else:
+                            logger.info(
+                                f"DRY RUN: Would update task '{task.name}' status in database"
+                            )
 
-                break  # Exit async generator
+                    except Exception as e:
+                        logger.error(f"Failed to update task '{task.name}' status: {e}")
+                        logger.error(traceback.format_exc())
+                        await session.rollback()
+                        raise
 
         except Exception as e:
-            logger.error(f"Failed to update task '{task.name}' status: {e}")
+            logger.error(f"Database transaction failed for task '{task.name}': {e}")
             logger.error(traceback.format_exc())
 
     async def execute_tasks_with_timeout(self, task: ScheduledTask) -> Dict[str, Any]:
@@ -435,6 +450,14 @@ class DynamicTaskScheduler:
 
         return summary
 
+    async def cleanup(self):
+        """Clean up database connections"""
+        try:
+            await self.engine.dispose()
+            logger.info("Database engine disposed")
+        except Exception as e:
+            logger.error(f"Error disposing database engine: {e}")
+
 
 def setup_logging(verbose: bool = False):
     """Setup logging configuration"""
@@ -492,6 +515,9 @@ async def main():
         logger.error(f"Scheduler failed with unexpected error: {e}")
         logger.error(traceback.format_exc())
         return 1
+    finally:
+        # Clean up resources
+        await scheduler.cleanup()
 
 
 if __name__ == "__main__":

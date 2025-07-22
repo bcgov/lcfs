@@ -1,5 +1,7 @@
+from datetime import date, datetime, timedelta
 import math
 
+from lcfs.web.api.email.services import CHESEmailService
 import structlog
 from fastapi import Depends
 
@@ -9,6 +11,7 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.base import (
+    NotificationTypeEnum,
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
@@ -31,8 +34,13 @@ logger = structlog.get_logger(__name__)
 
 
 class FuelCodeServices:
-    def __init__(self, repo: FuelCodeRepository = Depends(FuelCodeRepository)) -> None:
+    def __init__(
+        self,
+        repo: FuelCodeRepository = Depends(FuelCodeRepository),
+        email_service: CHESEmailService = Depends(CHESEmailService),
+    ) -> None:
         self.repo = repo
+        self.email_service = email_service
 
     @service_handler
     async def search_fuel_code(self, fuel_code, prefix, distinct_search):
@@ -329,3 +337,65 @@ class FuelCodeServices:
     @service_handler
     async def delete_fuel_code(self, fuel_code_id: int):
         return await self.repo.delete_fuel_code(fuel_code_id)
+
+    @service_handler
+    async def send_fuel_code_expiry_notifications(self) -> bool:
+        """
+        Send email notifications for fuel codes expiring in the 30 days.
+
+        Args:
+            days_ahead: Number of days in advance to check for expiring codes
+            organization_id: If specified, only send to this organization.
+                           If None, send to all relevant organizations.
+
+        Returns:
+            bool: True if notifications were sent successfully
+        """
+        try:
+            # Calculate date range
+            start_date = date.today() + timedelta(days=88)
+            end_date = date.today() + timedelta(days=88)
+
+            # Get expiring fuel codes
+            expiring_codes = await self.repo.get_expiring_fuel_codes(
+                start_date.isoformat(), end_date.isoformat()
+            )
+
+            if not expiring_codes:
+                logger.info(f"No fuel codes expiring in the next 90 days")
+                return True
+
+            # Group codes by contact email and validate emails
+            email_groups = self._group_codes_by_email(expiring_codes)
+            if not email_groups:
+                logger.warning("No valid contact emails found for expiring fuel codes")
+                return False
+
+            # Send emails to each contact
+            success_count = 0
+            total_emails = len(email_groups)
+            context = {
+                "subject": "Fuel Code Expiry Notification",
+            }
+
+            for contact_email, codes_data in email_groups.items():
+                context["fuel-codes"] = codes_data
+                context["contact_email"] = contact_email
+                if await self.email_service.send_fuel_code_expiry_notifications(
+                    notification_type=NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION,
+                    fuel_codes=codes_data,
+                    email=contact_email,
+                    notification_context=context
+                ):
+                    success_count += 1
+
+            logger.info(
+                f"Sent fuel code expiry notifications to {success_count}/{total_emails} contacts"
+            )
+            return success_count > 0
+
+        except Exception as e:
+            logger.error(f"Failed to send fuel code expiry notifications: {e}")
+            return False
+
+        return True

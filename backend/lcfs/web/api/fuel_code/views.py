@@ -4,6 +4,7 @@ Fuel codes endpoints
 
 from typing import List, Union, Optional
 
+from datetime import date, timedelta
 import structlog
 from fastapi import (
     APIRouter,
@@ -22,6 +23,7 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.export import FuelCodeExporter
 from lcfs.web.api.fuel_code.schema import (
+    ExpiringFuelCodesSchema,
     FuelCodeCreateUpdateSchema,
     FuelCodesSchema,
     SearchFuelCodeList,
@@ -140,7 +142,9 @@ async def get_fuel_codes(
     return await service.search_fuel_codes(pagination)
 
 
-@router.post("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_fuel_codes(
     request: Request,
@@ -238,3 +242,25 @@ async def delete_fuel_code(
     request: Request, fuel_code_id: int, service: FuelCodeServices = Depends()
 ):
     return await service.delete_fuel_code(fuel_code_id)
+
+
+@router.get(
+    "/expiring",
+    response_model=List[ExpiringFuelCodesSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT])
+async def get_expiring_fuel_codes(
+    request: Request,
+    from_date: str = Query(
+        default_factory=lambda: (date.today() + timedelta(days=88)).isoformat(),
+        description="Start of the expiration window (defaults to 88 days from today)",
+    ),
+    to_date: str = Query(
+        default_factory=lambda: (date.today() + timedelta(days=119)).isoformat(),
+        description="End of the expiration window (defaults to 119 days from today)",
+    ),
+    service: FuelCodeServices = Depends(),
+) -> List[ExpiringFuelCodesSchema]:
+    """Fetch all fuel codes expiring within a given date range (88-119 days from today by default)"""
+    return await service.get_expiring_fuel_codes(from_date, to_date)

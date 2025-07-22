@@ -6,6 +6,7 @@ from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from datetime import date, datetime
 from pydantic import (
     Field,
+    computed_field,
     field_validator,
     model_validator,
 )
@@ -438,3 +439,22 @@ class FuelCodeCreateUpdateSchema(BaseSchema):
 
 class DeleteFuelCodeResponseSchema(BaseSchema):
     message: str
+
+
+class ExpiringFuelCodesSchema(BaseSchema):
+    fuel_code_id: int
+    fuel_suffix: str
+    company: str
+    contact_email: str
+    expiration_date: date
+    fuel_code_prefix: FuelCodePrefixSchema
+    
+    @computed_field
+    @property
+    def fuel_code(self) -> str:
+        """
+        Concatenate fuel_code_prefix.prefix with fuel_suffix to create the full fuel code.
+        """
+        if self.fuel_code_prefix and self.fuel_code_prefix.prefix:
+            return f"{self.fuel_code_prefix.prefix}{self.fuel_suffix}"
+        return self.fuel_suffix
