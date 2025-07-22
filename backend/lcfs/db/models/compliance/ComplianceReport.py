@@ -153,7 +153,7 @@ class ComplianceReport(BaseModel, Auditable):
     current_status = relationship("ComplianceReportStatus")
     transaction = relationship("Transaction")
     assigned_analyst = relationship(
-        "UserProfile", foreign_keys=[assigned_analyst_id]
+        "UserProfile", foreign_keys=[assigned_analyst_id], lazy="selectin"
     )
 
     # Tracking relationships

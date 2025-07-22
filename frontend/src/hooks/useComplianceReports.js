@@ -645,6 +645,9 @@ export const useAssignAnalyst = (options = {}) => {
           exact: false,
           type: 'active'
         })
+        
+        // Invalidate available analysts list to ensure updated roles are reflected
+        queryClient.invalidateQueries({ queryKey: ['available-analysts'] })
       }
       onSuccess?.(data, variables, context)
     },

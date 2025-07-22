@@ -48,12 +48,12 @@ describe('ComplianceReports Schema', () => {
       // Verify column fields
       const fields = colDefs.map(col => col.field)
       expect(fields).toEqual([
+        'status',
         'assignedAnalyst',
         'lastComment',
         'compliancePeriod',
         'organization',
         'type',
-        'status',
         'updateDate'
       ])
     })
@@ -168,27 +168,24 @@ describe('ComplianceReports Schema', () => {
   })
 
   describe('Column ordering', () => {
-    it('should place assigned analyst column first', () => {
+    it('should place status column first', () => {
+      const isSupplier = false
+      const colDefs = reportsColDefs(mockT, isSupplier, mockOnRefresh)
+
+      const fields = colDefs.map(col => col.field)
+      const statusIndex = fields.indexOf('status')
+
+      expect(statusIndex).toBe(0)
+    })
+
+    it('should place assigned analyst column second', () => {
       const isSupplier = false
       const colDefs = reportsColDefs(mockT, isSupplier, mockOnRefresh)
 
       const fields = colDefs.map(col => col.field)
       const assignedAnalystIndex = fields.indexOf('assignedAnalyst')
 
-      expect(assignedAnalystIndex).toBe(0)
-    })
-
-    it('should place status column between type and updateDate', () => {
-      const isSupplier = false
-      const colDefs = reportsColDefs(mockT, isSupplier, mockOnRefresh)
-
-      const fields = colDefs.map(col => col.field)
-      const typeIndex = fields.indexOf('type')
-      const statusIndex = fields.indexOf('status')
-      const updateDateIndex = fields.indexOf('updateDate')
-
-      expect(typeIndex).toBeLessThan(statusIndex)
-      expect(statusIndex).toBeLessThan(updateDateIndex)
+      expect(assignedAnalystIndex).toBe(1)
     })
   })
 
