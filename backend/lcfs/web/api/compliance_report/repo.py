@@ -524,8 +524,26 @@ class ComplianceReportRepository:
         """
         Retrieve a compliance report mapped to its schema from the database by ID
         """
+        # Do the query and schema conversion in the same session to avoid async context issues
+        result = await self.db.execute(
+            select(ComplianceReport)
+            .options(
+                joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.compliance_period),
+                joinedload(ComplianceReport.current_status),
+                joinedload(ComplianceReport.summary),
+                joinedload(ComplianceReport.history).joinedload(
+                    ComplianceReportHistory.status
+                ),
+                joinedload(ComplianceReport.history)
+                .joinedload(ComplianceReportHistory.user_profile)
+                .joinedload(UserProfile.organization),
+                joinedload(ComplianceReport.transaction),
+            )
+            .where(ComplianceReport.compliance_report_id == report_id)
+        )
 
-        compliance_report = await self.get_compliance_report_by_id(report_id)
+        compliance_report = result.scalars().unique().first()
 
         if not compliance_report:
             return None
@@ -894,7 +912,8 @@ class ComplianceReportRepository:
 
             # Build base query conditions
             query_conditions = [
-                ComplianceReport.compliance_report_group_uuid == compliance_report_group_uuid,
+                ComplianceReport.compliance_report_group_uuid
+                == compliance_report_group_uuid,
                 exists(subquery),
                 # Always filter out reports with no current_status (NULL)
                 ComplianceReport.current_status_id.is_not(None),
@@ -905,33 +924,58 @@ class ComplianceReportRepository:
                 logger.info(
                     "Government user detected, adding draft status filter to query",
                     user_id=user.user_profile_id,
-                    username=user.keycloak_username
+                    username=user.keycloak_username,
                 )
                 # Filter out draft reports at the database level
                 query_conditions.append(
-                    ComplianceReport.current_status_id != select(ComplianceReportStatus.compliance_report_status_id)
-                    .where(ComplianceReportStatus.status == ComplianceReportStatusEnum.Draft)
+                    ComplianceReport.current_status_id
+                    != select(ComplianceReportStatus.compliance_report_status_id)
+                    .where(
+                        ComplianceReportStatus.status
+                        == ComplianceReportStatusEnum.Draft
+                    )
                     .scalar_subquery()
                 )
             else:
                 logger.info(
                     "Non-government user, no additional status filtering applied",
                     user_id=user.user_profile_id,
-                    username=user.keycloak_username
+                    username=user.keycloak_username,
                 )
+
+            # Get the specific schedule relationship for this data type
+            schedule_relationships = set()
+            for rel, _ in relationships:
+                schedule_relationships.add(rel)
 
             # Build the main query
             reports_query = (
                 select(ComplianceReport)
                 .where(and_(*query_conditions))
                 .options(
+                    joinedload(ComplianceReport.organization),
+                    joinedload(ComplianceReport.compliance_period),
                     joinedload(ComplianceReport.current_status),
+                    joinedload(ComplianceReport.summary),
+                    joinedload(ComplianceReport.history).joinedload(
+                        ComplianceReportHistory.status
+                    ),
+                    joinedload(ComplianceReport.history)
+                    .joinedload(ComplianceReportHistory.user_profile)
+                    .joinedload(UserProfile.organization),
+                    joinedload(ComplianceReport.transaction),
+                    # Load the base schedule relationships first
+                    *[
+                        joinedload(getattr(ComplianceReport, rel))
+                        for rel in schedule_relationships
+                    ],
+                    # Then load their sub-relationships
                     *[
                         joinedload(getattr(ComplianceReport, rel)).joinedload(
                             getattr(model, sub_rel)
                         )
                         for rel, sub_rel in relationships
-                    ]
+                    ],
                 )
                 .order_by(ComplianceReport.version.desc())
             )
@@ -942,10 +986,9 @@ class ComplianceReportRepository:
             logger.info(
                 "Changelog data query executed",
                 user_id=user.user_profile_id,
-                total_reports_returned=len(reports)
+                total_reports_returned=len(reports),
             )
 
-            # Return the raw models (filtering was done at database level)
             return reports
         except Exception as e:
             logger.error(f"Error in get_changelog_data: {e}", exc_info=True)
