@@ -144,10 +144,10 @@ async def test_get_effective_allocation_agreements(
     # Verify the result
     assert len(result) == 1
     assert result[0].allocation_agreement_id == 1
-    # Compare against the enum value (string)
-    assert result[0].action_type == ActionTypeEnum.CREATE.value
-    # fuel_type is now a string instead of an object
-    assert result[0].fuel_type == "Biodiesel"
+    # Compare against the enum itself
+    assert result[0].action_type == ActionTypeEnum.CREATE
+    # fuel_type is a related object with a fuel_type property
+    assert result[0].fuel_type.fuel_type == "Biodiesel"
     assert result[0].transaction_partner == "LCFS Org 2"
     assert result[0].postal_address == "789 Stellar Lane Floor 10"
 
