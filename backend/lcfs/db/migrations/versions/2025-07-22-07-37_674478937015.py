@@ -1,17 +1,17 @@
-"""Add fuel code notification types
+"""add fuel code notifications
 
-Revision ID: add_fuel_code_notifications
-Revises: ae2306fa8d72
-Create Date: 2025-07-22 10:00:00.000000
+Revision ID: 674478937015
+Revises: a1b2c3d4e5f7
+Create Date: 2025-07-22 07:37:02.573354
+
 """
 
-from alembic import op
 import sqlalchemy as sa
-from datetime import datetime
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = "add_fuel_code_notifications"
-down_revision = "ae2306fa8d72"
+revision = "674478937015"
+down_revision = "a1b2c3d4e5f7"
 branch_labels = None
 depends_on = None
 
