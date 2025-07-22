@@ -30,3 +30,11 @@ def user_has_roles(user: UserProfile, desired_role_names: List[RoleEnum]) -> boo
     # Check if all desired roles are in the user's roles
     # This line checks if the desired roles are a subset of the user's roles
     return desired_role_set.issubset(user_role_names)
+
+
+def is_government_user(user: UserProfile) -> bool:
+    """
+    Check if a user is a government user by examining if any of their roles
+    has the is_government_role flag set to True.
+    """
+    return any(role.role.is_government_role for role in user.user_roles)
