@@ -1,7 +1,7 @@
 """add fuel code notifications
 
 Revision ID: 674478937015
-Revises: a1b2c3d4e5f7
+Revises: 18ca5084ea87
 Create Date: 2025-07-22 07:37:02.573354
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "674478937015"
-down_revision = "a1b2c3d4e5f7"
+down_revision = "18ca5084ea87"
 branch_labels = None
 depends_on = None
 
