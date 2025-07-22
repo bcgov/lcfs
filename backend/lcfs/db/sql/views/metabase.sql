@@ -512,45 +512,26 @@ SELECT
       "source"."eer" AS "eer",
       "source"."energy" AS "energy",
       "source"."fuel_type_other" AS "fuel_type_other",
-      "source"."group_uuid" AS "group_uuid",
-      "source"."version" AS "version",
-      "source"."action_type" AS "action_type",
-      "source"."create_date" AS "create_date",
-      "source"."create_user" AS "create_user",
-      "source"."create_user_full_name" AS "create_user_full_name",
-      "source"."update_date" AS "update_date",
-      "source"."update_user" AS "update_user",
-      "source"."update_user_full_name" AS "update_user_full_name",
-      "Fuel Code - fuel_code_id"."fuel_code_id" AS "Fuel Code - fuel_code_id__fuel_code_id",
-      "Fuel Code - fuel_code_id"."fuel_status_id" AS "Fuel Code - fuel_code_id__fuel_status_id",
-      "Fuel Code - fuel_code_id"."prefix_id" AS "Fuel Code - fuel_code_id__prefix_id",
-      "Fuel Code - fuel_code_id"."fuel_suffix" AS "Fuel Code - fuel_code_id__fuel_suffix",
-      "Fuel Code - fuel_code_id"."company" AS "Fuel Code - fuel_code_id__company",
-      "Fuel Code - fuel_code_id"."contact_name" AS "Fuel Code - fuel_code_id__contact_name",
-      "Fuel Code - fuel_code_id"."contact_email" AS "Fuel Code - fuel_code_id__contact_email",
-      "Fuel Code - fuel_code_id"."carbon_intensity" AS "Fuel Code - fuel_code_id__carbon_intensity",
-      "Fuel Code - fuel_code_id"."edrms" AS "Fuel Code - fuel_code_id__edrms",
-      "Fuel Code - fuel_code_id"."last_updated" AS "Fuel Code - fuel_code_id__last_updated",
-      "Fuel Code - fuel_code_id"."application_date" AS "Fuel Code - fuel_code_id__application_date",
-      "Fuel Code - fuel_code_id"."approval_date" AS "Fuel Code - fuel_code_id__approval_date",
-      "Fuel Code - fuel_code_id"."fuel_type_id" AS "Fuel Code - fuel_code_id__fuel_type_id",
-      "Fuel Code - fuel_code_id"."feedstock" AS "Fuel Code - fuel_code_id__feedstock",
-      "Fuel Code - fuel_code_id"."feedstock_location" AS "Fuel Code - fuel_code_id__feedstock_location",
-      "Fuel Code - fuel_code_id"."feedstock_misc" AS "Fuel Code - fuel_code_id__feedstock_misc",
-      "Fuel Code - fuel_code_id"."fuel_production_facility_city" AS "Fuel Code - fuel_code_id__fuel_production_facility_city",
-      "Fuel Code - fuel_code_id"."fuel_production_facility_province_state" AS "Fuel Code - fuel_code_id__fuel_production_facility__c31b5d39",
-      "Fuel Code - fuel_code_id"."fuel_production_facility_country" AS "Fuel Code - fuel_code_id__fuel_production_facility_country",
-      "Fuel Code - fuel_code_id"."facility_nameplate_capacity" AS "Fuel Code - fuel_code_id__facility_nameplate_capacity",
-      "Fuel Code - fuel_code_id"."facility_nameplate_capacity_unit" AS "Fuel Code - fuel_code_id__facility_nameplate_capacity_unit",
-      "Fuel Code - fuel_code_id"."former_company" AS "Fuel Code - fuel_code_id__former_company",
-      "Fuel Code - fuel_code_id"."notes" AS "Fuel Code - fuel_code_id__notes",
-      "Fuel Code - fuel_code_id"."create_date" AS "Fuel Code - fuel_code_id__create_date",
-      "Fuel Code - fuel_code_id"."update_date" AS "Fuel Code - fuel_code_id__update_date",
-      "Fuel Code - fuel_code_id"."create_user" AS "Fuel Code - fuel_code_id__create_user",
-      "Fuel Code - fuel_code_id"."update_user" AS "Fuel Code - fuel_code_id__update_user",
-      "Fuel Code - fuel_code_id"."effective_date" AS "Fuel Code - fuel_code_id__effective_date",
-      "Fuel Code - fuel_code_id"."effective_status" AS "Fuel Code - fuel_code_id__effective_status",
-      "Fuel Code - fuel_code_id"."expiration_date" AS "Fuel Code - fuel_code_id__expiration_date"
+      "Fuel Code - fuel_code_id"."fuel_code_id" AS "FC - id__fuel_code_id",
+      "Fuel Code - fuel_code_id"."fuel_status_id" AS "FC - id__fuel_status_id",
+      "Fuel Code - fuel_code_id"."prefix_id" AS "FC - id__prefix_id",
+      "Fuel Code - fuel_code_id"."fuel_suffix" AS "FC - id__fuel_suffix",
+      "Fuel Code - fuel_code_id"."company" AS "FC - id__company",
+      "Fuel Code - fuel_code_id"."carbon_intensity" AS "FC - id__carbon_intensity",
+      "Fuel Code - fuel_code_id"."last_updated" AS "FC - id__last_updated",
+      "Fuel Code - fuel_code_id"."application_date" AS "FC - id__application_date",
+      "Fuel Code - fuel_code_id"."approval_date" AS "FC - id__approval_date",
+      "Fuel Code - fuel_code_id"."fuel_type_id" AS "FC - id__fuel_type_id",
+      "Fuel Code - fuel_code_id"."feedstock" AS "FC - id__feedstock",
+      "Fuel Code - fuel_code_id"."feedstock_location" AS "FC - id__feedstock_location",
+      "Fuel Code - fuel_code_id"."feedstock_misc" AS "FC - id__feedstock_misc",
+      "Fuel Code - fuel_code_id"."fuel_production_facility_city" AS "FC - id__fuel_production_facility_city",
+      "Fuel Code - fuel_code_id"."fuel_production_facility_province_state" AS "FC - id__fuel_production_facility_province_state",
+      "Fuel Code - fuel_code_id"."fuel_production_facility_country" AS "FC - id__fuel_production_facility_country",
+      "Fuel Code - fuel_code_id"."facility_nameplate_capacity" AS "FC - id__facility_nameplate_capacity",
+      "Fuel Code - fuel_code_id"."effective_date" AS "FC - id__effective_date",
+      "Fuel Code - fuel_code_id"."effective_status" AS "FC - id__effective_status",
+      "Fuel Code - fuel_code_id"."expiration_date" AS "FC - id__expiration_date"
     FROM
       (
         WITH latest_fs AS (
@@ -595,22 +576,7 @@ ORDER BY
           fuel_supply.energy_density,
           fuel_supply.eer,
           fuel_supply.energy,
-          fuel_supply.fuel_type_other,
-          -------------------------------------------------
-          -- Versioning columns
-          -------------------------------------------------
-          fuel_supply.group_uuid,
-          fuel_supply.version,
-          fuel_supply.action_type,
-          -------------------------------------------------
-          -- Timestamps & user references
-          -------------------------------------------------
-          fuel_supply.create_date,
-          fuel_supply.create_user,
-          up_create.first_name || ' ' || up_create.last_name AS create_user_full_name,
-          fuel_supply.update_date,
-          fuel_supply.update_user,
-          up_update.first_name || ' ' || up_update.last_name AS update_user_full_name
+          fuel_supply.fuel_type_other
         FROM
           compliance_report
           JOIN compliance_report_status ON compliance_report.current_status_id = compliance_report_status.compliance_report_status_id
@@ -622,8 +588,6 @@ ORDER BY
          
 LEFT JOIN provision_of_the_act ON fuel_supply.provision_of_the_act_id = provision_of_the_act.provision_of_the_act_id
           LEFT JOIN end_use_type ON fuel_supply.end_use_id = end_use_type.end_use_type_id
-          LEFT JOIN user_profile up_create ON fuel_supply.create_user = up_create.keycloak_username
-          LEFT JOIN user_profile up_update ON fuel_supply.update_user = up_update.keycloak_username
        
 WHERE
           compliance_report.current_status_id IN (2, 3, 4, 5)
@@ -674,16 +638,7 @@ ORDER BY
       fuel_supply.energy_density,
       fuel_supply.eer,
       fuel_supply.energy,
-      fuel_supply.fuel_type_other,
-      fuel_supply.group_uuid,
-      fuel_supply.version,
-      fuel_supply.action_type,
-      fuel_supply.create_date,
-      fuel_supply.create_user,
-      up_create.first_name || ' ' || up_create.last_name AS create_user_full_name,
-      fuel_supply.update_date,
-      fuel_supply.update_user,
-      up_update.first_name || ' ' || up_update.last_name AS update_user_full_name
+      fuel_supply.fuel_type_other
     FROM
       compliance_report
       JOIN compliance_report_status ON compliance_report.current_status_id = compliance_report_status.compliance_report_status_id
@@ -695,8 +650,6 @@ ORDER BY
      
 LEFT JOIN provision_of_the_act ON fuel_supply.provision_of_the_act_id = provision_of_the_act.provision_of_the_act_id
       LEFT JOIN end_use_type ON fuel_supply.end_use_id = end_use_type.end_use_type_id
-      LEFT JOIN user_profile up_create ON fuel_supply.create_user = up_create.keycloak_username
-      LEFT JOIN user_profile up_update ON fuel_supply.update_user = up_update.keycloak_username
    
 WHERE
       compliance_report.current_status_id IN (2, 3, 4, 5);
@@ -726,25 +679,16 @@ SELECT
       "source"."fuel_type_id" AS "fuel_type_id",
       "source"."provision_of_the_act_id" AS "provision_of_the_act_id",
       "source"."end_use_id" AS "end_use_id",
-      "source"."create_date" AS "create_date",
-      "source"."update_date" AS "update_date",
-      "source"."create_user" AS "create_user",
-      "source"."update_user" AS "update_user",
-      "source"."group_uuid" AS "group_uuid",
-      "source"."version" AS "version",
-      "source"."action_type" AS "action_type",
       "source"."q1_quantity" AS "q1_quantity",
       "source"."q2_quantity" AS "q2_quantity",
       "source"."q3_quantity" AS "q3_quantity",
       "source"."q4_quantity" AS "q4_quantity",
-      "source"."Latest Fuel Supply per Group - Version__group_uuid" AS "Latest Fuel Supply per Group - Version__group_uuid",
-      "source"."Latest Fuel Supply per Group - Version__max" AS "Latest Fuel Supply per Group - Version__max",
-      "Compliance Report groups - Compliance Report"."compliance_report_id" AS "Compliance Report groups - Compliance Report__compl_07c52e81",
-      "Compliance Report groups - Compliance Report"."compliance_report_group_uuid" AS "Compliance Report groups - Compliance Report__compl_a1e6d749",
-      "Compliance Report groups - Compliance Report"."version" AS "Compliance Report groups - Compliance Report__version",
-      "Compliance Report groups - Compliance Report"."compliance_period" AS "Compliance Report groups - Compliance Report__compl_127e8174",
-      "Compliance Report groups - Compliance Report"."organization_name" AS "Compliance Report groups - Compliance Report__organ_5cf42f45",
-      "Compliance Report groups - Compliance Report"."report_status" AS "Compliance Report groups - Compliance Report__report_status"
+      "Compliance Report groups - Compliance Report"."compliance_report_id" AS "CR groups - id",
+      "Compliance Report groups - Compliance Report"."compliance_report_group_uuid" AS "CR groups - group_uuid",
+      "Compliance Report groups - Compliance Report"."version" AS "CR groups - version",
+      "Compliance Report groups - Compliance Report"."compliance_period" AS "CR groups - compliance_period",
+      "Compliance Report groups - Compliance Report"."organization_name" AS "CR groups - organization_name",
+      "Compliance Report groups - Compliance Report"."report_status" AS "CR groups - report_status"
     FROM
       (
         SELECT
@@ -765,19 +709,10 @@ SELECT
           "fuel_supply"."fuel_type_id" AS "fuel_type_id",
           "fuel_supply"."provision_of_the_act_id" AS "provision_of_the_act_id",
           "fuel_supply"."end_use_id" AS "end_use_id",
-          "fuel_supply"."create_date" AS "create_date",
-          "fuel_supply"."update_date" AS "update_date",
-          "fuel_supply"."create_user" AS "create_user",
-          "fuel_supply"."update_user" AS "update_user",
-          "fuel_supply"."group_uuid" AS "group_uuid",
-          "fuel_supply"."version" AS "version",
-          "fuel_supply"."action_type" AS "action_type",
           "fuel_supply"."q1_quantity" AS "q1_quantity",
           "fuel_supply"."q2_quantity" AS "q2_quantity",
           "fuel_supply"."q3_quantity" AS "q3_quantity",
-          "fuel_supply"."q4_quantity" AS "q4_quantity",
-          "Latest Fuel Supply per Group - Version"."group_uuid" AS "Latest Fuel Supply per Group - Version__group_uuid",
-          "Latest Fuel Supply per Group - Version"."max" AS "Latest Fuel Supply per Group - Version__max"
+          "fuel_supply"."q4_quantity" AS "q4_quantity"
         FROM
           "fuel_supply"
           INNER JOIN (
@@ -812,12 +747,12 @@ LEFT JOIN (
           "source"."compliance_period" AS "compliance_period",
           "source"."organization_name" AS "organization_name",
           "source"."report_status" AS "report_status",
-          "Compliance Report - Compliance Report Group UUID"."compliance_report_id" AS "Compliance Report - Compliance Report Group UUID__c_e4dbf381",
-          "Compliance Report - Compliance Report Group UUID"."transaction_id" AS "Compliance Report - Compliance Report Group UUID__t_91b14a03",
-          "Compliance Report - Compliance Report Group UUID"."legacy_id" AS "Compliance Report - Compliance Report Group UUID__legacy_id",
-          "Compliance Report - Compliance Report Group UUID"."version" AS "Compliance Report - Compliance Report Group UUID__version",
-          "Compliance Report - Compliance Report Group UUID"."supplemental_initiator" AS "Compliance Report - Compliance Report Group UUID__s_7c2696a2",
-          "Compliance Report - Compliance Report Group UUID"."current_status_id" AS "Compliance Report - Compliance Report Group UUID__c_bc51a06b"
+          "Compliance Report - Compliance Report Group UUID"."compliance_report_id" AS "CR - Group UUID__compliance_report_id",
+          "Compliance Report - Compliance Report Group UUID"."transaction_id" AS "CR - Group UUID__transaction_id",
+          "Compliance Report - Compliance Report Group UUID"."legacy_id" AS "CR - Group UUID__legacy_id",
+          "Compliance Report - Compliance Report Group UUID"."version" AS "CR - Group UUID__version",
+          "Compliance Report - Compliance Report Group UUID"."supplemental_initiator" AS "CR - Group UUID__supplemental_initiator",
+          "Compliance Report - Compliance Report Group UUID"."current_status_id" AS "CR - Group UUID__current_status_id"
         FROM
           (
             SELECT
@@ -845,7 +780,7 @@ LEFT JOIN (
               )
           ) AS "source"
           INNER JOIN "compliance_report" AS "Compliance Report - Compliance Report Group UUID" ON "source"."compliance_report_group_uuid" = "Compliance Report - Compliance Report Group UUID"."compliance_report_group_uuid"
-      ) AS "Compliance Report groups - Compliance Report" ON "Compliance Report groups - Compliance Report"."compliance_report_id" = "Compliance Report groups - Compliance Report"."Compliance Report - Compliance Report Group UUID__c_e4dbf381";
+      ) AS "Compliance Report groups - Compliance Report" ON "source"."compliance_report_id" = "Compliance Report groups - Compliance Report"."compliance_report_id";
 
 GRANT SELECT ON vw_compliance_report_fuel_supply_base TO basic_lcfs_reporting_role;
 
@@ -884,10 +819,6 @@ SELECT
       "compliance_report"."reporting_frequency" AS "reporting_frequency",
       "compliance_report"."nickname" AS "nickname",
       "compliance_report"."supplemental_note" AS "supplemental_note",
-      "compliance_report"."create_date" AS "create_date",
-      "compliance_report"."update_date" AS "update_date",
-      "compliance_report"."create_user" AS "create_user",
-      "compliance_report"."update_user" AS "update_user",
       "compliance_report"."assessment_statement" AS "assessment_statement",
       CASE
         WHEN "Compliance Report Summary - Compliance Report"."line_11_fossil_derived_base_fuel_total" > 0 THEN 'Not Met'
@@ -1009,8 +940,8 @@ SELECT
       "Organization"."expiration_date" AS "Organization__expiration_date",
       "Organization"."has_early_issuance" AS "Organization__has_early_issuance",
       "Organization"."records_address" AS "Organization__records_address",
-      "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid" AS "Compliance Reports Chained - Compliance Report Grou_1a77e4cb",
-      "Compliance Reports Chained - Compliance Report Group UUID"."max_version" AS "Compliance Reports Chained - Compliance Report Grou_480bb7b1"
+      "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid" AS "CR Chained - CR Group UUID__group_uuid",
+      "Compliance Reports Chained - Compliance Report Group UUID"."max_version" AS "CR Chained - CR Group UUID__max_version"
     FROM
       "compliance_report"
       INNER JOIN "compliance_period" AS "Compliance Period" ON "compliance_report"."compliance_period_id" = "Compliance Period"."compliance_period_id"
@@ -1062,6 +993,11 @@ GRANT SELECT ON vw_allocation_agreement_chained TO basic_lcfs_reporting_role;
 -- ==========================================
 drop view if exists vw_allocation_agreement_base;
 CREATE OR REPLACE VIEW vw_allocation_agreement_base AS
+WITH latest_aa AS (
+    SELECT DISTINCT ON (group_uuid) *
+    FROM allocation_agreement
+    ORDER BY group_uuid, version DESC
+)
 SELECT
       "source"."group_uuid" AS "group_uuid",
       "source"."max" AS "max",
@@ -1420,38 +1356,39 @@ GRANT SELECT ON vw_allocation_agreement_base TO basic_lcfs_reporting_role;
 drop view if exists vw_fuel_code_base cascade;
 CREATE OR REPLACE VIEW vw_fuel_code_base AS
 SELECT
-    fc.fuel_code_id,
+    fc.fuel_code_id AS "ID",
     fcp.fuel_code_prefix_id,
-    fcp.prefix,
-    fc.fuel_suffix,
+    fcp.prefix AS "Prefix",
+    fc.fuel_suffix AS "Suffix",
     fcs.fuel_code_status_id,
-    fcs.status,
+    fcs.status AS "Status",
     ft.fuel_type_id,
-    ft.fuel_type,
-    fc.company,
+    ft.fuel_type AS "Fuel Type",
+    fc.company AS "Company",
     fc.contact_name,
     fc.contact_email,
-    fc.carbon_intensity,
+    fc.carbon_intensity AS "Carbon Intensity",
     fc.edrms,
-    fc.last_updated,
-    fc.application_date,
-    fc.approval_date,
+    fc.last_updated AS "Last Updated",
+    fc.application_date AS "Application Date",
+    fc.approval_date AS "Approval Date",
     fc.create_date,
     fc.effective_date,
     fc.expiration_date,
     fc.effective_status,
-    fc.feedstock,
-    fc.feedstock_location,
-    fc.feedstock_misc,
-    fc.fuel_production_facility_city,
-    fc.fuel_production_facility_province_state,
-    fc.fuel_production_facility_country,
-    fc.facility_nameplate_capacity,
+    fc.feedstock AS "Feedstock",
+    fc.feedstock_location AS "Feedstock Location",
+    fc.feedstock_misc AS "Feedstock Misc",
+    fc.fuel_production_facility_city AS "Facility City",
+    fc.fuel_production_facility_province_state AS "Facility State",
+    fc.fuel_production_facility_country AS "Facility Country",
+    fc.facility_nameplate_capacity AS "Facility Capacity",
     fc.facility_nameplate_capacity_unit,
     fc.former_company,
     finished_modes.transport_modes AS finished_fuel_transport_modes,
     feedstock_modes.transport_modes AS feedstock_fuel_transport_modes,
-    fc.notes
+    fc.notes AS "Notes"
+    
 FROM fuel_code fc
 JOIN fuel_code_prefix fcp ON fc.prefix_id = fcp.fuel_code_prefix_id
 JOIN fuel_code_status fcs ON fc.fuel_status_id = fcs.fuel_code_status_id
