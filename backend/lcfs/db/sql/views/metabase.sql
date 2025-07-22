@@ -1167,3 +1167,131 @@ JOIN compliance_period cp ON sr.compliance_period_id = cp.compliance_period_id
 JOIN organization o ON sr.organization_id = o.organization_id
 LEFT JOIN user_profile up ON sr.assigned_analyst_id = up.user_profile_id
 ORDER BY sr.compliance_report_group_uuid, sr.version DESC;
+-- ==========================================
+-- Fuel Export Analytics Base View
+-- ==========================================
+drop view if exists vw_fuel_export_analytics_base;
+CREATE OR REPLACE VIEW vw_fuel_export_analytics_base AS
+WITH
+  latest_fe AS (
+    SELECT
+      fe.group_uuid,
+      MAX(fe.version) AS max_version
+    FROM
+      fuel_export fe
+    WHERE
+      action_type <> 'DELETE'
+    GROUP BY
+      fe.group_uuid
+  ),
+  selected_fe AS (
+    SELECT
+      fe.*
+    FROM
+      fuel_export fe
+      JOIN latest_fe lfe ON fe.group_uuid = lfe.group_uuid
+      AND fe.version = lfe.max_version
+    WHERE
+      fe.action_type != 'DELETE'
+  ),
+  finished_fuel_transport_modes_agg AS (
+    SELECT
+      fc.fuel_code_id,
+      ARRAY_AGG(tm.transport_mode ORDER BY tm.transport_mode) AS transport_modes
+    FROM
+      fuel_code fc
+      JOIN finished_fuel_transport_mode fftm ON fc.fuel_code_id = fftm.fuel_code_id
+      JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
+    GROUP BY
+      fc.fuel_code_id
+  ),
+  feedstock_fuel_transport_modes_agg AS (
+    SELECT
+      fc.fuel_code_id,
+      ARRAY_AGG(tm.transport_mode ORDER BY tm.transport_mode) AS transport_modes
+    FROM
+      fuel_code fc
+      JOIN feedstock_fuel_transport_mode fftm ON fc.fuel_code_id = fftm.fuel_code_id
+      JOIN transport_mode tm ON fftm.transport_mode_id = tm.transport_mode_id
+    GROUP BY
+      fc.fuel_code_id
+  ),
+  grouped_reports AS (
+    SELECT
+      compliance_report_id,
+      compliance_report_group_uuid,
+      VERSION,
+      compliance_period_id,
+      current_status_id,
+      organization_id
+    FROM
+      compliance_report
+    WHERE
+      compliance_report_group_uuid IN (
+        SELECT
+          vcrb.compliance_report_group_uuid
+        FROM
+          vw_compliance_report_analytics_base vcrb
+      )
+  )
+SELECT DISTINCT
+  gr.compliance_report_group_uuid,
+  vcrb.report_status,
+  vcrb.compliance_report_id,
+  org.organization_id,
+  org.name AS supplier_name,
+  cp.description AS compliance_year,
+  ft.fuel_type,
+  fcat.category as fuel_category,
+  eut.type AS end_use_type,
+  pa.description as provision_description,
+  fe.quantity,
+  ft.units as fuel_units,
+  fe.target_ci,
+  fe.ci_of_fuel as rci,
+  fe.uci,
+  fe.energy_density,
+  fe.eer,
+  fe.energy as energy_content,
+  concat(fcp.prefix, fc.fuel_suffix) AS fuel_code,
+  fc.company as fuel_code_company,
+  fc.feedstock,
+  fc.feedstock_location,
+  fc.feedstock_misc,
+  fc.effective_date,
+  fc.application_date,
+  fc.approval_date,
+  fc.expiration_date,
+  ft.renewable,
+  ft.fossil_derived,
+  fc.carbon_intensity,
+  fc.fuel_production_facility_city,
+  fc.fuel_production_facility_province_state,
+  fc.fuel_production_facility_country,
+  fc.facility_nameplate_capacity,
+  fc.facility_nameplate_capacity_unit,
+  finishedftma.transport_modes as Finished_fuel_transport_modes,
+  feedstockftma.transport_modes as Feedstock_fuel_transport_modes,
+  fcs.status as fuel_code_status,
+  fe.fuel_export_id,
+  fe.fuel_type_id,
+  fe.fuel_code_id,
+  fe.provision_of_the_act_id,
+  fe.fuel_category_id,
+  fe.end_use_id
+FROM
+  selected_fe fe
+  JOIN grouped_reports gr ON fe.compliance_report_id = gr.compliance_report_id
+  JOIN vw_compliance_report_analytics_base vcrb ON vcrb.compliance_report_group_uuid = gr.compliance_report_group_uuid
+  JOIN compliance_period cp ON gr.compliance_period_id = cp.compliance_period_id
+  JOIN organization org ON gr.organization_id = org.organization_id
+  LEFT JOIN fuel_code fc ON fe.fuel_code_id = fc.fuel_code_id
+  LEFT JOIN fuel_code_status fcs ON fc.fuel_status_id = fcs.fuel_code_status_id
+  LEFT JOIN fuel_code_prefix fcp ON fc.prefix_id = fcp.fuel_code_prefix_id
+  LEFT JOIN fuel_type ft ON fe.fuel_type_id = ft.fuel_type_id
+  LEFT JOIN fuel_category fcat ON fcat.fuel_category_id = fe.fuel_category_id
+  LEFT JOIN end_use_type eut ON fe.end_use_id = eut.end_use_type_id
+  LEFT JOIN provision_of_the_act pa ON fe.provision_of_the_act_id = pa.provision_of_the_act_id
+  LEFT JOIN finished_fuel_transport_modes_agg finishedftma ON fc.fuel_code_id = finishedftma.fuel_code_id
+  LEFT JOIN feedstock_fuel_transport_modes_agg feedstockftma ON fc.fuel_code_id = feedstockftma.fuel_code_id;
+grant select on vw_fuel_export_analytics_base to basic_lcfs_reporting_role;
