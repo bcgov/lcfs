@@ -205,14 +205,14 @@ async def get_transport_modes(
     response_model=List[ExpiringFuelCodesSchema],
     status_code=status.HTTP_200_OK,
 )
-async def get_expiring_fuel_codes(
+async def send_expiring_fuel_code_notifications(
     from_date: date = Query(
         default_factory=lambda: (date.today() + timedelta(days=90)).isoformat(),
-        description="Start of the expiration window (defaults to 88 days from today)",
+        description="Start of the expiration window (defaults to 90 days from today)",
     ),
     service: FuelCodeServices = Depends(),
 ) -> List[ExpiringFuelCodesSchema]:
-    """Fetch all fuel codes expiring within a given date range (88-119 days from today by default)"""
+    """Send notifications to all related fuel code contacts, that are within 90 days of expiry"""
     return await service.send_fuel_code_expiry_notifications(from_date)
 
 @router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)

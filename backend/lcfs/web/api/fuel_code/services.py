@@ -403,15 +403,7 @@ class FuelCodeServices:
     @service_handler
     async def send_fuel_code_expiry_notifications(self, from_date) -> bool:
         """
-        Send email notifications for fuel codes expiring in the 30 days.
-
-        Args:
-            days_ahead: Number of days in advance to check for expiring codes
-            organization_id: If specified, only send to this organization.
-                           If None, send to all relevant organizations.
-
-        Returns:
-            bool: True if notifications were sent successfully
+        Send email notifications for fuel codes expiring in the 90 days.
         """
         try:
             # Get expiring fuel codes
