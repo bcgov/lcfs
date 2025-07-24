@@ -124,6 +124,11 @@ export const useUpdateUser = ({
         queryKey: ['users']
       })
 
+      // Invalidate available analysts list when user roles change
+      queryClient.invalidateQueries({
+        queryKey: ['available-analysts']
+      })
+
       // Invalidate organization details if updating organization user
       if (organizationId) {
         queryClient.invalidateQueries({
@@ -176,6 +181,11 @@ export const useCreateUser = ({
       // Invalidate users list query
       queryClient.invalidateQueries({
         queryKey: ['users']
+      })
+
+      // Invalidate available analysts list when new users are created
+      queryClient.invalidateQueries({
+        queryKey: ['available-analysts']
       })
 
       // Invalidate organization details if creating organization user

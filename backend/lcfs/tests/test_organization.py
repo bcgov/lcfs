@@ -29,7 +29,7 @@ async def test_export_success(
 async def test_export_unauthorized_access(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("export_organizations")
     response = await client.get(url)
 

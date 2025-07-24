@@ -52,6 +52,10 @@ export const ComplianceReports = () => {
     staleTime: 0
   })
 
+  const handleRefresh = () => {
+    queryData.refetch()
+  }
+
   const getRowId = useCallback(
     (params) => params.data.complianceReportGroupUuid,
     []
@@ -179,7 +183,11 @@ export const ComplianceReports = () => {
           <BCGridViewer
             gridRef={gridRef}
             gridKey="compliance-reports-grid"
-            columnDefs={reportsColDefs(t, hasRoles(roles.supplier))}
+            columnDefs={reportsColDefs(
+              t,
+              hasRoles(roles.supplier),
+              handleRefresh
+            )}
             queryData={queryData}
             dataKey="reports"
             getRowId={getRowId}

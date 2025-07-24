@@ -15,6 +15,7 @@ import { constructAddress } from '@/utils/constructAddress'
 import { roles } from '@/constants/roles'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 import { Role } from '@/components/Role'
+import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
 
 export const OrganizationDetailsCard = () => {
   const { t } = useTranslation(['common', 'org'])
@@ -28,7 +29,11 @@ export const OrganizationDetailsCard = () => {
   } = useCurrentUser()
 
   const { data: orgData, isLoading } = useOrganization(
-    orgID ?? currentUser?.organization?.organizationId
+    orgID ?? currentUser?.organization?.organizationId,
+    {
+      staleTime: 0,
+      cacheTime: 0
+    }
   )
   const { data: orgBalanceInfo } = useOrganizationBalance(
     orgID ?? currentUser?.organization?.organizationId
@@ -136,7 +141,12 @@ export const OrganizationDetailsCard = () => {
                   {(hasRoles(roles.government) ||
                     orgData?.hasEarlyIssuance) && (
                     <BCTypography variant="body4">
-                      <strong>{t('org:earlyIssuanceIndicator')}:</strong>{' '}
+                      <strong>
+                        {t('org:earlyIssuanceIndicator', {
+                          year: CURRENT_COMPLIANCE_YEAR
+                        })}
+                        :
+                      </strong>{' '}
                       {orgData?.hasEarlyIssuance
                         ? t('common:yes')
                         : t('common:no')}
