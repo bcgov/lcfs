@@ -437,10 +437,23 @@ jobs:
     needs: [frontend-tests]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: |
+            frontend
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Install Vitest
+        run: |
+          cd frontend
+          VITEST_VERSION=$(node -p "require('./package.json').devDependencies.vitest")
+          echo "Installing vitest version: $VITEST_VERSION"
+          npm install vitest@$VITEST_VERSION --no-save
 
       - name: Download blob reports from GitHub Actions Artifacts
         uses: actions/download-artifact@v4
