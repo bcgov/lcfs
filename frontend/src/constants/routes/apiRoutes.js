@@ -82,6 +82,8 @@ export const apiRoutes = {
   createAnalystAdjustment: '/reports/:reportID/adjustment',
   createIdirSupplementalReport: '/reports/:reportID/idir-supplemental',
   getChangelog: '/reports/:complianceReportGroupUuid/changelog/:dataType',
+  getAvailableAnalysts: '/reports/analysts',
+  assignAnalyst: '/reports/:reportId/assign',
 
   // notional-transfers
   notionalTransferOptions: '/notional-transfers/table-options',

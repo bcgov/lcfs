@@ -1,7 +1,7 @@
 """Adds organization_early_issuance_by_year table, extends compliance periods to 2050, and migrates early issuance flags.
 
 Revision ID: a1b2c3d4e5f7
-Revises: ae2306fa8d72
+Revises: 07cce665fabc
 Create Date: 2025-07-10 10:10:00.000000
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "a1b2c3d4e5f7"
-down_revision = "ae2306fa8d72"
+down_revision = "07cce665fabc"
 branch_labels = None
 depends_on = None
 

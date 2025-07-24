@@ -8,8 +8,9 @@
     "organization": "Organization",
     "type": "Type",
     "status": "Current status",
-    "lastComment": "Last comment",
-    "lastUpdated": "Last status update"
+    "lastUpdated": "Last status update",
+    "assignedAnalyst": "Assigned Analyst",
+    "lastComment": "Last comment"
   },
   "noReportsFound": "No compliance reports found",
   "serviceAddrLabel": "Address for service",
@@ -280,5 +281,7 @@
   ],
   "changeInUnits": "Projected change in compliance units balance",
   "generatedLabel": "Credits generated",
-  "allRecordsDeleted": "All previous records deleted."
+  "allRecordsDeleted": "All previous records deleted.",
+  "assignAnalyst": "Assign Analyst",
+  "unassign": "Unassign"
 }

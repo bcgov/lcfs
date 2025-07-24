@@ -262,12 +262,16 @@ class TestReportLifecycleAndTransactions:
         # 2. Setup the original, assessed compliance report (v0)
         v0_report = MagicMock(spec=ComplianceReport)
         v0_report.compliance_report_id = 1
-        v0_report.version = 0
         v0_report.compliance_report_group_uuid = "group-uuid-1"
+        v0_report.version = 0
+        v0_report.compliance_period_id = 1
+        v0_report.organization_id = 1
+        v0_report.current_status_id = 3
         v0_report.transaction_id = v0_transaction.transaction_id
         v0_report.transaction = v0_transaction
         v0_report.current_status.status = ComplianceReportStatusEnum.Submitted
-        v0_report.organization_id = 1
+        v0_report.has_supplemental = False
+        v0_report.legacy_id = None
         # Add real values for schema validation
         v0_report.supplemental_initiator = (
             SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
@@ -276,19 +280,53 @@ class TestReportLifecycleAndTransactions:
         v0_report.supplemental_note = ""
         v0_report.assessment_statement = ""
         v0_report.reporting_frequency = ReportingFrequency.ANNUAL
-        v0_report.compliance_period.description = "2023"
-        v0_report.organization.organizationCode = "ORG1"
-        v0_report.organization.name = "Organization One"
+        v0_report.update_date = None
+        v0_report.history = None
+        
+        # Mock compliance period
+        mock_compliance_period = MagicMock()
+        mock_compliance_period.compliance_period_id = 1
+        mock_compliance_period.description = "2023"
+        v0_report.compliance_period = mock_compliance_period
+        
+        # Use real schema object for organization  
+        from lcfs.web.api.compliance_report.schema import ComplianceReportOrganizationSchema
+        real_organization = ComplianceReportOrganizationSchema(
+            organization_id=1,
+            organization_code="ORG1",
+            name="Organization One"
+        )
+        v0_report.organization = real_organization
+        
+        # Mock current status
+        mock_status = MagicMock()
+        mock_status.compliance_report_status_id = 3
+        mock_status.status = ComplianceReportStatusEnum.Submitted
+        v0_report.current_status = mock_status
+        
+        # Mock summary
+        v0_report.summary = None
+        
+        # Setup assigned analyst for v0_report
+        mock_analyst = MagicMock()
+        mock_analyst.user_profile_id = 456
+        mock_analyst.first_name = "John"
+        mock_analyst.last_name = "Analyst"
+        v0_report.assigned_analyst = mock_analyst
 
         # 3. Setup the new report to be created (v1)
         v1_report = MagicMock(spec=ComplianceReport)
         v1_report.compliance_report_id = 2
-        v1_report.version = 1
         v1_report.compliance_report_group_uuid = "group-uuid-1"
+        v1_report.version = 1
+        v1_report.compliance_period_id = 1
+        v1_report.organization_id = 1
+        v1_report.current_status_id = 7
         v1_report.transaction_id = None
         v1_report.transaction = None
         v1_report.current_status.status = ComplianceReportStatusEnum.Analyst_adjustment
-        v1_report.organization_id = 1
+        v1_report.has_supplemental = False
+        v1_report.legacy_id = None
         # Add real values for schema validation
         v1_report.supplemental_initiator = (
             SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
@@ -297,9 +335,24 @@ class TestReportLifecycleAndTransactions:
         v1_report.supplemental_note = ""
         v1_report.assessment_statement = ""
         v1_report.reporting_frequency = ReportingFrequency.ANNUAL
-        v1_report.compliance_period.description = "2023"
-        v1_report.organization.organizationCode = "ORG1"
-        v1_report.organization.name = "Organization One"
+        v1_report.update_date = None
+        v1_report.history = None
+        
+        # Reuse same compliance period, organization
+        v1_report.compliance_period = mock_compliance_period
+        v1_report.organization = real_organization
+        
+        # Mock current status for v1
+        mock_status_v1 = MagicMock()
+        mock_status_v1.compliance_report_status_id = 7
+        mock_status_v1.status = ComplianceReportStatusEnum.Analyst_adjustment
+        v1_report.current_status = mock_status_v1
+        
+        # Mock summary
+        v1_report.summary = None
+        
+        # Setup assigned analyst for v1_report
+        v1_report.assigned_analyst = mock_analyst
 
         # 4. Mock repository methods
         def get_report_side_effect(report_id):

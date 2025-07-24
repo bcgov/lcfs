@@ -1157,10 +1157,14 @@ SELECT DISTINCT
     (sr.version_rank = 1) as is_latest,
     sr.latest_supplemental_initiator as latest_report_supplemental_initiator,
     sr.latest_supplemental_create_date,
-    sr.latest_status
+    sr.latest_status,
+    sr.assigned_analyst_id,
+    up.first_name AS assigned_analyst_first_name,
+    up.last_name AS assigned_analyst_last_name
 FROM selected_reports sr
 JOIN compliance_period cp ON sr.compliance_period_id = cp.compliance_period_id
 JOIN organization o ON sr.organization_id = o.organization_id
+LEFT JOIN user_profile up ON sr.assigned_analyst_id = up.user_profile_id
 ORDER BY sr.compliance_report_group_uuid, sr.version DESC;
 -- ==========================================
 -- Fuel Export Analytics Base View
