@@ -12,29 +12,225 @@ import sys
 # Add parent directory to path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import argparse
 import json
 import logging
 import sys
+import zoneinfo
 from datetime import datetime
 from decimal import Decimal
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from core.database import get_source_connection, get_destination_connection
 from core.utils import setup_logging, safe_decimal, build_legacy_mapping
 
 logger = logging.getLogger(__name__)
 
+MIGRATION_USER = "ETL_COMPLIANCE_SUMMARY"
+
 
 class ComplianceSummaryUpdater:
     def __init__(self):
         self.legacy_to_lcfs_mapping: Dict[int, int] = {}
+
+        # Statistics for reporting
+        self.stats = {
+            "tfrs_snapshots_found": 0,
+            "snapshots_processed": 0,
+            "snapshots_skipped_no_mapping": 0,
+            "snapshots_skipped_parse_error": 0,
+            "updates_successful": 0,
+            "updates_failed": 0,
+            "line_17_calculations": 0,
+            "batch_commits": 0,
+        }
 
     def load_mappings(self, lcfs_cursor):
         logger.info("Loading legacy ID to LCFS compliance_report_id mappings")
         self.legacy_to_lcfs_mapping = build_legacy_mapping(lcfs_cursor)
         logger.info(f"Loaded {len(self.legacy_to_lcfs_mapping)} legacy mappings")
 
+    def calculate_line_17_balance(
+        self, lcfs_cursor, organization_id: int, compliance_period: int
+    ) -> float:
+        """Calculate Line 17 available balance using raw SQL"""
+        try:
+            # Calculate compliance period end date
+            vancouver_timezone = zoneinfo.ZoneInfo("America/Vancouver")
+            compliance_period_end = datetime.strptime(
+                f"{str(compliance_period + 1)}-03-31", "%Y-%m-%d"
+            )
+            compliance_period_end_local = compliance_period_end.replace(
+                hour=23,
+                minute=59,
+                second=59,
+                microsecond=999999,
+                tzinfo=vancouver_timezone,
+            )
+
+            line_17_query = """
+                WITH assessment_balance AS (
+                    SELECT COALESCE(SUM(t.compliance_units), 0) as balance
+                    FROM transaction t
+                    JOIN compliance_report cr ON t.transaction_id = cr.transaction_id
+                    JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
+                    WHERE t.organization_id = %s
+                      AND crs.status IN ('Assessed')
+                      AND t.create_date <= %s
+                      AND t.transaction_action = 'Adjustment'
+                ),
+                transfer_purchases AS (
+                    SELECT COALESCE(SUM(quantity), 0) as balance
+                    FROM transfer
+                    WHERE to_organization_id = %s
+                      AND current_status_id = 6
+                      AND transaction_effective_date <= %s
+                ),
+                transfer_sales AS (
+                    SELECT COALESCE(SUM(quantity), 0) as balance
+                    FROM transfer
+                    WHERE from_organization_id = %s
+                      AND current_status_id = 6
+                      AND transaction_effective_date <= %s
+                ),
+                initiative_agreements AS (
+                    SELECT COALESCE(SUM(compliance_units), 0) as balance
+                    FROM initiative_agreement
+                    WHERE to_organization_id = %s
+                      AND current_status_id = 3
+                      AND transaction_effective_date <= %s
+                ),
+                admin_adjustments AS (
+                    SELECT COALESCE(SUM(compliance_units), 0) as balance
+                    FROM admin_adjustment
+                    WHERE to_organization_id = %s
+                      AND current_status_id = 3
+                      AND transaction_effective_date <= %s
+                ),
+                future_transfer_debits AS (
+                    SELECT COALESCE(SUM(quantity), 0) as balance
+                    FROM transfer
+                    WHERE from_organization_id = %s
+                      AND current_status_id = 6
+                      AND transaction_effective_date > %s
+                ),
+                future_negative_transactions AS (
+                    SELECT COALESCE(SUM(ABS(compliance_units)), 0) as balance
+                    FROM transaction
+                    WHERE organization_id = %s
+                      AND create_date > %s
+                      AND compliance_units < 0
+                      AND transaction_action != 'Released'
+                )
+                SELECT GREATEST(
+                    (SELECT balance FROM assessment_balance) +
+                    (SELECT balance FROM transfer_purchases) -
+                    (SELECT balance FROM transfer_sales) +
+                    (SELECT balance FROM initiative_agreements) +
+                    (SELECT balance FROM admin_adjustments) -
+                    (SELECT balance FROM future_transfer_debits) -
+                    (SELECT balance FROM future_negative_transactions),
+                    0
+                ) AS available_balance
+            """
+
+            params = [
+                organization_id,  # assessment_balance
+                compliance_period_end_local,
+                organization_id,  # transfer_purchases
+                compliance_period_end_local.date(),
+                organization_id,  # transfer_sales
+                compliance_period_end_local.date(),
+                organization_id,  # initiative_agreements
+                compliance_period_end_local.date(),
+                organization_id,  # admin_adjustments
+                compliance_period_end_local.date(),
+                organization_id,  # future_transfer_debits
+                compliance_period_end_local.date(),
+                organization_id,  # future_negative_transactions
+                compliance_period_end_local,
+            ]
+
+            lcfs_cursor.execute(line_17_query, params)
+            result = lcfs_cursor.fetchone()
+
+            self.stats["line_17_calculations"] += 1
+            return float(result[0] if result and result[0] is not None else 0)
+
+        except Exception as e:
+            logger.error(
+                f"Error calculating line 17 balance for org {organization_id}: {e}"
+            )
+            return 0.0
+
+    def get_compliance_units_received(
+        self,
+        lcfs_cursor,
+        organization_id: int,
+        compliance_period_start: str,
+        compliance_period_end: str,
+    ) -> float:
+        """Get compliance units received through transfers"""
+        query = """
+            SELECT COALESCE(SUM(quantity), 0) AS total_transferred_out
+            FROM transfer 
+            WHERE agreement_date BETWEEN %s AND %s
+            AND to_organization_id = %s 
+            AND current_status_id = 6 -- Recorded
+        """
+
+        lcfs_cursor.execute(
+            query, (compliance_period_start, compliance_period_end, organization_id)
+        )
+        result = lcfs_cursor.fetchone()
+        return float(result[0] if result and result[0] is not None else 0.0)
+
+    def get_transferred_out_compliance_units(
+        self,
+        lcfs_cursor,
+        organization_id: int,
+        compliance_period_start: str,
+        compliance_period_end: str,
+    ) -> float:
+        """Get compliance units transferred away"""
+        query = """
+            SELECT COALESCE(SUM(quantity), 0) AS total_transferred_out
+            FROM transfer 
+            WHERE agreement_date BETWEEN %s AND %s
+            AND from_organization_id = %s 
+            AND current_status_id = 6 -- Recorded
+        """
+
+        lcfs_cursor.execute(
+            query, (compliance_period_start, compliance_period_end, organization_id)
+        )
+        result = lcfs_cursor.fetchone()
+        return float(result[0] if result and result[0] is not None else 0.0)
+
+    def get_issued_compliance_units(
+        self,
+        lcfs_cursor,
+        organization_id: int,
+        compliance_period_start: str,
+        compliance_period_end: str,
+    ) -> float:
+        """Get compliance units issued under initiative agreements"""
+        query = """
+            SELECT COALESCE(SUM(compliance_units), 0) AS total_compliance_units
+            FROM initiative_agreement 
+            WHERE transaction_effective_date BETWEEN %s AND %s
+            AND to_organization_id = %s 
+            AND current_status_id = 3; -- Approved
+        """
+
+        lcfs_cursor.execute(
+            query, (compliance_period_start, compliance_period_end, organization_id)
+        )
+        result = lcfs_cursor.fetchone()
+        return float(result[0] if result and result[0] is not None else 0.0)
+
     def fetch_snapshot_data(self, tfrs_cursor) -> List[Dict]:
+        """Fetch snapshot data from LCFS compliance reports, filtering for unprocessed records"""
         source_query = """
             SELECT compliance_report_id, snapshot
             FROM public.compliance_report_snapshot
@@ -59,14 +255,59 @@ class ComplianceSummaryUpdater:
                 logger.warning(
                     f"Failed to parse JSON for compliance_report_id {row[0]}: {e}"
                 )
+                self.stats["snapshots_skipped_parse_error"] += 1
                 continue
 
+        self.stats["tfrs_snapshots_found"] = len(records)
         logger.info(f"Fetched {len(records)} snapshot records")
         return records
 
-    def parse_summary_data(self, snapshot: Dict) -> Optional[Dict]:
+    def parse_summary_data(self, snapshot: Dict, lcfs_cursor) -> Optional[Dict]:
+        """Enhanced parsing with Alembic migration logic"""
         try:
-            summary_lines = snapshot.get("summary", {}).get("lines", {})
+            # Extract organization and compliance period info
+            organization_id = snapshot.get("organization", {}).get("id", 0)
+            compliance_period_start = snapshot.get("compliance_period", {}).get(
+                "effective_date", "9999-12-31"
+            )
+            compliance_period_end = snapshot.get("compliance_period", {}).get(
+                "expiration_date", "9999-12-31"
+            )
+
+            # Extract year for line 17 calculation
+            compliance_period_year = (
+                int(compliance_period_start[:4])
+                if compliance_period_start != "9999-12-31"
+                else 2020
+            )
+
+            summary = snapshot.get("summary", {})
+            summary_lines = summary.get("lines", {})
+
+            # Calculate line 17 balance using enhanced logic
+            line_17 = self.calculate_line_17_balance(
+                lcfs_cursor, organization_id, compliance_period_year
+            )
+
+            # Get dynamic compliance unit calculations
+            compliance_units_received = self.get_compliance_units_received(
+                lcfs_cursor,
+                organization_id,
+                compliance_period_start,
+                compliance_period_end,
+            )
+            transferred_out_units = self.get_transferred_out_compliance_units(
+                lcfs_cursor,
+                organization_id,
+                compliance_period_start,
+                compliance_period_end,
+            )
+            issued_compliance_units = self.get_issued_compliance_units(
+                lcfs_cursor,
+                organization_id,
+                compliance_period_start,
+                compliance_period_end,
+            )
 
             # Extract gasoline class mappings (lines 1-11)
             line1_gas = safe_decimal(summary_lines.get("1", 0))
@@ -94,20 +335,21 @@ class ComplianceSummaryUpdater:
             line10_diesel = safe_decimal(summary_lines.get("21", 0))
             line11_diesel = safe_decimal(summary_lines.get("22", 0))
 
-            # Extract other summary data
+            # Extract other summary data with enhanced calculations
             compliance_units_issued = safe_decimal(summary_lines.get("25", 0))
-            banked_used = safe_decimal(summary_lines.get("26", 0))
-
-            # Extract non-compliance penalty data
+            banked_used = safe_decimal(summary.get("credits_offset", 0))
             line28_non_compliance = safe_decimal(summary_lines.get("28", 0))
-            total_payable = safe_decimal(
-                snapshot.get("summary", {}).get("total_payable", 0)
-            )
 
             # Calculate fossil fuel totals
             fossil_gas = line1_gas
             fossil_diesel = line1_diesel
             fossil_total = fossil_gas + fossil_diesel
+
+            # Enhanced calculations from Alembic migration
+            balance_chg_from_assessment = compliance_units_issued - banked_used
+            # Available compliance unit balance at the end of the compliance date for the period
+            compliance_units_balance = line_17 + compliance_units_issued
+            total_payable = line11_gas + line11_diesel + line28_non_compliance
 
             return {
                 # Gasoline class data
@@ -146,18 +388,27 @@ class ComplianceSummaryUpdater:
                 "line_9_obligation_added_jet_fuel": Decimal("0.0"),
                 "line_10_net_renewable_fuel_supplied_jet_fuel": Decimal("0.0"),
                 "line_11_non_compliance_penalty_jet_fuel": Decimal("0.0"),
-                # Low carbon fuel requirement summary
-                "line_12_low_carbon_fuel_required": Decimal("0.0"),
-                "line_13_low_carbon_fuel_supplied": Decimal("0.0"),
-                "line_14_low_carbon_fuel_surplus": Decimal("0.0"),
+                # Low carbon fuel requirement summary - Enhanced with dynamic calculations
+                # Compliance units transferred away
+                "line_12_low_carbon_fuel_required": safe_decimal(transferred_out_units),
+                # Compliance units received through transfers
+                "line_13_low_carbon_fuel_supplied": safe_decimal(
+                    compliance_units_received
+                ),
+                # Compliance units issued under initiative agreements
+                "line_14_low_carbon_fuel_surplus": safe_decimal(
+                    issued_compliance_units
+                ),
                 "line_15_banked_units_used": banked_used,
-                "line_16_banked_units_remaining": Decimal("0.0"),
-                "line_17_non_banked_units_used": Decimal("0.0"),
-                "line_18_units_to_be_banked": Decimal("0.0"),
-                "line_19_units_to_be_exported": Decimal("0.0"),
-                "line_20_surplus_deficit_units": Decimal("0.0"),
-                "line_21_surplus_deficit_ratio": Decimal("0.0"),
-                "line_22_compliance_units_issued": compliance_units_issued,
+                "line_16_banked_units_remaining": Decimal("0.0"),  # Not tracked in TFRS
+                "line_17_non_banked_units_used": safe_decimal(line_17),
+                "line_18_units_to_be_banked": compliance_units_issued,
+                "line_19_units_to_be_exported": Decimal("0.0"),  # Not tracked in TFRS
+                "line_20_surplus_deficit_units": safe_decimal(balance_chg_from_assessment),
+                "line_21_surplus_deficit_ratio": line28_non_compliance,
+                "line_22_compliance_units_issued": safe_decimal(
+                    compliance_units_balance
+                ),
                 # Fossil derived base fuel (aggregate)
                 "line_11_fossil_derived_base_fuel_gasoline": fossil_gas,
                 "line_11_fossil_derived_base_fuel_diesel": fossil_diesel,
@@ -165,7 +416,7 @@ class ComplianceSummaryUpdater:
                 "line_11_fossil_derived_base_fuel_total": fossil_total,
                 # Non-compliance penalty fields
                 "line_21_non_compliance_penalty_payable": line28_non_compliance,
-                "total_non_compliance_penalty_payable": total_payable,
+                "total_non_compliance_penalty_payable": safe_decimal(total_payable),
             }
 
         except Exception as e:
@@ -179,9 +430,12 @@ class ComplianceSummaryUpdater:
         summary_data: Dict,
         snapshot_json: str,
     ) -> bool:
+        """Update summary record with enhanced field mapping"""
         update_sql = """
             UPDATE public.compliance_report_summary
             SET 
+                update_user = %s,
+                update_date = NOW(),
                 line_1_fossil_derived_base_fuel_gasoline = %s,
                 line_2_eligible_renewable_fuel_supplied_gasoline = %s,
                 line_3_total_tracked_fuel_supplied_gasoline = %s,
@@ -238,6 +492,7 @@ class ComplianceSummaryUpdater:
 
         try:
             params = [
+                MIGRATION_USER,  # update_user
                 # Gasoline class
                 float(summary_data["line_1_fossil_derived_base_fuel_gasoline"]),
                 float(summary_data["line_2_eligible_renewable_fuel_supplied_gasoline"]),
@@ -309,9 +564,11 @@ class ComplianceSummaryUpdater:
             )
             return False
 
-    def update_summaries(self) -> tuple[int, int]:
+    def update_summaries(self) -> Tuple[int, int]:
+        """Main update logic with enhanced batch processing"""
         update_count = 0
         skip_count = 0
+        BATCH_SIZE = 10  # Commit every 10 records
 
         try:
             with get_source_connection() as tfrs_conn:
@@ -343,14 +600,19 @@ class ComplianceSummaryUpdater:
                             f"Processing legacy id {legacy_compliance_report_id} (LCFS ID: {lcfs_compliance_report_id})"
                         )
 
-                        summary_data = self.parse_summary_data(record["snapshot"])
+                        # Parse summary data with enhanced logic
+                        summary_data = self.parse_summary_data(
+                            record["snapshot"], lcfs_cursor
+                        )
                         if summary_data is None:
                             logger.error(
                                 f"Failed to parse summary data for legacy id {legacy_compliance_report_id}"
                             )
+                            self.stats["snapshots_skipped_parse_error"] += 1
                             skip_count += 1
                             continue
 
+                        # Update the record
                         if self.update_summary_record(
                             lcfs_cursor,
                             lcfs_compliance_report_id,
@@ -358,10 +620,19 @@ class ComplianceSummaryUpdater:
                             record["snapshot_json"],
                         ):
                             update_count += 1
+                            self.stats["updates_successful"] += 1
                             logger.info(
                                 f"Successfully updated legacy id {legacy_compliance_report_id} (LCFS ID: {lcfs_compliance_report_id})"
                             )
+                            # Commit every batch_size records
+                            if update_count % BATCH_SIZE == 0:
+                                lcfs_conn.commit()
+                                self.stats["batch_commits"] += 1
+                                logger.info(
+                                    f"Committed batch. Total processed: {update_count}"
+                                )
                         else:
+                            self.stats["updates_failed"] += 1
                             skip_count += 1
 
                     # Commit all changes
@@ -377,6 +648,35 @@ class ComplianceSummaryUpdater:
 
         return update_count, skip_count
 
+    def print_statistics(self):
+        """Print comprehensive migration statistics"""
+        logger.info("=" * 60)
+        logger.info("COMPLIANCE SUMMARY UPDATE STATISTICS")
+        logger.info("=" * 60)
+
+        logger.info(f"📊 Source Data:")
+        logger.info(f"  • Snapshot records found: {self.stats['tfrs_snapshots_found']}")
+        logger.info(f"  • Snapshots processed: {self.stats['snapshots_processed']}")
+
+        logger.info(f"🔄 Processing Results:")
+        logger.info(f"  • Successful updates: {self.stats['updates_successful']}")
+        logger.info(f"  • Failed updates: {self.stats['updates_failed']}")
+        logger.info(f"  • Parse errors: {self.stats['snapshots_skipped_parse_error']}")
+        logger.info(f"  • Line 17 calculations: {self.stats['line_17_calculations']}")
+        logger.info(f"  • Batch commits: {self.stats['batch_commits']}")
+
+        total_processed = (
+            self.stats["updates_successful"] + self.stats["updates_failed"]
+        )
+        success_rate = (
+            (self.stats["updates_successful"] / total_processed * 100)
+            if total_processed > 0
+            else 0
+        )
+        logger.info(f"  • Success rate: {success_rate:.1f}%")
+
+        logger.info("=" * 60)
+
 
 def main():
     setup_logging()
@@ -386,6 +686,8 @@ def main():
 
     try:
         updated, skipped = updater.update_summaries()
+        # Print statistics
+        updater.print_statistics()
         logger.info(
             f"Update completed successfully. Updated: {updated}, Skipped: {skipped}"
         )
