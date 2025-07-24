@@ -1,8 +1,7 @@
 import structlog
-from fastapi import APIRouter, Body, status, Request, Depends
+from fastapi import APIRouter, Body, status, Request, Depends, HTTPException
 from starlette.responses import StreamingResponse
 from typing import List, Literal
-from fastapi_cache.decorator import cache
 
 from lcfs.db.models.user.Role import RoleEnum
 from lcfs.services.s3.client import DocumentService
@@ -17,6 +16,8 @@ from lcfs.web.api.compliance_report.schema import (
     ChainedComplianceReportSchema,
     ComplianceReportUpdateSchema,
     ComplianceReportSummaryUpdateSchema,
+    AssignAnalystSchema,
+    AssignedAnalystSchema,
 )
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.web.api.compliance_report.summary_service import (
@@ -44,7 +45,6 @@ logger = structlog.get_logger(__name__)
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
-@cache(expire=60 * 60 * 24)  # cache for 24 hours
 async def get_compliance_periods(
     request: Request, service: ComplianceReportServices = Depends()
 ) -> list[CompliancePeriodBaseSchema]:
@@ -74,7 +74,6 @@ async def get_compliance_reports(
     status_code=status.HTTP_200_OK,
 )
 @view_handler(["*"])
-@cache(expire=60 * 60 * 24)
 async def get_compliance_report_statuses(
     request: Request,
     service: ComplianceReportServices = Depends(),
@@ -83,6 +82,22 @@ async def get_compliance_report_statuses(
     Retrieve the comprehensive compliance report summary for a specific report by ID.
     """
     return await service.get_compliance_report_statuses(request.user)
+
+
+@router.get(
+    "/analysts",
+    response_model=List[AssignedAnalystSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+async def get_available_analysts(
+    request: Request,
+    service: ComplianceReportServices = Depends(),
+) -> List[AssignedAnalystSchema]:
+    """
+    Get a list of all active IDIR users with Analyst role for assignment dropdown.
+    """
+    return await service.get_available_analysts()
 
 
 @router.get(
@@ -130,7 +145,7 @@ async def get_compliance_report_summary(
     status_code=status.HTTP_200_OK,
 )
 @view_handler(
-    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST]
+    [RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.ANALYST, RoleEnum.DIRECTOR]
 )
 async def update_compliance_report_summary(
     request: Request,
@@ -144,6 +159,19 @@ async def update_compliance_report_summary(
     """
     compliance_report = await validate.validate_organization_access(report_id)
     await validate.validate_compliance_report_access(compliance_report)
+    
+    # Validate penalty override is only allowed for 2024 reports and later
+    compliance_year = int(compliance_report.compliance_period.description)
+    if compliance_year < 2024 and (
+        getattr(summary_data, 'penalty_override_enabled', False) or
+        getattr(summary_data, 'renewable_penalty_override', None) is not None or
+        getattr(summary_data, 'low_carbon_penalty_override', None) is not None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Penalty override is only available for compliance reports from 2024 onwards"
+        )
+    
     return await summary_service.update_compliance_report_summary(
         report_id, summary_data
     )
@@ -297,5 +325,32 @@ async def get_changelog(
     router.routes[-1].response_model = List[response_model_map[data_type_snake]]
 
     return await service.get_changelog_data(
-        compliance_report_group_uuid, data_type_snake
+        compliance_report_group_uuid, data_type_snake, request.user
     )
+
+
+@router.put(
+    "/{report_id}/assign",
+    response_model=ChainedComplianceReportSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+async def assign_analyst_to_report(
+    request: Request,
+    report_id: int,
+    assignment_data: AssignAnalystSchema,
+    service: ComplianceReportServices = Depends(),
+    validate: ComplianceReportValidation = Depends(),
+) -> ChainedComplianceReportSchema:
+    """
+    Assign or unassign an analyst to/from a compliance report.
+    Set assigned_analyst_id to null to unassign.
+    """
+    compliance_report = await validate.validate_organization_access(report_id)
+    await validate.validate_compliance_report_access(compliance_report)
+    
+    await service.assign_analyst_to_report(
+        report_id, assignment_data.assigned_analyst_id, request.user
+    )
+    
+    return await service.get_compliance_report_chain(report_id, request.user)

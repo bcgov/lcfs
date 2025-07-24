@@ -2,16 +2,37 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import List, Dict, Any, Union, Optional, Sequence
 
+from lcfs.db.models.compliance import (
+    AllocationAgreement,
+    FuelExport,
+    FuelSupply,
+    OtherUses,
+)
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, func, text, update, distinct, desc, asc
+from sqlalchemy import (
+    and_,
+    exists,
+    or_,
+    select,
+    func,
+    text,
+    update,
+    distinct,
+    desc,
+    asc,
+)
 from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
-from lcfs.db.models.fuel import CategoryCarbonIntensity, DefaultCarbonIntensity
+from lcfs.db.models.fuel import (
+    CategoryCarbonIntensity,
+    DefaultCarbonIntensity,
+    FuelCodeHistory,
+)
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
 from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
@@ -28,6 +49,7 @@ from lcfs.db.models.fuel.ProvisionOfTheAct import ProvisionOfTheAct
 from lcfs.db.models.fuel.TargetCarbonIntensity import TargetCarbonIntensity
 from lcfs.db.models.fuel.TransportMode import TransportMode
 from lcfs.db.models.fuel.UnitOfMeasure import UnitOfMeasure
+from lcfs.db.models.fuel.FuelCodeListView import FuelCodeListView
 from lcfs.web.api.base import (
     PaginationRequestSchema,
     get_field_for_filter,
@@ -175,6 +197,7 @@ class FuelCodeRepository:
                         "fuel_code_id": fc.fuel_code_id,
                         "fuel_code": fc.fuel_code,
                         "carbon_intensity": fc.carbon_intensity,
+                        "fuel_production_facility_country": fc.fuel_production_facility_country,
                     }
                     for fc in fuel_type.fuel_codes
                 ],
@@ -357,11 +380,10 @@ class FuelCodeRepository:
             pagination (dict): Pagination and sorting parameters.
 
         Returns:
-            List[FuelCodeSchema]: A list of fuel codes matching the query.
+            List[FuelCodeBaseSchema]: A list of fuel codes matching the query.
         """
-        delete_status = await self.get_fuel_status_by_status("Deleted")
-        conditions = [FuelCode.fuel_status_id != delete_status.fuel_code_status_id]
-
+        conditions = []
+        query = select(FuelCodeListView)
         for filter in pagination.filters:
 
             filter_value = filter.filter
@@ -373,32 +395,18 @@ class FuelCodeRepository:
 
             filter_option = filter.type
             filter_type = filter.filter_type
-            if filter.field == "status":
-                field = get_field_for_filter(FuelCodeStatus, filter.field)
-            elif filter.field == "prefix":
-                field = get_field_for_filter(FuelCodePrefix, filter.field)
-            elif filter.field == "fuel_type":
-                field = get_field_for_filter(FuelType, filter.field)
-            elif (
-                filter.field == "feedstock_fuel_transport_mode"
-                or filter.field == "finished_fuel_transport_mode"
-            ):
-                transport_mode = await self.get_transport_mode_by_name(filter_value)
 
-                if filter.field == "feedstock_fuel_transport_mode":
-                    conditions.append(
-                        FeedstockFuelTransportMode.transport_mode_id
-                        == transport_mode.transport_mode_id
-                    )
-
-                if filter.field == "finished_fuel_transport_mode":
-                    conditions.append(
-                        FinishedFuelTransportMode.transport_mode_id
-                        == transport_mode.transport_mode_id
-                    )
+            # Handle transport mode filters - these are array fields in the view
+            if filter.field in [
+                "feedstock_fuel_transport_modes",
+                "finished_fuel_transport_modes",
+            ]:
+                field = get_field_for_filter(FuelCodeListView, filter.field)
+                conditions.append(field.any(filter_value))
                 continue
             else:
-                field = get_field_for_filter(FuelCode, filter.field)
+                # Use the view field directly
+                field = get_field_for_filter(FuelCodeListView, filter.field)
 
             conditions.append(
                 apply_filter_conditions(field, filter_value, filter_option, filter_type)
@@ -407,46 +415,24 @@ class FuelCodeRepository:
         # setup pagination
         offset = 0 if (pagination.page < 1) else (pagination.page - 1) * pagination.size
         limit = pagination.size
-        # Construct the select query with options for eager loading
-        query = (
-            select(FuelCode)
-            .join(FuelCode.fuel_code_status)  # Add explicit join for status
-            .join(FuelCode.fuel_code_prefix)  # Add explicit join for prefix
-            .join(FuelCode.fuel_type)  # Add explicit join for fuel type
-            .options(
-                contains_eager(FuelCode.fuel_code_status),
-                contains_eager(FuelCode.fuel_code_prefix),
-                contains_eager(FuelCode.fuel_type).joinedload(FuelType.provision_1),
-                contains_eager(FuelCode.fuel_type).joinedload(FuelType.provision_2),
-                joinedload(FuelCode.feedstock_fuel_transport_modes).joinedload(
-                    FeedstockFuelTransportMode.feedstock_fuel_transport_mode
-                ),
-                joinedload(FuelCode.finished_fuel_transport_modes).joinedload(
-                    FinishedFuelTransportMode.finished_fuel_transport_mode
-                ),
-            )
-            .where(and_(*conditions))
-        )
 
-        # Apply sorting
-        for order in pagination.sort_orders:
-            direction = asc if order.direction == "asc" else desc
-            if order.field == "status":
-                field = getattr(FuelCodeStatus, "status")
-            elif order.field == "prefix":
-                field = getattr(FuelCodePrefix, "prefix")
-            else:
-                field = getattr(FuelCode, order.field)
-            query = query.order_by(direction(field))
+        # Construct the base query with conditions
+        base_query = query.where(and_(*conditions))
 
-        # Execute the count query to get the total count
-        count_query = query.with_only_columns(func.count()).order_by(None)
+        # Execute the count query - use select(func.count()) from the filtered base query
+        count_query = select(func.count()).select_from(base_query.subquery())
         total_count = (await self.db.execute(count_query)).scalar()
 
+        # Apply sorting to the main query
+        for order in pagination.sort_orders:
+            direction = asc if order.direction == "asc" else desc
+            field = getattr(FuelCodeListView, order.field)
+            base_query = base_query.order_by(direction(field))
+        # Apply default sort order
+        base_query = base_query.order_by(desc(FuelCodeListView.last_updated))
+
         # Execute the main query to retrieve all fuel codes
-        result = await self.db.execute(
-            query.offset(offset).limit(limit).order_by(FuelCode.create_date.desc())
-        )
+        result = await self.db.execute(base_query.offset(offset).limit(limit))
         fuel_codes = result.unique().scalars().all()
         return fuel_codes, total_count
 
@@ -468,6 +454,43 @@ class FuelCodeRepository:
         await self.db.flush()
         result = await self.get_fuel_code(fuel_code.fuel_code_id)
         return result
+
+    @repo_handler
+    async def get_fuel_code_history(
+        self, fuel_code_id: int, version=0
+    ) -> Optional[FuelCodeHistory]:
+        """
+        gets history entry for the fuel code
+        """
+        query = select(FuelCodeHistory).where(
+            and_(
+                FuelCodeHistory.fuel_code_id == fuel_code_id,
+                FuelCodeHistory.version == version,
+            )
+        )
+        return (await self.db.execute(query)).scalar_one_or_none()
+
+    @repo_handler
+    async def create_fuel_code_history(
+        self, history: FuelCodeHistory
+    ) -> FuelCodeHistory:
+        """
+        Updates the fuel code entry to history table
+        """
+        self.db.add(history)
+        await self.db.flush()
+        return True
+
+    @repo_handler
+    async def update_fuel_code_history(
+        self, history: FuelCodeHistory
+    ) -> FuelCodeHistory:
+        """
+        Audits the fuel code entry to history table
+        """
+        await self.db.flush()
+        await self.db.refresh(history)
+        return True
 
     @repo_handler
     async def get_fuel_code(self, fuel_code_id: int) -> FuelCode:
@@ -1159,3 +1182,19 @@ class FuelCodeRepository:
         result = await self.db.execute(query)
         record = result.scalar_one_or_none()
         return record.category_carbon_intensity if record else 0.0
+
+    @repo_handler
+    async def is_fuel_code_used(self, fuel_code_id: int) -> bool:
+        """
+        Check if a fuel code is used in any of the compliance reports.
+        """
+        exists_query = select(
+            or_(
+                exists().where(FuelSupply.fuel_code_id == fuel_code_id),
+                exists().where(AllocationAgreement.fuel_code_id == fuel_code_id),
+                exists().where(FuelExport.fuel_code_id == fuel_code_id),
+                exists().where(OtherUses.fuel_code_id == fuel_code_id),
+            )
+        )
+        result = await self.db.execute(exists_query)
+        return result.scalar()

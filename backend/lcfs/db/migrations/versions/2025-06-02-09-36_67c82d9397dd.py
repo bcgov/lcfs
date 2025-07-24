@@ -76,7 +76,7 @@ def downgrade():
             "vw_allocation_agreement_base",
             "vw_allocation_agreement_chained",
             "vw_compliance_report_base",
-            "vw_compliance_report_chained"
+            "vw_compliance_report_chained",
             "vw_compliance_report_fuel_supply_base",
             "vw_fuel_supply_base",
             "vw_fuel_supply_fuel_code_base",

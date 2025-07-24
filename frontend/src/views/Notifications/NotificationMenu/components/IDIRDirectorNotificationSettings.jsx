@@ -17,6 +17,11 @@ const IDIRDirectorNotificationSettings = () => {
       title: 'idirDirector.categories.complianceReports.title',
       IDIR_DIRECTOR__COMPLIANCE_REPORT__MANAGER_RECOMMENDATION:
         'idirDirector.categories.complianceReports.managerRecommendation'
+    },
+    'idirDirector.categories.fuelCodes': {
+      title: 'idirDirector.categories.fuelCodes.title',
+      IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION:
+        'idirDirector.categories.fuelCodes.analystRecommendation'
     }
   }
 

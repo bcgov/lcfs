@@ -8,39 +8,131 @@ import Loading from '@/components/Loading'
 import { roles } from '@/constants/roles'
 import { ROUTES } from '@/routes/routes'
 import {
-  useApproveFuelCode,
-  useCreateFuelCode,
-  useDeleteFuelCode,
+  useFuelCodeMutation,
   useFuelCodeOptions,
-  useGetFuelCode,
-  useUpdateFuelCode
+  useGetFuelCode
 } from '@/hooks/useFuelCode'
 import withRole from '@/utils/withRole'
 import { defaultColDef, fuelCodeColDefs } from './_schema'
-import { useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
 import BCTypography from '@/components/BCTypography'
 import { FUEL_CODE_STATUSES } from '@/constants/statuses'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import Papa from 'papaparse'
+import {
+  fuelCodeButtonConfigFn,
+  buildFuelCodeButtonContext
+} from './buttonConfigs'
+
+const NON_EDITABLE_STATUSES = [
+  FUEL_CODE_STATUSES.APPROVED,
+  FUEL_CODE_STATUSES.RECOMMENDED
+]
+const DEFAULT_PREFIX = 'BCLCF'
+
+const transformExistingFuelCodeData = (existingFuelCode) => {
+  if (!existingFuelCode) return null
+
+  return {
+    ...existingFuelCode,
+    id: existingFuelCode.id || uuid(),
+    feedstockFuelTransportMode:
+      existingFuelCode.feedstockFuelTransportModes?.map(
+        (mode) => mode.feedstockFuelTransportMode.transportMode
+      ) || [],
+    finishedFuelTransportMode:
+      existingFuelCode.finishedFuelTransportModes?.map(
+        (mode) => mode.finishedFuelTransportMode.transportMode
+      ) || []
+  }
+}
+
+const createDefaultRow = (optionsData) => {
+  const defaultPrefix = optionsData?.fuelCodePrefixes?.find(
+    (item) => item.prefix === DEFAULT_PREFIX
+  )
+  return {
+    id: uuid(),
+    prefixId: defaultPrefix?.fuelCodePrefixId || 1,
+    prefix: defaultPrefix?.prefix || DEFAULT_PREFIX,
+    fuelSuffix: defaultPrefix?.nextFuelCode,
+    isNewRow: true,
+    modified: false
+  }
+}
+
+const filterNonNullValues = (data) => {
+  const result = {}
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== null && value !== '') {
+      result[key] = value
+    }
+  }
+  return result
+}
 
 const AddEditFuelCodeBase = () => {
   const { fuelCodeID } = useParams()
   const gridRef = useRef(null)
   const alertRef = useRef()
   const { t } = useTranslation(['common', 'fuelCode'])
+  const navigate = useNavigate()
 
-  const [rowData, setRowData] = useState([])
-  const [errors, setErrors] = useState({})
-  const [warnings, setWarnings] = useState({})
-  const [columnDefs, setColumnDefs] = useState([])
-  const [isGridReady, setGridReady] = useState(false)
-  const [modalData, setModalData] = useState(null)
-  const [initialized, setInitialized] = useState(false)
+  // Consolidated state
+  const [state, setState] = useState({
+    rowData: [],
+    errors: {},
+    columnDefs: [],
+    isGridReady: false,
+    modalData: null,
+    initialized: false,
+    isInEditMode: false,
+    originalStatus: null,
+    pendingUpdates: new Set(),
+    isUpdating: false,
+    isButtonOperationInProgress: false,
+    currentButtonOperation: null
+  })
 
+  const {
+    rowData,
+    errors,
+    columnDefs,
+    isGridReady,
+    modalData,
+    initialized,
+    isInEditMode,
+    originalStatus,
+    pendingUpdates,
+    isUpdating
+  } = state
+
+  // state setters
+  const updateState = useCallback((updates) => {
+    setState((prev) => ({ ...prev, ...updates }))
+  }, [])
+
+  const updatePendingUpdates = useCallback((updater) => {
+    setState((prev) => ({
+      ...prev,
+      pendingUpdates:
+        typeof updater === 'function' ? updater(prev.pendingUpdates) : updater
+    }))
+  }, [])
+  const setButtonOperationState = useCallback(
+    (isLoading, operationName = null) => {
+      setState((prev) => ({
+        ...prev,
+        isButtonOperationInProgress: isLoading,
+        currentButtonOperation: isLoading ? operationName : null
+      }))
+    },
+    []
+  )
+  // Hooks
   const { hasRoles } = useCurrentUser()
   const {
     data: optionsData,
@@ -48,105 +140,295 @@ const AddEditFuelCodeBase = () => {
     isFetched,
     refetch: refetchOptions
   } = useFuelCodeOptions()
-  const { mutateAsync: updateFuelCode } = useUpdateFuelCode(fuelCodeID)
-  const { mutateAsync: createFuelCode } = useCreateFuelCode()
-  const { mutateAsync: deleteFuelCode } = useDeleteFuelCode()
-  const { mutateAsync: approveFuelCode } = useApproveFuelCode()
+
+  const fuelCodeMutation = useFuelCodeMutation()
+
   const {
     data: existingFuelCode,
     isLoading: isLoadingExistingCode,
     refetch
   } = useGetFuelCode(fuelCodeID)
 
-  const nonEditableStatuses = useMemo(
-    () => [FUEL_CODE_STATUSES.APPROVED, FUEL_CODE_STATUSES.RECOMMENDED],
-    []
-  )
+  const getRowId = useCallback((params) => {
+    if (params.data.id) return params.data.id
+    const newId = uuid()
+    params.data.id = newId
+    return newId
+  }, [])
 
-  const isEditable = useMemo(
-    () =>
-      !nonEditableStatuses.includes(existingFuelCode?.fuelCodeStatus.status),
-    [nonEditableStatuses, existingFuelCode?.fuelCodeStatus.status]
-  )
+  const computedValues = useMemo(() => {
+    const isEditable = !NON_EDITABLE_STATUSES.includes(
+      existingFuelCode?.fuelCodeStatus.status
+    )
+    const isAnalyst = hasRoles(roles.analyst)
+    const transformedExistingData =
+      transformExistingFuelCodeData(existingFuelCode)
 
+    const shouldShowEditButton =
+      !isInEditMode && existingFuelCode && !isUpdating
+    const shouldShowSaveButton =
+      (isInEditMode || !existingFuelCode) && !isUpdating
+
+    let titleText = t('fuelCode:newFuelCodeTitle')
+    if (existingFuelCode) {
+      const status = existingFuelCode.fuelCodeStatus.status
+      titleText =
+        status === FUEL_CODE_STATUSES.DRAFT && isInEditMode
+          ? t('fuelCode:editFuelCodeTitle')
+          : t('fuelCode:viewFuelCodeTitle')
+    }
+
+    const showGuideText =
+      !existingFuelCode ||
+      existingFuelCode.fuelCodeStatus.status === FUEL_CODE_STATUSES.DRAFT
+
+    const isNotesRequired =
+      existingFuelCode?.fuelCodeStatus.status === FUEL_CODE_STATUSES.DRAFT &&
+      existingFuelCode?.isNotesRequired
+
+    const hasNotesValidationError =
+      isNotesRequired && (!rowData[0]?.notes || rowData[0].notes.trim() === '')
+
+    return {
+      isEditable,
+      isAnalyst,
+      transformedExistingData,
+      shouldShowEditButton,
+      shouldShowSaveButton,
+      titleText,
+      showGuideText,
+      isNotesRequired,
+      hasNotesValidationError
+    }
+  }, [existingFuelCode, hasRoles, isInEditMode, isUpdating, t, rowData])
+
+  // Track original status when fuel code is first loaded
   useEffect(() => {
-    // Only initialize rowData once when all data is available and the grid is ready
+    if (existingFuelCode && originalStatus === null) {
+      updateState({ originalStatus: existingFuelCode.fuelCodeStatus.status })
+    }
+  }, [existingFuelCode, originalStatus, updateState])
+
+  // Initialize row data once when all dependencies are ready
+  useEffect(() => {
     if (!initialized && isFetched && !isLoadingExistingCode && isGridReady) {
-      if (existingFuelCode) {
-        setRowData([existingFuelCode])
-      } else {
-        const defaultPrefix = optionsData?.fuelCodePrefixes?.find(
-          (item) => item.prefix === 'BCLCF'
-        )
-        setRowData([
-          {
-            id: uuid(),
-            prefixId: defaultPrefix?.fuelCodePrefixId || 1,
-            prefix: defaultPrefix?.prefix || 'BCLCF',
-            fuelSuffix: defaultPrefix?.nextFuelCode
-          }
-        ])
-      }
-      setInitialized(true)
+      const initialData = computedValues.transformedExistingData
+        ? [
+            {
+              ...computedValues.transformedExistingData,
+              id: computedValues.transformedExistingData.id || uuid()
+            }
+          ]
+        : [createDefaultRow(optionsData)]
+
+      updateState({
+        rowData: initialData,
+        initialized: true
+      })
     }
   }, [
     initialized,
     isFetched,
     isLoadingExistingCode,
     isGridReady,
-    existingFuelCode,
-    optionsData
+    computedValues.transformedExistingData,
+    optionsData,
+    updateState
   ])
 
-  useEffect(() => {
-    if (optionsData) {
-      const updatedColumnDefs = fuelCodeColDefs(
-        optionsData,
-        errors,
-        !existingFuelCode,
-        isEditable && hasRoles(roles.analyst)
-      )
-      setColumnDefs(updatedColumnDefs)
-    }
-  }, [errors, optionsData, existingFuelCode, isEditable, hasRoles])
+  const enhancedColumnDefs = useMemo(() => {
+    if (!optionsData) return []
 
-  useEffect(() => {
-    if (existingFuelCode) {
-      const transformedData = {
-        ...existingFuelCode,
-        feedstockFuelTransportMode:
-          existingFuelCode.feedstockFuelTransportModes.map(
-            (mode) => mode.feedstockFuelTransportMode.transportMode
-          ),
-        finishedFuelTransportMode:
-          existingFuelCode.finishedFuelTransportModes.map(
-            (mode) => mode.finishedFuelTransportMode.transportMode
-          )
+    const canEditGrid = (isInEditMode || !existingFuelCode) && !isUpdating
+    const updatedColumnDefs = fuelCodeColDefs(
+      optionsData,
+      errors,
+      !existingFuelCode,
+      canEditGrid,
+      computedValues.isNotesRequired,
+      existingFuelCode?.canEditCi
+    )
+
+    return updatedColumnDefs.map((colDef) => ({
+      ...colDef,
+      editable: (params) => {
+        const isRowUpdating = pendingUpdates.has(params.data.id)
+        const originalEditable =
+          typeof colDef.editable === 'function'
+            ? colDef.editable(params)
+            : colDef.editable
+        return originalEditable && !isRowUpdating && !isUpdating
       }
-      setRowData([transformedData])
-    }
-  }, [optionsData, existingFuelCode, isGridReady])
+    }))
+  }, [
+    optionsData,
+    errors,
+    existingFuelCode,
+    isInEditMode,
+    computedValues.isNotesRequired,
+    pendingUpdates,
+    isUpdating
+  ])
 
-  const onGridReady = (params) => {
-    setGridReady(true)
-    params.api.sizeColumnsToFit()
-  }
+  // Update column definitions
+  useEffect(() => {
+    updateState({ columnDefs: enhancedColumnDefs })
+  }, [enhancedColumnDefs, updateState])
 
-  const handleError = (_error, message, severity) => {
-    alertRef.current?.triggerAlert({
-      message,
-      severity
-    })
-  }
+  const gridOptions = useMemo(
+    () => ({
+      getRowId,
+      suppressClickEdit: isUpdating,
+      suppressCellSelection: isUpdating,
+      suppressRowDrag: isUpdating,
+      suppressRowClick: isUpdating,
+      loadingOverlayComponent: 'customLoadingOverlay',
+      loadingOverlayComponentParams: {
+        loadingMessage: 'Updating data...'
+      }
+    }),
+    [isUpdating, getRowId]
+  )
+
+  const getRowStyle = useCallback(
+    (params) => {
+      const isRowUpdating = pendingUpdates.has(params.data.id)
+      return {
+        opacity: isRowUpdating ? 0.6 : 1,
+        pointerEvents: isRowUpdating ? 'none' : 'auto',
+        background: isRowUpdating ? '#f5f5f5' : 'transparent'
+      }
+    },
+    [pendingUpdates]
+  )
+
+  const onGridReady = useCallback(
+    (params) => {
+      updateState({ isGridReady: true })
+      params.api.sizeColumnsToFit()
+    },
+    [updateState]
+  )
+
+  const handleError = useCallback((error, message, severity = 'error') => {
+    console.error('Error:', error)
+    alertRef.current?.triggerAlert({ message, severity })
+  }, [])
+
+  const updateRowWithValidation = useCallback(
+    async (params, updatedData) => {
+      const rowId = params.node.data.id || uuid()
+
+      try {
+        // Add to pending updates
+        updatePendingUpdates((prev) => new Set([...prev, rowId]))
+        updateState({ isUpdating: true })
+
+        // Clear previous errors for this row
+        updateState((prev) => ({
+          errors: { ...prev.errors, [rowId]: undefined }
+        }))
+
+        const action =
+          updatedData.validationStatus === 'pending'
+            ? 'save'
+            : updatedData.fuelCodeId
+              ? 'update'
+              : 'create'
+
+        const result = await fuelCodeMutation.mutateAsync({
+          action,
+          data: { ...updatedData, id: rowId },
+          fuelCodeId: updatedData.fuelCodeId
+        })
+
+        const finalData = {
+          ...updatedData,
+          id: rowId,
+          fuelCodeId: result.data.fuelCodeId,
+          fuelSuffix: result.data.fuelSuffix,
+          validationStatus: 'success',
+          isNewRow: false,
+          modified: false
+        }
+
+        alertRef.current?.triggerAlert({
+          message: 'Row updated successfully.',
+          severity: 'success'
+        })
+
+        return finalData
+      } catch (error) {
+        const isNewRow = !updatedData.fuelCodeId
+        const severity = isNewRow ? 'warning' : 'error'
+
+        let errMsg = 'Unable to save row'
+        if (error.response?.data?.errors?.[0]) {
+          const { fields, message } = error.response.data.errors[0]
+          const fieldLabels = fields?.map((field) =>
+            t(`fuelCode:fuelCodeColLabels.${field}`)
+          )
+          errMsg = `Unable to save row: ${fieldLabels?.length === 1 ? fieldLabels[0] : ''} ${message}`
+        } else {
+          errMsg = `Unable to save row: ${error.response?.data?.detail || error.message}`
+        }
+
+        // Update errors state
+        updateState((prev) => ({
+          errors: {
+            ...prev.errors,
+            [rowId]: error.response?.data?.errors?.[0]?.fields
+          }
+        }))
+
+        handleError(error, errMsg, severity)
+
+        return {
+          ...updatedData,
+          id: rowId,
+          validationStatus: severity,
+          validationMsg: errMsg
+        }
+      } finally {
+        // Remove from pending updates
+        updatePendingUpdates((prev) => {
+          const newSet = new Set(prev)
+          newSet.delete(rowId)
+          return newSet
+        })
+
+        // Update global updating state
+        setTimeout(() => {
+          updatePendingUpdates((current) => {
+            if (current.size === 0) {
+              updateState({ isUpdating: false })
+            }
+            return current
+          })
+        }, 0)
+      }
+    },
+    [fuelCodeMutation, t, handleError, updatePendingUpdates, updateState]
+  )
 
   const onCellValueChanged = useCallback(
-    async (params) => {
-      const updatedData = { ...params.data, modified: true }
+    (params) => {
+      const rowId = params.data.id || uuid()
+      if (!params.data.id) {
+        params.data.id = rowId
+      }
+
+      const updatedData = {
+        ...params.data,
+        id: rowId,
+        modified: true
+      }
 
       if (params.colDef.field === 'prefix') {
-        updatedData.fuelSuffix = optionsData?.fuelCodePrefixes?.find(
+        const nextFuelCode = optionsData?.fuelCodePrefixes?.find(
           (item) => item.prefix === params.newValue
         )?.nextFuelCode
+        updatedData.fuelSuffix = nextFuelCode
       }
 
       params.api.applyTransaction({ update: [updatedData] })
@@ -154,71 +436,22 @@ const AddEditFuelCodeBase = () => {
     [optionsData?.fuelCodePrefixes]
   )
 
-  const handleDeleteFuelCode = async (fuelCodeId, params) => {
-    if (fuelCodeId) {
-      try {
-        await deleteFuelCode(fuelCodeId)
-        params.api.applyTransaction({ remove: [params.node.data] })
-        alertRef.current?.triggerAlert({
-          message: 'Row deleted successfully.',
-          severity: 'success'
-        })
-      } catch (error) {
-        handleError(error, `Error deleting row: ${error.message}`)
-      }
-    } else {
-      params.api.applyTransaction({ remove: [params.node.data] })
-    }
-    setModalData(null)
-  }
-
-  const handleApproveDraftCode = async (fuelCodeId) => {
-    await approveFuelCode(fuelCodeId)
-    await refetch()
-    setModalData(null)
-  }
-
-  const openDeleteModal = (fuelCodeId, params) => {
-    setModalData({
-      primaryButtonAction: () => handleDeleteFuelCode(fuelCodeId, params),
-      primaryButtonText: t('fuelCode:deleteFuelCodeBtn'),
-      secondaryButtonText: t('cancelBtn'),
-      title: t('fuelCode:deleteFuelCode'),
-      content: (
-        <Stack>
-          <BCTypography variant="h6">
-            {t('fuelCode:deleteFuelCode')}
-          </BCTypography>
-          <BCTypography mt={1} variant="body5">
-            {t('fuelCode:deleteConfirmText')}
-          </BCTypography>
-        </Stack>
-      )
-    })
-  }
-
-  const openApprovalModal = async (fuelCodeId) => {
-    setModalData({
-      primaryButtonAction: () => handleApproveDraftCode(fuelCodeId),
-      primaryButtonText: t('fuelCode:approveFuelCodeBtn'),
-      secondaryButtonText: t('cancelBtn'),
-      title: t('fuelCode:approveFuelCode'),
-      content: (
-        <Stack>
-          <BCTypography variant="h6">
-            {t('fuelCode:approveFuelCode')}
-          </BCTypography>
-          <BCTypography mt={1} variant="body5">
-            {t('fuelCode:approveConfirmText')}
-          </BCTypography>
-        </Stack>
-      )
-    })
-  }
-
   const onCellEditingStopped = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
+
+      const rowId = params.node.data.id || uuid()
+      if (!params.node.data.id) {
+        params.node.data.id = rowId
+      }
+
+      if (pendingUpdates.has(rowId)) {
+        alertRef.current?.triggerAlert({
+          message: 'Please wait for the current update to complete.',
+          severity: 'warning'
+        })
+        return
+      }
 
       params.node.updateData({
         ...params.node.data,
@@ -230,289 +463,580 @@ const AddEditFuelCodeBase = () => {
         severity: 'pending'
       })
 
-      let updatedData = Object.entries(params.node.data)
-        .filter(([, value]) => value !== null && value !== '')
-        .reduce((acc, [key, value]) => {
-          acc[key] = value
-          return acc
-        }, {})
+      const filteredData = filterNonNullValues(params.node.data)
+      const finalData = await updateRowWithValidation(params, filteredData)
+      params.node.updateData(finalData)
+    },
+    [updateRowWithValidation, pendingUpdates]
+  )
 
+  const handleSaveSuccess = useCallback(async () => {
+    await refetch()
+    updateState({ isInEditMode: false, modalData: null })
+    navigate(ROUTES.FUEL_CODES.LIST, {
+      state: {
+        message: t(
+          'fuelCode:saveSuccessMessage',
+          'Fuel code saved successfully.'
+        ),
+        severity: 'success'
+      }
+    })
+  }, [refetch, t, navigate, updateState])
+
+  const handleDeleteFuelCode = useCallback(
+    async (fuelCodeId, params) => {
+      if (fuelCodeId) {
+        try {
+          await fuelCodeMutation.mutateAsync({ action: 'delete', fuelCodeId })
+          alertRef.current?.triggerAlert({
+            message: 'Row deleted successfully.',
+            severity: 'success'
+          })
+        } catch (error) {
+          handleError(error, `Error deleting row: ${error.message}`)
+          return
+        }
+      }
+
+      params.api.applyTransaction({ remove: [params.node.data] })
+      updateState({ modalData: null })
+    },
+    [fuelCodeMutation, handleError, updateState]
+  )
+
+  const handleApproveCode = useCallback(
+    async (fuelCodeId) => {
       try {
-        setErrors({})
-        setWarnings({})
-
-        if (updatedData.fuelCodeId) {
-          await updateFuelCode(updatedData)
-        } else {
-          const res = await createFuelCode(updatedData)
-          updatedData.fuelCodeId = res.data.fuelCodeId
-          updatedData.fuelSuffix = res.data.fuelSuffix
-        }
-
-        updatedData = {
-          ...updatedData,
-          validationStatus: 'success',
-          modified: false
-        }
+        await fuelCodeMutation.mutateAsync({
+          action: 'approve',
+          data: { status: FUEL_CODE_STATUSES.APPROVED },
+          fuelCodeId
+        })
+        await refetch()
+        updateState({ modalData: null })
         alertRef.current?.triggerAlert({
-          message: 'Row updated successfully.',
+          message: t(
+            'fuelCode:approveSuccessMessage',
+            'Fuel code approved successfully.'
+          ),
           severity: 'success'
         })
       } catch (error) {
-        setErrors({
-          [params.node.data.id]:
-            error.response?.data?.errors &&
-            error.response.data.errors[0]?.fields
-        })
-
-        const isNewRow = !updatedData.fuelCodeId
-        const severity = isNewRow ? 'warning' : 'error'
-
-        updatedData = {
-          ...updatedData,
-          validationStatus: severity
-        }
-
-        if (
-          error.response?.data?.errors &&
-          error.response.data.errors.length > 0
-        ) {
-          const { fields, message } = error.response.data.errors[0]
-          const fieldLabels = fields.map((field) =>
-            t(`fuelCode:fuelCodeColLabels.${field}`)
-          )
-          const errMsg = `Unable to save row: ${
-            fieldLabels.length === 1 ? fieldLabels[0] : ''
-          } ${message}`
-          updatedData.validationMsg = errMsg
-          handleError(error, errMsg, severity)
-        } else {
-          const errMsg = error.response?.data?.detail || error.message
-          updatedData.validationMsg = errMsg
-          handleError(error, `Unable to save row: ${errMsg}`, severity)
-        }
+        handleError(error, `Error approving fuel code: ${error.message}`)
       }
-
-      params.node.updateData(updatedData)
     },
-    [updateFuelCode, t, createFuelCode]
+    [fuelCodeMutation, refetch, t, handleError, updateState]
   )
 
+  const openDeleteModal = useCallback(
+    (fuelCodeId, params) => {
+      updateState({
+        modalData: {
+          primaryButtonAction: () => handleDeleteFuelCode(fuelCodeId, params),
+          primaryButtonText: t('fuelCode:deleteFuelCodeBtn'),
+          secondaryButtonText: t('cancelBtn'),
+          title: t('fuelCode:deleteFuelCode'),
+          content: (
+            <Stack>
+              <BCTypography variant="h6">
+                {t('fuelCode:deleteFuelCode')}
+              </BCTypography>
+              <BCTypography mt={1} variant="body5">
+                {t('fuelCode:deleteConfirmText')}
+              </BCTypography>
+            </Stack>
+          )
+        }
+      })
+    },
+    [handleDeleteFuelCode, t, updateState]
+  )
+
+  const openApprovalModal = useCallback(
+    (fuelCodeId) => {
+      updateState({
+        modalData: {
+          primaryButtonAction: () => handleApproveCode(fuelCodeId),
+          primaryButtonText: t('fuelCode:approveFuelCodeBtn'),
+          secondaryButtonText: t('cancelBtn'),
+          title: t('fuelCode:approveFuelCode'),
+          content: (
+            <Stack>
+              <BCTypography variant="h6">
+                {t('fuelCode:approveFuelCode')}
+              </BCTypography>
+              <BCTypography mt={1} variant="body5">
+                {t('fuelCode:approveConfirmText')}
+              </BCTypography>
+            </Stack>
+          )
+        }
+      })
+    },
+    [handleApproveCode, t, updateState]
+  )
+
+  const parsePastedData = useCallback((pastedData, headerRow) => {
+    return Papa.parse(headerRow + '\n' + pastedData, {
+      delimiter: '\t',
+      header: true,
+      transform: (value, field) => {
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/
+        if (field.toLowerCase().includes('date') && !dateRegex.test(value)) {
+          const parsedDate = new Date(value)
+          if (!isNaN(parsedDate)) {
+            return parsedDate.toISOString().split('T')[0]
+          }
+        }
+        const num = Number(value)
+        return isNaN(num) ? value : num
+      },
+      skipEmptyLines: true
+    })
+  }, [])
+
   const handlePaste = useCallback(
-    (event, { api, columnApi }) => {
-      const newData = []
+    (event, { api }) => {
+      if (isUpdating) return
+
       const clipboardData = event.clipboardData || window.clipboardData
       const pastedData = clipboardData.getData('text/plain')
+
       const headerRow = api
         .getAllDisplayedColumns()
         .map((column) => column.colDef.field)
-        .filter((col) => col)
+        .filter(Boolean)
         .join('\t')
-      const parsedData = Papa.parse(headerRow + '\n' + pastedData, {
-        delimiter: '\t',
-        header: true,
-        transform: (value, field) => {
-          // Check for date fields and format them
-          const dateRegex = /^\d{4}-\d{2}-\d{2}$/ // Matches YYYY-MM-DD format
-          if (field.toLowerCase().includes('date') && !dateRegex.test(value)) {
-            const parsedDate = new Date(value)
-            if (!isNaN(parsedDate)) {
-              return parsedDate.toISOString().split('T')[0] // Format as YYYY-MM-DD
-            }
-          }
-          const num = Number(value) // Attempt to convert to a number if possible
-          return isNaN(num) ? value : num // Return the number if valid, otherwise keep as string
-        },
-        skipEmptyLines: true
-      })
-      if (parsedData.data?.length < 0) {
-        return
-      }
-      parsedData.data.forEach((row) => {
-        const newRow = { ...row }
-        newRow.id = uuid()
-        newRow.prefixId = optionsData?.fuelCodePrefixes?.find(
+
+      const parsedData = parsePastedData(pastedData, headerRow)
+      if (!parsedData.data?.length) return
+
+      const newData = parsedData.data.map((row) => ({
+        ...row,
+        id: uuid(),
+        prefixId: optionsData?.fuelCodePrefixes?.find(
           (o) => o.prefix === row.prefix
-        )?.fuelCodePrefixId
-        newRow.fuelTypeId = optionsData?.fuelTypes?.find(
+        )?.fuelCodePrefixId,
+        fuelTypeId: optionsData?.fuelTypes?.find(
           (o) => o.fuelType === row.fuelType
-        )?.fuelTypeId
-        newRow.fuelSuffix = newRow.fuelSuffix.toString()
-        newRow.feedstockFuelTransportMode = row.feedstockFuelTransportMode
-          .split(',')
-          .map((item) => item.trim())
-        newRow.finishedFuelTransportMode = row.finishedFuelTransportMode
-          .split(',')
-          .map((item) => item.trim())
-        newRow.modified = true
-        newData.push(newRow)
-      })
+        )?.fuelTypeId,
+        fuelSuffix: row.fuelSuffix?.toString(),
+        feedstockFuelTransportMode:
+          row.feedstockFuelTransportMode
+            ?.split(',')
+            .map((item) => item.trim()) || [],
+        finishedFuelTransportMode:
+          row.finishedFuelTransportMode
+            ?.split(',')
+            .map((item) => item.trim()) || [],
+        modified: true,
+        isNewRow: true
+      }))
+
       const transactions = api.applyTransaction({ add: newData })
-      // Trigger onCellEditingStopped event to update the row in backend.
       transactions.add.forEach((node) => {
         onCellEditingStopped({
           node,
           oldValue: '',
-          newvalue: undefined,
-          ...api
+          newValue: undefined
         })
       })
     },
-    [onCellEditingStopped, optionsData]
+    [parsePastedData, onCellEditingStopped, optionsData, isUpdating]
   )
 
-  const duplicateFuelCode = async (params) => {
-    const originalData = params.data
-    const originalPrefix = originalData.prefix || 'BCLCF'
+  const duplicateFuelCode = useCallback(
+    async (params) => {
+      const originalData = params.data
+      const originalPrefix = originalData.prefix || DEFAULT_PREFIX
+      const newRowId = uuid()
 
-    const updatedOptions = await refetchOptions()
-    const selectedPrefix = updatedOptions.data.fuelCodePrefixes?.find(
-      (p) => p.prefix === originalPrefix
-    )
-
-    const newRow = {
-      ...originalData,
-      id: uuid(),
-      fuelCodeId: null,
-      modified: true,
-      isValid: false,
-      validationStatus: 'error',
-      validationMsg: 'Fill in the missing fields'
-    }
-
-    if (selectedPrefix) {
-      newRow.prefixId = selectedPrefix.fuelCodePrefixId
-      newRow.prefix = selectedPrefix.prefix
-      newRow.fuelSuffix = selectedPrefix.nextFuelCode
-    }
-
-    if (params.api) {
-      if (originalData.fuelCodeId) {
-        try {
-          // If the original was a saved row, create a new code in the backend
-          const response = await createFuelCode(newRow)
-          const updatedData = {
-            ...response.data,
-            id: uuid(),
-            modified: false,
-            isValid: false,
-            validationStatus: 'error'
-          }
-          return { add: [updatedData] }
-        } catch (error) {
-          handleError(error, `Error duplicating row: ${error.message}`)
-        }
-      } else {
-        // If the original row wasn’t saved, just return the transaction
-        return { add: [newRow] }
-      }
-    }
-  }
-
-  const handleOpenApprovalModal = useCallback(() => {
-    openApprovalModal(fuelCodeID)
-  }, [fuelCodeID])
-
-  const onAction = useCallback(
-    async (action, params) => {
-      if (action === 'duplicate') {
-        return await duplicateFuelCode(params)
-      } else if (action === 'delete') {
-        await openDeleteModal(params.data.fuelCodeId, params)
-      } else if (action === 'add') {
-        // Refetch options to get updated nextFuelCode
+      try {
         const updatedOptions = await refetchOptions()
-        const defaultPrefix = updatedOptions.data.fuelCodePrefixes.find(
-          (item) => item.prefix === 'BCLCF'
+        const selectedPrefix = updatedOptions.data.fuelCodePrefixes?.find(
+          (p) => p.prefix === originalPrefix
         )
 
         const newRow = {
-          id: uuid(),
-          prefixId: defaultPrefix.fuelCodePrefixId,
-          prefix: defaultPrefix.prefix,
-          fuelSuffix: defaultPrefix.nextFuelCode,
+          ...originalData,
+          id: newRowId,
+          fuelCodeId: null,
           modified: true,
+          isNewRow: true,
           validationStatus: 'error',
-          validationMsg: 'Fill in missing fields'
+          validationMsg: 'Fill in the missing fields'
         }
 
-        // Return a transaction (no resetting rowData)
+        if (selectedPrefix) {
+          Object.assign(newRow, {
+            prefixId: selectedPrefix.fuelCodePrefixId,
+            prefix: selectedPrefix.prefix,
+            fuelSuffix: selectedPrefix.nextFuelCode
+          })
+        }
+
+        if (originalData.fuelCodeId) {
+          const response = await fuelCodeMutation.mutateAsync({
+            action: 'create',
+            data: newRow
+          })
+          return {
+            add: [
+              {
+                ...response.data,
+                id: newRowId,
+                modified: false,
+                isNewRow: false,
+                validationStatus: 'success'
+              }
+            ]
+          }
+        }
+
         return { add: [newRow] }
+      } catch (error) {
+        handleError(error, `Error duplicating row: ${error.message}`)
+        return null
       }
     },
-    [duplicateFuelCode, refetchOptions]
+    [refetchOptions, fuelCodeMutation, handleError]
   )
 
+  const onAction = useCallback(
+    async (action, params) => {
+      switch (action) {
+        case 'duplicate':
+          return await duplicateFuelCode(params)
+
+        case 'delete':
+          openDeleteModal(params.data.fuelCodeId, params)
+          break
+
+        case 'add': {
+          const updatedOptions = await refetchOptions()
+          const defaultPrefix = updatedOptions.data.fuelCodePrefixes.find(
+            (item) => item.prefix === DEFAULT_PREFIX
+          )
+
+          return {
+            add: [
+              {
+                id: uuid(),
+                prefixId: defaultPrefix.fuelCodePrefixId,
+                prefix: defaultPrefix.prefix,
+                fuelSuffix: defaultPrefix.nextFuelCode,
+                modified: true,
+                isNewRow: true,
+                validationStatus: 'error',
+                validationMsg: 'Fill in missing fields'
+              }
+            ]
+          }
+        }
+
+        default:
+          return null
+      }
+    },
+    [duplicateFuelCode, openDeleteModal, refetchOptions]
+  )
+
+  const buttonContext = useMemo(() => {
+    const baseHandlers = {
+      handleSave: async () => {
+        if (state.isButtonOperationInProgress) return
+        try {
+          setButtonOperationState(true, 'save')
+          if (computedValues.hasNotesValidationError) {
+            alertRef.current?.triggerAlert({
+              message: t('fuelCode:notesRequiredMessage'),
+              severity: 'error'
+            })
+            return
+          }
+          await handleSaveSuccess()
+        } catch (error) {
+          handleError(error, `Error saving fuel code: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
+        }
+      },
+      handleEdit: async () => {
+        if (state.isButtonOperationInProgress) return
+        try {
+          setButtonOperationState(true, 'edit')
+          if (originalStatus === null && existingFuelCode) {
+            updateState({
+              originalStatus: existingFuelCode.fuelCodeStatus.status
+            })
+          }
+          if (
+            existingFuelCode.fuelCodeStatus.status !== FUEL_CODE_STATUSES.DRAFT
+          ) {
+            await fuelCodeMutation.mutateAsync({
+              action: 'update',
+              data: { status: FUEL_CODE_STATUSES.DRAFT },
+              fuelCodeId: fuelCodeID
+            })
+            await refetch()
+          }
+          updateState({ isInEditMode: true, modalData: null })
+          alertRef.current?.triggerAlert({
+            message: t('fuelCode:editModeEnabledMessage'),
+            severity: 'success'
+          })
+        } catch (error) {
+          handleError(error, `Error enabling edit mode: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
+        }
+      },
+      handleRecommend: async () => {
+        if (state.isButtonOperationInProgress) return
+        try {
+          setButtonOperationState(true, 'recommend')
+          await fuelCodeMutation.mutateAsync({
+            action: 'update',
+            data: { status: FUEL_CODE_STATUSES.RECOMMENDED },
+            fuelCodeId: fuelCodeID
+          })
+          await refetch()
+          updateState({ modalData: null })
+          alertRef.current?.triggerAlert({
+            message: t('fuelCode:recommendSuccessMessage'),
+            severity: 'success'
+          })
+        } catch (error) {
+          handleError(error, `Error recommending fuel code: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
+        }
+      },
+      handleApprove: async () => {
+        if (state.isButtonOperationInProgress) return
+        try {
+          setButtonOperationState(true, 'approve')
+          await fuelCodeMutation.mutateAsync({
+            action: 'update',
+            data: { status: FUEL_CODE_STATUSES.APPROVED },
+            fuelCodeId: fuelCodeID
+          })
+          await refetch()
+          updateState({ modalData: null })
+          alertRef.current?.triggerAlert({
+            message: t('fuelCode:approveSuccessMessage'),
+            severity: 'success'
+          })
+        } catch (error) {
+          handleError(error, `Error approving fuel code: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
+        }
+      },
+      handleDelete: async () => {
+        if (state.isButtonOperationInProgress) return
+        try {
+          setButtonOperationState(true, 'delete')
+          if (fuelCodeID) {
+            await fuelCodeMutation.mutateAsync({
+              action: 'delete',
+              fuelCodeId: fuelCodeID
+            })
+            updateState({ modalData: null })
+            navigate(ROUTES.FUEL_CODES.LIST, {
+              state: {
+                message: t('fuelCode:deleteSuccessMessage'),
+                severity: 'success'
+              }
+            })
+          }
+        } catch (error) {
+          handleError(error, `Error deleting fuel code: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
+        }
+      },
+      handleReturnToAnalyst: async () => {
+        if (state.isButtonOperationInProgress) return
+        try {
+          setButtonOperationState(true, 'return')
+          // Set original status before changing to draft if not already set
+          if (originalStatus === null && existingFuelCode) {
+            updateState({ originalStatus: existingFuelCode.fuelCodeStatus.status })
+          }
+
+          await fuelCodeMutation.mutateAsync({
+            action: 'update',
+            data: { status: FUEL_CODE_STATUSES.DRAFT },
+            fuelCodeId: fuelCodeID
+          })
+          await refetch()
+          updateState({ modalData: null })
+          alertRef.current?.triggerAlert({
+            message: t('fuelCode:returnToAnalystSuccessMessage'),
+            severity: 'success'
+          })
+        } catch (error) {
+          handleError(error, `Error returning to analyst: ${error.message}`)
+        } finally {
+          setButtonOperationState(false)
+        }
+      }
+    }
+
+    return buildFuelCodeButtonContext({
+      fuelCode: existingFuelCode,
+      hasRoles,
+      t,
+      setModalData: (data) => updateState({ modalData: data }),
+      ...baseHandlers,
+      hasChanges: rowData.some((row) => row.modified),
+      hasValidationErrors:
+        Object.keys(errors).length > 0 ||
+        computedValues.hasNotesValidationError,
+      isComplete: !!existingFuelCode,
+      canEdit: computedValues.isEditable && !isUpdating,
+      canDelete:
+        computedValues.isEditable &&
+        !isUpdating &&
+        (!fuelCodeID ||
+          existingFuelCode?.fuelCodeStatus.status === FUEL_CODE_STATUSES.DRAFT),
+      shouldShowEditButton: computedValues.shouldShowEditButton,
+      shouldShowSaveButton: computedValues.shouldShowSaveButton,
+      isInEditMode,
+      isUpdating,
+      isButtonOperationInProgress: state.isButtonOperationInProgress,
+      currentButtonOperation: state.currentButtonOperation
+    })
+  }, [
+    existingFuelCode,
+    hasRoles,
+    t,
+    rowData,
+    errors,
+    computedValues,
+    isUpdating,
+    fuelCodeID,
+    originalStatus,
+    isInEditMode,
+    handleSaveSuccess,
+    handleError,
+    fuelCodeMutation,
+    refetch,
+    updateState,
+    state.isButtonOperationInProgress,
+    state.currentButtonOperation,
+    setButtonOperationState
+  ])
+
+  const buttonConfig = useMemo(() => {
+    const config = fuelCodeButtonConfigFn(buttonContext)
+    return config[buttonContext.currentStatus] || []
+  }, [buttonContext])
+
+  // Loading states
   if (isLoading || isLoadingExistingCode) {
     return <Loading />
   }
 
+  if (!isFetched) {
+    return null
+  }
+
   return (
-    isFetched && (
-      <>
-        <Grid2 className="add-edit-fuel-code-container" mx={-1}>
-          <div className="header">
-            <BCTypography variant="h5" color="primary">
-              {!existingFuelCode && t('fuelCode:newFuelCodeTitle')}
-              {existingFuelCode?.fuelCodeStatus.status ===
-                FUEL_CODE_STATUSES.DRAFT && t('fuelCode:editFuelCodeTitle')}
-              {existingFuelCode?.fuelCodeStatus.status ===
-                FUEL_CODE_STATUSES.RECOMMENDED &&
-                t('fuelCode:viewFuelCodeTitle')}
-              {existingFuelCode?.fuelCodeStatus.status ===
-                FUEL_CODE_STATUSES.APPROVED && t('fuelCode:viewFuelCodeTitle')}
-            </BCTypography>
+    <>
+      <Grid2 className="add-edit-fuel-code-container">
+        <div className="header">
+          <BCTypography variant="h5" color="primary">
+            {computedValues.titleText}
+          </BCTypography>
+          {computedValues.showGuideText && isInEditMode && (
             <BCTypography variant="body2" mt={2} mb={3}>
-              {(!existingFuelCode ||
-                existingFuelCode?.fuelCodeStatus.status ===
-                  FUEL_CODE_STATUSES.DRAFT) &&
-                t('fuelCode:fuelCodeEntryGuide')}
+              {t('fuelCode:fuelCodeEntryGuide')}
             </BCTypography>
-          </div>
-          <BCGridEditor
-            gridRef={gridRef}
-            alertRef={alertRef}
-            columnDefs={columnDefs}
-            defaultColDef={defaultColDef}
-            onGridReady={onGridReady}
-            rowData={rowData} // Only set once, do not update again
-            onCellValueChanged={onCellValueChanged}
-            onCellEditingStopped={onCellEditingStopped}
-            onAction={onAction}
-            showAddRowsButton={!existingFuelCode && hasRoles(roles.analyst)}
-            context={{ errors }}
-            handlePaste={handlePaste}
-          />
-          {isEditable && (
-            <Stack
-              direction={{ md: 'column', lg: 'row' }}
-              spacing={{ xs: 2, sm: 2, md: 3 }}
-              useFlexGap
-              flexWrap="wrap"
-            >
-              <BCButton
-                variant="contained"
-                size="medium"
-                color="primary"
-                startIcon={
-                  <FontAwesomeIcon icon={faFloppyDisk} className="small-icon" />
-                }
-                onClick={handleOpenApprovalModal}
-              >
-                <BCTypography variant="subtitle2">
-                  {t('fuelCode:approveFuelCodeBtn')}
-                </BCTypography>
-              </BCButton>
-            </Stack>
           )}
-        </Grid2>
-        <BCModal
-          open={!!modalData}
-          onClose={() => setModalData(null)}
-          data={modalData}
+          {computedValues.isNotesRequired && isInEditMode && (
+            <BCTypography variant="body2" mt={2} mb={3} color="warning.main">
+              {t('fuelCode:notesRequiredWarning')}
+            </BCTypography>
+          )}
+        </div>
+
+        <BCGridEditor
+          gridRef={gridRef}
+          alertRef={alertRef}
+          columnDefs={columnDefs}
+          defaultColDef={defaultColDef}
+          onGridReady={onGridReady}
+          rowData={rowData}
+          onCellValueChanged={onCellValueChanged}
+          onCellEditingStopped={onCellEditingStopped}
+          onAction={onAction}
+          showAddRowsButton={
+            !existingFuelCode && computedValues.isAnalyst && !isUpdating
+          }
+          context={{ errors, pendingUpdates, isUpdating }}
+          handlePaste={isUpdating ? undefined : handlePaste}
+          gridOptions={gridOptions}
+          getRowStyle={getRowStyle}
+          loading={isUpdating}
+          loadingText="Updating data..."
+          showMandatoryColumns={isInEditMode}
         />
-      </>
-    )
+
+        <Stack
+          direction={{ md: 'column', lg: 'row' }}
+          spacing={{ xs: 2, sm: 2, md: 3 }}
+          useFlexGap
+          flexWrap="wrap"
+        >
+          {buttonConfig.map((button) => (
+            <BCButton
+              key={button.id}
+              variant={button.variant}
+              size="medium"
+              color={button.color}
+              startIcon={
+                button.startIcon && (
+                  <FontAwesomeIcon
+                    icon={button.startIcon}
+                    className="small-icon"
+                  />
+                )
+              }
+              loading={state.isButtonOperationInProgress}
+              onClick={button.handler}
+              disabled={
+                button.disabled ||
+                isUpdating ||
+                state.isButtonOperationInProgress
+              }
+            >
+              <BCTypography variant="subtitle2">{button.label}</BCTypography>
+            </BCButton>
+          ))}
+        </Stack>
+      </Grid2>
+
+      <BCModal
+        open={!!modalData}
+        onClose={() =>
+          !state.isButtonOperationInProgress && updateState({ modalData: null })
+        }
+        data={
+          modalData
+            ? {
+                ...modalData,
+                primaryButtonAction: state.isButtonOperationInProgress
+                  ? undefined
+                  : modalData.primaryButtonAction,
+                primaryButtonDisabled: state.isButtonOperationInProgress
+              }
+            : null
+        }
+      />
+    </>
   )
 }
 

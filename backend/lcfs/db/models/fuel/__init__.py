@@ -9,6 +9,7 @@ from .FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from .FinishedFuelTransportMode import FinishedFuelTransportMode
 from .FuelCategory import FuelCategory
 from .FuelCode import FuelCode
+from .FuelCodeHistory import FuelCodeHistory
 from .FuelCodePrefix import FuelCodePrefix
 from .FuelCodeStatus import FuelCodeStatus
 from .FuelType import FuelType
@@ -17,6 +18,7 @@ from .TransportMode import TransportMode
 from .UnitOfMeasure import UnitOfMeasure
 from .TargetCarbonIntensity import TargetCarbonIntensity
 from .FuelInstance import FuelInstance
+from .FuelCodeListView import FuelCodeListView
 
 __all__ = [
     "AdditionalCarbonIntensity",
@@ -30,6 +32,8 @@ __all__ = [
     "FinishedFuelTransportMode",
     "FuelCategory",
     "FuelCode",
+    "FuelCodeHistory",
+    "FuelCodeListView",
     "FuelCodePrefix",
     "FuelCodeStatus",
     "FuelType",

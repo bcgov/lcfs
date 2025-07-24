@@ -36,6 +36,7 @@ RETURN_STATUS_MAPPER = {
 class SupplementalInitiatorType(str, Enum):
     SUPPLIER_SUPPLEMENTAL = "Supplier Supplemental"
     GOVERNMENT_REASSESSMENT = "Government Reassessment"
+    GOVERNMENT_INITIATED = "Government Initiated"
 
 
 class ReportingFrequency(str, Enum):
@@ -79,6 +80,40 @@ class ComplianceReportUserSchema(BaseSchema):
     organization: Optional[ComplianceReportOrganizationSchema] = None
 
 
+class AssignedAnalystSchema(BaseSchema):
+    user_profile_id: int
+    first_name: str
+    last_name: str
+    initials: Optional[str] = None
+    full_name: Optional[str] = None
+    
+    @classmethod
+    def model_validate(cls, analyst):
+        if analyst is None:
+            return None
+        
+        # Handle both dictionary and object inputs  
+        if isinstance(analyst, dict):
+            user_profile_id = analyst.get('user_profile_id')
+            first_name = analyst.get('first_name', '') or ''
+            last_name = analyst.get('last_name', '') or ''
+        else:
+            user_profile_id = analyst.user_profile_id
+            first_name = analyst.first_name or ''
+            last_name = analyst.last_name or ''
+        
+        initials = f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
+        full_name = f"{initials} - {first_name} {last_name}" if initials else "Unassigned"
+        
+        return cls(
+            user_profile_id=user_profile_id,
+            first_name=first_name,
+            last_name=last_name,
+            initials=initials,
+            full_name=full_name
+        )
+
+
 class ComplianceReportHistorySchema(BaseSchema):
     compliance_report_history_id: int
     compliance_report_id: int
@@ -118,7 +153,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     compliance_report_id: int
     compliance_report_group_uuid: Optional[str]
     version: Optional[int]
-    supplemental_initiator: Optional[SupplementalInitiatorType]
+    supplemental_initiator: Optional[SupplementalInitiatorType] = None
     compliance_period_id: int
     compliance_period: CompliancePeriodBaseSchema
     organization_id: int
@@ -132,9 +167,33 @@ class ComplianceReportBaseSchema(BaseSchema):
     reporting_frequency: Optional[ReportingFrequency] = None
     update_date: Optional[datetime] = None
     history: Optional[List[ComplianceReportHistorySchema]] = None
-    has_supplemental: bool
+    has_supplemental: bool = False
     legacy_id: Optional[int] = None
     assessment_statement: Optional[str] = None
+    assigned_analyst: Optional[AssignedAnalystSchema] = None
+    
+    @classmethod
+    def model_validate(cls, obj):
+        # Handle assigned analyst conversion for the detailed view
+        assigned_analyst = None
+        if hasattr(obj, 'assigned_analyst') and obj.assigned_analyst:
+            assigned_analyst = AssignedAnalystSchema.model_validate(obj.assigned_analyst)
+        
+        # Get the base dictionary and remove private SQLAlchemy attributes
+        if hasattr(obj, '__dict__'):
+            data = {k: v for k, v in obj.__dict__.items() if not k.startswith('_')}
+        else:
+            data = {field: getattr(obj, field, None) for field in cls.model_fields.keys()}
+            
+        data['assigned_analyst'] = assigned_analyst
+        
+        return cls(**data)
+
+
+class LastCommentSchema(BaseSchema):
+    comment: str
+    full_name: str
+    create_date: datetime
 
 
 class ComplianceReportViewSchema(BaseSchema):
@@ -149,6 +208,61 @@ class ComplianceReportViewSchema(BaseSchema):
     report_status_id: int
     report_status: str
     update_date: datetime
+    last_comment: Optional[LastCommentSchema] = None
+    supplemental_initiator: Optional[SupplementalInitiatorType] = None
+    report_frequency: Optional[ReportingFrequency] = None
+    legacy_id: Optional[int] = None
+    transaction_id: Optional[int] = None
+    assessment_statement: Optional[str] = None
+    is_latest: bool
+    latest_report_supplemental_initiator: Optional[SupplementalInitiatorType] = None
+    latest_supplemental_create_date: Optional[datetime] = None
+    latest_status: Optional[str] = None
+    assigned_analyst: Optional[AssignedAnalystSchema] = None
+    
+    @classmethod
+    def model_validate(cls, obj):
+        # Handle assigned analyst conversion from database view fields
+        assigned_analyst = None
+        
+        # Handle both dictionary and object inputs
+        if isinstance(obj, dict):
+            assigned_analyst_id = obj.get('assigned_analyst_id')
+            if assigned_analyst_id:
+                first_name = obj.get('assigned_analyst_first_name', '') or ''
+                last_name = obj.get('assigned_analyst_last_name', '') or ''
+                initials = f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
+                
+                assigned_analyst = AssignedAnalystSchema(
+                    user_profile_id=assigned_analyst_id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    initials=initials
+                )
+            data = obj.copy()
+        else:
+            # Handle object inputs
+            if hasattr(obj, 'assigned_analyst_id') and obj.assigned_analyst_id:
+                first_name = getattr(obj, 'assigned_analyst_first_name', '') or ''
+                last_name = getattr(obj, 'assigned_analyst_last_name', '') or ''
+                initials = f"{first_name[0] if first_name else ''}{last_name[0] if last_name else ''}".upper()
+                
+                assigned_analyst = AssignedAnalystSchema(
+                    user_profile_id=obj.assigned_analyst_id,
+                    first_name=first_name,
+                    last_name=last_name,
+                    initials=initials
+                )
+            
+            # Get the base dictionary from object
+            if hasattr(obj, '__dict__'):
+                data = obj.__dict__.copy()
+            else:
+                data = {field: getattr(obj, field, None) for field in cls.model_fields.keys()}
+        
+        data['assigned_analyst'] = assigned_analyst
+        
+        return cls(**data)
 
 
 class ChainedComplianceReportSchema(BaseSchema):
@@ -196,6 +310,13 @@ class ComplianceReportSummarySchema(BaseSchema):
     is_locked: Optional[bool] = False
     quarter: Optional[int] = None
     early_issuance_summary: Optional[List[ComplianceReportSummaryRowSchema]] = None
+    
+    # Penalty override fields
+    penalty_override_enabled: Optional[bool] = False
+    renewable_penalty_override: Optional[float] = None
+    low_carbon_penalty_override: Optional[float] = None
+    penalty_override_date: Optional[datetime] = None
+    penalty_override_user: Optional[int] = None
 
 
 class ComplianceReportSummaryUpdateSchema(BaseSchema):
@@ -206,6 +327,13 @@ class ComplianceReportSummaryUpdateSchema(BaseSchema):
     non_compliance_penalty_summary: List[ComplianceReportSummaryRowSchema]
     summary_id: int
     is_locked: bool
+    
+    # Penalty override fields
+    penalty_override_enabled: Optional[bool] = False
+    renewable_penalty_override: Optional[float] = None
+    low_carbon_penalty_override: Optional[float] = None
+    penalty_override_date: Optional[datetime] = None
+    penalty_override_user: Optional[int] = None
 
 
 class CommonPaginatedReportRequestSchema(BaseSchema):
@@ -220,6 +348,10 @@ class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
     assessment_statement: Optional[str] = None
+
+
+class AssignAnalystSchema(BaseSchema):
+    assigned_analyst_id: Optional[int] = None
 
 
 class ExportColumn(NamedTuple):

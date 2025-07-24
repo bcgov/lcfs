@@ -3,15 +3,19 @@ import {
   BCSelectFloatingFilter
 } from '@/components/BCDataGrid/components'
 import { SUMMARY } from '@/constants/common'
-import { ReportsStatusRenderer } from '@/utils/grid/cellRenderers'
+import {
+  ReportsStatusRenderer,
+  LastCommentRenderer
+} from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
-import { useGetComplianceReportStatuses } from '@/hooks/useComplianceReports'
+import { useGetComplianceReportStatuses, useGetAvailableAnalysts } from '@/hooks/useComplianceReports'
+import { AssignedAnalystCell } from './AssignedAnalystCell'
 
-export const reportsColDefs = (t, isSupplier) => [
+export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'status',
     headerName: t('report:reportColLabels.status'),
-    width: 300,
+    width: 220,
     valueGetter: ({ data }) => data.reportStatus || '',
     filterParams: {
       textFormatter: (value) => value.replace(/\s+/g, '_').toLowerCase(),
@@ -41,6 +45,48 @@ export const reportsColDefs = (t, isSupplier) => [
       labelKey: 'status'
     },
     suppressFloatingFilterButton: true
+  },
+  {
+    field: 'assignedAnalyst',
+    headerName: t('report:reportColLabels.assignedAnalyst'),
+    width: 150,
+    hide: isSupplier,
+    valueGetter: ({ data }) => data.assignedAnalyst?.initials || '',
+    cellRenderer: AssignedAnalystCell,
+    cellRendererParams: {
+      onRefresh
+    },
+    filter: 'agTextColumnFilter',
+    filterParams: {
+      textFormatter: (value) => value || '',
+      textCustomComparator: (filter, value, filterText) => {
+        // Handle filtering by initials
+        const cleanValue = (value || '').toLowerCase()
+        const cleanFilter = filterText.toLowerCase()
+        return cleanValue.includes(cleanFilter)
+      },
+      buttons: ['clear']
+    },
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      optionsQuery: useGetAvailableAnalysts,
+      valueKey: 'initials',
+      labelKey: 'fullName'
+    },
+    suppressFloatingFilterButton: true,
+    suppressHeaderFilterButton: true
+  },
+  {
+    field: 'lastComment',
+    headerName: t('report:reportColLabels.lastComment'),
+    width: 160,
+    hide: isSupplier, // Only show for IDIR users
+    cellRenderer: LastCommentRenderer,
+    sortable: false,
+    filter: false,
+    floatingFilter: false,
+    suppressHeaderFilterButton: true,
+    valueGetter: ({ data }) => data.lastComment || null
   },
   {
     field: 'compliancePeriod',
@@ -306,7 +352,7 @@ export const lowCarbonColumns = (t) => [
   }
 ]
 
-export const nonComplianceColumns = (t) => [
+export const nonComplianceColumns = (t, editable = false) => [
   {
     id: 'description',
     label: t('report:nonCompliancePenaltySummary'),
@@ -316,7 +362,9 @@ export const nonComplianceColumns = (t) => [
     id: 'totalValue',
     label: t('report:summaryLabels.totalValue'),
     align: 'center',
-    width: '150px'
+    width: '150px',
+    editable: editable,
+    editableCells: editable ? [0, 1] : []
   }
 ]
 

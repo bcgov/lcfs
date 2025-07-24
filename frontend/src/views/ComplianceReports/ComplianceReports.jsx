@@ -13,7 +13,7 @@ import {
   useCreateComplianceReport,
   useGetComplianceReportList
 } from '@/hooks/useComplianceReports'
-import { reportsColDefs } from './components/_schema'
+import { reportsColDefs, defaultSortModel } from './components/_schema'
 import { NewComplianceReportButton } from './components/NewComplianceReportButton'
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
@@ -23,6 +23,13 @@ import { defaultInitialPagination } from '@/constants/schedules.js'
 import BCButton from '@/components/BCButton'
 import { CalculateOutlined } from '@mui/icons-material'
 
+const initialPaginationOptions = {
+  page: 1,
+  size: 10,
+  sortOrders: defaultSortModel,
+  filters: []
+}
+
 export const ComplianceReports = () => {
   const { t } = useTranslation(['common', 'report'])
   const [alertMessage, setAlertMessage] = useState('')
@@ -30,7 +37,7 @@ export const ComplianceReports = () => {
   const [alertSeverity, setAlertSeverity] = useState('info')
 
   const [paginationOptions, setPaginationOptions] = useState(
-    defaultInitialPagination
+    initialPaginationOptions
   )
 
   const gridRef = useRef()
@@ -44,6 +51,10 @@ export const ComplianceReports = () => {
     cacheTime: 0,
     staleTime: 0
   })
+
+  const handleRefresh = () => {
+    queryData.refetch()
+  }
 
   const getRowId = useCallback(
     (params) => params.data.complianceReportGroupUuid,
@@ -104,7 +115,7 @@ export const ComplianceReports = () => {
   )
 
   const handleClearFilters = () => {
-    setPaginationOptions(defaultInitialPagination)
+    setPaginationOptions(initialPaginationOptions)
     sessionStorage.removeItem('compliance-reports-grid-filter')
     if (gridRef && gridRef.current) {
       gridRef.current.clearFilters()
@@ -172,7 +183,11 @@ export const ComplianceReports = () => {
           <BCGridViewer
             gridRef={gridRef}
             gridKey="compliance-reports-grid"
-            columnDefs={reportsColDefs(t, hasRoles(roles.supplier))}
+            columnDefs={reportsColDefs(
+              t,
+              hasRoles(roles.supplier),
+              handleRefresh
+            )}
             queryData={queryData}
             dataKey="reports"
             getRowId={getRowId}

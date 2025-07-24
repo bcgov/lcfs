@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
-  Stack
+  Stack,
+  FormControlLabel,
+  Checkbox,
+  Box
 } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import SigningAuthorityDeclaration from './SigningAuthorityDeclaration'
@@ -43,6 +46,7 @@ const ComplianceReportSummary = ({
   const [summaryData, setSummaryData] = useState(null)
   const [hasRecords, setHasRecords] = useState(false)
   const [hasValidAddress, setHasValidAddress] = useState(false)
+  const [penaltyOverrideEnabled, setPenaltyOverrideEnabled] = useState(false)
   const { t } = useTranslation(['report'])
 
   const { data: snapshotData } = useOrganizationSnapshot(reportID)
@@ -68,6 +72,7 @@ const ComplianceReportSummary = ({
     if (data) {
       setSummaryData(data)
       setHasRecords(data && data.canSign)
+      setPenaltyOverrideEnabled(data.penaltyOverrideEnabled || false)
     }
     if (isError) {
       alertRef.current?.triggerAlert({
@@ -101,6 +106,90 @@ const ComplianceReportSummary = ({
       updateComplianceReportSummary(updatedData)
     },
     [summaryData, updateComplianceReportSummary]
+  )
+
+  const handlePenaltyOverrideCellEdit = useCallback(
+    (data) => {
+      // Extract penalty override values from edited non-compliance penalty summary data
+      // Row 0 (index 0) = Line 11 renewable fuel penalty -> renewablePenaltyOverride
+      // Row 1 (index 1) = Line 21 low carbon fuel penalty -> lowCarbonPenaltyOverride
+      const renewablePenaltyValue = data[0]?.totalValue || null
+      const lowCarbonPenaltyValue = data[1]?.totalValue || null
+      
+      const updatedData = {
+        ...summaryData,
+        nonCompliancePenaltySummary: data,
+        renewablePenaltyOverride: renewablePenaltyValue,
+        lowCarbonPenaltyOverride: lowCarbonPenaltyValue,
+        penaltyOverrideDate: new Date().toISOString(),
+        penaltyOverrideUser: currentUser?.userProfileId
+      }
+      
+      setSummaryData(updatedData)
+      updateComplianceReportSummary(updatedData)
+    },
+    [summaryData, updateComplianceReportSummary, currentUser]
+  )
+
+  // Computed data for non-compliance penalty summary based on override state
+  const nonCompliancePenaltyDisplayData = useMemo(() => {
+    if (!summaryData?.nonCompliancePenaltySummary) return null
+
+    const originalData = summaryData.nonCompliancePenaltySummary
+    
+    if (!penaltyOverrideEnabled) {
+      // When override is disabled, show original calculated values
+      return originalData
+    }
+
+    // When override is enabled, show override values
+    return originalData.map((row, index) => {
+      if (index === 0) {
+        // Line 11: Renewable fuel penalty - show override value
+        return {
+          ...row,
+          totalValue: summaryData.renewablePenaltyOverride || 0
+        }
+      } else if (index === 1) {
+        // Line 21: Low carbon fuel penalty - show override value
+        return {
+          ...row,
+          totalValue: summaryData.lowCarbonPenaltyOverride || 0
+        }
+      } else if (index === 2) {
+        // Total row: Sum of override values (calculated from backend)
+        return {
+          ...row,
+          totalValue: (summaryData.renewablePenaltyOverride || 0) + (summaryData.lowCarbonPenaltyOverride || 0)
+        }
+      }
+      return row
+    })
+  }, [summaryData, penaltyOverrideEnabled])
+
+  const handleCheckboxToggle = useCallback(
+    (enabled) => {
+      setPenaltyOverrideEnabled(enabled)
+      const updatedData = {
+        ...summaryData,
+        penaltyOverrideEnabled: enabled,
+        // If enabling, set audit fields immediately
+        ...(enabled
+          ? {
+              penaltyOverrideDate: new Date().toISOString(),
+              penaltyOverrideUser: currentUser?.userProfileId
+            }
+          : {
+              renewablePenaltyOverride: null,
+              lowCarbonPenaltyOverride: null,
+              penaltyOverrideDate: null,
+              penaltyOverrideUser: null
+            })
+      }
+      console.log('Checkbox toggle - sending to backend:', updatedData)
+      updateComplianceReportSummary(updatedData)
+    },
+    [summaryData, updateComplianceReportSummary, currentUser]
   )
 
   if (isLoading || isFetching) {
@@ -161,10 +250,32 @@ const ComplianceReportSummary = ({
                 <SummaryTable
                   data-test="non-compliance-summary"
                   title={t('report:nonCompliancePenaltySummary')}
-                  columns={nonComplianceColumns(t)}
-                  data={summaryData?.nonCompliancePenaltySummary}
+                  columns={nonComplianceColumns(t, penaltyOverrideEnabled)}
+                  data={nonCompliancePenaltyDisplayData}
                   width={'80.65%'}
+                  onCellEditStopped={penaltyOverrideEnabled ? handlePenaltyOverrideCellEdit : undefined}
                 />
+                {hasRoles(roles.director) &&
+                  parseInt(compliancePeriodYear) >= 2024 &&
+                  (currentStatus ===
+                    COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST ||
+                    currentStatus ===
+                      COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER) && (
+                    <Box sx={{ mb: 2 }}>
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={penaltyOverrideEnabled}
+                            onChange={(e) =>
+                              handleCheckboxToggle(e.target.checked)
+                            }
+                            data-test="penalty-override-checkbox"
+                          />
+                        }
+                        label="Override penalty calculations"
+                      />
+                    </Box>
+                  )}
               </>
             }
           />

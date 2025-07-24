@@ -1,6 +1,7 @@
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock
 
+from lcfs.db.models.fuel.FuelCodeListView import FuelCodeListView
 import pytest
 from sqlalchemy.exc import NoResultFound
 
@@ -333,11 +334,10 @@ async def test_get_expected_use_type_by_name(fuel_code_repo, mock_db):
 
 @pytest.mark.anyio
 async def test_get_fuel_codes_paginated(fuel_code_repo, mock_db):
-    fc = FuelCode(fuel_code_id=1, fuel_suffix="101.0")
+    fc = FuelCodeListView(fuel_code_id=1, fuel_suffix="101.0")
     mock_db.execute.side_effect = [
-        MagicMock(scalar=MagicMock(return_value=FuelCodeStatus())),
-        MagicMock(scalar=MagicMock(return_value=1)),
-        MagicMock(
+        MagicMock(scalar=MagicMock(return_value=1)),  # Count query result
+        MagicMock(  # Main query result
             unique=MagicMock(
                 return_value=MagicMock(
                     scalars=MagicMock(
@@ -835,3 +835,39 @@ async def test_get_standardized_fuel_data_unknown_no_codes_found_falls_back_to_d
     assert result.effective_carbon_intensity == 123.45
 
     fuel_code_repo.get_default_carbon_intensity.assert_awaited_once_with(1, "2024")
+
+
+@pytest.mark.anyio
+async def test_get_fp_facility_location_by_name_city(fuel_code_repo, mock_db):
+    mock_result = MagicMock()
+    mock_result.unique.return_value.all.return_value = [("CityA, ProvinceA, CountryA",)]
+    mock_db.execute.return_value = mock_result
+
+    result = await fuel_code_repo.get_fp_facility_location_by_name(city="CityA")
+    assert result == ["CityA, ProvinceA, CountryA"]
+    mock_db.execute.assert_awaited_once()
+
+
+@pytest.mark.anyio
+async def test_get_category_carbon_intensity(fuel_code_repo, mock_db):
+    mock_record = MagicMock()
+    mock_record.category_carbon_intensity = 55.5
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = mock_record
+    mock_db.execute.return_value = mock_result
+
+    result = await fuel_code_repo.get_category_carbon_intensity(2, "2024")
+    assert result == 55.5
+
+
+@pytest.mark.anyio
+async def test_get_fuel_code_history(fuel_code_repo, mock_db):
+    history = FuelCode(
+        fuel_code_id=1, fuel_suffix="101.0"
+    )  # or a proper FuelCodeHistory mock
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = history
+    mock_db.execute.return_value = mock_result
+
+    result = await fuel_code_repo.get_fuel_code_history(1, version=0)
+    assert result == history
