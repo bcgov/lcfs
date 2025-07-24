@@ -79,12 +79,17 @@ async def test_get_intended_user_types(repo, fake_db):
 
 @pytest.mark.anyio
 async def test_get_organization_names_valid(repo, fake_db):
-    # Create a dummy organization object with an organization_id.
-    organization = type("Org", (), {"organization_id": 1})()
-    # Simulate the query returning tuples with organization names.
-    fake_db.execute.return_value = FakeResult([("Org1",), ("Org2",)])
+    # Create a dummy organization object with an organization_id and name.
+    organization = type("Org", (), {"organization_id": 1, "name": "Test Organization"})()
+    # Simulate the queries returning tuples with organization names.
+    # First call for allocation partners, second call for existing FSE orgs
+    fake_db.execute.side_effect = [
+        FakeResult([("Partner Org",)]),  # allocation partners
+        FakeResult([("Org1",), ("Org2",)])  # existing FSE organizations
+    ]
     result = await repo.get_organization_names(organization)
-    assert result == ["Org1", "Org2"]
+    # Should return user's organization first, then others alphabetically
+    assert result == ["Test Organization", "Org1", "Org2", "Partner Org"]
 
 
 @pytest.mark.anyio
@@ -97,6 +102,19 @@ async def test_get_organization_names_invalid(repo, fake_db):
     organization = type("Org", (), {})()
     result = await repo.get_organization_names(organization)
     assert result == []
+
+
+@pytest.mark.anyio
+async def test_get_organization_names_no_name(repo, fake_db):
+    # When organization has organization_id but no name, should still work
+    organization = type("Org", (), {"organization_id": 1, "name": None})()
+    fake_db.execute.side_effect = [
+        FakeResult([("Partner Org",)]),  # allocation partners
+        FakeResult([("Org1",), ("Org2",)])  # existing FSE organizations
+    ]
+    result = await repo.get_organization_names(organization)
+    # Should return organizations alphabetically (no user org to put first)
+    assert result == ["Org1", "Org2", "Partner Org"]
 
 
 @pytest.mark.anyio
