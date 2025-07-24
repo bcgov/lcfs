@@ -71,6 +71,10 @@ export const CreditCalculator = () => {
         value: period.description,
         label: period.description
       }))
+      .filter((period) => {
+        const year = parseInt(period.value)
+        return year >= 2019 && year <= 2030
+      })
       .sort((a, b) => parseInt(b.value) - parseInt(a.value))
   }, [compliancePeriods])
 
