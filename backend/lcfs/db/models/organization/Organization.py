@@ -71,13 +71,6 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         nullable=False,
         comment="The count of transfers in progress for the specified organization.",
     )
-    has_early_issuance = Column(
-        Boolean,
-        nullable=False,
-        default=False,
-        server_default=text("FALSE"),
-        comment="True if the Organization can create early issuance reports",
-    )
     organization_status_id = Column(
         Integer, ForeignKey("organization_status.organization_status_id")
     )
@@ -134,6 +127,9 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     compliance_reports = relationship("ComplianceReport", back_populates="organization")
     notification_messages = relationship(
         "NotificationMessage", back_populates="related_organization"
+    )
+    early_issuance_by_years = relationship(
+        "OrganizationEarlyIssuanceByYear", back_populates="organization"
     )
 
 

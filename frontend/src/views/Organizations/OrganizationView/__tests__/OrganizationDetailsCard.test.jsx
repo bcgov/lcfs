@@ -4,9 +4,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeProvider } from '@mui/material'
 import theme from '@/themes'
 import { roles } from '@/constants/roles'
+import { MemoryRouter } from 'react-router-dom'
+import { I18nextProvider } from 'react-i18next'
+import i18n from '@/i18n'
 
 import { OrganizationDetailsCard } from '../OrganizationDetailsCard'
 import * as CurrentUserHook from '@/hooks/useCurrentUser'
+import { useOrganization } from '@/hooks/useOrganization'
 
 vi.mock('@react-keycloak/web', () => ({
   useKeycloak: () => ({
@@ -14,11 +18,15 @@ vi.mock('@react-keycloak/web', () => ({
   })
 }))
 
-vi.mock('react-router-dom', () => ({
-  useParams: () => ({ orgID: '123' }),
-  useLocation: () => ({ state: {} }),
-  useNavigate: () => vi.fn() // required by BCWidgetCard
-}))
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useParams: () => ({ orgID: '123' }),
+    useLocation: () => ({ state: {} }),
+    useNavigate: () => vi.fn() // required by BCWidgetCard
+  }
+})
 
 const baseOrg = {
   organizationId: '123',
@@ -33,7 +41,7 @@ const baseOrg = {
 }
 
 vi.mock('@/hooks/useOrganization', () => ({
-  useOrganization: () => ({ data: baseOrg, isLoading: false }),
+  useOrganization: vi.fn(() => ({ data: baseOrg, isLoading: false })),
   useOrganizationBalance: () => ({
     data: { totalBalance: 200, reservedBalance: 25 }
   })
@@ -48,6 +56,11 @@ const adminUser = {
   organization: { organizationId: '123' }
 }
 
+const nonGovUser = {
+  roles: [{ name: 'bceid' }],
+  organization: { organizationId: '123' }
+}
+
 const makeUserHook = (user) => ({
   data: user,
   isLoading: false,
@@ -58,14 +71,18 @@ vi.mock('@/hooks/useCurrentUser', () => ({
   useCurrentUser: vi.fn(() => makeUserHook(govUser))
 }))
 
-const renderCard = () =>
-  render(
-    <QueryClientProvider client={new QueryClient()}>
-      <ThemeProvider theme={theme}>
-        <OrganizationDetailsCard />
-      </ThemeProvider>
-    </QueryClientProvider>
-  )
+const queryClient = new QueryClient()
+
+const Wrapper = ({ children }) => (
+  <QueryClientProvider client={queryClient}>
+    <I18nextProvider i18n={i18n}>
+      <MemoryRouter>{children}</MemoryRouter>
+    </I18nextProvider>
+  </QueryClientProvider>
+)
+
+const mockGovUser = { hasRoles: () => true }
+const mockNonGovUser = { hasRoles: () => false }
 
 describe('OrganizationDetailsCard', () => {
   afterEach(() => {
@@ -74,7 +91,13 @@ describe('OrganizationDetailsCard', () => {
   })
 
   it('renders core org fields', () => {
-    renderCard()
+    render(
+      <Wrapper>
+        <ThemeProvider theme={theme}>
+          <OrganizationDetailsCard />
+        </ThemeProvider>
+      </Wrapper>
+    )
     expect(screen.getByText('Legal Inc')).toBeInTheDocument()
     expect(screen.getByText('Operating Inc')).toBeInTheDocument()
     expect(screen.getByText('(123) 456-7890')).toBeInTheDocument()
@@ -85,14 +108,85 @@ describe('OrganizationDetailsCard', () => {
     CurrentUserHook.useCurrentUser.mockImplementation(() =>
       makeUserHook(adminUser)
     )
-    renderCard()
+    render(
+      <Wrapper>
+        <ThemeProvider theme={theme}>
+          <OrganizationDetailsCard />
+        </ThemeProvider>
+      </Wrapper>
+    )
     expect(screen.getByRole('button', { name: /edit/i })).toBeInTheDocument()
   })
 
   it('hides edit button for non‑administrators', () => {
-    renderCard()
+    render(
+      <Wrapper>
+        <ThemeProvider theme={theme}>
+          <OrganizationDetailsCard />
+        </ThemeProvider>
+      </Wrapper>
+    )
     expect(
       screen.queryByRole('button', { name: /edit/i })
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows early issuance for government user when it is false', () => {
+    CurrentUserHook.useCurrentUser.mockImplementation(() =>
+      makeUserHook(govUser)
+    )
+    useOrganization.mockReturnValue({
+      data: { hasEarlyIssuance: false, orgStatus: {} }
+    })
+    render(
+      <Wrapper>
+        <ThemeProvider theme={theme}>
+          <OrganizationDetailsCard />
+        </ThemeProvider>
+      </Wrapper>
+    )
+    expect(
+      screen.getByText(/Early issuance reporting enabled for/)
+    ).toBeInTheDocument()
+    expect(screen.getByText('No')).toBeInTheDocument()
+  })
+
+  it('shows early issuance for non-government user only when true', () => {
+    CurrentUserHook.useCurrentUser.mockImplementation(() =>
+      makeUserHook(nonGovUser)
+    )
+    useOrganization.mockReturnValue({
+      data: { hasEarlyIssuance: true, orgStatus: {} }
+    })
+    render(
+      <Wrapper>
+        <ThemeProvider theme={theme}>
+          <OrganizationDetailsCard />
+        </ThemeProvider>
+      </Wrapper>
+    )
+    expect(
+      screen.getByText(/Early issuance reporting enabled for/)
+    ).toBeInTheDocument()
+    expect(screen.getByText('Yes')).toBeInTheDocument()
+  })
+
+  it('does not show early issuance for non-government user when false', () => {
+    CurrentUserHook.useCurrentUser.mockImplementation(() =>
+      makeUserHook(nonGovUser)
+    )
+    useOrganization.mockReturnValue({
+      data: { hasEarlyIssuance: false, orgStatus: {} }
+    })
+    render(
+      <Wrapper>
+        <ThemeProvider theme={theme}>
+          <OrganizationDetailsCard />
+        </ThemeProvider>
+      </Wrapper>
+    )
+    expect(
+      screen.queryByText(/Early issuance reporting enabled for/)
     ).not.toBeInTheDocument()
   })
 })
