@@ -235,13 +235,13 @@ async def test_get_compliance_report_by_id_success(
         return_value=mock_compliance_report
     )
 
-    mock_repo.get_compliance_report_by_id.return_value = mock_compliance_report
+    mock_repo.get_compliance_report_schema_by_id.return_value = mock_compliance_report
 
     mock_user = UserProfile()
     result = await compliance_report_service.get_compliance_report_by_id(1, mock_user)
 
     assert result == mock_compliance_report
-    mock_repo.get_compliance_report_by_id.assert_called_once_with(1)
+    mock_repo.get_compliance_report_schema_by_id.assert_called_once_with(1)
     compliance_report_service._mask_report_status_for_history.assert_called_once_with(
         mock_compliance_report, mock_user
     )
@@ -251,7 +251,7 @@ async def test_get_compliance_report_by_id_success(
 async def test_get_compliance_report_by_id_not_found(
     compliance_report_service, mock_repo
 ):
-    mock_repo.get_compliance_report_by_id.return_value = None
+    mock_repo.get_compliance_report_schema_by_id.return_value = None
 
     with pytest.raises(DataNotFoundException):
         await compliance_report_service.get_compliance_report_by_id(999, UserProfile())
@@ -261,7 +261,7 @@ async def test_get_compliance_report_by_id_not_found(
 async def test_get_compliance_report_by_id_unexpected_error(
     compliance_report_service, mock_repo
 ):
-    mock_repo.get_compliance_report_by_id.side_effect = Exception("Unexpected error")
+    mock_repo.get_compliance_report_schema_by_id.side_effect = Exception("Unexpected error")
 
     with pytest.raises(ServiceException):
         await compliance_report_service.get_compliance_report_by_id(1, UserProfile())
