@@ -1,7 +1,7 @@
 """Update metabase views to use organization_early_issuance_by_year table
 
 Revision ID: c3d4e5f6g7h8
-Revises: a1b2c3d4e5f7
+Revises: 674478937015
 Create Date: 2025-07-10 10:30:00.000000
 
 """
@@ -16,7 +16,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "c3d4e5f6g7h8"
-down_revision = "a1b2c3d4e5f7"
+down_revision = "674478937015"
 branch_labels = None
 depends_on = None
 
