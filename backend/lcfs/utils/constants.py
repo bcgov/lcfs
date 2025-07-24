@@ -62,6 +62,11 @@ class LCFS_Constants:
         "2024"  # First year that the new LCFS Legislation takes effect
     )
 
+    @classmethod
+    def get_current_compliance_year(cls) -> str:
+        """Get the current compliance year for early issuance"""
+        return str(int(cls.LEGISLATION_TRANSITION_YEAR) + 1)
+
     # Export credit ledger
     CREDIT_LEDGER_EXPORT_MEDIA_TYPE = "application/vnd.ms-excel"
     CREDIT_LEDGER_EXPORT_COLUMNS = [
