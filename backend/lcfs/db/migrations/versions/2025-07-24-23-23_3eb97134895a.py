@@ -1,8 +1,8 @@
 """Add is_non_assessment field to compliance_report table
 
 Revision ID: 3eb97134895a
-Revises: 413eef467edd
-Create Date: 2025-07-07 23:23:47.891496
+Revises: 674478937015
+Create Date: 2025-07-24 23:23:47.891496
 
 """
 
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "3eb97134895a"
-down_revision = "413eef467edd"
+down_revision = "674478937015"
 branch_labels = None
 depends_on = None
 

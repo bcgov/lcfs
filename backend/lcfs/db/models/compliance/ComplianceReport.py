@@ -145,6 +145,12 @@ class ComplianceReport(BaseModel, Auditable):
         default=False,
         comment="Flag indicating if report is not subject to assessment under the Low Carbon Fuels Act",
     )
+    assigned_analyst_id = Column(
+        Integer,
+        ForeignKey("user_profile.user_profile_id"),
+        nullable=True,
+        comment="Foreign key to user_profile for assigned analyst",
+    )
 
     # Relationships
     compliance_period = relationship(
@@ -153,6 +159,9 @@ class ComplianceReport(BaseModel, Auditable):
     organization = relationship("Organization", back_populates="compliance_reports")
     current_status = relationship("ComplianceReportStatus")
     transaction = relationship("Transaction")
+    assigned_analyst = relationship(
+        "UserProfile", foreign_keys=[assigned_analyst_id], lazy="selectin"
+    )
 
     # Tracking relationships
     summary = relationship(

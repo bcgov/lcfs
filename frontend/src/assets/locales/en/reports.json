@@ -8,8 +8,9 @@
     "organization": "Organization",
     "type": "Type",
     "status": "Current status",
-    "lastComment": "Last comment",
-    "lastUpdated": "Last status update"
+    "lastUpdated": "Last status update",
+    "assignedAnalyst": "Assigned Analyst",
+    "lastComment": "Last comment"
   },
   "noReportsFound": "No compliance reports found",
   "serviceAddrLabel": "Address for service",
@@ -284,5 +285,7 @@
   "generatedLabel": "Credits generated",
   "allRecordsDeleted": "All previous records deleted.",
   "notSubjectToAssessment": "Not Subject to Assessment",
-  "notSubjectToAssessmentDescription": "This report is not subject to assessment under the Low Carbon Fuels Act. No action will be taken on the contents of this report, and the summary result will not impact the organization's compliance unit balance. Please add any specific information to the supplier in the director statement above."
+  "notSubjectToAssessmentDescription": "This report is not subject to assessment under the Low Carbon Fuels Act. No action will be taken on the contents of this report, and the summary result will not impact the organization's compliance unit balance. Please add any specific information to the supplier in the director statement above.",
+  "assignAnalyst": "Assign Analyst",
+  "unassign": "Unassign"
 }

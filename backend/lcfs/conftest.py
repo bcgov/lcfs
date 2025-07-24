@@ -253,8 +253,22 @@ class MockAuthenticationBackend(AuthenticationBackend):
         user.organization = organization
 
         # Create UserRole instances based on the RoleEnum members provided
+        roles_to_add = list(self.user_roles_enum)
+        
+        # Add GOVERNMENT role if user has any government-specific roles
+        government_specific_roles = [RoleEnum.ANALYST, RoleEnum.ADMINISTRATOR, RoleEnum.DIRECTOR, RoleEnum.COMPLIANCE_MANAGER]
+        if any(role in government_specific_roles for role in self.user_roles_enum):
+            if RoleEnum.GOVERNMENT not in roles_to_add:
+                roles_to_add.append(RoleEnum.GOVERNMENT)
+        
+        # Add SUPPLIER role if user has any supplier-specific roles
+        supplier_specific_roles = [RoleEnum.MANAGE_USERS, RoleEnum.TRANSFER, RoleEnum.COMPLIANCE_REPORTING, RoleEnum.SIGNING_AUTHORITY, RoleEnum.READ_ONLY]
+        if any(role in supplier_specific_roles for role in self.user_roles_enum):
+            if RoleEnum.SUPPLIER not in roles_to_add:
+                roles_to_add.append(RoleEnum.SUPPLIER)
+        
         user.user_roles = [
-            self.create_user_role(user, role_enum) for role_enum in self.user_roles_enum
+            self.create_user_role(user, role_enum) for role_enum in roles_to_add
         ]
 
         return AuthCredentials(["authenticated"]), user
@@ -265,7 +279,7 @@ class MockAuthenticationBackend(AuthenticationBackend):
             name=role_enum,
             description=f"Mocked role for {role_enum}",
             is_government_role=role_enum
-            in [RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.ADMINISTRATOR],
+            in [RoleEnum.GOVERNMENT, RoleEnum.ANALYST, RoleEnum.ADMINISTRATOR, RoleEnum.DIRECTOR, RoleEnum.COMPLIANCE_MANAGER],
         )
         user_role = UserRole(
             user_role_id=self.role_count, user_profile=user_profile, role=role

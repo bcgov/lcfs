@@ -53,7 +53,7 @@ export const columnDefs = (t, currentUser) => [
       ) {
         return fromOrganization
       }
-      return params.data.relatedOrganization.name
+      return params.data.relatedOrganization?.name || ''
     }
   }
 ]
