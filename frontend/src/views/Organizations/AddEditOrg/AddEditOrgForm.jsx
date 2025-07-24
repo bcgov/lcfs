@@ -428,14 +428,14 @@ export const AddEditOrgForm = () => {
                     <Box mb={2}>
                       <FormControl fullWidth>
                         <Grid container>
-                          <Grid item xs={4}>
+                          <Grid item xs={6}>
                             <FormLabel id="orgSupplierType" sx={{ pb: 1 }}>
                               <BCTypography variant="body3">
                                 {t('org:supplierTypLabel')}:
                               </BCTypography>
                             </FormLabel>
                           </Grid>
-                          <Grid item xs={8} mt={0.5}>
+                          <Grid item xs={6} mt={0.5}>
                             <RadioGroup
                               row
                               id="orgSupplierType"
@@ -465,14 +465,14 @@ export const AddEditOrgForm = () => {
                     <Box mb={2}>
                       <FormControl fullWidth>
                         <Grid container>
-                          <Grid item xs={4}>
+                          <Grid item xs={6}>
                             <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
                               <BCTypography variant="body3">
                                 {t('org:regTrnLabel')}:
                               </BCTypography>
                             </FormLabel>
                           </Grid>
-                          <Grid item xs={8} mt={0.5}>
+                          <Grid item xs={6} mt={0.5}>
                             <Controller
                               control={control}
                               name="orgRegForTransfers"
@@ -520,7 +520,7 @@ export const AddEditOrgForm = () => {
                     <Box mb={2}>
                       <FormControl fullWidth>
                         <Grid container>
-                          <Grid item xs={4} mt={0.5}>
+                          <Grid item xs={6} mt={0.5}>
                             <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
                               <BCTypography variant="body3">
                                 {t('org:earlyIssuanceLabel', {
@@ -530,7 +530,7 @@ export const AddEditOrgForm = () => {
                               </BCTypography>
                             </FormLabel>
                           </Grid>
-                          <Grid item xs={8}>
+                          <Grid item xs={6}>
                             <Controller
                               control={control}
                               name="hasEarlyIssuance"

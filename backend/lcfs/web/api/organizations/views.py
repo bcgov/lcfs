@@ -85,7 +85,7 @@ async def create_organization(
 async def search_organizations(
     request: Request,
     org_name: str = Query(
-        ..., min_length=3, description="Company name or operating name"
+        ..., min_length=1, description="Company name or operating name"
     ),
     service: OrganizationsService = Depends(),
 ):

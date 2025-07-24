@@ -140,7 +140,9 @@ async def get_fuel_codes(
     return await service.search_fuel_codes(pagination)
 
 
-@router.post("/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK)
+@router.post(
+    "/export", response_class=StreamingResponse, status_code=status.HTTP_200_OK
+)
 @view_handler([RoleEnum.GOVERNMENT])
 async def export_fuel_codes(
     request: Request,
@@ -207,19 +209,22 @@ async def get_fuel_code(
     return await service.get_fuel_code(fuel_code_id)
 
 
-@router.post("/{fuel_code_id}/approve", status_code=status.HTTP_200_OK)
+@router.put("/{fuel_code_id}", status_code=status.HTTP_200_OK)
 @view_handler([RoleEnum.GOVERNMENT])
-async def approve_fuel_code(
+async def update_fuel_code_status(
     request: Request,
     fuel_code_id: int,
+    data: FuelCodeStatusSchema,
     service: FuelCodeServices = Depends(),
 ):
-    # TODO: Add Logic that checks if the code has necessary fields for approval
-    return await service.approve_fuel_code(fuel_code_id)
+    current_user = request.user
+    return await service.update_fuel_code_status(
+        fuel_code_id, data.status, current_user
+    )
 
 
 @router.post("", status_code=status.HTTP_200_OK)
-@view_handler([RoleEnum.ANALYST])
+@view_handler([RoleEnum.ANALYST, RoleEnum.DIRECTOR])
 async def save_fuel_code(
     request: Request,
     fuel_code_data: FuelCodeCreateUpdateSchema,

@@ -8,9 +8,10 @@ import {
   LastCommentRenderer
 } from '@/utils/grid/cellRenderers'
 import { timezoneFormatter } from '@/utils/formatters'
-import { useGetComplianceReportStatuses } from '@/hooks/useComplianceReports'
+import { useGetComplianceReportStatuses, useGetAvailableAnalysts } from '@/hooks/useComplianceReports'
+import { AssignedAnalystCell } from './AssignedAnalystCell'
 
-export const reportsColDefs = (t, isSupplier) => [
+export const reportsColDefs = (t, isSupplier, onRefresh) => [
   {
     field: 'status',
     headerName: t('report:reportColLabels.status'),
@@ -44,6 +45,36 @@ export const reportsColDefs = (t, isSupplier) => [
       labelKey: 'status'
     },
     suppressFloatingFilterButton: true
+  },
+  {
+    field: 'assignedAnalyst',
+    headerName: t('report:reportColLabels.assignedAnalyst'),
+    width: 150,
+    hide: isSupplier,
+    valueGetter: ({ data }) => data.assignedAnalyst?.initials || '',
+    cellRenderer: AssignedAnalystCell,
+    cellRendererParams: {
+      onRefresh
+    },
+    filter: 'agTextColumnFilter',
+    filterParams: {
+      textFormatter: (value) => value || '',
+      textCustomComparator: (filter, value, filterText) => {
+        // Handle filtering by initials
+        const cleanValue = (value || '').toLowerCase()
+        const cleanFilter = filterText.toLowerCase()
+        return cleanValue.includes(cleanFilter)
+      },
+      buttons: ['clear']
+    },
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      optionsQuery: useGetAvailableAnalysts,
+      valueKey: 'initials',
+      labelKey: 'fullName'
+    },
+    suppressFloatingFilterButton: true,
+    suppressHeaderFilterButton: true
   },
   {
     field: 'lastComment',

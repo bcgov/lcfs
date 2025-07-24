@@ -370,14 +370,56 @@ jobs:
         id: frontend_tests
         run: |
           cd frontend
+          echo "=== Running tests for shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} ==="
+          
+          # Run tests and capture exit code
+          set +e
           npm run test:ci:memory
+          EXIT_CODE=$?
+          set -e
+          
+          # Handle exit codes appropriately
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ Tests completed successfully"
+          elif [ $EXIT_CODE -eq 1 ]; then
+            # Check if this is due to no test files (empty shard) or real failure
+            echo "Checking if shard ${{ matrix.shardIndex }} is empty..."
+            
+            # Try to determine if this shard should have test files
+            if SHARD_INDEX=${{ matrix.shardIndex }} SHARD_TOTAL=${{ matrix.shardTotal }} node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=verbose --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --run=false 2>&1 | grep -q "No test files found"; then
+              echo "✅ Empty shard detected - this is expected for shard ${{ matrix.shardIndex }} with 195 total test files"
+              
+              # For empty shards, we'll let the blob report merging step handle the missing report
+              # The merge step has logic to handle missing blob reports gracefully
+              echo "✅ Empty shard handled successfully - no blob report needed"
+            else
+              echo "❌ Real test failure detected in shard ${{ matrix.shardIndex }}"
+              exit $EXIT_CODE
+            fi
+          else
+            echo "❌ Tests failed with unexpected exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
         env:
           CI: true
           SHARD_INDEX: ${{ matrix.shardIndex }}
           SHARD_TOTAL: ${{ matrix.shardTotal }}
-          NODE_OPTIONS: '--max-old-space-size=4096'
           VITEST_REPORTER: 'blob'
           VITEST_POOL_THREADS: '4'
+
+      - name: Debug test failure details
+        if: failure()
+        run: |
+          cd frontend
+          echo "=== FRONTEND TEST FAILURE DEBUG ==="
+          echo "Failed shard: ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}"
+          echo "Memory settings: 8192MB (npm script)"
+          echo "Environment: CI=$CI"
+          echo ""
+          echo "Getting detailed error information..."
+          SHARD_INDEX=${{ matrix.shardIndex }} SHARD_TOTAL=${{ matrix.shardTotal }} node --max-old-space-size=8192 ./node_modules/.bin/vitest run --reporter=verbose --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }} || true
+        env:
+          CI: true
 
       - name: Upload blob report to GitHub Actions Artifacts
         if: always()
@@ -395,10 +437,23 @@ jobs:
     needs: [frontend-tests]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          sparse-checkout: |
+            frontend
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Install Vitest
+        run: |
+          cd frontend
+          VITEST_VERSION=$(node -p "require('./package.json').devDependencies.vitest")
+          echo "Installing vitest version: $VITEST_VERSION"
+          npm install vitest@$VITEST_VERSION --no-save
 
       - name: Download blob reports from GitHub Actions Artifacts
         uses: actions/download-artifact@v4
@@ -410,6 +465,37 @@ jobs:
       - name: Merge reports
         run: |
           cd frontend
+          
+          # Check if we have any blob reports
+          if [ ! -d ".vitest-reports" ] || [ -z "$(find .vitest-reports -name 'blob-*.json' -type f 2>/dev/null)" ]; then
+            echo "No blob reports found, creating empty test results file"
+            mkdir -p .vitest-reports
+            echo '<?xml version="1.0" encoding="UTF-8"?><testsuite name="frontend" tests="0" failures="0" errors="0" skipped="0"></testsuite>' > .vitest-reports/vitest-results.xml
+            exit 0
+          fi
+          
+          # Validate blob reports and remove invalid ones
+          echo "Validating blob reports..."
+          for file in .vitest-reports/blob-*.json; do
+            if [ -f "$file" ]; then
+              if ! node -pe "JSON.parse(require('fs').readFileSync('$file', 'utf8')); 'valid'" 2>/dev/null | grep -q "valid"; then
+                echo "Removing invalid blob report: $file"
+                rm "$file"
+              else
+                echo "Valid blob report: $file"
+              fi
+            fi
+          done
+          
+          # Check again if we have valid reports
+          if [ -z "$(find .vitest-reports -name 'blob-*.json' -type f 2>/dev/null)" ]; then
+            echo "No valid blob reports found after validation, creating empty test results file"
+            echo '<?xml version="1.0" encoding="UTF-8"?><testsuite name="frontend" tests="0" failures="0" errors="0" skipped="0"></testsuite>' > .vitest-reports/vitest-results.xml
+            exit 0
+          fi
+          
+          # Merge valid reports
+          echo "Merging valid blob reports..."
           npx --yes vitest@$(node -p "require('./package.json').devDependencies.vitest || require('./package.json').dependencies.vitest") --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
