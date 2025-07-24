@@ -9,6 +9,7 @@ from .FeedstockFuelTransportMode import FeedstockFuelTransportMode
 from .FinishedFuelTransportMode import FinishedFuelTransportMode
 from .FuelCategory import FuelCategory
 from .FuelCode import FuelCode
+from .FuelCodeHistory import FuelCodeHistory
 from .FuelCodePrefix import FuelCodePrefix
 from .FuelCodeStatus import FuelCodeStatus
 from .FuelType import FuelType
@@ -31,6 +32,7 @@ __all__ = [
     "FinishedFuelTransportMode",
     "FuelCategory",
     "FuelCode",
+    "FuelCodeHistory",
     "FuelCodeListView",
     "FuelCodePrefix",
     "FuelCodeStatus",

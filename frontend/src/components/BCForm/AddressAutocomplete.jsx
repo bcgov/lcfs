@@ -14,7 +14,7 @@ export const AddressAutocomplete = forwardRef(
     const [isAddressSelected, setIsAddressSelected] = useState(false)
 
     useEffect(() => {
-      if (!inputValue || inputValue.length < 3) {
+      if (!inputValue || inputValue.length < 1) {
         setOptions([])
         return
       }

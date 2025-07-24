@@ -152,7 +152,7 @@ async def test_get_compliance_reports_forbidden(
     pagination_request_schema,
 ):
     # Set a role that does not have access
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("get_compliance_reports")
 
@@ -263,13 +263,29 @@ async def test_get_compliance_report_by_id_success(
 async def test_get_compliance_report_by_id_forbidden(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])  # User with the wrong role
+    from unittest.mock import MagicMock
+    from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+    
+    # Set mock user with organization_id = 1 (default) 
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("get_compliance_report_by_id", report_id=1)
 
-    response = await client.get(url)
-
-    assert response.status_code == 403
+    # Mock the repository using dependency override
+    mock_repo = MagicMock(spec=ComplianceReportRepository)
+    mock_compliance_report = MagicMock()
+    mock_compliance_report.organization_id = 999  # Different org ID to trigger 403
+    mock_repo.get_compliance_report_schema_by_id.return_value = mock_compliance_report
+    
+    # Override the dependency
+    fastapi_app.dependency_overrides[ComplianceReportRepository] = lambda: mock_repo
+    
+    try:
+        response = await client.get(url)
+        assert response.status_code == 403
+    finally:
+        # Clean up dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -794,15 +810,31 @@ async def test_update_compliance_report_forbidden(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    from unittest.mock import MagicMock
+    from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+    
+    # Set mock user with organization_id = 1 (default)
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("update_compliance_report", report_id=1)
 
     payload = {"status": "Draft", "supplementalNote": "new supplemental note"}
 
-    response = await client.put(url, json=payload)
-
-    assert response.status_code == 403
+    # Mock the repository using dependency override
+    mock_repo = MagicMock(spec=ComplianceReportRepository)
+    mock_compliance_report = MagicMock()
+    mock_compliance_report.organization_id = 999  # Different org ID to trigger 403
+    mock_repo.get_compliance_report_schema_by_id.return_value = mock_compliance_report
+    
+    # Override the dependency
+    fastapi_app.dependency_overrides[ComplianceReportRepository] = lambda: mock_repo
+    
+    try:
+        response = await client.put(url, json=payload)
+        assert response.status_code == 403
+    finally:
+        # Clean up dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio

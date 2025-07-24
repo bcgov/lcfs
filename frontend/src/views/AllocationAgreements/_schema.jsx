@@ -122,7 +122,7 @@ export const allocationAgreementColDefs = (
         },
         title: 'transactionPartner',
         api: params.api,
-        minWords: 3
+        minWords: 1
       }),
       cellRenderer: (params) =>
         params.value ||
