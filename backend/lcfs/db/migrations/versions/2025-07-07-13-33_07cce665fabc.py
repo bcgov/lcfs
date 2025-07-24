@@ -1,7 +1,7 @@
 """Add assigned_analyst_id field to compliance_report table
 
 Revision ID: 07cce665fabc
-Revises: 413eef467edd
+Revises: ae2306fa8d72
 Create Date: 2025-07-07 13:33:00.000000
 
 """
@@ -16,7 +16,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "07cce665fabc"
-down_revision = "413eef467edd"
+down_revision = "ae2306fa8d72"
 branch_labels = None
 depends_on = None
 
