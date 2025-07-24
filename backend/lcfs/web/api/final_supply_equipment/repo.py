@@ -1,20 +1,18 @@
-from typing import List, Any, Sequence
+from typing import Any, List, Sequence
 
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, delete, distinct, exists, select, update
-from sqlalchemy import func
+from sqlalchemy import and_, delete, distinct, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from lcfs.db.dependencies import get_async_db_session
-from lcfs.db.models import (
-    Organization,
-)
+from lcfs.db.models import Organization
 from lcfs.db.models.compliance import (
+    AllocationAgreement,
+    ComplianceReport,
     EndUserType,
     FinalSupplyEquipment,
-    ComplianceReport,
 )
 from lcfs.db.models.compliance.FinalSupplyEquipmentRegNumber import (
     FinalSupplyEquipmentRegNumber,
@@ -109,20 +107,48 @@ class FinalSupplyEquipmentRepository:
 
     async def get_organization_names(self, organization: Organization) -> List[str]:
         """
-        Retrieve unique organization names for Final Supply Equipment records
-        associated with the given organization_id via ComplianceReport.
+        Retrieve unique organization names for Final Supply Equipment dropdown including:
+        1. User's own organization name (as default)
+        2. Transaction partner names from allocation agreements
+        3. Organization names from existing FSE records
 
         Args:
-            organization (Organization): The organization.
+            organization (Organization): The user's organization.
 
         Returns:
-            List[str]: A list of unique organization names.
+            List[str]: A list of unique organization names, with user's org first.
         """
         try:
             if not organization or not organization.organization_id:
                 return []
 
-            organization_names = (
+            organization_names = set()
+
+            # 1. Add user's own organization name (primary option)
+            if organization.name:
+                organization_names.add(organization.name)
+
+            # 2. Add transaction partner names from allocation agreements
+            allocation_partners = (
+                await self.db.execute(
+                    select(distinct(AllocationAgreement.transaction_partner))
+                    .join(
+                        ComplianceReport,
+                        AllocationAgreement.compliance_report_id
+                        == ComplianceReport.compliance_report_id,
+                    )
+                    .filter(
+                        ComplianceReport.organization_id == organization.organization_id
+                    )
+                    .filter(AllocationAgreement.transaction_partner.isnot(None))
+                )
+            ).all()
+
+            for partner in allocation_partners:
+                organization_names.add(partner[0])
+
+            # 3. Add organization names from existing FSE records
+            existing_fse_orgs = (
                 await self.db.execute(
                     select(distinct(FinalSupplyEquipment.organization_name))
                     .join(
@@ -137,7 +163,20 @@ class FinalSupplyEquipmentRepository:
                 )
             ).all()
 
-            return [name[0] for name in organization_names]
+            for fse_org in existing_fse_orgs:
+                organization_names.add(fse_org[0])
+
+            # Convert to sorted list with user's organization first
+            result = []
+            if organization.name and organization.name in organization_names:
+                result.append(organization.name)
+                organization_names.remove(organization.name)
+
+            # Add remaining organizations in alphabetical order
+            result.extend(sorted(list(organization_names)))
+
+            return result
+
         except Exception as e:
             logger.error("Error getting organization names", error=str(e))
             return []
