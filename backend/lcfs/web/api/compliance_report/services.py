@@ -3,6 +3,7 @@ from collections import defaultdict
 import copy
 from datetime import datetime
 import math
+from lcfs.db.base import ActionTypeEnum
 import structlog
 import uuid
 from fastapi import Depends
@@ -1061,7 +1062,7 @@ class ComplianceReportServices:
                 if data.group_uuid not in create_date_map:
                     create_date_map[data.group_uuid] = data.create_date
                     # Track the original order of items based on creation
-                    if data.action_type == "CREATE":
+                    if data.action_type == ActionTypeEnum.CREATE:
                         original_order.append(data.group_uuid)
 
         if not original_order:
@@ -1079,7 +1080,7 @@ class ComplianceReportServices:
                 items.append(data_copy)
                 seen_ids.add(getattr(data_copy, id_field))
 
-                if data_copy.action_type == "UPDATE":
+                if data_copy.action_type == ActionTypeEnum.UPDATE:
                     prev = make_deep_copy(
                         group_map[data_copy.group_uuid].get(data_copy.version - 1)
                     )
@@ -1095,7 +1096,7 @@ class ComplianceReportServices:
 
                         prev.diff = diff
                         prev.updated = True
-                        prev.action_type = "UPDATE"
+                        prev.action_type = ActionTypeEnum.UPDATE
                         data_copy.diff = diff
 
                         items.append(prev)
@@ -1123,7 +1124,7 @@ class ComplianceReportServices:
             ):
                 latest_item.compliance_units = round(latest_item.compliance_units)
 
-            if latest_item.action_type == "DELETE":
+            if latest_item.action_type == ActionTypeEnum.DELETE:
                 continue
 
             latest_entries[group_uuid] = latest_item

@@ -1,5 +1,6 @@
 from datetime import datetime
 import copy
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.web.api.compliance_report.dtos import (
@@ -1128,7 +1129,7 @@ async def test_get_changelog_data_fuel_supplies_success(
         fuel_supply_id=1,
         group_uuid="group-1",
         version=1,
-        action_type="CREATE",
+        action_type=ActionTypeEnum.CREATE,
         create_date=datetime(2024, 1, 1),
         compliance_units=100.56,
         create_user="test_user",
@@ -1273,7 +1274,7 @@ async def test_get_changelog_data_fuel_supplies_update(
         fuel_supply_id=1,
         group_uuid="group-1",
         version=1,
-        action_type="CREATE",
+        action_type=ActionTypeEnum.CREATE,
         create_date=datetime(2024, 1, 1),
         compliance_units=100,
         quantity=50,
@@ -1316,7 +1317,7 @@ async def test_get_changelog_data_fuel_supplies_update(
         fuel_supply_id=1,
         group_uuid="group-1",
         version=2,
-        action_type="UPDATE",
+        action_type=ActionTypeEnum.UPDATE,
         create_date=datetime(2024, 1, 2),
         compliance_units=150,  # Changed value
         quantity=50,  # Same as before
@@ -1540,7 +1541,7 @@ async def test_get_changelog_data_fuel_supplies_delete(
     mock_fuel_supply1.fuel_supply_id = 1
     mock_fuel_supply1.group_uuid = "group-1"
     mock_fuel_supply1.version = 1
-    mock_fuel_supply1.action_type = "CREATE"
+    mock_fuel_supply1.action_type = ActionTypeEnum.CREATE
     mock_fuel_supply1.create_date = datetime(2024, 1, 1)
     mock_fuel_supply1.compliance_units = 100
     mock_fuel_supply1.quantity = 50
@@ -1593,7 +1594,7 @@ async def test_get_changelog_data_fuel_supplies_delete(
     mock_fuel_supply2.fuel_supply_id = 1
     mock_fuel_supply2.group_uuid = "group-1"
     mock_fuel_supply2.version = 2
-    mock_fuel_supply2.action_type = "DELETE"
+    mock_fuel_supply2.action_type = ActionTypeEnum.DELETE
     mock_fuel_supply2.create_date = datetime(2024, 1, 2)
     mock_fuel_supply2.compliance_units = 100
     mock_fuel_supply2.quantity = 50
@@ -1659,7 +1660,7 @@ async def test_get_changelog_data_fuel_supplies_delete(
     # Check Report 2 (with delete)
     assert result[1].nickname == "Report 2"
     assert len(result[1].fuel_supplies) == 1
-    assert result[1].fuel_supplies[0].action_type == "DELETE"
+    assert result[1].fuel_supplies[0].action_type == ActionTypeEnum.DELETE.value
 
 
 @pytest.mark.anyio
@@ -1684,7 +1685,7 @@ async def test_get_changelog_data_with_multiple_items(
         fs.fuel_supply_id = fuel_id
         fs.group_uuid = group_id
         fs.version = 1
-        fs.action_type = "CREATE"
+        fs.action_type = ActionTypeEnum.CREATE
         fs.create_date = create_date
         fs.compliance_units = compliance_units
         fs.quantity = 50
@@ -1780,7 +1781,7 @@ async def test_get_changelog_data_other_types(compliance_report_service, mock_re
     mock_agreement.allocation_agreement_id = 1
     mock_agreement.group_uuid = "group-1"
     mock_agreement.version = 1
-    mock_agreement.action_type = "CREATE"
+    mock_agreement.action_type = ActionTypeEnum.CREATE
     mock_agreement.create_date = datetime(2024, 1, 1)
 
     # Add the additional required fields based on validation errors
