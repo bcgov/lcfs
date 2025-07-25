@@ -179,6 +179,8 @@ class TransferRepository:
             [
                 "from_organization",
                 "to_organization",
+                "from_transaction",
+                "to_transaction",
                 "current_status",
                 "transfer_category",
                 "transfer_history",
