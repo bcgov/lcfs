@@ -443,27 +443,43 @@ class TransactionRepository:
         )
 
         # 2. Compliance units received through transfers (purchases)
-        # Include recorded transfers where this org is the receiver, effective date <= end of compliance period
+        # Include recorded transfers where this org is the receiver, recorded date <= end of compliance period
         transfer_purchases = await self.db.scalar(
-            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
+            select(func.coalesce(func.sum(Transfer.quantity), 0))
+            .select_from(Transfer)
+            .join(
+                TransferHistory,
+                and_(
+                    Transfer.transfer_id == TransferHistory.transfer_id,
+                    TransferHistory.transfer_status_id == 6  # Recorded status
+                )
+            )
+            .where(
                 and_(
                     Transfer.to_organization_id == organization_id,
                     Transfer.current_status_id == 6,  # Recorded status
-                    Transfer.transaction_effective_date
-                    <= compliance_period_end_local.date(),
+                    TransferHistory.create_date <= compliance_period_end_local,
                 )
             )
         )
 
         # 3. Compliance units transferred away (sales)
-        # Include recorded transfers where this org is the sender, effective date <= end of compliance period
+        # Include recorded transfers where this org is the sender, recorded date <= end of compliance period
         transfer_sales = await self.db.scalar(
-            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
+            select(func.coalesce(func.sum(Transfer.quantity), 0))
+            .select_from(Transfer)
+            .join(
+                TransferHistory,
+                and_(
+                    Transfer.transfer_id == TransferHistory.transfer_id,
+                    TransferHistory.transfer_status_id == 6  # Recorded status
+                )
+            )
+            .where(
                 and_(
                     Transfer.from_organization_id == organization_id,
                     Transfer.current_status_id == 6,  # Recorded status
-                    Transfer.transaction_effective_date
-                    <= compliance_period_end_local.date(),
+                    TransferHistory.create_date <= compliance_period_end_local,
                 )
             )
         )
@@ -499,12 +515,20 @@ class TransactionRepository:
         # 6. Future debits (negative transactions after the compliance period end)
         # This includes future transfers out and other future negative transactions
         future_transfer_debits = await self.db.scalar(
-            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
+            select(func.coalesce(func.sum(Transfer.quantity), 0))
+            .select_from(Transfer)
+            .join(
+                TransferHistory,
+                and_(
+                    Transfer.transfer_id == TransferHistory.transfer_id,
+                    TransferHistory.transfer_status_id == 6  # Recorded status
+                )
+            )
+            .where(
                 and_(
                     Transfer.from_organization_id == organization_id,
                     Transfer.current_status_id == 6,  # Recorded status
-                    Transfer.transaction_effective_date
-                    > compliance_period_end_local.date(),
+                    TransferHistory.create_date > compliance_period_end_local,
                 )
             )
         )
