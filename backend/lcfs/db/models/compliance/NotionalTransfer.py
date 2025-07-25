@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, ForeignKey, Enum, BigInteger
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, Versioning
 import enum
@@ -28,27 +28,27 @@ class NotionalTransfer(BaseModel, Auditable, Versioning):
 
     # Quantity fields - main quantity for regular reports, quarterly for early issuance
     quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel being notionally transferred (no early issuance)",
     )
     q1_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel being notionally transferred in Q1 (early issuance only)",
     )
     q2_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel being notionally transferred in Q2 (early issuance only)",
     )
     q3_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel being notionally transferred in Q3 (early issuance only)",
     )
     q4_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel being notionally transferred in Q4 (early issuance only)",
     )
