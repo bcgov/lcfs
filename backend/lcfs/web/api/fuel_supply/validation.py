@@ -32,3 +32,14 @@ class FuelSupplyValidation:
                         }
                     ]
                 )
+            
+            if fuel_supply.energy_density is None or fuel_supply.energy_density <= 0:
+                raise RequestValidationError(
+                    [
+                        {
+                            "loc": ("energyDensity",),
+                            "msg": "Energy Density must be greater than zero when using Other fuel type",
+                            "type": "value_error",
+                        }
+                    ]
+                )

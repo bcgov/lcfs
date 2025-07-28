@@ -27,24 +27,24 @@ def pagination_request_schema():
         page=1,
         size=10,
         sort_orders=[
-            SortOrder(field="createdDate", direction="asc"),
-            SortOrder(field="status", direction="desc"),
+            SortOrder(field="update_date", direction="asc"),
+            SortOrder(field="report_status", direction="desc"),
         ],
         filters=[
             FilterModel(
                 filter_type="text",
                 type="contains",
                 filter="exampleValue",
-                field="exampleField",
-                date_from="2024-01-01",
-                date_to="2024-12-31",
+                field="organization_name",
+                date_from="2024-01-01 00:00:00",
+                date_to="2024-12-31 23:59:59",
             ),
             FilterModel(
                 filter_type="date",
                 type="range",
-                field="createdDate",
-                date_from="2024-01-01",
-                date_to="2024-12-31",
+                field="update_date",
+                date_from="2024-01-01 00:00:00",
+                date_to="2024-12-31 23:59:59",
             ),
         ],
     )
@@ -158,6 +158,7 @@ def compliance_report_schema(
         report_status_id: int = None,
         report_status: str = "Submitted",
         update_date: datetime = datetime(2024, 4, 1, 12, 0, 0),
+        is_latest: bool = True
     ):
         compliance_period_id = (
             compliance_period_id or compliance_period_schema.compliance_period_id
@@ -189,6 +190,7 @@ def compliance_report_schema(
             report_status_id=report_status_id,
             report_status=report_status,
             update_date=update_date,
+            is_latest=is_latest
         )
 
     return _create_compliance_report_schema

@@ -87,7 +87,8 @@ export const HistoryCard = ({
   const shouldShowTopLevelAssessmentLines =
     isGovernmentUser &&
     !isCurrentAssessed &&
-    defaultExpanded
+    defaultExpanded &&
+    report?.currentStatus?.status !== COMPLIANCE_REPORT_STATUSES.DRAFT
 
   const shouldShowDirectorStatement =
     assessedMessage &&
@@ -95,6 +96,23 @@ export const HistoryCard = ({
 
   const shouldShowEditableIndicator =
     isGovernmentUser && canEditAssessmentStatement
+
+  /**
+   * Helper functions to get the appropriate compliance values based on override state
+   */
+  const getRenewableTargetComplianceValue = () => {
+    if (report.summary.penaltyOverrideEnabled) {
+      return report.summary.renewablePenaltyOverride || 0
+    }
+    return report.summary.line11FossilDerivedBaseFuelTotal || 0
+  }
+
+  const getLowCarbonTargetComplianceValue = () => {
+    if (report.summary.penaltyOverrideEnabled) {
+      return report.summary.lowCarbonPenaltyOverride || 0
+    }
+    return report.summary.line21NonCompliancePenaltyPayable || 0
+  }
 
   /**
    * Helper: build the two assessment list items.
@@ -111,7 +129,7 @@ export const HistoryCard = ({
           {t('report:assessmentLn1', {
             name: report.organization.name,
             hasMet:
-              report.summary.line11FossilDerivedBaseFuelTotal <= 0
+              getRenewableTargetComplianceValue() <= 0
                 ? 'has met'
                 : 'has not met'
           })}
@@ -125,7 +143,7 @@ export const HistoryCard = ({
           {t('report:assessmentLn2', {
             name: report.organization.name,
             hasMet:
-              report.summary.line21NonCompliancePenaltyPayable <= 0
+              getLowCarbonTargetComplianceValue() <= 0
                 ? 'has met'
                 : 'has not met'
           })}
@@ -198,36 +216,44 @@ export const HistoryCard = ({
                 'AssessedBy'
               ].includes(item.status.status)
 
-              return (
-                <StyledListItem key={index} disablePadding>
-                  <ListItemText
-                    data-test="list-item"
-                    slotProps={{ primary: { variant: 'body4' } }}
-                  >
-                    <span
-                      dangerouslySetInnerHTML={{
-                        __html: t(
-                          `report:complianceReportHistory.${item.status.status}`,
-                          {
-                            createDate: timezoneFormatter({
-                              value: item.createDate
-                            }),
-                            displayName:
-                              item.displayName ||
-                              `${item.userProfile.firstName} ${item.userProfile.lastName}`
-                          }
-                        )
-                      }}
-                    />
-                  </ListItemText>
+              const hideHistoryLine =
+                report?.complianceReportId === item?.complianceReportId &&
+                report?.currentStatus.status ===
+                  COMPLIANCE_REPORT_STATUSES.DRAFT &&
+                item?.status?.status !== COMPLIANCE_REPORT_STATUSES.DRAFT
 
-                  {/* Nested assessment – appears once the status is Assessed */}
-                  {showNestedAssessment && (
-                    <List sx={{ p: 0, m: 0 }}>
-                      <AssessmentLines />
-                    </List>
-                  )}
-                </StyledListItem>
+              return (
+                !hideHistoryLine && (
+                  <StyledListItem key={index} disablePadding>
+                    <ListItemText
+                      data-test="list-item"
+                      slotProps={{ primary: { variant: 'body4' } }}
+                    >
+                      <span
+                        dangerouslySetInnerHTML={{
+                          __html: t(
+                            `report:complianceReportHistory.${item.status.status}`,
+                            {
+                              createDate: timezoneFormatter({
+                                value: item.createDate
+                              }),
+                              displayName:
+                                item.displayName ||
+                                `${item.userProfile.firstName} ${item.userProfile.lastName}`
+                            }
+                          )
+                        }}
+                      />
+                    </ListItemText>
+
+                    {/* Nested assessment – appears once the status is Assessed */}
+                    {showNestedAssessment && (
+                      <List sx={{ p: 0, m: 0 }}>
+                        <AssessmentLines />
+                      </List>
+                    )}
+                  </StyledListItem>
+                )
               )
             })}
           </List>

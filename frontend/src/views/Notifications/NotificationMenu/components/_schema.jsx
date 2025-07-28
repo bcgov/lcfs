@@ -22,7 +22,7 @@ export const columnDefs = (t, currentUser) => [
     headerName: t('notifications:notificationColLabels.date'),
     filter: 'agDateColumnFilter',
     filterParams: {
-      filterOptions: ['equals'],
+      filterOptions: ['equals']
     },
     valueGetter: (params) => params.data.createDate,
     valueFormatter: dateFormatter
@@ -53,7 +53,7 @@ export const columnDefs = (t, currentUser) => [
       ) {
         return fromOrganization
       }
-      return params.data.relatedOrganization.name
+      return params.data.relatedOrganization?.name || ''
     }
   }
 ]
@@ -74,3 +74,5 @@ export const routesMapping = (currentUser) => ({
     : ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.ORG_VIEW,
   ComplianceReport: ROUTES.REPORTS.VIEW
 })
+
+export const defaultSortModel = [{ field: 'date', direction: 'desc' }]

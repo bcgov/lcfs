@@ -2,61 +2,72 @@
 import Button from '@mui/material/Button'
 import { styled } from '@mui/material/styles'
 
-const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
-  const { palette, functions, borders, boxShadows } = theme
+// Define the ownerState interface for BCButton
+interface BCButtonOwnerState {
+  color: string
+  variant: string
+  size: string
+  circular: boolean
+  iconOnly: boolean
+}
+
+const BCButtonRoot = styled(Button, {
+  shouldForwardProp: (prop) => prop !== 'ownerState',
+})<{ ownerState: BCButtonOwnerState }>(({ theme, ownerState }) => {
+  const { palette, functions, borders, boxShadows } = theme as any
   const { color, variant, size, circular, iconOnly } = ownerState
-  const { white, text, transparent, gradients, primary, light } = palette
-  const { boxShadow, linearGradient, pxToRem, rgba } = functions
-  const { borderRadius } = borders
-  const { colored } = boxShadows
+  const { white, text, transparent, gradients, primary, light } = palette as any
+  const { boxShadow, linearGradient, pxToRem, rgba } = functions as any
+  const { borderRadius } = borders as any
+  const { colored } = boxShadows as any
 
   // styles for the button with variant="contained"
   const containedStyles = () => {
     // background color value
-    const backgroundValue = palette[color] ? palette[color].main : white.main
+    const backgroundValue = (palette as any)[color] ? (palette as any)[color].main : white.main
 
     // backgroundColor value when button is focused
-    const focusedBackgroundValue = palette[color]
-      ? palette[color].focus
+    const focusedBackgroundValue = (palette as any)[color]
+      ? (palette as any)[color].focus
       : white.focus
 
     // boxShadow value
-    const boxShadowValue = colored[color]
-      ? `${boxShadow([0, 3], [3, 0], palette[color].main, 0.15)}, ${boxShadow(
+    const boxShadowValue = (colored as any)[color]
+      ? `${boxShadow([0, 3], [3, 0], (palette as any)[color].main, 0.15)}, ${boxShadow(
           [0, 3],
           [1, -2],
-          palette[color].main,
+          (palette as any)[color].main,
           0.2
-        )}, ${boxShadow([0, 1], [5, 0], palette[color].main, 0.15)}`
+        )}, ${boxShadow([0, 1], [5, 0], (palette as any)[color].main, 0.15)}`
       : 'none'
 
     // boxShadow value when button is hovered
-    const hoveredBoxShadowValue = colored[color]
+    const hoveredBoxShadowValue = (colored as any)[color]
       ? `${boxShadow(
           [0, -10],
           [26, -32],
-          palette[color].main,
+          (palette as any)[color].main,
           0.4
         )}, ${boxShadow(
           [0, 4],
           [23, 0],
-          palette[color].main,
+          (palette as any)[color].main,
           0.15
-        )}, ${boxShadow([0, 8], [10, -5], palette[color].main, 0.2)}`
+        )}, ${boxShadow([0, 8], [10, -5], (palette as any)[color].main, 0.2)}`
       : 'none'
 
     // color value
     let colorValue = white.main
 
-    if (color === 'white' || color === 'light' || !palette[color]) {
-      colorValue = text.main
+    if (color === 'white' || color === 'light' || !(palette as any)[color]) {
+      colorValue = (text as any).main
     }
 
     // color value when button is focused
     let focusedColorValue = white.main
 
     if (color === 'white') {
-      focusedColorValue = text.main
+      focusedColorValue = (text as any).main
     } else if (color === 'primary' || color === 'error' || color === 'dark') {
       focusedColorValue = white.main
     }
@@ -80,8 +91,8 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
 
       '&:focus:not(:hover)': {
         backgroundColor: focusedBackgroundValue,
-        boxShadow: palette[color]
-          ? boxShadow([0, 0], [0, 3.2], palette[color].main, 0.5)
+        boxShadow: (palette as any)[color]
+          ? boxShadow([0, 0], [0, 3.2], (palette as any)[color].main, 0.5)
           : boxShadow([0, 0], [0, 3.2], white.main, 0.5)
       },
 
@@ -103,20 +114,20 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
       focusedBackgroundValue = primary.main
     } else if (color === 'light') {
       focusedBackgroundValue = 'transparent'
-    } else if (palette[color]) {
-      focusedBackgroundValue = palette[color].focus
+    } else if ((palette as any)[color]) {
+      focusedBackgroundValue = (palette as any)[color].focus
     }
     // color value
-    const colorValue = palette[color] ? palette[color].main : white.main
+    const colorValue = (palette as any)[color] ? (palette as any)[color].main : white.main
 
     // boxShadow value
-    const boxShadowValue = palette[color]
-      ? boxShadow([0, 0], [0, 3.2], palette[color].main, 0.5)
+    const boxShadowValue = (palette as any)[color]
+      ? boxShadow([0, 0], [0, 3.2], (palette as any)[color].main, 0.5)
       : boxShadow([0, 0], [0, 3.2], white.main, 0.5)
 
     // border color value
-    let borderColorValue = palette[color]
-      ? palette[color].main
+    let borderColorValue = (palette as any)[color]
+      ? (palette as any)[color].main
       : rgba(white.main, 0.75)
 
     if (color === 'white') {
@@ -160,40 +171,40 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
   const gradientStyles = () => {
     // background value
     const backgroundValue =
-      color === 'white' || !gradients[color]
+      color === 'white' || !(gradients as any)[color]
         ? white.main
-        : linearGradient(gradients[color].main, gradients[color].state)
+        : linearGradient((gradients as any)[color].main, (gradients as any)[color].state)
 
     // boxShadow value
-    const boxShadowValue = colored[color]
-      ? `${boxShadow([0, 3], [3, 0], palette[color].main, 0.15)}, ${boxShadow(
+    const boxShadowValue = (colored as any)[color]
+      ? `${boxShadow([0, 3], [3, 0], (palette as any)[color].main, 0.15)}, ${boxShadow(
           [0, 3],
           [1, -2],
-          palette[color].main,
+          (palette as any)[color].main,
           0.2
-        )}, ${boxShadow([0, 1], [5, 0], palette[color].main, 0.15)}`
+        )}, ${boxShadow([0, 1], [5, 0], (palette as any)[color].main, 0.15)}`
       : 'none'
 
     // boxShadow value when button is hovered
-    const hoveredBoxShadowValue = colored[color]
+    const hoveredBoxShadowValue = (colored as any)[color]
       ? `${boxShadow(
           [0, 14],
           [26, -12],
-          palette[color].main,
+          (palette as any)[color].main,
           0.4
         )}, ${boxShadow(
           [0, 4],
           [23, 0],
-          palette[color].main,
+          (palette as any)[color].main,
           0.15
-        )}, ${boxShadow([0, 8], [10, -5], palette[color].main, 0.2)}`
+        )}, ${boxShadow([0, 8], [10, -5], (palette as any)[color].main, 0.2)}`
       : 'none'
 
     // color value
     let colorValue = white.main
 
     if (color === 'white') {
-      colorValue = text.main
+      colorValue = (text as any).main
     } else if (color === 'light') {
       colorValue = gradients.dark.state
     }
@@ -224,11 +235,11 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
   // styles for the button with variant="text"
   const textStyles = () => {
     // color value
-    const colorValue = palette[color] ? palette[color].main : white.main
+    const colorValue = (palette as any)[color] ? (palette as any)[color].main : white.main
 
     // color value when button is focused
-    const focusedColorValue = palette[color]
-      ? palette[color].focus
+    const focusedColorValue = (palette as any)[color]
+      ? (palette as any)[color].focus
       : white.focus
 
     return {
@@ -294,7 +305,7 @@ const BCButtonRoot = styled(Button)(({ theme, ownerState }) => {
     ...(circular && circularStyles()),
     ...(iconOnly && iconOnlyStyles()),
     maxHeight: pxToRem(39),
-  }
+  } as any
 })
 
 export default BCButtonRoot

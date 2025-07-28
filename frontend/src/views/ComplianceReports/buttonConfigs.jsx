@@ -144,7 +144,6 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'recommend-by-analyst-btn',
       label: this.context.t('report:actionBtns.recommendReportAnalystBtn'),
-      disabled: this.context.hasDraftSupplemental,
       handler: (formData) =>
         this.context.setModalData({
           primaryButtonAction: () =>
@@ -167,7 +166,6 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
       id: 'return-to-supplier-btn',
       label: this.context.t('report:actionBtns.returnToSupplier'),
-      disabled: this.context.hasDraftSupplemental,
       handler: (formData) =>
         this.context.setModalData({
           primaryButtonAction: () =>
@@ -190,7 +188,6 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
       id: 'create-idir-supplemental-btn',
       label: this.context.t('report:actionBtns.createSupplementalReportBtn'),
-      disabled: this.context.hasDraftSupplemental,
       handler: (formData) =>
         this.context.setModalData({
           primaryButtonAction: () =>
@@ -220,26 +217,6 @@ class ButtonActionFactory {
           secondaryButtonText: this.context.t('cancelBtn'),
           title: this.context.t('confirmation'),
           content: this.context.t('report:governmentAdjustmentConfirmText')
-        })
-    })
-  }
-
-  createReassessment() {
-    return this.createButton({
-      style: BUTTON_STYLES.WARNING_OUTLINED,
-      id: 'create-reassessment-btn',
-      label: this.context.t('report:actionBtns.createReassessment'),
-      disabled: this.context.hasDraftSupplemental,
-      handler: (formData) =>
-        this.context.setModalData({
-          primaryButtonAction: () =>
-            this.context.createAnalystAdjustment(formData),
-          primaryButtonText: this.context.t(
-            'report:actionBtns.createReassessment'
-          ),
-          secondaryButtonText: this.context.t('cancelBtn'),
-          title: this.context.t('confirmation'),
-          content: this.context.t('report:createReassessmentConfirmText')
         })
     })
   }
@@ -291,7 +268,6 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'recommend-by-manager-btn',
       label: this.context.t('report:actionBtns.recommendReportManagerBtn'),
-      disabled: this.context.hasDraftSupplemental,
       handler: (formData) =>
         this.context.setModalData({
           primaryButtonAction: () =>
@@ -314,7 +290,6 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
       id: 'return-to-analyst-btn',
       label: this.context.t('report:actionBtns.returnToAnalyst'),
-      disabled: this.context.hasDraftSupplemental,
       handler: (formData) =>
         this.context.setModalData({
           primaryButtonAction: () =>
@@ -338,7 +313,6 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'issue-assessment-btn',
       label: this.context.t('report:actionBtns.assessReportBtn'),
-      disabled: this.context.hasDraftSupplemental,
       handler: (formData) =>
         this.context.setModalData({
           primaryButtonAction: () =>
@@ -361,7 +335,6 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_OUTLINED,
       id: 'return-to-manager-btn',
       label: this.context.t('report:actionBtns.returnToManager'),
-      disabled: this.context.hasDraftSupplemental,
       handler: (formData) =>
         this.context.setModalData({
           primaryButtonAction: () =>
@@ -477,6 +450,24 @@ const BUTTON_RULES = {
 // =============================================================================
 
 function shouldShowButton(buttonName, context) {
+  // Check for draft supplemental conflicts first for buttons that would be disabled
+  const buttonsDisabledByDraftSupplemental = [
+    'recommendByAnalyst',
+    'returnToSupplier',
+    'createIdirSupplemental',
+    'recommendByManager',
+    'returnToAnalyst',
+    'issueAssessment',
+    'returnToManager'
+  ]
+
+  if (
+    buttonsDisabledByDraftSupplemental.includes(buttonName) &&
+    context.hasDraftSupplemental
+  ) {
+    return false
+  }
+
   switch (buttonName) {
     case 'deleteDraft':
       // For early issuance: only until first early issuance has been assessed
@@ -514,10 +505,6 @@ function shouldShowButton(buttonName, context) {
     case 'amendPenalties':
       // Only available for original and supplemental reports
       return !context.isEarlyIssuance
-
-    case 'createReassessment':
-      // Disabled if there's a conflicting supplemental
-      return !context.hasDraftSupplemental
 
     default:
       return true

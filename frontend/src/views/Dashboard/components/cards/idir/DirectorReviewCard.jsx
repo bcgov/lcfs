@@ -13,7 +13,8 @@ import { FILTER_KEYS } from '@/constants/common'
 import {
   COMPLIANCE_REPORT_STATUSES,
   TRANSACTION_STATUSES,
-  TRANSFER_STATUSES
+  TRANSFER_STATUSES,
+  FUEL_CODE_STATUSES
 } from '@/constants/statuses'
 
 // Constants for filter configurations
@@ -74,6 +75,17 @@ const FILTER_CONFIGS = {
         filterType: 'text',
         type: 'equals',
         filter: TRANSACTION_STATUSES.RECOMMENDED
+      }
+    })
+  },
+  fuelCodes: {
+    route: ROUTES.FUEL_CODES.LIST,
+    gridKey: FILTER_KEYS.FUEL_CODES_GRID,
+    filter: JSON.stringify({
+      status: {
+        filterType: 'text',
+        type: 'equals',
+        filter: FUEL_CODE_STATUSES.RECOMMENDED
       }
     })
   }
@@ -164,6 +176,12 @@ const DirectorReviewCard = () => {
         text: t('dashboard:directorReview.adminAdjustmentsForReview'),
         count: counts.adminAdjustments || 0,
         config: FILTER_CONFIGS.adminAdjustments
+      },
+      {
+        key: 'fuelCodes',
+        text: t('dashboard:directorReview.fuelCodesForReview'),
+        count: counts.fuelCodes || 0,
+        config: FILTER_CONFIGS.fuelCodes
       }
     ],
     [t, counts]

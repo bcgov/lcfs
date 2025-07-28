@@ -3,6 +3,7 @@ from collections import defaultdict
 import copy
 from datetime import datetime
 import math
+from lcfs.db.base import ActionTypeEnum
 import structlog
 import uuid
 from fastapi import Depends
@@ -74,6 +75,31 @@ class ComplianceReportServices:
         self.transaction_repo = transaction_repo
         self.internal_comment_service = internal_comment_service
 
+    async def _validate_analyst_eligibility(self, assigned_analyst_id: int) -> None:
+        """
+        Validate that the assigned analyst exists and has the correct role.
+        
+        Args:
+            assigned_analyst_id: The ID of the analyst to validate
+            
+        Raises:
+            DataNotFoundException: If analyst not found
+            ServiceException: If user is not an active IDIR analyst
+        """
+        assigned_analyst = await self.repo.get_user_by_id(assigned_analyst_id)
+        if not assigned_analyst:
+            raise DataNotFoundException("Assigned analyst not found")
+        
+        # Check if user has Analyst role and is IDIR user (no organization)
+        has_analyst_role = any(
+            user_role.role.name == RoleEnum.ANALYST 
+            for user_role in assigned_analyst.user_roles
+        )
+        is_idir_user = assigned_analyst.organization_id is None
+        
+        if not (has_analyst_role and is_idir_user):
+            raise ServiceException("User is not an active IDIR analyst")
+
     @service_handler
     async def get_all_compliance_periods(self) -> List[CompliancePeriodBaseSchema]:
         """Fetches all compliance periods and converts them to Pydantic models."""
@@ -98,12 +124,19 @@ class ComplianceReportServices:
         if not draft_status:
             raise DataNotFoundException(f"Status '{report_data.status}' not found.")
 
-        organization = await self.org_repo.get_organization(organization_id)
+        # Determine reporting frequency based on early issuance setting for the compliance period
+        early_issuance_record = await self.org_repo.get_early_issuance_by_year(
+            organization_id, report_data.compliance_period
+        )
 
-        # Determine reporting frequency
+        # Use year-specific setting if it exists, otherwise default to False
+        has_early_issuance = (
+            early_issuance_record.has_early_issuance if early_issuance_record else False
+        )
+
         reporting_frequency = (
             ReportingFrequency.QUARTERLY
-            if organization.has_early_issuance
+            if has_early_issuance
             else ReportingFrequency.ANNUAL
         )
 
@@ -170,7 +203,7 @@ class ComplianceReportServices:
 
         # Get the group_uuid from the current report
         group_uuid = current_report.compliance_report_group_uuid
-
+        nickname = "Government adjustment" if current_report.current_status.status == ComplianceReportStatusEnum.Submitted else "Government re-assessment"
         # Fetch the latest version number for the given group_uuid
         latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
         if not latest_report:
@@ -200,9 +233,9 @@ class ComplianceReportServices:
             version=new_version,  # Increment the version
             supplemental_initiator=SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
             nickname=(
-                f"Supplemental report {new_version}"
+                f"{nickname} {new_version}"
                 if current_report.reporting_frequency == ReportingFrequency.ANNUAL
-                else f"Early issuance - Government adjustment {new_version}"
+                else f"Early issuance - {nickname} {new_version}"
             ),
             summary=ComplianceReportSummary(),  # Create an empty summary object
         )
@@ -430,7 +463,7 @@ class ComplianceReportServices:
             reporting_frequency=current_report.reporting_frequency,
             compliance_report_group_uuid=current_report.compliance_report_group_uuid,  # Same group
             version=new_version,
-            supplemental_initiator=SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,  # Supplier edits it
+            supplemental_initiator=SupplementalInitiatorType.GOVERNMENT_INITIATED,  # Government initiated Supplemental report for the supplier to make edits.
             nickname=(
                 f"Supplemental report {new_version}"
                 if current_report.reporting_frequency == ReportingFrequency.ANNUAL
@@ -654,6 +687,12 @@ class ComplianceReportServices:
             report.compliance_report_group_uuid
         )
 
+        # Convert SQLAlchemy objects to Pydantic schemas to avoid async context issues
+        compliance_report_chain = [
+            ComplianceReportBaseSchema.model_validate(report)
+            for report in compliance_report_chain
+        ]
+
         is_newest = len(compliance_report_chain) - 1 == report.version
         had_been_assessed = any(
             report.current_status.status == ComplianceReportStatusEnum.Assessed.value
@@ -691,11 +730,10 @@ class ComplianceReportServices:
         """
         Fetches a specific compliance report by ID.
         """
-        report = await self.repo.get_compliance_report_by_id(report_id)
-        if report is None:
+        validated_report = await self.repo.get_compliance_report_schema_by_id(report_id)
+        if validated_report is None:
             raise DataNotFoundException("Compliance report not found.")
 
-        validated_report = ComplianceReportBaseSchema.model_validate(report)
         masked_report = self._mask_report_status([validated_report], user)[0]
 
         history_masked_report = self._mask_report_status_for_history(
@@ -905,6 +943,7 @@ class ComplianceReportServices:
                     ComplianceReportStatusEnum.Not_recommended_by_analyst,
                     ComplianceReportStatusEnum.Not_recommended_by_manager,
                     ComplianceReportStatusEnum.Analyst_adjustment,
+                    ComplianceReportStatusEnum.Supplemental_requested,
                 ]
             ]
         return statuses
@@ -920,6 +959,7 @@ class ComplianceReportServices:
             "other_uses",
             "allocation_agreements",
         ],
+        user: UserProfile,
     ) -> List:
 
         data_map = {
@@ -989,11 +1029,12 @@ class ComplianceReportServices:
         id_field = config["id_field"]
 
         reports = await self.repo.get_changelog_data(
-            compliance_report_group_uuid, config
+            compliance_report_group_uuid, config, user
         )
 
         if not reports or len(reports) == 0:
             return []
+
 
         group_map = defaultdict(dict)
         create_date_map = {}
@@ -1021,7 +1062,7 @@ class ComplianceReportServices:
                 if data.group_uuid not in create_date_map:
                     create_date_map[data.group_uuid] = data.create_date
                     # Track the original order of items based on creation
-                    if data.action_type == "CREATE":
+                    if data.action_type == ActionTypeEnum.CREATE:
                         original_order.append(data.group_uuid)
 
         if not original_order:
@@ -1039,7 +1080,7 @@ class ComplianceReportServices:
                 items.append(data_copy)
                 seen_ids.add(getattr(data_copy, id_field))
 
-                if data_copy.action_type == "UPDATE":
+                if data_copy.action_type == ActionTypeEnum.UPDATE:
                     prev = make_deep_copy(
                         group_map[data_copy.group_uuid].get(data_copy.version - 1)
                     )
@@ -1055,7 +1096,7 @@ class ComplianceReportServices:
 
                         prev.diff = diff
                         prev.updated = True
-                        prev.action_type = "UPDATE"
+                        prev.action_type = ActionTypeEnum.UPDATE
                         data_copy.diff = diff
 
                         items.append(prev)
@@ -1077,10 +1118,13 @@ class ComplianceReportServices:
         for group_uuid, versions in group_map.items():
             latest_version = max(versions.keys())
             latest_item = versions[latest_version]
-            if hasattr(latest_item, "compliance_units"):
+            if (
+                hasattr(latest_item, "compliance_units")
+                and latest_item.compliance_units is not None
+            ):
                 latest_item.compliance_units = round(latest_item.compliance_units)
 
-            if latest_item.action_type == "DELETE":
+            if latest_item.action_type == ActionTypeEnum.DELETE:
                 continue
 
             latest_entries[group_uuid] = latest_item
@@ -1102,3 +1146,36 @@ class ComplianceReportServices:
         )
 
         return grouped_fs_reports
+
+    @service_handler
+    async def assign_analyst_to_report(
+        self, report_id: int, assigned_analyst_id: int, user: UserProfile
+    ) -> None:
+        """
+        Assign or unassign an analyst to/from a compliance report.
+        """
+        compliance_report = await self.repo.get_compliance_report_by_id(report_id)
+        if not compliance_report:
+            raise DataNotFoundException("Compliance report not found")
+
+        # Validate that the assigned analyst exists and has the correct role
+        if assigned_analyst_id:
+            await self._validate_analyst_eligibility(assigned_analyst_id)
+
+        # Update the assignment
+        await self.repo.assign_analyst_to_report(report_id, assigned_analyst_id)
+
+    @service_handler
+    async def get_available_analysts(self) -> List:
+        """
+        Get a list of all active IDIR users with Analyst role for assignment dropdown.
+        """
+        from lcfs.web.api.compliance_report.schema import AssignedAnalystSchema
+        
+        analysts = await self.repo.get_active_idir_analysts()
+        analyst_list = [
+            AssignedAnalystSchema.model_validate(analyst) 
+            for analyst in analysts
+        ]
+        
+        return analyst_list

@@ -27,6 +27,13 @@ const IDIRAnalystNotificationSettings = () => {
         'idirAnalyst.categories.complianceReports.managerRecommendation',
       IDIR_ANALYST__COMPLIANCE_REPORT__DIRECTOR_DECISION:
         'idirAnalyst.categories.complianceReports.directorDecision'
+    },
+    'idirAnalyst.categories.fuelCodes': {
+      title: 'idirAnalyst.categories.fuelCodes.title',
+      IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED:
+        'idirAnalyst.categories.fuelCodes.directorReturned',
+      IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL:
+        'idirAnalyst.categories.fuelCodes.directorApproval'
     }
   }
 

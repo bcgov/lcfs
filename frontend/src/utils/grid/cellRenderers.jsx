@@ -1,5 +1,6 @@
 import BCBadge from '@/components/BCBadge'
 import BCBox from '@/components/BCBox'
+import BCUserInitials from '@/components/BCUserInitials/BCUserInitials'
 import { roles } from '@/constants/roles'
 import {
   COMPLIANCE_REPORT_STATUSES,
@@ -9,7 +10,7 @@ import {
   TRANSFER_STATUSES
 } from '@/constants/statuses'
 import { Link, useLocation } from 'react-router-dom'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import colors from '@/themes/base/colors'
 import { ArrowDropDown } from '@mui/icons-material'
 import { getCode } from 'country-list'
@@ -221,7 +222,7 @@ export const FuelCodeStatusRenderer = (props) => {
   const location = useLocation()
   const statusArr = getAllFuelCodeStatuses()
   const statusColorArr = ['info', 'info', 'success', 'error']
-  const statusIndex = statusArr.indexOf(props.data.fuelCodeStatus.status)
+  const statusIndex = statusArr.indexOf(props.data?.status)
   return (
     <Link
       to={props.node?.id && location.pathname + '/' + props?.node?.id}
@@ -258,7 +259,7 @@ export const FuelCodeStatusRenderer = (props) => {
 
 export const FuelCodePrefixRenderer = (params) => {
   const location = useLocation()
-  const prefix = params.data.fuelCodePrefix.prefix
+  const prefix = params.data.prefix
   const countryName = params.data.fuelProductionFacilityCountry
   const countryCode = countryName ? getCode(countryName) : null
 
@@ -345,6 +346,7 @@ const STATUS_TO_COLOR_MAP = {
   [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST]: 'info',
   [COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER]: 'info',
   [COMPLIANCE_REPORT_STATUSES.ASSESSED]: 'success',
+  [COMPLIANCE_REPORT_STATUSES.SUPPLEMENTAL_REQUESTED]: 'warning',
   [COMPLIANCE_REPORT_STATUSES.REJECTED]: 'error'
 }
 
@@ -420,12 +422,18 @@ const GenericChipRenderer = ({
   const [visibleChips, setVisibleChips] = useState([])
   const [hiddenChipsCount, setHiddenChipsCount] = useState(0)
 
-  const options = Array.isArray(value)
-    ? value.filter((item) => item !== '')
-    : value
-        .split(',')
-        .map((item) => item.trim())
-        .filter((item) => item !== '')
+  const options = useMemo(
+    () =>
+      Array.isArray(value)
+        ? value.filter((item) => item !== '')
+        : value && value !== ''
+          ? value
+              .split(',')
+              .map((item) => item.trim())
+              .filter((item) => item !== '')
+          : [],
+    [value]
+  )
 
   const calculateChipWidths = useCallback(() => {
     if (!containerRef.current) return { visibleChips: [], hiddenChipsCount: 0 }
@@ -674,5 +682,64 @@ export const RoleRenderer = (props) => {
         roleRenderOverflowChip(count, isGovernmentRole)
       }
     />
+  )
+}
+
+export const LastCommentRenderer = (props) => {
+  const location = useLocation()
+  const { lastComment } = props.data
+
+  // If no comment exists, return empty cell
+  if (!lastComment || !lastComment.fullName) {
+    return (
+      <Link
+        to={`${location.pathname}/${props.data.compliancePeriod}/${props.data.complianceReportId}`}
+        style={{ color: '#000' }}
+      >
+        <BCBox component="div" sx={{ width: '100%', height: '100%' }}>
+          {/* Empty cell but still clickable */}
+        </BCBox>
+      </Link>
+    )
+  }
+
+  return (
+    <Link
+      to={`${location.pathname}/${props.data.compliancePeriod}/${props.data.complianceReportId}`}
+      style={{ color: '#000' }}
+    >
+      <BCBox
+        component="div"
+        sx={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          py: 1
+        }}
+      >
+        <BCUserInitials
+          fullName={lastComment.fullName}
+          tooltipText={lastComment.comment}
+          maxLength={500}
+          variant="filled"
+          sx={{
+            bgcolor: '#606060',
+            color: 'white',
+            borderRadius: '50%',
+            width: '32px',
+            height: '32px',
+            minWidth: '32px',
+            '& .MuiChip-label': {
+              padding: 0
+            },
+            '&:hover': {
+              bgcolor: '#505050'
+            }
+          }}
+        />
+      </BCBox>
+    </Link>
   )
 }
