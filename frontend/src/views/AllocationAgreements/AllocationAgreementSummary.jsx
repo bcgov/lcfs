@@ -163,6 +163,7 @@ export const AllocationAgreementSummary = ({
               ...newPagination
             }))
           }
+          enablePageCaching={false}
         />
       </BCBox>
     </Grid2>

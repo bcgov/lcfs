@@ -192,6 +192,7 @@ export const NotionalTransferChangelog = () => {
                 onPaginationChange={
                   shouldPaginate ? handlePaginationChange(i) : undefined
                 }
+                enablePageCaching={false}
               />
             </Box>
           </Box>

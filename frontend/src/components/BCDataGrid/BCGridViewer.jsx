@@ -7,7 +7,7 @@ import {
 } from '@/components/BCDataGrid/components'
 import '@ag-grid-community/styles/ag-grid.css'
 import '@ag-grid-community/styles/ag-theme-material.css'
-import { forwardRef, useCallback, useMemo } from 'react'
+import { forwardRef, useCallback, useMemo, useEffect } from 'react'
 
 export const BCGridViewer = forwardRef(
   ({
@@ -37,6 +37,7 @@ export const BCGridViewer = forwardRef(
     enableExportButton = false,
     enableCopyButton = false,
     enableResetButton = false,
+    enablePageCaching = true,
     paginationPageSizeSelector = [5, 10, 20, 25, 50, 100],
     exportName = 'ExportData',
 
@@ -44,14 +45,62 @@ export const BCGridViewer = forwardRef(
   }, ref) => {
     const { data, error, isError, isLoading } = queryData
 
+    // Cache pagination options to sessionStorage
+    const cachePaginationOptions = useCallback((options) => {
+      if (enablePageCaching && gridKey) {
+        const cacheData = {
+          page: options.page,
+          size: options.size,
+          sortOrders: options.sortOrders || [],
+          filters: options.filters || []
+        }
+        sessionStorage.setItem(`${gridKey}-pagination`, JSON.stringify(cacheData))
+      }
+    }, [gridKey, enablePageCaching])
+
+    // Restore pagination options from sessionStorage
+    const getCachedPaginationOptions = useCallback(() => {
+      if (!enablePageCaching || !gridKey) return paginationOptions
+
+      const cachedPagination = sessionStorage.getItem(`${gridKey}-pagination`)
+      if (cachedPagination) {
+        try {
+          const parsed = JSON.parse(cachedPagination)
+          return {
+            ...paginationOptions,
+            ...parsed
+          }
+        } catch (error) {
+          return { ...paginationOptions }
+        }
+      }
+      return paginationOptions
+    }, [gridKey, paginationOptions, enablePageCaching])
+
+    // Initialize with cached pagination options if available
+    useEffect(() => {
+      if (enablePageCaching) {
+        const cachedOptions = getCachedPaginationOptions()
+        if (cachedOptions !== paginationOptions) {
+          onPaginationChange(cachedOptions)
+        }
+      }
+    }, [enablePageCaching])
+
     const onGridReady = useCallback(
       (params) => {
+        // Restore cached pagination options first if caching is enabled
+        const currentPaginationOptions = enablePageCaching 
+          ? getCachedPaginationOptions() 
+          : paginationOptions
+        
         const filterState = JSON.parse(
           sessionStorage.getItem(`${gridKey}-filter`)
         )
         const columnState = JSON.parse(
           sessionStorage.getItem(`${gridKey}-column`)
         )
+        
         if (filterState) {
           params.api.setFilterModel(filterState)
           const filterArr = [
@@ -59,8 +108,13 @@ export const BCGridViewer = forwardRef(
               return { field, ...value }
             })
           ]
-          onPaginationChange({ ...paginationOptions, filters: filterArr })
+          const updatedOptions = { ...currentPaginationOptions, filters: filterArr }
+          onPaginationChange(updatedOptions)
+          if (enablePageCaching) {
+            cachePaginationOptions(updatedOptions)
+          }
         }
+        
         if (columnState) {
           params.api.applyColumnState({
             state: columnState,
@@ -70,10 +124,10 @@ export const BCGridViewer = forwardRef(
           params.api.applyColumnState(() => {
             let state = []
             if (
-              paginationOptions.sortOrders &&
-              paginationOptions.sortOrders.length > 0
+              currentPaginationOptions.sortOrders &&
+              currentPaginationOptions.sortOrders.length > 0
             ) {
-              state = paginationOptions.sortOrders.map((col) => ({
+              state = currentPaginationOptions.sortOrders.map((col) => ({
                 colId: col.field,
                 sort: col.direction
               }))
@@ -85,7 +139,7 @@ export const BCGridViewer = forwardRef(
           })
         }
       },
-      [gridKey, paginationOptions.sortOrders]
+      [gridKey, enablePageCaching, getCachedPaginationOptions, paginationOptions, onPaginationChange, cachePaginationOptions]
     )
 
     const onFirstDataRendered = useCallback((params) => {
@@ -93,15 +147,23 @@ export const BCGridViewer = forwardRef(
     }, [])
 
     const handleChangePage = (_, newPage) => {
-      onPaginationChange({ ...paginationOptions, page: newPage + 1 })
+      const updatedOptions = { ...paginationOptions, page: newPage + 1 }
+      onPaginationChange(updatedOptions)
+      if (enablePageCaching) {
+        cachePaginationOptions(updatedOptions)
+      }
     }
 
     const handleChangeRowsPerPage = (event) => {
-      onPaginationChange({
+      const updatedOptions = {
         ...paginationOptions,
         page: 1,
         size: parseInt(event.target.value, 10)
-      })
+      }
+      onPaginationChange(updatedOptions)
+      if (enablePageCaching) {
+        cachePaginationOptions(updatedOptions)
+      }
     }
 
     const handleFilterChanged = useCallback(
@@ -113,14 +175,18 @@ export const BCGridViewer = forwardRef(
           })
         ]
 
-        onPaginationChange({
+        const updatedOptions = {
           ...paginationOptions,
           page: 1,
           filters: filterArr
-        })
+        }
+        onPaginationChange(updatedOptions)
+        if (enablePageCaching) {
+          cachePaginationOptions(updatedOptions)
+        }
         sessionStorage.setItem(`${gridKey}-filter`, JSON.stringify(gridFilters))
       },
-      [gridKey, onPaginationChange, paginationOptions.filters]
+      [gridKey, onPaginationChange, paginationOptions, enablePageCaching, cachePaginationOptions]
     )
 
     const handleSortChanged = useCallback(() => {
@@ -134,12 +200,17 @@ export const BCGridViewer = forwardRef(
             direction: col.sort
           }
         })
-      onPaginationChange({ ...paginationOptions, sortOrders: sortTemp })
+      
+      const updatedOptions = { ...paginationOptions, sortOrders: sortTemp }
+      onPaginationChange(updatedOptions)
+      if (enablePageCaching) {
+        cachePaginationOptions(updatedOptions)
+      }
       sessionStorage.setItem(
         `${gridKey}-column`,
         JSON.stringify(gridRef.current?.api.getColumnState())
       )
-    }, [gridKey, onPaginationChange])
+    }, [gridKey, onPaginationChange, paginationOptions, enablePageCaching, cachePaginationOptions])
 
     const defaultColDefParams = useMemo(
       () => ({
