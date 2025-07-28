@@ -73,7 +73,7 @@ async def create_organization(
     Endpoint to create a new organization. This includes processing the provided
     organization details along with associated addresses.
     """
-    return await service.create_organization(organization_data)
+    return await service.create_organization(organization_data, request.user)
 
 
 @router.get(
@@ -85,7 +85,7 @@ async def create_organization(
 async def search_organizations(
     request: Request,
     org_name: str = Query(
-        ..., min_length=3, description="Company name or operating name"
+        ..., min_length=1, description="Company name or operating name"
     ),
     service: OrganizationsService = Depends(),
 ):
@@ -118,7 +118,7 @@ async def update_organization(
     service: OrganizationsService = Depends(),
 ):
     """Update an organizations data by id"""
-    return await service.update_organization(organization_id, organization_data)
+    return await service.update_organization(organization_id, organization_data, request.user)
 
 
 @router.post("/", response_model=OrganizationListSchema, status_code=status.HTTP_200_OK)

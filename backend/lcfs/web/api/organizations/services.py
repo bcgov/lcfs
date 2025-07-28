@@ -6,6 +6,7 @@ from typing import List
 
 from fastapi import Depends, Request
 from fastapi.responses import StreamingResponse
+from fastapi_cache import FastAPICache
 
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
@@ -75,6 +76,17 @@ class OrganizationsService:
             filter_value = filter.filter
             filter_option = filter.type
             filter_type = filter.filter_type
+
+            if filter.field == "has_early_issuance":
+                # Get the early issuance field reference
+                early_issuance_field = self.repo.get_early_issuance_field()
+                conditions.append(
+                    apply_filter_conditions(
+                        early_issuance_field, filter_value, filter_option, filter_type
+                    )
+                )
+                continue
+
             if filter.field == "status":
                 field = get_field_for_filter(OrganizationStatus, "status")
             else:
@@ -83,6 +95,8 @@ class OrganizationsService:
             conditions.append(
                 apply_filter_conditions(field, filter_value, filter_option, filter_type)
             )
+
+        return None
 
     @service_handler
     async def export_organizations(self) -> StreamingResponse:
@@ -124,7 +138,9 @@ class OrganizationsService:
         )
 
     @service_handler
-    async def create_organization(self, organization_data: OrganizationCreateSchema):
+    async def create_organization(
+        self, organization_data: OrganizationCreateSchema, user=None
+    ):
         """handles creating an organization"""
         org_address = OrganizationAddress(**organization_data.address.dict())
         org_attorney_address = OrganizationAttorneyAddress(
@@ -144,11 +160,35 @@ class OrganizationsService:
             org_attorney_address=org_attorney_address,
         )
 
-        return await self.repo.create_organization(org_model)
+        created_organization = await self.repo.create_organization(org_model)
+
+        # Set early issuance for current year if provided
+        if (
+            hasattr(organization_data, "has_early_issuance")
+            and organization_data.has_early_issuance is not None
+        ):
+            from lcfs.utils.constants import LCFS_Constants
+
+            current_year = LCFS_Constants.get_current_compliance_year()
+
+            await self.repo.update_early_issuance_by_year(
+                created_organization.organization_id,
+                current_year,
+                organization_data.has_early_issuance,
+                user,
+            )
+
+        # Clear cache after creating to ensure fresh data in subsequent requests
+        await FastAPICache.clear()
+
+        return created_organization
 
     @service_handler
     async def update_organization(
-        self, organization_id: int, organization_data: OrganizationUpdateSchema
+        self,
+        organization_id: int,
+        organization_data: OrganizationUpdateSchema,
+        user=None,
     ):
         """handles updating an organization"""
 
@@ -156,7 +196,33 @@ class OrganizationsService:
         if not organization:
             raise DataNotFoundException("Organization not found")
 
+        # If early issuance setting is being updated, validate against existing reports for current year
+        if (
+            hasattr(organization_data, "has_early_issuance")
+            and organization_data.has_early_issuance is not None
+        ):
+            from lcfs.utils.constants import LCFS_Constants
+
+            current_year = LCFS_Constants.get_current_compliance_year()
+
+            # Check if setting is different from current setting
+            current_setting = await self.repo.get_current_year_early_issuance(
+                organization_id
+            )
+
+            if current_setting != organization_data.has_early_issuance:
+                # Update the year-specific setting, this will raise HTTPException if reports exist
+                await self.repo.update_early_issuance_by_year(
+                    organization_id,
+                    current_year,
+                    organization_data.has_early_issuance,
+                    user,
+                )
+
         for key, value in organization_data.dict().items():
+            # Skip has_early_issuance as it's now handled by year-based structure
+            if key == "has_early_issuance":
+                continue
             if hasattr(organization, key):
                 setattr(organization, key, value)
 
@@ -207,6 +273,11 @@ class OrganizationsService:
 
         if organization is None:
             raise DataNotFoundException("org not found")
+
+        # Add year-based early issuance for current year
+        organization.has_early_issuance = (
+            await self.repo.get_current_year_early_issuance(organization_id)
+        )
 
         return organization
 
