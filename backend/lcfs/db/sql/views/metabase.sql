@@ -1830,3 +1830,37 @@ FROM
   LEFT JOIN finished_fuel_transport_modes_agg finishedftma ON fc.fuel_code_id = finishedftma.fuel_code_id
   LEFT JOIN feedstock_fuel_transport_modes_agg feedstockftma ON fc.fuel_code_id = feedstockftma.fuel_code_id;
 grant select on vw_fuel_export_analytics_base to basic_lcfs_reporting_role;
+
+-- ==========================================
+-- Allocation Agreement 2024 View
+-- ==========================================
+drop view if exists vw_allocation_agreement_2024 cascade;
+CREATE OR REPLACE VIEW vw_allocation_agreement_2024 AS
+SELECT
+    CASE
+        WHEN aa.allocation_transaction_type_id = 1 THEN 'Allocated From'
+        WHEN aa.allocation_transaction_type_id = 2 THEN 'Allocation To'
+    END AS "Responsibility",
+    aa.transaction_partner AS "Legal name of transaction partner",
+    aa.postal_address AS "Address for service",
+    aa.transaction_partner_email AS "Email",
+    aa.transaction_partner_phone AS "Phone",
+    COALESCE(ft.fuel_type, aa.fuel_type_other) AS "Fuel type",
+    fcat.category AS "Fuel category",
+    aa.ci_of_fuel AS "Determining carbon intensity",
+    CONCAT(fcp.prefix, fc.fuel_suffix) AS "Fuel code",
+    aa.ci_of_fuel AS "RCI",
+    aa.quantity AS "Quantity",
+    aa.units AS "Units"
+FROM allocation_agreement aa
+JOIN compliance_report cr ON aa.compliance_report_id = cr.compliance_report_id
+JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
+JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
+LEFT JOIN fuel_type ft ON aa.fuel_type_id = ft.fuel_type_id
+LEFT JOIN fuel_code fc ON aa.fuel_code_id = fc.fuel_code_id
+LEFT JOIN fuel_code_prefix fcp ON fc.prefix_id = fcp.fuel_code_prefix_id
+LEFT JOIN fuel_category fcat ON aa.fuel_category_id = fcat.fuel_category_id
+WHERE cp.description = '2024'
+  AND crs.status NOT IN ('Draft', 'Analyst_adjustment');
+
+grant select on vw_allocation_agreement_2024 to basic_lcfs_reporting_role;
