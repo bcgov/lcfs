@@ -30,13 +30,17 @@ class CompliancePeriod(BaseModel, EffectiveDates):
     additional_carbon_intensities = relationship(
         "AdditionalCarbonIntensity",
         back_populates="compliance_period",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
     )
-    
+
     energy_density = relationship(
         "EnergyDensity",
         back_populates="compliance_period",
-        cascade="all, delete-orphan"
+        cascade="all, delete-orphan",
+    )
+
+    early_issuance_by_years = relationship(
+        "OrganizationEarlyIssuanceByYear", back_populates="compliance_period"
     )
 
     def __repr__(self):

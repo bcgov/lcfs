@@ -2,9 +2,9 @@ from lcfs.db.base import BaseModel
 from lcfs.db.models.transaction import Transaction
 from lcfs.web.api.transaction.schema import TransactionActionEnum
 import structlog
-from typing import List
+from typing import List, Optional, TYPE_CHECKING
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import and_, case, func, select, asc, desc, distinct, or_
@@ -21,7 +21,14 @@ from lcfs.db.models.organization.OrganizationStatus import (
     OrganizationStatus,
 )
 from lcfs.db.models.organization.OrganizationType import OrganizationType
-from lcfs.web.exception.exceptions import DataNotFoundException
+from lcfs.db.models.organization.OrganizationEarlyIssuanceByYear import (
+    OrganizationEarlyIssuanceByYear,
+)
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+
+if TYPE_CHECKING:
+    from lcfs.db.models.user.UserProfile import UserProfile
 
 from .schema import (
     OrganizationSchema,
@@ -121,6 +128,12 @@ class OrganizationsRepository:
         self.db.add(org_model)
         await self.db.flush()
         await self.db.refresh(org_model)
+
+        # Add year-based early issuance for current year before validation
+        org_model.has_early_issuance = await self.get_current_year_early_issuance(
+            org_model.organization_id
+        )
+
         return OrganizationResponseSchema.model_validate(org_model)
 
     @repo_handler
@@ -148,6 +161,11 @@ class OrganizationsRepository:
         await self.db.flush()
         await self.db.refresh(organization)
 
+        # Add year-based early issuance for current year before validation
+        organization.has_early_issuance = await self.get_current_year_early_issuance(
+            organization.organization_id
+        )
+
         return OrganizationResponseSchema.model_validate(organization)
 
     def add(self, entity: BaseModel):
@@ -167,6 +185,16 @@ class OrganizationsRepository:
         """
         Fetch all organizations. returns pagination data
         """
+        from lcfs.utils.constants import LCFS_Constants
+
+        current_year = LCFS_Constants.get_current_compliance_year()
+
+        # Check if early issuance filter is present
+        has_early_issuance_filter = any(
+            filter.field == "has_early_issuance" for filter in pagination.filters
+        )
+
+        # Base query with standard joins
         query = (
             select(Organization)
             .join(
@@ -178,9 +206,10 @@ class OrganizationsRepository:
                 joinedload(Organization.org_type),
                 joinedload(Organization.org_status),
             )
-            .where(and_(*conditions))
         )
-        count_query = await self.db.execute(
+
+        # Count query
+        count_query = (
             select(func.count(distinct(Organization.organization_id)))
             .select_from(Organization)
             .join(
@@ -188,9 +217,45 @@ class OrganizationsRepository:
                 Organization.organization_status_id
                 == OrganizationStatus.organization_status_id,
             )
-            .where(and_(*conditions))
         )
-        total_count = count_query.unique().scalar_one_or_none()
+
+        # Add early issuance joins if needed (either for filtering or for general data)
+        if has_early_issuance_filter:
+            query = query.outerjoin(
+                OrganizationEarlyIssuanceByYear,
+                Organization.organization_id
+                == OrganizationEarlyIssuanceByYear.organization_id,
+            ).outerjoin(
+                CompliancePeriod,
+                and_(
+                    OrganizationEarlyIssuanceByYear.compliance_period_id
+                    == CompliancePeriod.compliance_period_id,
+                    CompliancePeriod.description == current_year,
+                ),
+            )
+
+            count_query = count_query.outerjoin(
+                OrganizationEarlyIssuanceByYear,
+                Organization.organization_id
+                == OrganizationEarlyIssuanceByYear.organization_id,
+            ).outerjoin(
+                CompliancePeriod,
+                and_(
+                    OrganizationEarlyIssuanceByYear.compliance_period_id
+                    == CompliancePeriod.compliance_period_id,
+                    CompliancePeriod.description == current_year,
+                ),
+            )
+
+        # Apply all conditions (including early_issuance if present)
+        if conditions:
+            query = query.where(and_(*conditions))
+            count_query = count_query.where(and_(*conditions))
+
+        # Execute count query
+        total_count = await self.db.execute(count_query)
+        total_count = total_count.unique().scalar_one_or_none()
+
         # Sort the query results
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
@@ -201,10 +266,17 @@ class OrganizationsRepository:
         results = await self.db.execute(query.offset(offset).limit(limit))
         organizations = results.scalars().all()
 
-        return [
-            OrganizationSchema.model_validate(organization)
-            for organization in organizations
-        ], total_count
+        # Add year-based early issuance for current year to each organization
+        validated_organizations = []
+        for organization in organizations:
+            organization.has_early_issuance = (
+                await self.get_current_year_early_issuance(organization.organization_id)
+            )
+            validated_organizations.append(
+                OrganizationSchema.model_validate(organization)
+            )
+
+        return validated_organizations, total_count
 
     @repo_handler
     async def get_organization_statuses(self) -> List[OrganizationStatusSchema]:
@@ -378,3 +450,108 @@ class OrganizationsRepository:
             .where(Organization.organization_code == org_code)
         )
         return await self.db.scalar(query)
+
+    @repo_handler
+    async def get_early_issuance_by_year(
+        self, organization_id: int, compliance_year: str
+    ) -> Optional[OrganizationEarlyIssuanceByYear]:
+        """Get early issuance setting for a specific organization and compliance year"""
+        result = await self.db.execute(
+            select(OrganizationEarlyIssuanceByYear)
+            .join(CompliancePeriod)
+            .where(
+                OrganizationEarlyIssuanceByYear.organization_id == organization_id,
+                CompliancePeriod.description == compliance_year,
+            )
+        )
+        return result.scalars().first()
+
+    @repo_handler
+    async def check_existing_reports_for_year(
+        self, organization_id: int, compliance_year: str
+    ) -> bool:
+        """Check if organization has any existing compliance reports for the given year"""
+        result = await self.db.execute(
+            select(ComplianceReport.compliance_report_id)
+            .join(CompliancePeriod)
+            .where(
+                ComplianceReport.organization_id == organization_id,
+                CompliancePeriod.description == compliance_year,
+            )
+            .limit(1)
+        )
+        return result.scalar() is not None
+
+    @repo_handler
+    async def update_early_issuance_by_year(
+        self,
+        organization_id: int,
+        compliance_year: str,
+        has_early_issuance: bool,
+        user: "UserProfile",
+    ) -> OrganizationEarlyIssuanceByYear:
+        """Update early issuance setting for a specific organization and compliance year"""
+        # First check if there are existing reports
+        has_existing_reports = await self.check_existing_reports_for_year(
+            organization_id, compliance_year
+        )
+
+        if has_existing_reports:
+            raise HTTPException(
+                status_code=400,
+                detail="The Early issuance setting cannot be updated as the organization already has a report in progress. They must delete this report first.",
+            )
+
+        # Get the compliance period
+        compliance_period_result = await self.db.execute(
+            select(CompliancePeriod).where(
+                CompliancePeriod.description == compliance_year
+            )
+        )
+        compliance_period = compliance_period_result.scalar_one_or_none()
+
+        if not compliance_period:
+            raise HTTPException(
+                status_code=404, detail=f"Compliance period {compliance_year} not found"
+            )
+
+        # Check if record exists
+        existing_record = await self.get_early_issuance_by_year(
+            organization_id, compliance_year
+        )
+
+        if existing_record:
+            # Update existing record
+            existing_record.has_early_issuance = has_early_issuance
+            existing_record.update_user = user.keycloak_username
+            await self.db.flush()
+            return existing_record
+        else:
+            # Create new record
+            new_record = OrganizationEarlyIssuanceByYear(
+                organization_id=organization_id,
+                compliance_period_id=compliance_period.compliance_period_id,
+                has_early_issuance=has_early_issuance,
+                create_user=user.keycloak_username,
+                update_user=user.keycloak_username,
+            )
+            self.db.add(new_record)
+            await self.db.flush()
+            return new_record
+
+    @repo_handler
+    async def get_current_year_early_issuance(self, organization_id: int) -> bool:
+        """Get early issuance setting for the current year"""
+        from lcfs.utils.constants import LCFS_Constants
+
+        current_year = LCFS_Constants.get_current_compliance_year()
+
+        early_issuance_record = await self.get_early_issuance_by_year(
+            organization_id, current_year
+        )
+
+        if early_issuance_record:
+            return early_issuance_record.has_early_issuance
+
+        # Default to False if no year-specific setting exists
+        return False
