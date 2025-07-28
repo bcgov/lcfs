@@ -191,13 +191,13 @@ const FUEL_CODE_BUTTON_RULES = {
   },
 
   [FUEL_CODE_STATUSES.RECOMMENDED]: {
-    [USER_TYPES.ANALYST]: ['save', 'edit'],
+    [USER_TYPES.ANALYST]: ['save'],
     [USER_TYPES.DIRECTOR]: ['save', 'edit', 'approve', 'returnToAnalyst']
   },
 
   [FUEL_CODE_STATUSES.APPROVED]: {
     [USER_TYPES.ANALYST]: ['save', 'edit'],
-    [USER_TYPES.DIRECTOR]: ['save', 'edit']
+    [USER_TYPES.DIRECTOR]: ['edit']
   }
 }
 
