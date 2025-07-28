@@ -1,7 +1,7 @@
 """big int for quantities
 
 Revision ID: 1c0b3bed4671
-Revises: b2c3d4e5f8g9
+Revises: ae2306fa8d72
 Create Date: 2025-07-25 14:31:49.034570
 
 """
@@ -17,7 +17,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "1c0b3bed4671"
-down_revision = "b2c3d4e5f8g9"
+down_revision = "ae2306fa8d72"
 branch_labels = None
 depends_on = None
 
@@ -44,7 +44,7 @@ def upgrade() -> None:
     op.execute("DROP VIEW IF EXISTS vw_compliance_report_fuel_supply_base CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_fuel_supply_fuel_code_base CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_transfer_base CASCADE;")
-    
+
     # Alter allocation_agreement columns
     op.alter_column(
         "allocation_agreement",
@@ -198,15 +198,16 @@ def upgrade() -> None:
         existing_comment="Quantity of units",
         existing_nullable=True,
     )
-    
+
     # Recreate views from metabase.sql
     create_role_if_not_exists()
     content = find_and_read_sql_file(sqlFile="metabase.sql")
     sections = parse_sql_sections(content)
     execute_sql_sections(sections, SECTIONS_TO_EXECUTE)
-    
+
     # Recreate the materialized view
-    op.execute("""
+    op.execute(
+        """
         CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ------------------------------------------------------------------------
             -- Transfers
@@ -246,6 +247,7 @@ def upgrade() -> None:
                     FROM transfer_history th
                     WHERE th.transfer_id = t.transfer_id
                       AND th.transfer_status_id = 6  -- Recorded
+                    LIMIT 1
                 ) AS recorded_date,
                 NULL AS approved_date,
                 t.transaction_effective_date,
@@ -286,6 +288,7 @@ def upgrade() -> None:
                     FROM initiative_agreement_history iah
                     WHERE iah.initiative_agreement_id = ia.initiative_agreement_id
                       AND iah.initiative_agreement_status_id = 3 -- Approved
+                    LIMIT 1
                 ) AS approved_date,
                 ia.transaction_effective_date,
                 ia.update_date,
@@ -321,6 +324,7 @@ def upgrade() -> None:
                     FROM admin_adjustment_history aah
                     WHERE aah.admin_adjustment_id = aa.admin_adjustment_id
                       AND aah.admin_adjustment_status_id = 3 -- Approved
+                    LIMIT 1
                 ) AS approved_date,
                 aa.transaction_effective_date,
                 aa.update_date,
@@ -330,7 +334,16 @@ def upgrade() -> None:
                 ON aa.to_organization_id = org.organization_id
             JOIN admin_adjustment_status aas
                 ON aa.current_status_id = aas.admin_adjustment_status_id;
-    """)
+    """
+    )
+    
+    # Create unique index on the materialized view for concurrent refresh
+    op.execute(
+        """
+        CREATE UNIQUE INDEX idx_mv_transaction_aggregate_unique 
+        ON mv_transaction_aggregate (transaction_id, transaction_type);
+        """
+    )
 
 
 def downgrade() -> None:
@@ -343,7 +356,7 @@ def downgrade() -> None:
     op.execute("DROP VIEW IF EXISTS vw_compliance_report_fuel_supply_base CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_fuel_supply_fuel_code_base CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_transfer_base CASCADE;")
-    
+
     # Alter columns back to INTEGER
     op.alter_column(
         "transfer",
@@ -497,15 +510,16 @@ def downgrade() -> None:
         existing_comment="Quantity of fuel involved in the transaction",
         existing_nullable=True,
     )
-    
+
     # Recreate views from metabase.sql after reverting columns
     create_role_if_not_exists()
     content = find_and_read_sql_file(sqlFile="metabase.sql")
     sections = parse_sql_sections(content)
     execute_sql_sections(sections, SECTIONS_TO_EXECUTE)
-    
+
     # Recreate the materialized view
-    op.execute("""
+    op.execute(
+        """
         CREATE MATERIALIZED VIEW mv_transaction_aggregate AS
             ------------------------------------------------------------------------
             -- Transfers
@@ -545,6 +559,7 @@ def downgrade() -> None:
                     FROM transfer_history th
                     WHERE th.transfer_id = t.transfer_id
                       AND th.transfer_status_id = 6  -- Recorded
+                    LIMIT 1
                 ) AS recorded_date,
                 NULL AS approved_date,
                 t.transaction_effective_date,
@@ -585,6 +600,7 @@ def downgrade() -> None:
                     FROM initiative_agreement_history iah
                     WHERE iah.initiative_agreement_id = ia.initiative_agreement_id
                       AND iah.initiative_agreement_status_id = 3 -- Approved
+                    LIMIT 1
                 ) AS approved_date,
                 ia.transaction_effective_date,
                 ia.update_date,
@@ -620,6 +636,7 @@ def downgrade() -> None:
                     FROM admin_adjustment_history aah
                     WHERE aah.admin_adjustment_id = aa.admin_adjustment_id
                       AND aah.admin_adjustment_status_id = 3 -- Approved
+                    LIMIT 1
                 ) AS approved_date,
                 aa.transaction_effective_date,
                 aa.update_date,
@@ -629,4 +646,13 @@ def downgrade() -> None:
                 ON aa.to_organization_id = org.organization_id
             JOIN admin_adjustment_status aas
                 ON aa.current_status_id = aas.admin_adjustment_status_id;
-    """)
+    """
+    )
+    
+    # Create unique index on the materialized view for concurrent refresh
+    op.execute(
+        """
+        CREATE UNIQUE INDEX idx_mv_transaction_aggregate_unique 
+        ON mv_transaction_aggregate (transaction_id, transaction_type);
+        """
+    )
