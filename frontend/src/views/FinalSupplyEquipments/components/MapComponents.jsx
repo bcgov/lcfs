@@ -1,9 +1,48 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useMap, Marker, Popup, TileLayer } from 'react-leaflet'
-import Control from 'react-leaflet-custom-control'
+import { createPortal } from 'react-dom'
+import { Control, DomEvent, DomUtil } from 'leaflet'
 import { Paper, CircularProgress } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import { markerIcons } from './utils'
+
+// Custom Control component using React portals
+export const MapControl = ({ position = 'topright', disableClickPropagation = false, children }) => {
+  const [container, setContainer] = useState(null)
+  const map = useMap()
+
+  useEffect(() => {
+    // Create a new map control
+    const mapControl = new Control({ position })
+    
+    mapControl.onAdd = () => {
+      const section = DomUtil.create('section')
+      
+      if (disableClickPropagation) {
+        DomEvent.disableClickPropagation(section)
+        DomEvent.disableScrollPropagation(section)
+      }
+      
+      setContainer(section)
+      return section
+    }
+
+    mapControl.onRemove = () => {
+      setContainer(null)
+    }
+
+    // Add the control to the map
+    map.addControl(mapControl)
+
+    // Cleanup function
+    return () => {
+      map.removeControl(mapControl)
+    }
+  }, [map, position, disableClickPropagation])
+
+  // Use createPortal to render React components inside the Leaflet control
+  return container ? createPortal(children, container) : null
+}
 
 // Component to fit the map bounds when locations change
 export const MapBoundsHandler = ({ groupedLocations }) => {
@@ -57,7 +96,7 @@ export const MapLegend = ({ geofencingStatus }) => {
   ]
 
   return (
-    <Control prepend position="bottomright">
+    <MapControl position="bottomright" disableClickPropagation={true}>
       <Paper elevation={3} sx={{ p: 1, maxWidth: 300 }}>
         <BCTypography variant="body2" fontWeight="bold" gutterBottom>
           Legend
@@ -75,7 +114,7 @@ export const MapLegend = ({ geofencingStatus }) => {
           </div>
         ))}
       </Paper>
-    </Control>
+    </MapControl>
   )
 }
 
