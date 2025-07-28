@@ -36,6 +36,7 @@ SECTIONS_TO_EXECUTE = [
 def upgrade() -> None:
     # Drop views and materialized views that depend on the columns being altered
     # Using CASCADE to drop dependent views automatically
+    op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_credit_ledger CASCADE;")
     op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_transaction_aggregate CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_allocation_agreement_base CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_fuel_export_analytics_base CASCADE;")
@@ -344,10 +345,13 @@ def upgrade() -> None:
         ON mv_transaction_aggregate (transaction_id, transaction_type);
         """
     )
+    
+    
 
 
 def downgrade() -> None:
     # Drop views and materialized views before altering columns back
+    op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_credit_ledger CASCADE;")
     op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_transaction_aggregate CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_allocation_agreement_base CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_fuel_export_analytics_base CASCADE;")
@@ -656,3 +660,99 @@ def downgrade() -> None:
         ON mv_transaction_aggregate (transaction_id, transaction_type);
         """
     )
+    
+    # Recreate mv_credit_ledger that was dropped by CASCADE
+    op.execute(
+        """
+        CREATE MATERIALIZED VIEW mv_credit_ledger AS
+        WITH base AS (
+            SELECT
+                t.transaction_id,
+                t.transaction_type,
+                t.compliance_period,
+                t.from_organization_id                       AS organization_id,
+                -ABS(t.quantity)                             AS compliance_units,
+                t.create_date,
+                t.update_date
+            FROM   mv_transaction_aggregate t
+            WHERE  t.transaction_type = 'Transfer'
+            AND  t.status            = 'Recorded'
+
+            UNION ALL
+
+            SELECT
+                t.transaction_id,
+                t.transaction_type,
+                t.compliance_period,
+                t.to_organization_id,
+                ABS(t.quantity),
+                t.create_date,
+                t.update_date
+            FROM   mv_transaction_aggregate t
+            WHERE  t.transaction_type = 'Transfer'
+            AND  t.status            = 'Recorded'
+
+            UNION ALL
+
+            SELECT
+                t.transaction_id,
+                t.transaction_type,
+                t.compliance_period,
+                t.to_organization_id                       AS organization_id,
+                t.quantity,
+                t.create_date,
+                t.update_date
+            FROM   mv_transaction_aggregate t
+            WHERE  t.transaction_type  = 'AdminAdjustment'
+            AND  t.status            = 'Approved'
+
+            UNION ALL
+
+            SELECT
+                t.transaction_id,
+                t.transaction_type,
+                t.compliance_period,
+                t.to_organization_id                       AS organization_id,
+                t.quantity,
+                t.create_date,
+                t.update_date
+            FROM   mv_transaction_aggregate t
+            WHERE  t.transaction_type  = 'InitiativeAgreement'
+            AND  t.status            = 'Approved'
+
+            UNION ALL
+
+            SELECT
+                t.transaction_id,
+                t.transaction_type,
+                t.compliance_period,
+                t.to_organization_id                       AS organization_id,
+                t.quantity,
+                t.create_date,
+                t.update_date
+            FROM   mv_transaction_aggregate t
+            WHERE  t.transaction_type  = 'ComplianceReport'
+            AND  t.status            = 'Assessed'
+        )
+
+        SELECT
+            transaction_id,
+            transaction_type,
+            compliance_period,
+            organization_id,
+            compliance_units,
+            SUM(compliance_units) OVER (
+                PARTITION BY organization_id
+                ORDER BY update_date
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+            ) AS available_balance,
+            create_date,
+            update_date
+        FROM base;
+        """
+    )
+    
+    # Recreate indexes for mv_credit_ledger
+    op.execute("CREATE INDEX mv_credit_ledger_org_year_idx ON mv_credit_ledger (organization_id, compliance_period);")
+    op.execute("CREATE INDEX mv_credit_ledger_org_date_idx ON mv_credit_ledger (organization_id, update_date DESC);")
+    op.execute("CREATE UNIQUE INDEX mv_credit_ledger_tx_org_idx ON mv_credit_ledger (transaction_id, transaction_type, organization_id);")
