@@ -203,7 +203,7 @@ class ComplianceReportServices:
 
         # Get the group_uuid from the current report
         group_uuid = current_report.compliance_report_group_uuid
-
+        nickname = "Government adjustment" if current_report.current_status.status == ComplianceReportStatusEnum.Submitted else "Government re-assessment"
         # Fetch the latest version number for the given group_uuid
         latest_report = await self.repo.get_latest_report_by_group_uuid(group_uuid)
         if not latest_report:
@@ -233,9 +233,9 @@ class ComplianceReportServices:
             version=new_version,  # Increment the version
             supplemental_initiator=SupplementalInitiatorType.GOVERNMENT_REASSESSMENT,
             nickname=(
-                f"Supplemental report {new_version}"
+                f"{nickname} {new_version}"
                 if current_report.reporting_frequency == ReportingFrequency.ANNUAL
-                else f"Early issuance - Government adjustment {new_version}"
+                else f"Early issuance - {nickname} {new_version}"
             ),
             summary=ComplianceReportSummary(),  # Create an empty summary object
         )
