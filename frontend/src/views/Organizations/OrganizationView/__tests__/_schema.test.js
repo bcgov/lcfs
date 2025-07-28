@@ -46,7 +46,7 @@ describe('ViewOrganization Schema', () => {
     const colDefs = organizationsColDefs(t)
 
     it('defines the correct number of columns', () => {
-      expect(colDefs).toHaveLength(5)
+      expect(colDefs).toHaveLength(6)
     })
 
     it('defines the status column as the first column', () => {
@@ -65,6 +65,43 @@ describe('ViewOrganization Schema', () => {
       expect(nameCol.field).toBe('name')
       expect(nameCol.headerName).toBe('org:orgColLabels.orgName')
       expect(nameCol.cellRenderer).toBe(LinkRenderer)
+    })
+
+    it('defines the registration status column correctly', () => {
+      const registrationCol = colDefs.find((col) => col.colId === 'registrationStatus')
+      expect(registrationCol).toBeDefined()
+      expect(registrationCol.field).toBe('registrationStatus')
+      expect(registrationCol.headerName).toBe('org:orgColLabels.registrationStatus')
+      expect(registrationCol.cellRenderer).toBe(YesNoTextRenderer)
+      expect(registrationCol.filter).toBe(true)
+      expect(registrationCol.sortable).toBe(true)
+      expect(registrationCol.suppressFloatingFilterButton).toBe(true)
+    })
+
+    it('calculates registration status value correctly in valueGetter', () => {
+      const registrationCol = colDefs.find((col) => col.colId === 'registrationStatus')
+      
+      // Test when organization status is 'Registered'
+      const mockParamsRegistered = { data: { orgStatus: { status: 'Registered' } } }
+      expect(registrationCol.valueGetter(mockParamsRegistered)).toBe(true)
+      
+      // Test when organization status is not 'Registered'
+      const mockParamsNotRegistered = { data: { orgStatus: { status: 'Active' } } }
+      expect(registrationCol.valueGetter(mockParamsNotRegistered)).toBe(false)
+    })
+
+    it('defines registration status filter options correctly', () => {
+      const registrationCol = colDefs.find((col) => col.colId === 'registrationStatus')
+      const filterParams = registrationCol.floatingFilterComponentParams
+      
+      expect(filterParams.valueKey).toBe('value')
+      expect(filterParams.labelKey).toBe('label')
+
+      const options = filterParams.optionsQuery()
+      expect(options.data).toHaveLength(2)
+      expect(options.data[0]).toEqual({ value: true, label: 'Yes' })
+      expect(options.data[1]).toEqual({ value: false, label: 'No' })
+      expect(options.isLoading).toBe(false)
     })
 
     it('defines the early issuance column correctly', () => {
