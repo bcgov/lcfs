@@ -1,7 +1,7 @@
 """big int for quantities
 
 Revision ID: 1c0b3bed4671
-Revises: ae2306fa8d72
+Revises: 33ec14737b15
 Create Date: 2025-07-25 14:31:49.034570
 
 """
@@ -17,7 +17,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "1c0b3bed4671"
-down_revision = "ae2306fa8d72"
+down_revision = "33ec14737b15"
 branch_labels = None
 depends_on = None
 
@@ -337,7 +337,7 @@ def upgrade() -> None:
                 ON aa.current_status_id = aas.admin_adjustment_status_id;
     """
     )
-    
+
     # Create unique index on the materialized view for concurrent refresh
     op.execute(
         """
@@ -345,8 +345,108 @@ def upgrade() -> None:
         ON mv_transaction_aggregate (transaction_id, transaction_type);
         """
     )
-    
-    
+
+    # Recreate mv_credit_ledger that was dropped earlier
+    op.execute(
+        """
+        CREATE MATERIALIZED VIEW mv_credit_ledger AS
+        WITH base AS (
+            SELECT
+                t.transaction_id,
+                t.transaction_type,
+                t.compliance_period,
+                t.from_organization_id                       AS organization_id,
+                -ABS(t.quantity)                             AS compliance_units,
+                t.create_date,
+                t.update_date
+            FROM   mv_transaction_aggregate t
+            WHERE  t.transaction_type = 'Transfer'
+            AND  t.status            = 'Recorded'
+
+            UNION ALL
+
+            SELECT
+                t.transaction_id,
+                t.transaction_type,
+                t.compliance_period,
+                t.to_organization_id,
+                ABS(t.quantity),
+                t.create_date,
+                t.update_date
+            FROM   mv_transaction_aggregate t
+            WHERE  t.transaction_type = 'Transfer'
+            AND  t.status            = 'Recorded'
+
+            UNION ALL
+
+            SELECT
+                t.transaction_id,
+                t.transaction_type,
+                t.compliance_period,
+                t.to_organization_id                       AS organization_id,
+                t.quantity,
+                t.create_date,
+                t.update_date
+            FROM   mv_transaction_aggregate t
+            WHERE  t.transaction_type  = 'AdminAdjustment'
+            AND  t.status            = 'Approved'
+
+            UNION ALL
+
+            SELECT
+                t.transaction_id,
+                t.transaction_type,
+                t.compliance_period,
+                t.to_organization_id                       AS organization_id,
+                t.quantity,
+                t.create_date,
+                t.update_date
+            FROM   mv_transaction_aggregate t
+            WHERE  t.transaction_type  = 'InitiativeAgreement'
+            AND  t.status            = 'Approved'
+
+            UNION ALL
+
+            SELECT
+                t.transaction_id,
+                t.transaction_type,
+                t.compliance_period,
+                t.to_organization_id                       AS organization_id,
+                t.quantity,
+                t.create_date,
+                t.update_date
+            FROM   mv_transaction_aggregate t
+            WHERE  t.transaction_type  = 'ComplianceReport'
+            AND  t.status            = 'Assessed'
+        )
+
+        SELECT
+            transaction_id,
+            transaction_type,
+            compliance_period,
+            organization_id,
+            compliance_units,
+            SUM(compliance_units) OVER (
+                PARTITION BY organization_id
+                ORDER BY update_date
+                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+            ) AS available_balance,
+            create_date,
+            update_date
+        FROM base;
+        """
+    )
+
+    # Recreate indexes for mv_credit_ledger
+    op.execute(
+        "CREATE INDEX mv_credit_ledger_org_year_idx ON mv_credit_ledger (organization_id, compliance_period);"
+    )
+    op.execute(
+        "CREATE INDEX mv_credit_ledger_org_date_idx ON mv_credit_ledger (organization_id, update_date DESC);"
+    )
+    op.execute(
+        "CREATE UNIQUE INDEX mv_credit_ledger_tx_org_idx ON mv_credit_ledger (transaction_id, transaction_type, organization_id);"
+    )
 
 
 def downgrade() -> None:
@@ -652,7 +752,7 @@ def downgrade() -> None:
                 ON aa.current_status_id = aas.admin_adjustment_status_id;
     """
     )
-    
+
     # Create unique index on the materialized view for concurrent refresh
     op.execute(
         """
@@ -660,7 +760,7 @@ def downgrade() -> None:
         ON mv_transaction_aggregate (transaction_id, transaction_type);
         """
     )
-    
+
     # Recreate mv_credit_ledger that was dropped by CASCADE
     op.execute(
         """
@@ -751,8 +851,14 @@ def downgrade() -> None:
         FROM base;
         """
     )
-    
+
     # Recreate indexes for mv_credit_ledger
-    op.execute("CREATE INDEX mv_credit_ledger_org_year_idx ON mv_credit_ledger (organization_id, compliance_period);")
-    op.execute("CREATE INDEX mv_credit_ledger_org_date_idx ON mv_credit_ledger (organization_id, update_date DESC);")
-    op.execute("CREATE UNIQUE INDEX mv_credit_ledger_tx_org_idx ON mv_credit_ledger (transaction_id, transaction_type, organization_id);")
+    op.execute(
+        "CREATE INDEX mv_credit_ledger_org_year_idx ON mv_credit_ledger (organization_id, compliance_period);"
+    )
+    op.execute(
+        "CREATE INDEX mv_credit_ledger_org_date_idx ON mv_credit_ledger (organization_id, update_date DESC);"
+    )
+    op.execute(
+        "CREATE UNIQUE INDEX mv_credit_ledger_tx_org_idx ON mv_credit_ledger (transaction_id, transaction_type, organization_id);"
+    )
