@@ -670,7 +670,7 @@ class UserRepository:
         Creates a user login history entry asynchronously.
         """
         login_history = UserLoginHistory(
-            keycloak_email=user.email,
+            keycloak_email=user.keycloak_email if user.keycloak_email else user.email,
             external_username=user.keycloak_username,
             keycloak_user_id=user.keycloak_user_id,
             is_login_successful=True,
