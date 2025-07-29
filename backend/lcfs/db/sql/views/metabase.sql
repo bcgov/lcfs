@@ -1834,11 +1834,13 @@ FROM
 grant select on vw_fuel_export_analytics_base to basic_lcfs_reporting_role;
 
 -- ==========================================
--- Allocation Agreement 2024 View
+-- Allocation Agreement Analytics View
 -- ==========================================
-drop view if exists vw_allocation_agreement_2024 cascade;
-CREATE OR REPLACE VIEW vw_allocation_agreement_2024 AS
+drop view if exists vw_allocation_agreement_analytics cascade;
+CREATE OR REPLACE VIEW vw_allocation_agreement_analytics AS
 SELECT
+    cp.description AS "Compliance Year",
+    org.name AS "Organization Name",
     CASE
         WHEN aa.allocation_transaction_type_id = 1 THEN 'Allocated From'
         WHEN aa.allocation_transaction_type_id = 2 THEN 'Allocation To'
@@ -1853,16 +1855,17 @@ SELECT
     CONCAT(fcp.prefix, fc.fuel_suffix) AS "Fuel code",
     aa.ci_of_fuel AS "RCI",
     aa.quantity AS "Quantity",
-    aa.units AS "Units"
+    aa.units AS "Units",
+    crs.status AS "Report Status"
 FROM allocation_agreement aa
 JOIN compliance_report cr ON aa.compliance_report_id = cr.compliance_report_id
 JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
 JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
+JOIN organization org ON cr.organization_id = org.organization_id
 LEFT JOIN fuel_type ft ON aa.fuel_type_id = ft.fuel_type_id
 LEFT JOIN fuel_code fc ON aa.fuel_code_id = fc.fuel_code_id
 LEFT JOIN fuel_code_prefix fcp ON fc.prefix_id = fcp.fuel_code_prefix_id
 LEFT JOIN fuel_category fcat ON aa.fuel_category_id = fcat.fuel_category_id
-WHERE cp.description = '2024'
-  AND crs.status NOT IN ('Draft', 'Analyst_adjustment');
+WHERE crs.status != 'Draft';
 
-grant select on vw_allocation_agreement_2024 to basic_lcfs_reporting_role;
+grant select on vw_allocation_agreement_analytics to basic_lcfs_reporting_role;
