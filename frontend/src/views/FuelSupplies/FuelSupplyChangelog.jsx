@@ -192,6 +192,7 @@ export const FuelSupplyChangelog = () => {
                 onPaginationChange={
                   shouldPaginate ? handlePaginationChange(i) : undefined
                 }
+                enablePageCaching={false}
               />
             </Box>
           </Box>
