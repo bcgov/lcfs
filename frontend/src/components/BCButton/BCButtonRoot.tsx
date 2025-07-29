@@ -12,7 +12,7 @@ interface BCButtonOwnerState {
 }
 
 const BCButtonRoot = styled(Button, {
-  shouldForwardProp: (prop) => prop !== 'ownerState',
+  shouldForwardProp: (prop) => prop !== 'ownerState'
 })<{ ownerState: BCButtonOwnerState }>(({ theme, ownerState }) => {
   const { palette, functions, borders, boxShadows } = theme as any
   const { color, variant, size, circular, iconOnly } = ownerState
@@ -24,7 +24,9 @@ const BCButtonRoot = styled(Button, {
   // styles for the button with variant="contained"
   const containedStyles = () => {
     // background color value
-    const backgroundValue = (palette as any)[color] ? (palette as any)[color].main : white.main
+    const backgroundValue = (palette as any)[color]
+      ? (palette as any)[color].main
+      : white.main
 
     // backgroundColor value when button is focused
     const focusedBackgroundValue = (palette as any)[color]
@@ -57,20 +59,19 @@ const BCButtonRoot = styled(Button, {
       : 'none'
 
     // color value
-    let colorValue = white.main
+    const needsDarkText =
+      color === 'white' ||
+      color === 'light' ||
+      color === 'glacier' ||
+      !(palette as any)[color]
 
-    if (color === 'white' || color === 'light' || !(palette as any)[color]) {
-      colorValue = (text as any).main
-    }
+    let colorValue = needsDarkText ? (text as any).main : white.main
 
     // color value when button is focused
-    let focusedColorValue = white.main
+    let focusedColorValue = needsDarkText ? (text as any).main : white.main
 
-    if (color === 'white') {
-      focusedColorValue = (text as any).main
-    } else if (color === 'primary' || color === 'error' || color === 'dark') {
-      focusedColorValue = white.main
-    }
+    // determine hover boxShadow color
+    const hoverTextColor = needsDarkText ? (text as any).main : white.main
 
     return {
       border: '1px solid rgba(0, 51, 102)',
@@ -83,7 +84,7 @@ const BCButtonRoot = styled(Button, {
 
       '&:hover': {
         backgroundColor: focusedBackgroundValue,
-        color: white.main,
+        color: hoverTextColor,
         borderColor: colorValue,
         opacity: 0.85,
         boxShadow: hoveredBoxShadowValue
@@ -118,7 +119,9 @@ const BCButtonRoot = styled(Button, {
       focusedBackgroundValue = (palette as any)[color].focus
     }
     // color value
-    const colorValue = (palette as any)[color] ? (palette as any)[color].main : white.main
+    const colorValue = (palette as any)[color]
+      ? (palette as any)[color].main
+      : white.main
 
     // boxShadow value
     const boxShadowValue = (palette as any)[color]
@@ -173,7 +176,10 @@ const BCButtonRoot = styled(Button, {
     const backgroundValue =
       color === 'white' || !(gradients as any)[color]
         ? white.main
-        : linearGradient((gradients as any)[color].main, (gradients as any)[color].state)
+        : linearGradient(
+            (gradients as any)[color].main,
+            (gradients as any)[color].state
+          )
 
     // boxShadow value
     const boxShadowValue = (colored as any)[color]
@@ -235,7 +241,9 @@ const BCButtonRoot = styled(Button, {
   // styles for the button with variant="text"
   const textStyles = () => {
     // color value
-    const colorValue = (palette as any)[color] ? (palette as any)[color].main : white.main
+    const colorValue = (palette as any)[color]
+      ? (palette as any)[color].main
+      : white.main
 
     // color value when button is focused
     const focusedColorValue = (palette as any)[color]
@@ -304,7 +312,7 @@ const BCButtonRoot = styled(Button, {
     ...(variant === 'text' && textStyles()),
     ...(circular && circularStyles()),
     ...(iconOnly && iconOnlyStyles()),
-    maxHeight: pxToRem(39),
+    maxHeight: pxToRem(39)
   } as any
 })
 

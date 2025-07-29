@@ -22,7 +22,8 @@
   "success": "success",
   "login": {
     "loginMessage": "Login with",
-    "troubleMessage": "Trouble logging in?"
+    "troubleMessage": "Trouble logging in?",
+    "publicCreditCalculator": "Public - Credit calculator"
   },
   "layout": {
     "breadCrumbHome": "Home",
