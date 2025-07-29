@@ -33,7 +33,6 @@ from lcfs.web.api.notification.schema import (
 from lcfs.web.api.notification.services import NotificationService
 from lcfs.web.api.organizations.services import OrganizationsService
 from lcfs.web.api.role.schema import user_has_roles
-from lcfs.web.api.transaction.repo import TransactionRepository
 from lcfs.web.api.transaction.services import TransactionsService
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 
@@ -46,11 +45,9 @@ class ComplianceReportUpdateService:
         summary_service: ComplianceReportSummaryService = Depends(),
         org_service: OrganizationsService = Depends(OrganizationsService),
         trx_service: TransactionsService = Depends(TransactionsService),
-        trx_repo: TransactionRepository = Depends(TransactionRepository),
         notfn_service: NotificationService = Depends(NotificationService),
     ):
         self.summary_repo = summary_repo
-        self.trx_repo = trx_repo
         self.repo = repo
         self.summary_service = summary_service
         self.org_service = org_service
@@ -67,6 +64,15 @@ class ComplianceReportUpdateService:
         # Get and validate report
         report = await self._check_report_exists(report_id)
 
+        # Ensure that only an analyst can set the is_non_assessment flag
+        if report_data.is_non_assessment and not user_has_roles(
+            user, [RoleEnum.ANALYST]
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to set the non-assessment status",
+            )
+
         # Store original status
         current_status = report_data.status
 
@@ -80,7 +86,9 @@ class ComplianceReportUpdateService:
             # Handle "Return to supplier"
             if current_status == ReturnStatus.SUPPLIER.value:
                 await self.summary_repo.reset_summary_lock(report.compliance_report_id)
-                await self.trx_repo.delete_transaction(report.transaction_id, report_id)
+                await self.trx_service.repo.delete_transaction(
+                    report.transaction_id, report_id
+                )
         else:
             # Handle normal status change
             status_has_changed = report.current_status.status != getattr(
@@ -96,6 +104,8 @@ class ComplianceReportUpdateService:
         report.current_status = new_status
         report.supplemental_note = report_data.supplemental_note
         report.assessment_statement = report_data.assessment_statement
+        if report_data.is_non_assessment is not None:
+            report.is_non_assessment = report_data.is_non_assessment
         updated_report = await self.repo.update_compliance_report(report)
 
         # Handle status change related actions
@@ -292,24 +302,39 @@ class ComplianceReportUpdateService:
         if not has_director_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-        # First ensure we have a summary and calculate credit change
-        calculated_summary = await self._calculate_and_lock_summary(
-            report, user, skip_can_sign_check=True
-        )
-        credit_change = calculated_summary.line_20_surplus_deficit_units
+        # Skip transaction creation if this is a non-assessment report
+        if not report.is_non_assessment:
+            # First ensure we have a summary and calculate credit change
+            calculated_summary = await self._calculate_and_lock_summary(
+                report, user, skip_can_sign_check=True
+            )
+            credit_change = calculated_summary.line_20_surplus_deficit_units
 
-        if report.transaction:
-            # Update the transaction to assessed
-            report.transaction.transaction_action = TransactionActionEnum.Adjustment
-            report.transaction.update_user = user.keycloak_username
-            report.transaction.compliance_units = credit_change
-        else:
-            # Create a new transaction if none exists (fixes Government adjustment issue)
-            await self._create_or_update_reserve_transaction(credit_change, report)
             if report.transaction:
-                # Update the newly created transaction to Adjustment status
+                # Update the transaction to assessed
                 report.transaction.transaction_action = TransactionActionEnum.Adjustment
                 report.transaction.update_user = user.keycloak_username
+                report.transaction.compliance_units = credit_change
+            else:
+                # Create a new transaction if none exists (fixes Government adjustment issue)
+                await self._create_or_update_reserve_transaction(credit_change, report)
+                if report.transaction:
+                    # Update the newly created transaction to Adjustment status
+                    report.transaction.transaction_action = (
+                        TransactionActionEnum.Adjustment
+                    )
+                    report.transaction.update_user = user.keycloak_username
+        else:
+            # For non-assessment reports, still calculate summary but don't create/update transactions
+            await self._calculate_and_lock_summary(
+                report, user, skip_can_sign_check=True
+            )
+
+            if report.transaction_id:
+                await self.trx_service.repo.delete_transaction(
+                    report.transaction_id, report.compliance_report_id
+                )
+                report.transaction_id = None
 
         await self.repo.update_compliance_report(report)
 
@@ -326,11 +351,11 @@ class ComplianceReportUpdateService:
             report.transaction.compliance_units = units_to_reserve
         # Only need a Transaction if they have credits or if it's a positive credit_change
         elif credit_change != 0 and (available_balance > 0 or credit_change > 0):
-                report.transaction = await self.org_service.adjust_balance(
-                    transaction_action=TransactionActionEnum.Reserved,
-                    compliance_units=units_to_reserve,
-                    organization_id=report.organization_id,
-                )
+            report.transaction = await self.org_service.adjust_balance(
+                transaction_action=TransactionActionEnum.Reserved,
+                compliance_units=units_to_reserve,
+                organization_id=report.organization_id,
+            )
 
     async def _calculate_and_lock_summary(
         self, report, user, skip_can_sign_check=False

@@ -140,6 +140,7 @@ def mock_snapshot_service():
 def mock_trxn_repo():
     repo = AsyncMock(spec=TransactionRepository)
     repo.calculate_available_balance_for_period = AsyncMock(return_value=2000)
+    repo.delete_transaction = AsyncMock()
     return repo
 
 
@@ -229,12 +230,30 @@ def mock_summary_service(
 
 
 @pytest.fixture
+def mock_trx_service(mock_trxn_repo):
+    """Mock TransactionsService with repo attribute."""
+    service = AsyncMock()
+    service.repo = mock_trxn_repo
+    return service
+
+
+@pytest.fixture
+def mock_notfn_service():
+    """Mock NotificationService."""
+    service = AsyncMock()
+    service.send_notification = AsyncMock()
+    return service
+
+
+@pytest.fixture
 def compliance_report_update_service(
     mock_repo,
     mock_org_service,
     mock_summary_service,
     mock_summary_repo,
     mock_user_profile,
+    mock_trx_service,
+    mock_notfn_service,
 ):
     service = ComplianceReportUpdateService()
     service.repo = mock_repo
@@ -243,6 +262,8 @@ def compliance_report_update_service(
     service.request = MagicMock()
     service.request.user = mock_user_profile
     service.org_service = mock_org_service
+    service.trx_service = mock_trx_service
+    service.notfn_service = mock_notfn_service
     return service
 
 

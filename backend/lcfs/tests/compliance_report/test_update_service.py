@@ -1009,6 +1009,8 @@ async def test_handle_assessed_status_not_superseded(
     mock_report_model.version = mock_compliance_report_assessed.version
     # Set a mock transaction object on the model
     mock_report_model.transaction = MagicMock()
+    # Set is_non_assessment to False to enter transaction logic
+    mock_report_model.is_non_assessment = False
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
     compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
@@ -1065,6 +1067,8 @@ async def test_handle_assessed_status_government_adjustment_no_transaction(
     mock_report.organization_id = 456
     mock_report.version = 1
     mock_report.transaction = None  # No existing transaction - the key bug case
+    # Set is_non_assessment to False to enter transaction logic
+    mock_report.is_non_assessment = False
 
     # Set up supplemental initiator to indicate it's a government adjustment
     mock_report.supplemental_initiator = (
