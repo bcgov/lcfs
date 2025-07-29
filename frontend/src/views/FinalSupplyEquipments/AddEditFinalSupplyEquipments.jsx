@@ -133,13 +133,16 @@ export const AddEditFinalSupplyEquipments = () => {
 
   useEffect(() => {
     if (isGridReady && data) {
+      const defaultOrgName = optionsData?.organizationNames?.[0] || ''
+      
       if (isArrayEmpty(data)) {
         setRowData([
           {
             id: uuid(),
             complianceReportId,
             supplyFromDate: defaultDates.from,
-            supplyToDate: defaultDates.to
+            supplyToDate: defaultDates.to,
+            organizationName: defaultOrgName
           }
         ])
       } else {
@@ -152,7 +155,8 @@ export const AddEditFinalSupplyEquipments = () => {
             id: uuid(),
             complianceReportId,
             supplyFromDate: defaultDates.from,
-            supplyToDate: defaultDates.to
+            supplyToDate: defaultDates.to,
+            organizationName: defaultOrgName
           }
         ])
       }
@@ -172,7 +176,8 @@ export const AddEditFinalSupplyEquipments = () => {
     data,
     isGridReady,
     gridRef,
-    defaultDates
+    defaultDates,
+    optionsData?.organizationNames
   ])
 
   useEffect(() => {
@@ -230,6 +235,7 @@ export const AddEditFinalSupplyEquipments = () => {
 
   const onAction = async (action, params) => {
     if (action === 'delete') {
+      const defaultOrgName = optionsData?.organizationNames?.[0] || ''
       await handleScheduleDelete(
         params,
         'finalSupplyEquipmentId',
@@ -239,7 +245,8 @@ export const AddEditFinalSupplyEquipments = () => {
         {
           complianceReportId,
           supplyFromDate: defaultDates.from,
-          supplyToDate: defaultDates.to
+          supplyToDate: defaultDates.to,
+          organizationName: defaultOrgName
         }
       )
     }
@@ -321,6 +328,7 @@ export const AddEditFinalSupplyEquipments = () => {
 
   const onAddRows = useCallback(
     (numRows) => {
+      const defaultOrgName = optionsData?.organizationNames?.[0] || ''
       return Array(numRows)
         .fill()
         .map(() => ({
@@ -328,11 +336,12 @@ export const AddEditFinalSupplyEquipments = () => {
           complianceReportId,
           supplyFromDate: defaultDates.from,
           supplyToDate: defaultDates.to,
+          organizationName: defaultOrgName,
           validationStatus: 'error',
           modified: true
         }))
     },
-    [complianceReportId, defaultDates]
+    [complianceReportId, defaultDates, optionsData?.organizationNames]
   )
 
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null)

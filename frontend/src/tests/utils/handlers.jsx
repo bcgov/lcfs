@@ -48,6 +48,89 @@ export const handlers = [
   http.get(api + apiRoutes.getCompliancePeriods, () =>
     HttpResponse.json([])
   ),
+
+  // Address geocoder API for AddressAutocomplete
+  http.get('https://geocoder.api.gov.bc.ca/addresses.json', ({ request }) => {
+    const url = new URL(request.url)
+    const addressString = url.searchParams.get('addressString')
+    const maxResults = url.searchParams.get('maxResults') || '5'
+    
+    // Mock response based on search query
+    if (!addressString || addressString.length < 3) {
+      return HttpResponse.json({
+        features: [],
+        queryAddress: addressString || ''
+      })
+    }
+
+    // Mock successful address search results
+    const features = [
+      {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [-123.3656, 48.4284]
+        },
+        properties: {
+          fullAddress: `${addressString} Main St, Victoria, BC V8W 1A1`,
+          siteName: '',
+          unitDesignator: '',
+          unitNumber: '',
+          unitNumberSuffix: '',
+          civicNumber: addressString.split(' ')[0] || '123',
+          civicNumberSuffix: '',
+          streetName: 'Main',
+          streetType: 'St',
+          streetDirection: '',
+          streetQualifier: '',
+          localityName: 'Victoria',
+          localityType: 'City',
+          electoralArea: '',
+          provinceCode: 'BC',
+          locationPositionalAccuracy: 'high',
+          locationDescriptor: 'frontDoorPoint',
+          siteID: '12345',
+          blockID: '67890',
+          score: 95
+        }
+      },
+      {
+        type: 'Feature', 
+        geometry: {
+          type: 'Point',
+          coordinates: [-123.1207, 49.2827]
+        },
+        properties: {
+          fullAddress: `${addressString} Commercial Dr, Vancouver, BC V5N 4A8`,
+          siteName: '',
+          unitDesignator: '',
+          unitNumber: '',
+          unitNumberSuffix: '',
+          civicNumber: addressString.split(' ')[0] || '456',
+          civicNumberSuffix: '',
+          streetName: 'Commercial',
+          streetType: 'Dr',
+          streetDirection: '',
+          streetQualifier: '',
+          localityName: 'Vancouver',
+          localityType: 'City',
+          electoralArea: '',
+          provinceCode: 'BC',
+          locationPositionalAccuracy: 'high',
+          locationDescriptor: 'frontDoorPoint',
+          siteID: '54321',
+          blockID: '09876',
+          score: 90
+        }
+      }
+    ].slice(0, parseInt(maxResults))
+
+    return HttpResponse.json({
+      type: 'FeatureCollection',
+      queryAddress: addressString,
+      features: features
+    })
+  }),
   
   // Fuel codes
   http.get(api + apiRoutes.getFuelCodes, () =>
