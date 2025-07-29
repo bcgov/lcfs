@@ -9,7 +9,10 @@ import { Controller } from 'react-hook-form'
 import { CustomLabel } from './CustomLabel'
 import PropTypes from 'prop-types'
 
-export const BCFormCheckbox = ({ name, form, label, options, disabled }) => {
+export const BCFormCheckbox = ({ name, form, label, options, disabled = false, initialItems = [] }) => {
+  if (!form) {
+    throw new Error('BCFormCheckbox requires a form prop')
+  }
   const { control } = form
   const handleSelect = (selectedValue) => (currentValues) => {
     if (currentValues.includes(selectedValue)) {
@@ -28,7 +31,7 @@ export const BCFormCheckbox = ({ name, form, label, options, disabled }) => {
       </FormLabel>
 
       <div>
-        {options.map((option) => {
+        {options.map((option, index) => {
           return (
             <FormControlLabel
               sx={{ marginY: 2 }}
@@ -38,9 +41,9 @@ export const BCFormCheckbox = ({ name, form, label, options, disabled }) => {
                   render={({ field: { onChange, value } }) => {
                     return (
                       <Checkbox
-                        id={option.value.toLowerCase().replace(/\s/g, '-')}
+                        id={option.value ? option.value.toLowerCase().replace(/\s/g, '-') : `checkbox-${option.label || 'unlabeled'}`}
                         sx={{ marginTop: 0.5 }}
-                        checked={value.includes(option.value)}
+                        checked={value && option.value ? value.includes(option.value) : false}
                         onChange={() =>
                           onChange(handleSelect(option.value)(value))
                         }
@@ -58,7 +61,7 @@ export const BCFormCheckbox = ({ name, form, label, options, disabled }) => {
                   option.label
                 )
               }
-              key={option.value}
+              key={option.value || option.label || `option-${index}`}
             />
           )
         })}
@@ -67,9 +70,6 @@ export const BCFormCheckbox = ({ name, form, label, options, disabled }) => {
   )
 }
 
-BCFormCheckbox.defaultProps = {
-  initialItems: []
-}
 BCFormCheckbox.displayName = 'BCFormCheckbox'
 BCFormCheckbox.propTypes = {
   name: PropTypes.string.isRequired,
