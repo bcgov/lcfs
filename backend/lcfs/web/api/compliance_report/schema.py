@@ -170,6 +170,7 @@ class ComplianceReportBaseSchema(BaseSchema):
     has_supplemental: bool = False
     legacy_id: Optional[int] = None
     assessment_statement: Optional[str] = None
+    is_non_assessment: Optional[bool] = False
     assigned_analyst: Optional[AssignedAnalystSchema] = None
     
     @classmethod
@@ -348,6 +349,7 @@ class ComplianceReportUpdateSchema(BaseSchema):
     status: str
     supplemental_note: Optional[str] = None
     assessment_statement: Optional[str] = None
+    is_non_assessment: Optional[bool] = None
 
 
 class AssignAnalystSchema(BaseSchema):
