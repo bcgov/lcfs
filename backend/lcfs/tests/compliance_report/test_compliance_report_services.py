@@ -11,6 +11,7 @@ import pytest
 import unittest.mock
 from unittest.mock import MagicMock, AsyncMock, patch, Mock
 from datetime import datetime
+from fastapi import HTTPException
 
 from lcfs.db.models.compliance import ComplianceReport
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
@@ -22,6 +23,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
 from lcfs.db.models.user import UserProfile
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
+    ComplianceReportUpdateSchema,
 )
 from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
 
@@ -29,6 +31,7 @@ from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.tests.compliance_report.conftest import mock_summary_repo
 
 
 # get_all_compliance_periods
@@ -646,7 +649,9 @@ async def test_create_government_initiated_supplemental_report_success(
         assert (
             call_args.current_status_id == mock_draft_status.compliance_report_status_id
         )
-        assert call_args.nickname == f"Early issuance - Supplemental report {new_version}"
+        assert (
+            call_args.nickname == f"Early issuance - Supplemental report {new_version}"
+        )
         assert (
             call_args.supplemental_initiator
             == SupplementalInitiatorType.GOVERNMENT_INITIATED
@@ -2756,6 +2761,95 @@ async def test_create_analyst_adjustment_from_assessed_status_success(
     mock_repo.create_compliance_report.assert_called_once()
 
 
+@pytest.mark.anyio
+async def test_update_compliance_report_non_assessment_success(
+    compliance_report_service,
+    mock_repo,
+    mock_org_repo,
+    compliance_report_base_schema,
+    compliance_report_create_schema,
+    mock_snapshot_service,
+):
+    mock_user = MagicMock()
+    mock_user.roles = [Role(role_id=1, name=RoleEnum.ANALYST)]
+    mock_org_repo.get_organization.return_value = Mock(has_early_issuance=False)
+
+    # Mock the compliance period
+    mock_compliance_period = CompliancePeriod(
+        compliance_period_id=1,
+        description="2024",
+    )
+    mock_repo.get_compliance_period.return_value = mock_compliance_period
+
+    # Mock the compliance report status
+    mock_draft_status = ComplianceReportStatus(
+        compliance_report_status_id=1, status="Draft"
+    )
+    mock_repo.get_compliance_report_status_by_desc.return_value = mock_draft_status
+
+    # Mock the added compliance report
+    mock_compliance_report = compliance_report_base_schema()
+    mock_compliance_report.is_non_assessment = True
+
+    mock_repo.create_compliance_report.return_value = mock_compliance_report
+
+    result = await compliance_report_service.create_compliance_report(
+        1, compliance_report_create_schema, mock_user
+    )
+
+    assert result == mock_compliance_report
+    assert result.is_non_assessment == True
+    mock_repo.get_compliance_period.assert_called_once_with(
+        compliance_report_create_schema.compliance_period
+    )
+    mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
+        compliance_report_create_schema.status
+    )
+    mock_repo.create_compliance_report.assert_called_once()
+    mock_snapshot_service.create_organization_snapshot.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_non_assessment_forbidden_for_non_analyst(
+    compliance_report_update_service,
+    mock_repo,
+    mock_user_profile_supplier,
+):
+    # Mock a compliance report
+    mock_report = MagicMock()
+    mock_report.compliance_report_id = 1
+    mock_report.status = ComplianceReportStatusEnum.Draft
+    mock_report.is_non_assessment = False
+    mock_report.current_status = MagicMock(status=ComplianceReportStatusEnum.Draft)
+
+    # Mock the repository
+    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=mock_report)
+    mock_repo.get_compliance_report_status_by_desc = AsyncMock(
+        return_value=MagicMock(spec=ComplianceReportStatus)
+    )
+    compliance_report_update_service.repo = mock_repo
+
+    # Set up a non-analyst user
+    mock_user = MagicMock(spec=UserProfile)
+    mock_user.display_name = "Test User"
+    mock_user.organization = MagicMock(organization_id=1, name="Test Supplier")
+    mock_user.roles = [MagicMock(spec=Role, name=RoleEnum.SUPPLIER)]
+
+    # Test that non-analyst users cannot set is_non_assessment
+    with pytest.raises(HTTPException) as exc_info:
+        await compliance_report_update_service.update_compliance_report(
+            1,
+            ComplianceReportUpdateSchema(
+                is_non_assessment=True, status=ComplianceReportStatusEnum.Draft
+            ),
+            mock_user,
+        )
+
+    # Assert that the correct exception was raised
+    assert exc_info.value.status_code == 403
+    assert "You do not have permission to set the non-assessment status" in str(
+        exc_info.value.detail
+    )
 # Analyst Assignment Service Tests
 @pytest.mark.anyio
 async def test_assign_analyst_to_report_success(compliance_report_service, mock_repo):
@@ -2989,8 +3083,6 @@ async def test_get_changelog_data_handles_missing_status_gracefully(
     )
 
 
-
-
 # CHANGELOG STATUS FILTERING TESTS
 
 
@@ -3099,4 +3191,3 @@ async def test_get_changelog_data_filters_draft_reports_for_government_users(
     mock_repo.get_changelog_data.assert_called_once_with(
         "test-group-uuid", unittest.mock.ANY, gov_user
     )
-

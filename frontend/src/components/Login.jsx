@@ -23,7 +23,8 @@ import Grid from '@mui/material/Grid'
 import { useKeycloak } from '@react-keycloak/web'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { ROUTES } from '@/routes/routes'
 import Snowfall from 'react-snowfall'
 
 const currentDate = new Date()
@@ -106,6 +107,7 @@ export const Login = () => {
   const { t } = useTranslation()
   const { keycloak } = useKeycloak()
   const location = useLocation()
+  const navigate = useNavigate()
   const redirectUri = window.location.origin
   const { message, severity } = location.state || {}
   const styles = useMemo(() => ({
@@ -117,7 +119,7 @@ export const Login = () => {
     },
     loginCard: {
       background: 'rgba(255, 255, 255, 0.15)',
-      backdropFilter: 'blur(8px)',
+      backdropFilter: 'blur(2px)',
       bordeRadius: '15px',
       border: '1px solid rgba(43, 43, 43, 0.568)'
     }
@@ -184,7 +186,7 @@ export const Login = () => {
               <BCBox pt={1} pb={3} px={3}>
                 {message && <Alert severity={severity}>{message}</Alert>}
                 <BCBox component="form" role="form" data-test="login-container">
-                  <BCBox mt={4} mb={1}>
+                  <BCBox mt={5} mb={1}>
                     <BCButton
                       variant="contained"
                       color="primary"
@@ -244,6 +246,29 @@ export const Login = () => {
                       </BCTypography>
                       <BCTypography variant="h6" mr={3} className="idir-name">
                         IDIR
+                      </BCTypography>
+                    </BCButton>
+                  </BCBox>
+                  <BCBox mt={4} mb={1}>
+                    <BCButton
+                      variant="contained"
+                      color="glacier"
+                      aria-label={t('login.publicCreditCalculator')}
+                      onClick={() => navigate(ROUTES.CREDIT_CALCULATOR)}
+                      id="link-public-credit-calculator"
+                      className="button"
+                      data-test="link-public-credit-calculator"
+                      size="large"
+                      fullWidth
+                    >
+                      <BCTypography
+                        variant="h6"
+                        color="inherit"
+                        sx={{
+                          fontWeight: '400'
+                        }}
+                      >
+                        {t('login.publicCreditCalculator')}
                       </BCTypography>
                     </BCButton>
                   </BCBox>

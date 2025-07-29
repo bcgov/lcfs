@@ -29,7 +29,9 @@ vi.mock('@/components/NotFound', () => ({
         <p data-test="not-found-path">
           The page at {location.pathname} could not be found.
         </p>
-        <a href="/" data-test="home-link">Go to Home</a>
+        <a href="/" data-test="home-link">
+          Go to Home
+        </a>
       </div>
     )
   }
@@ -49,14 +51,22 @@ vi.mock('@/views/Dashboard', () => ({
 
 vi.mock('@/views/Organizations', () => ({
   Organizations: () => <div data-test="organizations">Organizations</div>,
-  AddEditOrg: () => <div data-test="add-edit-organization">Add/Edit Organization</div>,
-  OrganizationView: () => <div data-test="view-organization">View Organization</div>
+  AddEditOrg: () => (
+    <div data-test="add-edit-organization">Add/Edit Organization</div>
+  ),
+  OrganizationView: () => (
+    <div data-test="view-organization">View Organization</div>
+  )
 }))
 
 vi.mock('@/layouts/MainLayout', () => {
   const { Outlet } = require('react-router-dom')
   return {
-    MainLayout: () => <div data-test="main-layout"><Outlet /></div>
+    MainLayout: () => (
+      <div data-test="main-layout">
+        <Outlet />
+      </div>
+    )
   }
 })
 
@@ -64,7 +74,11 @@ vi.mock('@/layouts/PublicLayout', () => {
   const { Outlet } = require('react-router-dom')
   return {
     __esModule: true,
-    default: () => <div data-test="public-layout"><Outlet /></div>
+    default: () => (
+      <div data-test="public-layout">
+        <Outlet />
+      </div>
+    )
   }
 })
 
@@ -100,7 +114,7 @@ const LoaderTestComponent = ({ onLoaderCall }) => {
   useEffect(() => {
     onLoaderCall?.('loader-called')
   }, [onLoaderCall])
-  
+
   return <div data-test="loader-test">Loader Test</div>
 }
 
@@ -145,7 +159,7 @@ describe('Special Routes', () => {
       keycloak: mockKeycloak
     })
     useCurrentUser.mockReturnValue(mockCurrentUser)
-    
+
     sessionStorage.clear()
   })
 
@@ -177,7 +191,7 @@ describe('Special Routes', () => {
     })
 
     it('should have correct breadcrumb handle for API docs', () => {
-      const apiDocsRoute = router.routes.find(route => route.path === '/docs')
+      const apiDocsRoute = router.routes.find((route) => route.path === '/docs')
       expect(apiDocsRoute).toBeDefined()
       expect(apiDocsRoute.handle).toBeDefined()
       expect(apiDocsRoute.handle.crumb).toBeInstanceOf(Function)
@@ -192,7 +206,9 @@ describe('Special Routes', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('api-docs')).toBeInTheDocument()
-        expect(screen.queryByTestId('redirect-to-login')).not.toBeInTheDocument()
+        expect(
+          screen.queryByTestId('redirect-to-login')
+        ).not.toBeInTheDocument()
       })
     })
   })
@@ -200,7 +216,7 @@ describe('Special Routes', () => {
   describe('Logout Route', () => {
     it('should call logout function when accessing /log-out route', async () => {
       const { logout } = await import('@/utils/keycloak')
-      
+
       const testRouter = createTestRouter(['/log-out'])
       renderRouterWithProviders(testRouter)
 
@@ -210,7 +226,9 @@ describe('Special Routes', () => {
     })
 
     it('should have loader that returns null', () => {
-      const logoutRoute = router.routes.find(route => route.path === '/log-out')
+      const logoutRoute = router.routes.find(
+        (route) => route.path === '/log-out'
+      )
       expect(logoutRoute).toBeDefined()
       expect(logoutRoute.loader).toBeInstanceOf(Function)
     })
@@ -218,7 +236,7 @@ describe('Special Routes', () => {
     it('should call logout even when not authenticated', async () => {
       const { logout } = await import('@/utils/keycloak')
       mockKeycloak.authenticated = false
-      
+
       const testRouter = createTestRouter(['/log-out'])
       renderRouterWithProviders(testRouter)
 
@@ -274,7 +292,9 @@ describe('Special Routes', () => {
     })
 
     it('should handle deeply nested invalid routes', async () => {
-      const testRouter = createTestRouter(['/admin/users/123/invalid/nested/route'])
+      const testRouter = createTestRouter([
+        '/admin/users/123/invalid/nested/route'
+      ])
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
@@ -283,7 +303,9 @@ describe('Special Routes', () => {
     })
 
     it('should handle routes with query parameters', async () => {
-      const testRouter = createTestRouter(['/invalid-route?param=value&another=test'])
+      const testRouter = createTestRouter([
+        '/invalid-route?param=value&another=test'
+      ])
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
@@ -358,30 +380,32 @@ describe('Special Routes', () => {
 
   describe('Route Metadata and Handles', () => {
     it('should have correct route structure', () => {
-      expect(router.routes).toHaveLength(5) // PublicLayout, MainLayout, API docs, logout, 404
-      
+      expect(router.routes).toHaveLength(6) // PublicLayout, PublicPageLayout, MainLayout, API docs, logout, 404
+
       // Check for wildcard route
-      const wildcardRoute = router.routes.find(route => route.path === '*')
+      const wildcardRoute = router.routes.find((route) => route.path === '*')
       expect(wildcardRoute).toBeDefined()
       expect(wildcardRoute.element).toBeDefined()
     })
 
     it('should have logout route with loader', () => {
-      const logoutRoute = router.routes.find(route => route.path === '/log-out')
+      const logoutRoute = router.routes.find(
+        (route) => route.path === '/log-out'
+      )
       expect(logoutRoute).toBeDefined()
       expect(logoutRoute.loader).toBeInstanceOf(Function)
       expect(logoutRoute.element).toBeUndefined() // No element for logout route
     })
 
     it('should have API docs route with handle', () => {
-      const apiDocsRoute = router.routes.find(route => route.path === '/docs')
+      const apiDocsRoute = router.routes.find((route) => route.path === '/docs')
       expect(apiDocsRoute).toBeDefined()
       expect(apiDocsRoute.handle).toBeDefined()
       expect(apiDocsRoute.handle.crumb).toBeInstanceOf(Function)
     })
 
     it('should not have handles for fallback routes', () => {
-      const wildcardRoute = router.routes.find(route => route.path === '*')
+      const wildcardRoute = router.routes.find((route) => route.path === '*')
       expect(wildcardRoute.handle).toBeUndefined()
     })
   })
@@ -400,9 +424,11 @@ describe('Special Routes', () => {
 
     it('should handle loader errors in special routes', async () => {
       // Test that logout loader handles errors gracefully
-      const logoutRoute = router.routes.find(route => route.path === '/log-out')
+      const logoutRoute = router.routes.find(
+        (route) => route.path === '/log-out'
+      )
       expect(logoutRoute.loader).toBeDefined()
-      
+
       // The loader should handle any errors and still return null
       const result = await logoutRoute.loader()
       expect(result).toBeNull()
@@ -422,7 +448,7 @@ describe('Special Routes', () => {
 
     it('should handle navigation state for special routes', async () => {
       const navigationState = { from: 'dashboard', reason: 'user-action' }
-      
+
       const testRouter = createTestRouter([
         { pathname: '/docs', state: navigationState }
       ])
