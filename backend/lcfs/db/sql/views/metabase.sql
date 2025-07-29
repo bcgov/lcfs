@@ -417,6 +417,7 @@ SELECT DISTINCT
   fcat.category as fuel_category,
   eut.type AS end_use_type,
   pa.description as provision_description,
+  fs.compliance_units,
   fs.quantity,
   ft.units as fuel_units,
   fs.target_ci,
@@ -1147,7 +1148,7 @@ SELECT DISTINCT
 	      and sr.latest_supplemental_initiator = 'GOVERNMENT_INITIATED'::supplementalinitiatortype 
 	      	then 'Supplemental_requested'::compliancereportstatusenum 
 	     else sr.status 
-	 end as report_status,
+	  end as report_status,
     sr.update_date,
     sr.supplemental_initiator,
     sr.reporting_frequency,
@@ -1780,6 +1781,7 @@ SELECT DISTINCT
   fcat.category as fuel_category,
   eut.type AS end_use_type,
   pa.description as provision_description,
+  fe.compliance_units,
   fe.quantity,
   ft.units as fuel_units,
   fe.target_ci,

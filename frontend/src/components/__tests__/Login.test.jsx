@@ -5,6 +5,8 @@ import { wrapper } from '@/tests/utils/wrapper'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 
+const mockNavigate = vi.fn()
+
 // Mock Keycloak
 const mockKeycloak = {
   authenticated: false,
@@ -37,7 +39,8 @@ vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
-    useLocation: () => mockLocation
+    useLocation: () => mockLocation,
+    useNavigate: () => mockNavigate
   }
 })
 
@@ -47,7 +50,8 @@ vi.mock('react-i18next', () => ({
     t: (key) => {
       const translations = {
         'login.loginMessage': 'Login with',
-        Login: 'Login'
+        Login: 'Login',
+        'login.publicCreditCalculator': 'Public - Credit calculator'
       }
       return translations[key] || key
     }
@@ -61,6 +65,7 @@ describe('Login Component', () => {
     keycloak.useKeycloak.mockReturnValue({
       keycloak: mockKeycloak
     })
+    mockNavigate.mockReset()
   })
 
   afterEach(() => {
@@ -76,14 +81,18 @@ describe('Login Component', () => {
       expect(screen.getByText('Login')).toBeInTheDocument()
     })
 
-    it('should render both login buttons', () => {
+    it('should render both login buttons and public calculator button', () => {
       render(<Login />, { wrapper })
 
       expect(screen.getByTestId('link-bceid')).toBeInTheDocument()
       expect(screen.getByTestId('link-idir')).toBeInTheDocument()
+      expect(
+        screen.getByTestId('link-public-credit-calculator')
+      ).toBeInTheDocument()
       expect(screen.getAllByText(/Login with/)).toHaveLength(2)
       expect(screen.getByText('BCeID')).toBeInTheDocument()
       expect(screen.getByText('IDIR')).toBeInTheDocument()
+      expect(screen.getByText('Public - Credit calculator')).toBeInTheDocument()
     })
 
     it('should render seasonal effects (snowfall)', () => {
@@ -133,6 +142,17 @@ describe('Login Component', () => {
           redirectUri: window.location.origin
         })
       )
+    })
+
+    it('should navigate to public credit calculator when public calculator button is clicked', () => {
+      render(<Login />, { wrapper })
+
+      const publicCalculatorButton = screen.getByTestId(
+        'link-public-credit-calculator'
+      )
+      fireEvent.click(publicCalculatorButton)
+
+      expect(mockNavigate).toHaveBeenCalledWith('/credit-calculator')
     })
   })
 

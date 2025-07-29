@@ -14,15 +14,15 @@ export const BCFormRadio = ({
   name,
   control,
   label,
-  options,
+  options = [],
   disabled,
   orientation = 'vertical',
   sx = {}
 }) => {
   const generateRadioOptions = () => {
-    return options.map((singleOption) => (
+    return options.map((singleOption, index) => (
       <FormControlLabel
-        key={singleOption.value}
+        key={singleOption.value || singleOption.label || `radio-option-${index}`}
         value={singleOption.value}
         label={
           singleOption.header ? (
