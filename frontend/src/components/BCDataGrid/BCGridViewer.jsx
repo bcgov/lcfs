@@ -40,6 +40,10 @@ const floatingScrollStyles = {
   background: '#fafafa'
 }
 
+const isIntersectionObserverSupported = () => {
+  return typeof window !== 'undefined' && 'IntersectionObserver' in window
+}
+
 export const BCGridViewer = forwardRef(
   ({
     gridRef,
@@ -160,15 +164,21 @@ export const BCGridViewer = forwardRef(
       }
     }, [gridKey])
 
-    // Intersection Observer for pagination visibility
+    // Intersection Observer for pagination and grid visibility
     useEffect(() => {
-      if (!enableFloatingPagination || suppressPagination || !paginationRef.current) {
+      if (!enableFloatingPagination || suppressPagination || !paginationRef.current || !gridContainerRef.current || !isIntersectionObserverSupported()) {
         return
       }
 
       const observer = new IntersectionObserver(
-        ([entry]) => {
-          setIsPaginationVisible(entry.isIntersecting)
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.target === paginationRef.current) {
+              setIsPaginationVisible(entry.isIntersecting)
+            } else if (entry.target === gridContainerRef.current) {
+              setIsGridVisible(entry.isIntersecting)
+            }
+          })
         },
         {
           root: null,
@@ -178,29 +188,6 @@ export const BCGridViewer = forwardRef(
       )
 
       observer.observe(paginationRef.current)
-
-      return () => {
-        observer.disconnect()
-      }
-    }, [enableFloatingPagination, suppressPagination, data])
-
-    // Intersection Observer for grid visibility
-    useEffect(() => {
-      if (!enableFloatingPagination || suppressPagination || !gridContainerRef.current) {
-        return
-      }
-
-      const observer = new IntersectionObserver(
-        ([entry]) => {
-          setIsGridVisible(entry.isIntersecting)
-        },
-        {
-          root: null,
-          rootMargin: '0px',
-          threshold: 0.1 // Consider grid visible when at least 10% is visible
-        }
-      )
-
       observer.observe(gridContainerRef.current)
 
       return () => {
@@ -466,9 +453,10 @@ export const BCGridViewer = forwardRef(
                   >
                     <div
                       style={{
-                        width: gridRef.current?.api?.getDisplayedRowCount()
-                          ? gridContainerRef?.current?.querySelector('.ag-root')?.scrollWidth || '2000px'
-                          : '2000px',
+                        width: gridRef.current?.api ? 
+                          gridContainerRef?.current?.querySelector('.ag-body-horizontal-scroll-viewport')?.scrollWidth || 
+                          gridContainerRef?.current?.querySelector('.ag-header-viewport')?.scrollWidth || 
+                          '100%' : '100%',
                         height: '1px'
                       }}
                     />
