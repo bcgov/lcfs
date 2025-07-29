@@ -1,7 +1,7 @@
 """Update fossil_derived field for specific fuel types
 
 Revision ID: b1c2d3e4f5g6
-Revises: b2c3d4e5f8g9
+Revises: 3eb97134895a
 Create Date: 2025-07-21 10:00:00.000000
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "b1c2d3e4f5g6"
-down_revision = "b2c3d4e5f8g9"
+down_revision = "3eb97134895a"
 branch_labels = None
 depends_on = None
 
