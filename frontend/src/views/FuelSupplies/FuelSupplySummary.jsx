@@ -157,6 +157,7 @@ export const FuelSupplySummary = ({ data, status, isEarlyIssuance }) => {
               ...newPagination
             }))
           }
+          enablePageCaching={false}
         />
       </BCBox>
     </Grid2>

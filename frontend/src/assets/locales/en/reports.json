@@ -8,8 +8,9 @@
     "organization": "Organization",
     "type": "Type",
     "status": "Current status",
-    "lastComment": "Last comment",
-    "lastUpdated": "Last status update"
+    "lastUpdated": "Last status update",
+    "assignedAnalyst": "Assigned Analyst",
+    "lastComment": "Last comment"
   },
   "noReportsFound": "No compliance reports found",
   "serviceAddrLabel": "Address for service",
@@ -72,7 +73,8 @@
     "reAssessReportBtn": "Re-assess report",
     "deleteSupplementalReportBtn": "Delete supplemental report",
     "deleteAnalystAdjustmentBtn": "Delete analyst adjustment",
-    "createSupplementalReportBtn": "Create Supplemental Report"
+    "createSupplementalReportBtn": "Create Supplemental Report",
+    "nonAssessment": "Non-assessment"
   },
   "savedSuccessText": "Compliance report successfully {{status}}",
   "supplementalCreatedSuccessText": "Supplemental report created successfully",
@@ -85,6 +87,7 @@
   "returnToManagerConfirmText": "Are you sure you want to return this compliance report back to compliance manager?",
   "returnToSupplierConfirmText": "Are you sure you want to return this compliance report back to the supplier?",
   "assessConfirmText": "Are you sure you want to assess this compliance report?",
+  "nonAssessmentConfirmText": "Are you sure you want to mark this compliance report as non-assessment? This will immediately assess the report without issuing any compliance units.",
   "uploadLabel": "Upload supporting documents for your report.",
   "introduction": "Introduction",
   "sections": [
@@ -280,5 +283,9 @@
   ],
   "changeInUnits": "Projected change in compliance units balance",
   "generatedLabel": "Credits generated",
-  "allRecordsDeleted": "All previous records deleted."
+  "allRecordsDeleted": "All previous records deleted.",
+  "notSubjectToAssessment": "Not Subject to Assessment",
+  "notSubjectToAssessmentDescription": "This report is not subject to assessment under the Low Carbon Fuels Act. No action will be taken on the contents of this report, and the summary result will not impact the organization's compliance unit balance. Please add any specific information to the supplier in the director statement above.",
+  "assignAnalyst": "Assign Analyst",
+  "unassign": "Unassign"
 }

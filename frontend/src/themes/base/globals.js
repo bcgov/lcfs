@@ -238,9 +238,6 @@ const globals = {
   '.ag-grid-pagination': {
     fontSize: '0.875rem'
   },
-  '.ag-grid-pagination .MuiTablePagination-toolbar': {
-    overflow: 'scroll'
-  },
   '.ag-grid-pagination .MuiInputBase-root': {
     border: `1.2px solid ${grey[500]}`,
     borderRadius: '0.3rem',

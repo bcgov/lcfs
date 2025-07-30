@@ -1,7 +1,7 @@
 import BCAlert from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
-import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer.jsx'
+import { BCGridViewer } from '@/components/BCDataGrid/BCGridViewer'
 import BCTypography from '@/components/BCTypography'
 import { ClearFiltersButton } from '@/components/ClearFiltersButton'
 import { DownloadButton } from '@/components/DownloadButton'

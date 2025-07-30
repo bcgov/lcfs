@@ -2,16 +2,37 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import List, Dict, Any, Union, Optional, Sequence
 
+from lcfs.db.models.compliance import (
+    AllocationAgreement,
+    FuelExport,
+    FuelSupply,
+    OtherUses,
+)
 import structlog
 from fastapi import Depends
-from sqlalchemy import and_, or_, select, func, text, update, distinct, desc, asc
+from sqlalchemy import (
+    and_,
+    exists,
+    or_,
+    select,
+    func,
+    text,
+    update,
+    distinct,
+    desc,
+    asc,
+)
 from sqlalchemy.sql.functions import coalesce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, contains_eager, selectinload
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
-from lcfs.db.models.fuel import CategoryCarbonIntensity, DefaultCarbonIntensity
+from lcfs.db.models.fuel import (
+    CategoryCarbonIntensity,
+    DefaultCarbonIntensity,
+    FuelCodeHistory,
+)
 from lcfs.db.models.fuel.AdditionalCarbonIntensity import AdditionalCarbonIntensity
 from lcfs.db.models.fuel.EnergyDensity import EnergyDensity
 from lcfs.db.models.fuel.EnergyEffectivenessRatio import EnergyEffectivenessRatio
@@ -433,6 +454,43 @@ class FuelCodeRepository:
         await self.db.flush()
         result = await self.get_fuel_code(fuel_code.fuel_code_id)
         return result
+
+    @repo_handler
+    async def get_fuel_code_history(
+        self, fuel_code_id: int, version=0
+    ) -> Optional[FuelCodeHistory]:
+        """
+        gets history entry for the fuel code
+        """
+        query = select(FuelCodeHistory).where(
+            and_(
+                FuelCodeHistory.fuel_code_id == fuel_code_id,
+                FuelCodeHistory.version == version,
+            )
+        )
+        return (await self.db.execute(query)).scalar_one_or_none()
+
+    @repo_handler
+    async def create_fuel_code_history(
+        self, history: FuelCodeHistory
+    ) -> FuelCodeHistory:
+        """
+        Updates the fuel code entry to history table
+        """
+        self.db.add(history)
+        await self.db.flush()
+        return True
+
+    @repo_handler
+    async def update_fuel_code_history(
+        self, history: FuelCodeHistory
+    ) -> FuelCodeHistory:
+        """
+        Audits the fuel code entry to history table
+        """
+        await self.db.flush()
+        await self.db.refresh(history)
+        return True
 
     @repo_handler
     async def get_fuel_code(self, fuel_code_id: int) -> FuelCode:
@@ -1124,6 +1182,22 @@ class FuelCodeRepository:
         result = await self.db.execute(query)
         record = result.scalar_one_or_none()
         return record.category_carbon_intensity if record else 0.0
+
+    @repo_handler
+    async def is_fuel_code_used(self, fuel_code_id: int) -> bool:
+        """
+        Check if a fuel code is used in any of the compliance reports.
+        """
+        exists_query = select(
+            or_(
+                exists().where(FuelSupply.fuel_code_id == fuel_code_id),
+                exists().where(AllocationAgreement.fuel_code_id == fuel_code_id),
+                exists().where(FuelExport.fuel_code_id == fuel_code_id),
+                exists().where(OtherUses.fuel_code_id == fuel_code_id),
+            )
+        )
+        result = await self.db.execute(exists_query)
+        return result.scalar()
 
     @repo_handler
     async def get_expiring_fuel_codes(self, start_date: date) -> List[FuelCode]:

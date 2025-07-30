@@ -158,6 +158,7 @@ export const FinalSupplyEquipmentSummary = ({ data, status }) => {
               ...newPagination
             }))
           }
+          enablePageCaching={false}
         />
       </BCBox>
       <>

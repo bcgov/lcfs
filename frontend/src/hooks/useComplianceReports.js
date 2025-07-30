@@ -587,3 +587,73 @@ export const useGetChangeLog = (
     ...restOptions
   })
 }
+
+export const useGetAvailableAnalysts = (options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = STATIC_DATA_STALE_TIME,
+    cacheTime = STATIC_DATA_STALE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['available-analysts'],
+    queryFn: async () => {
+      const response = await client.get(apiRoutes.getAvailableAnalysts)
+      return response.data
+    },
+    enabled,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
+export const useAssignAnalyst = (options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async ({ reportId, assignedAnalystId }) => {
+      const path = apiRoutes.assignAnalyst.replace(':reportId', reportId)
+      return await client.put(path, { assignedAnalystId })
+    },
+    onSuccess: async (data, variables, context) => {
+      if (invalidateRelatedQueries) {
+        // More aggressive cache clearing - remove and refetch everything
+        queryClient.removeQueries({ queryKey: ['compliance-reports-list'] })
+        queryClient.removeQueries({ queryKey: ['compliance-reports'] })
+        queryClient.invalidateQueries({ queryKey: ['compliance-report', variables.reportId] })
+        
+        // Small delay to ensure backend transaction is committed
+        await new Promise(resolve => setTimeout(resolve, 200))
+        
+        // Force refetch of all compliance report list queries with exact matching
+        await queryClient.refetchQueries({ 
+          queryKey: ['compliance-reports-list'],
+          exact: false,
+          type: 'active'
+        })
+        
+        // Invalidate available analysts list to ensure updated roles are reflected
+        queryClient.invalidateQueries({ queryKey: ['available-analysts'] })
+      }
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}

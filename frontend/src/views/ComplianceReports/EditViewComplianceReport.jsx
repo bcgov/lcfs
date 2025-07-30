@@ -166,7 +166,11 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       ) {
         // For drafts created in Jan/Feb of years after the compliance period,
         // treat them as Q1 instead of Q4 since they're early in the calendar year
-        if (isDraft && currentYear > parseInt(compliancePeriod) && (month === 0 || month === 1)) {
+        if (
+          isDraft &&
+          currentYear > parseInt(compliancePeriod) &&
+          (month === 0 || month === 1)
+        ) {
           quarter = 1
         } else {
           quarter = 4
@@ -363,7 +367,8 @@ export const EditViewComplianceReport = ({ isError, error }) => {
   const methods = useForm({
     defaultValues: {
       assessmentStatement: reportData?.report?.assessmentStatement || '',
-      supplementalNote: reportData?.report?.supplementalNote || ''
+      supplementalNote: reportData?.report?.supplementalNote || '',
+      isNonAssessment: reportData?.report?.isNonAssessment || false
     }
   })
 
@@ -377,6 +382,9 @@ export const EditViewComplianceReport = ({ isError, error }) => {
     }
     if (reportData?.report?.supplementalNote !== undefined) {
       methods.setValue('supplementalNote', reportData.report.supplementalNote)
+    }
+    if (reportData?.report?.isNonAssessment !== undefined) {
+      methods.setValue('isNonAssessment', reportData.report.isNonAssessment)
     }
   }, [reportData?.report, methods])
 
@@ -622,22 +630,28 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           />
           {!location.state?.newReport && (
             <>
-              {!showEarlyIssuanceSummary && (
-                <ComplianceReportSummary
-                  reportID={complianceReportId}
-                  enableCompareMode={reportData?.chain?.length > 1}
-                  canEdit={canEdit}
-                  currentStatus={currentStatus}
-                  compliancePeriodYear={compliancePeriod}
-                  setIsSigningAuthorityDeclared={setIsSigningAuthorityDeclared}
-                  buttonClusterConfig={buttonClusterConfig}
-                  methods={methods}
-                  alertRef={alertRef}
-                />
-              )}
-              {showEarlyIssuanceSummary && (
-                <ComplianceReportEarlyIssuanceSummary reportData={reportData} />
-              )}
+              {!showEarlyIssuanceSummary &&
+                !reportData?.report?.isNonAssessment && (
+                  <ComplianceReportSummary
+                    reportID={complianceReportId}
+                    enableCompareMode={reportData?.chain?.length > 1}
+                    canEdit={canEdit}
+                    currentStatus={currentStatus}
+                    compliancePeriodYear={compliancePeriod}
+                    setIsSigningAuthorityDeclared={
+                      setIsSigningAuthorityDeclared
+                    }
+                    buttonClusterConfig={buttonClusterConfig}
+                    methods={methods}
+                    alertRef={alertRef}
+                  />
+                )}
+              {showEarlyIssuanceSummary &&
+                !reportData?.report?.isNonAssessment && (
+                  <ComplianceReportEarlyIssuanceSummary
+                    reportData={reportData}
+                  />
+                )}
             </>
           )}
           {!isGovernmentUser && (
@@ -674,6 +688,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
                   reportData={reportData}
                   complianceReportId={complianceReportId}
                   currentStatus={currentStatus}
+                  methods={methods}
                 />
               )}
               {/* Internal Comments */}
