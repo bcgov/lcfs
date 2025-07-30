@@ -9,13 +9,14 @@ import { ROUTES } from '@/routes/routes'
 import { useApiService } from '@/services/useApiService'
 import { faCirclePlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { Box, Grid } from '@mui/material'
+import { AppBar, Box, Grid, Tab, Tabs } from '@mui/material'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Role } from '@/components/Role'
 import { defaultSortModel, transactionsColDefs } from './_schema'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useOrganization } from '@/hooks/useOrganization'
 import {
   ORGANIZATION_STATUSES,
   TRANSACTION_STATUSES,
@@ -31,12 +32,28 @@ import {
   useDownloadTransactions
 } from '@/hooks/useTransactions'
 import { defaultInitialPagination } from '@/constants/schedules.js'
+import { CreditTradingMarket } from './CreditTradingMarket/CreditTradingMarket'
+import { CreditMarketDetailsCard } from './CreditTradingMarket/CreditMarketDetailsCard'
 
 const initialPaginationOptions = {
   page: 1,
   size: 10,
   sortOrders: defaultSortModel,
   filters: []
+}
+
+function TabPanel({ children, value, index }) {
+  return (
+    <BCBox
+      role="tabpanel"
+      hidden={value !== index}
+      id={`transaction-tabpanel-${index}`}
+      aria-labelledby={`transaction-tab-${index}`}
+      sx={{ pt: 3 }}
+    >
+      {value === index && children}
+    </BCBox>
+  )
 }
 
 export const Transactions = () => {
@@ -47,9 +64,22 @@ export const Transactions = () => {
   const gridRef = useRef()
   const downloadButtonRef = useRef(null)
   const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
+  
+  // Get full organization data to access creditTradingEnabled
+  const { data: organizationData } = useOrganization(
+    currentUser?.organization?.organizationId,
+    {
+      enabled: !!currentUser?.organization?.organizationId,
+      staleTime: 0,
+      cacheTime: 0
+    }
+  )
 
   const [searchParams] = useSearchParams()
   const highlightedId = searchParams.get('hid')
+
+  const [tabIndex, setTabIndex] = useState(0)
+  const [tabsOrientation, setTabsOrientation] = useState('horizontal')
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
     useState(false)
@@ -221,6 +251,23 @@ export const Transactions = () => {
     }
   }, [location.state])
 
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth < 500) {
+        setTabsOrientation('vertical')
+      } else {
+        setTabsOrientation('horizontal')
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    handleResize()
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  const handleChangeTab = (event, newValue) => {
+    setTabIndex(newValue)
+  }
+
   const handleClearFilters = () => {
     setPaginationOptions(initialPaginationOptions)
     setSelectedOrg({ organizationId: null, label: null })
@@ -233,117 +280,192 @@ export const Transactions = () => {
     return <Loading />
   }
 
-  return (
-    <>
-      <div>
-        {alertMessage && (
-          <BCAlert data-test="alert-box" severity={alertSeverity}>
-            {alertMessage}
-          </BCAlert>
-        )}
-      </div>
-      <Grid container spacing={2}>
-        <Grid item xs={12} lg={7}>
-          <BCTypography variant="h5" mb={2} color="primary">
-            {t('txn:title')}
-          </BCTypography>
-          <Box display="flex" gap={1} mb={2} alignItems="center">
-            {currentUser?.organization?.orgStatus?.status ===
-              ORGANIZATION_STATUSES.REGISTERED && (
-              <Role roles={[roles.transfers]}>
-                <BCButton
-                  id="new-transfer-button"
-                  variant="contained"
-                  size="small"
-                  color="primary"
-                  startIcon={
-                    <FontAwesomeIcon
-                      icon={faCirclePlus}
-                      className="small-icon"
-                      size="2x"
-                    />
-                  }
-                  onClick={() => navigate(ROUTES.TRANSFERS.ADD)}
-                >
-                  <BCTypography variant="subtitle2">
-                    {t('txn:newTransferBtn')}
-                  </BCTypography>
-                </BCButton>
-              </Role>
-            )}
-            <Role roles={[roles.analyst]}>
-              <BCButton
-                id="new-transaction-button"
-                variant="contained"
-                size="small"
-                color="primary"
-                startIcon={
-                  <FontAwesomeIcon
-                    icon={faCirclePlus}
-                    className="small-icon"
-                    size="2x"
-                  />
-                }
-                onClick={() => navigate(ROUTES.TRANSACTIONS.ADD)}
-              >
-                <BCTypography variant="subtitle2">
-                  {t('txn:newTransactionBtn')}
-                </BCTypography>
-              </BCButton>
-            </Role>
-            <DownloadButton
-              ref={downloadButtonRef}
-              onDownload={handleDownloadTransactions}
-              isDownloading={isDownloadingTransactions}
-              label={t('txn:downloadAsExcel')}
-              downloadLabel={t('txn:downloadingTxnInfo')}
-              dataTest="download-transactions-button"
-            />
-            <ClearFiltersButton onClick={handleClearFilters} />
-          </Box>
-        </Grid>
-        <Grid
-          item
-          xs={12}
-          lg={5}
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: { xs: 'flex-start', lg: 'flex-end' },
-            alignItems: { lg: 'flex-end' }
-          }}
-        >
-          <Role roles={govRoles}>
-            <OrganizationList
-              selectedOrg={selectedOrg}
-              onOrgChange={({ id, label }) => {
-                setSelectedOrg({ id, label })
+  // Determine if the user is eligible for credit trading market tab
+  const isBCeIDUser = !hasRoles(roles.government)
+  const isRegistered =
+    currentUser?.organization?.orgStatus?.status ===
+    ORGANIZATION_STATUSES.REGISTERED
+  const creditTradingEnabled = organizationData?.creditTradingEnabled || false
+  const showCreditTradingTab =
+    isBCeIDUser && isRegistered && creditTradingEnabled
+
+  // Build tabs array
+  const tabs = [
+    {
+      label: t('txn:transactionsTab', 'Transactions'),
+      content: (
+        <>
+          <Grid container spacing={2}>
+            <Grid item xs={12} lg={7}>
+              <Box display="flex" gap={1} mb={2} alignItems="center">
+                {currentUser?.organization?.orgStatus?.status ===
+                  ORGANIZATION_STATUSES.REGISTERED && (
+                  <Role roles={[roles.transfers]}>
+                    <BCButton
+                      id="new-transfer-button"
+                      variant="contained"
+                      size="small"
+                      color="primary"
+                      startIcon={
+                        <FontAwesomeIcon
+                          icon={faCirclePlus}
+                          className="small-icon"
+                          size="2x"
+                        />
+                      }
+                      onClick={() => navigate(ROUTES.TRANSFERS.ADD)}
+                    >
+                      <BCTypography variant="subtitle2">
+                        {t('txn:newTransferBtn')}
+                      </BCTypography>
+                    </BCButton>
+                  </Role>
+                )}
+                <Role roles={[roles.analyst]}>
+                  <BCButton
+                    id="new-transaction-button"
+                    variant="contained"
+                    size="small"
+                    color="primary"
+                    startIcon={
+                      <FontAwesomeIcon
+                        icon={faCirclePlus}
+                        className="small-icon"
+                        size="2x"
+                      />
+                    }
+                    onClick={() => navigate(ROUTES.TRANSACTIONS.ADD)}
+                  >
+                    <BCTypography variant="subtitle2">
+                      {t('txn:newTransactionBtn')}
+                    </BCTypography>
+                  </BCButton>
+                </Role>
+                <DownloadButton
+                  ref={downloadButtonRef}
+                  onDownload={handleDownloadTransactions}
+                  isDownloading={isDownloadingTransactions}
+                  label={t('txn:downloadAsExcel')}
+                  downloadLabel={t('txn:downloadingTxnInfo')}
+                  dataTest="download-transactions-button"
+                />
+                <ClearFiltersButton onClick={handleClearFilters} />
+              </Box>
+            </Grid>
+            <Grid
+              item
+              xs={12}
+              lg={5}
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: { xs: 'flex-start', lg: 'flex-end' },
+                alignItems: { lg: 'flex-end' }
               }}
-              onlyRegistered={false}
+            >
+              <Role roles={govRoles}>
+                <OrganizationList
+                  selectedOrg={selectedOrg}
+                  onOrgChange={({ id, label }) => {
+                    setSelectedOrg({ id, label })
+                  }}
+                  onlyRegistered={false}
+                />
+              </Role>
+            </Grid>
+          </Grid>
+          <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
+            <BCGridViewer
+              gridRef={gridRef}
+              gridKey="transactions-grid-v2"
+              columnDefs={transactionsColDefs(t)}
+              getRowId={getRowId}
+              overlayNoRowsTemplate={t('txn:noTxnsFound')}
+              defaultColDef={defaultColDef}
+              queryData={queryData}
+              dataKey="transactions"
+              paginationOptions={paginationOptions}
+              onPaginationChange={(newPagination) =>
+                setPaginationOptions((prev) => ({
+                  ...prev,
+                  ...newPagination
+                }))
+              }
+              highlightedRowId={highlightedId}
             />
-          </Role>
-        </Grid>
-      </Grid>
-      <BCBox component="div" sx={{ height: '100%', width: '100%' }}>
-        <BCGridViewer
-          gridRef={gridRef}
-          gridKey="transactions-grid-v2"
-          columnDefs={transactionsColDefs(t)}
-          getRowId={getRowId}
-          overlayNoRowsTemplate={t('txn:noTxnsFound')}
-          defaultColDef={defaultColDef}
-          queryData={queryData}
-          dataKey="transactions"
-          paginationOptions={paginationOptions}
-          onPaginationChange={(newPagination) =>
-            setPaginationOptions((prev) => ({
-              ...prev,
-              ...newPagination
-            }))
-          }
-          highlightedRowId={highlightedId}
-        />
-      </BCBox>
-    </>
+          </BCBox>
+        </>
+      )
+    }
+  ]
+
+  // Add credit trading market tab if eligible
+  if (showCreditTradingTab) {
+    tabs.push({
+      label: t('txn:creditTradingMarketTab', 'Credit Trading Market'),
+      content: (
+        <>
+          <CreditMarketDetailsCard />
+          <BCBox mt={3}>
+            <CreditTradingMarket />
+          </BCBox>
+        </>
+      )
+    })
+  }
+
+  return (
+    <BCBox>
+      {alertMessage && (
+        <BCAlert data-test="alert-box" severity={alertSeverity} sx={{ mb: 4 }}>
+          {alertMessage}
+        </BCAlert>
+      )}
+
+      <BCTypography variant="h5" mb={2} color="primary">
+        {t('txn:title')}
+      </BCTypography>
+
+      {tabs.length === 1 ? (
+        <BCBox mt={3}>{tabs[0].content}</BCBox>
+      ) : (
+        <BCBox sx={{ mt: 2, bgcolor: 'background.paper' }}>
+          <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
+            <Tabs
+              orientation={tabsOrientation}
+              value={tabIndex}
+              onChange={handleChangeTab}
+              aria-label="Transaction tabs"
+              variant="scrollable"
+              scrollButtons="auto"
+              sx={{
+                backgroundColor: 'rgba(0, 0, 0, 0.08)',
+                width: 'fit-content',
+                maxWidth: { xs: '100%', md: '50%', lg: '40%' },
+                '& .MuiTab-root': {
+                  minWidth: 'auto',
+                  paddingX: 3,
+                  marginX: 1,
+                  whiteSpace: 'nowrap'
+                },
+                '& .MuiTabs-flexContainer': {
+                  flexWrap: 'nowrap'
+                }
+              }}
+            >
+              {tabs.map((tab, idx) => (
+                <Tab key={idx} label={tab.label} />
+              ))}
+            </Tabs>
+          </AppBar>
+
+          {tabs.map((tab, idx) => (
+            <TabPanel key={idx} value={tabIndex} index={idx}>
+              {tab.content}
+            </TabPanel>
+          ))}
+        </BCBox>
+      )}
+    </BCBox>
   )
 }
