@@ -2,7 +2,7 @@ import colors from '@/themes/base/colors'
 import typography from '@/themes/base/typography'
 import { pxToRem } from '@/themes/utils'
 
-const { white, text, info, secondary } = colors
+const { white, text, info, secondary, glacier } = colors
 const { size } = typography
 
 const contained = {
@@ -66,6 +66,19 @@ const contained = {
 
     '&:focus:not(:hover)': {
       backgroundColor: secondary.focus
+    }
+  },
+
+  glacier: {
+    backgroundColor: glacier.main,
+    color: text.main,
+
+    '&:hover': {
+      backgroundColor: glacier.focus
+    },
+
+    '&:focus:not(:hover)': {
+      backgroundColor: glacier.focus
     }
   }
 }

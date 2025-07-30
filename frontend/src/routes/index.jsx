@@ -14,6 +14,8 @@ import { miscRoutes } from './routeConfig/miscRoutes'
 import { transferRoutes } from './routeConfig/transferRoutes'
 import PublicLayout from '@/layouts/PublicLayout'
 import { fuelCodeRoutes } from './routeConfig/fuelCodeRoutes'
+import { publicPageRoutes } from './routeConfig/publicPageRoutes'
+import { PublicPageLayout } from '@/layouts/PublicPageLayout'
 
 const allRoutes = [
   ...publicRoutes,
@@ -24,7 +26,8 @@ const allRoutes = [
   ...transactionRoutes,
   ...transferRoutes,
   ...reportRoutes,
-  ...notificationRoutes
+  ...notificationRoutes,
+  ...publicPageRoutes
   // ... other route groups
 ]
 
@@ -32,6 +35,10 @@ export const router = createBrowserRouter([
   {
     element: <PublicLayout />,
     children: publicRoutes
+  },
+  {
+    element: <PublicPageLayout />,
+    children: publicPageRoutes
   },
   {
     element: <MainLayout />,

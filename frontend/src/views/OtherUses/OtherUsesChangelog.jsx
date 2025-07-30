@@ -187,6 +187,7 @@ export const OtherUsesChangelog = () => {
                 onPaginationChange={
                   shouldPaginate ? handlePaginationChange(i) : undefined
                 }
+                enablePageCaching={false}
               />
             </Box>
           </Box>

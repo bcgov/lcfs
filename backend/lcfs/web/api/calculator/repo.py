@@ -45,26 +45,27 @@ class CalculatorRepository:
             (
                 await self.db.execute(
                     select(CompliancePeriod)
-                    .join(
+                    .outerjoin(
                         DefaultCarbonIntensity,
                         CompliancePeriod.compliance_period_id
                         == DefaultCarbonIntensity.compliance_period_id,
                     )
-                    .join(
+                    .outerjoin(
                         TargetCarbonIntensity,
                         CompliancePeriod.compliance_period_id
                         == TargetCarbonIntensity.compliance_period_id,
                     )
-                    .join(
+                    .outerjoin(
                         EnergyDensity,
                         CompliancePeriod.compliance_period_id
                         == EnergyDensity.compliance_period_id,
                     )
-                    .join(
+                    .outerjoin(
                         EnergyEffectivenessRatio,
                         CompliancePeriod.compliance_period_id
                         == EnergyEffectivenessRatio.compliance_period_id,
                     )
+                    .where(CompliancePeriod.effective_status == True)
                     .distinct()
                     .order_by(desc(CompliancePeriod.description))
                 )

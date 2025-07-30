@@ -144,8 +144,26 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'recommend-by-analyst-btn',
       label: this.context.t('report:actionBtns.recommendReportAnalystBtn'),
-      handler: (formData) =>
-        this.context.setModalData({
+      handler: (formData) => {
+        // Check if the report is marked as non-assessment
+        if (formData.isNonAssessment) {
+          return this.context.setModalData({
+            primaryButtonAction: () =>
+              this.context.updateComplianceReport({
+                ...formData,
+                status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_ANALYST
+              }),
+            primaryButtonText: this.context.t(
+              'report:actionBtns.recommendReportAnalystBtn'
+            ),
+            secondaryButtonText: this.context.t('cancelBtn'),
+            title: this.context.t('confirmation'),
+            content: this.context.t('report:nonAssessmentConfirmText')
+          })
+        }
+
+        // Default recommend behavior
+        return this.context.setModalData({
           primaryButtonAction: () =>
             this.context.updateComplianceReport({
               ...formData,
@@ -158,6 +176,7 @@ class ButtonActionFactory {
           title: this.context.t('confirmation'),
           content: this.context.t('report:recommendConfirmText')
         })
+      }
     })
   }
 
@@ -268,8 +287,26 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'recommend-by-manager-btn',
       label: this.context.t('report:actionBtns.recommendReportManagerBtn'),
-      handler: (formData) =>
-        this.context.setModalData({
+      handler: (formData) => {
+        // Check if the report is marked as non-assessment
+        if (formData.isNonAssessment) {
+          return this.context.setModalData({
+            primaryButtonAction: () =>
+              this.context.updateComplianceReport({
+                ...formData,
+                status: COMPLIANCE_REPORT_STATUSES.RECOMMENDED_BY_MANAGER
+              }),
+            primaryButtonText: this.context.t(
+              'report:actionBtns.recommendReportManagerBtn'
+            ),
+            secondaryButtonText: this.context.t('cancelBtn'),
+            title: this.context.t('confirmation'),
+            content: this.context.t('report:nonAssessmentConfirmText')
+          })
+        }
+
+        // Default recommend behavior
+        return this.context.setModalData({
           primaryButtonAction: () =>
             this.context.updateComplianceReport({
               ...formData,
@@ -282,6 +319,7 @@ class ButtonActionFactory {
           title: this.context.t('confirmation'),
           content: this.context.t('report:recommendConfirmText')
         })
+      }
     })
   }
 
@@ -313,8 +351,26 @@ class ButtonActionFactory {
       style: BUTTON_STYLES.PRIMARY_CONTAINED,
       id: 'issue-assessment-btn',
       label: this.context.t('report:actionBtns.assessReportBtn'),
-      handler: (formData) =>
-        this.context.setModalData({
+      handler: (formData) => {
+        // Check if the report is marked as non-assessment
+        if (formData.isNonAssessment) {
+          return this.context.setModalData({
+            primaryButtonAction: () =>
+              this.context.updateComplianceReport({
+                ...formData,
+                status: COMPLIANCE_REPORT_STATUSES.ASSESSED
+              }),
+            primaryButtonText: this.context.t(
+              'report:actionBtns.nonAssessment'
+            ),
+            secondaryButtonText: this.context.t('cancelBtn'),
+            title: this.context.t('confirmation'),
+            content: this.context.t('report:nonAssessmentConfirmText')
+          })
+        }
+
+        // Default assess behavior
+        return this.context.setModalData({
           primaryButtonAction: () =>
             this.context.updateComplianceReport({
               ...formData,
@@ -327,6 +383,7 @@ class ButtonActionFactory {
           title: this.context.t('confirmation'),
           content: this.context.t('report:assessConfirmText')
         })
+      }
     })
   }
 
