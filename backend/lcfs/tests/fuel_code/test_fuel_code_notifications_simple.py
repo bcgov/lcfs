@@ -174,11 +174,11 @@ class TestFuelCodeNotificationLogic:
 
     def test_no_notification_for_unmapped_status(self):
         """Test that unmapped statuses don't trigger notifications"""
-        # Draft and Deleted should not have notifications
+        # Draft now HAS notifications (for returned fuel codes), but Deleted should not
         draft_notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Draft)
         deleted_notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Deleted)
         
-        assert draft_notifications is None
+        assert draft_notifications is not None  # Draft now has notifications for returned fuel codes
         assert deleted_notifications is None
 
     def test_fuel_code_notification_workflow_coverage(self):
