@@ -11,7 +11,7 @@ class TransferRecommendationEnum(enum.Enum):
     Refuse = "Refuse"
 
 
-class Transfer(BaseModel, Auditable, EffectiveDates):
+class Transfer(BaseModel, Auditable):
     __tablename__ = "transfer"
     __table_args__ = (
         {"comment": "Records of tranfer from Organization to Organization"},
