@@ -1839,7 +1839,13 @@ grant select on vw_fuel_export_analytics_base to basic_lcfs_reporting_role;
 
 DROP VIEW IF EXISTS vw_allocation_agreement_duplicate_check CASCADE;
 CREATE OR REPLACE VIEW vw_allocation_agreement_duplicate_check AS
-WITH base_data AS (
+WITH latest_aa AS (
+    SELECT DISTINCT ON (group_uuid) *
+    FROM allocation_agreement
+    WHERE action_type != 'DELETE'
+    ORDER BY group_uuid, version DESC
+),
+base_data AS (
     SELECT
         aa.postal_address,
         LOWER(TRIM(aa.postal_address))     AS address_normalized,
@@ -1849,10 +1855,10 @@ WITH base_data AS (
         o.organization_code                AS organization_code,
         o.name                             AS reporting_organization_name,
         lr.compliance_report_id            AS compliance_report_id
-    FROM allocation_agreement aa
+    FROM latest_aa aa
     JOIN v_compliance_report lr
       ON lr.compliance_report_id = aa.compliance_report_id
-     AND lr.is_latest
+     AND lr.report_status != 'Draft'
     JOIN organization       o  ON o.organization_id       = lr.organization_id
     JOIN compliance_period  cp ON cp.compliance_period_id = lr.compliance_period_id
 ),
@@ -1926,16 +1932,16 @@ WITH base_data AS (
         fse.organization_name,
         LOWER(TRIM(fse.organization_name))  AS organization_name_normalized,
         CONCAT(LOWER(TRIM(fse.street_address)), ', ', LOWER(TRIM(fse.city)), ', ', LOWER(TRIM(fse.postal_code))) AS full_address_normalized,
-        cp.description                      AS compliance_year,
+        vcr.compliance_period               AS compliance_year,
         o.organization_code                 AS organization_code,
         o.name                              AS reporting_organization_name,
-        lr.compliance_report_id             AS compliance_report_id
+        vcr.compliance_report_id            AS compliance_report_id
     FROM final_supply_equipment fse
-    JOIN v_compliance_report lr
-      ON lr.compliance_report_id = fse.compliance_report_id
-     AND lr.is_latest
-    JOIN organization       o  ON o.organization_id       = lr.organization_id
-    JOIN compliance_period  cp ON cp.compliance_period_id = lr.compliance_period_id
+    JOIN v_compliance_report vcr
+      ON vcr.compliance_report_id = fse.compliance_report_id
+     AND vcr.report_status != 'Draft'
+    JOIN organization       o  ON o.organization_id       = vcr.organization_id
+    JOIN compliance_period  cp ON cp.compliance_period_id = vcr.compliance_period_id
 ),
 full_address_duplicates AS (
     SELECT 
