@@ -192,6 +192,7 @@ export const AllocationAgreementChangelog = () => {
                 onPaginationChange={
                   shouldPaginate ? handlePaginationChange(i) : undefined
                 }
+                enablePageCaching={false}
               />
             </Box>
           </Box>

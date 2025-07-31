@@ -9,6 +9,7 @@ from sqlalchemy import (
     Enum,
     Table,
     ForeignKey,
+    Boolean,
 )
 from sqlalchemy.orm import relationship
 
@@ -137,6 +138,12 @@ class ComplianceReport(BaseModel, Auditable):
         String,
         nullable=True,
         comment="Assessment statement for the compliance report",
+    )
+    is_non_assessment = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Flag indicating if report is not subject to assessment under the Low Carbon Fuels Act",
     )
     assigned_analyst_id = Column(
         Integer,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import BCButton from '@/components/BCButton'
 import { useCreateAnalystAdjustment } from '@/hooks/useComplianceReports'
 import { useTranslation } from 'react-i18next'
@@ -9,15 +9,21 @@ import BCModal from '@/components/BCModal.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
 import { Assignment } from '@mui/icons-material'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
-import { Tooltip } from '@mui/material'
+import { Tooltip, FormControlLabel, Checkbox } from '@mui/material'
+import { roles } from '@/constants/roles.js'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useMemo } from 'react'
 
 export const AssessmentRecommendation = ({
   reportData,
   currentStatus,
-  complianceReportId
+  complianceReportId,
+  methods
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
+  const ref = useRef(null)
+  const { hasRoles, data: currentUser } = useCurrentUser()
 
   const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false)
   const [isReassessmentDialogOpen, setIsReassessmentDialogOpen] =
@@ -40,6 +46,14 @@ export const AssessmentRecommendation = ({
         )
       }
     })
+
+  const isGovernmentUser = currentUser?.isGovernmentUser
+  const isAnalyst = hasRoles(roles.analyst)
+
+  // Only allow editing non-assessment checkbox when user is analyst and report is submitted
+  const canEditNonAssessmentStatus = useMemo(() => {
+    return isAnalyst && currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED
+  }, [isAnalyst, currentStatus])
 
   const governmentAdjustmentDialog = (
     <>
@@ -103,6 +117,41 @@ export const AssessmentRecommendation = ({
             </Tooltip>
           </BCTypography>
         )}
+
+      {/* Not subject to assessment section - Only show to IDIR analysts */}
+      {isGovernmentUser && isAnalyst && (
+        <BCBox
+          mt={currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ? 3 : 2}
+        >
+          <BCTypography variant="h6" color="primary" mb={2}>
+            {t('report:notSubjectToAssessment')}
+          </BCTypography>
+          <FormControlLabel
+            control={
+              <Checkbox
+                disabled={!canEditNonAssessmentStatus}
+                checked={methods.watch('isNonAssessment') || false}
+                onChange={(e) => {
+                  methods.setValue('isNonAssessment', e.target.checked)
+                }}
+              />
+            }
+            label={t('report:notSubjectToAssessmentDescription')}
+            sx={{
+              alignItems: 'flex-start',
+              '& .MuiCheckbox-root': {
+                paddingTop: 0,
+                marginTop: '6px'
+              },
+              '& .MuiFormControlLabel-label': {
+                fontSize: '1rem',
+                lineHeight: 1.5
+              }
+            }}
+          />
+        </BCBox>
+      )}
+
       {isFeatureEnabled(FEATURE_FLAGS.GOVERNMENT_ADJUSTMENT) &&
         currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
           <Tooltip

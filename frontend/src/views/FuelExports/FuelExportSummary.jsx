@@ -150,6 +150,7 @@ export const FuelExportSummary = ({ data, status }) => {
               ...newPagination
             }))
           }
+          enablePageCaching={false}
         />
       </BCBox>
     </Grid2>

@@ -74,8 +74,8 @@ class FuelCodeExporter:
         for fuel_code in results[0]:
             data.append(
                 [
-                    fuel_code.fuel_code_status.status.value,
-                    fuel_code.fuel_code_prefix.prefix,
+                    fuel_code.status,
+                    fuel_code.prefix,
                     fuel_code.fuel_suffix,
                     fuel_code.carbon_intensity,
                     fuel_code.edrms,
@@ -86,7 +86,7 @@ class FuelCodeExporter:
                     fuel_code.approval_date,
                     fuel_code.effective_date,
                     fuel_code.expiration_date,
-                    fuel_code.fuel_type.fuel_type,
+                    fuel_code.fuel_type,
                     fuel_code.feedstock,
                     fuel_code.feedstock_location,
                     fuel_code.feedstock_misc,
@@ -94,18 +94,16 @@ class FuelCodeExporter:
                     fuel_code.fuel_production_facility_province_state,
                     fuel_code.fuel_production_facility_country,
                     fuel_code.facility_nameplate_capacity,
+                    fuel_code.facility_nameplate_capacity_unit,
                     (
-                        fuel_code.facility_nameplate_capacity_unit.value
-                        if fuel_code.facility_nameplate_capacity_unit
-                        else None
+                        ", ".join(fuel_code.feedstock_fuel_transport_modes)
+                        if fuel_code.feedstock_fuel_transport_modes
+                        else ""
                     ),
-                    ", ".join(
-                        mode.feedstock_fuel_transport_mode.transport_mode
-                        for mode in fuel_code.feedstock_fuel_transport_modes
-                    ),
-                    ", ".join(
-                        mode.finished_fuel_transport_mode.transport_mode
-                        for mode in fuel_code.finished_fuel_transport_modes
+                    (
+                        ", ".join(fuel_code.finished_fuel_transport_modes)
+                        if fuel_code.finished_fuel_transport_modes
+                        else ""
                     ),
                     fuel_code.former_company,
                     fuel_code.notes,
