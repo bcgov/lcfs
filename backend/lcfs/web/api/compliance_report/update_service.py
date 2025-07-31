@@ -66,7 +66,7 @@ class ComplianceReportUpdateService:
 
         # Ensure that only an analyst can set the is_non_assessment flag
         if report_data.is_non_assessment and not user_has_roles(
-            user, [RoleEnum.ANALYST]
+            user, [RoleEnum.GOVERNMENT]
         ):
             raise HTTPException(
                 status_code=403,
