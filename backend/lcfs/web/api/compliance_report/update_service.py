@@ -64,15 +64,6 @@ class ComplianceReportUpdateService:
         # Get and validate report
         report = await self._check_report_exists(report_id)
 
-        # Ensure that only an analyst can set the is_non_assessment flag
-        if report_data.is_non_assessment and not user_has_roles(
-            user, [RoleEnum.GOVERNMENT]
-        ):
-            raise HTTPException(
-                status_code=403,
-                detail="You do not have permission to set the non-assessment status",
-            )
-
         # Store original status
         current_status = report_data.status
 
