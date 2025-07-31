@@ -191,8 +191,14 @@ class NotificationRepository:
                     field = Organization.name
                 elif order.field == "transaction_id":
                     field = NotificationMessage.related_transaction_id
+                elif order.field == "action":
+                    # Action column is not sortable, skip it
+                    field = None
+                elif order.field == "type":
+                    field = NotificationMessage.type
                 else:
-                    field = getattr(NotificationMessage, order.field)
+                    # Only try to get attribute if it exists on the model
+                    field = getattr(NotificationMessage, order.field, None)
                 if field is not None:
                     order_clauses.append(direction(field))
         query = query.order_by(*order_clauses)
