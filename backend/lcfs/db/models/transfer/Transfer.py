@@ -3,7 +3,7 @@ import enum
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum, String, Numeric
 from sqlalchemy.orm import relationship
 
-from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+from lcfs.db.base import BaseModel, Auditable
 
 
 class TransferRecommendationEnum(enum.Enum):
