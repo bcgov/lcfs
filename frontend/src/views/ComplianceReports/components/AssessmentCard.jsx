@@ -27,7 +27,8 @@ export const AssessmentCard = ({
   currentStatus,
   complianceReportId,
   alertRef,
-  chain
+  chain,
+  setModalData,
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
@@ -60,6 +61,8 @@ export const AssessmentCard = ({
   const { mutate: createSupplementalReport, isLoading } =
     useCreateSupplementalReport(complianceReportId, {
       onSuccess: (data) => {
+        setModalData(null)
+
         // Navigate to the new report's page
         const newReportId = data.data.complianceReportId
         const compliancePeriodYear = data.data.compliancePeriod.description
@@ -73,12 +76,28 @@ export const AssessmentCard = ({
         })
       },
       onError: (error) => {
+        setModalData(null)
+
         alertRef?.current?.triggerAlert({
           message: error.message,
           severity: 'error'
         })
       }
     })
+
+  const handleCreateSupplementalClick = () => {
+    setModalData({
+      primaryButtonAction: () => {
+        createSupplementalReport()
+      },
+      primaryButtonText: t('report:createSupplementalRptBtn'),
+      primaryButtonLoading: isLoading,
+      secondaryButtonText: t('common:cancelBtn'),
+      secondaryButtonAction: () => setModalData(null),
+      title: t('report:createSupplementalRptBtn'),
+      content: t('report:createBceidSupplementalConfirmText'),
+    })
+  }
 
   const filteredChain = useMemo(() => {
     return chain?.filter((report) => report.history && report.history.length > 0)
@@ -190,9 +209,7 @@ export const AssessmentCard = ({
                           size="small"
                           variant="contained"
                           color="primary"
-                          onClick={() => {
-                            createSupplementalReport()
-                          }}
+                          onClick={handleCreateSupplementalClick}
                           startIcon={
                             <Assignment
                               sx={{
