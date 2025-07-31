@@ -1,4 +1,4 @@
-import { FloatingAlert } from '@/components/BCAlert'
+import BCAlert, { FloatingAlert } from '@/components/BCAlert'
 import BCBox from '@/components/BCBox'
 import BCButton from '@/components/BCButton'
 import BCModal from '@/components/BCModal'
@@ -6,7 +6,7 @@ import BCTypography from '@/components/BCTypography'
 import InternalComments from '@/components/InternalComments'
 import Loading from '@/components/Loading'
 import { Role } from '@/components/Role'
-import { govRoles, roles } from '@/constants/roles'
+import { govRoles, nonGovRoles, roles } from '@/constants/roles'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import {
   useDeleteComplianceReport,
@@ -123,6 +123,54 @@ export const EditViewComplianceReport = ({ isError, error }) => {
       hasAnyRole(roles.compliance_reporting, roles.signing_authority)) ||
     (currentStatus === COMPLIANCE_REPORT_STATUSES.ANALYST_ADJUSTMENT &&
       hasRoles(roles.analyst))
+
+  const supplierSupplementalInfo = useMemo(() => {
+    const isSupplementalCreatedBySupplier =
+      reportData?.report?.supplementalInitiator === 'Supplier Supplemental'
+    const isDraftStatus = currentStatus === COMPLIANCE_REPORT_STATUSES.DRAFT
+    if (
+      isGovernmentUser ||
+      !isDraftStatus ||
+      !reportData?.report ||
+      !isSupplementalCreatedBySupplier
+    ) {
+      return {
+        isSupplementalExpiring: false,
+        submissionDeadline: null,
+        daysRemaining: null,
+        warningText: ''
+      }
+    }
+
+    const shouldShowAlert =
+      isSupplementalCreatedBySupplier &&
+      isDraftStatus &&
+      reportData.report.updateDate &&
+      !isGovernmentUser
+
+    let submissionDeadline = null
+    let daysRemaining = null
+    let warningText = ''
+
+    if (shouldShowAlert) {
+      const updateDate = DateTime.fromISO(reportData.report.updateDate)
+      submissionDeadline = updateDate.plus({ days: 30 })
+      daysRemaining = Math.ceil(submissionDeadline.diffNow('days').days)
+      warningText = t('report:supplementalExpiryWarningText', {
+        deadlineDate: submissionDeadline.toLocaleString(DateTime.DATE_FULL),
+        daysRemaining: daysRemaining,
+        s: daysRemaining !== 1 ? 's' : ''
+      })
+      console.log(warningText)
+    }
+
+    return {
+      isSupplementalExpiring: shouldShowAlert,
+      submissionDeadline,
+      daysRemaining,
+      warningText
+    }
+  }, [reportData, currentStatus, isGovernmentUser])
 
   const { data: orgData, isLoading } = useOrganization(
     reportData?.report?.organizationId,
@@ -580,6 +628,21 @@ export const EditViewComplianceReport = ({ isError, error }) => {
           onClose={() => setModalData(null)}
           data={modalData}
         />
+        {supplierSupplementalInfo?.isSupplementalExpiring && (
+          <BCAlert
+            data-test="supplier-supplemental-alert"
+            severity={
+              supplierSupplementalInfo?.daysRemaining < 0 ? 'error' : 'warning'
+            }
+            noFade={true}
+            dismissible={true}
+            sx={{ mt: 1, mb: 2 }}
+          >
+            <BCTypography variant="body2">
+              {supplierSupplementalInfo?.warningText || ''}
+            </BCTypography>
+          </BCAlert>
+        )}
         <BCBox pb={2}>
           <BCTypography
             data-test="compliance-report-header"
@@ -620,6 +683,7 @@ export const EditViewComplianceReport = ({ isError, error }) => {
               alertRef={alertRef}
               hasSupplemental={reportData?.report?.hasSupplemental}
               chain={reportData?.chain}
+              setModalData={setModalData}
             />
           </Stack>
           <ReportDetails
