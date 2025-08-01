@@ -33,6 +33,7 @@ export const apiRoutes = {
 
   // Credit‑ledger
   creditLedger: '/credit-ledger/organization/:orgID',
+  creditLedgerYears: '/credit-ledger/organization/:orgID/years',
   exportCreditLedger: '/credit-ledger/organization/:orgID/export',
 
   // organizations
