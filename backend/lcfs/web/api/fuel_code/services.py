@@ -342,7 +342,7 @@ class FuelCodeServices:
         elif (
             previous_status == FuelCodeStatusEnum.Recommended
             and status == FuelCodeStatusEnumSchema.Draft
-            and user.role_names and RoleEnum.DIRECTOR.name in user.role_names
+            and user.role_names and RoleEnum.DIRECTOR.value in user.role_names
         ):
             # Recommended → Draft: notify Analyst (returned by Director)
             # Only send this notification if it's actually a Director making the change
