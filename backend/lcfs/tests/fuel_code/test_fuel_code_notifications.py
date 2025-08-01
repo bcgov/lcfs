@@ -44,7 +44,7 @@ def mock_director_user():
     user.last_name = "Director"
     user.email = "test.director@gov.bc.ca"
     user.is_active = True
-    user.role_names = [RoleEnum.DIRECTOR.name]
+    user.role_names = [RoleEnum.DIRECTOR.value]
     return user
 
 
