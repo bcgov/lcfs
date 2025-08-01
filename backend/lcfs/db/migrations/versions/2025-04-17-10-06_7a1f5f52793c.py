@@ -162,7 +162,15 @@ def upgrade() -> None:
         RETURNS TRIGGER AS $$
         BEGIN
             REFRESH MATERIALIZED VIEW CONCURRENTLY mv_transaction_aggregate;
-            REFRESH MATERIALIZED VIEW CONCURRENTLY mv_credit_ledger;
+            -- Check if mv_credit_ledger exists before refreshing
+            IF EXISTS (
+                SELECT 1 FROM information_schema.tables 
+                WHERE table_schema = 'public' 
+                AND table_name = 'mv_credit_ledger' 
+                AND table_type = 'VIEW'
+            ) THEN
+                REFRESH MATERIALIZED VIEW CONCURRENTLY mv_credit_ledger;
+            END IF;
             RETURN NULL;
         END;
         $$ LANGUAGE plpgsql;
