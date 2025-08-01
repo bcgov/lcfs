@@ -424,16 +424,6 @@ export const CreditMarketDetailsCard = () => {
       />
       </BCBox>
 
-      {/* Credit Trading Market Section - Full Width */}
-      <BCBox mt={4}>
-        <BCTypography variant="h4" mb={2} sx={{ color: 'primary.main' }}>
-          {t('creditMarket:marketHeading')}
-        </BCTypography>
-        
-        <BCTypography variant="body2" color="text.secondary" mb={3}>
-          {t('creditMarket:marketDisclaimer')}
-        </BCTypography>
-      </BCBox>
     </BCBox>
   )
 }

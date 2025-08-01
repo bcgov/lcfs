@@ -76,7 +76,15 @@ export const CreditMarketTable = () => {
 
   return (
     <Box>
-      <Box component="div" sx={{ height: '100%', width: '100%' }}>
+      <Box 
+        component="div" 
+        sx={{ 
+          height: '100%', 
+          width: '100%',
+          overflowX: 'auto',
+          minWidth: '800px' // Ensure minimum width for proper table display
+        }}
+      >
         <BCGridViewer
           gridRef={gridRef}
           gridKey="credit-market-grid"

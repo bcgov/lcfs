@@ -287,7 +287,7 @@ export const Transactions = () => {
     ORGANIZATION_STATUSES.REGISTERED
   const creditTradingEnabled = organizationData?.creditTradingEnabled || false
   const showCreditTradingTab =
-    isBCeIDUser && isRegistered && creditTradingEnabled
+    hasRoles(roles.government) || (isBCeIDUser && isRegistered && creditTradingEnabled)
 
   // Build tabs array
   const tabs = [
@@ -405,8 +405,8 @@ export const Transactions = () => {
       label: t('txn:creditTradingMarketTab', 'Credit Trading Market'),
       content: (
         <>
-          <CreditMarketDetailsCard />
-          <BCBox mt={3}>
+          {!hasRoles(roles.government) && <CreditMarketDetailsCard />}
+          <BCBox mt={!hasRoles(roles.government) ? 3 : 0}>
             <CreditTradingMarket />
           </BCBox>
         </>
