@@ -189,12 +189,11 @@ describe('CreditMarketDetailsCard', () => {
     expect(screen.getByText(/must be registered for transfers/i)).toBeInTheDocument()
   })
 
-  it('displays market section heading and disclaimer', () => {
+  it('displays card title heading', () => {
     render(<CreditMarketDetailsCard />, { wrapper })
 
-    // Look for the h4 heading specifically (not the other instances of the text)
-    expect(screen.getByRole('heading', { level: 4 })).toBeInTheDocument()
-    // The bottom section may not be rendered in test - just check for the heading
+    // Check for the card title heading
+    expect(screen.getByRole('heading', { name: 'Credit Trading Market Details' })).toBeInTheDocument()
   })
 
   it('handles missing organization data gracefully', () => {
