@@ -1,8 +1,8 @@
 import structlog
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import Depends
-from sqlalchemy import func, select, and_, desc, asc
+from sqlalchemy import func, select, and_, desc, asc, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
@@ -26,9 +26,9 @@ class CreditLedgerRepository:
         *,
         offset: int,
         limit: Optional[int],
-        conditions: list,
-        sort_orders: list,
-    ):
+        conditions: List[any],
+        sort_orders: List[any],
+    ) -> tuple[List[CreditLedgerView], int]:
         # Base query
         stmt = select(CreditLedgerView).where(and_(*conditions))
 
@@ -47,3 +47,24 @@ class CreditLedgerRepository:
 
         rows = (await self.db.execute(stmt)).scalars().all()
         return rows, total or 0
+
+    @repo_handler
+    async def get_distinct_years(
+        self,
+        *,
+        organization_id: int,
+    ) -> List[str]:
+        """
+        Get distinct compliance years that have data for the organization.
+        Returns years sorted in descending order.
+        """
+        stmt = (
+            select(distinct(CreditLedgerView.compliance_period))
+            .where(CreditLedgerView.organization_id == organization_id)
+            .where(CreditLedgerView.compliance_period.isnot(None))
+            .order_by(desc(CreditLedgerView.compliance_period))
+        )
+        
+        result = await self.db.execute(stmt)
+        years = result.scalars().all()
+        return [str(year) for year in years if year]

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 import structlog
 from fastapi import APIRouter, Depends, status, Request, Body, Query, Path
@@ -38,6 +38,27 @@ async def get_credit_ledger(
         organization_id=organization_id,
         pagination=pagination,
     )
+
+
+@router.get(
+    "/organization/{organization_id}/years",
+    response_model=List[str],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER, RoleEnum.GOVERNMENT])
+async def get_organization_ledger_years(
+    request: Request,
+    organization_id: int = Path(..., ge=1),
+    service: CreditLedgerService = Depends(),
+    validate: CreditLedgerValidation = Depends(),
+):
+    """
+    Get distinct compliance years with ledger data for an organization.
+    """
+    # ensure user may only fetch their own org
+    await validate.validate_organization_access(organization_id)
+
+    return await service.get_organization_years(organization_id=organization_id)
 
 
 @router.get(
