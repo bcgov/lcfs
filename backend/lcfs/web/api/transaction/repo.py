@@ -497,18 +497,6 @@ class TransactionRepository:
         )
 
         # 6. Future debits (negative transactions after the compliance period end)
-        # This includes future transfers out and other future negative transactions
-        future_transfer_debits = await self.db.scalar(
-            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
-                and_(
-                    Transfer.from_organization_id == organization_id,
-                    Transfer.current_status_id == 6,  # Recorded status
-                    Transfer.transaction_effective_date
-                    > compliance_period_end_local.date(),
-                )
-            )
-        )
-
         # Future negative adjustments and other transactions
         future_negative_transactions = await self.db.scalar(
             select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
@@ -528,7 +516,6 @@ class TransactionRepository:
             - (transfer_sales or 0)
             + (initiative_agreements or 0)
             + (admin_adjustments or 0)
-            - (future_transfer_debits or 0)
             - abs(future_negative_transactions or 0)
         )
 
