@@ -125,12 +125,8 @@ async def seed_organization_attorney_addresses(session):
             # Check if the Organization already exists based on organization_attorney_address_id
             exists = await session.execute(
                 select(OrganizationAttorneyAddress).where(
-                    OrganizationAttorneyAddress.name
-                    == organization_attorney_address_data["name"],
-                    OrganizationAttorneyAddress.street_address
-                    == organization_attorney_address_data["street_address"],
-                    OrganizationAttorneyAddress.address_other
-                    == organization_attorney_address_data["address_other"],
+                    OrganizationAttorneyAddress.organization_attorney_address_id
+                    == organization_attorney_address_data["organization_attorney_address_id"]
                 )
             )
             if not exists.scalars().first():

@@ -187,7 +187,9 @@ describe('OrganizationView Component Tests', () => {
   it('shows no for early issuance if user is government', () => {
     setupRoleTest(roles.government, true)
     expect(screen.getByText(/Early issuance reporting/i)).toBeInTheDocument()
-    expect(screen.getByText(/No/i)).toBeInTheDocument()
+    // Get all "No" texts and verify there are 2 (for credit market and early issuance)
+    const noTexts = screen.getAllByText(/^No$/i)
+    expect(noTexts).toHaveLength(2)
   })
 
   it('has a functioning clear filters button', () => {
@@ -219,34 +221,34 @@ describe('OrganizationView Component Tests', () => {
   describe('Credit Ledger Tab Tests', () => {
     it('shows credit ledger tab for IDIR government users', () => {
       setupRoleTest(roles.government, true)
-      
+
       // Check that credit ledger tab is present for government users
       expect(screen.getByText(/Credit ledger/i)).toBeInTheDocument()
     })
 
     it('shows credit ledger tab for BCeID supplier users', () => {
       setupRoleTest(roles.supplier, false) // false means not government role
-      
-      // Check that credit ledger tab is present for suppliers too  
+
+      // Check that credit ledger tab is present for suppliers too
       expect(screen.getByText(/Credit ledger/i)).toBeInTheDocument()
     })
 
     it('credit ledger tab shows the component when clicked for IDIR users', () => {
       setupRoleTest(roles.government, true)
-      
+
       // Click on the credit ledger tab to activate it
       fireEvent.click(screen.getByText(/Credit ledger/i))
-      
+
       // Check that credit ledger component text appears
       expect(screen.getByText('Credit Ledger Component')).toBeInTheDocument()
     })
 
     it('credit ledger component receives correct organizationId prop', () => {
       setupRoleTest(roles.government, true)
-      
+
       // Click on the credit ledger tab to activate it
       fireEvent.click(screen.getByText(/Credit ledger/i))
-      
+
       // Check that the CreditLedger component receives the orgID from useParams (123)
       expect(screen.getByText('Credit Ledger Component')).toBeInTheDocument()
       // The mock component shows data-organization-id="123" in the DOM

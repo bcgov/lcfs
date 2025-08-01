@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Numeric
+from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, BigInteger
 from sqlalchemy.orm import relationship
 
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder, Versioning
@@ -32,32 +32,32 @@ class AllocationAgreement(BaseModel, Auditable, Versioning, DisplayOrder):
         Numeric(10, 2), nullable=True, comment="The Carbon intensity of fuel"
     )
     quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel involved in the transaction",
     )
     q1_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel involved in Q1 (early issuance only)",
     )
     q2_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel involved in Q2 (early issuance only)",
     )
     q3_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel involved in Q3 (early issuance only)",
     )
     q4_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel involved in Q4 (early issuance only)",
     )
     quantity_not_sold = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity not sold or supplied within the compliance period",
         default=0,
