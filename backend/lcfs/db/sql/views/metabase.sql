@@ -146,7 +146,7 @@ CREATE OR REPLACE VIEW vw_transfer_base AS
 SELECT
     transfer.transfer_id,
     transfer_status.status,
-    coalesce(transfer.transaction_effective_date, transfer_history.create_date) "Calculated Effective Date",
+    coalesce(transfer.transaction_effective_date, transfer_history.update_date) "Calculated Effective Date",
     from_organization.name AS from_organization,
     to_organization.name AS to_organization,
     price_per_unit,

@@ -31,7 +31,7 @@ def upgrade() -> None:
     op.execute(
         """
         UPDATE transfer t
-        SET transaction_effective_date = COALESCE(t.effective_date, th.create_date)
+        SET transaction_effective_date = COALESCE(t.effective_date, th.update_date)
         FROM transfer_history th
         WHERE t.transfer_id = th.transfer_id 
         AND t.current_status_id = th.transfer_status_id
@@ -113,16 +113,4 @@ def downgrade() -> None:
             nullable=True,
             comment="The calendar date the value is no longer valid.",
         ),
-    )
-    # since timestamp is used during the upgrade, there's a high chance that we would only pick records that were updated during the upgrade
-    op.execute(
-        """
-        UPDATE transfer t
-        SET transaction_effective_date = NULL
-        FROM transfer_history th
-        WHERE t.transfer_id = th.transfer_id 
-        AND t.current_status_id = th.transfer_status_id
-        AND t.transaction_effective_date = th.create_date
-        AND t.current_status_id = 6;
-    """
     )
