@@ -1,7 +1,7 @@
 """big int for quantities
 
 Revision ID: 1c0b3bed4671
-Revises: b1c2d3e4f5g6
+Revises: 4f3c2a5b7d8e
 Create Date: 2025-07-25 14:31:49.034570
 
 """
@@ -17,7 +17,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "1c0b3bed4671"
-down_revision = "b1c2d3e4f5g6"
+down_revision = "4f3c2a5b7d8e"
 branch_labels = None
 depends_on = None
 
