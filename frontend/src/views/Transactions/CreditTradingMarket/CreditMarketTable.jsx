@@ -27,15 +27,14 @@ export const CreditMarketTable = () => {
   // Fetch real credit market listings
   const { data: creditMarketData, isLoading, isError, error } = useCreditMarketListings()
 
-  // Transform and sort data - exclude current user's organization
+  // Transform and sort data - show current user's organization at top
   const sortedData = useCallback(() => {
     if (!creditMarketData) return []
     
     const userOrgId = currentUser?.organization?.organizationId
     
-    // Transform API data to match frontend schema and exclude current user's org
+    // Transform API data to match frontend schema (no longer exclude current user's org)
     const transformedData = creditMarketData
-      .filter(org => org.organizationId !== userOrgId) // Exclude current user's organization
       .map(org => ({
         id: org.organizationId,
         organizationName: org.organizationName,
@@ -48,8 +47,16 @@ export const CreditMarketTable = () => {
         phone: org.creditMarketContactPhone
       }))
 
-    // Sort alphabetically
-    transformedData.sort((a, b) => a.organizationName.localeCompare(b.organizationName))
+    // Sort with current user's organization at top, then alphabetically
+    transformedData.sort((a, b) => {
+      // If user has an organization, put it at the top
+      if (userOrgId) {
+        if (a.id === userOrgId) return -1 // a is user's org, put it first
+        if (b.id === userOrgId) return 1  // b is user's org, put it first
+      }
+      // Otherwise, sort alphabetically
+      return a.organizationName.localeCompare(b.organizationName)
+    })
 
     return transformedData
   }, [creditMarketData, currentUser?.organization?.organizationId])

@@ -96,18 +96,19 @@ describe('CreditMarketTable', () => {
     await waitFor(() => {
       expect(screen.getByTestId('bc-grid-viewer')).toBeInTheDocument()
       expect(screen.getByTestId('column-count')).toHaveTextContent('6') // 6 columns expected
-      expect(screen.getByTestId('row-count')).toHaveTextContent('2') // Should exclude current user org
+      expect(screen.getByTestId('row-count')).toHaveTextContent('3') // Should include current user org
     })
   })
 
-  it('excludes current user organization from display', async () => {
+  it('shows current user organization at the top of the list', async () => {
     render(<CreditMarketTable />, { wrapper })
 
     await waitFor(() => {
-      // Current user org (organizationId: 1) should not be displayed
-      expect(screen.queryByTestId('row-data-1')).not.toBeInTheDocument()
+      // Current user org (organizationId: 1) should be displayed at the top
+      expect(screen.getByTestId('row-data-1')).toBeInTheDocument()
+      expect(screen.getByTestId('row-data-1')).toHaveTextContent('Current User Org')
       
-      // Other organizations should be displayed
+      // Other organizations should be displayed after
       expect(screen.getByTestId('row-data-2')).toBeInTheDocument()
       expect(screen.getByTestId('row-data-3')).toBeInTheDocument()
     })
@@ -119,7 +120,7 @@ describe('CreditMarketTable', () => {
     await waitFor(() => {
       expect(screen.getByText('Acme Corporation')).toBeInTheDocument()
       expect(screen.getByText('Beta Industries')).toBeInTheDocument()
-      expect(screen.queryByText('Current User Org')).not.toBeInTheDocument()
+      expect(screen.getByText('Current User Org')).toBeInTheDocument()
     })
   })
 
@@ -162,7 +163,7 @@ describe('CreditMarketTable', () => {
     expect(screen.getByTestId('grid-no-rows')).toHaveTextContent('No credit market listings found')
   })
 
-  it('shows no data message when only current user organization exists', () => {
+  it('shows current user organization when only it exists', async () => {
     vi.mocked(useCreditMarketListings).mockReturnValue({ 
       data: [mockCreditMarketData[0]], // Only current user org
       isLoading: false, 
@@ -172,7 +173,10 @@ describe('CreditMarketTable', () => {
 
     render(<CreditMarketTable />, { wrapper })
 
-    expect(screen.getByTestId('grid-no-rows')).toHaveTextContent('No credit market listings found')
+    await waitFor(() => {
+      expect(screen.getByTestId('row-count')).toHaveTextContent('1')
+      expect(screen.getByTestId('row-data-1')).toHaveTextContent('Current User Org')
+    })
   })
 
   it('configures grid as read-only', async () => {
