@@ -84,6 +84,12 @@ const colors = {
     main: '#000000',
     focus: '#000000'
   },
+
+  glacier: {
+    main: '#cff4fc',
+    focus: '#89dff5'
+  },
+
   // Links
   link: {
     main: '#1a5a96',

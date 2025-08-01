@@ -35,6 +35,35 @@ export const organizationsColDefs = (t) => [
     flex: 1
   },
   {
+    colId: 'registrationStatus',
+    field: 'registrationStatus',
+    headerName: t('org:orgColLabels.registrationStatus'),
+    width: 200,
+    valueGetter: (params) => params.data.orgStatus.status === 'Registered',
+    cellRenderer: YesNoTextRenderer,
+    cellClass: 'vertical-middle',
+    filter: true,
+    sortable: true,
+    filterParams: {
+      textMatcher: () => {
+        return true
+      }
+    },
+    floatingFilterComponent: BCSelectFloatingFilter,
+    floatingFilterComponentParams: {
+      valueKey: 'value',
+      labelKey: 'label',
+      optionsQuery: () => ({
+        data: [
+          { value: true, label: 'Yes' },
+          { value: false, label: 'No' }
+        ],
+        isLoading: false
+      })
+    },
+    suppressFloatingFilterButton: true
+  },
+  {
     colId: 'hasEarlyIssuance',
     field: 'hasEarlyIssuance',
     headerName: t('org:orgColLabels.earlyIssuance'),

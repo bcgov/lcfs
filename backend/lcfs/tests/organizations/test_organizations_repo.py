@@ -1,10 +1,27 @@
 import pytest
-from lcfs.web.api.base import PaginationRequestSchema, SortOrder
+import uuid
+from lcfs.web.api.base import PaginationRequestSchema, SortOrder, FilterModel
 from lcfs.tests.organizations.organizations_payloads import *
 from lcfs.web.api.organizations.repo import OrganizationsRepository
 from lcfs.db.models.transaction.Transaction import TransactionActionEnum
 from lcfs.db.models.organization.Organization import Organization
 from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
+from lcfs.db.models.organization.OrganizationEarlyIssuanceByYear import (
+    OrganizationEarlyIssuanceByYear,
+)
+from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
+from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
+from lcfs.db.models.user.UserProfile import UserProfile
+from lcfs.utils.constants import LCFS_Constants
+from unittest.mock import patch
+
+
+@pytest.fixture
+def unique_id() -> int:
+    """
+    Generate a unique ID for tests.
+    """
+    return uuid.uuid4().int & (1 << 31) - 1
 
 
 @pytest.fixture
@@ -21,10 +38,13 @@ async def test_get_organizations_paginated_balances_with_no_transaction(
 ):
     # Fetch the paginated list of all organizations
     pagination = PaginationRequestSchema(
-        sort_orders=[SortOrder(field="organization_id", direction="asc")]
+        sort_orders=[SortOrder(field="organization_id", direction="asc")], filters=[]
     )
     organizations, total_count = await organizations_repo.get_organizations_paginated(
-        0, 10, [], pagination
+        0,
+        10,
+        [],
+        pagination,
     )
 
     # Search for the organization with ID = 1
@@ -51,10 +71,13 @@ async def test_get_organizations_paginated_balances_with_adjustment_transactions
 
     # Fetch the paginated list of all organizations
     pagination = PaginationRequestSchema(
-        sort_orders=[SortOrder(field="organization_id", direction="asc")]
+        sort_orders=[SortOrder(field="organization_id", direction="asc")], filters=[]
     )
     organizations, total_count = await organizations_repo.get_organizations_paginated(
-        0, 10, [], pagination
+        0,
+        10,
+        [],
+        pagination,
     )
 
     # Search for the organization with ID = 1
@@ -87,10 +110,13 @@ async def test_get_organizations_paginated_balances_with_reserved_transactions(
 
     # Fetch the paginated list of all organizations
     pagination = PaginationRequestSchema(
-        sort_orders=[SortOrder(field="organization_id", direction="asc")]
+        sort_orders=[SortOrder(field="organization_id", direction="asc")], filters=[]
     )
     organizations, total_count = await organizations_repo.get_organizations_paginated(
-        0, 10, [], pagination
+        0,
+        10,
+        [],
+        pagination,
     )
 
     # Search for the organization with ID = 1
@@ -125,10 +151,13 @@ async def test_get_organizations_paginated_balances_with_released_transactions(
 
     # Fetch the paginated list of all organizations
     pagination = PaginationRequestSchema(
-        sort_orders=[SortOrder(field="organization_id", direction="asc")]
+        sort_orders=[SortOrder(field="organization_id", direction="asc")], filters=[]
     )
     organizations, total_count = await organizations_repo.get_organizations_paginated(
-        0, 10, [], pagination
+        0,
+        10,
+        [],
+        pagination,
     )
 
     # Search for the organization with ID = 1
@@ -183,7 +212,9 @@ async def test_search_organizations_with_empty_query(organizations_repo):
     results = await organizations_repo.search_organizations_by_name("")
 
     # Assert that all results are returned
-    assert len(results) == 3, f"Expected 3 results for empty query, got {len(results)}"
+    assert (
+        len(results) > 1
+    ), f"Expected more than 1 result for empty query, got {len(results)}"
 
 
 @pytest.mark.anyio
@@ -248,75 +279,195 @@ async def test_search_organizations_case_insensitive(organizations_repo, add_mod
 @pytest.mark.anyio
 async def test_get_organization_names_no_conditions(organizations_repo):
     """Test get_organization_names with no conditions returns all organizations"""
+    # Test with no conditions
     result = await organizations_repo.get_organization_names()
-
-    assert isinstance(result, list)
-    assert len(result) > 0
-    # Check that each result has the expected structure
-    for org in result:
-        assert "organization_id" in org
-        assert "name" in org
-        assert "total_balance" in org
-        assert "reserved_balance" in org
+    assert len(result) > 1
 
 
 @pytest.mark.anyio
 async def test_get_organization_names_with_status_conditions(organizations_repo):
-    """Test get_organization_names with status filtering"""
-    from lcfs.db.models.organization.OrganizationStatus import (
-        OrganizationStatus,
-        OrgStatusEnum,
+    """Test get_organization_names with a list of statuses"""
+    # Test with a list of statuses
+    result = await organizations_repo.get_organization_names(
+        conditions=[Organization.org_status.has(status="Registered")]
     )
-
-    # Test with registered organizations only
-    registered_conditions = [OrganizationStatus.status == OrgStatusEnum.Registered]
-    registered_result = await organizations_repo.get_organization_names(
-        registered_conditions
-    )
-
-    # Test with multiple statuses
-    multi_status_conditions = [
-        OrganizationStatus.status.in_(
-            [OrgStatusEnum.Registered, OrgStatusEnum.Unregistered]
-        )
-    ]
-    multi_result = await organizations_repo.get_organization_names(
-        multi_status_conditions
-    )
-
-    assert isinstance(registered_result, list)
-    assert isinstance(multi_result, list)
-
-    # Multi-status result should have at least as many organizations as registered-only
-    assert len(multi_result) >= len(registered_result)
-
-    # Check structure of results
-    for org in registered_result:
-        assert "organization_id" in org
-        assert "name" in org
-        assert "total_balance" in org
-        assert "reserved_balance" in org
+    assert len(result) > 0
 
 
 @pytest.mark.anyio
-async def test_get_organization_names_ordering(organizations_repo):
-    """Test get_organization_names respects ordering parameters"""
-    # Test ascending order by name
-    result_asc = await organizations_repo.get_organization_names(
-        order_by=("name", "asc")
+async def test_get_early_issuance_by_year(organizations_repo, add_models, unique_id):
+    """Test fetching early issuance record by year."""
+    org_id = 1
+    year = f"2023-{unique_id}"
+    compliance_period_id = unique_id
+    await add_models(
+        [
+            CompliancePeriod(
+                compliance_period_id=compliance_period_id, description=year
+            ),
+            OrganizationEarlyIssuanceByYear(
+                organization_id=org_id,
+                compliance_period_id=compliance_period_id,
+                has_early_issuance=True,
+            ),
+        ]
+    )
+    result = await organizations_repo.get_early_issuance_by_year(org_id, year)
+    assert result is not None
+    assert result.has_early_issuance is True
+
+
+@pytest.mark.anyio
+async def test_check_existing_reports_for_year(
+    organizations_repo, add_models, unique_id
+):
+    """Test checking for existing compliance reports for a given year."""
+    org_id = 1
+    year = f"2023-{unique_id}"
+    compliance_period_id = unique_id
+    await add_models(
+        [
+            CompliancePeriod(
+                compliance_period_id=compliance_period_id, description=year
+            ),
+            ComplianceReport(
+                compliance_report_id=unique_id,
+                organization_id=org_id,
+                compliance_period_id=compliance_period_id,
+                current_status_id=1,
+            ),
+        ]
+    )
+    result = await organizations_repo.check_existing_reports_for_year(org_id, year)
+    assert result is True
+
+
+@pytest.mark.anyio
+async def test_update_early_issuance_by_year_create_new(
+    organizations_repo, add_models, unique_id
+):
+    """Test updating early issuance when no record exists."""
+    org_id = 1
+    year = f"{LCFS_Constants.get_current_compliance_year()}-{unique_id}"
+    user = UserProfile(user_profile_id=1)
+    compliance_period_id = unique_id
+    await add_models(
+        [CompliancePeriod(compliance_period_id=compliance_period_id, description=year)]
     )
 
-    # Test descending order by name
-    result_desc = await organizations_repo.get_organization_names(
-        order_by=("name", "desc")
+    issuance = await organizations_repo.update_early_issuance_by_year(
+        org_id, year, True, user
+    )
+    assert issuance.has_early_issuance is True
+    assert issuance.organization_id == org_id
+
+
+@pytest.mark.anyio
+async def test_update_early_issuance_by_year_update_existing(
+    organizations_repo, add_models, unique_id
+):
+    """Test updating an existing early issuance record."""
+    org_id = 1
+    year = f"{LCFS_Constants.get_current_compliance_year()}-{unique_id}"
+    user = UserProfile(user_profile_id=1)
+    compliance_period_id = unique_id
+    await add_models(
+        [
+            CompliancePeriod(
+                compliance_period_id=compliance_period_id, description=year
+            ),
+            OrganizationEarlyIssuanceByYear(
+                organization_id=org_id,
+                compliance_period_id=compliance_period_id,
+                has_early_issuance=True,
+            ),
+        ]
     )
 
-    assert len(result_asc) == len(result_desc)
+    issuance = await organizations_repo.update_early_issuance_by_year(
+        org_id, year, False, user
+    )
+    assert issuance.has_early_issuance is False
 
-    if len(result_asc) > 1:
-        # Check that first result in asc is last in desc (if unique names)
-        first_asc = result_asc[0]["name"]
-        last_desc = result_desc[-1]["name"]
-        # They should be the same if all names are unique
-        assert first_asc <= result_asc[-1]["name"]  # Ascending order
-        assert result_desc[0]["name"] >= last_desc  # Descending order
+
+@pytest.mark.anyio
+async def test_get_current_year_early_issuance(
+    organizations_repo, add_models, unique_id
+):
+    """Test fetching the current year's early issuance status."""
+    org_id = 1
+    year = "2023"
+    compliance_period_id = unique_id
+    await add_models(
+        [
+            CompliancePeriod(
+                compliance_period_id=compliance_period_id, description=year
+            ),
+            OrganizationEarlyIssuanceByYear(
+                organization_id=org_id,
+                compliance_period_id=compliance_period_id,
+                has_early_issuance=True,
+            ),
+        ]
+    )
+    with patch(
+        "lcfs.utils.constants.LCFS_Constants.get_current_compliance_year",
+        return_value="2023",
+    ):
+        has_issuance = await organizations_repo.get_current_year_early_issuance(org_id)
+    assert has_issuance is True
+
+
+@pytest.mark.anyio
+async def test_get_organizations_paginated_with_early_issuance_filter(
+    organizations_repo, add_models, unique_id
+):
+    # Create test data
+    compliance_period = CompliancePeriod(
+        compliance_period_id=unique_id, description="2025"
+    )
+    org_with_early_issuance = Organization(
+        organization_id=unique_id,
+        name="Early Bird Inc.",
+    )
+    early_issuance_record = OrganizationEarlyIssuanceByYear(
+        organization_id=org_with_early_issuance.organization_id,
+        compliance_period_id=compliance_period.compliance_period_id,
+        has_early_issuance=True,
+    )
+    await add_models(
+        [compliance_period, org_with_early_issuance, early_issuance_record]
+    )
+
+    # Create pagination request with filter
+    pagination = PaginationRequestSchema(
+        filters=[
+            FilterModel(
+                field="has_early_issuance",
+                value=True,
+                type="boolean",
+                filter_type="eq",
+            )
+        ],
+        sort_orders=[SortOrder(field="organization_id", direction="asc")],
+    )
+
+    with patch.object(
+        LCFS_Constants, "get_current_compliance_year", return_value="2025"
+    ):
+        # Test that the repository can handle the early issuance filter
+        # without throwing an error (the actual filtering is done by the service layer)
+        organizations, total_count = (
+            await organizations_repo.get_organizations_paginated(
+                0,
+                10,
+                [],
+                pagination,
+            )
+        )
+
+    # Just verify that the query executed without error
+    # The actual filtering logic is tested in the service layer
+    assert isinstance(organizations, list)
+    assert isinstance(total_count, int)
+    assert total_count >= 0

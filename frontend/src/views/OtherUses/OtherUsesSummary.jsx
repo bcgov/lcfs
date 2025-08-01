@@ -132,6 +132,7 @@ export const OtherUsesSummary = ({ data, status }) => {
               ...newPagination
             }))
           }
+          enablePageCaching={false}
         />
       </BCBox>
     </Grid2>

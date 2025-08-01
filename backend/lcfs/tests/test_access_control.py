@@ -21,7 +21,7 @@ async def test_endpoint_success(
 async def test_endpoint_access_denied(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ) -> None:
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
     url = fastapi_app.url_path_for("get_organizations")
     pagination = {"page": 1, "size": 10, "filters": [], "sortOrders": []}
     response = await client.post(url, json=pagination)

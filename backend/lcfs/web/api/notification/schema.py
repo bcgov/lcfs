@@ -6,8 +6,9 @@ from lcfs.db.models.initiative_agreement.InitiativeAgreementStatus import (
     InitiativeAgreementStatusEnum,
 )
 from lcfs.db.models.transfer.TransferStatus import TransferStatusEnum
+from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.web.api.base import BaseSchema, NotificationTypeEnum, PaginationResponseSchema
-from pydantic import computed_field, model_validator
+from pydantic import computed_field
 
 
 class NotificationOrganizationSchema(BaseSchema):
@@ -163,5 +164,14 @@ INITIATIVE_AGREEMENT_STATUS_NOTIFICATION_MAPPER = {
     ],
     "Return to analyst": [
         NotificationTypeEnum.IDIR_ANALYST__INITIATIVE_AGREEMENT__RETURNED_TO_ANALYST
+    ],
+}
+
+FUEL_CODE_STATUS_NOTIFICATION_MAPPER = {
+    FuelCodeStatusEnum.Recommended: [
+        NotificationTypeEnum.IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION
+    ],
+    FuelCodeStatusEnum.Approved: [
+        NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL
     ],
 }

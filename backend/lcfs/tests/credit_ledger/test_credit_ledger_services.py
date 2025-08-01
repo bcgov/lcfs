@@ -14,6 +14,7 @@ from lcfs.web.api.credit_ledger.services import CreditLedgerService
 def mock_repo():
     repo = MagicMock()
     repo.get_rows_paginated = AsyncMock(return_value=([], 0))
+    repo.get_distinct_years = AsyncMock(return_value=[])
     return repo
 
 
@@ -66,3 +67,28 @@ async def test_export_transactions_generates_stream(credit_ledger_service, mock_
         assert isinstance(resp, StreamingResponse)
         assert resp.media_type == "text/csv"
         assert resp.headers["Content-Disposition"].startswith("attachment;")
+
+
+@pytest.mark.anyio
+async def test_get_organization_years_success(credit_ledger_service, mock_repo):
+    """Test getting organization years returns years from repo."""
+    expected_years = ["2024", "2023", "2022"]
+    mock_repo.get_distinct_years.return_value = expected_years
+    
+    organization_id = 123
+    years = await credit_ledger_service.get_organization_years(organization_id=organization_id)
+    
+    assert years == expected_years
+    mock_repo.get_distinct_years.assert_called_once_with(organization_id=organization_id)
+
+
+@pytest.mark.anyio
+async def test_get_organization_years_empty_list(credit_ledger_service, mock_repo):
+    """Test getting organization years returns empty list when no data."""
+    mock_repo.get_distinct_years.return_value = []
+    
+    organization_id = 456
+    years = await credit_ledger_service.get_organization_years(organization_id=organization_id)
+    
+    assert years == []
+    mock_repo.get_distinct_years.assert_called_once_with(organization_id=organization_id)

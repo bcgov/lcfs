@@ -33,6 +33,7 @@ export const apiRoutes = {
 
   // Credit‑ledger
   creditLedger: '/credit-ledger/organization/:orgID',
+  creditLedgerYears: '/credit-ledger/organization/:orgID/years',
   exportCreditLedger: '/credit-ledger/organization/:orgID/export',
 
   // organizations
@@ -60,8 +61,8 @@ export const apiRoutes = {
 
   // fuel-codes
   getFuelCode: '/fuel-codes/:fuelCodeId',
+  updateFuelCodeStatus: '/fuel-codes/:fuelCodeId',
   saveFuelCode: '/fuel-codes',
-  approveFuelCode: '/fuel-codes/:fuelCodeId/approve',
   deleteFuelCode: '/fuel-codes/:fuelCodeId',
   fuelCodeOptions: '/fuel-codes/table-options',
   fuelCodeSearch: '/fuel-codes/search?',
@@ -82,6 +83,8 @@ export const apiRoutes = {
   createAnalystAdjustment: '/reports/:reportID/adjustment',
   createIdirSupplementalReport: '/reports/:reportID/idir-supplemental',
   getChangelog: '/reports/:complianceReportGroupUuid/changelog/:dataType',
+  getAvailableAnalysts: '/reports/analysts',
+  assignAnalyst: '/reports/:reportId/assign',
 
   // notional-transfers
   notionalTransferOptions: '/notional-transfers/table-options',

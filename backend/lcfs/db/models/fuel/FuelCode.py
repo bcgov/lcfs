@@ -9,11 +9,12 @@ from sqlalchemy import (
     func,
     Enum,
 )
-from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+from lcfs.db.base import BaseModel, Auditable, EffectiveDates, Versioning
 from sqlalchemy.orm import relationship
 from .FuelType import QuantityUnitsEnum
 
-class FuelCode(BaseModel, Auditable, EffectiveDates):
+
+class FuelCode(BaseModel, Auditable, EffectiveDates, Versioning):
     __tablename__ = "fuel_code"
     __table_args__ = {"comment": "Contains a list of all of fuel codes"}
 
@@ -94,21 +95,30 @@ class FuelCode(BaseModel, Auditable, EffectiveDates):
     fuel_code_prefix = relationship(
         "FuelCodePrefix", back_populates="fuel_codes", lazy="selectin"
     )
-    fuel_type = relationship(
-        "FuelType", back_populates="fuel_codes", lazy="selectin"
-    )
+    fuel_type = relationship("FuelType", back_populates="fuel_codes", lazy="selectin")
 
     feedstock_fuel_transport_modes = relationship(
         "FeedstockFuelTransportMode",
         back_populates="feedstock_fuel_code",
         primaryjoin="FuelCode.fuel_code_id == FeedstockFuelTransportMode.fuel_code_id",
         cascade="all, delete, delete-orphan",
+        lazy="selectin",
     )
 
     finished_fuel_transport_modes = relationship(
         "FinishedFuelTransportMode",
         back_populates="finished_fuel_code",
         primaryjoin="FuelCode.fuel_code_id == FinishedFuelTransportMode.fuel_code_id",
+        cascade="all, delete, delete-orphan",
+        lazy="selectin",
+    )
+
+    history_records = relationship(
+        "FuelCodeHistory",
+        back_populates="fuel_code",
+        primaryjoin="FuelCode.fuel_code_id == FuelCodeHistory.fuel_code_id",
+        foreign_keys="FuelCodeHistory.fuel_code_id",
+        lazy="selectin",
         cascade="all, delete, delete-orphan",
     )
 

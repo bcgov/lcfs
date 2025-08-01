@@ -38,3 +38,6 @@ class ComplianceReportListView(Base):
     latest_report_supplemental_initiator = Column(Enum(SupplementalInitiatorType))
     latest_supplemental_create_date = Column(DateTime)
     latest_status = Column(Enum(ComplianceReportStatusEnum))
+    assigned_analyst_id = Column(Integer)
+    assigned_analyst_first_name = Column(String)
+    assigned_analyst_last_name = Column(String)
