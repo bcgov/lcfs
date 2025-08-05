@@ -1831,7 +1831,153 @@ FROM
   LEFT JOIN provision_of_the_act pa ON fe.provision_of_the_act_id = pa.provision_of_the_act_id
   LEFT JOIN finished_fuel_transport_modes_agg finishedftma ON fc.fuel_code_id = finishedftma.fuel_code_id
   LEFT JOIN feedstock_fuel_transport_modes_agg feedstockftma ON fc.fuel_code_id = feedstockftma.fuel_code_id;
-grant select on vw_fuel_export_analytics_base to basic_lcfs_reporting_role;
+  
+  grant select on vw_fuel_export_analytics_base to basic_lcfs_reporting_role;
+
+-- ==========================================
+-- Final Supply Equipment Base View
+-- ==========================================
+DROP VIEW IF EXISTS vw_fse_base CASCADE;
+CREATE OR REPLACE VIEW vw_fse_base AS
+WITH
+fse_intended_uses AS (
+    SELECT 
+        fse.final_supply_equipment_id,
+        STRING_AGG(DISTINCT eut.type, ', ' ORDER BY eut.type) AS intended_uses
+    FROM final_supply_equipment fse
+    LEFT JOIN final_supply_intended_use_association fsiua 
+        ON fse.final_supply_equipment_id = fsiua.final_supply_equipment_id
+    LEFT JOIN end_use_type eut 
+        ON fsiua.end_use_type_id = eut.end_use_type_id
+        AND eut.intended_use = true
+    GROUP BY fse.final_supply_equipment_id
+),
+fse_intended_users AS (
+    SELECT 
+        fse.final_supply_equipment_id,
+        STRING_AGG(DISTINCT eurt.type_name, ', ' ORDER BY eurt.type_name) AS intended_users
+    FROM final_supply_equipment fse
+    LEFT JOIN final_supply_intended_user_association fsiura 
+        ON fse.final_supply_equipment_id = fsiura.final_supply_equipment_id
+    LEFT JOIN end_user_type eurt 
+        ON fsiura.end_user_type_id = eurt.end_user_type_id
+        AND eurt.intended_use = true
+    GROUP BY fse.final_supply_equipment_id
+)
+SELECT 
+    o.name AS "Organization",
+    fse.supply_from_date AS "Supply From Date",
+    fse.supply_to_date AS "Supply To Date",
+    fse.kwh_usage AS "kWh Usage",
+    fse.serial_nbr AS "Serial #",
+    fse.manufacturer AS "Manufacturer",
+    fse.model AS "Model",
+    loe.name AS "Level of Equipment",
+    fse.ports AS "Ports",
+    COALESCE(fiu.intended_uses, '') AS "Intended Use",
+    COALESCE(fiur.intended_users, '') AS "Intended Users",
+    fse.street_address AS "Street Address",
+    fse.city AS "City",
+    fse.postal_code AS "Postal Code",
+    fse.latitude AS "Latitude",
+    fse.longitude AS "Longitude",
+    fse.notes AS "Notes"
+    
+FROM final_supply_equipment fse
+JOIN v_compliance_report vcr 
+    ON vcr.compliance_report_id = fse.compliance_report_id
+    AND vcr.is_latest = true
+JOIN compliance_report cr 
+    ON cr.compliance_report_id = fse.compliance_report_id
+JOIN compliance_report_status crs 
+    ON crs.compliance_report_status_id = cr.current_status_id
+    AND crs.status != 'Draft'  -- Exclude draft reports
+JOIN organization o 
+    ON o.organization_id = cr.organization_id
+JOIN compliance_period cp 
+    ON cp.compliance_period_id = cr.compliance_period_id
+LEFT JOIN level_of_equipment loe 
+    ON loe.level_of_equipment_id = fse.level_of_equipment_id
+LEFT JOIN fse_intended_uses fiu 
+    ON fiu.final_supply_equipment_id = fse.final_supply_equipment_id
+LEFT JOIN fse_intended_users fiur 
+    ON fiur.final_supply_equipment_id = fse.final_supply_equipment_id
+
+ORDER BY 
+    o.name,
+    cp.description DESC,
+    fse.supply_from_date,
+    fse.serial_nbr;
+
+GRANT SELECT ON vw_fse_base TO basic_lcfs_reporting_role;
+
+-- Create indexes
+CREATE INDEX IF NOT EXISTS idx_fse_info_org_year
+    ON final_supply_equipment (compliance_report_id);
+CREATE INDEX IF NOT EXISTS idx_fse_info_supply_dates
+    ON final_supply_equipment (supply_from_date, supply_to_date);
+CREATE INDEX IF NOT EXISTS idx_fse_info_location
+    ON final_supply_equipment (latitude, longitude);
+
+
+-- ==========================================
+-- Electricity Allocation FSE Match Query
+-- ==========================================
+
+DROP VIEW IF EXISTS vw_electricity_allocation_fse_match CASCADE;
+CREATE OR REPLACE VIEW vw_electricity_allocation_fse_match AS
+WITH electricity_allocations AS (
+    SELECT DISTINCT
+        vcr.compliance_period AS "Compliance Year",
+        vcr.organization_name AS "Reporting Organization",
+        aa.transaction_partner AS "Legal Name of Transaction Partner",
+        COALESCE(ft.fuel_type, aa.fuel_type_other) AS "Fuel Type",
+        aa.quantity AS "Quantity",
+        aa.units AS "Units"
+    FROM allocation_agreement aa
+    JOIN v_compliance_report vcr 
+        ON vcr.compliance_report_id = aa.compliance_report_id
+        AND vcr.report_status != 'Draft'
+    LEFT JOIN fuel_type ft ON aa.fuel_type_id = ft.fuel_type_id
+    WHERE (LOWER(COALESCE(ft.fuel_type, aa.fuel_type_other)) LIKE '%electricity%')
+),
+fse_organizations AS (
+    SELECT DISTINCT
+        vcr.compliance_period AS "Compliance Year",
+        vcr.organization_name AS "Reporting Organization",
+        fse.organization_name AS "FSE Organization Name",
+        COUNT(*) AS "FSE Equipment Count"
+    FROM final_supply_equipment fse
+    JOIN v_compliance_report vcr 
+        ON vcr.compliance_report_id = fse.compliance_report_id
+        AND vcr.report_status != 'Draft'
+    GROUP BY vcr.compliance_period, vcr.organization_name, fse.organization_name
+)
+SELECT 
+    ea."Compliance Year",
+    ea."Reporting Organization",
+    ea."Legal Name of Transaction Partner",
+    ea."Fuel Type",
+    ea."Quantity",
+    ea."Units",
+    fo."FSE Organization Name",
+    COALESCE(fo."FSE Equipment Count", 0) AS "FSE Equipment Count",
+    CASE 
+        WHEN fo."FSE Organization Name" IS NOT NULL THEN 'Matched'
+        ELSE 'Missing FSE Data'
+    END AS "FSE Match Status"
+FROM electricity_allocations ea
+LEFT JOIN fse_organizations fo 
+    ON ea."Compliance Year" = fo."Compliance Year"
+    AND ea."Reporting Organization" = fo."Reporting Organization"
+    AND LOWER(TRIM(ea."Legal Name of Transaction Partner")) = LOWER(TRIM(fo."FSE Organization Name"))
+
+ORDER BY 
+    ea."Compliance Year" DESC,
+    ea."Reporting Organization",
+    ea."Legal Name of Transaction Partner";
+
+GRANT SELECT ON vw_electricity_allocation_fse_match TO basic_lcfs_reporting_role;
 
 -- ==========================================
 -- Allocation Agreement Duplicate Check
