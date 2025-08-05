@@ -63,3 +63,20 @@ export const useDownloadCreditLedger = (apiOpts) => {
       }
     })
 }
+
+export const useCreditLedgerYears = (orgId, options) => {
+  const api = useApiService()
+
+  return useQuery({
+    queryKey: ['credit-ledger-years', orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const url = apiRoutes.creditLedgerYears.replace(':orgID', orgId)
+      const { data } = await api.get(url)
+      return data
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+    ...options
+  })
+}

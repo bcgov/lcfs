@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, Integer, ForeignKey, Enum, String, Numeric
+from sqlalchemy import Column, Date, Integer, ForeignKey, Enum, String, Numeric, BigInteger
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import text
 
@@ -33,7 +33,7 @@ class FuelExport(BaseModel, Auditable, Versioning):
     quarter = Column(
         Enum(Quarter), nullable=True, comment="Quarter for quarterly reports"
     )
-    quantity = Column(Integer, nullable=False, comment="Quantity of fuel supplied")
+    quantity = Column(BigInteger, nullable=False, comment="Quantity of fuel supplied")
     units = Column(
         Enum(QuantityUnitsEnum), nullable=False, comment="Units of fuel quantity"
     )
