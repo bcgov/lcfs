@@ -1,7 +1,7 @@
 """Create FSE Base View and Electricity Allocation FSE Match Query
 
 Revision ID: 7a2c0f91a992
-Revises: b1c2d3e4f5g6
+Revises: dc03b0eabbf5
 Create Date: 2025-07-31 00:30:29.254103
 
 """
@@ -14,7 +14,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "7a2c0f91a992"
-down_revision = "b1c2d3e4f5g6"
+down_revision = "dc03b0eabbf5"
 branch_labels = None
 depends_on = None
 
