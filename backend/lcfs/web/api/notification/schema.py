@@ -174,4 +174,7 @@ FUEL_CODE_STATUS_NOTIFICATION_MAPPER = {
     FuelCodeStatusEnum.Approved: [
         NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL
     ],
+    FuelCodeStatusEnum.Draft: [
+        NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED
+    ],
 }

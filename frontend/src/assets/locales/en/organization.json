@@ -27,6 +27,7 @@
   "regTrnLabel": "Registered for transfers",
   "registeredTransferYes": "Yes — A registered organization is able to transfer compliance units.",
   "registeredTransferNo": "No — An organization must be registered to transfer compliance units.",
+  "creditTradingEnabledLabel": "Credit trading market participation",
   "earlyIssuanceLabel": "Enable early issuance reporting for {{year}}",
   "earlyIssuanceIndicator": "Early issuance reporting enabled for {{year}}",
   "edrmsLabel": "Organization profile, EDRMS record # (optional)",
