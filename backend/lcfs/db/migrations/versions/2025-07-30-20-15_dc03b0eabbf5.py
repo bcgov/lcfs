@@ -1,7 +1,7 @@
 """Allocation Agreement and FSE Address Duplicate Check Views
 
 Revision ID: dc03b0eabbf5
-Revises: b1c2d3e4f5g6
+Revises: 1c0b3bed4671
 Create Date: 2025-07-30 20:15:42.707972
 
 """
@@ -14,7 +14,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "dc03b0eabbf5"
-down_revision = "b1c2d3e4f5g6"
+down_revision = "1c0b3bed4671"
 branch_labels = None
 depends_on = None
 
