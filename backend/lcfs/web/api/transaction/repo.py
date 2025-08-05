@@ -588,9 +588,43 @@ class TransactionRepository:
             if count_as_past:
                 past_balance += compliance_units
             elif create_date > compliance_period_end_local and compliance_units < 0:
-                # This is a future negative transaction not associated with any parent entity
-                # or associated with a parent entity that has a future effective date
-                future_negative += compliance_units
+                # This is a future negative transaction - but only count it if it's not
+                # associated with any parent entity that has a future effective date
+                is_future_debit = True
+                
+                # Check if this transaction belongs to a transfer with future effective date
+                if row.transfer_from_effective_date is not None:
+                    transfer_date = row.transfer_from_effective_date
+                    if hasattr(transfer_date, "date"):
+                        transfer_date = transfer_date.date()
+                    if transfer_date > compliance_period_end_local.date():
+                        is_future_debit = False
+                        
+                if row.transfer_to_effective_date is not None:
+                    transfer_date = row.transfer_to_effective_date
+                    if hasattr(transfer_date, "date"):
+                        transfer_date = transfer_date.date()
+                    if transfer_date > compliance_period_end_local.date():
+                        is_future_debit = False
+                        
+                # Check if this transaction belongs to an IA with future effective date
+                if row.ia_effective_date is not None:
+                    ia_date = row.ia_effective_date
+                    if hasattr(ia_date, "date"):
+                        ia_date = ia_date.date()
+                    if ia_date > compliance_period_end_local.date():
+                        is_future_debit = False
+                        
+                # Check if this transaction belongs to an admin adjustment with future effective date
+                if row.admin_effective_date is not None:
+                    admin_date = row.admin_effective_date
+                    if hasattr(admin_date, "date"):
+                        admin_date = admin_date.date()
+                    if admin_date > compliance_period_end_local.date():
+                        is_future_debit = False
+                
+                if is_future_debit:
+                    future_negative += compliance_units
 
         # Calculate the available balance
         available_balance = past_balance - abs(future_negative)
