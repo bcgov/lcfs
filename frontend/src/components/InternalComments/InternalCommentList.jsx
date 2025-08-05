@@ -5,6 +5,10 @@ import { useState } from 'react'
 import PropTypes from 'prop-types'
 import { GlobalStyles } from '@mui/system'
 import Avatar from '@mui/material/Avatar'
+import Tooltip from '@mui/material/Tooltip'
+import IconButton from '@mui/material/IconButton'
+import EditIcon from '@mui/icons-material/Edit'
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import { useTranslation } from 'react-i18next'
 import InternalCommentForm from './InternalCommentForm'
 import { roles } from '@/constants/roles'
@@ -54,7 +58,8 @@ const InternalCommentList = ({
       day: 'numeric',
       hour: 'numeric',
       minute: 'numeric',
-      second: 'numeric'
+      second: 'numeric',
+      hour12: true
     }
     return new Date(dateString).toLocaleDateString(undefined, options)
   }
@@ -66,11 +71,24 @@ const InternalCommentList = ({
       <span>
         {formatDate(createDate)}
         {isEdited && (
-          <span>
-            {' - ('}
+          <>
+            <span>&nbsp;-&nbsp;</span>
             <span style={{ color: 'red' }}>{t('internalComment:edited')}</span>
-            {` ${formatDate(updateDate)})`}
-          </span>
+            <Tooltip title={`Edited ${formatDate(updateDate)}`} arrow>
+              <span style={{ marginLeft: '4px' }}>
+                <InfoOutlinedIcon
+                  fontSize="medium"
+                  sx={{
+                    marginLeft: '1px',
+                    verticalAlign: 'text-top',
+                    transform: 'scale(0.8)'
+                  }}
+                  aria-label={`Comment edited on ${formatDate(updateDate)}`}
+                  role="img"
+                />
+              </span>
+            </Tooltip>
+          </>
         )}
       </span>
     )
@@ -113,24 +131,36 @@ const InternalCommentList = ({
         {comments.map((comment, index) => (
           <BCBox
             key={comment.internalCommentId}
-            sx={{ display: 'flex', alignItems: 'flex-start', paddingLeft: 2 }}
+            sx={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              paddingLeft: 2,
+              paddingBottom: 1,
+              backgroundColor:
+                (comments.length - 1 - index) % 2 === 0
+                  ? 'transparent'
+                  : '#ffffff'
+            }}
           >
-            <Avatar
-              sx={{
-                width: 24,
-                height: 24,
-                fontSize: '0.75rem',
-                fontWeight: 'bold',
-                bgcolor: '#606060',
-                marginTop: 2.5,
-                marginRight: 2
-              }}
-            >
-              {getInitials(comment.fullName)}
-            </Avatar>
+            <Tooltip title={comment.fullName} arrow>
+              <Avatar
+                sx={{
+                  width: 32,
+                  height: 32,
+                  fontSize: '0.75rem',
+                  fontWeight: 'bold',
+                  bgcolor: '#606060',
+                  marginTop: 2.5,
+                  marginRight: 2
+                }}
+                aria-label={`Comment by ${comment.fullName}`}
+                role="img"
+              >
+                {getInitials(comment.fullName)}
+              </Avatar>
+            </Tooltip>
             <BCBox
               sx={{
-                marginBottom: index === comments.length - 1 ? 2 : 0,
                 marginRight: 3,
                 padding: 1,
                 paddingLeft: 0,
@@ -151,34 +181,40 @@ const InternalCommentList = ({
                 />
               ) : (
                 <BCBox>
-                  <BCTypography
-                    variant="body2"
-                    color="text"
-                    component="span"
+                  <BCBox
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}
                   >
-                    {comment.fullName},{' '}
-                    <CommentTimestamp
-                      createDate={comment.createDate}
-                      updateDate={comment.updateDate}
-                    />
+                    <BCTypography variant="body2" color="text" component="span">
+                      <CommentTimestamp
+                        createDate={comment.createDate}
+                        updateDate={comment.updateDate}
+                      />
+                    </BCTypography>
                     {currentUser.keycloakUsername === comment.createUser && (
-                      <span
-                        style={{
-                          cursor: 'pointer',
-                          marginLeft: '10px',
-                          color: '#1976d2'
-                        }}
-                        onClick={() =>
-                          startEditing(
-                            comment.internalCommentId,
-                            comment.comment
-                          )
-                        }
-                      >
-                        {t('internalComment:edit')}
-                      </span>
+                      <Tooltip title={t('internalComment:edit')} arrow>
+                        <IconButton
+                          onClick={() =>
+                            startEditing(
+                              comment.internalCommentId,
+                              comment.comment
+                            )
+                          }
+                          sx={{
+                            color: '#003366',
+                            transform: 'scale(1.2)',
+                            marginTop: '2px'
+                          }}
+                          aria-label={t('internalComment:edit')}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     )}
-                  </BCTypography>
+                  </BCBox>
 
                   <div
                     className="comment-content"
@@ -221,7 +257,10 @@ const InternalCommentList = ({
 InternalCommentList.propTypes = {
   comments: PropTypes.arrayOf(
     PropTypes.shape({
-      internalCommentId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]).isRequired,
+      internalCommentId: PropTypes.oneOfType([
+        PropTypes.number,
+        PropTypes.string
+      ]).isRequired,
       comment: PropTypes.string.isRequired,
       fullName: PropTypes.string.isRequired,
       createDate: PropTypes.string.isRequired,
