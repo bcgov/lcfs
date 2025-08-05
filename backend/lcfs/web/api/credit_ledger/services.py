@@ -1,7 +1,7 @@
 import io
 from datetime import datetime
 from math import ceil
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import Depends
 from fastapi.responses import StreamingResponse
@@ -29,7 +29,7 @@ class CreditLedgerService:
     def __init__(self, repo: CreditLedgerRepository = Depends()) -> None:
         self.repo = repo
 
-    def _apply_filters(self, pagination, conditions):
+    def _apply_filters(self, pagination: PaginationRequestSchema, conditions: List[any]) -> None:
         for f in pagination.filters:
             field = get_field_for_filter(CreditLedgerView, f.field)
             filter_val = f.filter
@@ -47,7 +47,7 @@ class CreditLedgerService:
 
         pagination = validate_pagination(pagination)
 
-        conditions: list = [CreditLedgerView.organization_id == organization_id]
+        conditions: List[any] = [CreditLedgerView.organization_id == organization_id]
 
         if pagination.filters:
             self._apply_filters(pagination, conditions)
@@ -73,6 +73,18 @@ class CreditLedgerService:
         )
 
     @service_handler
+    async def get_organization_years(
+        self,
+        *,
+        organization_id: int,
+    ) -> List[str]:
+        """
+        Get distinct compliance years that have ledger data for an organization.
+        Returns years sorted in descending order.
+        """
+        return await self.repo.get_distinct_years(organization_id=organization_id)
+
+    @service_handler
     async def export_transactions(
         self,
         *,
@@ -86,7 +98,7 @@ class CreditLedgerService:
         if export_format not in ["xls", "xlsx", "csv"]:
             raise ValueError("Export format not supported")
 
-        conditions: list = [CreditLedgerView.organization_id == organization_id]
+        conditions: List[any] = [CreditLedgerView.organization_id == organization_id]
         if compliance_year:
             conditions.append(
                 CreditLedgerView.compliance_period == str(compliance_year)

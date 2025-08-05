@@ -2,7 +2,8 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   useCreditLedger,
-  useDownloadCreditLedger
+  useDownloadCreditLedger,
+  useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
 import { useApiService } from '@/services/useApiService'
 import { wrapper } from '@/tests/utils/wrapper'
@@ -355,6 +356,86 @@ describe('useDownloadCreditLedger', () => {
         compliance_year: '2024',
         format: 'xlsx'
       }
+    })
+  })
+})
+
+describe('useCreditLedgerYears', () => {
+  const mockGet = vi.fn()
+
+  beforeEach(() => {
+    vi.resetAllMocks()
+    vi.mocked(useApiService).mockReturnValue({ get: mockGet })
+  })
+
+  it('should fetch organization years successfully', async () => {
+    const mockYears = ['2024', '2023', '2022']
+    mockGet.mockResolvedValueOnce({ data: mockYears })
+
+    const { result } = renderHook(() => useCreditLedgerYears(123), {
+      wrapper: wrapper
+    })
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockYears)
+    })
+
+    expect(mockGet).toHaveBeenCalledWith('/credit-ledger/organization/123/years')
+  })
+
+  it('should not fetch when orgId is not provided', () => {
+    const { result } = renderHook(() => useCreditLedgerYears(null), {
+      wrapper: wrapper
+    })
+
+    expect(result.current.isLoading).toBe(false)
+    expect(mockGet).not.toHaveBeenCalled()
+  })
+
+  it('should handle empty years list', async () => {
+    mockGet.mockResolvedValueOnce({ data: [] })
+
+    const { result } = renderHook(() => useCreditLedgerYears(456), {
+      wrapper: wrapper
+    })
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual([])
+    })
+
+    expect(mockGet).toHaveBeenCalledWith('/credit-ledger/organization/456/years')
+  })
+
+  it('should handle API errors gracefully', async () => {
+    const mockError = new Error('API Error')
+    mockGet.mockRejectedValueOnce(mockError)
+
+    const { result } = renderHook(() => useCreditLedgerYears(123), {
+      wrapper: wrapper
+    })
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true)
+    })
+
+    expect(result.current.error).toEqual(mockError)
+  })
+
+  it('should pass through custom options', async () => {
+    const mockYears = ['2024']
+    mockGet.mockResolvedValueOnce({ data: mockYears })
+
+    const customOptions = {
+      enabled: true,
+      staleTime: 60000
+    }
+
+    const { result } = renderHook(() => useCreditLedgerYears(123, customOptions), {
+      wrapper: wrapper
+    })
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual(mockYears)
     })
   })
 })

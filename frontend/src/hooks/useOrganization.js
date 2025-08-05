@@ -247,3 +247,73 @@ export const useUpdateOrganizationUser = (orgID, userID, options = {}) => {
     ...restOptions
   })
 }
+
+// Mutation hook for updating current organization's credit market details
+export const useUpdateCurrentOrgCreditMarket = (options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+  const { data: currentUser } = useCurrentUser()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    clearCache = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (data) => {
+      return await client.put('/organizations/current/credit-market', data)
+    },
+    onSuccess: (data, variables, context) => {
+      const orgId = currentUser?.organization?.organizationId
+
+      if (clearCache && orgId) {
+        queryClient.removeQueries(['organization', orgId])
+      } else if (orgId) {
+        queryClient.setQueryData(['organization', orgId], data.data)
+      }
+
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries(['organization'])
+        queryClient.invalidateQueries(['current-org-balance'])
+      }
+
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      const orgId = currentUser?.organization?.organizationId
+      if (orgId) {
+        queryClient.invalidateQueries(['organization', orgId])
+      }
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useCreditMarketListings = (options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['credit-market-listings'],
+    queryFn: async () => {
+      const response = await client.get('/organizations/credit-market-listings')
+      return response.data
+    },
+    enabled,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
