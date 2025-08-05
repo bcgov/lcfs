@@ -123,7 +123,7 @@ describe('Transactions', () => {
         <Transactions />
       </WrapperComponent>
     )
-    expect(screen.getByText('Transactions')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Transactions' })).toBeInTheDocument()
   })
 
   it('displays alert message when location state has a message', () => {

@@ -38,5 +38,6 @@ export const schemaValidation = Yup.object({
   orgHeadOfficeProvince: Yup.string().nullable(),
   orgHeadOfficeCountry: Yup.string().nullable(),
   orgHeadOfficePostalCodeZipCode: Yup.string().nullable(),
-  hasEarlyIssuance: Yup.string().required('Early issuance setting is required')
+  hasEarlyIssuance: Yup.string().required('Early issuance setting is required'),
+  orgCreditTradingEnabled: Yup.string().required('Credit trading market setting is required')
 })

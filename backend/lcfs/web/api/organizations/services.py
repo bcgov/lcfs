@@ -267,6 +267,53 @@ class OrganizationsService:
         return updated_organization
 
     @service_handler
+    async def update_organization_credit_market_details(
+        self,
+        organization_id: int,
+        credit_market_data: dict,
+        user=None,
+    ):
+        """
+        Update only the credit market contact details for an organization.
+        This method only updates the specific credit market fields without affecting other organization data.
+        """
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        # Update only the credit market fields
+        allowed_fields = {
+            'credit_market_contact_name',
+            'credit_market_contact_email', 
+            'credit_market_contact_phone',
+            'credit_market_is_seller',
+            'credit_market_is_buyer',
+            'credits_to_sell',
+            'display_in_credit_market'
+        }
+        
+        for key, value in credit_market_data.items():
+            if key in allowed_fields and hasattr(organization, key):
+                # Special validation for credits_to_sell
+                if key == 'credits_to_sell' and value is not None:
+                    if value < 0:
+                        raise ValueError("Credits to sell cannot be negative")
+                    
+                    # Get the organization's total balance to validate against
+                    total_balance = await self.calculate_total_balance(organization.organization_id)
+                    if value > total_balance:
+                        raise ValueError(f"Credits to sell ({value}) cannot exceed available balance ({total_balance})")
+                
+                setattr(organization, key, value)
+        
+        # Set the update user
+        if user:
+            organization.update_user = user.keycloak_username
+
+        updated_organization = await self.repo.update_organization(organization)
+        return updated_organization
+
+    @service_handler
     async def get_organization(self, organization_id: int):
         """handles fetching an organization"""
         organization = await self.repo.get_organization(organization_id)
@@ -278,6 +325,10 @@ class OrganizationsService:
         organization.has_early_issuance = (
             await self.repo.get_current_year_early_issuance(organization_id)
         )
+
+        # Calculate and add balance information for credit trading validation
+        organization.total_balance = await self.calculate_total_balance(organization_id)
+        organization.reserved_balance = await self.calculate_reserved_balance(organization_id)
 
         return organization
 
@@ -555,5 +606,30 @@ class OrganizationsService:
                 "email": org.email,
                 "phone": org.phone,
             }
+            for org in organizations
+        ]
+
+    @service_handler
+    async def get_credit_market_listings(self):
+        """
+        Get organizations that have opted to display in the credit trading market.
+        Returns organizations with their credit market contact details for public viewing.
+        """
+        from .schema import OrganizationCreditMarketListingSchema
+        
+        organizations = await self.repo.get_credit_market_organizations()
+        
+        return [
+            OrganizationCreditMarketListingSchema(
+                organization_id=org.organization_id,
+                organization_name=org.name,
+                credits_to_sell=org.credits_to_sell or 0,
+                display_in_credit_market=org.display_in_credit_market,
+                credit_market_is_seller=org.credit_market_is_seller or False,
+                credit_market_is_buyer=org.credit_market_is_buyer or False,
+                credit_market_contact_name=org.credit_market_contact_name,
+                credit_market_contact_email=org.credit_market_contact_email,
+                credit_market_contact_phone=org.credit_market_contact_phone,
+            )
             for org in organizations
         ]

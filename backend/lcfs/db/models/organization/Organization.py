@@ -90,6 +90,51 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         String(2000),
         comment="Organization's address in BC where records are maintained",
     )
+    credit_trading_enabled = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="Whether the organization is enabled for credit trading market participation",
+    )
+    credit_market_contact_name = Column(
+        String(500),
+        nullable=True,
+        comment="Contact name for credit trading market (if different from organization)",
+    )
+    credit_market_contact_email = Column(
+        String(255),
+        nullable=True,
+        comment="Contact email for credit trading market (if different from organization)",
+    )
+    credit_market_contact_phone = Column(
+        String(50),
+        nullable=True,
+        comment="Contact phone for credit trading market (if different from organization)",
+    )
+    credit_market_is_seller = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="Whether the organization is interested in selling credits",
+    )
+    credit_market_is_buyer = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="Whether the organization is interested in buying credits",
+    )
+    credits_to_sell = Column(
+        Integer,
+        nullable=False,
+        server_default=text("0"),
+        comment="Number of credits the organization wants to sell",
+    )
+    display_in_credit_market = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="Whether the organization should be displayed in the credit trading market",
+    )
 
     org_type = relationship(
         "OrganizationType", back_populates="organizations", lazy="joined"
