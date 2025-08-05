@@ -56,7 +56,11 @@ vi.mock('@/hooks/useCreditLedger', () => ({
     },
     isLoading: false
   })),
-  useDownloadCreditLedger: () => vi.fn()
+  useDownloadCreditLedger: () => vi.fn(),
+  useCreditLedgerYears: vi.fn((orgId) => ({
+    data: ['2024', '2023', '2022'],
+    isLoading: false
+  }))
 }))
 
 vi.mock('@/components/BCDataGrid/BCGridViewer', () => ({

@@ -25,25 +25,25 @@ class FuelSupply(BaseModel, Auditable, Versioning):
 
     # Data columns
     quantity = Column(
-        Integer, nullable=True, comment="Quantity of fuel supplied (no early issuance)"
+        BigInteger, nullable=True, comment="Quantity of fuel supplied (no early issuance)"
     )
     q1_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel supplied in Q1 (early issuance only)",
     )
     q2_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel supplied in Q2 (early issuance only)",
     )
     q3_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel supplied in Q3 (early issuance only)",
     )
     q4_quantity = Column(
-        Integer,
+        BigInteger,
         nullable=True,
         comment="Quantity of fuel supplied in Q4 (early issuance only)",
     )
