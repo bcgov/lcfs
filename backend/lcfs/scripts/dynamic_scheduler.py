@@ -14,6 +14,7 @@ Usage:
 
 import asyncio
 import argparse
+from enum import Enum
 import logging
 import sys
 import os
@@ -26,6 +27,17 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Add current directory to Python path to import local tasks modules
+current_dir = Path(__file__).parent
+sys.path.insert(0, str(current_dir))
+
+# Add tasks directory to Python path
+tasks_dir = Path(__file__).parent / "tasks"
+sys.path.insert(0, str(tasks_dir))
+
+# Ensure tasks directory exists
+tasks_dir.mkdir(exist_ok=True)
+
 try:
     from croniter import croniter
     from sqlalchemy import create_engine, select
@@ -33,8 +45,17 @@ try:
     from sqlalchemy.orm import sessionmaker
 
     # Import your application modules
-    from lcfs.web.api.task.models import ScheduledTask, TaskExecution, TaskStatus
-    from lcfs.web.api.notification.tasks import TASK_REGISTRY
+    from lcfs.db.models.tasks import ScheduledTask, TaskExecution
+
+    class TaskStatus(str, Enum):
+        """Task execution status"""
+
+        PENDING = "pending"
+        RUNNING = "running"
+        SUCCESS = "success"
+        FAILURE = "failure"
+        DISABLED = "disabled"
+
     from lcfs.settings import settings
 
 except ImportError as e:
@@ -46,7 +67,7 @@ except ImportError as e:
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout), logging.StreamHandler(sys.stderr)],
+    handlers=[logging.StreamHandler(sys.stdout)],  # Only use stdout to avoid duplicates
 )
 logger = logging.getLogger(__name__)
 
@@ -85,7 +106,7 @@ class DynamicTaskScheduler:
             async with self.session() as session:
                 # Query enabled tasks
                 result = await session.execute(
-                    select(ScheduledTask).where(ScheduledTask.enabled == True)
+                    select(ScheduledTask).where(ScheduledTask.is_enabled == True)
                 )
                 tasks = result.scalars().all()
 
@@ -156,25 +177,104 @@ class DynamicTaskScheduler:
 
     async def get_task_function(self, task_function_name: str):
         """
-        Get task function from registry or dynamically import
+        Get task function from modular task structure or dynamically import.
+
+        Supports multiple formats:
+        - "tasks.fuel_code_expiry.notify_expiring_fuel_code" (full module path)
+        - "fuel_code_expiry.notify_expiring_fuel_code" (auto-prepends 'tasks.')
+        - "notify_expiring_fuel_code" (searches in common task modules)
         """
-        # First check the manual registry
-        if task_function_name in TASK_REGISTRY:
-            return TASK_REGISTRY[task_function_name]
-
-        # Try to dynamically import the function
         try:
-            # Assume function format is "module.function_name"
+            # Parse the task function name
             if "." in task_function_name:
-                module_name, function_name = task_function_name.rsplit(".", 1)
+                parts = task_function_name.split(".")
+                if len(parts) >= 2:
+                    if parts[0] == "tasks":
+                        # Full path: tasks.module.function
+                        module_name = ".".join(parts[:-1])
+                        function_name = parts[-1]
+                    else:
+                        # Partial path: module.function -> tasks.module.function
+                        module_name = f"tasks.{'.'.join(parts[:-1])}"
+                        function_name = parts[-1]
+                else:
+                    # Single dot case: assume it's module.function
+                    module_name = f"tasks.{parts[0]}"
+                    function_name = parts[1] if len(parts) > 1 else parts[0]
             else:
-                # Default to notification tasks module
-                module_name = "lcfs.web.api.notification.tasks"
+                # No dots: just function name, search in common modules
                 function_name = task_function_name
+                module_name = None
 
-            import importlib
+            # List of module paths to try
+            module_candidates = []
 
-            module = importlib.import_module(module_name)
+            if module_name:
+                # If we have a specific module, try it first
+                module_candidates.append(module_name)
+            else:
+                # Search in common task modules
+                common_task_modules = [
+                    "tasks.fuel_code_expiry",
+                    "tasks.notification",
+                    "tasks.cleanup",
+                    "tasks.common",
+                    "tasks",  # Legacy tasks.py
+                    "lcfs.web.api.notification.tasks",  # Original path
+                ]
+                module_candidates.extend(common_task_modules)
+
+            # Try to import from each candidate module
+            module = None
+            successful_module = None
+            import_errors = []
+
+            for candidate_module in module_candidates:
+                try:
+                    import importlib
+
+                    module = importlib.import_module(candidate_module)
+                    successful_module = candidate_module
+                    logger.debug(f"Successfully imported module: {candidate_module}")
+                    break
+                except ImportError as e:
+                    import_errors.append(f"{candidate_module}: {str(e)}")
+                    logger.debug(f"Could not import module {candidate_module}: {e}")
+                    continue
+
+            if module is None:
+                logger.error(
+                    f"Could not import any module for task function '{task_function_name}'"
+                )
+                logger.error(f"Tried modules: {module_candidates}")
+                logger.error(f"Import errors: {import_errors}")
+
+                # Additional debugging info
+                tasks_dir = Path(__file__).parent / "tasks"
+                logger.error(f"Tasks directory exists: {tasks_dir.exists()}")
+                if tasks_dir.exists():
+                    logger.error(
+                        f"Files in tasks directory: {list(tasks_dir.glob('*.py'))}"
+                    )
+
+                return None
+
+            # Get the function from the module
+            if not hasattr(module, function_name):
+                logger.error(
+                    f"Function '{function_name}' not found in module '{successful_module}'"
+                )
+                # List available functions for debugging
+                available_functions = [
+                    name
+                    for name in dir(module)
+                    if not name.startswith("_") and callable(getattr(module, name))
+                ]
+                logger.error(
+                    f"Available functions in {successful_module}: {available_functions}"
+                )
+                return None
+
             task_function = getattr(module, function_name)
 
             # Verify it's a callable
@@ -182,11 +282,14 @@ class DynamicTaskScheduler:
                 logger.error(f"'{task_function_name}' is not callable")
                 return None
 
-            logger.info(f"Dynamically imported task function: {task_function_name}")
+            logger.info(
+                f"Successfully imported task function: {task_function_name} from {successful_module}"
+            )
             return task_function
 
-        except (ImportError, AttributeError) as e:
+        except Exception as e:
             logger.error(f"Failed to import task function '{task_function_name}': {e}")
+            logger.error(traceback.format_exc())
             return None
 
     async def execute_task(self, task: ScheduledTask) -> Dict[str, Any]:
@@ -223,13 +326,31 @@ class DynamicTaskScheduler:
                 result["result_message"] = "DRY RUN - Task not actually executed"
                 await asyncio.sleep(0.1)  # Simulate brief execution
             else:
-                # Execute the task function
-                if task.parameters:
-                    # If task has parameters, pass them as kwargs
-                    await task_function(**task.parameters)
-                else:
-                    # No parameters
-                    await task_function()
+                # Execute the task function with database session
+                async with self.session() as db_session:
+                    if task.parameters:
+                        # Add db_session to parameters
+                        params = task.parameters.copy()
+                        params["db_session"] = db_session
+
+                        if asyncio.iscoroutinefunction(task_function):
+                            await task_function(**params)
+                        else:
+                            # If it's not async, run it in a thread pool
+                            loop = asyncio.get_event_loop()
+                            await loop.run_in_executor(
+                                None, lambda: task_function(**params)
+                            )
+                    else:
+                        # Pass db_session as parameter
+                        if asyncio.iscoroutinefunction(task_function):
+                            await task_function(db_session=db_session)
+                        else:
+                            # If it's not async, run it in a thread pool
+                            loop = asyncio.get_event_loop()
+                            await loop.run_in_executor(
+                                None, lambda: task_function(db_session=db_session)
+                            )
 
                 result["success"] = True
                 result["result_message"] = f"Task '{task.name}' completed successfully"
@@ -262,67 +383,123 @@ class DynamicTaskScheduler:
 
         return result
 
+    async def verify_task_update(
+        self, task_id: int, expected_status: TaskStatus
+    ) -> bool:
+        """
+        Verify that a task was properly updated in the database
+        """
+        try:
+            async with self.session() as session:
+                updated_task = await session.get(ScheduledTask, task_id)
+                if updated_task:
+                    logger.debug(
+                        f"Task verification - ID: {task_id}, Status: {updated_task.status}, "
+                        f"Last Run: {updated_task.last_run}, Next Run: {updated_task.next_run}"
+                    )
+                    return updated_task.status == expected_status
+                else:
+                    logger.error(f"Task {task_id} not found during verification")
+                    return False
+        except Exception as e:
+            logger.error(f"Failed to verify task update: {e}")
+            return False
+
     async def update_task_status(
         self, task: ScheduledTask, execution_result: Dict[str, Any]
     ):
         """
         Update task status and create execution record
         """
+        expected_status = (
+            TaskStatus.SUCCESS if execution_result["success"] else TaskStatus.FAILURE
+        )
+
         try:
             async with self.session() as session:
-                async with session.begin():
-                    try:
-                        # Update task record
-                        if execution_result["success"]:
-                            task.status = TaskStatus.SUCCESS
-                            task.execution_count += 1
-                        else:
-                            task.status = TaskStatus.FAILURE
-                            task.failure_count += 1
+                try:
+                    # Get a fresh copy of the task from the current session
+                    fresh_task = await session.get(ScheduledTask, task.id)
+                    if not fresh_task:
+                        logger.error(f"Task with ID {task.id} not found in database")
+                        return
 
-                        task.last_run = execution_result["start_time"]
+                    # Update task record
+                    if execution_result["success"]:
+                        fresh_task.status = TaskStatus.SUCCESS
+                        fresh_task.execution_count = (
+                            fresh_task.execution_count or 0
+                        ) + 1
+                    else:
+                        fresh_task.status = TaskStatus.FAILURE
+                        fresh_task.failure_count = (fresh_task.failure_count or 0) + 1
 
-                        # Calculate next run time
-                        if croniter.is_valid(task.schedule):
-                            cron = croniter(task.schedule, datetime.now())
-                            task.next_run = cron.get_next(datetime)
+                    fresh_task.last_run = execution_result["start_time"]
 
-                        # Create execution record
-                        execution = TaskExecution(
-                            task_id=task.id,
-                            started_at=execution_result["start_time"],
-                            completed_at=execution_result["end_time"],
-                            status=(
-                                TaskStatus.SUCCESS
-                                if execution_result["success"]
-                                else TaskStatus.FAILURE
-                            ),
-                            result=execution_result.get("result_message")
-                            or execution_result.get("error_message"),
-                            execution_time_seconds=execution_result["duration_seconds"],
-                            worker_id=self.worker_id,
-                            version=self.app_version,
+                    # Calculate next run time
+                    if croniter.is_valid(fresh_task.schedule):
+                        cron = croniter(fresh_task.schedule, datetime.now())
+                        fresh_task.next_run = cron.get_next(datetime)
+
+                    # Create execution record
+                    execution = TaskExecution(
+                        task_id=fresh_task.id,
+                        started_at=execution_result["start_time"],
+                        completed_at=execution_result["end_time"],
+                        status=(
+                            TaskStatus.SUCCESS
+                            if execution_result["success"]
+                            else TaskStatus.FAILURE
+                        ),
+                        result=execution_result.get("result_message")
+                        or execution_result.get("error_message"),
+                        execution_time_seconds=execution_result["duration_seconds"],
+                        worker_id=self.worker_id,
+                        version=self.app_version,
+                    )
+
+                    if not self.dry_run:
+                        # Add execution record to session
+                        session.add(execution)
+
+                        # Commit the changes
+                        await session.commit()
+
+                        logger.info(
+                            f"✓ Updated task '{fresh_task.name}' - Status: {fresh_task.status}, "
+                            f"Last Run: {fresh_task.last_run.strftime('%Y-%m-%d %H:%M:%S')}, "
+                            f"Next Run: {fresh_task.next_run.strftime('%Y-%m-%d %H:%M:%S') if fresh_task.next_run else 'N/A'}"
                         )
 
-                        if not self.dry_run:
-                            # Merge the updated task back to the session
-                            session.add(task)
-                            session.add(execution)
-                            # Commit is handled by the context manager
-                            await session.commit()
-                            logger.info(
-                                f"Updated task '{task.name}' status in database"
+                        # Update the original task object with the new values for reference
+                        task.status = fresh_task.status
+                        task.last_run = fresh_task.last_run
+                        task.next_run = fresh_task.next_run
+                        task.execution_count = fresh_task.execution_count
+                        task.failure_count = fresh_task.failure_count
+
+                        # Verify the update was successful
+                        if await self.verify_task_update(task.id, expected_status):
+                            logger.debug(
+                                f"✓ Task '{task.name}' update verified in database"
                             )
                         else:
-                            logger.info(
-                                f"DRY RUN: Would update task '{task.name}' status in database"
+                            logger.warning(
+                                f"⚠ Task '{task.name}' update verification failed"
                             )
 
-                    except Exception as e:
-                        logger.error(f"Failed to update task '{task.name}' status: {e}")
-                        logger.error(traceback.format_exc())
-                        await session.rollback()
-                        raise
+                    else:
+                        logger.info(
+                            f"DRY RUN: Would update task '{fresh_task.name}' - Status: {fresh_task.status}, "
+                            f"Last Run: {fresh_task.last_run.strftime('%Y-%m-%d %H:%M:%S')}, "
+                            f"Next Run: {fresh_task.next_run.strftime('%Y-%m-%d %H:%M:%S') if fresh_task.next_run else 'N/A'}"
+                        )
+
+                except Exception as e:
+                    logger.error(f"Failed to update task '{task.name}' status: {e}")
+                    logger.error(traceback.format_exc())
+                    await session.rollback()
+                    raise
 
         except Exception as e:
             logger.error(f"Database transaction failed for task '{task.name}': {e}")
@@ -397,23 +574,37 @@ class DynamicTaskScheduler:
                 f"Executing {len(tasks_to_execute)} tasks: {[t.name for t in tasks_to_execute]}"
             )
 
-            # Execute tasks (could be done in parallel, but sequential is safer for database)
-            for task in tasks_to_execute:
+            # Execute tasks sequentially to ensure proper database updates
+            for i, task in enumerate(tasks_to_execute, 1):
                 try:
+                    logger.info(
+                        f"Executing task {i}/{len(tasks_to_execute)}: '{task.name}'"
+                    )
+
                     # Execute task with timeout
                     execution_result = await self.execute_tasks_with_timeout(task)
 
-                    # Update task status
+                    # Update task status and commit before proceeding
                     await self.update_task_status(task, execution_result)
 
                     # Update summary
                     if execution_result["success"]:
                         summary["tasks_succeeded"] += 1
+                        logger.info(
+                            f"✓ Task {i}/{len(tasks_to_execute)} '{task.name}' completed successfully"
+                        )
                     else:
                         summary["tasks_failed"] += 1
                         summary["errors"].append(
                             f"Task '{task.name}': {execution_result['error_message']}"
                         )
+                        logger.error(
+                            f"✗ Task {i}/{len(tasks_to_execute)} '{task.name}' failed: {execution_result['error_message']}"
+                        )
+
+                    # Add a small delay between tasks to ensure database consistency
+                    if i < len(tasks_to_execute):  # Don't delay after the last task
+                        await asyncio.sleep(0.1)
 
                 except Exception as e:
                     error_msg = (
@@ -445,6 +636,24 @@ class DynamicTaskScheduler:
                 logger.error("Errors encountered:")
                 for error in summary["errors"]:
                     logger.error(f"  - {error}")
+
+            # Show final status of executed tasks
+            if tasks_to_execute:
+                logger.info("Final task status:")
+                async with self.session() as session:
+                    for task in tasks_to_execute:
+                        try:
+                            final_task = await session.get(ScheduledTask, task.id)
+                            if final_task:
+                                logger.info(
+                                    f"  - '{final_task.name}': {final_task.status}, "
+                                    f"Last Run: {final_task.last_run.strftime('%Y-%m-%d %H:%M:%S') if final_task.last_run else 'Never'}, "
+                                    f"Next Run: {final_task.next_run.strftime('%Y-%m-%d %H:%M:%S') if final_task.next_run else 'N/A'}"
+                                )
+                        except Exception as e:
+                            logger.warning(
+                                f"Could not fetch final status for task '{task.name}': {e}"
+                            )
 
             logger.info("=" * 60)
 
