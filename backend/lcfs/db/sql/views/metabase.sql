@@ -1832,3 +1832,166 @@ FROM
   LEFT JOIN finished_fuel_transport_modes_agg finishedftma ON fc.fuel_code_id = finishedftma.fuel_code_id
   LEFT JOIN feedstock_fuel_transport_modes_agg feedstockftma ON fc.fuel_code_id = feedstockftma.fuel_code_id;
 grant select on vw_fuel_export_analytics_base to basic_lcfs_reporting_role;
+
+-- ==========================================
+-- Allocation Agreement Duplicate Check
+-- ==========================================
+
+DROP VIEW IF EXISTS vw_allocation_agreement_duplicate_check CASCADE;
+CREATE OR REPLACE VIEW vw_allocation_agreement_duplicate_check AS
+WITH latest_aa AS (
+    SELECT DISTINCT ON (group_uuid) *
+    FROM allocation_agreement
+    WHERE action_type != 'DELETE'
+    ORDER BY group_uuid, version DESC
+),
+base_data AS (
+    SELECT
+        aa.postal_address,
+        LOWER(TRIM(aa.postal_address))     AS address_normalized,
+        aa.transaction_partner,
+        LOWER(TRIM(aa.transaction_partner)) AS organization_name_normalized,
+        cp.description                     AS compliance_year,
+        o.organization_code                AS organization_code,
+        o.name                             AS reporting_organization_name,
+        lr.compliance_report_id            AS compliance_report_id
+    FROM latest_aa aa
+    JOIN v_compliance_report lr
+      ON lr.compliance_report_id = aa.compliance_report_id
+     AND lr.report_status != 'Draft'
+    JOIN organization       o  ON o.organization_id       = lr.organization_id
+    JOIN compliance_period  cp ON cp.compliance_period_id = lr.compliance_period_id
+),
+address_duplicates AS (
+    SELECT 
+        postal_address,
+        address_normalized,
+        compliance_year,
+        COUNT(DISTINCT compliance_report_id) as duplicate_count,
+        STRING_AGG(DISTINCT organization_code, ', ') as organization_codes,
+        STRING_AGG(DISTINCT reporting_organization_name, ', ') as reporting_organizations,
+        STRING_AGG(DISTINCT compliance_report_id::text, ', ') as compliance_report_ids
+    FROM base_data
+    GROUP BY postal_address, address_normalized, compliance_year
+    HAVING COUNT(DISTINCT organization_code) > 1
+),
+org_name_duplicates AS (
+    SELECT 
+        transaction_partner,
+        organization_name_normalized,
+        compliance_year,
+        COUNT(DISTINCT compliance_report_id) as duplicate_count,
+        STRING_AGG(DISTINCT organization_code, ', ') as organization_codes,
+        STRING_AGG(DISTINCT reporting_organization_name, ', ') as reporting_organizations,
+        STRING_AGG(DISTINCT compliance_report_id::text, ', ') as compliance_report_ids
+    FROM base_data
+    GROUP BY transaction_partner, organization_name_normalized, compliance_year
+    HAVING COUNT(DISTINCT organization_code) > 1
+)
+SELECT 
+    'Address Duplicate' AS "Issue Type",
+    ad.postal_address AS "Duplicate Value",
+    ad.compliance_year AS "Year",
+    ad.duplicate_count AS "Number of Compliance Reports",
+    ad.compliance_report_ids AS "Compliance Report IDs",
+    ad.organization_codes AS "Organization Codes"
+FROM address_duplicates ad
+
+UNION ALL
+
+SELECT 
+    'Allocator Name Duplicate' AS "Issue Type",
+    od.transaction_partner AS "Duplicate Value",
+    od.compliance_year AS "Year",
+    od.duplicate_count AS "Number of Compliance Reports",
+    od.compliance_report_ids AS "Compliance Report IDs",
+    od.organization_codes AS "Organization Codes"
+FROM org_name_duplicates od
+
+ORDER BY "Year" DESC, "Issue Type", "Number of Compliance Reports" DESC;
+
+GRANT SELECT ON vw_allocation_agreement_duplicate_check TO basic_lcfs_reporting_role;
+
+CREATE INDEX IF NOT EXISTS idx_allocation_agreement_addr_norm
+    ON allocation_agreement (LOWER(TRIM(postal_address)));
+
+-- ==========================================
+-- Final Supply Equipment Duplicate Check
+-- ==========================================
+
+DROP VIEW IF EXISTS vw_fse_duplicate_check CASCADE;
+CREATE OR REPLACE VIEW vw_fse_duplicate_check AS
+WITH base_data AS (
+    SELECT
+        fse.street_address,
+        LOWER(TRIM(fse.street_address))     AS street_address_normalized,
+        fse.city,
+        LOWER(TRIM(fse.city))               AS city_normalized,
+        fse.postal_code,
+        LOWER(TRIM(fse.postal_code))        AS postal_code_normalized,
+        fse.organization_name,
+        LOWER(TRIM(fse.organization_name))  AS organization_name_normalized,
+        CONCAT(LOWER(TRIM(fse.street_address)), ', ', LOWER(TRIM(fse.city)), ', ', LOWER(TRIM(fse.postal_code))) AS full_address_normalized,
+        vcr.compliance_period               AS compliance_year,
+        o.organization_code                 AS organization_code,
+        o.name                              AS reporting_organization_name,
+        vcr.compliance_report_id            AS compliance_report_id
+    FROM final_supply_equipment fse
+    JOIN v_compliance_report vcr
+      ON vcr.compliance_report_id = fse.compliance_report_id
+     AND vcr.report_status != 'Draft'
+    JOIN organization       o  ON o.organization_id       = vcr.organization_id
+    JOIN compliance_period  cp ON cp.compliance_period_id = vcr.compliance_period_id
+),
+full_address_duplicates AS (
+    SELECT 
+        CONCAT(street_address, ', ', city, ', ', postal_code) as full_address,
+        full_address_normalized,
+        compliance_year,
+        COUNT(DISTINCT compliance_report_id) as duplicate_count,
+        STRING_AGG(DISTINCT compliance_report_id::text, ', ') as compliance_report_ids,
+        STRING_AGG(DISTINCT organization_code, ', ') as organization_codes
+    FROM base_data
+    GROUP BY street_address, city, postal_code, full_address_normalized, compliance_year
+    HAVING COUNT(DISTINCT organization_code) > 1
+),
+organization_name_duplicates AS (
+    SELECT 
+        organization_name,
+        organization_name_normalized,
+        compliance_year,
+        COUNT(DISTINCT compliance_report_id) as duplicate_count,
+        STRING_AGG(DISTINCT compliance_report_id::text, ', ') as compliance_report_ids,
+        STRING_AGG(DISTINCT organization_code, ', ') as organization_codes
+    FROM base_data
+    GROUP BY organization_name, organization_name_normalized, compliance_year
+    HAVING COUNT(DISTINCT organization_code) > 1
+)
+SELECT 
+    'Full Address Duplicate' AS "Issue Type",
+    fad.full_address AS "Duplicate Value",
+    fad.compliance_year AS "Year",
+    fad.duplicate_count AS "Number of Compliance Reports",
+    fad.compliance_report_ids AS "Compliance Report IDs",
+    fad.organization_codes AS "Organization Codes"
+FROM full_address_duplicates fad
+
+UNION ALL
+
+SELECT 
+    'Organization Name Duplicate' AS "Issue Type",
+    ond.organization_name AS "Duplicate Value",
+    ond.compliance_year AS "Year",
+    ond.duplicate_count AS "Number of Compliance Reports",
+    ond.compliance_report_ids AS "Compliance Report IDs",
+    ond.organization_codes AS "Organization Codes"
+FROM organization_name_duplicates ond
+
+ORDER BY "Year" DESC, "Issue Type", "Number of Compliance Reports" DESC;
+
+GRANT SELECT ON vw_fse_duplicate_check TO basic_lcfs_reporting_role;
+
+CREATE INDEX IF NOT EXISTS idx_fse_full_address_norm
+    ON final_supply_equipment (LOWER(TRIM(street_address)), LOWER(TRIM(city)), LOWER(TRIM(postal_code)));
+CREATE INDEX IF NOT EXISTS idx_fse_organization_name_norm
+    ON final_supply_equipment (LOWER(TRIM(organization_name)));
