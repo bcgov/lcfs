@@ -1200,11 +1200,10 @@ class FuelCodeRepository:
         return result.scalar()
 
     @repo_handler
-    async def get_expiring_fuel_codes(self, start_date: date) -> List[FuelCode]:
+    async def get_expiring_fuel_codes(self) -> List[FuelCode]:
         """
-        Get all fuel codes that are expiring within a given date range.
+        Get all fuel codes that are expiring within a 90 days date range.
         """
-        approved_status = await self.get_fuel_code_status(FuelCodeStatusEnum.Approved)
         query = (
             select(FuelCode)
             .options(
@@ -1213,7 +1212,7 @@ class FuelCodeRepository:
             )
             .where(
                 and_(
-                    FuelCode.expiration_date <= start_date,
+                    FuelCode.expiration_date.between(date.today(), date.today() + timedelta(days=90)),
                     FuelCodeStatus.status == FuelCodeStatusEnum.Approved,
                 )
             )

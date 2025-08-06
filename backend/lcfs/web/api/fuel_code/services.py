@@ -52,9 +52,7 @@ logger = structlog.get_logger(__name__)
 
 class FuelCodeServices:
     def __init__(
-        
         self,
-       
         repo: FuelCodeRepository = Depends(FuelCodeRepository),
         notification_service: NotificationService = Depends(NotificationService),
         email_service: CHESEmailService = Depends(CHESEmailService),
@@ -344,14 +342,19 @@ class FuelCodeServices:
         # Check for specific status transitions and new statuses
         if status == FuelCodeStatusEnumSchema.Recommended:
             # Draft → Recommended: notify Director
-            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Recommended, [])
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(
+                FuelCodeStatusEnum.Recommended, []
+            )
         elif status == FuelCodeStatusEnumSchema.Approved:
             # Recommended → Approved: notify Analyst
-            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Approved, [])
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(
+                FuelCodeStatusEnum.Approved, []
+            )
         elif (
             previous_status == FuelCodeStatusEnum.Recommended
             and status == FuelCodeStatusEnumSchema.Draft
-            and user.role_names and RoleEnum.DIRECTOR.name in user.role_names
+            and user.role_names
+            and RoleEnum.DIRECTOR.name in user.role_names
         ):
             # Recommended → Draft: notify Analyst (returned by Director)
             # Only send this notification if it's actually a Director making the change
@@ -467,114 +470,3 @@ class FuelCodeServices:
     @service_handler
     async def delete_fuel_code(self, fuel_code_id: int):
         return await self.repo.delete_fuel_code(fuel_code_id)
-
-    def _group_codes_by_email(self, fuel_codes: List[Any]) -> Dict[str, Dict[str, Any]]:
-        """
-        Group fuel codes by contact email and validate emails.
-
-        Returns:
-            Dict with email as key and dict containing 'codes' and 'contact_emails' as value
-        """
-        email_groups = defaultdict(lambda: {"codes": [], "emails": set()})
-        invalid_emails = []
-
-        for code in fuel_codes:
-            contact_email = code.contact_email
-
-            # Validate email format
-            if not self._is_valid_email(contact_email):
-                invalid_emails.append(contact_email)
-                logger.warning(
-                    f"Invalid email format for fuel code {code.fuel_code}: {contact_email}"
-                )
-                continue
-
-            # Group by email
-            email_groups[contact_email]["codes"].append(code)
-            email_groups[contact_email]["emails"].add(code.contact_email)
-
-        if invalid_emails:
-            logger.warning(
-                f"Found {len(invalid_emails)} invalid email addresses: {invalid_emails}"
-            )
-
-        # Convert defaultdict to regular dict and convert sets to lists for JSON serialization
-        result = {}
-        for email, data in email_groups.items():
-            result[email] = {
-                "codes": data["codes"],
-                "emails": data["emails"],
-            }
-
-        logger.debug(
-            f"Grouped {len(fuel_codes)} fuel codes into {len(result)} email groups"
-        )
-        return result
-
-    def _is_valid_email(self, email: str) -> bool:
-        """
-        Validate email format using regex.
-
-        Args:
-            email: Email string to validate
-
-        Returns:
-            bool: True if email format is valid
-        """
-        if not email or not isinstance(email, str):
-            return False
-
-        # Basic email regex pattern
-        email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-        return re.match(email_pattern, email) is not None
-
-    @service_handler
-    async def send_fuel_code_expiry_notifications(self, from_date) -> bool:
-        """
-        Send email notifications for fuel codes expiring in the 90 days.
-        """
-        try:
-            # Get expiring fuel codes
-            expiring_codes = await self.repo.get_expiring_fuel_codes(from_date)
-
-            if not expiring_codes:
-                logger.info(f"No fuel codes expiring in the next 90 days")
-                return []
-
-            # Group codes by contact email and validate emails
-            email_groups = self._group_codes_by_email(expiring_codes)
-            if not email_groups:
-                logger.warning("No valid contact emails found for expiring fuel codes")
-                return False
-
-            # Send emails to each contact
-            success_count = 0
-            total_emails = len(email_groups)
-            context = {
-                "subject": "Fuel Code Expiry Notification",
-                "message": {
-                    "id": "",
-                    "status": "Expiring"
-                }
-            }
-
-            for contact_email, codes_data in email_groups.items():
-                context["fuel_codes"] = codes_data["codes"]
-                context["contact_email"] = contact_email
-                if await self.email_service.send_fuel_code_expiry_notifications(
-                    notification_type=NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION,
-                    email=contact_email,
-                    notification_context=context,
-                ):
-                    success_count += 1
-
-            logger.info(
-                f"Sent fuel code expiry notifications to {success_count}/{total_emails} contacts"
-            )
-            return expiring_codes
-
-        except Exception as e:
-            logger.error(f"Failed to send fuel code expiry notifications: {e}")
-            return False
-
-        return []

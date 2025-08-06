@@ -1,7 +1,6 @@
 import os
 
 from pydantic import EmailStr
-from lcfs.web.api.fuel_code.schema import ExpiringFuelCodesSchema
 from lcfs.web.api.base import NotificationTypeEnum
 import requests
 import structlog
@@ -46,12 +45,12 @@ class CHESEmailService:
         """
         Send an email notification to users subscribed to the specified notification type.
         """
-        # if not settings.ches_enabled:
-        #     return False
+        if not settings.ches_enabled:
+            return False
 
         # Validate configuration before performing any operations
-        # if not self._validate_configuration():
-            # return
+        if not self._validate_configuration():
+            return
 
         # Retrieve subscribed user emails
         recipient_emails = [email]

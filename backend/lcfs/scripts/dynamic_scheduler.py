@@ -344,16 +344,21 @@ class DynamicTaskScheduler:
                     else:
                         # Pass db_session as parameter
                         if asyncio.iscoroutinefunction(task_function):
-                            await task_function(db_session=db_session)
+                            success = await task_function(db_session=db_session)
+                            result["success"] = success
+                            result["result_message"] = (
+                                f"Task '{task.name}' completed {'' if success else 'un'}successfully"
+                            )
                         else:
                             # If it's not async, run it in a thread pool
                             loop = asyncio.get_event_loop()
                             await loop.run_in_executor(
                                 None, lambda: task_function(db_session=db_session)
                             )
-
-                result["success"] = True
-                result["result_message"] = f"Task '{task.name}' completed successfully"
+                            result["success"] = True
+                            result["result_message"] = (
+                                f"Task '{task.name}' completed successfully"
+                            )
 
         except asyncio.TimeoutError:
             result["error_message"] = (
@@ -411,9 +416,9 @@ class DynamicTaskScheduler:
         """
         Update task status and create execution record
         """
-        expected_status = (
-            TaskStatus.SUCCESS if execution_result["success"] else TaskStatus.FAILURE
-        )
+        # expected_status = (
+        #     TaskStatus.SUCCESS if execution_result["success"] else TaskStatus.FAILURE
+        # )
 
         try:
             async with self.session() as session:
@@ -463,7 +468,7 @@ class DynamicTaskScheduler:
                         session.add(execution)
 
                         # Commit the changes
-                        await session.commit()
+                        await session.flush()
 
                         logger.info(
                             f"✓ Updated task '{fresh_task.name}' - Status: {fresh_task.status}, "
@@ -477,16 +482,6 @@ class DynamicTaskScheduler:
                         task.next_run = fresh_task.next_run
                         task.execution_count = fresh_task.execution_count
                         task.failure_count = fresh_task.failure_count
-
-                        # Verify the update was successful
-                        if await self.verify_task_update(task.id, expected_status):
-                            logger.debug(
-                                f"✓ Task '{task.name}' update verified in database"
-                            )
-                        else:
-                            logger.warning(
-                                f"⚠ Task '{task.name}' update verification failed"
-                            )
 
                     else:
                         logger.info(

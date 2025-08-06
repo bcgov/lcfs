@@ -22,7 +22,7 @@ from lcfs.web.api.fuel_code.repo import FuelCodeRepository
 logger = structlog.get_logger(__name__)
 
 
-async def notify_expirying_fuel_code(db_session: AsyncSession):
+async def notify_expiring_fuel_code(db_session: AsyncSession):
     """
     Task function to send notifications for fuel codes expiring in the next 90 days.
     This function is designed to be called by the dynamic scheduler.
@@ -43,7 +43,7 @@ async def notify_expirying_fuel_code(db_session: AsyncSession):
 
         # Get expiring fuel codes
         logger.info(f"Looking for fuel codes expiring before {expiry_date}")
-        expiring_codes = await fuel_code_repo.get_expiring_fuel_codes(expiry_date)
+        expiring_codes = await fuel_code_repo.get_expiring_fuel_codes()
 
         if not expiring_codes:
             logger.info("No fuel codes expiring in the next 90 days")
@@ -123,7 +123,8 @@ def _group_codes_by_email(fuel_codes: List[Any]) -> Dict[str, Dict[str, Any]]:
 
         # Validate email format
         if not _is_valid_email(contact_email):
-            invalid_emails.append(contact_email)
+            email_groups['tfrs@gov.bc.ca']["codes"].append(code)
+            email_groups['tfrs@gov.bc.ca']["emails"].add('tfrs@gov.bc.ca')
             logger.warning(
                 f"Invalid email format for fuel code {code.fuel_code}: {contact_email}"
             )
