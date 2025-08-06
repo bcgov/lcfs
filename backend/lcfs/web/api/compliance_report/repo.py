@@ -76,7 +76,7 @@ class ComplianceReportRepository:
     def _get_base_report_options(self, include_transaction: bool = True):
         """
         Get common joinedload options for compliance reports.
-        
+
         Args:
             include_transaction: Whether to include transaction relationship (default: True)
         """
@@ -93,10 +93,10 @@ class ComplianceReportRepository:
             .joinedload(UserProfile.organization),
             joinedload(ComplianceReport.assigned_analyst),
         ]
-        
+
         if include_transaction:
             options.append(joinedload(ComplianceReport.transaction))
-            
+
         return options
 
     def _get_minimal_report_options(self):
@@ -473,8 +473,10 @@ class ComplianceReportRepository:
     def _apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
             filter_value = filter.filter
-            logger.info(f"Processing filter: field={filter.field}, value={filter_value}")
-            
+            logger.info(
+                f"Processing filter: field={filter.field}, value={filter_value}"
+            )
+
             # check if the date string is selected for filter
             if filter.filter is None:
                 filter_value = [
@@ -523,52 +525,79 @@ class ComplianceReportRepository:
                 field = get_field_for_filter(
                     ComplianceReportListView, "organization_name"
                 )
-            elif filter.field == "compliance_period" or filter.field == "compliancePeriod":
+            elif (
+                filter.field == "compliance_period"
+                or filter.field == "compliancePeriod"
+            ):
                 field = get_field_for_filter(
                     ComplianceReportListView, "compliance_period"
                 )
             elif filter.field == "updateDate" or filter.field == "update_date":
                 field = get_field_for_filter(ComplianceReportListView, "update_date")
-            elif filter.field == "assignedAnalyst" or filter.field == "assigned_analyst":
-                logger.info(f"Handling assignedAnalyst filter with value: '{filter_value}' (type: {type(filter_value)})")
+            elif (
+                filter.field == "assignedAnalyst" or filter.field == "assigned_analyst"
+            ):
+                logger.info(
+                    f"Handling assignedAnalyst filter with value: '{filter_value}' (type: {type(filter_value)})"
+                )
                 # Handle empty string for unassigned (null analyst fields)
                 if filter_value == "" or filter_value is None:
                     # For unassigned reports, check if analyst_id is null/0 AND names are null/empty
-                    analyst_id_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_id")
-                    first_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_first_name")
-                    last_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_last_name")
-                    
+                    analyst_id_field = get_field_for_filter(
+                        ComplianceReportListView, "assigned_analyst_id"
+                    )
+                    first_name_field = get_field_for_filter(
+                        ComplianceReportListView, "assigned_analyst_first_name"
+                    )
+                    last_name_field = get_field_for_filter(
+                        ComplianceReportListView, "assigned_analyst_last_name"
+                    )
+
                     # Start with the simplest condition - just check if analyst_id is null
                     unassigned_condition = analyst_id_field.is_(None)
                     conditions.append(unassigned_condition)
-                    logger.info("Added condition for unassigned analyst (assigned_analyst_id IS NULL)")
+                    logger.info(
+                        "Added condition for unassigned analyst (assigned_analyst_id IS NULL)"
+                    )
                     continue  # Skip the regular filter application
                 else:
                     logger.info(f"Filtering by analyst initials: '{filter_value}'")
                     # Filter by analyst initials - need to construct initials from first/last name
-                    first_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_first_name")
-                    last_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_last_name")
-                    
+                    first_name_field = get_field_for_filter(
+                        ComplianceReportListView, "assigned_analyst_first_name"
+                    )
+                    last_name_field = get_field_for_filter(
+                        ComplianceReportListView, "assigned_analyst_last_name"
+                    )
+
                     # Create initials field by concatenating first letter of first and last name
                     initials_field = func.concat(
                         func.substring(first_name_field, 1, 1),
-                        func.substring(last_name_field, 1, 1)
+                        func.substring(last_name_field, 1, 1),
                     )
-                    
+
                     # Apply the filter condition directly
                     if filter_option == "contains":
                         conditions.append(initials_field.ilike(f"%{filter_value}%"))
-                        logger.info(f"Added CONTAINS condition for analyst initials like '%{filter_value}%'")
+                        logger.info(
+                            f"Added CONTAINS condition for analyst initials like '%{filter_value}%'"
+                        )
                     else:
                         conditions.append(initials_field == filter_value)
-                        logger.info(f"Added EQUALS condition for analyst initials = '{filter_value}'")
+                        logger.info(
+                            f"Added EQUALS condition for analyst initials = '{filter_value}'"
+                        )
                     continue  # Skip the regular filter application
             else:
-                logger.info(f"Unknown filter field: {filter.field}, trying to get field from model")
+                logger.info(
+                    f"Unknown filter field: {filter.field}, trying to get field from model"
+                )
                 try:
                     field = get_field_for_filter(ComplianceReportListView, filter.field)
                 except Exception as e:
-                    logger.error(f"Failed to get field '{filter.field}' from ComplianceReportListView: {e}")
+                    logger.error(
+                        f"Failed to get field '{filter.field}' from ComplianceReportListView: {e}"
+                    )
                     continue  # Skip this filter if field doesn't exist
 
             conditions.append(
@@ -1066,7 +1095,7 @@ class ComplianceReportRepository:
         Get a user by their ID with roles loaded.
         """
         from lcfs.db.models.user.UserRole import UserRole
-        
+
         result = await self.db.execute(
             select(UserProfile)
             .options(joinedload(UserProfile.user_roles).joinedload(UserRole.role))
@@ -1081,7 +1110,7 @@ class ComplianceReportRepository:
         """
         from lcfs.db.models.user.UserRole import UserRole
         from lcfs.db.models.user.Role import Role
-        
+
         result = await self.db.execute(
             select(UserProfile)
             .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
@@ -1089,10 +1118,112 @@ class ComplianceReportRepository:
             .where(
                 and_(
                     UserProfile.is_active == True,
-                    UserProfile.organization_id.is_(None),  # IDIR users have no organization
-                    Role.name == RoleEnum.ANALYST
+                    UserProfile.organization_id.is_(
+                        None
+                    ),  # IDIR users have no organization
+                    Role.name == RoleEnum.ANALYST,
                 )
             )
             .order_by(UserProfile.first_name, UserProfile.last_name)
         )
         return result.scalars().all()
+
+    @repo_handler
+    async def get_overdue_draft_supplemental_reports(
+        self, cutoff_date: datetime
+    ) -> List:
+        """
+        Get compliance reports that are overdue for auto-submission using existing repo patterns.
+
+        Criteria:
+        - supplemental_initiator = 'Supplier Supplemental'
+        - current_status = 'Draft'
+        - update_date <= cutoff_date (30 days ago)
+
+        Args:
+            repo: ComplianceReportRepository instance
+            cutoff_date: Reports updated before this date are considered overdue
+
+        Returns:
+            List of overdue compliance reports
+        """
+        try:
+            # Use raw query through repo's db session since this is a specific use case
+            query = (
+                select(ComplianceReport)
+                .options(
+                    joinedload(ComplianceReport.current_status),
+                    joinedload(ComplianceReport.organization),
+                    joinedload(ComplianceReport.compliance_period),
+                )
+                .join(ComplianceReportStatus)
+                .where(
+                    and_(
+                        ComplianceReport.supplemental_initiator
+                        == ComplianceReport.SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL,
+                        ComplianceReportStatus.status
+                        == ComplianceReportStatus.ComplianceReportStatusEnum.Draft,
+                        ComplianceReport.update_date <= cutoff_date,
+                    )
+                )
+                .order_by(ComplianceReport.update_date)
+            )
+
+            result = await db.execute(query)
+            reports = result.scalars().all()
+
+            logger.info(f"Retrieved {len(reports)} overdue draft supplemental reports")
+            return list(reports)
+
+        except Exception as e:
+            logger.error(f"Error retrieving overdue compliance reports: {e}")
+            return []
+
+    async def get_or_create_system_user(db_session: AsyncSession):
+        """
+        Get or create a system user for automated operations.
+
+        Args:
+            db_session: Database session
+
+        Returns:
+            UserProfile object for system user
+        """
+        try:
+            from lcfs.db.models.user.UserProfile import UserProfile
+            from sqlalchemy import select
+
+            # Try to find existing system user
+            query = select(UserProfile).where(
+                UserProfile.keycloak_username == "system-auto-submit"
+            )
+
+            result = await db_session.execute(query)
+            system_user = result.scalar_one_or_none()
+
+            if not system_user:
+                # Create system user if it doesn't exist
+                system_user = UserProfile(
+                    keycloak_username="system-auto-submit",
+                    first_name="System",
+                    last_name="Auto Submit",
+                    email="system@lcfs.gov.bc.ca",
+                    is_active=True,
+                )
+                db_session.add(system_user)
+                await db_session.commit()
+                logger.info("Created system user for auto-submit operations")
+
+            return system_user
+
+        except Exception as e:
+            logger.error(f"Error getting/creating system user: {e}")
+            # Fallback - create a minimal system user object
+            from lcfs.db.models.user.UserProfile import UserProfile
+
+            return UserProfile(
+                user_profile_id=None,
+                keycloak_username="system-auto-submit",
+                first_name="System",
+                last_name="Auto Submit",
+            )

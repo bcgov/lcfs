@@ -130,7 +130,11 @@ def upgrade() -> None:
     )
     op.execute("commit")
     op.execute(
-        "INSERT INTO scheduled_tasks (name, task_function, schedule, is_enabled) VALUES ('Fuel Code Expiry Check', 'fuel_code_expiry.notify_expiring_fuel_code', '0 9 * * *', true)"
+        """
+        INSERT INTO scheduled_tasks (name, task_function, schedule, is_enabled) VALUES 
+        ('Fuel Code Expiry Check', 'fuel_code_expiry.notify_expiring_fuel_code', '0 9 * * *', true),
+        ('Auto-Submit Overdue Supplemental Reports', 'compliance_report.auto_submit_overdue_supplemental_reports', '0 2 * * *', true)
+        """
     )
 
 
