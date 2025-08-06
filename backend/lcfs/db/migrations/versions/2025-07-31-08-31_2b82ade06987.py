@@ -1,7 +1,7 @@
 """Scheduled batch tasks
 
 Revision ID: 2b82ade06987
-Revises: b1c2d3e4f5g6
+Revises: 7a2c0f91a992
 Create Date: 2025-07-18 08:31:38.002793
 
 """
@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "2b82ade06987"
-down_revision = "1c0b3bed4671"
+down_revision = "7a2c0f91a992"
 branch_labels = None
 depends_on = None
 
