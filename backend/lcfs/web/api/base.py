@@ -428,6 +428,9 @@ class NotificationTypeEnum(Enum):
     IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL = (
         "IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL"
     )
+    BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE = (
+        "BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE"
+    )
 
     def __str__(self):
         return self.value
