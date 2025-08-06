@@ -1,7 +1,7 @@
 """Add BCEID credit market notification type
 
 Revision ID: 76ffd24d72fb
-Revises: 1c0b3bed4671
+Revises: 8cb65fb3418e
 Create Date: 2025-08-01 15:38:58.326364
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "76ffd24d72fb"
-down_revision = "1c0b3bed4671"
+down_revision = "8cb65fb3418e"
 branch_labels = None
 depends_on = None
 
