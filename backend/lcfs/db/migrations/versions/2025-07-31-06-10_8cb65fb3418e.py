@@ -1,7 +1,7 @@
 """Remove EffectiveDates mixin from Transfer
 
 Revision ID: 8cb65fb3418e
-Revises: b1c2d3e4f5g6
+Revises: 7a2c0f91a992
 Create Date: 2025-07-31 06:10:12.758949
 
 """
@@ -18,7 +18,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "8cb65fb3418e"
-down_revision = "b1c2d3e4f5g6"
+down_revision = "7a2c0f91a992"
 branch_labels = None
 depends_on = None
 
