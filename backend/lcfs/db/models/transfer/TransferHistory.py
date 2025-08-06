@@ -1,10 +1,10 @@
 from sqlalchemy import Column, Integer, ForeignKey, String
 from sqlalchemy.orm import relationship
 
-from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+from lcfs.db.base import BaseModel, Auditable
 
 
-class TransferHistory(BaseModel, Auditable, EffectiveDates):
+class TransferHistory(BaseModel, Auditable):
     __tablename__ = "transfer_history"
     __table_args__ = {"comment": "Records the status changes of a transfer."}
 

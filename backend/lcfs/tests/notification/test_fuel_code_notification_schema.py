@@ -38,10 +38,11 @@ class TestFuelCodeNotificationSchema:
         enum_value = getattr(NotificationTypeEnum, "IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED")
         assert enum_value.value == "IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED"
 
-    def test_draft_status_not_in_mapper(self):
-        """Test that Draft status is not in the mapper (no notifications for draft)"""
+    def test_draft_status_in_mapper_for_returned_notifications(self):
+        """Test that Draft status is in the mapper for returned fuel codes (Recommended → Draft)"""
         notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Draft)
-        assert notifications is None
+        assert notifications is not None
+        assert NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED in notifications
 
     def test_deleted_status_not_in_mapper(self):
         """Test that Deleted status is not in the mapper (no notifications for deleted)"""
