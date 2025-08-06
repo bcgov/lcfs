@@ -146,11 +146,7 @@ CREATE OR REPLACE VIEW vw_transfer_base AS
 SELECT
     transfer.transfer_id,
     transfer_status.status,
-    CASE WHEN transfer.transfer_id > 3066 THEN
-        coalesce(transfer.effective_date, transfer_history.create_date)
-    ELSE
-        coalesce(transfer.effective_date, transfer.transaction_effective_date, transfer_history.create_date)
-    END AS "Calculated Effective Date",
+    coalesce(transfer.transaction_effective_date, transfer_history.update_date) "Calculated Effective Date",
     from_organization.name AS from_organization,
     to_organization.name AS to_organization,
     price_per_unit,

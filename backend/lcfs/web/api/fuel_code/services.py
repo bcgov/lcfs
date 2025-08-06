@@ -342,13 +342,11 @@ class FuelCodeServices:
         elif (
             previous_status == FuelCodeStatusEnum.Recommended
             and status == FuelCodeStatusEnumSchema.Draft
-            and user.role_names and RoleEnum.DIRECTOR.name in user.role_names
+            and user.role_names and RoleEnum.DIRECTOR.value in user.role_names
         ):
             # Recommended → Draft: notify Analyst (returned by Director)
             # Only send this notification if it's actually a Director making the change
-            notifications = [
-                NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED
-            ]
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Draft, [])
 
         if notifications:
             message_data = {
@@ -358,8 +356,16 @@ class FuelCodeServices:
                 "fuelCode": fuel_code.fuel_code,
                 "company": fuel_code.company,
             }
+            # Create dynamic notification type based on status
+            # Special case: when returned to Draft, show as "Returned"
+            if (previous_status == FuelCodeStatusEnum.Recommended and 
+                status == FuelCodeStatusEnumSchema.Draft):
+                notification_type = "Fuel Code Returned"
+            else:
+                notification_type = f"Fuel Code {status.value}"
+            
             notification_data = NotificationMessageSchema(
-                type="Fuel Code Status Update",
+                type=notification_type,
                 message=json.dumps(message_data),
                 related_organization_id=None,  # Fuel codes don't have organization context
                 origin_user_profile_id=user.user_profile_id,

@@ -56,7 +56,7 @@ class TestFuelCodeNotificationLogic:
                             "company": "Test Company",
                         }
                         notification_data = NotificationMessageSchema(
-                            type="Fuel Code Status Update",
+                            type="Fuel Code Recommended",
                             message=json.dumps(message_data),
                             related_organization_id=None,
                             origin_user_profile_id=user.user_profile_id,
@@ -94,7 +94,7 @@ class TestFuelCodeNotificationLogic:
                 
                 # Verify notification data
                 notification_data = call_args.notification_data
-                assert notification_data.type == "Fuel Code Status Update"
+                assert notification_data.type == "Fuel Code Recommended"
                 assert notification_data.origin_user_profile_id == 1
                 assert notification_data.related_transaction_id == "1"
                 
@@ -114,7 +114,7 @@ class TestFuelCodeNotificationLogic:
         }
         
         notification_data = NotificationMessageSchema(
-            type="Fuel Code Status Update",
+            type="Fuel Code Returned",
             message=json.dumps(message_data),
             related_organization_id=None,
             origin_user_profile_id=456,
@@ -122,7 +122,7 @@ class TestFuelCodeNotificationLogic:
         )
         
         # Verify all required fields are present
-        assert notification_data.type == "Fuel Code Status Update"
+        assert notification_data.type == "Fuel Code Returned"
         assert notification_data.origin_user_profile_id == 456
         assert notification_data.related_transaction_id == "123"
         assert notification_data.related_organization_id is None
@@ -138,7 +138,7 @@ class TestFuelCodeNotificationLogic:
         """Test that notification request structure is correct"""
         # Create notification data
         notification_data = NotificationMessageSchema(
-            type="Fuel Code Status Update",
+            type="Fuel Code Recommended",
             message='{"id": 1, "status": "Recommended"}',
             origin_user_profile_id=1,
             related_transaction_id="1",
@@ -174,11 +174,11 @@ class TestFuelCodeNotificationLogic:
 
     def test_no_notification_for_unmapped_status(self):
         """Test that unmapped statuses don't trigger notifications"""
-        # Draft and Deleted should not have notifications
+        # Draft now HAS notifications (for returned fuel codes), but Deleted should not
         draft_notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Draft)
         deleted_notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Deleted)
         
-        assert draft_notifications is None
+        assert draft_notifications is not None  # Draft now has notifications for returned fuel codes
         assert deleted_notifications is None
 
     def test_fuel_code_notification_workflow_coverage(self):
