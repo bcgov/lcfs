@@ -257,16 +257,32 @@ class FuelSupplyServices:
             fuel_type_other=fuel_supply.fuel_type_other,
             ci_of_fuel=fuel_supply.ci_of_fuel,
             end_use_id=fuel_supply.end_use_id,
-            provision_of_the_act=fuel_supply.provision_of_the_act.name,
+            provision_of_the_act=(
+                fuel_supply.provision_of_the_act.name
+                if fuel_supply.provision_of_the_act
+                else None
+            ),
             provision_of_the_act_id=fuel_supply.provision_of_the_act_id,
-            fuel_type=fuel_supply.fuel_type.fuel_type,
-            fuel_category=fuel_supply.fuel_category.category,
+            fuel_type=(
+                fuel_supply.fuel_type.fuel_type if fuel_supply.fuel_type else None
+            ),
+            fuel_category=(
+                fuel_supply.fuel_category.category
+                if fuel_supply.fuel_category
+                else None
+            ),
             fuel_code_id=fuel_supply.fuel_code_id,
             fuel_category_id=fuel_supply.fuel_category_id,
             fuel_supply_id=fuel_supply.fuel_supply_id,
             action_type=fuel_supply.action_type,
-            compliance_units=round(fuel_supply.compliance_units),
-            end_use_type=fuel_supply.end_use_type.type,
+            compliance_units=(
+                round(fuel_supply.compliance_units)
+                if fuel_supply.compliance_units is not None
+                else None
+            ),
+            end_use_type=(
+                fuel_supply.end_use_type.type if fuel_supply.end_use_type else None
+            ),
             target_ci=fuel_supply.target_ci,
             version=fuel_supply.version,
             quantity=fuel_supply.quantity,

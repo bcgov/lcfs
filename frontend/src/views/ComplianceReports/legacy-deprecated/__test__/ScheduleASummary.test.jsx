@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { ScheduleASummary } from '@/views/ComplianceReports/legacy/ScheduleASummary'
+import { ScheduleASummary } from '@/views/ComplianceReports/legacy-deprecated/ScheduleASummary'
 import { wrapper } from '@/tests/utils/wrapper.jsx'
 
 vi.mock('react-router-dom', async () => {

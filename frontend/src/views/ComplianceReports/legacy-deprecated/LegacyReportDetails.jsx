@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -9,19 +9,21 @@ import {
   Link
 } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
+import { ScheduleASummary } from './ScheduleASummary'
+import { ScheduleBSummary } from './ScheduleBSummary'
+import { ScheduleCSummary } from './ScheduleCSummary'
+import { ExclusionAgreementSummary } from './ExclusionAgreementSummary'
 
 import { ROUTES, buildPath } from '@/routes/routes'
 import { useGetAllNotionalTransfers } from '@/hooks/useNotionalTransfer'
-import { ScheduleASummary } from '@/views/ComplianceReports/legacy/ScheduleASummary.jsx'
 import { useGetAllOtherUses } from '@/hooks/useOtherUses.js'
-import { ScheduleCSummary } from '@/views/ComplianceReports/legacy/ScheduleCSummary.jsx'
 import { useGetFuelSupplies } from '@/hooks/useFuelSupply.js'
-import { ScheduleBSummary } from '@/views/ComplianceReports/legacy/ScheduleBSummary.jsx'
+import { useGetAllAllocationAgreements } from '@/hooks/useAllocationAgreement'
 import { isArrayEmpty } from '@/utils/array.js'
 import { ExpandMore } from '@mui/icons-material'
 
 const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
-  const { t } = useTranslation(['legacy'])
+  const { t } = useTranslation(['legacy', 'report'])
   const { compliancePeriod, complianceReportId } = useParams()
   const navigate = useNavigate()
 
@@ -70,6 +72,21 @@ const LegacyReportDetails = ({ currentStatus = 'Draft' }) => {
         component: (data) =>
           data.otherUses.length > 0 && (
             <ScheduleCSummary status={currentStatus} data={data} />
+          )
+      },
+      {
+        name: t('legacy:activityLists.exclusionAgreement'),
+        action: () =>
+          navigate(
+            buildPath(ROUTES.REPORTS.ADD.ALLOCATION_AGREEMENTS, {
+              compliancePeriod,
+              complianceReportId
+            })
+          ),
+        useFetch: useGetAllAllocationAgreements,
+        component: (data) =>
+          data?.allocationAgreements?.length > 0 && (
+            <ExclusionAgreementSummary status={currentStatus} data={data} />
           )
       }
     ],

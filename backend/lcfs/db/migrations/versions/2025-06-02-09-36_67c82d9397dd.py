@@ -40,7 +40,7 @@ SECTIONS_TO_EXECUTE = [
     "Compliance Report Base View",
     "Allocation Agreement Chained View",
     "Allocation Agreement Base View",
-    "Fuel Code Base View"
+    "Fuel Code Base View",
 ]
 
 

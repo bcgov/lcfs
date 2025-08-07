@@ -1,3 +1,6 @@
+import { useUserStore } from '@/stores/useUserStore'
+import { roles } from '@/constants/roles'
+
 export function getApiBaseUrl() {
   // Split the hostname
   const hostnameParts = window.location.hostname.split('.')
@@ -29,7 +32,14 @@ export function getApiBaseUrl() {
 }
 
 export const isFeatureEnabled = (featureFlag) => {
-  return CONFIG.feature_flags[featureFlag]
+  // Get user roles from the store
+  const userRoles = useUserStore.getState().user?.roles || []
+
+  // Check if user is a beta tester
+  const isBetaTester = userRoles.some((role) => role.name === roles.beta_tester)
+
+  // Feature is enabled if the flag is set OR the user is a beta tester
+  return CONFIG.feature_flags[featureFlag] || isBetaTester
 }
 
 export const FEATURE_FLAGS = {
