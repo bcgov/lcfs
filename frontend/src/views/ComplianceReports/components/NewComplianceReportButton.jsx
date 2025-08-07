@@ -1,12 +1,14 @@
 import { useState, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import BCButton from '@/components/BCButton'
-import { Menu, MenuItem } from '@mui/material'
+import BCTypography from '@/components/BCTypography'
+import { Menu, MenuItem, Box } from '@mui/material'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faCaretDown,
   faCaretUp,
-  faCirclePlus
+  faCirclePlus,
+  faInfoCircle
 } from '@fortawesome/free-solid-svg-icons'
 import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 import { useGetOrgComplianceReportReportedYears } from '@/hooks/useOrganization'
@@ -98,12 +100,37 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
             <MenuItem
               key={period.compliancePeriodId}
               onClick={() => handleComplianceOptionClick(period)}
-              disabled={reportedPeriodIDs?.includes(period.compliancePeriodId)}
+              disabled={
+                reportedPeriodIDs?.includes(period.compliancePeriodId) ||
+                period.description === '2025'
+              }
               className={`compliance-period-${period.description}`}
             >
               {period.description}
             </MenuItem>
           ))}
+          <Box
+            sx={{
+              px: 2,
+              py: 1,
+              borderTop: '1px solid #e0e0e0',
+              backgroundColor: '#f5f5f5'
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <FontAwesomeIcon
+                icon={faInfoCircle}
+                style={{
+                  fontSize: '0.875rem',
+                  color: '#666',
+                  marginRight: '4px'
+                }}
+              />
+              <BCTypography variant="caption" color="text.secondary">
+                2025 reporting is temporarily unavailable due to regulatory updates
+              </BCTypography>
+            </Box>
+          </Box>
         </Menu>
       )}
     </div>
