@@ -109,12 +109,14 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
               {period.description}
             </MenuItem>
           ))}
+          {/* Temporary block - disabling 2025 reporting until regulatory updates */}
           <Box
             sx={{
               px: 2,
               py: 1,
               borderTop: '1px solid #e0e0e0',
-              backgroundColor: '#f5f5f5'
+              backgroundColor: '#f5f5f5',
+              cursor: 'default',
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
