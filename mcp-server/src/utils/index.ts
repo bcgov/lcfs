@@ -9,58 +9,61 @@ export const docker = new Docker();
 
 export function parseViTestFailures(output: string): string {
   const lines = output.split('\n');
-  let isInFailureSection = false;
-  let currentTest = '';
   const failures: string[] = [];
-  let captureError = false;
-  let errorLines: string[] = [];
-
+  let isInFailureSection = false;
+  let currentFailure: string[] = [];
+  
   for (const line of lines) {
-    if (line.includes('FAIL') && (line.includes('.test.') || line.includes('.spec.'))) {
+    // Check for start of failed tests section
+    if (line.includes('Failed Tests') && line.includes('⎯')) {
       isInFailureSection = true;
       continue;
     }
-
+    
+    // Check for individual FAIL lines in the detailed section
+    if (line.trim().startsWith('FAIL') && (line.includes('.test.') || line.includes('.spec.'))) {
+      if (currentFailure.length > 0) {
+        failures.push(currentFailure.join('\n').trim());
+      }
+      currentFailure = [line.trim()];
+      continue;
+    }
+    
+    // Capture failure content
     if (isInFailureSection) {
-      if (line.match(/^\s*✓/) || line.match(/^\s*×/) || line.match(/^\s*✗/)) {
-        if (line.match(/^\s*✓/)) {
-          continue;
+      // Stop at summary section (the line with multiple ⎯ and numbers)
+      if (line.match(/⎯+\[\d+\/\d+\]⎯+/) || 
+          line.includes('Test Files') || 
+          line.includes('Tests ') ||
+          line.match(/^\s*\d+\s+(failed|passed)/)) {
+        if (currentFailure.length > 0) {
+          failures.push(currentFailure.join('\n').trim());
+          currentFailure = [];
         }
-        
-        if (line.match(/^\s*×/) || line.match(/^\s*✗/)) {
-          currentTest = line.trim();
-          captureError = true;
-          errorLines = [];
-          continue;
-        }
-      }
-
-      if (captureError && line.trim().startsWith('AssertionError:') || 
-          line.trim().startsWith('Error:') || 
-          line.trim().startsWith('Expected:') ||
-          line.trim().startsWith('Received:') ||
-          line.trim().includes('toEqual') ||
-          line.trim().includes('toBe')) {
-        errorLines.push(line.trim());
-      }
-
-      if (captureError && line.trim() === '' && errorLines.length > 0) {
-        failures.push(`${currentTest}\n${errorLines.join('\n')}`);
-        captureError = false;
-        currentTest = '';
-        errorLines = [];
-      }
-
-      if (line.includes('Test Files') || line.includes('Tests ') || line.match(/^\s*\d+\s+(passed|failed)/)) {
         isInFailureSection = false;
+        continue;
+      }
+      
+      // Skip empty separator lines but capture meaningful content
+      if (line.trim() === '' || line.match(/^⎯+$/)) {
+        if (currentFailure.length > 0) {
+          currentFailure.push(''); // Preserve spacing for readability
+        }
+        continue;
+      }
+      
+      // Capture all failure information
+      if (line.trim()) {
+        currentFailure.push(line);
       }
     }
   }
-
-  if (captureError && errorLines.length > 0) {
-    failures.push(`${currentTest}\n${errorLines.join('\n')}`);
+  
+  // Add final failure if exists
+  if (currentFailure.length > 0) {
+    failures.push(currentFailure.join('\n').trim());
   }
-
+  
   return failures.length > 0 ? failures.join('\n\n') : 'All tests passed!';
 }
 
