@@ -74,12 +74,15 @@ class ComplianceReportUpdateService:
             )
             report_data.status = new_status
 
-            # Handle "Return to supplier"
+            # Handle "Return to supplier" - unlock summary to allow refresh again
             if current_status == ReturnStatus.SUPPLIER.value:
                 await self.summary_repo.reset_summary_lock(report.compliance_report_id)
                 await self.trx_service.repo.delete_transaction(
                     report.transaction_id, report_id
                 )
+            # Handle "Return to analyst" - unlock summary to allow refresh again
+            elif current_status == ReturnStatus.ANALYST.value:
+                await self.summary_repo.reset_summary_lock(report.compliance_report_id)
         else:
             # Handle normal status change
             status_has_changed = report.current_status.status != getattr(
@@ -207,12 +210,26 @@ class ComplianceReportUpdateService:
         )
         if not has_supplier_roles:
             raise HTTPException(status_code=403, detail="Forbidden.")
-        calculated_summary = await self._calculate_and_lock_summary(report, user)
+        
+        # Simply ensure summary exists - it will continue to refresh dynamically
+        # because we're NOT locking it (unlike the old behavior)
+        if not report.summary:
+            # Create summary if it doesn't exist
+            calculated_summary = await self.summary_service.calculate_compliance_report_summary(
+                report.compliance_report_id
+            )
+            report.summary = calculated_summary
+        
+        # Always recalculate to get latest values for transaction
+        await self.summary_service.calculate_compliance_report_summary(
+            report.compliance_report_id
+        )
+        
         credit_change = report.summary.line_20_surplus_deficit_units
         await self._create_or_update_reserve_transaction(credit_change, report)
         await self.repo.update_compliance_report(report)
 
-        return calculated_summary
+        return report.summary
 
     async def handle_analyst_adjustment_status(
         self, report: ComplianceReport, user: UserProfile
@@ -242,16 +259,25 @@ class ComplianceReportUpdateService:
         if not has_analyst_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
 
-        # If its a government adjustment, create a transaction and lock the summary
+        # If its a government adjustment, create a transaction but DON'T lock the summary yet
+        # Let it continue refreshing until recommended by manager
         if (
             report.supplemental_initiator
             and report.supplemental_initiator
             == SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
         ):
-            summary = await self._calculate_and_lock_summary(
-                report, user, skip_can_sign_check=True
-            )
-            credit_change = summary.line_20_surplus_deficit_units
+            # Ensure summary exists and is recalculated
+            if not report.summary:
+                calculated_summary = await self.summary_service.calculate_compliance_report_summary(
+                    report.compliance_report_id
+                )
+                report.summary = calculated_summary
+            else:
+                await self.summary_service.calculate_compliance_report_summary(
+                    report.compliance_report_id
+                )
+            
+            credit_change = report.summary.line_20_surplus_deficit_units
             await self._create_or_update_reserve_transaction(credit_change, report)
 
     async def handle_recommended_by_manager_status(
@@ -274,6 +300,12 @@ class ComplianceReportUpdateService:
         )
         if not has_compliance_manager_role:
             raise HTTPException(status_code=403, detail="Forbidden.")
+        
+        # Lock the summary when report is recommended by manager - this is the new snapshot point
+        calculated_summary = await self._calculate_and_lock_summary(
+            report, user, skip_can_sign_check=True
+        )
+        await self.repo.update_compliance_report(report)
 
     async def handle_assessed_status(self, report: ComplianceReport, user: UserProfile):
         """Handle actions when a report is Assessed."""
