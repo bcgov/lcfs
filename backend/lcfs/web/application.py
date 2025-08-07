@@ -39,9 +39,6 @@ origins = [
     "https://lcfs.apps.silver.devops.gov.bc.ca",
     "https://lowcarbonfuels.gov.bc.ca",
 ]
-public_endpoints = [
-    "/api/fuel-codes/expiring",
-]
 
 
 class MiddlewareExceptionWrapper(BaseHTTPMiddleware):
@@ -90,7 +87,6 @@ class LazyAuthenticationBackend(AuthenticationBackend):
             redis_client=redis_client,
             session_factory=session_factory,
             settings=settings,
-            public_endpoints=public_endpoints,
         )
 
         # Call the authenticate method of the real backend
