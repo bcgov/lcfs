@@ -7,7 +7,6 @@ import uuid
 
 from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.fuel import FuelCodeHistory
-from lcfs.web.api.email.services import CHESEmailService
 import structlog
 from fastapi import Depends
 
@@ -17,7 +16,6 @@ from lcfs.db.models.fuel.FuelCode import FuelCode
 from lcfs.db.models.fuel.FuelCodeStatus import FuelCodeStatusEnum
 from lcfs.db.models.fuel.FuelType import QuantityUnitsEnum
 from lcfs.web.api.base import (
-    NotificationTypeEnum,
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
@@ -55,11 +53,9 @@ class FuelCodeServices:
         self,
         repo: FuelCodeRepository = Depends(FuelCodeRepository),
         notification_service: NotificationService = Depends(NotificationService),
-        email_service: CHESEmailService = Depends(CHESEmailService),
     ) -> None:
         self.repo = repo
         self.notification_service = notification_service
-        self.email_service = email_service
 
     @service_handler
     async def search_fuel_code(self, fuel_code, prefix, distinct_search):
@@ -342,14 +338,10 @@ class FuelCodeServices:
         # Check for specific status transitions and new statuses
         if status == FuelCodeStatusEnumSchema.Recommended:
             # Draft → Recommended: notify Director
-            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(
-                FuelCodeStatusEnum.Recommended, []
-            )
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Recommended, [])
         elif status == FuelCodeStatusEnumSchema.Approved:
             # Recommended → Approved: notify Analyst
-            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(
-                FuelCodeStatusEnum.Approved, []
-            )
+            notifications = FUEL_CODE_STATUS_NOTIFICATION_MAPPER.get(FuelCodeStatusEnum.Approved, [])
         elif (
             previous_status == FuelCodeStatusEnum.Recommended
             and status == FuelCodeStatusEnumSchema.Draft

@@ -4,7 +4,6 @@ Fuel codes endpoints
 
 from typing import List, Union, Optional
 
-from datetime import date, timedelta
 import structlog
 from fastapi import (
     APIRouter,
@@ -23,7 +22,6 @@ from lcfs.db.models.user.Role import RoleEnum
 from lcfs.web.api.base import PaginationRequestSchema
 from lcfs.web.api.fuel_code.export import FuelCodeExporter
 from lcfs.web.api.fuel_code.schema import (
-    ExpiringFuelCodesSchema,
     FuelCodeCreateUpdateSchema,
     FuelCodesSchema,
     SearchFuelCodeList,
@@ -200,20 +198,6 @@ async def get_transport_modes(
     """Fetch all fuel code transport modes"""
     return await service.get_transport_modes()
 
-@router.get(
-    "/expiring",
-    response_model=List[ExpiringFuelCodesSchema],
-    status_code=status.HTTP_200_OK,
-)
-async def send_expiring_fuel_code_notifications(
-    from_date: date = Query(
-        default_factory=lambda: (date.today() + timedelta(days=90)).isoformat(),
-        description="Start of the expiration window (defaults to 90 days from today)",
-    ),
-    service: FuelCodeServices = Depends(),
-) -> List[ExpiringFuelCodesSchema]:
-    """Send notifications to all related fuel code contacts, that are within 90 days of expiry"""
-    return await service.send_fuel_code_expiry_notifications(from_date)
 
 @router.get("/{fuel_code_id}", status_code=status.HTTP_200_OK)
 @view_handler(["*"])
@@ -259,4 +243,3 @@ async def delete_fuel_code(
     request: Request, fuel_code_id: int, service: FuelCodeServices = Depends()
 ):
     return await service.delete_fuel_code(fuel_code_id)
-
