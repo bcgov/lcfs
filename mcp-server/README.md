@@ -9,33 +9,39 @@ The LCFS MCP Server is a specialized development tool that integrates with AI co
 ## Features
 
 ### Health & System Monitoring
+
 - Health check endpoints for server status verification
 - Environment and system information reporting
 - Database connection status monitoring
 
 ### Docker Container Management
+
 - Start, stop, and restart individual or multiple containers
 - Container status monitoring and discovery
 - Support for development profiles and service dependencies
 - Graceful shutdown capabilities
 
 ### Database Operations
+
 - Database connection health checks (read-only)
 - Migration management (create, upgrade, downgrade, status)
 - Database reset workflows with safety confirmations
 - Integration with existing LCFS migration scripts
 
 ### Testing Integration
+
 - Frontend test execution with failure-focused reporting
 - Backend Python test execution with detailed error output
 - Coverage reporting and test pattern filtering
 - Memory-optimized test configurations for CI/CD
 
 ### GitHub Integration
+
 - Issue lookup from the LCFS repository
 - Integration with GitHub API for development context
 
 ### Data Transfer (Read-Only)
+
 - Import data from OpenShift environments for local development
 - Support for dev/test/prod environment data synchronization
 - Table-specific transfer capabilities
@@ -51,11 +57,13 @@ The LCFS MCP Server is a specialized development tool that integrates with AI co
 ## Installation & Setup
 
 ### Prerequisites
+
 - Node.js 18.0.0 or higher
 - Docker and Docker Compose
 - Access to LCFS development environment
 
 ### Local Development
+
 ```bash
 # Install dependencies
 npm install
@@ -71,6 +79,7 @@ npm start
 ```
 
 ### Docker Integration
+
 The MCP server is integrated with the LCFS Docker Compose setup:
 
 ```bash
@@ -87,20 +96,24 @@ docker-compose logs -f lcfs-mcp-server
 ## Configuration
 
 ### Environment Variables
+
 - `APP_ENVIRONMENT=dev` - **Required** - Restricts server to development use only
 - Standard LCFS environment variables for database and service connections
 
 ### MCP Client Configuration
+
 For Claude Code integration, add to your MCP settings:
 
 ```json
 {
   "mcpServers": {
     "lcfs-mcp-server": {
-      "command": "docker-compose",
-      "args": ["exec", "-T", "lcfs-mcp-server", "node", "dist/index.js"],
+      "type": "stdio",
+      "command": "npx",
+      "args": ["./mcp-server"],
       "env": {
-        "APP_ENVIRONMENT": "dev"
+        "APP_ENVIRONMENT": "dev",
+        "NODE_ENV": "development"
       }
     }
   }
@@ -110,14 +123,16 @@ For Claude Code integration, add to your MCP settings:
 ## Available Tools
 
 ### System Tools
+
 - `health` - Server health check
 - `echo` - Message echo for connectivity testing
 - `environment-info` - System environment details
 - `database-status` - Database connection status
 
 ### Docker Tools
+
 - `docker-start` - Start containers
-- `docker-stop` - Stop containers  
+- `docker-stop` - Stop containers
 - `docker-restart` - Restart containers
 - `docker-status` - Container status
 - `docker-discover` - Find running/stopped containers
@@ -125,6 +140,7 @@ For Claude Code integration, add to your MCP settings:
 - `docker-shutdown` - Graceful server shutdown
 
 ### Database Tools
+
 - `database-reset` - Reset database with confirmation
 - `db-reset` - Complete database reset workflow
 - `migration-create` - Generate new migrations
@@ -135,10 +151,12 @@ For Claude Code integration, add to your MCP settings:
 - `data-transfer` - Import data from environments
 
 ### Testing Tools
+
 - `frontend-test` - Run frontend tests with failure reporting
 - `backend-test` - Run backend Python tests
 
 ### GitHub Tools
+
 - `github-issue-lookup` - Fetch issue details by number
 
 ## Resources
@@ -151,6 +169,7 @@ The server provides informational resources accessible through MCP clients:
 ## Architecture
 
 ### Modular Design
+
 ```
 src/
 ├── index.ts           # Main server entry point
@@ -165,6 +184,7 @@ src/
 ```
 
 ### Error Handling
+
 - Comprehensive error catching and reporting
 - User-friendly error messages
 - Graceful degradation for failed operations
@@ -175,6 +195,7 @@ src/
 ### Common Use Cases
 
 1. **Development Environment Setup**
+
    ```bash
    # Use health check to verify server
    # Start required containers
@@ -182,6 +203,7 @@ src/
    ```
 
 2. **Testing & Validation**
+
    ```bash
    # Run targeted tests with failure details
    # Check test coverage
@@ -189,6 +211,7 @@ src/
    ```
 
 3. **Container Management**
+
    ```bash
    # Discover running containers
    # Restart services after code changes
@@ -207,26 +230,31 @@ src/
 ### Common Issues
 
 **Server Won't Start**
+
 - Verify `APP_ENVIRONMENT=dev` is set
 - Check Node.js version (18.0.0+)
 - Ensure Docker services are accessible
 
 **Container Operations Fail**
+
 - Verify Docker daemon is running
 - Check container names and Docker Compose setup
 - Review Docker permissions
 
 **Database Operations Fail**
+
 - Confirm database container is running
 - Verify database connection settings
 - Check migration state
 
 **Test Execution Issues**
+
 - Ensure frontend/backend dependencies are installed
 - Check memory limits and shard configurations
 - Verify test file patterns and paths
 
 ### Debug Mode
+
 Enable detailed logging by examining server stdout/stderr when running in development mode.
 
 ## Contributing
