@@ -133,3 +133,16 @@ cython_debug/
 # local database file
 LCFS Local DB.session.sql
 frontend/cucumber-report.html
+
+# AI Assistant Files
+CLAUDE.md
+.cursorrules
+cursor.md
+.github/copilot-instructions.md
+.aider*
+.windsurf
+windsurf.md
+.continue/
+.codeium/
+.tabnine/
+.kite/
