@@ -78,10 +78,10 @@ class ComplianceReportServices:
     async def _validate_analyst_eligibility(self, assigned_analyst_id: int) -> None:
         """
         Validate that the assigned analyst exists and has the correct role.
-        
+
         Args:
             assigned_analyst_id: The ID of the analyst to validate
-            
+
         Raises:
             DataNotFoundException: If analyst not found
             ServiceException: If user is not an active IDIR analyst
@@ -89,14 +89,14 @@ class ComplianceReportServices:
         assigned_analyst = await self.repo.get_user_by_id(assigned_analyst_id)
         if not assigned_analyst:
             raise DataNotFoundException("Assigned analyst not found")
-        
+
         # Check if user has Analyst role and is IDIR user (no organization)
         has_analyst_role = any(
-            user_role.role.name == RoleEnum.ANALYST 
+            user_role.role.name == RoleEnum.ANALYST
             for user_role in assigned_analyst.user_roles
         )
         is_idir_user = assigned_analyst.organization_id is None
-        
+
         if not (has_analyst_role and is_idir_user):
             raise ServiceException("User is not an active IDIR analyst")
 
@@ -115,7 +115,9 @@ class ComplianceReportServices:
     ) -> ComplianceReportBaseSchema:
         """Creates a new compliance report."""
         period = await self.repo.get_compliance_period(report_data.compliance_period)
-        if not period:
+        if (
+            not period or period.description == "2025"
+        ):  # Temporarily block 2025 reporting until regulatory changes are finalized
             raise DataNotFoundException("Compliance period not found.")
 
         draft_status = await self.repo.get_compliance_report_status_by_desc(
@@ -1035,7 +1037,6 @@ class ComplianceReportServices:
         if not reports or len(reports) == 0:
             return []
 
-
         group_map = defaultdict(dict)
         create_date_map = {}
         original_order = []
@@ -1171,11 +1172,11 @@ class ComplianceReportServices:
         Get a list of all active IDIR users with Analyst role for assignment dropdown.
         """
         from lcfs.web.api.compliance_report.schema import AssignedAnalystSchema
-        
+
         analysts = await self.repo.get_active_idir_analysts()
         analyst_list = [
             AssignedAnalystSchema.model_validate(analyst) 
             for analyst in analysts
         ]
-        
+
         return analyst_list

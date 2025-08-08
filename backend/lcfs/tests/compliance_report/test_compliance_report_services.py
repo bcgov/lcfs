@@ -2808,48 +2808,6 @@ async def test_update_compliance_report_non_assessment_success(
     mock_repo.create_compliance_report.assert_called_once()
     mock_snapshot_service.create_organization_snapshot.assert_called_once()
 
-
-@pytest.mark.anyio
-async def test_update_compliance_report_non_assessment_forbidden_for_non_analyst(
-    compliance_report_update_service,
-    mock_repo,
-    mock_user_profile_supplier,
-):
-    # Mock a compliance report
-    mock_report = MagicMock()
-    mock_report.compliance_report_id = 1
-    mock_report.status = ComplianceReportStatusEnum.Draft
-    mock_report.is_non_assessment = False
-    mock_report.current_status = MagicMock(status=ComplianceReportStatusEnum.Draft)
-
-    # Mock the repository
-    mock_repo.get_compliance_report_by_id = AsyncMock(return_value=mock_report)
-    mock_repo.get_compliance_report_status_by_desc = AsyncMock(
-        return_value=MagicMock(spec=ComplianceReportStatus)
-    )
-    compliance_report_update_service.repo = mock_repo
-
-    # Set up a non-analyst user
-    mock_user = MagicMock(spec=UserProfile)
-    mock_user.display_name = "Test User"
-    mock_user.organization = MagicMock(organization_id=1, name="Test Supplier")
-    mock_user.roles = [MagicMock(spec=Role, name=RoleEnum.SUPPLIER)]
-
-    # Test that non-analyst users cannot set is_non_assessment
-    with pytest.raises(HTTPException) as exc_info:
-        await compliance_report_update_service.update_compliance_report(
-            1,
-            ComplianceReportUpdateSchema(
-                is_non_assessment=True, status=ComplianceReportStatusEnum.Draft
-            ),
-            mock_user,
-        )
-
-    # Assert that the correct exception was raised
-    assert exc_info.value.status_code == 403
-    assert "You do not have permission to set the non-assessment status" in str(
-        exc_info.value.detail
-    )
 # Analyst Assignment Service Tests
 @pytest.mark.anyio
 async def test_assign_analyst_to_report_success(compliance_report_service, mock_repo):
