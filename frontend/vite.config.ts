@@ -7,7 +7,10 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(), svgr()],
+  plugins: [
+    react(),
+    svgr()
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')
@@ -41,8 +44,7 @@ export default defineConfig({
         'src/assets',
         'src/constants',
         'src/themes',
-        'src/tests',
-        'src/stores'
+        'src/tests'
       ]
     }
   },

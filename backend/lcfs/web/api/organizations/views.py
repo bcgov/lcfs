@@ -1,7 +1,7 @@
 import structlog
 from typing import List, Optional
 
-from fastapi import APIRouter, Body, Depends, status, Request, Query
+from fastapi import APIRouter, Body, Depends, status, Request, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi_cache.decorator import cache
 from starlette import status
@@ -23,6 +23,8 @@ from .schema import (
     OrganizationBalanceResponseSchema,
     OrganizationUpdateSchema,
     OrganizationDetailsSchema,
+    OrganizationCreditMarketUpdateSchema,
+    OrganizationCreditMarketListingSchema,
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -73,7 +75,7 @@ async def create_organization(
     Endpoint to create a new organization. This includes processing the provided
     organization details along with associated addresses.
     """
-    return await service.create_organization(organization_data)
+    return await service.create_organization(organization_data, request.user)
 
 
 @router.get(
@@ -85,7 +87,7 @@ async def create_organization(
 async def search_organizations(
     request: Request,
     org_name: str = Query(
-        ..., min_length=3, description="Company name or operating name"
+        ..., min_length=1, description="Company name or operating name"
     ),
     service: OrganizationsService = Depends(),
 ):
@@ -94,6 +96,22 @@ async def search_organizations(
     Returns a list of organizations with their names and formatted addresses.
     """
     return await service.search_organization_details(org_name)
+
+
+@router.get(
+    "/credit-market-listings",
+    response_model=List[OrganizationCreditMarketListingSchema],
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])
+async def get_credit_market_listings(
+    request: Request, service: OrganizationsService = Depends()
+):
+    """
+    Fetch organizations that have opted to display in the credit trading market.
+    Returns organizations with credit market details for public visibility.
+    """
+    return await service.get_credit_market_listings()
 
 
 @router.get(
@@ -118,7 +136,7 @@ async def update_organization(
     service: OrganizationsService = Depends(),
 ):
     """Update an organizations data by id"""
-    return await service.update_organization(organization_id, organization_data)
+    return await service.update_organization(organization_id, organization_data, request.user)
 
 
 @router.post("/", response_model=OrganizationListSchema, status_code=status.HTTP_200_OK)
@@ -262,3 +280,35 @@ async def get_balances(request: Request, service: OrganizationsService = Depends
         total_balance=total_balance,
         reserved_balance=reserved_balance,
     )
+
+
+@router.put(
+    "/current/credit-market",
+    response_model=OrganizationResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.SUPPLIER])
+async def update_current_org_credit_market_details(
+    request: Request,
+    credit_market_data: OrganizationCreditMarketUpdateSchema,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Update credit market contact details for the current user's organization.
+    This endpoint allows BCeID users to update their organization's credit trading market contact information.
+    """
+    organization_id = request.user.organization_id
+    if not organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is not associated with an organization"
+        )
+    
+    # Use the dedicated method to update only credit market fields
+    return await service.update_organization_credit_market_details(
+        organization_id, 
+        credit_market_data.model_dump(exclude_unset=True), 
+        request.user
+    )
+
+

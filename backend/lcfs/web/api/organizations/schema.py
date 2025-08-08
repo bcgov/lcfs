@@ -79,11 +79,7 @@ class AddressBase(BaseSchema):
 
 
 class OrganizationAddressBase(AddressBase):
-
-    # TODO[pydantic]: The `Config` class inherits from another class, please create the `model_config` manually.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
-    class Config(BaseConfig):
-        pass
+    pass
 
 
 class OrganizationAddressSchema(OrganizationAddressBase):
@@ -100,11 +96,7 @@ class OrganizationAddressCreateSchema(OrganizationAddressBase):
 
 
 class OrganizationAttorneyAddressBase(AddressBase):
-
-    # TODO[pydantic]: The `Config` class inherits from another class, please create the `model_config` manually.
-    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-config for more information.
-    class Config(BaseConfig):
-        pass
+    pass
 
 
 class OrganizationAttorneyAddressSchema(OrganizationAttorneyAddressBase):
@@ -132,6 +124,14 @@ class OrganizationBase(BaseSchema):
     reserved_balance: Optional[int] = None
     organization_status_id: int
     organization_type_id: int
+    credit_trading_enabled: Optional[bool] = False
+    credit_market_contact_name: Optional[str] = None
+    credit_market_contact_email: Optional[str] = None
+    credit_market_contact_phone: Optional[str] = None
+    credit_market_is_seller: Optional[bool] = False
+    credit_market_is_buyer: Optional[bool] = False
+    credits_to_sell: Optional[int] = 0
+    display_in_credit_market: Optional[bool] = False
 
 
 class OrganizationSchema(OrganizationBase):
@@ -156,6 +156,14 @@ class OrganizationCreateSchema(BaseSchema):
     organization_status_id: int
     organization_type_id: int
     records_address: Optional[str] = None
+    credit_trading_enabled: Optional[bool] = False
+    credit_market_contact_name: Optional[str] = None
+    credit_market_contact_email: Optional[str] = None
+    credit_market_contact_phone: Optional[str] = None
+    credit_market_is_seller: Optional[bool] = False
+    credit_market_is_buyer: Optional[bool] = False
+    credits_to_sell: Optional[int] = 0
+    display_in_credit_market: Optional[bool] = False
     address: OrganizationAddressCreateSchema
     attorney_address: OrganizationAttorneyAddressCreateSchema
 
@@ -170,6 +178,14 @@ class OrganizationUpdateSchema(BaseSchema):
     organization_status_id: Optional[int] = None
     organization_type_id: Optional[int] = None
     records_address: Optional[str] = None
+    credit_trading_enabled: Optional[bool] = None
+    credit_market_contact_name: Optional[str] = None
+    credit_market_contact_email: Optional[str] = None
+    credit_market_contact_phone: Optional[str] = None
+    credit_market_is_seller: Optional[bool] = False
+    credit_market_is_buyer: Optional[bool] = False
+    credits_to_sell: Optional[int] = 0
+    display_in_credit_market: Optional[bool] = False
     address: Optional[OrganizationAddressCreateSchema] = []
     attorney_address: Optional[OrganizationAttorneyAddressCreateSchema] = []
 
@@ -182,6 +198,16 @@ class OrganizationResponseSchema(BaseSchema):
     phone: Optional[str] = None
     edrms_record: Optional[str] = None
     has_early_issuance: bool
+    total_balance: Optional[int] = None
+    reserved_balance: Optional[int] = None
+    credit_trading_enabled: Optional[bool] = False
+    credit_market_contact_name: Optional[str] = None
+    credit_market_contact_email: Optional[str] = None
+    credit_market_contact_phone: Optional[str] = None
+    credit_market_is_seller: Optional[bool] = False
+    credit_market_is_buyer: Optional[bool] = False
+    credits_to_sell: Optional[int] = 0
+    display_in_credit_market: Optional[bool] = False
     org_status: Optional[OrganizationStatusSchema] = []
     records_address: Optional[str] = None
     org_address: Optional[OrganizationAddressSchema] = []
@@ -214,3 +240,26 @@ class OrganizationDetailsSchema(BaseSchema):
     address: Optional[str]
     email: Optional[str]
     phone: Optional[str]
+
+
+class OrganizationCreditMarketUpdateSchema(BaseSchema):
+    credit_market_contact_name: Optional[str] = None
+    credit_market_contact_email: Optional[str] = None
+    credit_market_contact_phone: Optional[str] = None
+    credit_market_is_seller: Optional[bool] = False
+    credit_market_is_buyer: Optional[bool] = False
+    credits_to_sell: Optional[int] = 0
+    display_in_credit_market: Optional[bool] = False
+
+
+class OrganizationCreditMarketListingSchema(BaseSchema):
+    """Schema for credit market listings - public data only"""
+    organization_id: int
+    organization_name: str
+    credits_to_sell: Optional[int] = 0
+    display_in_credit_market: bool
+    credit_market_is_seller: bool
+    credit_market_is_buyer: bool
+    credit_market_contact_name: Optional[str] = None
+    credit_market_contact_email: Optional[str] = None  
+    credit_market_contact_phone: Optional[str] = None

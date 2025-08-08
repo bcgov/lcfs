@@ -130,3 +130,7 @@ export const SCHEDULE_IMPORT_FILE_TYPES = {
     return this.MIME_TYPES.join(',')
   }
 }
+
+export const CURRENT_COMPLIANCE_YEAR = (
+  LEGISLATION_TRANSITION_YEAR + 1
+).toString()

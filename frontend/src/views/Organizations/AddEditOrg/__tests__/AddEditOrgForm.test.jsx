@@ -7,13 +7,17 @@ import { useApiService } from '@/services/useApiService'
 import { useOrganization } from '@/hooks/useOrganization'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ROUTES } from '@/routes/routes'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { I18nextProvider } from 'react-i18next'
+import i18n from '@/i18n'
 
 const mockSetValue = vi.fn()
 const mockWatch = vi.fn()
 const mockTrigger = vi.fn()
 const mockReset = vi.fn()
-const mockHandleSubmit = vi.fn(fn => (event) => {
-  event?.preventDefault?.();
+const mockHandleSubmit = vi.fn((fn) => (event) => {
+  event?.preventDefault?.()
   // Call the provided function with form data and connect it to the API
   const result = fn({
     orgLegalName: 'New Organization',
@@ -25,18 +29,22 @@ const mockHandleSubmit = vi.fn(fn => (event) => {
     orgPostalCodeZipCode: 'V6B3K9',
     orgRegForTransfers: 2,
     hasEarlyIssuance: true,
-    orgEDRMSRecord: 'EDRMS-123',
-  });
+    orgEDRMSRecord: 'EDRMS-123'
+  })
 
-  return result;
-});
+  return result
+})
 const mockFormState = { errors: {} }
 
 // Mock all dependencies first
-vi.mock('react-router-dom', () => ({
-  useParams: vi.fn(),
-  useNavigate: vi.fn()
-}))
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useParams: vi.fn(),
+    useNavigate: vi.fn()
+  }
+})
 
 vi.mock('@/services/useApiService', () => ({
   useApiService: vi.fn()
@@ -86,63 +94,74 @@ vi.mock('react-hook-form', () => ({
   FormProvider: ({ children }) => <div>{children}</div>
 }))
 
-vi.mock('@tanstack/react-query', () => ({
-  useMutation: vi.fn(() => ({
-    mutate: vi.fn(),
-    isPending: false,
-    isError: false
-  }))
-}))
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useMutation: vi.fn(() => ({
+      mutate: vi.fn(),
+      isPending: false,
+      isError: false
+    }))
+  }
+})
 
 vi.mock('@mui/material', () => ({
   Box: React.forwardRef((props, ref) => {
-    const { flexWrap, ...otherProps } = props;
+    const { flexWrap, ...otherProps } = props
     return (
-      <div
-        ref={ref}
-        data-testid="box"
-        data-flexwrap={flexWrap}
-        {...otherProps}
-      >
+      <div ref={ref} data-testid="box" data-flexwrap={flexWrap} {...otherProps}>
         {props.children}
       </div>
-    );
+    )
   }),
-  Paper: (props) => <div data-testid="paper" {...props}>{props.children}</div>,
-  TextField: React.forwardRef(({ id, label, error, helperText, fullWidth, variant, ...props }, ref) => (
-    <div data-testid={id || "text-field"}>
-      {label && <label htmlFor={id}>{label}</label>}
-      <input
-        id={id}
+  Paper: (props) => (
+    <div data-testid="paper" {...props}>
+      {props.children}
+    </div>
+  ),
+  TextField: React.forwardRef(
+    ({ id, label, error, helperText, fullWidth, variant, ...props }, ref) => (
+      <div data-testid={id || 'text-field'}>
+        {label && <label htmlFor={id}>{label}</label>}
+        <input
+          id={id}
+          ref={ref}
+          data-fullwidth={fullWidth ? 'true' : undefined}
+          data-variant={variant}
+          data-test={props['data-test']}
+          {...props}
+        />
+        {error && <span>{helperText}</span>}
+      </div>
+    )
+  ),
+  Typography: (props) => (
+    <div data-testid="typography" {...props}>
+      {props.children}
+    </div>
+  ),
+  Grid: React.forwardRef(
+    ({ container, item, spacing, xs, md, children, ...props }, ref) => (
+      <div
         ref={ref}
-        data-fullwidth={fullWidth ? "true" : undefined}
-        data-variant={variant}
-        data-test={props['data-test']}
+        data-testid="grid"
+        data-container={container ? 'true' : undefined}
+        data-item={item ? 'true' : undefined}
+        data-spacing={spacing}
+        data-xs={xs}
+        data-md={md}
         {...props}
-      />
-      {error && <span>{helperText}</span>}
-    </div>
-  )),
-  Typography: (props) => <div data-testid="typography" {...props}>{props.children}</div>,
-  Grid: React.forwardRef(({ container, item, spacing, xs, md, children, ...props }, ref) => (
-    <div
-      ref={ref}
-      data-testid="grid"
-      data-container={container ? "true" : undefined}
-      data-item={item ? "true" : undefined}
-      data-spacing={spacing}
-      data-xs={xs}
-      data-md={md}
-      {...props}
-    >
-      {children}
-    </div>
-  )),
+      >
+        {children}
+      </div>
+    )
+  ),
   FormControl: React.forwardRef(({ fullWidth, ...props }, ref) => (
     <div
       ref={ref}
       data-testid="form-control"
-      data-fullwidth={fullWidth ? "true" : undefined}
+      data-fullwidth={fullWidth ? 'true' : undefined}
       {...props}
     >
       {props.children}
@@ -168,7 +187,7 @@ vi.mock('@mui/material', () => ({
     <div
       ref={ref}
       data-testid="radio-group"
-      data-row={row ? "true" : undefined}
+      data-row={row ? 'true' : undefined}
       onChange={onChange}
       {...props}
     >
@@ -195,11 +214,27 @@ vi.mock('@mui/material', () => ({
       {...props}
     />
   )),
-  InputLabel: (props) => <label data-testid="input-label" {...props}>{props.children}</label>,
-  Select: (props) => <select data-testid="select" {...props}>{props.children}</select>,
-  MenuItem: (props) => <option value={props.value} {...props}>{props.children}</option>,
+  InputLabel: (props) => (
+    <label data-testid="input-label" {...props}>
+      {props.children}
+    </label>
+  ),
+  Select: (props) => (
+    <select data-testid="select" {...props}>
+      {props.children}
+    </select>
+  ),
+  MenuItem: (props) => (
+    <option value={props.value} {...props}>
+      {props.children}
+    </option>
+  ),
   Divider: () => <hr data-testid="divider" />,
-  Stack: (props) => <div data-testid="stack" {...props}>{props.children}</div>
+  Stack: (props) => (
+    <div data-testid="stack" {...props}>
+      {props.children}
+    </div>
+  )
 }))
 
 vi.mock('@mui/x-date-pickers', () => ({
@@ -209,7 +244,7 @@ vi.mock('@mui/x-date-pickers', () => ({
       <input
         type="date"
         value={props.value || ''}
-        onChange={e => props.onChange(e.target.value)}
+        onChange={(e) => props.onChange(e.target.value)}
         {...props}
       />
     </div>
@@ -235,20 +270,36 @@ vi.mock('@/components/BCForm', () => ({
       ref={ref}
       data-test="address-autocomplete"
       value={props.value || ''}
-      onChange={e => props.onChange && props.onChange(e.target.value)}
-      onSelect={() => props.onSelectAddress && props.onSelectAddress({
-        streetAddress: '123 Test St',
-        city: 'TestCity'
-      })}
+      onChange={(e) => props.onChange && props.onChange(e.target.value)}
+      onSelect={() =>
+        props.onSelectAddress &&
+        props.onSelectAddress({
+          streetAddress: '123 Test St',
+          city: 'TestCity'
+        })
+      }
     />
   )),
   TextField: React.forwardRef((props, ref) => (
-    <div data-testid={props.id || "bcform-text-field"}>
+    <div data-testid={props.id || 'bcform-text-field'}>
       <input ref={ref} {...props} />
     </div>
   ))
 }))
 
+const queryClient = new QueryClient()
+
+const Wrapper = ({ children }) => (
+  <QueryClientProvider client={queryClient}>
+    <I18nextProvider i18n={i18n}>
+      <MemoryRouter initialEntries={['/organizations/add']}>
+        <Routes>
+          <Route path="/organizations/add" element={children} />
+        </Routes>
+      </MemoryRouter>
+    </I18nextProvider>
+  </QueryClientProvider>
+)
 
 describe('AddEditOrgForm Component', () => {
   const mockNavigate = vi.fn()
@@ -281,14 +332,14 @@ describe('AddEditOrgForm Component', () => {
   })
 
   it('renders the form in add mode', () => {
-    render(<AddEditOrgForm />);
+    render(<AddEditOrgForm />)
 
     // Verify key form elements are rendered
     expect(screen.getByTestId('orgLegalName')).toBeInTheDocument()
     expect(screen.getByTestId('orgOperatingName')).toBeInTheDocument()
     expect(screen.getByTestId('orgEmailAddress')).toBeInTheDocument()
     expect(screen.getByTestId('orgPhoneNumber')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument()
   })
 
   it('renders the form in edit mode with pre-populated data', async () => {
@@ -329,7 +380,6 @@ describe('AddEditOrgForm Component', () => {
     })
   })
 
-
   it('syncs operating name with legal name when checkbox is checked', async () => {
     const user = userEvent.setup()
 
@@ -344,9 +394,11 @@ describe('AddEditOrgForm Component', () => {
     await user.click(screen.getByTestId('sameAsLegalName'))
 
     // Verify setValue was called with the legal name
-    expect(mockSetValue).toHaveBeenCalledWith('orgOperatingName', 'Test Legal Name')
+    expect(mockSetValue).toHaveBeenCalledWith(
+      'orgOperatingName',
+      'Test Legal Name'
+    )
   })
-
 
   it('navigates back to organizations page on cancel', async () => {
     const user = userEvent.setup()
@@ -359,7 +411,6 @@ describe('AddEditOrgForm Component', () => {
     // Verify navigation
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST)
   })
-
 
   it('handles address autocomplete selection', async () => {
     const user = userEvent.setup()
@@ -376,5 +427,4 @@ describe('AddEditOrgForm Component', () => {
     expect(mockSetValue).toHaveBeenCalledWith('orgStreetAddress', '123 Test St')
     expect(mockSetValue).toHaveBeenCalledWith('orgCity', 'TestCity')
   })
-
 })

@@ -71,13 +71,6 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         nullable=False,
         comment="The count of transfers in progress for the specified organization.",
     )
-    has_early_issuance = Column(
-        Boolean,
-        nullable=False,
-        default=False,
-        server_default=text("FALSE"),
-        comment="True if the Organization can create early issuance reports",
-    )
     organization_status_id = Column(
         Integer, ForeignKey("organization_status.organization_status_id")
     )
@@ -96,6 +89,51 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     records_address = Column(
         String(2000),
         comment="Organization's address in BC where records are maintained",
+    )
+    credit_trading_enabled = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="Whether the organization is enabled for credit trading market participation",
+    )
+    credit_market_contact_name = Column(
+        String(500),
+        nullable=True,
+        comment="Contact name for credit trading market (if different from organization)",
+    )
+    credit_market_contact_email = Column(
+        String(255),
+        nullable=True,
+        comment="Contact email for credit trading market (if different from organization)",
+    )
+    credit_market_contact_phone = Column(
+        String(50),
+        nullable=True,
+        comment="Contact phone for credit trading market (if different from organization)",
+    )
+    credit_market_is_seller = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="Whether the organization is interested in selling credits",
+    )
+    credit_market_is_buyer = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="Whether the organization is interested in buying credits",
+    )
+    credits_to_sell = Column(
+        Integer,
+        nullable=False,
+        server_default=text("0"),
+        comment="Number of credits the organization wants to sell",
+    )
+    display_in_credit_market = Column(
+        Boolean,
+        nullable=False,
+        server_default=text("false"),
+        comment="Whether the organization should be displayed in the credit trading market",
     )
 
     org_type = relationship(
@@ -134,6 +172,9 @@ class Organization(BaseModel, Auditable, EffectiveDates):
     compliance_reports = relationship("ComplianceReport", back_populates="organization")
     notification_messages = relationship(
         "NotificationMessage", back_populates="related_organization"
+    )
+    early_issuance_by_years = relationship(
+        "OrganizationEarlyIssuanceByYear", back_populates="organization"
     )
 
 

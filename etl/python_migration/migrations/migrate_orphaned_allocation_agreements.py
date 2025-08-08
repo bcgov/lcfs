@@ -46,22 +46,48 @@ class OrphanedAllocationAgreementMigrator:
     def find_orphaned_exclusion_reports(self, tfrs_cursor) -> List[Dict]:
         """Find TFRS exclusion reports without a sibling report"""
         query = """
+            /*
+             * Find exclusion reports that don't have a corresponding main report in the same
+             * org/period. If multiple exclusion supplementals exist in a chain, pick the latest
+             * one (by traversal) for processing.
+             */
+            WITH exclusion_candidates AS (
+                SELECT
+                    cr_excl.id AS tfrs_exclusion_report_id,
+                    cr_excl.root_report_id,
+                    cr_excl.traversal,
+                    cr_excl.organization_id AS tfrs_organization_id,
+                    cr_excl.compliance_period_id AS tfrs_compliance_period_id,
+                    cr_excl.exclusion_agreement_id,
+                    ws.director_status_id AS tfrs_director_status
+                FROM compliance_report cr_excl
+                JOIN compliance_report_workflow_state ws ON cr_excl.status_id = ws.id
+                WHERE cr_excl.exclusion_agreement_id IS NOT NULL
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM compliance_report cr_main
+                    WHERE cr_main.organization_id = cr_excl.organization_id
+                      AND cr_main.compliance_period_id = cr_excl.compliance_period_id
+                      AND cr_main.id != cr_excl.id
+                      AND cr_main.exclusion_agreement_id IS NULL
+                )
+            ), latest_exclusion_per_chain AS (
+                SELECT ec.*
+                FROM exclusion_candidates ec
+                JOIN (
+                    SELECT root_report_id, MAX(traversal) AS max_traversal
+                    FROM exclusion_candidates
+                    GROUP BY root_report_id
+                ) mx
+                ON ec.root_report_id = mx.root_report_id AND ec.traversal = mx.max_traversal
+            )
             SELECT
-                cr_excl.id AS tfrs_exclusion_report_id,
-                cr_excl.organization_id AS tfrs_organization_id,
-                cr_excl.compliance_period_id AS tfrs_compliance_period_id,
-                cr_excl.exclusion_agreement_id,
-                ws.director_status_id AS tfrs_director_status
-            FROM compliance_report cr_excl
-            JOIN compliance_report_workflow_state ws ON cr_excl.status_id = ws.id
-            WHERE cr_excl.exclusion_agreement_id IS NOT NULL
-            AND NOT EXISTS (
-                SELECT 1
-                FROM compliance_report cr_main
-                WHERE cr_main.organization_id = cr_excl.organization_id
-                  AND cr_main.compliance_period_id = cr_excl.compliance_period_id
-                  AND cr_main.id != cr_excl.id
-            );
+                tfrs_exclusion_report_id,
+                tfrs_organization_id,
+                tfrs_compliance_period_id,
+                exclusion_agreement_id,
+                tfrs_director_status
+            FROM latest_exclusion_per_chain;
         """
 
         tfrs_cursor.execute(query)

@@ -73,6 +73,44 @@ class ComplianceReportRepository:
         self.db = db
         self.fuel_supply_repo = fuel_supply_repo
 
+    def _get_base_report_options(self, include_transaction: bool = True):
+        """
+        Get common joinedload options for compliance reports.
+        
+        Args:
+            include_transaction: Whether to include transaction relationship (default: True)
+        """
+        options = [
+            joinedload(ComplianceReport.organization),
+            joinedload(ComplianceReport.compliance_period),
+            joinedload(ComplianceReport.current_status),
+            joinedload(ComplianceReport.summary),
+            joinedload(ComplianceReport.history).joinedload(
+                ComplianceReportHistory.status
+            ),
+            joinedload(ComplianceReport.history)
+            .joinedload(ComplianceReportHistory.user_profile)
+            .joinedload(UserProfile.organization),
+            joinedload(ComplianceReport.assigned_analyst),
+        ]
+        
+        if include_transaction:
+            options.append(joinedload(ComplianceReport.transaction))
+            
+        return options
+
+    def _get_minimal_report_options(self):
+        """
+        Get minimal joinedload options for basic compliance report queries.
+        """
+        return [
+            joinedload(ComplianceReport.organization),
+            joinedload(ComplianceReport.compliance_period),
+            joinedload(ComplianceReport.current_status),
+            joinedload(ComplianceReport.summary),
+            joinedload(ComplianceReport.assigned_analyst),
+        ]
+
     @repo_handler
     async def get_all_compliance_periods(self) -> Sequence[CompliancePeriod]:
         # Retrieve all compliance periods from the database
@@ -370,6 +408,9 @@ class ComplianceReportRepository:
                 "report_status": report.report_status,
                 "update_date": report.update_date,
                 "is_latest": report.is_latest,
+                "assigned_analyst_id": report.assigned_analyst_id,
+                "assigned_analyst_first_name": report.assigned_analyst_first_name,
+                "assigned_analyst_last_name": report.assigned_analyst_last_name,
             }
 
             # Get latest comment for this report (only for government users)
@@ -432,6 +473,8 @@ class ComplianceReportRepository:
     def _apply_filters(self, pagination, conditions):
         for filter in pagination.filters:
             filter_value = filter.filter
+            logger.info(f"Processing filter: field={filter.field}, value={filter_value}")
+            
             # check if the date string is selected for filter
             if filter.filter is None:
                 filter_value = [
@@ -480,12 +523,53 @@ class ComplianceReportRepository:
                 field = get_field_for_filter(
                     ComplianceReportListView, "organization_name"
                 )
-            elif filter.field == "compliance_period":
+            elif filter.field == "compliance_period" or filter.field == "compliancePeriod":
                 field = get_field_for_filter(
                     ComplianceReportListView, "compliance_period"
                 )
+            elif filter.field == "updateDate" or filter.field == "update_date":
+                field = get_field_for_filter(ComplianceReportListView, "update_date")
+            elif filter.field == "assignedAnalyst" or filter.field == "assigned_analyst":
+                logger.info(f"Handling assignedAnalyst filter with value: '{filter_value}' (type: {type(filter_value)})")
+                # Handle empty string for unassigned (null analyst fields)
+                if filter_value == "" or filter_value is None:
+                    # For unassigned reports, check if analyst_id is null/0 AND names are null/empty
+                    analyst_id_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_id")
+                    first_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_first_name")
+                    last_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_last_name")
+                    
+                    # Start with the simplest condition - just check if analyst_id is null
+                    unassigned_condition = analyst_id_field.is_(None)
+                    conditions.append(unassigned_condition)
+                    logger.info("Added condition for unassigned analyst (assigned_analyst_id IS NULL)")
+                    continue  # Skip the regular filter application
+                else:
+                    logger.info(f"Filtering by analyst initials: '{filter_value}'")
+                    # Filter by analyst initials - need to construct initials from first/last name
+                    first_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_first_name")
+                    last_name_field = get_field_for_filter(ComplianceReportListView, "assigned_analyst_last_name")
+                    
+                    # Create initials field by concatenating first letter of first and last name
+                    initials_field = func.concat(
+                        func.substring(first_name_field, 1, 1),
+                        func.substring(last_name_field, 1, 1)
+                    )
+                    
+                    # Apply the filter condition directly
+                    if filter_option == "contains":
+                        conditions.append(initials_field.ilike(f"%{filter_value}%"))
+                        logger.info(f"Added CONTAINS condition for analyst initials like '%{filter_value}%'")
+                    else:
+                        conditions.append(initials_field == filter_value)
+                        logger.info(f"Added EQUALS condition for analyst initials = '{filter_value}'")
+                    continue  # Skip the regular filter application
             else:
-                field = get_field_for_filter(ComplianceReportListView, filter.field)
+                logger.info(f"Unknown filter field: {filter.field}, trying to get field from model")
+                try:
+                    field = get_field_for_filter(ComplianceReportListView, filter.field)
+                except Exception as e:
+                    logger.error(f"Failed to get field '{filter.field}' from ComplianceReportListView: {e}")
+                    continue  # Skip this filter if field doesn't exist
 
             conditions.append(
                 apply_filter_conditions(field, filter_value, filter_option, filter_type)
@@ -498,19 +582,7 @@ class ComplianceReportRepository:
         """
         result = await self.db.execute(
             select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history)
-                .joinedload(ComplianceReportHistory.user_profile)
-                .joinedload(UserProfile.organization),
-                joinedload(ComplianceReport.transaction),
-            )
+            .options(*self._get_base_report_options())
             .where(ComplianceReport.compliance_report_id == report_id)
         )
 
@@ -555,19 +627,7 @@ class ComplianceReportRepository:
         # Build base query with all necessary joins
         query = (
             select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ),
-                joinedload(ComplianceReport.transaction),
-            )
+            .options(*self._get_base_report_options())
             .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
         )
 
@@ -592,18 +652,7 @@ class ComplianceReportRepository:
             # Reload the report with all necessary relationships
             refreshed_report = await self.db.scalar(
                 select(ComplianceReport)
-                .options(
-                    joinedload(ComplianceReport.compliance_period),
-                    joinedload(ComplianceReport.organization),
-                    joinedload(ComplianceReport.current_status),
-                    joinedload(ComplianceReport.summary),
-                    joinedload(ComplianceReport.history).joinedload(
-                        ComplianceReportHistory.status
-                    ),
-                    joinedload(ComplianceReport.history).joinedload(
-                        ComplianceReportHistory.user_profile
-                    ),
-                )
+                .options(*self._get_base_report_options(include_transaction=False))
                 .where(
                     ComplianceReport.compliance_report_id == report.compliance_report_id
                 )
@@ -650,18 +699,7 @@ class ComplianceReportRepository:
         """
         result = await self.db.execute(
             select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ),
-            )
+            .options(*self._get_base_report_options(include_transaction=False))
             .where(ComplianceReport.compliance_report_group_uuid == group_uuid)
             .order_by(ComplianceReport.version.desc())
             .limit(1)
@@ -686,12 +724,7 @@ class ComplianceReportRepository:
         # Query for a draft report in the group
         result = await self.db.execute(
             select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-            )
+            .options(*self._get_minimal_report_options())
             .where(
                 ComplianceReport.compliance_report_group_uuid == group_uuid,
                 ComplianceReport.current_status_id
@@ -706,19 +739,7 @@ class ComplianceReportRepository:
         """
         result = await self.db.execute(
             select(ComplianceReport)
-            .options(
-                joinedload(ComplianceReport.organization),
-                joinedload(ComplianceReport.compliance_period),
-                joinedload(ComplianceReport.current_status),
-                joinedload(ComplianceReport.summary),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.status
-                ),
-                joinedload(ComplianceReport.history).joinedload(
-                    ComplianceReportHistory.user_profile
-                ),
-                joinedload(ComplianceReport.transaction),
-            )
+            .options(*self._get_base_report_options())
             .where(ComplianceReport.legacy_id == legacy_id)
         )
         return result.scalars().unique().first()
@@ -1026,3 +1047,52 @@ class ComplianceReportRepository:
         )
 
         return related_reports_result.scalars().all()
+
+    @repo_handler
+    async def assign_analyst_to_report(
+        self, report_id: int, assigned_analyst_id: Optional[int]
+    ) -> None:
+        """
+        Assign or unassign an analyst to/from a compliance report.
+        """
+        compliance_report = await self.get_compliance_report_by_id(report_id)
+        if compliance_report:
+            compliance_report.assigned_analyst_id = assigned_analyst_id
+            await self.db.flush()
+
+    @repo_handler
+    async def get_user_by_id(self, user_id: int) -> Optional[UserProfile]:
+        """
+        Get a user by their ID with roles loaded.
+        """
+        from lcfs.db.models.user.UserRole import UserRole
+        
+        result = await self.db.execute(
+            select(UserProfile)
+            .options(joinedload(UserProfile.user_roles).joinedload(UserRole.role))
+            .where(UserProfile.user_profile_id == user_id)
+        )
+        return result.unique().scalar_one_or_none()
+
+    @repo_handler
+    async def get_active_idir_analysts(self) -> List[UserProfile]:
+        """
+        Get all active IDIR users with Analyst role for assignment dropdown.
+        """
+        from lcfs.db.models.user.UserRole import UserRole
+        from lcfs.db.models.user.Role import Role
+        
+        result = await self.db.execute(
+            select(UserProfile)
+            .join(UserRole, UserProfile.user_profile_id == UserRole.user_profile_id)
+            .join(Role, UserRole.role_id == Role.role_id)
+            .where(
+                and_(
+                    UserProfile.is_active == True,
+                    UserProfile.organization_id.is_(None),  # IDIR users have no organization
+                    Role.name == RoleEnum.ANALYST
+                )
+            )
+            .order_by(UserProfile.first_name, UserProfile.last_name)
+        )
+        return result.scalars().all()

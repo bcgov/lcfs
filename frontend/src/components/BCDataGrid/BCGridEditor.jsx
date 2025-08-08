@@ -47,6 +47,7 @@ export const BCGridEditor = ({
   saveButtonProps = {
     enabled: false
   },
+  showMandatoryColumns = true,
   onAddRows,
   ...props
 }) => {
@@ -63,7 +64,7 @@ export const BCGridEditor = ({
       const foundRequired = props.columnDefs.some(
         (colDef) => colDef.headerComponent === RequiredHeader
       )
-      if (foundRequired) {
+      if (foundRequired && showMandatoryColumns) {
         setShowRequiredIndicator(true)
       }
     }

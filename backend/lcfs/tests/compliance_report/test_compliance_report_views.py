@@ -15,6 +15,7 @@ from lcfs.web.api.compliance_report.schema import (
 from lcfs.web.api.email.repo import CHESEmailRepository
 from lcfs.web.exception.exceptions import DataNotFoundException, ServiceException
 from fastapi import status
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatusEnum
 
 
 @pytest.fixture
@@ -152,7 +153,7 @@ async def test_get_compliance_reports_forbidden(
     pagination_request_schema,
 ):
     # Set a role that does not have access
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("get_compliance_reports")
 
@@ -263,13 +264,29 @@ async def test_get_compliance_report_by_id_success(
 async def test_get_compliance_report_by_id_forbidden(
     client: AsyncClient, fastapi_app: FastAPI, set_mock_user
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])  # User with the wrong role
+    from unittest.mock import MagicMock
+    from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+
+    # Set mock user with organization_id = 1 (default)
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("get_compliance_report_by_id", report_id=1)
 
-    response = await client.get(url)
+    # Mock the repository using dependency override
+    mock_repo = MagicMock(spec=ComplianceReportRepository)
+    mock_compliance_report = MagicMock()
+    mock_compliance_report.organization_id = 999  # Different org ID to trigger 403
+    mock_repo.get_compliance_report_schema_by_id.return_value = mock_compliance_report
 
-    assert response.status_code == 403
+    # Override the dependency
+    fastapi_app.dependency_overrides[ComplianceReportRepository] = lambda: mock_repo
+
+    try:
+        response = await client.get(url)
+        assert response.status_code == 403
+    finally:
+        # Clean up dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -507,10 +524,12 @@ async def test_update_compliance_report_summary_with_penalty_override_director_r
     ) as mock_update_compliance_report_summary, patch(
         "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
     ) as mock_validate_organization_access:
-        set_mock_user(fastapi_app, [RoleEnum.DIRECTOR])  # Director role for penalty override
+        set_mock_user(
+            fastapi_app, [RoleEnum.DIRECTOR]
+        )  # Director role for penalty override
 
         mock_compliance_report_summary = compliance_report_summary_schema()
-        
+
         # Add penalty override fields to the schema (without datetime to avoid serialization issues)
         request_schema = ComplianceReportSummaryUpdateSchema(
             compliance_report_id=1,
@@ -524,9 +543,11 @@ async def test_update_compliance_report_summary_with_penalty_override_director_r
             low_carbon_penalty_override=750.50,
             penalty_override_user=123,
         )
-        
+
         mock_validate_organization_access.return_value = compliance_report_base_schema()
-        mock_update_compliance_report_summary.return_value = mock_compliance_report_summary
+        mock_update_compliance_report_summary.return_value = (
+            mock_compliance_report_summary
+        )
 
         url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
         payload = request_schema.model_dump(by_alias=True)
@@ -554,7 +575,7 @@ async def test_update_compliance_report_summary_penalty_override_non_director_al
     ) as mock_validate_organization_access:
         # Test with compliance reporting role (not director)
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
-        
+
         mock_compliance_report_summary = compliance_report_summary_schema()
         request_schema = ComplianceReportSummaryUpdateSchema(
             compliance_report_id=1,
@@ -570,7 +591,9 @@ async def test_update_compliance_report_summary_penalty_override_non_director_al
         )
 
         mock_validate_organization_access.return_value = compliance_report_base_schema()
-        mock_update_compliance_report_summary.return_value = mock_compliance_report_summary
+        mock_update_compliance_report_summary.return_value = (
+            mock_compliance_report_summary
+        )
 
         url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
         payload = request_schema.model_dump(by_alias=True)
@@ -613,9 +636,11 @@ async def test_update_compliance_report_summary_penalty_override_disabled(
             penalty_override_date=None,
             penalty_override_user=None,
         )
-        
+
         mock_validate_organization_access.return_value = compliance_report_base_schema()
-        mock_update_compliance_report_summary.return_value = mock_compliance_report_summary
+        mock_update_compliance_report_summary.return_value = (
+            mock_compliance_report_summary
+        )
 
         url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
         payload = request_schema.model_dump(by_alias=True)
@@ -655,9 +680,11 @@ async def test_update_compliance_report_summary_penalty_override_zero_values(
             low_carbon_penalty_override=0.0,
             penalty_override_user=123,
         )
-        
+
         mock_validate_organization_access.return_value = compliance_report_base_schema()
-        mock_update_compliance_report_summary.return_value = mock_compliance_report_summary
+        mock_update_compliance_report_summary.return_value = (
+            mock_compliance_report_summary
+        )
 
         url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
         payload = request_schema.model_dump(by_alias=True)
@@ -678,7 +705,7 @@ async def test_update_compliance_report_summary_penalty_override_validation_erro
     set_mock_user(fastapi_app, [RoleEnum.DIRECTOR])
 
     url = fastapi_app.url_path_for("update_compliance_report_summary", report_id=1)
-    
+
     # Test with invalid penalty override values (negative numbers)
     payload = {
         "complianceReportId": 1,
@@ -689,7 +716,7 @@ async def test_update_compliance_report_summary_penalty_override_validation_erro
         "summaryId": 1,
         "penaltyOverrideEnabled": True,
         "renewablePenaltyOverride": -100.0,  # Invalid negative value
-        "lowCarbonPenaltyOverride": -50.0,   # Invalid negative value
+        "lowCarbonPenaltyOverride": -50.0,  # Invalid negative value
         "penaltyOverrideUser": 123,
     }
 
@@ -729,14 +756,14 @@ async def test_get_compliance_report_summary_with_penalty_override_fields(
         response = await client.get(url)
 
         assert response.status_code == 200
-        
+
         response_data = response.json()
         assert "penaltyOverrideEnabled" in response_data
         assert "renewablePenaltyOverride" in response_data
         assert "lowCarbonPenaltyOverride" in response_data
         assert "penaltyOverrideDate" in response_data
         assert "penaltyOverrideUser" in response_data
-        
+
         assert response_data["penaltyOverrideEnabled"] is True
         assert response_data["renewablePenaltyOverride"] == 1500.75
         assert response_data["lowCarbonPenaltyOverride"] == 750.50
@@ -794,15 +821,31 @@ async def test_update_compliance_report_forbidden(
     fastapi_app: FastAPI,
     set_mock_user,
 ):
-    set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+    from unittest.mock import MagicMock
+    from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+
+    # Set mock user with organization_id = 1 (default)
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
 
     url = fastapi_app.url_path_for("update_compliance_report", report_id=1)
 
     payload = {"status": "Draft", "supplementalNote": "new supplemental note"}
 
-    response = await client.put(url, json=payload)
+    # Mock the repository using dependency override
+    mock_repo = MagicMock(spec=ComplianceReportRepository)
+    mock_compliance_report = MagicMock()
+    mock_compliance_report.organization_id = 999  # Different org ID to trigger 403
+    mock_repo.get_compliance_report_schema_by_id.return_value = mock_compliance_report
 
-    assert response.status_code == 403
+    # Override the dependency
+    fastapi_app.dependency_overrides[ComplianceReportRepository] = lambda: mock_repo
+
+    try:
+        response = await client.put(url, json=payload)
+        assert response.status_code == 403
+    finally:
+        # Clean up dependency override
+        fastapi_app.dependency_overrides.clear()
 
 
 @pytest.mark.anyio
@@ -1068,3 +1111,263 @@ async def test_update_compliance_report_assessed_success(
         mock_update_compliance_report.assert_called_once_with(
             1, ComplianceReportUpdateSchema(**payload), mock.ANY
         )
+
+
+@pytest.mark.anyio
+async def test_update_compliance_report_non_assessment_success(
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    compliance_report_base_schema,
+    set_mock_user,
+):
+    with patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportUpdateService.update_compliance_report"
+    ) as mock_update_compliance_report, patch(
+        "lcfs.web.api.compliance_report.views.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_organization_access, patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_compliance_report_chain:
+        # Set up mock user with analyst role
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT, RoleEnum.ANALYST])
+
+        # Mock the compliance report
+        mock_compliance_report = compliance_report_base_schema()
+        mock_compliance_report.is_non_assessment = True
+        mock_validate_organization_access.return_value = None
+        mock_update_compliance_report.return_value = mock_compliance_report
+        mock_get_compliance_report_chain.return_value = ChainedComplianceReportSchema(
+            report=mock_compliance_report, chain=[], is_newest=True
+        )
+
+        url = fastapi_app.url_path_for(
+            "update_compliance_report",
+            report_id=1,
+        )
+
+        payload = {
+            "status": ComplianceReportStatusEnum.Draft.value,
+            "isNonAssessment": True,
+            "supplementalNote": "Test note",
+        }
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+        assert response.json()["report"]["isNonAssessment"] is True
+
+
+# Analyst Assignment API Tests
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test successful analyst assignment API endpoint"""
+    with patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.assign_analyst_to_report"
+    ) as mock_assign_analyst, patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_chain, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access:
+
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+
+        # Mock responses
+        mock_report = MagicMock()
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_assign_analyst.return_value = None
+
+        # Create a proper mock for ChainedComplianceReportSchema
+        from lcfs.web.api.compliance_report.schema import (
+            ChainedComplianceReportSchema,
+            ComplianceReportBaseSchema,
+            ComplianceReportOrganizationSchema,
+            ComplianceReportStatusSchema,
+            AssignedAnalystSchema,
+        )
+        from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
+
+        # Create mock report with assigned analyst
+        mock_assigned_analyst = AssignedAnalystSchema(
+            user_profile_id=123, first_name="Test", last_name="Analyst", initials="TA"
+        )
+
+        mock_base_report = ComplianceReportBaseSchema(
+            compliance_report_id=1,
+            compliance_report_group_uuid="test-uuid",
+            version=0,
+            compliance_period_id=1,
+            compliance_period=CompliancePeriodBaseSchema(
+                compliance_period_id=1, description="2024"
+            ),
+            organization_id=1,
+            organization=ComplianceReportOrganizationSchema(
+                organization_id=1, organization_code="TEST", name="Test Organization"
+            ),
+            current_status_id=1,
+            current_status=ComplianceReportStatusSchema(
+                compliance_report_status_id=1, status="Draft"
+            ),
+            has_supplemental=False,
+            summary=None,
+            assigned_analyst=mock_assigned_analyst,
+        )
+
+        mock_chained_report = ChainedComplianceReportSchema(
+            report=mock_base_report,
+            chain=[mock_base_report],
+            is_newest=True,
+            had_been_assessed=False,
+        )
+
+        mock_get_chain.return_value = mock_chained_report
+
+        url = fastapi_app.url_path_for("assign_analyst_to_report", report_id=1)
+        payload = {"assignedAnalystId": 123}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+        mock_assign_analyst.assert_called_once_with(1, 123, mock.ANY)
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_unassign(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test unassigning analyst API endpoint"""
+    with patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.assign_analyst_to_report"
+    ) as mock_assign_analyst, patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_compliance_report_chain"
+    ) as mock_get_chain, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_organization_access"
+    ) as mock_validate_org, patch(
+        "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
+    ) as mock_validate_access:
+
+        set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
+        # Mock responses
+        mock_report = MagicMock()
+        mock_validate_org.return_value = mock_report
+        mock_validate_access.return_value = None
+        mock_assign_analyst.return_value = None
+
+        # Create a proper mock for ChainedComplianceReportSchema
+        from lcfs.web.api.compliance_report.schema import (
+            ChainedComplianceReportSchema,
+            ComplianceReportBaseSchema,
+            ComplianceReportOrganizationSchema,
+            ComplianceReportStatusSchema,
+        )
+        from lcfs.web.api.common.schema import CompliancePeriodBaseSchema
+
+        # For unassign test, analyst should be None
+        mock_base_report = ComplianceReportBaseSchema(
+            compliance_report_id=1,
+            compliance_report_group_uuid="test-uuid",
+            version=0,
+            compliance_period_id=1,
+            compliance_period=CompliancePeriodBaseSchema(
+                compliance_period_id=1, description="2024"
+            ),
+            organization_id=1,
+            organization=ComplianceReportOrganizationSchema(
+                organization_id=1, organization_code="TEST", name="Test Organization"
+            ),
+            current_status_id=1,
+            current_status=ComplianceReportStatusSchema(
+                compliance_report_status_id=1, status="Draft"
+            ),
+            has_supplemental=False,
+            summary=None,
+            assigned_analyst=None,  # No assigned analyst for unassign test
+        )
+
+        mock_chained_report = ChainedComplianceReportSchema(
+            report=mock_base_report,
+            chain=[mock_base_report],
+            is_newest=True,
+            had_been_assessed=False,
+        )
+
+        mock_get_chain.return_value = mock_chained_report
+
+        url = fastapi_app.url_path_for("assign_analyst_to_report", report_id=1)
+        payload = {"assignedAnalystId": None}
+
+        response = await client.put(url, json=payload)
+
+        assert response.status_code == 200
+        mock_assign_analyst.assert_called_once_with(1, None, mock.ANY)
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test assignment endpoint with unauthorized role"""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    url = fastapi_app.url_path_for("assign_analyst_to_report", report_id=1)
+    payload = {"assignedAnalystId": 123}
+
+    response = await client.put(url, json=payload)
+
+    assert response.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_get_available_analysts_success(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test get available analysts API endpoint"""
+    with patch(
+        "lcfs.web.api.compliance_report.services.ComplianceReportServices.get_available_analysts"
+    ) as mock_get_analysts:
+
+        set_mock_user(fastapi_app, [RoleEnum.ANALYST])
+
+        # Mock response
+        mock_analysts = [
+            {
+                "userProfileId": 1,
+                "firstName": "John",
+                "lastName": "Doe",
+                "initials": "JD",
+            },
+            {
+                "userProfileId": 2,
+                "firstName": "Jane",
+                "lastName": "Smith",
+                "initials": "JS",
+            },
+        ]
+        mock_get_analysts.return_value = mock_analysts
+
+        url = fastapi_app.url_path_for("get_available_analysts")
+
+        response = await client.get(url)
+
+        assert response.status_code == 200
+        assert len(response.json()) == 2
+        assert response.json()[0]["firstName"] == "John"
+        mock_get_analysts.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_get_available_analysts_unauthorized(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+):
+    """Test get available analysts endpoint with unauthorized role"""
+    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
+
+    url = fastapi_app.url_path_for("get_available_analysts")
+
+    response = await client.get(url)
+
+    assert response.status_code == 403

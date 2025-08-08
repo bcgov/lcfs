@@ -71,6 +71,10 @@ export const CreditCalculator = () => {
         value: period.description,
         label: period.description
       }))
+      .filter((period) => {
+        const year = parseInt(period.value)
+        return year >= 2019 && year <= 2030
+      })
       .sort((a, b) => parseInt(b.value) - parseInt(a.value))
   }, [compliancePeriods])
 
@@ -132,6 +136,7 @@ export const CreditCalculator = () => {
   const [selectedFuelType, setSelectedFuelType] = useState()
   const [selectedEndUse, setSelectedEndUse] = useState()
   const [calculatedResults, setCalculatedResults] = useState(null)
+  const [copySuccess, setCopySuccess] = useState(false)
 
   const { data: fuelTypeListData, isLoading: isFuelTypeListLoading } =
     useGetFuelTypeList(
@@ -275,6 +280,37 @@ export const CreditCalculator = () => {
     setCalculatedResults(null)
   }
 
+  const handleCopy = async () => {
+    try {
+      const copyText = `Compliance Year: ${complianceYear}
+Selected fuel type: ${selectedFuelType || 'N/A'}
+End use: ${selectedEndUse || 'N/A'}
+Determining carbon intensity: ${provisionOfTheAct || 'N/A'}
+Fuel code: ${fuelCode || 'N/A'}
+
+Quantity supplied: ${quantity?.toLocaleString() || 0} ${unit}
+
+Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000
+
+TCI - Target carbon intensity        ${resultData.formulaValues.carbonIntensity}
+EER - Energy effectiveness ratio     ${resultData.formulaValues.eer}
+RCI - Recorded carbon intensity      ${resultData.formulaValues.ci}  
+UCI - Additional carbon intensity    ${resultData.formulaValues.uci || '0'}
+EC - Energy content                  ${resultData.formulaValues.energyContent}
+ED - Energy density                  ${resultData.formulaValues.energyDensity}
+
+${resultData.formulaDisplay}
+
+Credits generated: ${resultData.credits.toLocaleString()}`
+
+      await navigator.clipboard.writeText(copyText)
+      setCopySuccess(true)
+      setTimeout(() => setCopySuccess(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
+    }
+  }
+
   // Helper function for rendering field errors
   const renderError = (fieldName) => {
     return errors[fieldName] ? (
@@ -364,10 +400,7 @@ export const CreditCalculator = () => {
           content={
             <Grid container flexDirection={'row'} rowSpacing={1}>
               {/* Left Section */}
-              <Grid size={{ sm: 12, md: 6 }} p={2}>
-                <BCTypography variant="h6" pb={8} color="primary">
-                  {t('report:fuelType')}
-                </BCTypography>
+              <Grid size={{ sm: 12, md: 6 }} px={4} py={8}>
                 <Stack direction={'row'} spacing={4}>
                   {/* Compliance Year */}
                   <FormControl
@@ -429,31 +462,6 @@ export const CreditCalculator = () => {
                     />
                     {renderError('complianceYear')}
                   </FormControl>
-                  {/* fuel requirement type selection */}
-                  {fuelRequirementOptions.length > 0 && (
-                    <BCFormRadio
-                      name="fuelRequirement"
-                      control={control}
-                      options={fuelRequirementOptions}
-                      sx={{
-                        backgroundColor: colors.background.grey,
-                        padding: 1,
-                        pb: 2,
-                        maxWidth: '32rem',
-                        transform: 'translate(0px, -16px) scale(1)'
-                      }}
-                    />
-                  )}
-                </Stack>
-                <Grid container spacing={1}>
-                  <Divider
-                    orientation="horizontal"
-                    sx={{
-                      maxWidth: '18rem',
-                      borderColor: 'rgba(0,0,0,1)',
-                      width: '-webkit-fill-available'
-                    }}
-                  />
                   {/* Fuel Category */}
                   <BCFormRadio
                     name="fuelCategory"
@@ -469,17 +477,16 @@ export const CreditCalculator = () => {
                       label: type
                     }))}
                     orientation="horizontal"
-                    sx={{ width: '100%' }}
-                  />
-                  <Divider
-                    orientation="horizontal"
                     sx={{
-                      maxWidth: '18rem',
-                      borderColor: 'rgba(0,0,0,1)',
-                      width: '-webkit-fill-available'
+                      backgroundColor: 'transparent',
+                      padding: 0,
+                      pb: 1,
+                      transform: 'translate(0px, -5px) scale(1)',
+                      borderTop: '1px solid rgba(0,0,0,0.9)',
+                      borderBottom: '1px solid rgba(0,0,0,0.9)'
                     }}
                   />
-                </Grid>
+                </Stack>
                 <Grid container flexDirection={'row'} rowSpacing={1} mt={4}>
                   <Grid size={4}>
                     <BCTypography variant="h6" color="primary">
@@ -551,110 +558,79 @@ export const CreditCalculator = () => {
                         ))}
                     </List>
                   </Grid>
-                  {parseInt(complianceYear) >= LEGISLATION_TRANSITION_YEAR && (
-                    <Grid size={8}>
-                      <BCTypography variant="h6" color="primary">
-                        {t('report:endUse')}
-                      </BCTypography>
-                      {/* End Use Type */}
-                      <List
-                        component="nav"
-                        sx={{
-                          pl: 2
-                        }}
-                      >
-                        {isLoadingFuelOptions && <Loading />}
-                        {endUses.length > 0 &&
-                          endUses.map((use) => (
-                            <ListItemButton
-                              component="span"
-                              key={use.value}
+
+                  <Grid size={4}>
+                    <BCTypography variant="h6" color="primary">
+                      {t('report:endUse')}
+                    </BCTypography>
+                    {/* End Use Type */}
+                    <List
+                      component="nav"
+                      sx={{
+                        pl: 2
+                      }}
+                    >
+                      {isLoadingFuelOptions && <Loading />}
+                      {endUses.length > 0 &&
+                        endUses.map(({ label, value }) => (
+                          <ListItemButton
+                            component="span"
+                            key={value}
+                            sx={{
+                              display: 'list-item',
+                              listStyleType: 'disc',
+                              p: 0.4,
+                              color: colors.primary.main,
+                              '&::marker': {
+                                fontSize: '0.7em'
+                              }
+                            }}
+                          >
+                            <BCBox
                               sx={{
-                                display: 'list-item',
-                                listStyleType: 'disc',
-                                p: 0.4,
-                                color: colors.primary.main,
-                                '&::marker': {
-                                  fontSize: '0.7em'
-                                },
+                                cursor: 'pointer',
                                 '&.selected': {
-                                  pl: 2
+                                  '& .list-text': {
+                                    color: 'text.primary',
+                                    textDecoration: 'none',
+                                    fontWeight: 'bold'
+                                  }
                                 }
                               }}
-                            >
-                              <BCBox
-                                sx={{
-                                  cursor: 'pointer',
-                                  '&.selected': {
-                                    '& .list-text': {
-                                      color: 'text.primary',
-                                      textDecoration: 'none',
-                                      fontWeight: 'bold'
-                                    }
-                                  }
-                                }}
-                                component="a"
-                                tabIndex={0}
-                                className={
-                                  selectedEndUse === use.value ? 'selected' : ''
+                              component="a"
+                              tabIndex={0}
+                              className={
+                                selectedEndUse === value ? 'selected' : ''
+                              }
+                              alignItems="flex-start"
+                              onClick={() => setSelectedEndUse(value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  setSelectedEndUse(value)
                                 }
-                                alignItems="flex-start"
-                                onClick={() => setSelectedEndUse(use.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault()
-                                    setSelectedEndUse(use.value)
-                                  }
+                              }}
+                              data-test={value}
+                            >
+                              <BCTypography
+                                variant="subtitle2"
+                                color="link"
+                                className="list-text"
+                                sx={{
+                                  textDecoration: 'underline',
+                                  '&:hover': { color: 'info.main' }
                                 }}
-                                data-test={use.value}
                               >
-                                <BCTypography
-                                  variant="subtitle2"
-                                  color="link"
-                                  className="list-text"
-                                  sx={{
-                                    textDecoration: 'underline',
-                                    '&:hover': { color: 'info.main' }
-                                  }}
-                                >
-                                  {use.value}
-                                </BCTypography>
-                              </BCBox>
-                            </ListItemButton>
-                          ))}
-                      </List>
-                    </Grid>
-                  )}
+                                {value}
+                              </BCTypography>
+                            </BCBox>
+                          </ListItemButton>
+                        ))}
+                    </List>
+                  </Grid>
                 </Grid>
 
-                <Stack
-                  direction="row"
-                  spacing={2}
-                  mt={2}
-                  sx={{
-                    justifyContent: 'flex-start',
-                    position: 'absolute',
-                    bottom: 30,
-                    left: 30
-                  }}
-                >
-                  {/* Clear button */}
-                  <BCButton
-                    variant="outlined"
-                    color="primary"
-                    onClick={handleClear}
-                  >
-                    Clear
-                  </BCButton>
-                </Stack>
-              </Grid>
-
-              {/* Right Section */}
-              <Grid
-                size={{ sm: 12, md: 6 }}
-                sx={{ m: 0, pt: 2, backgroundColor: colors.background.grey }}
-              >
-                <Stack direction={'row'} spacing={4} m={4} mb={0} ml={10}>
+                <Stack direction="row" spacing={2} sx={{ mt: 10, mb: 2 }}>
                   {/* Provision of the act */}
                   <FormControl
                     sx={{
@@ -792,41 +768,122 @@ export const CreditCalculator = () => {
                   </FormControl>
                 </Stack>
 
-                <BCBox
+                <Stack
+                  direction="row"
+                  spacing={2}
+                  mt={2}
                   sx={{
-                    m: '0',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    mx: 'auto',
-                    maxWidth: '12rem',
-                    transform: 'translate(0px, 24px) scale(1) !important'
+                    justifyContent: 'flex-start',
+                    position: 'absolute',
+                    bottom: 30,
+                    left: 30,
+                    alignItems: 'center'
                   }}
                 >
-                  {/* quantity */}
-                  <InputLabel
-                    htmlFor="quantity"
-                    sx={{
-                      pb: 1,
-                      maxWidth: '240px'
-                    }}
+                  <BCButton
+                    variant="outlined"
+                    color="primary"
+                    onClick={handleClear}
                   >
-                    <BCTypography
-                      variant="h5"
+                    Clear
+                  </BCButton>
+
+                  {/* fuel requirement type selection */}
+                  {fuelRequirementOptions.length > 0 && (
+                    <BCFormRadio
+                      name="fuelRequirement"
+                      control={control}
+                      options={fuelRequirementOptions}
                       sx={{
-                        m: 2,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        mx: 'auto',
-                        color: '#313132',
-                        transform: 'translate(0px, 24px) scale(1) !important'
+                        padding: 1,
+                        pb: 2,
+                        maxWidth: '32rem'
                       }}
-                      fontWeight="bold"
-                    >
-                      {t('report:qtySuppliedLabel')}
-                    </BCTypography>
-                  </InputLabel>
+                    />
+                  )}
+                </Stack>
+              </Grid>
+
+              {/* Right Section */}
+              <Grid
+                size={{ sm: 12, md: 6 }}
+                sx={{
+                  m: 0,
+                  pt: 2,
+                  backgroundColor: 'rgba(218, 218, 218, 0.6)'
+                }}
+              >
+                {/* Copy button */}
+                <Stack
+                  direction="row"
+                  justifyContent="flex-end"
+                  sx={{ p: 2, pb: 1 }}
+                >
+                  <BCButton
+                    variant={copySuccess ? 'contained' : 'outlined'}
+                    color={copySuccess ? 'success' : 'primary'}
+                    size="small"
+                    onClick={handleCopy}
+                    sx={{
+                      minWidth: '80px',
+                      px: 2,
+                      py: 1,
+                      fontWeight: 'bold',
+                      borderWidth: '2px',
+                      '&:hover': {
+                        borderWidth: '2px',
+                        backgroundColor: copySuccess
+                          ? undefined
+                          : 'primary.light',
+                        color: copySuccess ? undefined : 'white'
+                      },
+                      '& .MuiButton-startIcon': { mr: 1 },
+                      boxShadow: copySuccess ? 2 : 1,
+                      transition: 'all 0.3s ease'
+                    }}
+                    startIcon={
+                      copySuccess ? (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <polyline points="20,6 9,17 4,12"></polyline>
+                        </svg>
+                      ) : (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <rect
+                            x="9"
+                            y="9"
+                            width="13"
+                            height="13"
+                            rx="2"
+                            ry="2"
+                          ></rect>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                      )
+                    }
+                  >
+                    {copySuccess ? 'Copied!' : 'Copy'}
+                  </BCButton>
+                </Stack>
+
+                {/* Quantity supplied section */}
+                <BCBox sx={{ textAlign: 'center', py: 2 }}>
+                  <BCTypography variant="h4" fontWeight="bold" sx={{ mb: 2 }}>
+                    {t('report:qtySuppliedLabel')}
+                  </BCTypography>
                   <Controller
                     name="quantity"
                     control={control}
@@ -850,16 +907,18 @@ export const CreditCalculator = () => {
                         error={!!errors.quantity}
                         helperText={errors.quantity?.message}
                         sx={{
-                          marginInline: '0.2rem',
-                          bottom: '0.2rem'
+                          '& .MuiInputBase-input': {
+                            fontSize: '1.5rem',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            width: '200px'
+                          }
                         }}
                         slotProps={{
                           input: {
                             endAdornment: unit ? (
                               <InputAdornment position="end">
-                                <BCTypography variant="subtitle2">
-                                  {unit}
-                                </BCTypography>
+                                <BCTypography variant="h5">{unit}</BCTypography>
                               </InputAdornment>
                             ) : null,
                             style: { textAlign: 'left' },
@@ -872,126 +931,124 @@ export const CreditCalculator = () => {
                   />
                 </BCBox>
 
+                {/* Compliance units formula */}
                 <BCTypography
-                  variant="body3"
+                  variant="body2"
                   sx={{
-                    mt: 4,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    mx: 'auto'
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    mb: 2
                   }}
-                  fontWeight="bold"
                 >
                   {parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR
                     ? t('report:formulaBefore2024')
                     : t('report:formulaAfter2024')}
                 </BCTypography>
 
+                {/* Formula values table */}
                 <Paper
                   variant="outlined"
                   sx={{
+                    mx: 3,
+                    backgroundColor: '#f2f2f2',
+                    borderRadius: '15px',
                     p: 2,
-                    mt: 2,
-                    width: '65%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    mx: 'auto'
+                    mb: 2
                   }}
                 >
-                  <BCBox sx={{ width: '100%', mx: 'auto' }}>
-                    <Stack
-                      direction="row"
-                      divider={
-                        <Divider
-                          orientation="vertical"
-                          flexItem
-                          sx={{ borderColor: 'rgba(0,0,0,1)' }}
-                        />
-                      }
-                      spacing={2}
-                    >
-                      {/* Left List */}
-                      <List sx={{ flex: 2 }}>
-                        {Object.entries(ciParameterLabels).map(
-                          ([key, label]) => (
-                            <ListItem key={key}>
-                              <BCTypography
-                                variant="body4"
-                                fontWeight="bold"
-                                noWrap
-                              >{`${key.toUpperCase()} - ${label}`}</BCTypography>
-                            </ListItem>
-                          )
-                        )}
-                      </List>
+                  <Stack
+                    direction="row"
+                    divider={
+                      <Divider
+                        orientation="vertical"
+                        flexItem
+                        sx={{
+                          borderColor: '#8c8c8c',
+                          my: 2,
+                          borderRightWidth: 2
+                        }}
+                      />
+                    }
+                  >
+                    {/* Left column - Labels */}
+                    <BCBox sx={{ flex: 2, p: 2 }}>
+                      {Object.entries(ciParameterLabels).map(([key, label]) => (
+                        <BCTypography
+                          key={key}
+                          variant="body2"
+                          sx={{ py: 0.5, fontWeight: 'bold' }}
+                        >
+                          {`${key.toUpperCase()} - ${label}`}
+                        </BCTypography>
+                      ))}
+                    </BCBox>
 
-                      {/* Right List - show calculated values */}
-                      <List sx={{ flex: 1 }}>
-                        {Object.values(resultData.formulaValues).map(
-                          (value, index) => (
-                            <ListItem key={index}>
-                              <BCTypography variant="body4" fontWeight="bold">
-                                {value}
-                              </BCTypography>
-                            </ListItem>
-                          )
-                        )}
-                      </List>
-                    </Stack>
-                  </BCBox>
+                    {/* Right column - Values */}
+                    <BCBox sx={{ flex: 1, p: 2 }}>
+                      {Object.values(resultData.formulaValues).map(
+                        (value, index) => (
+                          <BCTypography
+                            key={index}
+                            variant="body2"
+                            sx={{
+                              py: 0.5,
+                              fontWeight: 'bold',
+                              textAlign: 'right'
+                            }}
+                          >
+                            {value}
+                          </BCTypography>
+                        )
+                      )}
+                    </BCBox>
+                  </Stack>
                 </Paper>
 
+                {/* Formula calculation display */}
                 <BCTypography
-                  variant="body4"
+                  variant="body2"
                   sx={{
-                    mt: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    mx: 'auto'
+                    textAlign: 'center',
+                    mb: 3,
+                    px: 2
                   }}
                 >
                   {resultData.formulaDisplay}
                 </BCTypography>
 
-                <BCTypography
-                  variant="h5"
-                  sx={{
-                    mt: 2,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    mx: 'auto'
-                  }}
-                  fontWeight="bold"
-                >
-                  {t('report:generatedLabel')}
-                </BCTypography>
+                {/* Credits generated section */}
                 <BCBox
-                  display="flex"
-                  justifyContent="center"
-                  alignItems="center"
-                  mt={2}
-                  mb={4}
+                  sx={{
+                    backgroundColor: '#38598a',
+                    color: colors.white.main,
+                    textAlign: 'center',
+                    py: 3
+                  }}
                 >
+                  <BCTypography variant="h5" fontWeight="bold" sx={{ mb: 2 }}>
+                    {t('report:generatedLabel')}
+                  </BCTypography>
                   <BCBox
                     sx={{
-                      minWidth: 110,
-                      minHeight: 110,
+                      width: 100,
+                      height: 100,
                       borderRadius: '50%',
-                      bgcolor: colors.white.main
+                      backgroundColor: colors.white.main,
+                      color: colors.text.primary,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 2
                     }}
-                    display="flex"
-                    justifyContent="center"
-                    alignItems="center"
                   >
-                    <BCTypography variant="h5">
+                    <BCTypography variant="h4" fontWeight="bold">
                       {resultData.credits.toLocaleString()}
                     </BCTypography>
                   </BCBox>
                 </BCBox>
+
+                {/* Organization balance section */}
                 {orgBalance && (
                   <Stack
                     component="div"
@@ -999,8 +1056,9 @@ export const CreditCalculator = () => {
                       backgroundColor: colors.primary.light,
                       width: '100%',
                       height: '8rem',
-                      p: 4,
-                      borderBottomRightRadius: '10px'
+                      p: 3,
+                      borderBottomRightRadius: '10px',
+                      borderTop: '1px solid rgba(255,255,255,0.5)'
                     }}
                     color={colors.white.main}
                     spacing={1}

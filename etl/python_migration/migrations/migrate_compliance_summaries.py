@@ -183,9 +183,8 @@ class ComplianceSummaryMigrator:
             "line_19_units_to_be_exported": None,
             "line_20_surplus_deficit_units": None,
             "line_21_surplus_deficit_ratio": None,
-            "line_22_compliance_units_issued": safe_int(
-                source_record["credits_offset"]
-            ),
+            # Do not map credits_offset here; leave line 22 empty for updater to populate from snapshot (end-of-period balance)
+            "line_22_compliance_units_issued": None,
             "line_11_fossil_derived_base_fuel_gasoline": None,
             "line_11_fossil_derived_base_fuel_diesel": None,
             "line_11_fossil_derived_base_fuel_jet_fuel": None,
@@ -352,7 +351,11 @@ class ComplianceSummaryMigrator:
                 0.0,  # units to be exported
                 0.0,  # surplus deficit units
                 0.0,  # surplus deficit ratio
-                record["line_22_compliance_units_issued"],
+                (
+                    float(record["line_22_compliance_units_issued"])
+                    if record["line_22_compliance_units_issued"] is not None
+                    else 0.0
+                ),
                 0.0,  # fossil gasoline (repeat)
                 0.0,  # fossil diesel (repeat)
                 0.0,  # fossil jet fuel (repeat)

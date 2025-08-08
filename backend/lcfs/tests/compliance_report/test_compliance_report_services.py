@@ -1,5 +1,6 @@
 from datetime import datetime
 import copy
+from lcfs.db.base import ActionTypeEnum
 from lcfs.db.models.compliance.AllocationAgreement import AllocationAgreement
 from lcfs.db.models.compliance.FuelSupply import FuelSupply
 from lcfs.web.api.compliance_report.dtos import (
@@ -10,6 +11,7 @@ import pytest
 import unittest.mock
 from unittest.mock import MagicMock, AsyncMock, patch, Mock
 from datetime import datetime
+from fastapi import HTTPException
 
 from lcfs.db.models.compliance import ComplianceReport
 from lcfs.db.models.compliance.CompliancePeriod import CompliancePeriod
@@ -21,6 +23,7 @@ from lcfs.db.models.compliance.ComplianceReportStatus import (
 from lcfs.db.models.user import UserProfile
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
+    ComplianceReportUpdateSchema,
 )
 from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
 
@@ -28,6 +31,7 @@ from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.web.api.compliance_report.services import ComplianceReportServices
 from lcfs.db.models.compliance.ComplianceReport import SupplementalInitiatorType
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.tests.compliance_report.conftest import mock_summary_repo
 
 
 # get_all_compliance_periods
@@ -69,7 +73,7 @@ async def test_create_compliance_report_success(
     mock_snapshot_service,
 ):
     mock_user = MagicMock()
-    mock_org_repo.get_organization.return_value = Mock(has_early_issuance=False)
+    mock_org_repo.get_early_issuance_by_year.return_value = None
 
     # Mock the compliance period
     mock_compliance_period = CompliancePeriod(
@@ -118,7 +122,9 @@ async def test_create_compliance_report_quarterly_success(
     mock_snapshot_service,
 ):
     mock_user = MagicMock()
-    mock_org_repo.get_organization.return_value = Mock(has_early_issuance=True)
+    mock_org_repo.get_early_issuance_by_year.return_value = Mock(
+        has_early_issuance=True
+    )
 
     # Mock the compliance period
     mock_compliance_period = CompliancePeriod(
@@ -566,15 +572,19 @@ async def test_create_government_initiated_supplemental_report_success(
         mock_new_report.compliance_report_id = 999
         mock_new_report.version = new_version
         mock_new_report.compliance_report_group_uuid = group_uuid
+        mock_new_report.compliance_period_id = mock_compliance_report_submitted.compliance_period_id
         mock_new_report.compliance_period = (
             mock_compliance_report_submitted.compliance_period
         )  # Pydantic schema
+        mock_new_report.organization_id = mock_compliance_report_submitted.organization_id
         mock_new_report.organization = (
             mock_compliance_report_submitted.organization
         )  # Pydantic schema
+        mock_new_report.current_status_id = mock_draft_status.compliance_report_status_id
         mock_new_report.current_status = (
             mock_draft_status  # Mock configured like schema
         )
+        mock_new_report.summary = None
         mock_new_report.nickname = f"Supplemental Report {new_version}"
         mock_new_report.supplemental_initiator = (
             SupplementalInitiatorType.GOVERNMENT_INITIATED.value
@@ -585,9 +595,14 @@ async def test_create_government_initiated_supplemental_report_success(
         mock_new_report.supplemental_note = None
         mock_new_report.assessment_statement = None
         mock_new_report.transaction_id = None
+        mock_new_report.has_supplemental = False
+        mock_new_report.legacy_id = None
+        mock_new_report.history = None
         # Set dummy create/update dates needed by BaseSchema
         mock_new_report.create_date = datetime.now()
         mock_new_report.update_date = datetime.now()
+        # Set assigned_analyst to None to avoid MagicMock issues
+        mock_new_report.assigned_analyst = None
         mock_repo.create_compliance_report = AsyncMock(return_value=mock_new_report)
 
         # Act
@@ -634,7 +649,9 @@ async def test_create_government_initiated_supplemental_report_success(
         assert (
             call_args.current_status_id == mock_draft_status.compliance_report_status_id
         )
-        assert call_args.nickname == f"Early issuance - Supplemental report {new_version}"
+        assert (
+            call_args.nickname == f"Early issuance - Supplemental report {new_version}"
+        )
         assert (
             call_args.supplemental_initiator
             == SupplementalInitiatorType.GOVERNMENT_INITIATED
@@ -734,19 +751,30 @@ async def test_create_supplemental_report_uses_current_balance(
     mock_new_report = MagicMock(spec=ComplianceReport)
     mock_new_report.compliance_report_id = 2
     mock_new_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_new_report.version = 1
     mock_new_report.supplemental_initiator = (
         SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
     )
+    mock_new_report.compliance_period_id = mock_current_report.compliance_period_id
     mock_new_report.compliance_period = mock_current_report.compliance_period
+    mock_new_report.organization_id = mock_current_report.organization_id
     mock_new_report.organization = MagicMock()
     mock_new_report.organization.organizationCode = "ORG123"
     mock_new_report.organization.name = "Test Organization"
+    mock_new_report.current_status_id = mock_draft_status.compliance_report_status_id
     mock_new_report.current_status = MagicMock()
     mock_new_report.current_status.status = "Draft"
+    mock_new_report.summary = None
+    mock_new_report.transaction_id = None
+    mock_new_report.has_supplemental = False
+    mock_new_report.legacy_id = None
+    mock_new_report.history = None
+    mock_new_report.update_date = None
     mock_new_report.nickname = "Supplemental report 1"
     mock_new_report.supplemental_note = "Test supplemental note"
     mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
     mock_new_report.assessment_statement = "Test assessment statement"
+    mock_new_report.assigned_analyst = None
     mock_repo.create_compliance_report.return_value = mock_new_report
     mock_repo.add_compliance_report_history = AsyncMock()
 
@@ -949,19 +977,30 @@ async def test_create_supplemental_report_line_17_zero_balance(
     mock_new_report = MagicMock(spec=ComplianceReport)
     mock_new_report.compliance_report_id = 2
     mock_new_report.compliance_report_group_uuid = "test-group-uuid"
+    mock_new_report.version = 1
     mock_new_report.supplemental_initiator = (
         SupplementalInitiatorType.SUPPLIER_SUPPLEMENTAL
     )
+    mock_new_report.compliance_period_id = mock_current_report.compliance_period_id
     mock_new_report.compliance_period = mock_current_report.compliance_period
+    mock_new_report.organization_id = mock_current_report.organization_id
     mock_new_report.organization = MagicMock()
     mock_new_report.organization.organizationCode = "ORG123"
     mock_new_report.organization.name = "Test Organization"
+    mock_new_report.current_status_id = mock_draft_status.compliance_report_status_id
     mock_new_report.current_status = MagicMock()
     mock_new_report.current_status.status = "Draft"
+    mock_new_report.summary = None
+    mock_new_report.transaction_id = None
+    mock_new_report.has_supplemental = False
+    mock_new_report.legacy_id = None
+    mock_new_report.history = None
+    mock_new_report.update_date = None
     mock_new_report.nickname = "Supplemental report 1"
     mock_new_report.supplemental_note = "Test supplemental note"
     mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
     mock_new_report.assessment_statement = "Test assessment statement"
+    mock_new_report.assigned_analyst = None
     mock_repo.create_compliance_report.return_value = mock_new_report
     mock_repo.add_compliance_report_history = AsyncMock()
 
@@ -1095,7 +1134,7 @@ async def test_get_changelog_data_fuel_supplies_success(
         fuel_supply_id=1,
         group_uuid="group-1",
         version=1,
-        action_type="CREATE",
+        action_type=ActionTypeEnum.CREATE,
         create_date=datetime(2024, 1, 1),
         compliance_units=100.56,
         create_user="test_user",
@@ -1240,7 +1279,7 @@ async def test_get_changelog_data_fuel_supplies_update(
         fuel_supply_id=1,
         group_uuid="group-1",
         version=1,
-        action_type="CREATE",
+        action_type=ActionTypeEnum.CREATE,
         create_date=datetime(2024, 1, 1),
         compliance_units=100,
         quantity=50,
@@ -1283,7 +1322,7 @@ async def test_get_changelog_data_fuel_supplies_update(
         fuel_supply_id=1,
         group_uuid="group-1",
         version=2,
-        action_type="UPDATE",
+        action_type=ActionTypeEnum.UPDATE,
         create_date=datetime(2024, 1, 2),
         compliance_units=150,  # Changed value
         quantity=50,  # Same as before
@@ -1507,7 +1546,7 @@ async def test_get_changelog_data_fuel_supplies_delete(
     mock_fuel_supply1.fuel_supply_id = 1
     mock_fuel_supply1.group_uuid = "group-1"
     mock_fuel_supply1.version = 1
-    mock_fuel_supply1.action_type = "CREATE"
+    mock_fuel_supply1.action_type = ActionTypeEnum.CREATE
     mock_fuel_supply1.create_date = datetime(2024, 1, 1)
     mock_fuel_supply1.compliance_units = 100
     mock_fuel_supply1.quantity = 50
@@ -1560,7 +1599,7 @@ async def test_get_changelog_data_fuel_supplies_delete(
     mock_fuel_supply2.fuel_supply_id = 1
     mock_fuel_supply2.group_uuid = "group-1"
     mock_fuel_supply2.version = 2
-    mock_fuel_supply2.action_type = "DELETE"
+    mock_fuel_supply2.action_type = ActionTypeEnum.DELETE
     mock_fuel_supply2.create_date = datetime(2024, 1, 2)
     mock_fuel_supply2.compliance_units = 100
     mock_fuel_supply2.quantity = 50
@@ -1626,7 +1665,7 @@ async def test_get_changelog_data_fuel_supplies_delete(
     # Check Report 2 (with delete)
     assert result[1].nickname == "Report 2"
     assert len(result[1].fuel_supplies) == 1
-    assert result[1].fuel_supplies[0].action_type == "DELETE"
+    assert result[1].fuel_supplies[0].action_type == ActionTypeEnum.DELETE.value
 
 
 @pytest.mark.anyio
@@ -1651,7 +1690,7 @@ async def test_get_changelog_data_with_multiple_items(
         fs.fuel_supply_id = fuel_id
         fs.group_uuid = group_id
         fs.version = 1
-        fs.action_type = "CREATE"
+        fs.action_type = ActionTypeEnum.CREATE
         fs.create_date = create_date
         fs.compliance_units = compliance_units
         fs.quantity = 50
@@ -1747,7 +1786,7 @@ async def test_get_changelog_data_other_types(compliance_report_service, mock_re
     mock_agreement.allocation_agreement_id = 1
     mock_agreement.group_uuid = "group-1"
     mock_agreement.version = 1
-    mock_agreement.action_type = "CREATE"
+    mock_agreement.action_type = ActionTypeEnum.CREATE
     mock_agreement.create_date = datetime(2024, 1, 1)
 
     # Add the additional required fields based on validation errors
@@ -2479,6 +2518,12 @@ async def test_create_analyst_adjustment_from_submitted_status_success(
     mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
     mock_new_report.assessment_statement = ""
     mock_new_report.has_supplemental = True
+    mock_new_report.summary = None
+    mock_new_report.transaction_id = None
+    mock_new_report.legacy_id = None
+    mock_new_report.history = None
+    mock_new_report.update_date = None
+    mock_new_report.assigned_analyst = None
 
     # Mock nested objects
     mock_compliance_period = MagicMock()
@@ -2657,6 +2702,12 @@ async def test_create_analyst_adjustment_from_assessed_status_success(
     mock_new_report.reporting_frequency = ReportingFrequency.ANNUAL
     mock_new_report.assessment_statement = ""
     mock_new_report.has_supplemental = True
+    mock_new_report.summary = None
+    mock_new_report.transaction_id = None
+    mock_new_report.legacy_id = None
+    mock_new_report.history = None
+    mock_new_report.update_date = None
+    mock_new_report.assigned_analyst = None
 
     # Mock nested objects
     mock_compliance_period = MagicMock()
@@ -2710,6 +2761,137 @@ async def test_create_analyst_adjustment_from_assessed_status_success(
     mock_repo.create_compliance_report.assert_called_once()
 
 
+@pytest.mark.anyio
+async def test_update_compliance_report_non_assessment_success(
+    compliance_report_service,
+    mock_repo,
+    mock_org_repo,
+    compliance_report_base_schema,
+    compliance_report_create_schema,
+    mock_snapshot_service,
+):
+    mock_user = MagicMock()
+    mock_user.roles = [Role(role_id=1, name=RoleEnum.ANALYST)]
+    mock_org_repo.get_organization.return_value = Mock(has_early_issuance=False)
+
+    # Mock the compliance period
+    mock_compliance_period = CompliancePeriod(
+        compliance_period_id=1,
+        description="2024",
+    )
+    mock_repo.get_compliance_period.return_value = mock_compliance_period
+
+    # Mock the compliance report status
+    mock_draft_status = ComplianceReportStatus(
+        compliance_report_status_id=1, status="Draft"
+    )
+    mock_repo.get_compliance_report_status_by_desc.return_value = mock_draft_status
+
+    # Mock the added compliance report
+    mock_compliance_report = compliance_report_base_schema()
+    mock_compliance_report.is_non_assessment = True
+
+    mock_repo.create_compliance_report.return_value = mock_compliance_report
+
+    result = await compliance_report_service.create_compliance_report(
+        1, compliance_report_create_schema, mock_user
+    )
+
+    assert result == mock_compliance_report
+    assert result.is_non_assessment == True
+    mock_repo.get_compliance_period.assert_called_once_with(
+        compliance_report_create_schema.compliance_period
+    )
+    mock_repo.get_compliance_report_status_by_desc.assert_called_once_with(
+        compliance_report_create_schema.status
+    )
+    mock_repo.create_compliance_report.assert_called_once()
+    mock_snapshot_service.create_organization_snapshot.assert_called_once()
+
+# Analyst Assignment Service Tests
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_success(compliance_report_service, mock_repo):
+    """Test successful analyst assignment"""
+    # Arrange
+    report_id = 1
+    analyst_id = 123
+    mock_user = MagicMock()
+    
+    mock_report = MagicMock()
+    mock_report.compliance_report_id = report_id
+    
+    mock_analyst = MagicMock()
+    mock_analyst.user_profile_id = analyst_id
+    mock_analyst.organization_id = None  # IDIR user
+    mock_analyst.user_roles = [MagicMock()]
+    mock_analyst.user_roles[0].role.name = RoleEnum.ANALYST
+    
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    mock_repo.get_user_by_id.return_value = mock_analyst
+    mock_repo.assign_analyst_to_report.return_value = None
+    
+    # Act
+    await compliance_report_service.assign_analyst_to_report(report_id, analyst_id, mock_user)
+    
+    # Assert
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id)
+    mock_repo.get_user_by_id.assert_called_once_with(analyst_id)
+    mock_repo.assign_analyst_to_report.assert_called_once_with(report_id, analyst_id)
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_unassign(compliance_report_service, mock_repo):
+    """Test unassigning analyst (null value)"""
+    # Arrange
+    report_id = 1
+    mock_user = MagicMock()
+    
+    mock_report = MagicMock()
+    mock_report.compliance_report_id = report_id
+    
+    mock_repo.get_compliance_report_by_id.return_value = mock_report
+    mock_repo.assign_analyst_to_report.return_value = None
+    
+    # Act
+    await compliance_report_service.assign_analyst_to_report(report_id, None, mock_user)
+    
+    # Assert
+    mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id)
+    mock_repo.get_user_by_id.assert_not_called()  # Should not call when analyst_id is None
+    mock_repo.assign_analyst_to_report.assert_called_once_with(report_id, None)
+
+
+@pytest.mark.anyio
+async def test_assign_analyst_to_report_report_not_found(compliance_report_service, mock_repo):
+    """Test assignment when compliance report doesnt exist"""
+    # Arrange
+    report_id = 999
+    analyst_id = 123
+    mock_user = MagicMock()
+    
+    mock_repo.get_compliance_report_by_id.return_value = None
+    
+    # Act & Assert
+    with pytest.raises(DataNotFoundException, match="Compliance report not found"):
+        await compliance_report_service.assign_analyst_to_report(report_id, analyst_id, mock_user)
+
+
+@pytest.mark.anyio
+async def test_get_available_analysts_success(compliance_report_service, mock_repo):
+    """Test retrieving available analysts"""
+    # Arrange
+    mock_analysts = [
+        MagicMock(user_profile_id=1, first_name="John", last_name="Doe"),
+        MagicMock(user_profile_id=2, first_name="Jane", last_name="Smith"),
+    ]
+    mock_repo.get_active_idir_analysts.return_value = mock_analysts
+    
+    # Act
+    result = await compliance_report_service.get_available_analysts()
+    
+    # Assert
+    assert len(result) == 2
+    mock_repo.get_active_idir_analysts.assert_called_once()
 
 # CHANGELOG STATUS FILTERING TESTS
 
@@ -2859,8 +3041,6 @@ async def test_get_changelog_data_handles_missing_status_gracefully(
     )
 
 
-
-
 # CHANGELOG STATUS FILTERING TESTS
 
 
@@ -2969,4 +3149,3 @@ async def test_get_changelog_data_filters_draft_reports_for_government_users(
     mock_repo.get_changelog_data.assert_called_once_with(
         "test-group-uuid", unittest.mock.ANY, gov_user
     )
-

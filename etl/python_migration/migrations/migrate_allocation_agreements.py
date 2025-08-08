@@ -122,7 +122,9 @@ class AllocationAgreementMigrator:
         lcfs_cursor.execute(query)
         return [row[1] for row in lcfs_cursor.fetchall()]  # Return legacy_ids
 
-    def get_lcfs_reports_with_org_period_info(self, lcfs_cursor) -> List[Tuple[int, int, int]]:
+    def get_lcfs_reports_with_org_period_info(
+        self, lcfs_cursor
+    ) -> List[Tuple[int, int, int]]:
         """Get LCFS compliance reports with their organization and period info for proper versioning scope"""
         query = """
         SELECT cr.legacy_id, cr.organization_id, cr.compliance_period_id
@@ -149,11 +151,18 @@ class AllocationAgreementMigrator:
                 crear.quantity_not_sold,
                 tt.id AS transaction_type_id
             FROM compliance_report legacy_cr
-            -- Find the related report within the same org/period that has the exclusion agreement
+            -- Join to exclusion report within the same supplemental chain (by root_report_id)
             INNER JOIN compliance_report exclusion_cr
-                ON legacy_cr.organization_id = exclusion_cr.organization_id
-               AND legacy_cr.compliance_period_id = exclusion_cr.compliance_period_id
+                ON exclusion_cr.root_report_id = legacy_cr.root_report_id
                AND exclusion_cr.exclusion_agreement_id IS NOT NULL
+            -- Ensure we only use the latest exclusion report in the chain up to this report's traversal (as-of)
+               AND exclusion_cr.traversal = (
+                    SELECT MAX(e2.traversal)
+                    FROM compliance_report e2
+                    WHERE e2.root_report_id = legacy_cr.root_report_id
+                      AND e2.exclusion_agreement_id IS NOT NULL
+                      AND e2.traversal <= legacy_cr.traversal
+               )
             -- Now join from the exclusion report to the agreement tables
             INNER JOIN compliance_report_exclusion_agreement crea
                 ON exclusion_cr.exclusion_agreement_id = crea.id
@@ -216,7 +225,7 @@ class AllocationAgreementMigrator:
         transaction_partner = record_data.get("transaction_partner", "").strip()
         responsibility = record_data.get("responsibility", "").strip()
         fuel_type = record_data.get("fuel_type", "").strip()
-        
+
         # Create a logical key from the business identifiers (excluding quantity)
         logical_key = f"{transaction_partner}|{responsibility}|{fuel_type}"
         return logical_key
@@ -236,7 +245,9 @@ class AllocationAgreementMigrator:
             if not group_uuid:
                 group_uuid = str(uuid.uuid4())
                 self.record_uuid_map[logical_key] = group_uuid
-                logger.debug(f"Created new group_uuid {group_uuid} for logical key: {logical_key}")
+                logger.debug(
+                    f"Created new group_uuid {group_uuid} for logical key: {logical_key}"
+                )
 
             # Retrieve current highest version for this group_uuid
             current_ver = self.get_current_version(lcfs_cursor, group_uuid)
@@ -322,7 +333,9 @@ class AllocationAgreementMigrator:
                     logger.info(
                         "Retrieving LCFS compliance reports with legacy_id != NULL"
                     )
-                    reports_data = self.get_lcfs_reports_with_org_period_info(lcfs_cursor)
+                    reports_data = self.get_lcfs_reports_with_org_period_info(
+                        lcfs_cursor
+                    )
                     logger.info(f"Found {len(reports_data)} reports to process")
 
                     # Group reports by organization + period to ensure proper versioning scope
@@ -336,11 +349,17 @@ class AllocationAgreementMigrator:
 
                     # Process each organization/period group with its own record_uuid_map
                     for (org_id, period_id), tfrs_ids in report_groups.items():
-                        self.record_uuid_map = {}  # Reset for each organization + period combination
-                        logger.info(f"Processing organization {org_id}, period {period_id} with {len(tfrs_ids)} reports")
-                        
+                        self.record_uuid_map = (
+                            {}
+                        )  # Reset for each organization + period combination
+                        logger.info(
+                            f"Processing organization {org_id}, period {period_id} with {len(tfrs_ids)} reports"
+                        )
+
                         for tfrs_id in tfrs_ids:
-                            logger.info(f"Processing TFRS compliance_report.id = {tfrs_id}")
+                            logger.info(
+                                f"Processing TFRS compliance_report.id = {tfrs_id}"
+                            )
 
                             # Look up the original LCFS compliance_report record by legacy_id
                             lcfs_cr_id = self.legacy_to_lcfs_mapping.get(tfrs_id)

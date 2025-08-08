@@ -10,6 +10,9 @@ from lcfs.db.seeders.dev.organization_attorney_address_seeder import (
     seed_organization_attorney_addresses,
 )
 from lcfs.db.seeders.dev.organization_seeder import seed_organizations
+from lcfs.db.seeders.dev.organization_early_issuance_seeder import (
+    seed_organization_early_issuance,
+)
 from lcfs.db.seeders.dev.transaction_seeder import seed_transactions
 from lcfs.db.seeders.dev.admin_adjustment_seeder import seed_admin_adjustments
 from lcfs.db.seeders.dev.admin_adjustment_history_seeder import (
@@ -59,6 +62,7 @@ async def seed_dev(session: AsyncSession):
     await seed_organization_addresses(session)
     await seed_organization_attorney_addresses(session)
     await seed_organizations(session)
+    await seed_organization_early_issuance(session)
     await seed_transactions(session)
     await seed_user_profiles(session)
     await seed_user_roles(session)

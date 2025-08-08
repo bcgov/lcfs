@@ -62,6 +62,11 @@
         "submittedForReview": "Submitted to government for analyst review (or returned by compliance manager)",
         "managerRecommendation": "Recommended by compliance manager",
         "directorDecision": "Director assessment"
+      },
+      "fuelCodes": {
+        "title": "Fuel codes",
+        "directorReturned": "Director returned to analyst",
+        "directorApproval": "Director approved"
       }
     }
   },
@@ -88,6 +93,10 @@
       "complianceReports": {
         "title": "Compliance & supplemental reports",
         "managerRecommendation": "Compliance manager recommendation"
+      },
+      "fuelCodes": {
+        "title": "Fuel codes",
+        "analystRecommendation": "Analyst recommendation"
       }
     }
   },

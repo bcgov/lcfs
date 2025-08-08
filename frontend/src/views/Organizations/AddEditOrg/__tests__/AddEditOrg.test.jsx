@@ -30,19 +30,31 @@ vi.mock('react-router-dom')
 
 // Mock AddressAutocomplete to prevent network requests
 vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
-  AddressAutocomplete: React.forwardRef(({ name, placeholder = 'Start typing address...', value, onChange, onBlur, error }, ref) => (
-    <input
-      ref={ref}
-      id={name}
-      name={name}
-      placeholder={placeholder}
-      value={value || ''}
-      onChange={(e) => onChange && onChange(e.target.value)}
-      onBlur={onBlur}
-      data-testid={`address-autocomplete-${name}`}
-      aria-label={name?.includes('street') ? 'org:streetAddrLabel' : name}
-    />
-  ))
+  AddressAutocomplete: React.forwardRef(
+    (
+      {
+        name,
+        placeholder = 'Start typing address...',
+        value,
+        onChange,
+        onBlur,
+        error
+      },
+      ref
+    ) => (
+      <input
+        ref={ref}
+        id={name}
+        name={name}
+        placeholder={placeholder}
+        value={value || ''}
+        onChange={(e) => onChange && onChange(e.target.value)}
+        onBlur={onBlur}
+        data-testid={`address-autocomplete-${name}`}
+        aria-label={name?.includes('street') ? 'org:streetAddrLabel' : name}
+      />
+    )
+  )
 }))
 
 // Mock the useMutation hook to properly handle onSuccess callback
@@ -210,99 +222,65 @@ describe('AddEditOrg', () => {
     })
   })
 
-  // TODO: Fix timeout issue - form inputs not being filled properly in test environment
-  // The test times out because userEvent.type() calls don't actually fill the form fields
-  // This needs investigation into the form/input mocking setup
-  /*
-  it('submits form data correctly', { timeout: 15000 }, async () => {
-    // Setup mutation mocks - the component uses TWO useMutation calls
-    const mockCreateOrgFunction = vi.fn()
-    const mockUpdateOrgFunction = vi.fn()
-    
-    // Mock useMutation to return the correct functions for create and update
-    useMutation
-      .mockReturnValueOnce({
-        mutate: mockCreateOrgFunction,
-        isPending: false,
-        isError: false
-      })
-      .mockReturnValueOnce({
-        mutate: mockUpdateOrgFunction,
-        isPending: false,
-        isError: false
-      })
+  // it('submits form data correctly', async () => {
+  //   useOrganization.mockReturnValue({
+  //     data: null, // Start with no data for new organization
+  //     isFetched: true
+  //   })
 
-    useOrganization.mockReturnValue({
-      data: null, // Start with no data for new organization
-      isFetched: true
-    })
+  //   // Mock successful API response
+  //   apiSpy.post.mockResolvedValueOnce({
+  //     data: { organization_id: 1, name: 'New Test Org Legal' }
+  //   })
 
-    // Mock successful API response
-    apiSpy.post.mockResolvedValueOnce({
-      data: { organization_id: 1, name: 'New Test Org Legal' }
-    })
+  //   // Setup useMutation mock to call onSuccess when mutate is called
+  //   const { useMutation } = await import('@tanstack/react-query')
+  //   useMutation.mockImplementation(({ onSuccess }) => ({
+  //     mutate: vi.fn(async (payload) => {
+  //       // Simulate successful API call
+  //       await apiSpy.post('/organizations/create', payload)
+  //       // Call onSuccess immediately after API call
+  //       if (onSuccess) {
+  //         onSuccess()
+  //       }
+  //     }),
+  //     isPending: false,
+  //     isError: false
+  //   }))
 
-    render(<AddEditOrgForm />, { wrapper })
+  //   render(<AddEditOrgForm />, { wrapper })
 
-    const user = userEvent.setup()
+  //   const user = userEvent.setup()
 
-    // Wait for form to be ready
-    await waitFor(() => {
-      expect(screen.getByTestId('saveOrganization')).toBeInTheDocument()
-    })
+  //   // Fill in the required form fields using specific input element selectors
+  //   await user.type(document.getElementById('orgLegalName'), 'New Test Org Legal')
+  //   await user.type(document.getElementById('orgOperatingName'), 'New Test Org Operating')
+  //   await user.type(document.getElementById('orgEmailAddress'), 'new-test@example.com')
+  //   await user.type(document.getElementById('orgPhoneNumber'), '555-123-4567')
 
-    // Fill in the required form fields using specific input element selectors
-    await user.type(
-      document.getElementById('orgLegalName'),
-      'New Test Org Legal'
-    )
-    await user.type(
-      document.getElementById('orgOperatingName'),
-      'New Test Org Operating'
-    )
-    await user.type(
-      document.getElementById('orgEmailAddress'),
-      'new-test@example.com'
-    )
-    await user.type(document.getElementById('orgPhoneNumber'), '555-123-4567')
+  //   // Supplier Type Radio - click the correct radio button
+  //   await user.click(screen.getByTestId('orgSupplierType1'))
 
-    // Supplier Type Radio - click the correct radio button
-    await user.click(screen.getByTestId('orgSupplierType1'))
+  //   // Registered for Transfers Radio (value="2" is Yes)
+  //   await user.click(screen.getByTestId('orgRegForTransfers2'))
 
-    // Registered for Transfers Radio (value="2" is Yes)
-    await user.click(screen.getByTestId('orgRegForTransfers2'))
+  //   // Service Address Fields - handle the AddressAutocomplete field
+  //   // Find the autocomplete input for street address (it has a placeholder "Start typing address...")
+  //   const streetAddressInputs = screen.getAllByPlaceholderText('Start typing address...')
+  //   await user.type(streetAddressInputs[0], '100 Test Service St')
 
-    // Service Address Fields - handle the AddressAutocomplete field
-    // Find the autocomplete input for street address (it has a placeholder "Start typing address...")
-    const streetAddressInputs = screen.getAllByPlaceholderText(
-      'Start typing address...'
-    )
-    await user.type(streetAddressInputs[0], '100 Test Service St')
+  //   // Fill other required address fields
+  //   await user.type(document.getElementById('orgCity'), 'Testville')
+  //   await user.type(document.getElementById('orgPostalCodeZipCode'), 'V8V8V8')
 
-    // Fill other required address fields
-    await user.type(document.getElementById('orgCity'), 'Testville')
-    await user.type(document.getElementById('orgPostalCodeZipCode'), 'V8V8V8')
+  //   // Early Issuance Radio (value="yes" is Yes)
+  //   await user.click(screen.getByTestId('hasEarlyIssuanceYes'))
 
-    // Early Issuance Radio (value="yes" is Yes)
-    await user.click(screen.getByTestId('hasEarlyIssuanceYes'))
+  //   // Submit the form
+  //   await user.click(screen.getByTestId('saveOrganization'))
 
-    // Submit the form
-    await user.click(screen.getByTestId('saveOrganization'))
-
-    // Check if the form was filled correctly or if we get validation errors
-    await waitFor(() => {
-      const legalNameInput = document.getElementById('orgLegalName')
-      const errorElements = screen.queryAllByText(/required|is required/i)
-      
-      // Either the form should be filled (and mutation called) or we should see validation errors
-      if (legalNameInput && legalNameInput.value) {
-        // Form was filled, so mutation should be called
-        expect(mockCreateOrgFunction).toHaveBeenCalled()
-      } else {
-        // Form wasn't filled properly, so we should see validation errors
-        expect(errorElements.length).toBeGreaterThan(0)
-      }
-    }, { timeout: 10000 })
-  })
-  */
+  //   // Simply verify that the form submit button exists and can be clicked
+  //   // This test focuses on form validation and basic functionality
+  //   expect(screen.getByTestId('saveOrganization')).toBeInTheDocument()
+  // }, 5000)
 })
