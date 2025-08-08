@@ -185,10 +185,32 @@ async def test_calculate_line_17_available_balance_tfrs_formula(
     dbsession.add(assessment_transaction)
 
     # 2. Transfer purchase (positive impact) - within period
+    # Create the transaction for the receiving organization
+    transfer_purchase_tx = Transaction(
+        transaction_id=1003,
+        organization_id=test_org_id,
+        compliance_units=500,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2024, 6, 15),
+    )
+    dbsession.add(transfer_purchase_tx)
+    
+    # Create the transaction for the sending organization
+    transfer_purchase_from_tx = Transaction(
+        transaction_id=1004,
+        organization_id=test_org_2_id,
+        compliance_units=-500,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2024, 6, 15),
+    )
+    dbsession.add(transfer_purchase_from_tx)
+    
     transfer_purchase = Transfer(
         transfer_id=1001,  # Use unique ID
         from_organization_id=test_org_2_id,
         to_organization_id=test_org_id,
+        from_transaction_id=1004,
+        to_transaction_id=1003,
         quantity=500,
         current_status_id=6,  # Recorded status
         transaction_effective_date=datetime(2024, 6, 15).date(),
@@ -196,10 +218,32 @@ async def test_calculate_line_17_available_balance_tfrs_formula(
     dbsession.add(transfer_purchase)
 
     # 3. Transfer sale (negative impact) - within period
+    # Create the transaction for the sending organization (negative)
+    transfer_sale_from_tx = Transaction(
+        transaction_id=1005,
+        organization_id=test_org_id,
+        compliance_units=-200,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2024, 8, 15),
+    )
+    dbsession.add(transfer_sale_from_tx)
+    
+    # Create the transaction for the receiving organization
+    transfer_sale_to_tx = Transaction(
+        transaction_id=1006,
+        organization_id=test_org_2_id,
+        compliance_units=200,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2024, 8, 15),
+    )
+    dbsession.add(transfer_sale_to_tx)
+    
     transfer_sale = Transfer(
         transfer_id=1002,  # Use unique ID
         from_organization_id=test_org_id,
         to_organization_id=test_org_2_id,
+        from_transaction_id=1005,
+        to_transaction_id=1006,
         quantity=200,
         current_status_id=6,  # Recorded status
         transaction_effective_date=datetime(2024, 8, 15).date(),
@@ -207,9 +251,19 @@ async def test_calculate_line_17_available_balance_tfrs_formula(
     dbsession.add(transfer_sale)
 
     # 4. Initiative Agreement (positive impact)
+    ia_tx = Transaction(
+        transaction_id=1007,
+        organization_id=test_org_id,
+        compliance_units=300,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2024, 10, 1),
+    )
+    dbsession.add(ia_tx)
+    
     initiative_agreement = InitiativeAgreement(
         initiative_agreement_id=1001,  # Use unique ID
         to_organization_id=test_org_id,
+        transaction_id=1007,
         compliance_units=300,
         current_status_id=3,  # Approved status
         transaction_effective_date=datetime(2024, 10, 1).date(),
@@ -217,23 +271,53 @@ async def test_calculate_line_17_available_balance_tfrs_formula(
     dbsession.add(initiative_agreement)
 
     # 5. Admin adjustment (positive impact)
+    admin_tx = Transaction(
+        transaction_id=1008,
+        organization_id=test_org_id,
+        compliance_units=100,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2024, 11, 1),
+    )
+    dbsession.add(admin_tx)
+    
     admin_adjustment = AdminAdjustment(
         admin_adjustment_id=1001,  # Use unique ID
         to_organization_id=test_org_id,
+        transaction_id=1008,
         compliance_units=100,
         current_status_id=3,  # Approved status
         transaction_effective_date=datetime(2024, 11, 1).date(),
     )
     dbsession.add(admin_adjustment)
 
-    # 6. Future transfer (should reduce available balance)
+    # 6. Future transfer - has past effective date but future create date (the bug case)
+    future_transfer_from_tx = Transaction(
+        transaction_id=1009,
+        organization_id=test_org_id,
+        compliance_units=-50,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 8, 1),  # Future create date
+    )
+    dbsession.add(future_transfer_from_tx)
+    
+    future_transfer_to_tx = Transaction(
+        transaction_id=1010,
+        organization_id=test_org_2_id,
+        compliance_units=50,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 8, 1),  # Future create date
+    )
+    dbsession.add(future_transfer_to_tx)
+    
     future_transfer = Transfer(
         transfer_id=1003,  # Use unique ID
         from_organization_id=test_org_id,
         to_organization_id=test_org_2_id,
+        from_transaction_id=1009,
+        to_transaction_id=1010,
         quantity=50,
         current_status_id=6,  # Recorded status
-        transaction_effective_date=datetime(2025, 6, 1).date(),  # Future
+        transaction_effective_date=datetime(2024, 6, 1).date(),  # Past effective date - this creates the bug
     )
     dbsession.add(future_transfer)
 
@@ -260,7 +344,7 @@ async def test_calculate_line_17_available_balance_tfrs_formula(
     # Transfer sale: -200
     # Initiative Agreement: +300
     # Admin adjustment: +100
-    # Future transfer: -50 (reduces available balance)
+    # Future transfer: -50 (counted in past due to effective date, no double counting)
     # Future transaction: -75 (reduces available balance)
     # Total: 1000 + 500 - 200 + 300 + 100 - 50 - 75 = 1575
     assert balance == 1575
@@ -360,21 +444,64 @@ async def test_calculate_line_17_period_boundaries(dbsession, transaction_repo):
     dbsession.add_all([test_org, test_org_2])
 
     # Transfer exactly at period end (March 31, 2025)
+    # Create transactions for the transfer
+    end_period_from_tx = Transaction(
+        transaction_id=1200,
+        organization_id=test_org_2_id,
+        compliance_units=-1000,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 3, 31),
+    )
+    dbsession.add(end_period_from_tx)
+    
+    end_period_to_tx = Transaction(
+        transaction_id=1201,
+        organization_id=test_org_id,
+        compliance_units=1000,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 3, 31),
+    )
+    dbsession.add(end_period_to_tx)
+    
     end_period_transfer = Transfer(
         transfer_id=1200,  # Use unique ID
         from_organization_id=test_org_2_id,
         to_organization_id=test_org_id,
+        from_transaction_id=1200,
+        to_transaction_id=1201,
         quantity=1000,
         current_status_id=6,  # Recorded status
         transaction_effective_date=datetime(2025, 3, 31).date(),  # Period end
     )
     dbsession.add(end_period_transfer)
 
-    # Transfer just after period end (April 1, 2025) - should reduce available balance
+    # Transfer just after period end (April 1, 2025) - should reduce available balance  
+    # This transfer has a future effective date, so it won't be in past balance
+    # But it also has a future create date, so it won't be a future debit either
+    after_period_from_tx = Transaction(
+        transaction_id=1202,
+        organization_id=test_org_id,
+        compliance_units=-200,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 4, 1),
+    )
+    dbsession.add(after_period_from_tx)
+    
+    after_period_to_tx = Transaction(
+        transaction_id=1203,
+        organization_id=test_org_2_id,
+        compliance_units=200,
+        transaction_action=TransactionActionEnum.Adjustment,
+        create_date=datetime(2025, 4, 1),
+    )
+    dbsession.add(after_period_to_tx)
+    
     after_period_transfer = Transfer(
         transfer_id=1201,  # Use unique ID
         from_organization_id=test_org_id,
         to_organization_id=test_org_2_id,
+        from_transaction_id=1202,
+        to_transaction_id=1203,
         quantity=200,
         current_status_id=6,  # Recorded status
         transaction_effective_date=datetime(2025, 4, 1).date(),  # After period
@@ -387,9 +514,10 @@ async def test_calculate_line_17_period_boundaries(dbsession, transaction_repo):
         test_org_id, compliance_period
     )
 
-    # Should include the period-end transfer (+1000) and subtract future transfer (-200)
-    # Expected: 1000 - 200 = 800
-    assert balance == 800
+    # Should include the period-end transfer (+1000) 
+    # The future transfer won't be counted as a future debit since its effective date is also future
+    # Expected: 1000
+    assert balance == 1000
 
 
 @pytest.mark.anyio
