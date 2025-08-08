@@ -57,14 +57,23 @@ const SummaryTable = ({
   const handleCellChange = (e, rowIndex, columnId) => {
     const enteredValue = e.target.value
     const column = columns.find((col) => col.id === columnId)
-    
+    const constraints = getCellConstraints(rowIndex, columnId)
+
     let value
-    if (column.editable && column.editableCells && column.editableCells.includes(rowIndex)) {
+    if (column.id === 'totalValue') {
       // For currency inputs (penalty fields), store as string to preserve decimal input
       value = enteredValue.replace(/[^0-9.]/g, '')
     } else {
-      // Convert to integer for non-currency fields
+      // integer
       value = enteredValue === '' ? 0 : parseInt(enteredValue.replace(/\D/g, ''), 10)
+
+      if (constraints.max !== undefined && value > constraints.max) {
+        value = constraints.max
+      }
+
+      if (constraints.min !== undefined && value < constraints.min) {
+        value = constraints.min
+      }
     }
 
     setData((prevData) => {
