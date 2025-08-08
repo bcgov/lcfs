@@ -569,7 +569,10 @@ async def test_get_issued_compliance_units_not_found(summary_repo):
         (False, {"diesel": 1.0, "gasoline": 1.0}),
     ],
 )
-def test_aggregate_fuel_supplies(summary_repo, fuel_supplies, fossil_derived, expected):
+@pytest.mark.anyio
+async def test_aggregate_fuel_supplies(
+    summary_repo, fuel_supplies, fossil_derived, expected
+):
     result = summary_repo.aggregate_quantities(fuel_supplies, fossil_derived)
 
     assert result == expected
@@ -606,12 +609,14 @@ async def test_penalty_override_field_defaults(summary_repo, compliance_reports)
 
 
 @pytest.mark.anyio
-async def test_penalty_override_field_assignment(summary_repo, compliance_reports, users):
+async def test_penalty_override_field_assignment(
+    summary_repo, compliance_reports, users
+):
     """Test that penalty override fields can be set and retrieved"""
     from datetime import datetime, timezone
-    
+
     penalty_date = datetime(2024, 6, 15, 10, 30, 0, tzinfo=timezone.utc)
-    
+
     summary = ComplianceReportSummary(
         compliance_report_id=compliance_reports[0].compliance_report_id,
         penalty_override_enabled=True,
@@ -637,9 +642,9 @@ async def test_penalty_override_update_existing_summary(
     """Test updating penalty override fields on existing summary"""
     from datetime import datetime, timezone
     from lcfs.web.api.compliance_report.schema import ComplianceReportSummarySchema
-    
+
     penalty_date = datetime(2024, 6, 15, 14, 45, 0, tzinfo=timezone.utc)
-    
+
     summary_schema = ComplianceReportSummarySchema(
         compliance_report_id=compliance_reports[0].compliance_report_id,
         renewable_fuel_target_summary=[],
@@ -652,7 +657,9 @@ async def test_penalty_override_update_existing_summary(
         penalty_override_user=users[0].user_profile_id,
     )
 
-    result = await summary_repo.save_compliance_report_summary(summary=summary_schema, compliance_year=2024)
+    result = await summary_repo.save_compliance_report_summary(
+        summary=summary_schema, compliance_year=2024
+    )
 
     assert result.penalty_override_enabled is True
     assert result.renewable_penalty_override == 2000.75
@@ -679,7 +686,9 @@ async def test_penalty_override_with_zero_values(summary_repo, compliance_report
 
 
 @pytest.mark.anyio
-async def test_penalty_override_disabled_clears_values(summary_repo, compliance_reports):
+async def test_penalty_override_disabled_clears_values(
+    summary_repo, compliance_reports
+):
     """Test that disabling penalty override while keeping override values works"""
     summary = ComplianceReportSummary(
         compliance_report_id=compliance_reports[0].compliance_report_id,
@@ -707,10 +716,10 @@ async def test_penalty_override_user_relationship(
     )
 
     result = await summary_repo.add_compliance_report_summary(summary=summary)
-    
+
     # Refresh to load relationships
     await summary_repo.db.refresh(result)
 
     assert result.penalty_override_user == users[0].user_profile_id
     # Test the relationship is properly configured
-    assert hasattr(result, 'penalty_override_user_profile')
+    assert hasattr(result, "penalty_override_user_profile")
