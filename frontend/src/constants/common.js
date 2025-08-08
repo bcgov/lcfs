@@ -131,9 +131,6 @@ export const SCHEDULE_IMPORT_FILE_TYPES = {
   }
 }
 
-export const FUEL_CATEGORIES = ['Diesel', 'Gasoline', 'Jet fuel']
-export const LEGISLATION_TRANSITION_YEAR = 2024
-
 export const CURRENT_COMPLIANCE_YEAR = (
   LEGISLATION_TRANSITION_YEAR + 1
 ).toString()

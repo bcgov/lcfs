@@ -935,7 +935,7 @@ SELECT
       "Organization"."effective_date" AS "Organization__effective_date",
       "Organization"."effective_status" AS "Organization__effective_status",
       "Organization"."expiration_date" AS "Organization__expiration_date",
-      "Organization"."has_early_issuance" AS "Organization__has_early_issuance",
+      COALESCE("Organization Early Issuance"."has_early_issuance", false) AS "Organization__has_early_issuance",
       "Organization"."records_address" AS "Organization__records_address",
       "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid" AS "CR Chained - CR Group UUID__group_uuid",
       "Compliance Reports Chained - Compliance Report Group UUID"."max_version" AS "CR Chained - CR Group UUID__max_version"
@@ -947,6 +947,7 @@ SELECT
      
 LEFT JOIN "transaction" AS "Transaction" ON "compliance_report"."transaction_id" = "Transaction"."transaction_id"
       LEFT JOIN "organization" AS "Organization" ON "compliance_report"."organization_id" = "Organization"."organization_id"
+      LEFT JOIN "organization_early_issuance_by_year" AS "Organization Early Issuance" ON "compliance_report"."organization_id" = "Organization Early Issuance"."organization_id" AND "compliance_report"."compliance_period_id" = "Organization Early Issuance"."compliance_period_id"
       INNER JOIN (
         SELECT
           compliance_report_group_uuid AS group_uuid,
@@ -1318,7 +1319,7 @@ LEFT JOIN "allocation_agreement" AS "Allocation Agreement - Group UUID" ON (
           "Organization"."effective_date" AS "Organization__effective_date",
           "Organization"."effective_status" AS "Organization__effective_status",
           "Organization"."expiration_date" AS "Organization__expiration_date",
-          "Organization"."has_early_issuance" AS "Organization__has_early_issuance",
+          COALESCE("Organization Early Issuance"."has_early_issuance", false) AS "Organization__has_early_issuance",
           "Organization"."records_address" AS "Organization__records_address",
           "Compliance Reports Chained - Compliance Report Group UUID"."group_uuid" AS "Compliance Reports Chained - Compliance Report Grou_1a77e4cb",
           "Compliance Reports Chained - Compliance Report Group UUID"."max_version" AS "Compliance Reports Chained - Compliance Report Grou_480bb7b1"
@@ -1329,6 +1330,7 @@ LEFT JOIN "allocation_agreement" AS "Allocation Agreement - Group UUID" ON (
           INNER JOIN "compliance_report_summary" AS "Compliance Report Summary - Compliance Report" ON "compliance_report"."compliance_report_id" = "Compliance Report Summary - Compliance Report"."compliance_report_id"
           LEFT JOIN "transaction" AS "Transaction" ON "compliance_report"."transaction_id" = "Transaction"."transaction_id"
           LEFT JOIN "organization" AS "Organization" ON "compliance_report"."organization_id" = "Organization"."organization_id"
+          LEFT JOIN "organization_early_issuance_by_year" AS "Organization Early Issuance" ON "compliance_report"."organization_id" = "Organization Early Issuance"."organization_id" AND "compliance_report"."compliance_period_id" = "Organization Early Issuance"."compliance_period_id"
           INNER JOIN (
             SELECT
               compliance_report_group_uuid AS group_uuid,

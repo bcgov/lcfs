@@ -23,7 +23,8 @@ depends_on = None
 
 # Sections to recreate after altering columns
 SECTIONS_TO_EXECUTE = [
-    "Allocation Agreement Base View",
+    "Allocation Agreement Chained View",
+    "Allocation Agreement Base View With Early Issuance By Year",
     "Fuel Export Analytics Base View",
     "Fuel Supply Analytics Base View",
     "Fuel Supply Base View",
@@ -362,6 +363,7 @@ def upgrade() -> None:
     # Using CASCADE to drop dependent views automatically
     op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_credit_ledger CASCADE;")
     op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_transaction_aggregate CASCADE;")
+    op.execute("DROP VIEW IF EXISTS vw_allocation_agreement_chained CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_allocation_agreement_base CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_fuel_export_analytics_base CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_fuel_supply_analytics_base CASCADE;")
@@ -532,6 +534,7 @@ def downgrade() -> None:
     # Drop views and materialized views before altering columns back
     op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_credit_ledger CASCADE;")
     op.execute("DROP MATERIALIZED VIEW IF EXISTS mv_transaction_aggregate CASCADE;")
+    op.execute("DROP VIEW IF EXISTS vw_allocation_agreement_chained CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_allocation_agreement_base CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_fuel_export_analytics_base CASCADE;")
     op.execute("DROP VIEW IF EXISTS vw_fuel_supply_analytics_base CASCADE;")
