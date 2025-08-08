@@ -61,9 +61,7 @@ class DatabaseSetup:
         """Get database configuration for the specified application and environment."""
         if app == Application.TFRS:
             project_name = f"0ab226-{env.value}"
-            app_label = (
-                "tfrs-crunchy-prod-tfrs" if env == Environment.PROD else "tfrs-spilo"
-            )
+            app_label = f"tfrs-crunchy-{env.value}-tfrs"
             return DatabaseConfig(
                 project_name=project_name,
                 app_label=app_label,
@@ -278,7 +276,7 @@ class DatabaseSetup:
 
             self.logger.info("Downloading dump file from OpenShift pod")
             subprocess.run(
-                ["oc", "rsync", f"{pod_name}:/tmp/{dump_file}", dump_dir + "/"],
+                ["oc", "cp", f"{pod_name}:/tmp/{dump_file}", local_dump_path],
                 check=True,
             )
 

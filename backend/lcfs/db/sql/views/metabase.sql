@@ -2031,6 +2031,7 @@ SELECT
       ) AS "Compliance Report Base - Compliance Report" ON "Allocation Agreement - Group UUID"."compliance_report_id" = "Compliance Report Base - Compliance Report"."compliance_report_id";
 
 GRANT SELECT ON vw_allocation_agreement_base TO basic_lcfs_reporting_role;
+
 -- ==========================================
 -- Fuel Export Analytics Base View
 -- ==========================================
@@ -2469,3 +2470,5 @@ CREATE INDEX IF NOT EXISTS idx_fse_full_address_norm
     ON final_supply_equipment (LOWER(TRIM(street_address)), LOWER(TRIM(city)), LOWER(TRIM(postal_code)));
 CREATE INDEX IF NOT EXISTS idx_fse_organization_name_norm
     ON final_supply_equipment (LOWER(TRIM(organization_name)));
+
+grant select on vw_fuel_export_analytics_base to basic_lcfs_reporting_role;
