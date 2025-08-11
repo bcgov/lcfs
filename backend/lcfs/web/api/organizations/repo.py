@@ -129,12 +129,18 @@ class OrganizationsRepository:
         await self.db.flush()
         await self.db.refresh(org_model)
 
-        # Add year-based early issuance for current year before validation
-        org_model.has_early_issuance = await self.get_current_year_early_issuance(
+        # Get early issuance status for current year
+        has_early_issuance = await self.get_current_year_early_issuance(
             org_model.organization_id
         )
 
-        return OrganizationResponseSchema.model_validate(org_model)
+        # Create response with early issuance data
+        org_data = {
+            **{column.name: getattr(org_model, column.name) for column in org_model.__table__.columns},
+            "has_early_issuance": has_early_issuance
+        }
+        
+        return OrganizationResponseSchema.model_validate(org_data)
 
     @repo_handler
     async def get_organization(self, organization_id: int) -> Organization:
@@ -161,12 +167,18 @@ class OrganizationsRepository:
         await self.db.flush()
         await self.db.refresh(organization)
 
-        # Add year-based early issuance for current year before validation
-        organization.has_early_issuance = await self.get_current_year_early_issuance(
+        # Get early issuance status for current year  
+        has_early_issuance = await self.get_current_year_early_issuance(
             organization.organization_id
         )
 
-        return OrganizationResponseSchema.model_validate(organization)
+        # Create response with early issuance data
+        org_data = {
+            **{column.name: getattr(organization, column.name) for column in organization.__table__.columns},
+            "has_early_issuance": has_early_issuance
+        }
+
+        return OrganizationResponseSchema.model_validate(org_data)
 
     def add(self, entity: BaseModel):
         self.db.add(entity)
@@ -269,11 +281,16 @@ class OrganizationsRepository:
         # Add year-based early issuance for current year to each organization
         validated_organizations = []
         for organization in organizations:
-            organization.has_early_issuance = (
-                await self.get_current_year_early_issuance(organization.organization_id)
-            )
+            has_early_issuance = await self.get_current_year_early_issuance(organization.organization_id)
+            
+            # Create organization data with early issuance
+            org_data = {
+                **{column.name: getattr(organization, column.name) for column in organization.__table__.columns},
+                "has_early_issuance": has_early_issuance
+            }
+            
             validated_organizations.append(
-                OrganizationSchema.model_validate(organization)
+                OrganizationSchema.model_validate(org_data)
             )
 
         return validated_organizations, total_count
