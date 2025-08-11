@@ -1,8 +1,13 @@
 import { CallToolRequestSchema, Tool } from "@modelcontextprotocol/sdk/types.js";
-import { docker, getDockerStats, findContainersByFilter, performContainerAction } from "../utils/index.js";
+import { 
+  docker, 
+  getDockerStats, 
+  findContainersByFilter, 
+  performContainerAction,
+  discoverLcfsContainers,
+  findContainersByNames,
+} from "../utils/index.js";
 import {
-  containerNamesMap,
-  ContainerName,
   dockerStartSchema,
   dockerStopSchema,
   dockerRestartSchema,
@@ -13,47 +18,11 @@ import {
   ContainerInfo,
 } from "../types/index.js";
 
-// Container dependency mapping based on docker-compose.yml
-const CONTAINER_DEPENDENCIES: Record<string, string[]> = {
-  // Infrastructure containers (no dependencies)
-  'db': [],
-  'redis': [],
-  'rabbitmq': [],
-  'minio': [],
-  
-  // MinIO initialization depends on MinIO
-  'minio_init': ['minio'],
-  
-  // Application containers depend on infrastructure
-  'backend': ['db', 'redis', 'rabbitmq', 'minio_init'],
-  'frontend': [], // Frontend doesn't have strict dependencies on other containers
-  'lcfs-mcp-server': ['db', 'redis'],
-};
-
-// Reverse dependency mapping (what depends on each container)
-const REVERSE_DEPENDENCIES: Record<string, string[]> = {};
-Object.entries(CONTAINER_DEPENDENCIES).forEach(([container, deps]) => {
-  deps.forEach(dep => {
-    if (!REVERSE_DEPENDENCIES[dep]) {
-      REVERSE_DEPENDENCIES[dep] = [];
-    }
-    REVERSE_DEPENDENCIES[dep].push(container);
-  });
-});
-
-// Volume usage mapping for containers
-const CONTAINER_VOLUMES: Record<string, string[]> = {
-  'db': ['lcfs_postgres_data'],
-  'redis': ['lcfs_redis_data'],
-  'minio': ['lcfs_s3_data'],
-  'frontend': ['lcfs_node_data'],
-  // Other containers don't use persistent volumes or use bind mounts only
-};
 
 export const dockerTools: Tool[] = [
   {
     name: "docker-start",
-    description: "Start one or more Docker containers",
+    description: "Start one or more LCFS Docker containers",
     inputSchema: {
       type: "object",
       properties: {
@@ -61,14 +30,16 @@ export const dockerTools: Tool[] = [
           type: "array",
           items: {
             type: "string",
-            enum: ["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server", "all"],
           },
-          description: "Container names to start, or 'all' for all containers",
+          description: "Container names to start (e.g., ['db', 'redis', 'backend'])",
         },
         single: {
           type: "string",
-          enum: ["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server"],
-          description: "Single container to start (alternative to containers array)",
+          description: "Single container to start (e.g., 'db', 'backend')",
+        },
+        all: {
+          type: "boolean",
+          description: "Start all LCFS containers (excludes lcfs-mcp-server)",
         },
       },
       additionalProperties: false,
@@ -76,7 +47,7 @@ export const dockerTools: Tool[] = [
   },
   {
     name: "docker-stop",
-    description: "Stop one or more Docker containers",
+    description: "Stop one or more LCFS Docker containers",
     inputSchema: {
       type: "object",
       properties: {
@@ -84,14 +55,16 @@ export const dockerTools: Tool[] = [
           type: "array",
           items: {
             type: "string",
-            enum: ["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server", "all"],
           },
-          description: "Container names to stop, or 'all' for all containers",
+          description: "Container names to stop (e.g., ['db', 'redis', 'backend'])",
         },
         single: {
           type: "string",
-          enum: ["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server"],
-          description: "Single container to stop (alternative to containers array)",
+          description: "Single container to stop (e.g., 'db', 'backend')",
+        },
+        all: {
+          type: "boolean",
+          description: "Stop all LCFS containers (excludes lcfs-mcp-server)",
         },
       },
       additionalProperties: false,
@@ -99,7 +72,7 @@ export const dockerTools: Tool[] = [
   },
   {
     name: "docker-restart",
-    description: "Restart one or more Docker containers",
+    description: "Restart one or more LCFS Docker containers",
     inputSchema: {
       type: "object",
       properties: {
@@ -107,14 +80,16 @@ export const dockerTools: Tool[] = [
           type: "array",
           items: {
             type: "string",
-            enum: ["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server", "all"],
           },
-          description: "Container names to restart, or 'all' for all containers",
+          description: "Container names to restart (e.g., ['db', 'redis', 'backend'])",
         },
         single: {
           type: "string",
-          enum: ["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server"],
-          description: "Single container to restart (alternative to containers array)",
+          description: "Single container to restart (e.g., 'db', 'backend')",
+        },
+        all: {
+          type: "boolean",
+          description: "Restart all LCFS containers (excludes lcfs-mcp-server)",
         },
       },
       additionalProperties: false,
@@ -122,7 +97,7 @@ export const dockerTools: Tool[] = [
   },
   {
     name: "docker-status",
-    description: "Get status of Docker containers",
+    description: "Get status of LCFS Docker containers",
     inputSchema: {
       type: "object",
       properties: {
@@ -130,14 +105,16 @@ export const dockerTools: Tool[] = [
           type: "array",
           items: {
             type: "string",
-            enum: ["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server", "all"],
           },
-          description: "Container names to check, or 'all' for all containers",
+          description: "Container names to check (e.g., ['db', 'redis', 'backend'])",
         },
         single: {
           type: "string",
-          enum: ["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server"],
-          description: "Single container to check (alternative to containers array)",
+          description: "Single container to check (e.g., 'db', 'backend')",
+        },
+        all: {
+          type: "boolean",
+          description: "Check all LCFS containers (includes lcfs-mcp-server)",
         },
       },
       additionalProperties: false,
@@ -210,122 +187,50 @@ export const dockerTools: Tool[] = [
   },
 ];
 
-// Get containers in dependency order for starting (dependencies first)
-function getStartOrder(containerNames: string[]): string[] {
-  const visited = new Set<string>();
-  const result: string[] = [];
-  
-  function visit(containerName: string) {
-    if (visited.has(containerName)) return;
-    visited.add(containerName);
-    
-    // Visit dependencies first
-    const deps = CONTAINER_DEPENDENCIES[containerName] || [];
-    for (const dep of deps) {
-      if (containerNames.includes(dep)) {
-        visit(dep);
-      }
-    }
-    
-    result.push(containerName);
-  }
-  
-  for (const containerName of containerNames) {
-    visit(containerName);
-  }
-  
-  return result;
-}
-
-// Get containers in reverse dependency order for stopping (dependents first)
-function getStopOrder(containerNames: string[]): string[] {
-  const visited = new Set<string>();
-  const result: string[] = [];
-  
-  function visit(containerName: string) {
-    if (visited.has(containerName)) return;
-    visited.add(containerName);
-    
-    // Visit dependents first
-    const dependents = REVERSE_DEPENDENCIES[containerName] || [];
-    for (const dependent of dependents) {
-      if (containerNames.includes(dependent)) {
-        visit(dependent);
-      }
-    }
-    
-    result.push(containerName);
-  }
-  
-  for (const containerName of containerNames) {
-    visit(containerName);
-  }
-  
-  return result;
-}
-
-// Get all containers that use volumes that would be affected by a database reset
-function getVolumeAffectedContainers(): string[] {
-  const affected: string[] = [];
-  for (const [container, volumes] of Object.entries(CONTAINER_VOLUMES)) {
-    // Any container using persistent volumes needs to be stopped for reset
-    if (volumes.length > 0) {
-      affected.push(container);
-    }
-  }
-  return affected;
-}
-
-async function getContainersByNames(containerNames: string[]): Promise<ContainerInfo[]> {
-  const allContainers = await docker.listContainers({ all: true });
-  const foundContainers: ContainerInfo[] = [];
-
-  for (const containerName of containerNames) {
-    const actualName = containerNamesMap[containerName as ContainerName] || containerName;
-    
-    const container = allContainers.find(c => 
-      c.Names.some(name => name.includes(actualName))
+async function getTargetContainers(args: { containers?: string[], single?: string, all?: boolean }): Promise<ContainerInfo[]> {
+  if (args.all) {
+    // Get all LCFS containers except MCP server
+    const allLcfsContainers = await discoverLcfsContainers();
+    return allLcfsContainers.filter(container => 
+      !container.Names.some(name => name.includes('lcfs-mcp-server'))
     );
-    
-    if (container) {
-      foundContainers.push({
-        Id: container.Id,
-        Names: container.Names,
-        State: container.State,
-        Status: container.Status,
-      });
-    }
   }
   
-  return foundContainers;
+  if (args.single) {
+    const allLcfsContainers = await discoverLcfsContainers();
+    return findContainersByNames(allLcfsContainers, [args.single]);
+  }
+  
+  if (args.containers && args.containers.length > 0) {
+    const allLcfsContainers = await discoverLcfsContainers();
+    return findContainersByNames(allLcfsContainers, args.containers);
+  }
+  
+  // Default: return all LCFS containers except MCP server
+  const allLcfsContainers = await discoverLcfsContainers();
+  return allLcfsContainers.filter(container => 
+    !container.Names.some(name => name.includes('lcfs-mcp-server'))
+  );
 }
 
-async function performDockerAction(containers: ContainerInfo[], action: 'start' | 'stop' | 'restart'): Promise<string[]> {
-  const results: string[] = [];
-  
-  for (const container of containers) {
-    try {
-      const dockerContainer = docker.getContainer(container.Id);
-      
-      switch (action) {
-        case 'start':
-          await dockerContainer.start();
-          break;
-        case 'stop':
-          await dockerContainer.stop();
-          break;
-        case 'restart':
-          await dockerContainer.restart();
-          break;
-      }
-      
-      results.push(`✓ ${action}ed ${container.Names[0]}`);
-    } catch (error: any) {
-      results.push(`✗ Failed to ${action} ${container.Names[0]}: ${error.message}`);
-    }
+async function getStatusContainers(args: { containers?: string[], single?: string, all?: boolean }): Promise<ContainerInfo[]> {
+  if (args.all) {
+    // Get all LCFS containers including MCP server
+    return await discoverLcfsContainers();
   }
   
-  return results;
+  if (args.single) {
+    const allLcfsContainers = await discoverLcfsContainers();
+    return findContainersByNames(allLcfsContainers, [args.single]);
+  }
+  
+  if (args.containers && args.containers.length > 0) {
+    const allLcfsContainers = await discoverLcfsContainers();
+    return findContainersByNames(allLcfsContainers, args.containers);
+  }
+  
+  // Default: return all LCFS containers including MCP server
+  return await discoverLcfsContainers();
 }
 
 export async function handleDockerTool(name: string, args: unknown) {
@@ -334,98 +239,98 @@ export async function handleDockerTool(name: string, args: unknown) {
   switch (name) {
     case "docker-start": {
       const dockerArgs = dockerStartSchema.parse(args);
-      let containerNames: string[] = [];
       
-      if (dockerArgs.single) {
-        containerNames = [dockerArgs.single];
-      } else if (dockerArgs.containers) {
-        if (dockerArgs.containers.includes('all')) {
-          containerNames = Object.keys(containerNamesMap).filter(name => name !== 'lcfs-mcp-server');
-        } else {
-          containerNames = dockerArgs.containers;
+      try {
+        const containers = await getTargetContainers(dockerArgs);
+        
+        if (containers.length === 0) {
+          return {
+            content: [{ type: "text" as const, text: "No LCFS containers found matching the criteria" }],
+          };
         }
-      } else {
-        containerNames = Object.keys(containerNamesMap).filter(name => name !== 'lcfs-mcp-server');
+        
+        const results = await performContainerAction(containers, 'start');
+        
+        return {
+          content: [{ type: "text" as const, text: results.join('\n') }],
+        };
+      } catch (error: any) {
+        return {
+          content: [{ type: "text" as const, text: `Error discovering containers: ${error.message}` }],
+        };
       }
-
-      const containers = await getContainersByNames(containerNames);
-      const results = await performDockerAction(containers, 'start');
-      
-      return {
-        content: [{ type: "text" as const, text: results.join('\n') }],
-      };
     }
 
     case "docker-stop": {
       const dockerArgs = dockerStopSchema.parse(args);
-      let containerNames: string[] = [];
       
-      if (dockerArgs.single) {
-        containerNames = [dockerArgs.single];
-      } else if (dockerArgs.containers) {
-        if (dockerArgs.containers.includes('all')) {
-          containerNames = Object.keys(containerNamesMap).filter(name => name !== 'lcfs-mcp-server');
-        } else {
-          containerNames = dockerArgs.containers;
+      try {
+        const containers = await getTargetContainers(dockerArgs);
+        
+        if (containers.length === 0) {
+          return {
+            content: [{ type: "text" as const, text: "No LCFS containers found matching the criteria" }],
+          };
         }
-      } else {
-        containerNames = Object.keys(containerNamesMap).filter(name => name !== 'lcfs-mcp-server');
+        
+        const results = await performContainerAction(containers, 'stop');
+        
+        return {
+          content: [{ type: "text" as const, text: results.join('\n') }],
+        };
+      } catch (error: any) {
+        return {
+          content: [{ type: "text" as const, text: `Error discovering containers: ${error.message}` }],
+        };
       }
-
-      const containers = await getContainersByNames(containerNames);
-      const results = await performDockerAction(containers, 'stop');
-      
-      return {
-        content: [{ type: "text" as const, text: results.join('\n') }],
-      };
     }
 
     case "docker-restart": {
       const dockerArgs = dockerRestartSchema.parse(args);
-      let containerNames: string[] = [];
       
-      if (dockerArgs.single) {
-        containerNames = [dockerArgs.single];
-      } else if (dockerArgs.containers) {
-        if (dockerArgs.containers.includes('all')) {
-          containerNames = Object.keys(containerNamesMap).filter(name => name !== 'lcfs-mcp-server');
-        } else {
-          containerNames = dockerArgs.containers;
+      try {
+        const containers = await getTargetContainers(dockerArgs);
+        
+        if (containers.length === 0) {
+          return {
+            content: [{ type: "text" as const, text: "No LCFS containers found matching the criteria" }],
+          };
         }
-      } else {
-        containerNames = Object.keys(containerNamesMap).filter(name => name !== 'lcfs-mcp-server');
+        
+        const results = await performContainerAction(containers, 'restart');
+        
+        return {
+          content: [{ type: "text" as const, text: results.join('\n') }],
+        };
+      } catch (error: any) {
+        return {
+          content: [{ type: "text" as const, text: `Error discovering containers: ${error.message}` }],
+        };
       }
-
-      const containers = await getContainersByNames(containerNames);
-      const results = await performDockerAction(containers, 'restart');
-      
-      return {
-        content: [{ type: "text" as const, text: results.join('\n') }],
-      };
     }
 
     case "docker-status": {
       const dockerArgs = dockerStatusSchema.parse(args);
-      let containerNames: string[] = [];
       
-      if (dockerArgs.single) {
-        containerNames = [dockerArgs.single];
-      } else if (dockerArgs.containers) {
-        if (dockerArgs.containers.includes('all')) {
-          containerNames = Object.keys(containerNamesMap);
-        } else {
-          containerNames = dockerArgs.containers;
+      try {
+        const containers = await getStatusContainers(dockerArgs);
+        
+        if (containers.length === 0) {
+          return {
+            content: [{ type: "text" as const, text: "No LCFS containers found matching the criteria" }],
+          };
         }
-      } else {
-        containerNames = Object.keys(containerNamesMap);
+        
+        const status = containers.map(c => `${c.Names[0]}: ${c.State} (${c.Status})`);
+        
+        return {
+          content: [{ type: "text" as const, text: status.join('\n') }],
+        };
+      } catch (error: any) {
+        return {
+          content: [{ type: "text" as const, text: `Error discovering containers: ${error.message}` }],
+        };
       }
-
-      const containers = await getContainersByNames(containerNames);
-      const status = containers.map(c => `${c.Names[0]}: ${c.State} (${c.Status})`);
-      
-      return {
-        content: [{ type: "text" as const, text: status.join('\n') }],
-      };
     }
 
     case "docker-shutdown": {

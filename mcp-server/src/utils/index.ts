@@ -161,10 +161,177 @@ export function findContainersByFilter(containers: ContainerInfo[], filter: stri
   );
 }
 
+export function findContainersByNames(containers: ContainerInfo[], names: string[]): ContainerInfo[] {
+  return containers.filter(container =>
+    names.some(name => 
+      container.Names.some(containerName => 
+        containerName.includes(name) || 
+        normalizeContainerName(containerName) === name
+      )
+    )
+  );
+}
+
+// Define LCFS project container patterns
+const LCFS_CONTAINER_PATTERNS = [
+  /^\/db$/,
+  /^\/redis$/,
+  /^\/rabbitmq$/,
+  /^\/backend$/,
+  /^\/frontend$/,
+  /^\/lcfs-minio-\d+$/,
+  /^\/minio_init$/,
+  /^\/lcfs-mcp-server$/,
+];
+
+// Container dependency mapping based on docker-compose.yml
+const CONTAINER_DEPENDENCIES: Record<string, string[]> = {
+  // Infrastructure containers (no dependencies)
+  'db': [],
+  'redis': [],
+  'rabbitmq': [],
+  'minio': [],
+  
+  // MinIO initialization depends on MinIO
+  'minio_init': ['minio'],
+  
+  // Application containers depend on infrastructure
+  'backend': ['db', 'redis', 'rabbitmq', 'minio_init'],
+  'frontend': [], // Frontend doesn't have strict dependencies on other containers
+  'lcfs-mcp-server': ['db', 'redis'],
+};
+
+// Reverse dependency mapping (what depends on each container)
+const REVERSE_DEPENDENCIES: Record<string, string[]> = {};
+Object.entries(CONTAINER_DEPENDENCIES).forEach(([container, deps]) => {
+  deps.forEach(dep => {
+    if (!REVERSE_DEPENDENCIES[dep]) {
+      REVERSE_DEPENDENCIES[dep] = [];
+    }
+    REVERSE_DEPENDENCIES[dep].push(container);
+  });
+});
+
+export function isLcfsContainer(containerName: string): boolean {
+  return LCFS_CONTAINER_PATTERNS.some(pattern => pattern.test(containerName));
+}
+
+export async function discoverLcfsContainers(statusFilter?: 'running' | 'stopped'): Promise<ContainerInfo[]> {
+  const stats = await getDockerStats();
+  let containers = stats.all;
+  
+  if (statusFilter === 'running') {
+    containers = stats.running;
+  } else if (statusFilter === 'stopped') {
+    containers = stats.stopped;
+  }
+  
+  return containers.filter(container => 
+    container.Names.some(name => isLcfsContainer(name))
+  );
+}
+
+export function normalizeContainerName(containerName: string): string {
+  // Remove leading slash and extract the base service name
+  const cleanName = containerName.replace(/^\//, '');
+  
+  // Handle minio with instance number
+  if (cleanName.match(/^lcfs-minio-\d+$/)) {
+    return 'minio';
+  }
+  
+  return cleanName;
+}
+
+export function getContainerStartOrder(containers: ContainerInfo[]): ContainerInfo[] {
+  const visited = new Set<string>();
+  const result: ContainerInfo[] = [];
+  const containerMap = new Map<string, ContainerInfo>();
+  
+  // Create a map for easy lookup
+  containers.forEach(container => {
+    const serviceName = normalizeContainerName(container.Names[0]);
+    containerMap.set(serviceName, container);
+  });
+  
+  function visit(serviceName: string) {
+    if (visited.has(serviceName)) return;
+    visited.add(serviceName);
+    
+    // Visit dependencies first
+    const deps = CONTAINER_DEPENDENCIES[serviceName] || [];
+    for (const dep of deps) {
+      if (containerMap.has(dep)) {
+        visit(dep);
+      }
+    }
+    
+    const container = containerMap.get(serviceName);
+    if (container) {
+      result.push(container);
+    }
+  }
+  
+  containers.forEach(container => {
+    const serviceName = normalizeContainerName(container.Names[0]);
+    visit(serviceName);
+  });
+  
+  return result;
+}
+
+export function getContainerStopOrder(containers: ContainerInfo[]): ContainerInfo[] {
+  const visited = new Set<string>();
+  const result: ContainerInfo[] = [];
+  const containerMap = new Map<string, ContainerInfo>();
+  
+  // Create a map for easy lookup
+  containers.forEach(container => {
+    const serviceName = normalizeContainerName(container.Names[0]);
+    containerMap.set(serviceName, container);
+  });
+  
+  function visit(serviceName: string) {
+    if (visited.has(serviceName)) return;
+    visited.add(serviceName);
+    
+    // Visit dependents first
+    const dependents = REVERSE_DEPENDENCIES[serviceName] || [];
+    for (const dependent of dependents) {
+      if (containerMap.has(dependent)) {
+        visit(dependent);
+      }
+    }
+    
+    const container = containerMap.get(serviceName);
+    if (container) {
+      result.push(container);
+    }
+  }
+  
+  containers.forEach(container => {
+    const serviceName = normalizeContainerName(container.Names[0]);
+    visit(serviceName);
+  });
+  
+  return result;
+}
+
 export async function performContainerAction(containers: ContainerInfo[], action: 'start' | 'stop' | 'restart'): Promise<string[]> {
   const results: string[] = [];
   
-  for (const container of containers) {
+  // Order containers based on action
+  let orderedContainers: ContainerInfo[];
+  if (action === 'start') {
+    orderedContainers = getContainerStartOrder(containers);
+  } else if (action === 'stop') {
+    orderedContainers = getContainerStopOrder(containers);
+  } else {
+    // For restart, stop in reverse order, then start in forward order
+    orderedContainers = containers;
+  }
+  
+  for (const container of orderedContainers) {
     try {
       const dockerContainer = docker.getContainer(container.Id);
       

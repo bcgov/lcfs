@@ -10,8 +10,6 @@ import {
   migrationDowngradeSchema,
   migrationDeleteSchema,
   dataTransferSchema,
-  containerNamesMap,
-  ContainerName,
 } from '../types/index.js';
 
 export const databaseTools: Tool[] = [

@@ -14,37 +14,31 @@ export interface DockerStats {
   all: ContainerInfo[];
 }
 
-export const containerNamesMap = {
-  db: "db",
-  redis: "redis",
-  rabbitmq: "rabbitmq",
-  minio: "minio",
-  minio_init: "minio_init",
-  backend: "backend",
-  frontend: "frontend",
-  "lcfs-mcp-server": "lcfs-mcp-server",
-} as const;
-
-export type ContainerName = keyof typeof containerNamesMap;
+// Dynamic container discovery schemas - no hardcoded names
+export type ContainerIdentifier = string;
 
 export const dockerStartSchema = z.object({
-  containers: z.array(z.enum(["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server", "all"])).optional(),
-  single: z.enum(["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server"]).optional(),
+  containers: z.array(z.string()).optional(),
+  single: z.string().optional(),
+  all: z.boolean().optional(),
 });
 
 export const dockerStopSchema = z.object({
-  containers: z.array(z.enum(["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server", "all"])).optional(),
-  single: z.enum(["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server"]).optional(),
+  containers: z.array(z.string()).optional(),
+  single: z.string().optional(),
+  all: z.boolean().optional(),
 });
 
 export const dockerRestartSchema = z.object({
-  containers: z.array(z.enum(["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server", "all"])).optional(),
-  single: z.enum(["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server"]).optional(),
+  containers: z.array(z.string()).optional(),
+  single: z.string().optional(),
+  all: z.boolean().optional(),
 });
 
 export const dockerStatusSchema = z.object({
-  containers: z.array(z.enum(["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server", "all"])).optional(),
-  single: z.enum(["db", "redis", "rabbitmq", "minio", "minio_init", "backend", "frontend", "lcfs-mcp-server"]).optional(),
+  containers: z.array(z.string()).optional(),
+  single: z.string().optional(),
+  all: z.boolean().optional(),
 });
 
 export const dockerShutdownSchema = z.object({
