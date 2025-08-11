@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 
 export const AddEditOrg = () => {
-  const { t } = useTranslation(['common', 'admin'])
+  const { t } = useTranslation(['common', 'org'])
   const { orgID } = useParams()
 
   return (

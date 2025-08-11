@@ -305,6 +305,7 @@ describe('AddEditOrgForm Component', () => {
   const mockNavigate = vi.fn()
   const mockApiPost = vi.fn()
   const mockApiPut = vi.fn()
+  const mockHandleCancelEdit = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -332,7 +333,7 @@ describe('AddEditOrgForm Component', () => {
   })
 
   it('renders the form in add mode', () => {
-    render(<AddEditOrgForm />)
+    render(<AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />)
 
     // Verify key form elements are rendered
     expect(screen.getByTestId('orgLegalName')).toBeInTheDocument()
@@ -372,7 +373,7 @@ describe('AddEditOrgForm Component', () => {
       isFetched: true
     })
 
-    render(<AddEditOrgForm />)
+    render(<AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />)
 
     // Need to wait for useEffect to run
     await waitFor(() => {
@@ -388,7 +389,7 @@ describe('AddEditOrgForm Component', () => {
       return ''
     })
 
-    render(<AddEditOrgForm />)
+    render(<AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />)
 
     // Check the "Same as Legal Name" checkbox
     await user.click(screen.getByTestId('sameAsLegalName'))
@@ -400,22 +401,23 @@ describe('AddEditOrgForm Component', () => {
     )
   })
 
-  it('navigates back to organizations page on cancel', async () => {
+  it('calls handleCancelEdit when cancel button is clicked', async () => {
     const user = userEvent.setup()
 
-    render(<AddEditOrgForm />)
+    render(<AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />)
 
-    // Find and click the Back button
-    await user.click(screen.getByText('backBtn'))
+    // Find and click the Cancel button by its text content
+    const cancelButton = screen.getByText('cancelBtn')
+    await user.click(cancelButton)
 
-    // Verify navigation
-    expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST)
+    // Verify handleCancelEdit was called
+    expect(mockHandleCancelEdit).toHaveBeenCalledTimes(1)
   })
 
   it('handles address autocomplete selection', async () => {
     const user = userEvent.setup()
 
-    render(<AddEditOrgForm />)
+    render(<AddEditOrgForm handleCancelEdit={mockHandleCancelEdit} />)
 
     // Find and interact with the address autocomplete
     const addressInput = screen.getAllByTestId('address-autocomplete')[0]
