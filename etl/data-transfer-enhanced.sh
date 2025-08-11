@@ -12,7 +12,7 @@ set -e
 #
 # Example commands:
 # . data-transfer-enhanced.sh lcfs dev export 398cd4661173 compliance_report_history
-# . data-transfer-enhanced.sh lcfs lcfs-postgres-dev-3006-postgresql-0 export 398cd4661173
+# . data-transfer-enhanced.sh lcfs lcfs-postgres-dev-2983-postgresql-0 export 398cd4661173
 # . data-transfer-enhanced.sh tfrs prod import 398cd4661173
 
 if [ "$#" -lt 4 ] || [ "$#" -gt 5 ]; then
@@ -171,7 +171,9 @@ if [ -n "$custom_pod_name" ]; then
         
         # For custom pods, use 'postgres' as the default superuser with detected password
         if [ -n "$detected_password" ]; then
-            remote_db_user="postgres"
+            detected_user=$(echo "$pod_env" | grep "POSTGRES_USER=" | cut -d'=' -f2 || echo "postgres")
+            remote_db_user="$detected_user"  # Use the detected user instead of hardcoded "postgres"
+            # remote_db_user="postgres"
             remote_db_password="$detected_password"
             db_name="$detected_database"
             print_status "Detected credentials - User: $remote_db_user, Database: $db_name, Password: [HIDDEN]"
@@ -414,7 +416,7 @@ elif [ "$direction" = "export" ]; then
     # Use password if detected
     if [ -n "$remote_db_password" ]; then
         print_status "Using detected password for authentication"
-        oc exec ${pod_name#pod/} -- bash -c "PGPASSWORD='$remote_db_password' pg_restore -U '$remote_db_user' --dbname='$db_name' --no-owner --clean --if-exists --verbose '/tmp/tmp_transfer/${file_suffix}.tar'" || true
+        oc exec ${pod_name#pod/} -- bash -c "PGPASSWORD='$remote_db_password' pg_restore -h localhost -p 5432 -U '$remote_db_user' --dbname='$db_name' --no-owner --clean --if-exists --verbose '/tmp/tmp_transfer/${file_suffix}.tar'" || true
     else
         oc exec ${pod_name#pod/} -- pg_restore -U "$remote_db_user" --dbname="$db_name" --no-owner --clean --if-exists --verbose "/tmp/tmp_transfer/${file_suffix}.tar" || true
     fi

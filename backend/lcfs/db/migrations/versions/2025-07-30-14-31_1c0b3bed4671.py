@@ -23,6 +23,7 @@ depends_on = None
 
 # Sections to recreate after altering columns
 SECTIONS_TO_EXECUTE = [
+    "Compliance Reports Analytics View",  # Must come first - dependency for Fuel Export Analytics Base View
     "Allocation Agreement Chained View",
     "Allocation Agreement Base View With Early Issuance By Year",
     "Fuel Export Analytics Base View",

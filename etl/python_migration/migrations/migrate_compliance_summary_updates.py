@@ -242,15 +242,23 @@ class ComplianceSummaryUpdater:
 
         for row in tfrs_cursor.fetchall():
             try:
-                snapshot_data = json.loads(row[1])
+                # Check if data is already a dict (from psycopg2's JSON handling)
+                if isinstance(row[1], dict):
+                    snapshot_data = row[1]
+                    snapshot_json = json.dumps(row[1])
+                else:
+                    # It's a string, parse it
+                    snapshot_data = json.loads(row[1])
+                    snapshot_json = row[1]
+                    
                 records.append(
                     {
                         "compliance_report_id": row[0],
                         "snapshot": snapshot_data,
-                        "snapshot_json": row[1],
+                        "snapshot_json": snapshot_json,
                     }
                 )
-            except json.JSONDecodeError as e:
+            except (json.JSONDecodeError, TypeError) as e:
                 logger.warning(
                     f"Failed to parse JSON for compliance_report_id {row[0]}: {e}"
                 )
@@ -289,24 +297,24 @@ class ComplianceSummaryUpdater:
             )
 
             # Get dynamic compliance unit calculations
-            compliance_units_received = self.get_compliance_units_received(
+            compliance_units_received = Decimal(str(self.get_compliance_units_received(
                 lcfs_cursor,
                 organization_id,
                 compliance_period_start,
                 compliance_period_end,
-            )
-            transferred_out_units = self.get_transferred_out_compliance_units(
+            )))
+            transferred_out_units = Decimal(str(self.get_transferred_out_compliance_units(
                 lcfs_cursor,
                 organization_id,
                 compliance_period_start,
                 compliance_period_end,
-            )
-            issued_compliance_units = self.get_issued_compliance_units(
+            )))
+            issued_compliance_units = Decimal(str(self.get_issued_compliance_units(
                 lcfs_cursor,
                 organization_id,
                 compliance_period_start,
                 compliance_period_end,
-            )
+            )))
 
             # Extract gasoline class mappings (lines 1-11)
             line1_gas = safe_decimal(summary_lines.get("1", 0))
@@ -345,9 +353,11 @@ class ComplianceSummaryUpdater:
             fossil_total = fossil_gas + fossil_diesel
 
             # Enhanced calculations from Alembic migration
+            # Convert line_17 (float) to Decimal for calculations
+            line_17_decimal = Decimal(str(line_17))
             balance_chg_from_assessment = compliance_units_issued - banked_used
             # Available compliance unit balance at the end of the compliance date for the period
-            compliance_units_balance = line_17 + compliance_units_issued
+            compliance_units_balance = line_17_decimal + compliance_units_issued
             total_payable = line11_gas + line11_diesel + line28_non_compliance
 
             return {
@@ -389,25 +399,19 @@ class ComplianceSummaryUpdater:
                 "line_11_non_compliance_penalty_jet_fuel": Decimal("0.0"),
                 # Low carbon fuel requirement summary - Enhanced with dynamic calculations
                 # Compliance units transferred away
-                "line_12_low_carbon_fuel_required": safe_decimal(transferred_out_units),
+                "line_12_low_carbon_fuel_required": transferred_out_units,
                 # Compliance units received through transfers
-                "line_13_low_carbon_fuel_supplied": safe_decimal(
-                    compliance_units_received
-                ),
+                "line_13_low_carbon_fuel_supplied": compliance_units_received,
                 # Compliance units issued under initiative agreements
-                "line_14_low_carbon_fuel_surplus": safe_decimal(
-                    issued_compliance_units
-                ),
+                "line_14_low_carbon_fuel_surplus": issued_compliance_units,
                 "line_15_banked_units_used": banked_used,
                 "line_16_banked_units_remaining": Decimal("0.0"),  # Not tracked in TFRS
-                "line_17_non_banked_units_used": safe_decimal(line_17),
+                "line_17_non_banked_units_used": line_17_decimal,
                 "line_18_units_to_be_banked": compliance_units_issued,
                 "line_19_units_to_be_exported": Decimal("0.0"),  # Not tracked in TFRS
-                "line_20_surplus_deficit_units": safe_decimal(balance_chg_from_assessment),
+                "line_20_surplus_deficit_units": balance_chg_from_assessment,
                 "line_21_surplus_deficit_ratio": line28_non_compliance,
-                "line_22_compliance_units_issued": safe_decimal(
-                    compliance_units_balance
-                ),
+                "line_22_compliance_units_issued": compliance_units_balance,
                 # Fossil derived base fuel (aggregate)
                 "line_11_fossil_derived_base_fuel_gasoline": fossil_gas,
                 "line_11_fossil_derived_base_fuel_diesel": fossil_diesel,
@@ -415,7 +419,7 @@ class ComplianceSummaryUpdater:
                 "line_11_fossil_derived_base_fuel_total": fossil_total,
                 # Non-compliance penalty fields
                 "line_21_non_compliance_penalty_payable": line28_non_compliance,
-                "total_non_compliance_penalty_payable": safe_decimal(total_payable),
+                "total_non_compliance_penalty_payable": total_payable,
             }
 
         except Exception as e:

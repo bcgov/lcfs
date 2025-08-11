@@ -270,7 +270,7 @@ class OrphanedAllocationAgreementMigrator:
                     line_11_fossil_derived_base_fuel_gasoline, line_11_fossil_derived_base_fuel_diesel, line_11_fossil_derived_base_fuel_jet_fuel, line_11_fossil_derived_base_fuel_total,
                     line_21_non_compliance_penalty_payable, total_non_compliance_penalty_payable,
                     create_user, update_user,
-                    early_issuance_credits_q1, early_issuance_credits_q2, early_issuance_credits_q3, early_issuance_credits_q4, historical_snapshot
+                    early_issuance_credits_q1, early_issuance_credits_q2, early_issuance_credits_q3, early_issuance_credits_q4
                 ) VALUES (
                     %s, null, false,
                     0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
@@ -283,7 +283,7 @@ class OrphanedAllocationAgreementMigrator:
                     0.0, 0.0, 0.0, 0.0,
                     0.0, 0.0,
                     'ETL', 'ETL',
-                    null, null, null, null, null
+                    null, null, null, null
                 )
             """
 
