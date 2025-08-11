@@ -288,6 +288,7 @@ export const useDeleteComplianceReport = (orgID, reportID, options = {}) => {
   const client = useApiService()
   const { hasRoles } = useCurrentUser()
   const queryClient = useQueryClient()
+  const { removeReport } = useComplianceReportStore()
 
   const { onSuccess, onError, ...restOptions } = options
 
@@ -306,6 +307,9 @@ export const useDeleteComplianceReport = (orgID, reportID, options = {}) => {
       return await client.delete(path)
     },
     onSuccess: (data, variables, context) => {
+      // Remove from Zustand store first
+      removeReport(reportID)
+
       const queriesToInvalidate = [
         ['compliance-reports'],
         ['compliance-reports-list'],
