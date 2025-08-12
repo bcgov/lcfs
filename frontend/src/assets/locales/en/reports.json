@@ -271,6 +271,7 @@
   "qtySuppliedLabel": "Quantity supplied",
   "formulaBefore2024": "Credit or Debit = (CI class × EER fuel – CI fuel) × EC fuel/1,000,000",
   "formulaAfter2024": "Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000",
+  "formulaECDefinition": "EC = quantity * energy density",
   "ciParameters": {
     "tci": "Target carbon intensity",
     "eer": "Energy effectiveness ratio",
