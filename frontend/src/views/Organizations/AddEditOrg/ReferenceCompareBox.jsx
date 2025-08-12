@@ -64,8 +64,8 @@ const ReferenceCompareBox = ({
                   transition: 'all 0.2s ease-in-out',
                   cursor: 'pointer',
                   '&:hover': {
-                    bgcolor: 'rgba(133, 127, 46, 0.05)',
-                    transform: 'translateX(2px)'
+                    bgcolor: 'rgba(133, 127, 46, 0.05)'
+                    // transform: 'translateX(2px)'
                   }
                 }}
                 onClick={() => copyToClipboard(item.value, index)}
@@ -78,8 +78,7 @@ const ReferenceCompareBox = ({
                       sx={{
                         color: '#666',
                         fontWeight: 500,
-                        letterSpacing: '0.3px',
-                        fontSize: '1rem'
+                        fontSize: '0.975rem'
                       }}
                     >
                       {item.label}

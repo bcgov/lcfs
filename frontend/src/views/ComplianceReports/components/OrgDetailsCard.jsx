@@ -4,12 +4,7 @@ import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { constructAddress } from '@/utils/constructAddress'
 
-export const OrgDetailsCard = ({
-  orgName,
-  orgAddress,
-  orgAttorneyAddress,
-  isGovernmentUser = false
-}) => {
+export const OrgDetailsCard = ({ orgName, orgAddress, orgAttorneyAddress, isGovernmentUser = false }) => {
   const { t } = useTranslation(['report'])
   return (
     <BCWidgetCard
@@ -30,21 +25,19 @@ export const OrgDetailsCard = ({
             </BCTypography>
           </div>
           <div style={{ marginTop: '2rem' }}>
-            <BCTypography variant="body4">
-              {t('report:bcAddrLabel')}:
-            </BCTypography>{' '}
+            <BCTypography variant="body4">{t('report:bcAddrLabel')}:</BCTypography>{' '}
             <BCTypography variant="body4">
               {orgAttorneyAddress && constructAddress(orgAttorneyAddress)}
             </BCTypography>
           </div>
           {!isGovernmentUser && <BCTypography
-              component="div"
-              style={{ marginTop: '2rem' }}
-              variant="body4"
-              dangerouslySetInnerHTML={{
-                __html: t('report:contactForAddrChange')
-              }}
-            />}
+            component="div"
+            style={{ marginTop: '2rem' }}
+            variant="body4"
+            dangerouslySetInnerHTML={{
+              __html: t('report:contactForAddrChange')
+            }}
+          />}
         </Stack>
       }
     />

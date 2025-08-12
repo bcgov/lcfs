@@ -428,7 +428,7 @@ export const AddEditOrgForm = () => {
                           />
                         }
                         label={
-                          <BCTypography variant="body3">
+                          <BCTypography variant="subtitle3">
                             {t('org:sameAsLegalNameLabel')}
                           </BCTypography>
                         }
@@ -488,7 +488,7 @@ export const AddEditOrgForm = () => {
                     <Grid container>
                       <Grid item xs={6}>
                         <FormLabel id="orgSupplierType" sx={{ pb: 1 }}>
-                          <BCTypography variant="body3">
+                          <BCTypography variant="body4">
                             {t('org:supplierTypLabel')}:
                           </BCTypography>
                         </FormLabel>
@@ -509,7 +509,7 @@ export const AddEditOrgForm = () => {
                               />
                             }
                             label={
-                              <BCTypography variant="body3">
+                              <BCTypography variant="body4">
                                 {t('supplier')}
                               </BCTypography>
                             }
@@ -525,7 +525,7 @@ export const AddEditOrgForm = () => {
                     <Grid container>
                       <Grid item xs={6}>
                         <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
-                          <BCTypography variant="body3">
+                          <BCTypography variant="body4">
                             {t('org:regTrnLabel')}:
                           </BCTypography>
                         </FormLabel>
@@ -548,7 +548,7 @@ export const AddEditOrgForm = () => {
                                   <Radio data-test="orgRegForTransfers2" />
                                 }
                                 label={
-                                  <BCTypography variant="body3">
+                                  <BCTypography variant="body4">
                                     {t('yes')}
                                   </BCTypography>
                                 }
@@ -560,7 +560,7 @@ export const AddEditOrgForm = () => {
                                   <Radio data-test="orgRegForTransfers1" />
                                 }
                                 label={
-                                  <BCTypography variant="body3">
+                                  <BCTypography variant="body4">
                                     {t('no')}
                                   </BCTypography>
                                 }
@@ -580,7 +580,7 @@ export const AddEditOrgForm = () => {
                     <Grid container>
                       <Grid item xs={6} mt={0.5}>
                         <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
-                          <BCTypography variant="body3">
+                          <BCTypography variant="body4">
                             {t('org:earlyIssuanceLabel', {
                               year: CURRENT_COMPLIANCE_YEAR
                             })}
@@ -607,7 +607,7 @@ export const AddEditOrgForm = () => {
                                   <Radio data-test="hasEarlyIssuanceYes" />
                                 }
                                 label={
-                                  <BCTypography variant="body3">
+                                  <BCTypography variant="body4">
                                     {t('yes')}
                                   </BCTypography>
                                 }
@@ -619,7 +619,7 @@ export const AddEditOrgForm = () => {
                                   <Radio data-test="hasEarlyIssuanceNo" />
                                 }
                                 label={
-                                  <BCTypography variant="body3">
+                                  <BCTypography variant="body4">
                                     {t('no')}
                                   </BCTypography>
                                 }
@@ -639,7 +639,7 @@ export const AddEditOrgForm = () => {
                     <Grid container>
                       <Grid item xs={6} mt={0.5}>
                         <FormLabel id="orgCreditTradingEnabled" sx={{ pb: 1 }}>
-                          <BCTypography variant="body3">
+                          <BCTypography variant="body4">
                             Credit trading market participation:
                           </BCTypography>
                         </FormLabel>
@@ -663,7 +663,7 @@ export const AddEditOrgForm = () => {
                                   <Radio data-test="orgCreditTradingEnabledYes" />
                                 }
                                 label={
-                                  <BCTypography variant="body3">
+                                  <BCTypography variant="body4">
                                     {t('yes')}
                                   </BCTypography>
                                 }
@@ -675,7 +675,7 @@ export const AddEditOrgForm = () => {
                                   <Radio data-test="orgCreditTradingEnabledNo" />
                                 }
                                 label={
-                                  <BCTypography variant="body3">
+                                  <BCTypography variant="body4">
                                     {t('no')}
                                   </BCTypography>
                                 }
@@ -723,7 +723,7 @@ export const AddEditOrgForm = () => {
               <BCTypography
                 variant="h6"
                 sx={{
-                  pb: dismissedBoxes.serviceAddress ? 7 : 2,
+                  pb: dismissedBoxes.serviceAddress ? 7 : 2.2,
                   color: colors.primary.main
                 }}
               >
@@ -737,7 +737,12 @@ export const AddEditOrgForm = () => {
                   isDismissed={dismissedBoxes.serviceAddress}
                 />
               )}
-              <Box sx={{ mb: 2, mt: dismissedBoxes.serviceAddress ? 0 : 7 }}>
+              <Box
+                sx={{
+                  mb: 2,
+                  mt: { lg: dismissedBoxes.serviceAddress ? 0 : 7 }
+                }}
+              >
                 <InputLabel htmlFor="orgStreetAddress" sx={{ pb: 1 }}>
                   {t('org:streetAddrLabel')}:
                 </InputLabel>
@@ -900,7 +905,7 @@ export const AddEditOrgForm = () => {
                     />
                   }
                   label={
-                    <BCTypography variant="body3">
+                    <BCTypography variant="body4">
                       {t('org:sameAddrLabel')}
                     </BCTypography>
                   }
