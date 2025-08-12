@@ -601,6 +601,7 @@ class ComplianceReportRepository:
             select(ComplianceReport)
             .options(
                 joinedload(ComplianceReport.organization),
+                joinedload(ComplianceReport.organization_snapshot),
                 joinedload(ComplianceReport.compliance_period),
                 joinedload(ComplianceReport.current_status),
                 joinedload(ComplianceReport.summary),
