@@ -25,6 +25,11 @@ from .schema import (
     OrganizationDetailsSchema,
     OrganizationCreditMarketUpdateSchema,
     OrganizationCreditMarketListingSchema,
+    OrganizationLinkKeyCreateSchema,
+    OrganizationLinkKeysListSchema,
+    LinkKeyOperationResponseSchema,
+    LinkKeyValidationSchema,
+    AvailableFormsSchema,
 )
 from lcfs.db.models.user.Role import RoleEnum
 
@@ -136,7 +141,9 @@ async def update_organization(
     service: OrganizationsService = Depends(),
 ):
     """Update an organizations data by id"""
-    return await service.update_organization(organization_id, organization_data, request.user)
+    return await service.update_organization(
+        organization_id, organization_data, request.user
+    )
 
 
 @router.post("/", response_model=OrganizationListSchema, status_code=status.HTTP_200_OK)
@@ -301,14 +308,106 @@ async def update_current_org_credit_market_details(
     if not organization_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is not associated with an organization"
+            detail="User is not associated with an organization",
         )
-    
+
     # Use the dedicated method to update only credit market fields
     return await service.update_organization_credit_market_details(
-        organization_id, 
-        credit_market_data.model_dump(exclude_unset=True), 
-        request.user
+        organization_id, credit_market_data.model_dump(exclude_unset=True), request.user
     )
 
 
+@router.get(
+    "/{organization_id}/forms",
+    response_model=AvailableFormsSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ANALYST])
+async def get_available_forms(
+    request: Request,
+    organization_id: int,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Get available forms for link key generation.
+    """
+    return await service.get_available_forms()
+
+
+@router.get(
+    "/{organization_id}/link-keys",
+    response_model=OrganizationLinkKeysListSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ANALYST])
+async def get_organization_link_keys(
+    request: Request,
+    organization_id: int,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Get all link keys for an organization.
+    """
+    return await service.get_organization_link_keys(organization_id)
+
+
+@router.post(
+    "/{organization_id}/link-keys",
+    response_model=LinkKeyOperationResponseSchema,
+    status_code=status.HTTP_201_CREATED,
+)
+@view_handler([RoleEnum.ANALYST])
+async def generate_organization_link_key(
+    request: Request,
+    organization_id: int,
+    link_key_data: OrganizationLinkKeyCreateSchema,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Generate a new secure link key for a specific form type.
+    """
+    return await service.generate_link_key(
+        organization_id, link_key_data.form_id, request.user
+    )
+
+
+@router.put(
+    "/{organization_id}/link-keys/{form_id}",
+    response_model=LinkKeyOperationResponseSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler([RoleEnum.ANALYST])
+async def regenerate_organization_link_key(
+    request: Request,
+    organization_id: int,
+    form_id: int,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Regenerate the link key for a specific form.
+    This invalidates the previous key and creates a new one.
+    """
+    return await service.regenerate_link_key(organization_id, form_id, request.user)
+
+
+@router.get(
+    "/validate-link-key/{link_key}",
+    response_model=LinkKeyValidationSchema,
+    status_code=status.HTTP_200_OK,
+)
+@view_handler(["*"])  # Allow anonymous access
+async def validate_link_key(
+    request: Request,
+    link_key: str,
+    service: OrganizationsService = Depends(),
+):
+    """
+    Validate a link key and return the associated organization and form type.
+    Returns 404 if the key is invalid or inactive.
+    """
+    result = await service.validate_link_key(link_key)
+    if not result.is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Invalid or expired link key"
+        )
+    return result

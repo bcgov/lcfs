@@ -16,6 +16,8 @@ import { roles } from '@/constants/roles'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 import { Role } from '@/components/Role'
 import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
+import { LinkKeyManagement } from './components/LinkKeyManagement'
 
 export const OrganizationDetailsCard = () => {
   const { t } = useTranslation(['common', 'org'])
@@ -138,7 +140,8 @@ export const OrganizationDetailsCard = () => {
                       : t('org:registeredTransferNo')}
                   </BCTypography>
 
-                  {orgData?.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED && (
+                  {orgData?.orgStatus.status ===
+                    ORGANIZATION_STATUSES.REGISTERED && (
                     <BCTypography variant="body4">
                       <strong>{t('org:creditTradingEnabledLabel')}:</strong>{' '}
                       {orgData?.creditTradingEnabled
@@ -160,6 +163,19 @@ export const OrganizationDetailsCard = () => {
                         ? t('common:yes')
                         : t('common:no')}
                     </BCTypography>
+                  )}
+
+                  {isFeatureEnabled(FEATURE_FLAGS.OBFUSCATED_LINKS) && (
+                    <Role roles={[roles.analyst]}>
+                      <BCBox>
+                        <LinkKeyManagement
+                          orgData={orgData}
+                          orgID={
+                            orgID ?? currentUser?.organization?.organizationId
+                          }
+                        />
+                      </BCBox>
+                    </Role>
                   )}
                 </BCBox>
               </BCBox>

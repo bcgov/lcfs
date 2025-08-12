@@ -71,11 +71,20 @@ class LazyAuthenticationBackend(AuthenticationBackend):
         if request.scope["method"] == "OPTIONS":
             return AuthCredentials([]), UnauthenticatedUser()
 
-        if (
-            request.url.path.startswith("/api/calculator")
-            or request.url.path == "/api/health"
-        ):  # Skip authentication check
+        # Check for specific paths that should skip authentication
+        path = request.url.path
+
+        # Always skip auth for these paths
+        if path.startswith("/api/calculator") or path == "/api/health":
             return AuthCredentials([]), UnauthenticatedUser()
+
+        # Only skip auth for forms with link keys (anonymous access)
+        # Pattern: /api/forms/{form_slug}/{link_key}
+        if path.startswith("/api/forms/"):
+            path_parts = path.split("/")
+            # If it has 5 parts: ['', 'api', 'forms', 'form_slug', 'link_key']
+            if len(path_parts) == 5 and path_parts[4]:  # Has link key
+                return AuthCredentials([]), UnauthenticatedUser()
 
         # Lazily retrieve Redis, session, and settings from app state
         redis_client = self.app.state.redis_client
