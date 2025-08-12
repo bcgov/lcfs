@@ -283,10 +283,12 @@ class OrganizationsRepository:
         for organization in organizations:
             has_early_issuance = await self.get_current_year_early_issuance(organization.organization_id)
             
-            # Create organization data with early issuance
+            # Create organization data with early issuance and relationships
             org_data = {
                 **{column.name: getattr(organization, column.name) for column in organization.__table__.columns},
-                "has_early_issuance": has_early_issuance
+                "has_early_issuance": has_early_issuance,
+                "org_type": organization.org_type,
+                "org_status": organization.org_status
             }
             
             validated_organizations.append(
