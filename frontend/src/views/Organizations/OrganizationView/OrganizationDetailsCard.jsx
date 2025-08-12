@@ -20,10 +20,10 @@ import { OrganizationProfile } from './OrganizationProfile'
 import BCAlert, { FloatingAlert } from '@/components/BCAlert'
 
 export const OrganizationDetailsCard = ({ addMode = false }) => {
-  const [isEditMode, setIsEditMode] = useState(addMode)
   const alertRef = useRef(null)
   const { t } = useTranslation(['common', 'org'])
   const location = useLocation()
+  const [isEditMode, setIsEditMode] = useState(addMode || location?.state?.reportID)
   const navigate = useNavigate()
   const { orgID } = useParams()
 
