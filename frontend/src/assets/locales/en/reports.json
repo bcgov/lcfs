@@ -83,6 +83,7 @@
   "deleteConfirmText": "Are you sure you want to delete this draft report? This action cannot be undone, and all changes will be lost.",
   "createIdirSupplementalConfirmText": "This will create a draft supplemental report for the supplier, further processing will be disabled for government users.",
   "createBceidSupplementalConfirmText": "A supplemental report must be submitted within 30 days of its creation. Failure to do so will result in the draft report being automatically submitted to the Government of British Columbia, and may lead to a discretionary penalty.",
+  "updateOrgInfo": "Update organization info",
   "supplementalExpiryWarningText": "Please submit this supplemental report by {{deadlineDate}}. After {{daysRemaining}} day{{s}}, the report will be automatically submitted to the Government of British Columbia, and may lead to a discretionary penalty.",
   "recommendConfirmText": "Are you sure you want to recommend this compliance report?",
   "returnToAnalystConfirmText": "Are you sure you want to return this compliance report back to analyst?",
