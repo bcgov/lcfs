@@ -75,5 +75,6 @@
   "toUpdateMsgPrefix": "To update address information, email",
   "toUpdateMsgSuffix": "and our team will assist you.",
   "addSuccessMessage": "Organization has been successfully added.",
-  "editSuccessMessage": "Organization has been successfully updated."
+  "editSuccessMessage": "Organization has been successfully updated.",
+  "snapshotTitle": "Organization Information from Compliance Report"
 }
