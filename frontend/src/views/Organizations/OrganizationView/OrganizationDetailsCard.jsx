@@ -65,14 +65,21 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
     }
   }, [])
 
-  const handleSaveSuccess = useCallback(() => {
+  const handleSaveSuccess = useCallback((organizationId) => {
     if (addMode) {
-      navigate(ROUTES.ORGANIZATIONS.LIST, {
+      const successMessage = {
         state: {
           message: t('org:addSuccessMessage'),
           severity: 'success'
         }
-      })
+      }
+      setIsEditMode(false)
+      organizationId
+        ? navigate(
+            ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', organizationId),
+            successMessage
+          )
+        : navigate(ROUTES.ORGANIZATIONS.LIST, successMessage)
     } else {
       alertRef.current?.triggerAlert({
         message: t('org:editSuccessMessage'),

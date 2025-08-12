@@ -207,10 +207,10 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   } = useMutation({
     mutationFn: async (userData) =>
       await apiService.post('/organizations/create', userData),
-    onSuccess: () => {
+    onSuccess: (response) => {
       // Redirect to Organization route on success
       if (handleSaveSuccess) {
-        handleSaveSuccess()
+        handleSaveSuccess(response?.data?.organizationId)
       }
     },
     onError: (error) => {
