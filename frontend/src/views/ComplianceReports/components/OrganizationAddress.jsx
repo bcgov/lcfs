@@ -25,7 +25,8 @@ export const OrganizationAddress = ({
   isEditing,
   setIsEditing,
   isGovernmentUser,
-  orgID
+  orgID,
+  reportID
 }) => {
   const { t } = useTranslation(['common', 'report', 'org'])
   const navigate = useNavigate()
@@ -266,7 +267,7 @@ export const OrganizationAddress = ({
 
   const handleUpdateOrgInfo = () => {
     navigate(ROUTES.ORGANIZATIONS.EDIT.replace(':orgID', orgID), {
-      state: { organizationSnapshot: snapshotData }
+      state: { organizationSnapshot: snapshotData, reportID }
     })
   }
 
