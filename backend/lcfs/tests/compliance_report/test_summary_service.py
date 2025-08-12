@@ -598,18 +598,23 @@ async def test_calculate_renewable_fuel_target_summary_2028(
     assert result[4].gasoline == 500.0
     assert result[4].diesel == 100.0
     assert result[4].jet_fuel == 300.0
-    # Line 6
-    assert result[5].gasoline == 0.0
-    assert result[5].diesel == 0.0
-    assert result[5].jet_fuel == 0.0
+    # Line 6 - values are preserved but capped at 5% of line 4
+    # Line 4: gasoline=15 (5% = 0.75 -> rounds to 1), diesel=28 (5% = 1.4 -> rounds to 1), jet_fuel=11 (5% = 0.55 -> rounds to 1)
+    # Original values: gasoline=100, diesel=200, jet_fuel=300
+    # Capped values: min(100, 1) = 1, min(200, 1) = 1, min(300, 1) = 1
+    assert result[5].gasoline == 1
+    assert result[5].diesel == 1
+    assert result[5].jet_fuel == 1
     # Line 7
     assert result[6].gasoline == 300.0
     assert result[6].diesel == 500.0
     assert result[6].jet_fuel == 100.0
-    # Line 8
-    assert result[7].gasoline == 0.0
-    assert result[7].diesel == 0.0
-    assert result[7].jet_fuel == 0.0
+    # Line 8 - values are preserved but capped at 5% of line 4
+    # Original values: gasoline=300, diesel=200, jet_fuel=100
+    # Capped values: min(300, 1) = 1, min(200, 1) = 1, min(100, 1) = 1
+    assert result[7].gasoline == 1
+    assert result[7].diesel == 1
+    assert result[7].jet_fuel == 1
     # Line 9
     assert result[8].gasoline == 400.0
     assert result[8].diesel == 600.0
@@ -674,18 +679,24 @@ async def test_calculate_renewable_fuel_target_summary_2029(
     assert result[4].gasoline == 100.0
     assert result[4].diesel == 300.0
     assert result[4].jet_fuel == 200.0
-    # Line 6
-    assert result[5].gasoline == 0.0
-    assert result[5].diesel == 0.0
-    assert result[5].jet_fuel == 0.0
+    # Line 6 - values are preserved but capped at 5% of line 4
+    # Line 4: gasoline=20 (5% = 1), diesel=20 (5% = 1), jet_fuel=6 (5% = 0.3 -> rounds to 0)
+    # Original values: gasoline=100, diesel=200, jet_fuel=300
+    # Capped values: min(100, 1) = 1, min(200, 1) = 1, min(300, 0) = 0
+    assert result[5].gasoline == 1
+    assert result[5].diesel == 1
+    assert result[5].jet_fuel == 0
     # Line 7
     assert result[6].gasoline == 200.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 300.0
-    # Line 8
-    assert result[7].gasoline == 0.0
-    assert result[7].diesel == 0.0
-    assert result[7].jet_fuel == 0.0
+    # Line 8 - values are preserved but capped at 5% of line 4
+    # Original values: gasoline=300, diesel=200, jet_fuel=100
+    # Line 4: gasoline=20 (5% = 1), diesel=20 (5% = 1), jet_fuel=6 (5% = 0)
+    # Capped values: min(300, 1) = 1, min(200, 1) = 1, min(100, 0) = 0
+    assert result[7].gasoline == 1
+    assert result[7].diesel == 1
+    assert result[7].jet_fuel == 0
     # Line 9
     assert result[8].gasoline == 300.0
     assert result[8].diesel == 200.0
@@ -750,18 +761,23 @@ async def test_calculate_renewable_fuel_target_summary_2030(
     assert result[4].gasoline == 200.0
     assert result[4].diesel == 300.0
     assert result[4].jet_fuel == 100.0
-    # Line 6
-    assert result[5].gasoline == 0.0
-    assert result[5].diesel == 0.0
-    assert result[5].jet_fuel == 0.0
+    # Line 6 - values are preserved but capped at 5% of line 4
+    # Line 4: gasoline=15 (5% = 0.75 -> rounds to 1), diesel=20 (5% = 1), jet_fuel=12 (5% = 0.6 -> rounds to 1)
+    # Original values: gasoline=300, diesel=200, jet_fuel=100
+    # Capped values: min(300, 1) = 1, min(200, 1) = 1, min(100, 1) = 1
+    assert result[5].gasoline == 1
+    assert result[5].diesel == 1
+    assert result[5].jet_fuel == 1
     # Line 7
     assert result[6].gasoline == 300.0
     assert result[6].diesel == 100.0
     assert result[6].jet_fuel == 200.0
-    # Line 8
-    assert result[7].gasoline == 0.0
-    assert result[7].diesel == 0.0
-    assert result[7].jet_fuel == 0.0
+    # Line 8 - values are preserved but capped at 5% of line 4
+    # Original values: gasoline=100, diesel=100, jet_fuel=100
+    # Capped values: min(100, 1) = 1, min(100, 1) = 1, min(100, 1) = 1
+    assert result[7].gasoline == 1
+    assert result[7].diesel == 1
+    assert result[7].jet_fuel == 1
     # Line 9
     assert result[8].gasoline == 100.0
     assert result[8].diesel == 200.0
@@ -856,24 +872,24 @@ async def test_calculate_renewable_fuel_target_summary_high_renewables(
 async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
     compliance_report_summary_service,
 ):
-    # Test when the required renewable quantities have not changed so that Lines 6 and 8 are simply copied.
-    fossil_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 300}
+    # Test when values are preserved but capped at 5% of line 4.
+    fossil_quantities = {"gasoline": 10000, "diesel": 20000, "jet_fuel": 30000}
     renewable_quantities = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     notional_transfers_sum = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
     compliance_period = 2030
     summary_model = ComplianceReportSummary(
-        line_6_renewable_fuel_retained_gasoline=10,
-        line_6_renewable_fuel_retained_diesel=20,
-        line_6_renewable_fuel_retained_jet_fuel=30,
-        line_8_obligation_deferred_gasoline=5,
-        line_8_obligation_deferred_diesel=10,
-        line_8_obligation_deferred_jet_fuel=15,
+        line_6_renewable_fuel_retained_gasoline=100,
+        line_6_renewable_fuel_retained_diesel=200,
+        line_6_renewable_fuel_retained_jet_fuel=300,
+        line_8_obligation_deferred_gasoline=50,
+        line_8_obligation_deferred_diesel=100,
+        line_8_obligation_deferred_jet_fuel=150,
     )
     # Set required renewable fuel values to match the summary model.
     expected_eligible_renewable_fuel_required = {
-        "gasoline": 5.0,
-        "diesel": 8.0,
-        "jet_fuel": 9.0,
+        "gasoline": 500.0,  # 5% of 10000
+        "diesel": 800.0,    # 4% of 20000  
+        "jet_fuel": 900.0,  # 3% of 30000
     }
     summary_model.line_4_eligible_renewable_fuel_required_gasoline = (
         expected_eligible_renewable_fuel_required["gasoline"]
@@ -896,13 +912,18 @@ async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
     )
 
     _assert_renewable_common(result)
-    # Lines 6 & 8 should be copied.
-    assert result[5].gasoline == 10.0
-    assert result[5].diesel == 20.0
-    assert result[5].jet_fuel == 30.0
-    assert result[7].gasoline == 5.0
-    assert result[7].diesel == 10.0
-    assert result[7].jet_fuel == 15.0
+    # Lines 6 & 8 should be preserved but capped at 5% of line 4
+    # Line 4: gasoline=500 (5% = 25), diesel=800 (5% = 40), jet_fuel=900 (5% = 45)
+    # Original values: gasoline=100, diesel=200, jet_fuel=300
+    # Capped values: min(100, 25) = 25, min(200, 40) = 40, min(300, 45) = 45
+    assert result[5].gasoline == 25
+    assert result[5].diesel == 40
+    assert result[5].jet_fuel == 45
+    # Line 8: gasoline=50, diesel=100, jet_fuel=150
+    # Capped values: min(50, 25) = 25, min(100, 40) = 40, min(150, 45) = 45
+    assert result[7].gasoline == 25
+    assert result[7].diesel == 40
+    assert result[7].jet_fuel == 45
 
 
 @pytest.mark.anyio
