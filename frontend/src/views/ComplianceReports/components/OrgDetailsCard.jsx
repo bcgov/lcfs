@@ -1,11 +1,27 @@
 import { useTranslation } from 'react-i18next'
-import { Stack } from '@mui/material'
+import { Stack, Button } from '@mui/material'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import { constructAddress } from '@/utils/constructAddress'
+import { useNavigate } from 'react-router-dom'
+import { ROUTES } from '@/routes/routes'
 
-export const OrgDetailsCard = ({ orgName, orgAddress, orgAttorneyAddress, isGovernmentUser = false }) => {
+export const OrgDetailsCard = ({
+  orgName,
+  orgAddress,
+  orgAttorneyAddress,
+  organizationSnapshot,
+  isGovernmentUser = false
+}) => {
   const { t } = useTranslation(['report'])
+  const navigate = useNavigate()
+
+  const handleUpdateOrgInfo = () => {
+    navigate(ROUTES.ORGANIZATIONS.EDIT.replace(':orgID', organizationSnapshot.organizationId), {
+      state: { organizationSnapshot }
+    })
+  }
+
   return (
     <BCWidgetCard
       component="div"
@@ -30,14 +46,26 @@ export const OrgDetailsCard = ({ orgName, orgAddress, orgAttorneyAddress, isGove
               {orgAttorneyAddress && constructAddress(orgAttorneyAddress)}
             </BCTypography>
           </div>
-          {!isGovernmentUser && <BCTypography
-            component="div"
-            style={{ marginTop: '2rem' }}
-            variant="body4"
-            dangerouslySetInnerHTML={{
-              __html: t('report:contactForAddrChange')
-            }}
-          />}
+          {!isGovernmentUser && (
+            <BCTypography
+              component="div"
+              style={{ marginTop: '2rem' }}
+              variant="body4"
+              dangerouslySetInnerHTML={{
+                __html: t('report:contactForAddrChange')
+              }}
+            />
+          )}
+          {isGovernmentUser && organizationSnapshot?.isEdited && (
+            <BCButton
+              variant="outlined"
+              color="primary"
+              onClick={handleUpdateOrgInfo}
+              style={{ marginTop: '1rem' }}
+            >
+              {t('report:updateOrgInfo')}
+            </BCButton>
+          )}
         </Stack>
       }
     />

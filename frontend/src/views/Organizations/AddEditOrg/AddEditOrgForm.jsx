@@ -20,7 +20,7 @@ import { useMutation } from '@tanstack/react-query'
 import { useCallback, useEffect, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { schemaValidation } from './_schema'
 
 // Internal Modules
@@ -38,6 +38,8 @@ import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
 export const AddEditOrgForm = () => {
   const { t } = useTranslation(['common', 'org'])
   const navigate = useNavigate()
+  const location = useLocation()
+  const organizationSnapshot = location.state?.organizationSnapshot
   const apiService = useApiService()
   const { orgID } = useParams()
 
@@ -330,6 +332,49 @@ export const AddEditOrgForm = () => {
         sx={{ mt: 2 }}
       >
         {/* Form Fields */}
+        {organizationSnapshot && (
+          <Box
+            sx={{ p: 3, mb: 3, border: '1px solid #ccc', borderRadius: '4px' }}
+          >
+            <BCTypography variant="h6" color="primary" sx={{ mb: 2 }}>
+              {t('org:snapshotTitle')}
+            </BCTypography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <BCTypography variant="body2">
+                  <strong>{t('org:legalNameLabel')}:</strong>{' '}
+                  {organizationSnapshot.name}
+                </BCTypography>
+                <BCTypography variant="body2">
+                  <strong>{t('org:operatingNameLabel')}:</strong>{' '}
+                  {organizationSnapshot.operatingName}
+                </BCTypography>
+                <BCTypography variant="body2">
+                  <strong>{t('org:emailAddrLabel')}:</strong>{' '}
+                  {organizationSnapshot.email}
+                </BCTypography>
+                <BCTypography variant="body2">
+                  <strong>{t('org:phoneNbrLabel')}:</strong>{' '}
+                  {organizationSnapshot.phone}
+                </BCTypography>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <BCTypography variant="body2">
+                  <strong>{t('org:serviceAddrLabel')}:</strong>{' '}
+                  {organizationSnapshot.serviceAddress}
+                </BCTypography>
+                <BCTypography variant="body2">
+                  <strong>{t('org:recordsAddrLabel')}:</strong>{' '}
+                  {organizationSnapshot.recordsAddress}
+                </BCTypography>
+                <BCTypography variant="body2">
+                  <strong>{t('org:bcAddrLabel')}:</strong>{' '}
+                  {organizationSnapshot.headOfficeAddress}
+                </BCTypography>
+              </Grid>
+            </Grid>
+          </Box>
+        )}
         <Grid container spacing={3}>
           <Grid item xs={12}>
             <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
@@ -582,7 +627,10 @@ export const AddEditOrgForm = () => {
                       <FormControl fullWidth>
                         <Grid container>
                           <Grid item xs={6} mt={0.5}>
-                            <FormLabel id="orgCreditTradingEnabled" sx={{ pb: 1 }}>
+                            <FormLabel
+                              id="orgCreditTradingEnabled"
+                              sx={{ pb: 1 }}
+                            >
                               <BCTypography variant="body3">
                                 Credit trading market participation:
                               </BCTypography>
