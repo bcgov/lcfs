@@ -68,9 +68,19 @@ vi.mock('@/views/Users', () => ({
   )
 }))
 
-vi.mock('@/views/Admin/AdminMenu/components/ViewUser', () => ({
+vi.mock('@/views/Admin/AdminMenu/components/UserDetailsCard', () => ({
   __esModule: true,
-  default: () => <div data-test="view-user">View User</div>
+  default: ({ addMode, userType }) => (
+    <div
+      data-test={
+        addMode
+          ? `user-details-card-add-${userType || 'default'}`
+          : 'user-details-card-view'
+      }
+    >
+      {addMode ? `Add User ${userType || 'default'}` : 'View User Details'}
+    </div>
+  )
 }))
 
 vi.mock('@/views/Organizations', () => ({
@@ -487,30 +497,25 @@ describe('Router Configuration', () => {
       })
     })
 
-    it('should render add user page', async () => {
+    it('should render add user page with UserDetailsCard', async () => {
       const testRouter = createTestRouter(['/admin/users/add-user'])
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('add-edit-user-idir')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('user-details-card-add-idir')
+        ).toBeInTheDocument()
+        expect(screen.getByText('Add User idir')).toBeInTheDocument()
       })
     })
 
-    it('should render view user page', async () => {
+    it('should render view user page with UserDetailsCard', async () => {
       const testRouter = createTestRouter(['/admin/users/123'])
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('view-user')).toBeInTheDocument()
-      })
-    })
-
-    it('should render edit user page', async () => {
-      const testRouter = createTestRouter(['/admin/users/123/edit-user'])
-      renderRouterWithProviders(testRouter)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('add-edit-user-idir')).toBeInTheDocument()
+        expect(screen.getByTestId('user-details-card-view')).toBeInTheDocument()
+        expect(screen.getByText('View User Details')).toBeInTheDocument()
       })
     })
   })
