@@ -555,3 +555,27 @@ class OrganizationsRepository:
 
         # Default to False if no year-specific setting exists
         return False
+
+    @repo_handler
+    async def get_credit_market_organizations(self) -> List[Organization]:
+        """
+        Get organizations that have opted to display in the credit trading market.
+        Only returns organizations that have display_in_credit_market set to True.
+        """
+        query = (
+            select(Organization)
+            .options(
+                joinedload(Organization.org_status),
+                joinedload(Organization.org_address),
+            )
+            .where(
+                and_(
+                    Organization.display_in_credit_market == True,
+                    Organization.org_status.has(OrganizationStatus.status == OrgStatusEnum.Registered)
+                )
+            )
+            .order_by(Organization.name)
+        )
+        
+        result = await self.db.execute(query)
+        return result.scalars().all()

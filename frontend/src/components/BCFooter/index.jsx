@@ -29,8 +29,8 @@ function Footer({
         key={link.name}
         component="li"
         px={2}
-        lineHeight={1}
         sx={({ functions: { pxToRem }, palette: { borderDivider } }) => ({
+          lineHeight: 1,
           borderRight: `2px solid ${borderDivider.main}`,
           '&:hover': {
             textDecoration: 'underline'
@@ -60,15 +60,15 @@ function Footer({
       className="bcgov-footer"
       component="footer"
       width="100%"
-      display="flex"
-      flexDirection={{ xs: 'column', lg: 'row' }}
-      justifyContent="space-between"
-      alignItems="center"
       px={1.5}
       sx={({
         functions: { pxToRem },
         palette: { primary, secondary, white }
       }) => ({
+        display: 'flex',
+        flexDirection: { xs: 'column', lg: 'row' },
+        justifyContent: 'space-between',
+        alignItems: 'center',
         backgroundColor: primary.nav,
         borderTop: `2px solid ${secondary.main}`,
         color: white.main,
@@ -97,13 +97,15 @@ function Footer({
         {renderLinks()}
       </BCBox>
       <BCBox
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        flexWrap="wrap"
         color="white"
         fontSize={size.sm}
         px={1.5}
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          flexWrap: 'wrap'
+        }}
       >
         <Link
           href={repoDetails.href}
@@ -127,7 +129,6 @@ function Footer({
   )
 }
 
-// Typechecking props for the Footer
 Footer.propTypes = {
   repoDetails: PropTypes.objectOf(PropTypes.string),
   links: PropTypes.arrayOf(PropTypes.object)

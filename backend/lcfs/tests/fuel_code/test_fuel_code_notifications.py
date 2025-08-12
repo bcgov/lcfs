@@ -44,7 +44,7 @@ def mock_director_user():
     user.last_name = "Director"
     user.email = "test.director@gov.bc.ca"
     user.is_active = True
-    user.role_names = [RoleEnum.DIRECTOR.name]
+    user.role_names = [RoleEnum.DIRECTOR.value]
     return user
 
 
@@ -208,7 +208,7 @@ class TestFuelCodeNotificationIntegration:
         
         # Verify notification data
         notification_data = call_args.notification_data
-        assert notification_data.type == "Fuel Code Status Update"
+        assert notification_data.type == "Fuel Code Recommended"
         assert notification_data.origin_user_profile_id == mock_user.user_profile_id
         assert notification_data.related_transaction_id == "1"
         
@@ -358,6 +358,9 @@ class TestFuelCodeNotificationIntegration:
         assert hasattr(notification_data, 'origin_user_profile_id')
         assert hasattr(notification_data, 'related_transaction_id')
         assert hasattr(notification_data, 'related_organization_id')
+        
+        # Verify notification type reflects the status
+        assert notification_data.type == "Fuel Code Recommended"
         
         # Verify organization_id is None for fuel codes
         assert notification_data.related_organization_id is None

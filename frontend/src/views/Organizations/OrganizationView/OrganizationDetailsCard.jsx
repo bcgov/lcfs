@@ -138,6 +138,15 @@ export const OrganizationDetailsCard = () => {
                       : t('org:registeredTransferNo')}
                   </BCTypography>
 
+                  {orgData?.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED && (
+                    <BCTypography variant="body4">
+                      <strong>{t('org:creditTradingEnabledLabel')}:</strong>{' '}
+                      {orgData?.creditTradingEnabled
+                        ? t('common:yes')
+                        : t('common:no')}
+                    </BCTypography>
+                  )}
+
                   {(hasRoles(roles.government) ||
                     orgData?.hasEarlyIssuance) && (
                     <BCTypography variant="body4">
