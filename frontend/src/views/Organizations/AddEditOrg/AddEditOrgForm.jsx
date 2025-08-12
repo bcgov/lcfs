@@ -690,7 +690,6 @@ export const AddEditOrgForm = () => {
                     </Grid>
                   </FormControl>
                 </Box>
-                {console.log(dismissedBoxes.organizationInfo)}
                 <Box
                   mb={2}
                   sx={{
