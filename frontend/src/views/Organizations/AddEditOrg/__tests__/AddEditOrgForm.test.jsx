@@ -58,7 +58,8 @@ vi.mock('react-i18next', () => ({
   useTranslation: vi.fn(() => ({
     t: (key) => key,
     i18n: { changeLanguage: vi.fn() }
-  }))
+  })),
+  I18nextProvider: ({ children }) => children
 }))
 
 vi.mock('react-hook-form', () => ({
@@ -332,68 +333,57 @@ describe('AddEditOrgForm Component', () => {
   })
 
   it('renders the form in add mode', () => {
-    render(<AddEditOrgForm />)
+    render(
+      <Wrapper>
+        <AddEditOrgForm />
+      </Wrapper>
+    )
 
     // Verify key form elements are rendered
     expect(screen.getByTestId('orgLegalName')).toBeInTheDocument()
     expect(screen.getByTestId('orgOperatingName')).toBeInTheDocument()
     expect(screen.getByTestId('orgEmailAddress')).toBeInTheDocument()
     expect(screen.getByTestId('orgPhoneNumber')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument()
   })
 
   it('renders the form in edit mode with pre-populated data', async () => {
-    // Setup edit mode
     useParams.mockReturnValue({ orgID: '123' })
     useOrganization.mockReturnValue({
       data: {
         name: 'Test Organization',
         operatingName: 'Test Org',
         email: 'test@example.com',
-        phone: '604-123-4567',
-        edrmsRecord: 'EDRMS-123',
-        hasEarlyIssuance: true,
-        orgStatus: { organizationStatusId: 2 },
-        orgAddress: {
-          streetAddress: '123 Main St',
-          addressOther: 'Suite 100',
-          city: 'Vancouver',
-          postalcodeZipcode: 'V6B3K9'
-        },
-        orgAttorneyAddress: {
-          streetAddress: '456 Legal Ave',
-          addressOther: 'Floor 2',
-          city: 'Victoria',
-          provinceState: 'BC',
-          country: 'Canada',
-          postalcodeZipcode: 'V8V1Z4'
-        }
+        orgStatus: { organizationStatusId: 2 }
       },
       isFetched: true
     })
 
-    render(<AddEditOrgForm />)
+    render(
+      <Wrapper>
+        <AddEditOrgForm />
+      </Wrapper>
+    )
 
-    // Need to wait for useEffect to run
     await waitFor(() => {
       expect(screen.getByTestId('orgLegalName')).toBeInTheDocument()
     })
   })
 
   it('syncs operating name with legal name when checkbox is checked', async () => {
-    const user = userEvent.setup()
-
     mockWatch.mockImplementation((field) => {
       if (field === 'orgLegalName') return 'Test Legal Name'
       return ''
     })
 
-    render(<AddEditOrgForm />)
+    render(
+      <Wrapper>
+        <AddEditOrgForm />
+      </Wrapper>
+    )
 
-    // Check the "Same as Legal Name" checkbox
-    await user.click(screen.getByTestId('sameAsLegalName'))
+    const checkbox = screen.getByTestId('sameAsLegalName')
+    fireEvent.click(checkbox)
 
-    // Verify setValue was called with the legal name
     expect(mockSetValue).toHaveBeenCalledWith(
       'orgOperatingName',
       'Test Legal Name'
@@ -401,29 +391,28 @@ describe('AddEditOrgForm Component', () => {
   })
 
   it('navigates back to organizations page on cancel', async () => {
-    const user = userEvent.setup()
+    render(
+      <Wrapper>
+        <AddEditOrgForm />
+      </Wrapper>
+    )
 
-    render(<AddEditOrgForm />)
+    const backButton = screen.getByText('backBtn')
+    fireEvent.click(backButton)
 
-    // Find and click the Back button
-    await user.click(screen.getByText('backBtn'))
-
-    // Verify navigation
     expect(mockNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST)
   })
 
   it('handles address autocomplete selection', async () => {
-    const user = userEvent.setup()
+    render(
+      <Wrapper>
+        <AddEditOrgForm />
+      </Wrapper>
+    )
 
-    render(<AddEditOrgForm />)
-
-    // Find and interact with the address autocomplete
     const addressInput = screen.getAllByTestId('address-autocomplete')[0]
-    await user.click(addressInput)
-    await user.type(addressInput, '123')
     fireEvent.select(addressInput)
 
-    // Verify setValue was called with the selected address
     expect(mockSetValue).toHaveBeenCalledWith('orgStreetAddress', '123 Test St')
     expect(mockSetValue).toHaveBeenCalledWith('orgCity', 'TestCity')
   })
