@@ -3,7 +3,7 @@ import enum
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Enum, String, Numeric, BigInteger
 from sqlalchemy.orm import relationship
 
-from lcfs.db.base import BaseModel, Auditable, EffectiveDates
+from lcfs.db.base import BaseModel, Auditable
 
 
 class TransferRecommendationEnum(enum.Enum):
@@ -11,7 +11,7 @@ class TransferRecommendationEnum(enum.Enum):
     Refuse = "Refuse"
 
 
-class Transfer(BaseModel, Auditable, EffectiveDates):
+class Transfer(BaseModel, Auditable):
     __tablename__ = "transfer"
     __table_args__ = (
         {"comment": "Records of tranfer from Organization to Organization"},

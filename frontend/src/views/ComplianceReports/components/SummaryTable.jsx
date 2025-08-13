@@ -57,6 +57,7 @@ const SummaryTable = ({
   const handleCellChange = (e, rowIndex, columnId) => {
     const enteredValue = e.target.value
     const column = columns.find((col) => col.id === columnId)
+    const constraints = getCellConstraints(rowIndex, columnId)
     
     let value
     if (column.editable && column.editableCells && column.editableCells.includes(rowIndex)) {
@@ -65,6 +66,14 @@ const SummaryTable = ({
     } else {
       // Convert to integer for non-currency fields
       value = enteredValue === '' ? 0 : parseInt(enteredValue.replace(/\D/g, ''), 10)
+    }
+
+    // Apply constraints validation
+    if (constraints.max !== undefined && parseInt(value) > constraints.max) {
+      value = constraints.max
+    }
+    if (constraints.min !== undefined && parseInt(value) < constraints.min) {
+      value = constraints.min
     }
 
     setData((prevData) => {
@@ -181,7 +190,7 @@ const SummaryTable = ({
                         ...props.inputProps
                       }}
                       startAdornment={
-                        column.editable && column.editableCells && column.editableCells.includes(rowIndex) ? (
+                        column.editable && column.editableCells && column.editableCells.includes(rowIndex) && row.format === 'currency' ? (
                           <InputAdornment position="start">$</InputAdornment>
                         ) : null
                       }

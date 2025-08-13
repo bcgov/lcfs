@@ -155,7 +155,9 @@ export const Notifications = () => {
     (params) => {
       const { id, service, compliancePeriod } = JSON.parse(params.data.message)
       // Select the appropriate route based on the notification type
-      const routeTemplate = routesMapping(currentUser)[service]
+      // For fuel codes, use the notification type since they don't have a service field
+      const serviceKey = service || params.data.type
+      const routeTemplate = routesMapping(currentUser)[serviceKey]
 
       if (routeTemplate && params.event.target.dataset.action !== 'delete') {
         navigate(
@@ -165,6 +167,7 @@ export const Notifications = () => {
             .replace(':transferId', id)
             .replace(':compliancePeriod', compliancePeriod)
             .replace(':complianceReportId', id)
+            .replace(':fuelCodeID', id)
         )
         handleMutation(markAsReadMutation, {
           notification_ids: [params.data.notificationMessageId]

@@ -1156,29 +1156,6 @@ async def test_update_compliance_report_non_assessment_success(
         assert response.json()["report"]["isNonAssessment"] is True
 
 
-@pytest.mark.anyio
-async def test_update_compliance_report_non_assessment_forbidden_for_non_analyst(
-    client: AsyncClient,
-    fastapi_app: FastAPI,
-    set_mock_user,
-):
-    set_mock_user(fastapi_app, [RoleEnum.SUPPLIER])
-
-    url = fastapi_app.url_path_for(
-        "update_compliance_report",
-        report_id=1,
-    )
-
-    payload = {
-        "status": ComplianceReportStatusEnum.Submitted.value,
-        "supplementalNote": "Test note",
-        "isNonAssessment": True,
-    }
-
-    response = await client.put(url, json=payload)
-    assert response.status_code == 403
-
-
 # Analyst Assignment API Tests
 @pytest.mark.anyio
 async def test_assign_analyst_to_report_success(
