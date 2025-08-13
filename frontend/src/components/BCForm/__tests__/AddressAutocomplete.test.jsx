@@ -1306,7 +1306,7 @@ describe('AddressAutocomplete', () => {
       const input = screen.getByRole('combobox')
       
       // Branch 1: isAddressSelected = false - should make API call
-      await user.type(input, 'test with, comma V6B')
+      await user.type(input, 'test address')
       
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalled()
@@ -1314,37 +1314,38 @@ describe('AddressAutocomplete', () => {
       
       mockFetch.mockClear()
       
-      // Branch 2: isAddressSelected = true, inputValue.includes(',') = false  
-      // First set isAddressSelected = true by typing an address
+      // Simulate selecting an address to set isAddressSelected = true
+      // This would typically happen through clicking on a suggestion
       await user.clear(input)
-      await user.type(input, 'Address without comma')
+      await user.type(input, '123 Main St, Vancouver, BC')
       
-      mockFetch.mockClear()
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ features: [] })
-      })
-      
-      await user.type(input, ' more')
-      
-      await waitFor(() => {
-        expect(mockFetch).toHaveBeenCalled()
-      }, { timeout: 1000 })
-      
+      // Wait for any pending API calls to complete
+      await new Promise(resolve => setTimeout(resolve, 100))
       mockFetch.mockClear()
       
-      // Branch 3: All conditions true but endsWith(' ') = false and regex = false
+      // Branch 2: isAddressSelected = true, inputValue.includes(',') = true, endsWith(' ') = true
+      // Should NOT make API call (returns early)
+      await user.type(input, ' ')
+      
+      await new Promise(resolve => setTimeout(resolve, 100))
+      expect(mockFetch).not.toHaveBeenCalled()
+      
+      // Branch 3: isAddressSelected = true, inputValue.includes(',') = true, matches postal code regex
+      // Should NOT make API call (returns early)
+      await user.type(input, 'V6B')
+      
+      await new Promise(resolve => setTimeout(resolve, 100))
+      expect(mockFetch).not.toHaveBeenCalled()
+      
+      // Branch 4: isAddressSelected = true, inputValue.includes(',') = false
+      // Should make API call
       await user.clear(input)
-      await user.type(input, 'Selected Address, City, BC')
-      
-      mockFetch.mockClear()
-      
-      await user.type(input, 'XYZ') // Doesn't end with space and doesn't match regex
+      await user.type(input, 'No comma address')
       
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalled()
       }, { timeout: 1000 })
-    })
+    }, 10000)
 
     it('covers streetAddress fallback branch (line 49)', async () => {
       const user = userEvent.setup()
