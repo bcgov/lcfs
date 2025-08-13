@@ -8,10 +8,10 @@ import { DownloadButton } from '@/components/DownloadButton'
 
 import {
   useCreditLedger,
-  useDownloadCreditLedger
+  useDownloadCreditLedger,
+  useCreditLedgerYears
 } from '@/hooks/useCreditLedger'
 import { useOrganizationBalance } from '@/hooks/useOrganization'
-import { useCompliancePeriod } from '@/hooks/useComplianceReports'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useTranslation } from 'react-i18next'
 import { timezoneFormatter } from '@/utils/formatters'
@@ -27,20 +27,11 @@ export const CreditLedger = ({ organizationId }) => {
   const [pagination, setPagination] = useState({ page: 1, size: 10 })
   const [selectedPeriod, setSelectedPeriod] = useState('')
 
-  const { data: periodsRes, isLoading: periodsLoading } = useCompliancePeriod()
+  // Get years with actual ledger data for this organization
+  const { data: availableYears = [], isLoading: yearsLoading } = useCreditLedgerYears(orgID)
 
-  // The compliance periods endpoint returns the data directly, not wrapped in a data object
-  const allPeriods = periodsRes ?? []
-  const currentYear = new Date().getFullYear()
-
-  // Show compliance periods from 2018 onwards up to the current year
-  // The credit ledger will naturally only show data for years with transactions
-  const compliancePeriods = allPeriods
-    .filter(
-      (p) =>
-        Number(p.description) >= 2018 && Number(p.description) <= currentYear
-    )
-    .sort((a, b) => Number(b.description) - Number(a.description))
+  // Sort years in descending order
+  const sortedYears = availableYears.sort((a, b) => Number(b) - Number(a))
 
   const { data: ledgerRes, isLoading: ledgerLoading } = useCreditLedger({
     orgId: orgID,
@@ -62,8 +53,8 @@ export const CreditLedger = ({ organizationId }) => {
   // Function to get available balance for a specific year or current balance for "All years"
   const getAvailableBalanceForPeriod = () => {
     if (!selectedPeriod) {
-      // "All years" - show current total balance
-      return orgBalance?.totalBalance ?? 0
+      // "All years" - show current total balance, but never negative
+      return Math.max(orgBalance?.totalBalance ?? 0, 0)
     }
 
     if (!fullLedgerRes?.ledger) {
@@ -96,7 +87,10 @@ export const CreditLedger = ({ organizationId }) => {
     
     // Available balance = units up to year + future negative units
     // (futureNegativeUnits is already negative, so this subtracts them)
-    return unitsUpToYear + futureNegativeUnits
+    const balance = unitsUpToYear + futureNegativeUnits
+    
+    // Ensure balance is never negative - display 0 instead
+    return Math.max(balance, 0)
   }
 
   const availableBalance = getAvailableBalanceForPeriod()
@@ -222,13 +216,10 @@ export const CreditLedger = ({ organizationId }) => {
                 }}
               >
                 <MenuItem value="">All years</MenuItem>
-                {!periodsLoading &&
-                  compliancePeriods.map((p) => (
-                    <MenuItem
-                      key={p.compliance_period_id}
-                      value={p.description}
-                    >
-                      {p.description}
+                {!yearsLoading &&
+                  sortedYears.map((year) => (
+                    <MenuItem key={year} value={year}>
+                      {year}
                     </MenuItem>
                   ))}
               </Select>

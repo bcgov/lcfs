@@ -72,7 +72,13 @@ export const routesMapping = (currentUser) => ({
   InitiativeAgreement: currentUser.isGovernmentUser
     ? ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.VIEW
     : ROUTES.TRANSACTIONS.INITIATIVE_AGREEMENT.ORG_VIEW,
-  ComplianceReport: ROUTES.REPORTS.VIEW
+  ComplianceReport: ROUTES.REPORTS.VIEW,
+  'Fuel Code': ROUTES.FUEL_CODES.EDIT,
+  'Fuel Code Status Update': ROUTES.FUEL_CODES.EDIT,
+  'Fuel Code Recommended': ROUTES.FUEL_CODES.EDIT,
+  'Fuel Code Approved': ROUTES.FUEL_CODES.EDIT,
+  'Fuel Code Draft': ROUTES.FUEL_CODES.EDIT,
+  'Fuel Code Returned': ROUTES.FUEL_CODES.EDIT
 })
 
 export const defaultSortModel = [{ field: 'date', direction: 'desc' }]

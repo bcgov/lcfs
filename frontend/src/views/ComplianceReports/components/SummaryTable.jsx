@@ -76,6 +76,14 @@ const SummaryTable = ({
       }
     }
 
+    // Apply constraints validation
+    if (constraints.max !== undefined && parseInt(value) > constraints.max) {
+      value = constraints.max
+    }
+    if (constraints.min !== undefined && parseInt(value) < constraints.min) {
+      value = constraints.min
+    }
+
     setData((prevData) => {
       const newData = [...prevData]
       newData[rowIndex] = { ...newData[rowIndex], [columnId]: value }
@@ -190,7 +198,7 @@ const SummaryTable = ({
                         ...props.inputProps
                       }}
                       startAdornment={
-                        column.editable && column.editableCells && column.editableCells.includes(rowIndex) ? (
+                        column.editable && column.editableCells && column.editableCells.includes(rowIndex) && row.format === 'currency' ? (
                           <InputAdornment position="start">$</InputAdornment>
                         ) : null
                       }

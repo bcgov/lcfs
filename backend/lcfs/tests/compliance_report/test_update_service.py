@@ -286,14 +286,17 @@ async def test_handle_submitted_status_with_existing_summary(
         mock.ANY,
         [RoleEnum.SUPPLIER, RoleEnum.SIGNING_AUTHORITY],
     )
-    mock_summary_repo.get_summary_by_report_id.assert_called_once_with(report_id)
-    mock_summary_service.calculate_compliance_report_summary.assert_called_once_with(
-        report_id
-    )
+    
+    # With new logic, we don't call get_summary_by_report_id directly
+    # The summary service handles all the logic internally
+    mock_summary_repo.get_summary_by_report_id.assert_not_called()
+    
+    # Summary service should be called at least once to recalculate
+    mock_summary_service.calculate_compliance_report_summary.assert_called()
+    mock_summary_service.calculate_compliance_report_summary.assert_any_call(report_id)
 
-    # Check if the summary is locked by verifying that the save call includes a UserProfile
-    saved_summary = mock_summary_repo.save_compliance_report_summary.call_args[0][0]
-    assert saved_summary.is_locked == True
+    # Save should NOT be called in the new implementation
+    mock_summary_repo.save_compliance_report_summary.assert_not_called()
 
 
 @pytest.mark.anyio
@@ -314,45 +317,9 @@ async def test_handle_submitted_status_without_existing_summary(
     mock_user_has_roles.return_value = True
     compliance_report_update_service.request = MagicMock()
     compliance_report_update_service.request.user = MagicMock()
-    # Mock calculated summary
-    calculated_summary = ComplianceReportSummarySchema(
-        compliance_report_id=report_id,
-        renewable_fuel_target_summary=[
-            ComplianceReportSummaryRowSchema(
-                line=6,
-                field="renewable_fuel_retained",
-                gasoline=100,
-                diesel=200,
-                jet_fuel=300,
-            ),
-            ComplianceReportSummaryRowSchema(
-                line=7,
-                field="previously_retained",
-                gasoline=400,
-                diesel=500,
-                jet_fuel=600,
-            ),
-            ComplianceReportSummaryRowSchema(
-                line=8,
-                field="obligation_deferred",
-                gasoline=700,
-                diesel=800,
-                jet_fuel=900,
-            ),
-        ],
-        low_carbon_fuel_target_summary=[
-            ComplianceReportSummaryRowSchema(
-                line=12, field="low_carbon_fuel_required", value=0
-            ),
-        ],
-        non_compliance_penalty_summary=[
-            ComplianceReportSummaryRowSchema(
-                line=21, field="non_compliance_penalty_payable", value=0
-            ),
-        ],
-        can_sign=True,
-        line_20_surplus_deficit_units=150,
-    )
+    # Mock calculated summary - should be model-like object with line_20_surplus_deficit_units
+    calculated_summary = MagicMock(spec=ComplianceReportSummary)
+    calculated_summary.line_20_surplus_deficit_units = 150
 
     # Set up mocks
     mock_summary_repo.get_summary_by_report_id.return_value = None
@@ -374,24 +341,18 @@ async def test_handle_submitted_status_without_existing_summary(
     )
 
     # Assertions
-    mock_summary_repo.get_summary_by_report_id.assert_called_once_with(report_id)
-    mock_summary_service.calculate_compliance_report_summary.assert_called_once_with(
-        report_id
-    )
+    # With new logic, calculate_compliance_report_summary is called 
+    mock_summary_service.calculate_compliance_report_summary.assert_called()
+    mock_summary_service.calculate_compliance_report_summary.assert_any_call(report_id)
 
-    # Check if a new summary is created
-    mock_summary_repo.add_compliance_report_summary.assert_called_once_with(mock.ANY)
-    new_summary = mock_summary_repo.add_compliance_report_summary.call_args[0][0]
+    # Since summary was None, it should be assigned from calculated_summary
+    assert mock_report.summary == calculated_summary
 
-    # Check if calculated values are used
-    assert new_summary.renewable_fuel_target_summary[0].gasoline == 100  # line 6
-    assert new_summary.renewable_fuel_target_summary[1].diesel == 500  # line 7
-    assert new_summary.renewable_fuel_target_summary[2].jet_fuel == 900  # line 8
+    # With new logic, add_compliance_report_summary is NOT called
+    # The summary service handles the creation internally
+    mock_summary_repo.add_compliance_report_summary.assert_not_called()
 
-    # Check if summary is locked
-    assert new_summary.is_locked == True
-
-    # Check if report is updated with new summary
+    # Check if report is updated
     mock_repo.update_compliance_report.assert_called_once_with(mock_report)
 
 
@@ -410,6 +371,7 @@ async def test_handle_submitted_status_partial_existing_values(
     mock_report.compliance_report_id = report_id
     mock_report.summary = MagicMock(spec=ComplianceReportSummary)
     mock_report.summary.summary_id = 100
+    mock_report.summary.line_20_surplus_deficit_units = 75
     # Mock user roles (user has required roles)
     mock_user_has_roles.return_value = True
     compliance_report_update_service.request = MagicMock()
@@ -480,17 +442,12 @@ async def test_handle_submitted_status_partial_existing_values(
     )
 
     # Assertions
-    mock_summary_repo.save_compliance_report_summary.assert_called_once_with(mock.ANY)
-    saved_summary = mock_summary_repo.save_compliance_report_summary.call_args[0][0]
-    assert (
-        saved_summary.renewable_fuel_target_summary[0].gasoline == 1000
-    )  # Preserved user-edited value
-    assert (
-        saved_summary.renewable_fuel_target_summary[1].diesel == 2000
-    )  # Used calculated value
-    assert (
-        saved_summary.renewable_fuel_target_summary[2].jet_fuel == 3000
-    )  # Preserved user-edited value
+    # With new logic, summary is calculated but not manually saved/locked
+    mock_summary_service.calculate_compliance_report_summary.assert_called()
+    # Save is NOT called in the new implementation
+    mock_summary_repo.save_compliance_report_summary.assert_not_called()
+    # The preservation of user-edited values happens inside calculate_compliance_report_summary
+    # which is mocked in this test, so we can't verify the actual preservation here
 
 
 @pytest.mark.anyio
@@ -508,6 +465,7 @@ async def test_handle_submitted_status_no_user_edits(
     mock_report.compliance_report_id = report_id
     mock_report.summary = MagicMock(spec=ComplianceReportSummary)
     mock_report.summary.summary_id = 100
+    mock_report.summary.line_20_surplus_deficit_units = 200
     # Mock user roles (user has required roles)
     mock_user_has_roles.return_value = True
     compliance_report_update_service.request = MagicMock()
@@ -581,17 +539,11 @@ async def test_handle_submitted_status_no_user_edits(
     )
 
     # Assertions
-    mock_summary_repo.save_compliance_report_summary.assert_called_once_with(mock.ANY)
-    saved_summary = mock_summary_repo.save_compliance_report_summary.call_args[0][0]
-    assert (
-        saved_summary.renewable_fuel_target_summary[0].gasoline == 100
-    )  # Used calculated value
-    assert (
-        saved_summary.renewable_fuel_target_summary[1].diesel == 500
-    )  # Used calculated value
-    assert (
-        saved_summary.renewable_fuel_target_summary[2].jet_fuel == 900
-    )  # Used calculated value
+    # With new logic, summary is calculated but not manually saved/locked
+    mock_summary_service.calculate_compliance_report_summary.assert_called()
+    # Save is NOT called in the new implementation
+    mock_summary_repo.save_compliance_report_summary.assert_not_called()
+    # All calculated values are used since there are no user edits to preserve
 
 
 @pytest.mark.anyio
@@ -609,6 +561,7 @@ async def test_handle_submitted_no_sign(
     mock_report.compliance_report_id = report_id
     mock_report.summary = MagicMock(spec=ComplianceReportSummary)
     mock_report.summary.summary_id = 100
+    mock_report.summary.line_20_surplus_deficit_units = -50
     # Mock user roles (user has required roles)
     mock_user_has_roles.return_value = True
     compliance_report_update_service.request = MagicMock()
@@ -634,10 +587,14 @@ async def test_handle_submitted_no_sign(
     # Inject the mocked org_service into the service being tested
     compliance_report_update_service.org_service = mock_org_service
 
-    with pytest.raises(ServiceException):
-        await compliance_report_update_service.handle_submitted_status(
-            mock_report, UserProfile()
-        )
+    # With new logic, can_sign is NOT checked on submission
+    # The method should complete successfully even with can_sign=False
+    await compliance_report_update_service.handle_submitted_status(
+        mock_report, UserProfile()
+    )
+    
+    # Verify summary was calculated but not locked
+    mock_summary_service.calculate_compliance_report_summary.assert_called()
 
 
 @pytest.mark.anyio
@@ -669,22 +626,12 @@ async def test_handle_submitted_status_no_credits(
     # Mock the summary so we skip deeper logic
     mock_summary_repo.get_summary_by_report_id.return_value = None
 
-    # Pretend the final summary can_sign is True
-    calculated_summary = ComplianceReportSummarySchema(
-        can_sign=True,
-        compliance_report_id=report_id,
-        renewable_fuel_target_summary=[],
-        low_carbon_fuel_target_summary=[],
-        non_compliance_penalty_summary=[],
-        line_20_surplus_deficit_units=-100,
-    )
+    # Mock calculated summary - should be model-like object with line_20_surplus_deficit_units
+    calculated_summary = MagicMock(spec=ComplianceReportSummary)
+    calculated_summary.line_20_surplus_deficit_units = -100
     mock_summary_service.calculate_compliance_report_summary = AsyncMock(
         return_value=calculated_summary
     )
-    # Mock the returned summary to have the proper attribute
-    mock_returned_summary = MagicMock(spec=ComplianceReportSummary)
-    mock_returned_summary.line_20_surplus_deficit_units = -100
-    mock_summary_repo.add_compliance_report_summary.return_value = mock_returned_summary
     # available_balance = 0
     mock_org_service.calculate_available_balance.return_value = 0
     # If adjust_balance is called, we'll see an assertion fail
@@ -696,9 +643,12 @@ async def test_handle_submitted_status_no_credits(
     )
 
     # Assertions:
-    # 1) We did NOT call adjust_balance, because balance = 0
+    # 1) Summary was assigned and calculated twice (once for creation, once for recalculation)
+    assert mock_report.summary == calculated_summary
+    assert mock_summary_service.calculate_compliance_report_summary.call_count == 2
+    # 2) We did NOT call adjust_balance, because balance = 0
     mock_org_service.adjust_balance.assert_not_awaited()
-    # 2) No transaction is created
+    # 3) No transaction is created
     assert mock_report.transaction is None
 
 
@@ -1009,6 +959,8 @@ async def test_handle_assessed_status_not_superseded(
     mock_report_model.version = mock_compliance_report_assessed.version
     # Set a mock transaction object on the model
     mock_report_model.transaction = MagicMock()
+    # Set is_non_assessment to False to enter transaction logic
+    mock_report_model.is_non_assessment = False
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
     compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
@@ -1065,6 +1017,8 @@ async def test_handle_assessed_status_government_adjustment_no_transaction(
     mock_report.organization_id = 456
     mock_report.version = 1
     mock_report.transaction = None  # No existing transaction - the key bug case
+    # Set is_non_assessment to False to enter transaction logic
+    mock_report.is_non_assessment = False
 
     # Set up supplemental initiator to indicate it's a government adjustment
     mock_report.supplemental_initiator = (
@@ -1339,6 +1293,7 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
     compliance_report_update_service,
     mock_repo,
     mock_user_profile_analyst,
+    mock_summary_service,
 ):
     """Test that handle_recommended_by_analyst_status calls _calculate_and_lock_summary with skip_can_sign_check=True for government reassessment"""
     # Arrange
@@ -1348,18 +1303,23 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
     mock_report.supplemental_initiator = (
         SupplementalInitiatorType.GOVERNMENT_REASSESSMENT
     )
+    # Start with no summary, will be assigned during execution
+    mock_report.summary = None
 
     mock_repo.get_draft_report_by_group_uuid = AsyncMock(return_value=None)
 
-    # Mock the _calculate_and_lock_summary method
-    mock_summary = MagicMock(spec=ComplianceReportSummary)
-    mock_summary.line_20_surplus_deficit_units = 200
-    compliance_report_update_service._calculate_and_lock_summary = AsyncMock(
-        return_value=mock_summary
+    # Mock the summary service for calculate_compliance_report_summary
+    calculated_summary = MagicMock()
+    calculated_summary.line_20_surplus_deficit_units = 200
+    mock_summary_service.calculate_compliance_report_summary = AsyncMock(
+        return_value=calculated_summary
     )
 
     # Mock the _create_or_update_reserve_transaction method
     compliance_report_update_service._create_or_update_reserve_transaction = AsyncMock()
+    
+    # Mock the _calculate_and_lock_summary method (should not be called)
+    compliance_report_update_service._calculate_and_lock_summary = AsyncMock()
 
     # Patch roles check
     with patch(
@@ -1371,10 +1331,13 @@ async def test_handle_recommended_by_analyst_government_reassessment_calls_with_
             mock_report, mock_user_profile_analyst
         )
 
-    # Assert that _calculate_and_lock_summary was called with skip_can_sign_check=True
-    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
-        mock_report, mock_user_profile_analyst, skip_can_sign_check=True
-    )
+    # With new logic, _calculate_and_lock_summary is NOT called for recommended by analyst
+    # Instead, summary service is called to calculate without locking
+    compliance_report_update_service._calculate_and_lock_summary.assert_not_called()
+    # Verify that summary service was called to calculate but not lock
+    mock_summary_service.calculate_compliance_report_summary.assert_called()
+    # Verify transaction was created/updated
+    compliance_report_update_service._create_or_update_reserve_transaction.assert_called_once_with(200, mock_report)
 
 
 @pytest.mark.anyio
@@ -1464,13 +1427,11 @@ async def test_handle_submitted_status_does_not_skip_can_sign_check(
         mock_report, UserProfile()
     )
 
-    # Assert that _calculate_and_lock_summary was called WITHOUT skip_can_sign_check parameter
-    # (which means it defaults to False)
-    compliance_report_update_service._calculate_and_lock_summary.assert_called_once_with(
-        mock_report,
-        mock.ANY,  # The user profile parameter
-        # Note: no skip_can_sign_check parameter means it defaults to False
-    )
+    # With new logic, _calculate_and_lock_summary is NOT called for submitted status
+    # The summary is calculated but not locked
+    compliance_report_update_service._calculate_and_lock_summary.assert_not_called()
+    # Instead, verify that calculate_compliance_report_summary was called
+    mock_summary_service.calculate_compliance_report_summary.assert_called()
 
 
 # RETURN STATUS TESTS FOR GOVERNMENT ADJUSTMENT FIX

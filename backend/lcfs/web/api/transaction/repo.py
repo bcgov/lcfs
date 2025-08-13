@@ -21,6 +21,7 @@ from sqlalchemy import (
     delete,
     join,
 )
+from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lcfs.db.dependencies import get_async_db_session
@@ -414,123 +415,219 @@ class TransactionRepository:
             hour=23, minute=59, second=59, microsecond=999999, tzinfo=vancouver_timezone
         )
 
-        # 1. Compliance unit balance changes from assessments (compliance reports)
-        # Include assessed/reassessed compliance reports from the compliance period or prior
-        assessment_balance = await self.db.scalar(
-            select(func.coalesce(func.sum(Transaction.compliance_units), 0))
+        # Query all transactions for this organization, joining with parent entities to check effective dates
+        # This approach ensures we count each transaction only once based on its parent entity's effective date
+        TransferTo = aliased(Transfer)
+
+        transactions_query = (
+            select(
+                Transaction.transaction_id,
+                Transaction.compliance_units,
+                Transaction.create_date,
+                # Check if transaction is from a compliance report
+                ComplianceReport.compliance_report_id.isnot(None).label(
+                    "is_compliance_report"
+                ),
+                # Check if transaction is from a transfer (as sender)
+                case(
+                    (
+                        Transfer.from_transaction_id.isnot(None),
+                        Transfer.transaction_effective_date,
+                    ),
+                    else_=None,
+                ).label("transfer_from_effective_date"),
+                # Check if transaction is from a transfer (as receiver)
+                case(
+                    (
+                        TransferTo.to_transaction_id.isnot(None),
+                        TransferTo.transaction_effective_date,
+                    ),
+                    else_=None,
+                ).label("transfer_to_effective_date"),
+                # Check if transaction is from an initiative agreement
+                case(
+                    (
+                        InitiativeAgreement.transaction_id.isnot(None),
+                        InitiativeAgreement.transaction_effective_date,
+                    ),
+                    else_=None,
+                ).label("ia_effective_date"),
+                # Check if transaction is from an admin adjustment
+                case(
+                    (
+                        AdminAdjustment.transaction_id.isnot(None),
+                        AdminAdjustment.transaction_effective_date,
+                    ),
+                    else_=None,
+                ).label("admin_effective_date"),
+                # Include status checks
+                Transfer.current_status_id.label("transfer_from_status"),
+                TransferTo.current_status_id.label("transfer_to_status"),
+                InitiativeAgreement.current_status_id.label("ia_status"),
+                AdminAdjustment.current_status_id.label("admin_status"),
+                ComplianceReportStatus.status.label("compliance_status"),
+            )
             .select_from(Transaction)
-            .join(
+            # Left join to compliance reports
+            .outerjoin(
                 ComplianceReport,
                 Transaction.transaction_id == ComplianceReport.transaction_id,
             )
-            .join(
+            .outerjoin(
                 ComplianceReportStatus,
                 ComplianceReport.current_status_id
                 == ComplianceReportStatus.compliance_report_status_id,
             )
+            # Left join to transfers (as sender)
+            .outerjoin(
+                Transfer,
+                and_(
+                    Transaction.transaction_id == Transfer.from_transaction_id,
+                    Transfer.from_organization_id == organization_id,
+                ),
+            )
+            # Left join to transfers (as receiver) - using aliased Transfer
+            .outerjoin(
+                TransferTo,
+                and_(
+                    Transaction.transaction_id == TransferTo.to_transaction_id,
+                    TransferTo.to_organization_id == organization_id,
+                ),
+            )
+            # Left join to initiative agreements
+            .outerjoin(
+                InitiativeAgreement,
+                and_(
+                    Transaction.transaction_id == InitiativeAgreement.transaction_id,
+                    InitiativeAgreement.to_organization_id == organization_id,
+                ),
+            )
+            # Left join to admin adjustments
+            .outerjoin(
+                AdminAdjustment,
+                and_(
+                    Transaction.transaction_id == AdminAdjustment.transaction_id,
+                    AdminAdjustment.to_organization_id == organization_id,
+                ),
+            )
             .where(
                 and_(
                     Transaction.organization_id == organization_id,
-                    ComplianceReportStatus.status.in_(
-                        [
-                            ComplianceReportStatusEnum.Assessed,
-                        ]
-                    ),
-                    Transaction.create_date <= compliance_period_end_local,
                     Transaction.transaction_action == TransactionActionEnum.Adjustment,
                 )
             )
         )
 
-        # 2. Compliance units received through transfers (purchases)
-        # Include recorded transfers where this org is the receiver, effective date <= end of compliance period
-        transfer_purchases = await self.db.scalar(
-            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
-                and_(
-                    Transfer.to_organization_id == organization_id,
-                    Transfer.current_status_id == 6,  # Recorded status
-                    Transfer.transaction_effective_date
-                    <= compliance_period_end_local.date(),
-                )
-            )
-        )
+        # Execute query and process results
+        result = await self.db.execute(transactions_query)
 
-        # 3. Compliance units transferred away (sales)
-        # Include recorded transfers where this org is the sender, effective date <= end of compliance period
-        transfer_sales = await self.db.scalar(
-            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
-                and_(
-                    Transfer.from_organization_id == organization_id,
-                    Transfer.current_status_id == 6,  # Recorded status
-                    Transfer.transaction_effective_date
-                    <= compliance_period_end_local.date(),
-                )
-            )
-        )
+        past_balance = 0
+        future_negative = 0
 
-        # 4. Compliance units issued under IA/P3A (Initiative Agreements)
-        # Include approved initiative agreements with effective date <= end of compliance period
-        initiative_agreements = await self.db.scalar(
-            select(
-                func.coalesce(func.sum(InitiativeAgreement.compliance_units), 0)
-            ).where(
-                and_(
-                    InitiativeAgreement.to_organization_id == organization_id,
-                    InitiativeAgreement.current_status_id == 3,  # Approved status
-                    InitiativeAgreement.transaction_effective_date
-                    <= compliance_period_end_local.date(),
-                )
-            )
-        )
+        for row in result:
+            transaction_id = row.transaction_id
+            compliance_units = row.compliance_units
+            create_date = row.create_date
 
-        # 5. Admin adjustments
-        # Include approved admin adjustments with effective date <= end of compliance period
-        admin_adjustments = await self.db.scalar(
-            select(func.coalesce(func.sum(AdminAdjustment.compliance_units), 0)).where(
-                and_(
-                    AdminAdjustment.to_organization_id == organization_id,
-                    AdminAdjustment.current_status_id == 3,  # Approved status
-                    AdminAdjustment.transaction_effective_date
-                    <= compliance_period_end_local.date(),
-                )
-            )
-        )
+            # Determine if this transaction should be counted as past or future
+            count_as_past = False
 
-        # 6. Future debits (negative transactions after the compliance period end)
-        # This includes future transfers out and other future negative transactions
-        future_transfer_debits = await self.db.scalar(
-            select(func.coalesce(func.sum(Transfer.quantity), 0)).where(
-                and_(
-                    Transfer.from_organization_id == organization_id,
-                    Transfer.current_status_id == 6,  # Recorded status
-                    Transfer.transaction_effective_date
-                    > compliance_period_end_local.date(),
-                )
-            )
-        )
+            # 1. Compliance report transactions
+            if (
+                row.is_compliance_report
+                and row.compliance_status == ComplianceReportStatusEnum.Assessed
+            ):
+                if create_date <= compliance_period_end_local:
+                    count_as_past = True
 
-        # Future negative adjustments and other transactions
-        future_negative_transactions = await self.db.scalar(
-            select(func.coalesce(func.sum(Transaction.compliance_units), 0)).where(
-                and_(
-                    Transaction.organization_id == organization_id,
-                    Transaction.create_date > compliance_period_end_local,
-                    Transaction.compliance_units < 0,
-                    Transaction.transaction_action != TransactionActionEnum.Released,
-                )
-            )
-        )
+            # 2. Transfer transactions (from)
+            elif (
+                row.transfer_from_effective_date is not None
+                and row.transfer_from_status == 6
+            ):  # Recorded
+                # Convert to date for comparison if it's a datetime
+                transfer_date = row.transfer_from_effective_date
+                if hasattr(transfer_date, "date"):
+                    transfer_date = transfer_date.date()
+                if transfer_date <= compliance_period_end_local.date():
+                    count_as_past = True
 
-        # Calculate the available balance using the TFRS formula
-        available_balance = (
-            (assessment_balance or 0)
-            + (transfer_purchases or 0)
-            - (transfer_sales or 0)
-            + (initiative_agreements or 0)
-            + (admin_adjustments or 0)
-            - (future_transfer_debits or 0)
-            - abs(future_negative_transactions or 0)
-        )
+            # 3. Transfer transactions (to)
+            elif (
+                row.transfer_to_effective_date is not None
+                and row.transfer_to_status == 6
+            ):  # Recorded
+                # Convert to date for comparison if it's a datetime
+                transfer_date = row.transfer_to_effective_date
+                if hasattr(transfer_date, "date"):
+                    transfer_date = transfer_date.date()
+                if transfer_date <= compliance_period_end_local.date():
+                    count_as_past = True
+
+            # 4. Initiative agreement transactions
+            elif row.ia_effective_date is not None and row.ia_status == 3:  # Approved
+                # Convert to date for comparison if it's a datetime
+                ia_date = row.ia_effective_date
+                if hasattr(ia_date, "date"):
+                    ia_date = ia_date.date()
+                if ia_date <= compliance_period_end_local.date():
+                    count_as_past = True
+
+            # 5. Admin adjustment transactions
+            elif (
+                row.admin_effective_date is not None and row.admin_status == 3
+            ):  # Approved
+                # Convert to date for comparison if it's a datetime
+                admin_date = row.admin_effective_date
+                if hasattr(admin_date, "date"):
+                    admin_date = admin_date.date()
+                if admin_date <= compliance_period_end_local.date():
+                    count_as_past = True
+
+            # Apply the transaction to the appropriate balance
+            if count_as_past:
+                past_balance += compliance_units
+            elif create_date > compliance_period_end_local and compliance_units < 0:
+                # This is a future negative transaction - but only count it if it's not
+                # associated with any parent entity that has a future effective date
+                is_future_debit = True
+                
+                # Check if this transaction belongs to a transfer with future effective date
+                if row.transfer_from_effective_date is not None:
+                    transfer_date = row.transfer_from_effective_date
+                    if hasattr(transfer_date, "date"):
+                        transfer_date = transfer_date.date()
+                    if transfer_date > compliance_period_end_local.date():
+                        is_future_debit = False
+                        
+                if row.transfer_to_effective_date is not None:
+                    transfer_date = row.transfer_to_effective_date
+                    if hasattr(transfer_date, "date"):
+                        transfer_date = transfer_date.date()
+                    if transfer_date > compliance_period_end_local.date():
+                        is_future_debit = False
+                        
+                # Check if this transaction belongs to an IA with future effective date
+                if row.ia_effective_date is not None:
+                    ia_date = row.ia_effective_date
+                    if hasattr(ia_date, "date"):
+                        ia_date = ia_date.date()
+                    if ia_date > compliance_period_end_local.date():
+                        is_future_debit = False
+                        
+                # Check if this transaction belongs to an admin adjustment with future effective date
+                if row.admin_effective_date is not None:
+                    admin_date = row.admin_effective_date
+                    if hasattr(admin_date, "date"):
+                        admin_date = admin_date.date()
+                    if admin_date > compliance_period_end_local.date():
+                        is_future_debit = False
+                
+                if is_future_debit:
+                    future_negative += compliance_units
+
+        # Calculate the available balance
+        available_balance = past_balance - abs(future_negative)
 
         # Return the balance, ensuring it doesn't go below zero
         return max(available_balance, 0)

@@ -12,7 +12,11 @@ import { testQueryClient } from '@/tests/utils/wrapper'
 vi.mock('@/layouts/MainLayout', () => {
   const { Outlet } = require('react-router-dom')
   return {
-    MainLayout: () => <div data-test="main-layout"><Outlet /></div>
+    MainLayout: () => (
+      <div data-test="main-layout">
+        <Outlet />
+      </div>
+    )
   }
 })
 
@@ -20,7 +24,11 @@ vi.mock('@/layouts/PublicLayout', () => {
   const { Outlet } = require('react-router-dom')
   return {
     __esModule: true,
-    default: () => <div data-test="public-layout"><Outlet /></div>
+    default: () => (
+      <div data-test="public-layout">
+        <Outlet />
+      </div>
+    )
   }
 })
 
@@ -45,7 +53,9 @@ vi.mock('@/views/Dashboard', () => ({
 }))
 
 vi.mock('@/views/Admin/AdminMenu', () => ({
-  AdminMenu: ({ tabIndex }) => <div data-test={`admin-menu-${tabIndex}`}>Admin Menu {tabIndex}</div>
+  AdminMenu: ({ tabIndex }) => (
+    <div data-test={`admin-menu-${tabIndex}`}>Admin Menu {tabIndex}</div>
+  )
 }))
 
 vi.mock('@/views/Admin/AdminMenu/components/ViewAuditLog', () => ({
@@ -53,7 +63,9 @@ vi.mock('@/views/Admin/AdminMenu/components/ViewAuditLog', () => ({
 }))
 
 vi.mock('@/views/Users', () => ({
-  AddEditUser: ({ userType }) => <div data-test={`add-edit-user-${userType}`}>Add/Edit User {userType}</div>
+  AddEditUser: ({ userType }) => (
+    <div data-test={`add-edit-user-${userType}`}>Add/Edit User {userType}</div>
+  )
 }))
 
 vi.mock('@/views/Admin/AdminMenu/components/ViewUser', () => ({
@@ -63,69 +75,112 @@ vi.mock('@/views/Admin/AdminMenu/components/ViewUser', () => ({
 
 vi.mock('@/views/Organizations', () => ({
   Organizations: () => <div data-test="organizations">Organizations</div>,
-  AddEditOrg: () => <div data-test="add-edit-organization">Add/Edit Organization</div>,
-  OrganizationView: () => <div data-test="view-organization">View Organization</div>
+  AddEditOrg: () => (
+    <div data-test="add-edit-organization">Add/Edit Organization</div>
+  ),
+  OrganizationView: () => (
+    <div data-test="view-organization">View Organization</div>
+  )
 }))
 
 vi.mock('@/views/Transactions', () => ({
   Transactions: () => <div data-test="transactions">Transactions</div>,
-  AddEditViewTransaction: () => <div data-test="add-edit-view-transaction">Add/Edit/View Transaction</div>,
-  ViewOrgTransaction: () => <div data-test="view-org-transaction">View Org Transaction</div>
+  AddEditViewTransaction: () => (
+    <div data-test="add-edit-view-transaction">Add/Edit/View Transaction</div>
+  ),
+  ViewOrgTransaction: () => (
+    <div data-test="view-org-transaction">View Org Transaction</div>
+  )
 }))
 
 vi.mock('@/views/Transfers', () => ({
   Transfers: () => <div data-test="transfers">Transfers</div>,
-  AddEditViewTransfer: () => <div data-test="add-edit-view-transfer">Add/Edit/View Transfer</div>
+  AddEditViewTransfer: () => (
+    <div data-test="add-edit-view-transfer">Add/Edit/View Transfer</div>
+  )
 }))
 
 vi.mock('@/views/ComplianceReports', () => ({
-  ComplianceReports: () => <div data-test="compliance-reports">Compliance Reports</div>,
-  CreditCalculator: () => <div data-test="credit-calculator">Credit Calculator</div>
+  ComplianceReports: () => (
+    <div data-test="compliance-reports">Compliance Reports</div>
+  ),
+  CreditCalculator: () => (
+    <div data-test="credit-calculator">Credit Calculator</div>
+  )
 }))
 
 vi.mock('@/views/ComplianceReports/ComplianceReportViewSelector', () => ({
-  ComplianceReportViewSelector: () => <div data-test="edit-view-compliance-report">Edit/View Compliance Report</div>
+  ComplianceReportViewSelector: () => (
+    <div data-test="edit-view-compliance-report">
+      Edit/View Compliance Report
+    </div>
+  )
 }))
 
 vi.mock('@/views/FuelCodes', () => ({
   FuelCodes: () => <div data-test="fuel-codes">Fuel Codes</div>,
   AddFuelCode: () => <div data-test="add-fuel-code">Add Fuel Code</div>,
-  AddEditFuelCode: () => <div data-test="add-edit-fuel-code">Add/Edit Fuel Code</div>,
+  AddEditFuelCode: () => (
+    <div data-test="add-edit-fuel-code">Add/Edit Fuel Code</div>
+  ),
   EditFuelCode: () => <div data-test="edit-fuel-code">Edit Fuel Code</div>
 }))
 
 vi.mock('@/views/Notifications/NotificationMenu', () => ({
-  NotificationMenu: ({ tabIndex }) => <div data-test={`notification-menu-${tabIndex || 0}`}>Notification Menu {tabIndex || 0}</div>
+  NotificationMenu: ({ tabIndex }) => (
+    <div data-test={`notification-menu-${tabIndex || 0}`}>
+      Notification Menu {tabIndex || 0}
+    </div>
+  )
 }))
 
 // Additional mocks for all route components
 vi.mock('@/views/FileSubmission', () => ({
-  FileSubmissionList: () => <div data-test="file-submission-list">File Submission List</div>
+  FileSubmissionList: () => (
+    <div data-test="file-submission-list">File Submission List</div>
+  )
 }))
 
-
 vi.mock('@/views/NotionalTransfers', () => ({
-  AddEditNotionalTransfers: () => <div data-test="add-edit-notional-transfers">Add/Edit Notional Transfers</div>
+  AddEditNotionalTransfers: () => (
+    <div data-test="add-edit-notional-transfers">
+      Add/Edit Notional Transfers
+    </div>
+  )
 }))
 
 vi.mock('@/views/AllocationAgreements/AddEditAllocationAgreements', () => ({
-  AddEditAllocationAgreements: () => <div data-test="add-edit-allocation-agreements">Add/Edit Allocation Agreements</div>
+  AddEditAllocationAgreements: () => (
+    <div data-test="add-edit-allocation-agreements">
+      Add/Edit Allocation Agreements
+    </div>
+  )
 }))
 
 vi.mock('@/views/OtherUses/AddEditOtherUses', () => ({
-  AddEditOtherUses: () => <div data-test="add-edit-other-uses">Add/Edit Other Uses</div>
+  AddEditOtherUses: () => (
+    <div data-test="add-edit-other-uses">Add/Edit Other Uses</div>
+  )
 }))
 
 vi.mock('@/views/FinalSupplyEquipments/AddEditFinalSupplyEquipments', () => ({
-  AddEditFinalSupplyEquipments: () => <div data-test="add-edit-final-supply-equipments">Add/Edit Final Supply Equipments</div>
+  AddEditFinalSupplyEquipments: () => (
+    <div data-test="add-edit-final-supply-equipments">
+      Add/Edit Final Supply Equipments
+    </div>
+  )
 }))
 
 vi.mock('@/views/FuelSupplies/AddEditFuelSupplies', () => ({
-  AddEditFuelSupplies: () => <div data-test="add-edit-fuel-supplies">Add/Edit Fuel Supplies</div>
+  AddEditFuelSupplies: () => (
+    <div data-test="add-edit-fuel-supplies">Add/Edit Fuel Supplies</div>
+  )
 }))
 
 vi.mock('@/views/FuelExports/AddEditFuelExports', () => ({
-  AddEditFuelExports: () => <div data-test="add-edit-fuel-exports">Add/Edit Fuel Exports</div>
+  AddEditFuelExports: () => (
+    <div data-test="add-edit-fuel-exports">Add/Edit Fuel Exports</div>
+  )
 }))
 
 // Mock authentication
@@ -148,15 +203,21 @@ vi.mock('@/components/RequireAuth', () => ({
   RequireAuth: ({ children, redirectTo }) => {
     const { keycloak } = useKeycloak()
     const { isError, error } = useCurrentUser()
-    
+
     if (isError) {
-      return <div data-test="user-error">User Error: {error?.response?.data?.detail || 'Unknown error'}</div>
+      return (
+        <div data-test="user-error">
+          User Error: {error?.response?.data?.detail || 'Unknown error'}
+        </div>
+      )
     }
-    
+
     if (!keycloak.authenticated) {
-      return <div data-test="redirect-to-login">Redirecting to {redirectTo}</div>
+      return (
+        <div data-test="redirect-to-login">Redirecting to {redirectTo}</div>
+      )
     }
-    
+
     return children
   }
 }))
@@ -204,12 +265,12 @@ describe('Router Configuration', () => {
   beforeEach(() => {
     // Reset to default unauthenticated state
     mockKeycloak.authenticated = false
-    
+
     useKeycloak.mockReturnValue({
       keycloak: mockKeycloak
     })
     useCurrentUser.mockReturnValue(mockCurrentUser)
-    
+
     // Clear session storage
     sessionStorage.clear()
   })
@@ -230,8 +291,8 @@ describe('Router Configuration', () => {
     })
 
     it('should have correct number of top-level routes', () => {
-      // Public layout, Main layout, API docs, logout, and 404 fallback
-      expect(router.routes).toHaveLength(5)
+      // Public layout, Public page layout, Main layout, API docs, logout, and 404 fallback
+      expect(router.routes).toHaveLength(6)
     })
   })
 
@@ -464,7 +525,9 @@ describe('Router Configuration', () => {
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('add-edit-view-transaction')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('add-edit-view-transaction')
+        ).toBeInTheDocument()
       })
     })
 
@@ -491,7 +554,9 @@ describe('Router Configuration', () => {
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('edit-view-compliance-report')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('edit-view-compliance-report')
+        ).toBeInTheDocument()
       })
     })
   })
@@ -517,7 +582,7 @@ describe('Router Configuration', () => {
 
     it('should handle logout route', async () => {
       const { logout } = await import('@/utils/keycloak')
-      
+
       const testRouter = createTestRouter(['/log-out'])
       renderRouterWithProviders(testRouter)
 
@@ -530,15 +595,19 @@ describe('Router Configuration', () => {
 
   describe('Route Metadata', () => {
     it('should have correct handle metadata for API docs route', () => {
-      const apiDocsRoute = router.routes.find(route => route.path === '/docs')
+      const apiDocsRoute = router.routes.find((route) => route.path === '/docs')
       expect(apiDocsRoute).toBeDefined()
       expect(apiDocsRoute.handle).toBeDefined()
       expect(apiDocsRoute.handle.crumb()).toBe('API Docs')
     })
 
     it('should have handle metadata for login route', () => {
-      const publicLayoutRoute = router.routes.find(route => route.element?.type?.name === 'default')
-      const loginRoute = publicLayoutRoute?.children?.find(route => route.path === '/login')
+      const publicLayoutRoute = router.routes.find(
+        (route) => route.element?.type?.name === 'default'
+      )
+      const loginRoute = publicLayoutRoute?.children?.find(
+        (route) => route.path === '/login'
+      )
       expect(loginRoute).toBeDefined()
       expect(loginRoute.handle).toBeDefined()
       expect(loginRoute.handle.title).toBe('Login')

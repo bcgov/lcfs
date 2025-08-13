@@ -124,6 +124,15 @@ async def test_update_organization_success(
         "organizationStatusId": 2,
         "organizationTypeId": 1,
         "hasEarlyIssuance": False,
+        # Include credit market fields with safe default values
+        "creditTradingEnabled": False,
+        "creditMarketContactName": None,
+        "creditMarketContactEmail": None,
+        "creditMarketContactPhone": None,
+        "creditMarketIsSeller": False,
+        "creditMarketIsBuyer": False,
+        "creditsToSell": 0,
+        "displayInCreditMarket": False,
         "address": {
             "name": "Test Operating name",
             "streetAddress": "123 Test Street",
@@ -145,6 +154,12 @@ async def test_update_organization_success(
     }
 
     response = await update_organization(client, fastapi_app, 1, payload)
+
+    # Debug: Print response details if it fails
+    if response.status_code != status.HTTP_200_OK:
+        print(f"Response status: {response.status_code}")
+        print(f"Response content: {response.content}")
+        print(f"Response text: {response.text}")
 
     assert response.status_code == status.HTTP_200_OK
 

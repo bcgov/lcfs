@@ -1,16 +1,50 @@
-// frontend/src/views/ComplianceReports/__tests__/CreditCalculator.test.jsx
-import { describe, it, expect } from 'vitest'
-import { render } from '@testing-library/react'
-import CreditCalculator from '../CreditCalculator' // Adjust path if needed
+import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { CreditCalculator } from '../CreditCalculator'
+import { wrapper } from '@/tests/utils/wrapper'
 
-// Basic test structure - expand with actual tests
-describe('CreditCalculator', () => {
-  it('should render without crashing', () => {
-    // Provide necessary props or context mocks if the component requires them
-    // const { getByText } = render(<CreditCalculator />);
-    // expect(getByText('Some Expected Text')).toBeInTheDocument();
-    expect(true).toBe(true) // Placeholder assertion
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key) => key })
+}))
+
+// Mock calculator hooks
+vi.mock('@/hooks/useCalculator', () => ({
+  useCalculateComplianceUnits: () => ({ data: null }),
+  useGetCompliancePeriodList: () => ({
+    data: { data: [{ description: '2022' }, { description: '2023' }] },
+    isLoading: false
+  }),
+  useGetFuelTypeList: () => ({
+    data: { data: [{ fuelType: 'Diesel', fuelTypeId: 1, fuelCategoryId: 1 }] },
+    isLoading: false
+  }),
+  useGetFuelTypeOptions: () => ({
+    data: {
+      unit: 'L',
+      eerRatios: [],
+      provisions: [],
+      fuelCodes: [],
+      energyDensity: { unit: { name: 'MJ/L' } }
+    },
+    isLoading: false
   })
+}))
 
-  // Add tests for calculation logic, user interactions, etc.
+vi.mock('@/hooks/useOrganization', () => ({
+  useCurrentOrgBalance: () => ({ data: { totalBalance: 1000 } })
+}))
+
+vi.mock('@/hooks/useCurrentUser', () => ({
+  useCurrentUser: () => ({ data: { organization: { organizationId: 1 } } })
+}))
+
+// Render helper
+const renderComponent = () => render(<CreditCalculator />, { wrapper })
+
+describe('CreditCalculator', () => {
+  it('renders Clear button and formula label', () => {
+    renderComponent()
+    expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument()
+    expect(screen.getByText(/qtySuppliedLabel/i)).toBeInTheDocument()
+  })
 })
