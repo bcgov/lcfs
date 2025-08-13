@@ -100,6 +100,7 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
       <FloatingAlert ref={alertRef} data-test="alert-box" />
       <BCBox
         sx={{
+          mt: 5,
           width: {
             md: '100%',
             lg: isEditMode ? '100%' : '90%'
