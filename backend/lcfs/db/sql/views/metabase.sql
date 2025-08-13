@@ -2137,3 +2137,77 @@ CREATE INDEX IF NOT EXISTS idx_fse_full_address_norm
     ON final_supply_equipment (LOWER(TRIM(street_address)), LOWER(TRIM(city)), LOWER(TRIM(postal_code)));
 CREATE INDEX IF NOT EXISTS idx_fse_organization_name_norm
     ON final_supply_equipment (LOWER(TRIM(organization_name)));
+
+-- ==========================================
+-- Notional Transfer Base View
+-- ==========================================
+DROP VIEW IF EXISTS vw_notional_transfer_base CASCADE;
+CREATE OR REPLACE VIEW vw_notional_transfer_base AS
+WITH latest_notional_transfers AS (
+    SELECT 
+        nt.notional_transfer_id,
+        nt.compliance_report_id,
+        nt.legal_name,
+        nt.address_for_service,
+        nt.fuel_category_id,
+        nt.received_or_transferred,
+        -- Handle quarterly vs annual reporting - use quarterly quantities if available, otherwise annual
+        CASE 
+            WHEN nt.q1_quantity IS NOT NULL OR nt.q2_quantity IS NOT NULL OR 
+                 nt.q3_quantity IS NOT NULL OR nt.q4_quantity IS NOT NULL THEN
+                COALESCE(nt.q1_quantity, 0) + COALESCE(nt.q2_quantity, 0) + 
+                COALESCE(nt.q3_quantity, 0) + COALESCE(nt.q4_quantity, 0)
+            ELSE nt.quantity
+        END as total_quantity,
+        nt.quantity as annual_quantity,
+        nt.q1_quantity,
+        nt.q2_quantity,
+        nt.q3_quantity,
+        nt.q4_quantity,
+        nt.create_date,
+        nt.update_date,
+        nt.create_user,
+        nt.update_user,
+        ROW_NUMBER() OVER (
+            PARTITION BY cr.compliance_report_group_uuid, nt.legal_name, nt.fuel_category_id, nt.received_or_transferred
+            ORDER BY cr.version DESC
+        ) as rn
+    FROM notional_transfer nt
+    JOIN compliance_report cr ON nt.compliance_report_id = cr.compliance_report_id
+    JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
+    WHERE crs.status != 'Draft'::compliancereportstatusenum
+)
+SELECT 
+    lnt.notional_transfer_id,
+    lnt.compliance_report_id,
+    lnt.legal_name as "Legal Name of Trading Partner",
+    lnt.address_for_service as "Address for Service",
+    fc.category as "Fuel Category",
+    lnt.received_or_transferred::text as "Received or Transferred",
+    lnt.total_quantity as "Quantity",
+    lnt.annual_quantity,
+    lnt.q1_quantity as "Q1 Quantity",
+    lnt.q2_quantity as "Q2 Quantity", 
+    lnt.q3_quantity as "Q3 Quantity",
+    lnt.q4_quantity as "Q4 Quantity",
+    cp.description as "Compliance Period",
+    org.name as "Organization Name",
+    crs.status::text as "Report Status",
+    cr.version as "Report Version",
+    lnt.create_date,
+    lnt.update_date,
+    lnt.create_user,
+    lnt.update_user,
+    cr.compliance_period_id,
+    cr.organization_id,
+    cr.current_status_id
+FROM latest_notional_transfers lnt
+JOIN compliance_report cr ON lnt.compliance_report_id = cr.compliance_report_id
+JOIN fuel_category fc ON lnt.fuel_category_id = fc.fuel_category_id
+JOIN compliance_period cp ON cr.compliance_period_id = cp.compliance_period_id
+JOIN organization org ON cr.organization_id = org.organization_id
+JOIN compliance_report_status crs ON cr.current_status_id = crs.compliance_report_status_id
+WHERE lnt.rn = 1  -- Only get the latest version for each unique combination
+ORDER BY cp.description DESC, org.name, lnt.legal_name, fc.category;
+
+GRANT SELECT ON vw_notional_transfer_base TO basic_lcfs_reporting_role;
