@@ -65,15 +65,6 @@ export const Transactions = () => {
   const downloadButtonRef = useRef(null)
   const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
   
-  // Get full organization data to access creditTradingEnabled
-  const { data: organizationData } = useOrganization(
-    currentUser?.organization?.organizationId,
-    {
-      enabled: !!currentUser?.organization?.organizationId,
-      staleTime: 0,
-      cacheTime: 0
-    }
-  )
 
   const [searchParams] = useSearchParams()
   const highlightedId = searchParams.get('hid')
@@ -285,9 +276,8 @@ export const Transactions = () => {
   const isRegistered =
     currentUser?.organization?.orgStatus?.status ===
     ORGANIZATION_STATUSES.REGISTERED
-  const creditTradingEnabled = organizationData?.creditTradingEnabled || false
   const showCreditTradingTab =
-    hasRoles(roles.government) || (isBCeIDUser && isRegistered && creditTradingEnabled)
+    hasRoles(roles.government) || (isBCeIDUser && isRegistered)
 
   // Build tabs array
   const tabs = [
