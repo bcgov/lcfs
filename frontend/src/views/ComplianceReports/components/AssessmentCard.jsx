@@ -145,6 +145,9 @@ export const AssessmentCard = ({
                 complianceReportId={complianceReportId}
                 isEditing={isEditing}
                 setIsEditing={setIsEditing}
+                isGovernmentUser={isGovernmentUser}
+                orgID={orgData?.organizationId}
+                reportID={complianceReportId}
               />
             )}
             {filteredChain?.length > 0 &&

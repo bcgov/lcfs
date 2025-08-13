@@ -16,14 +16,20 @@ import { faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
 import * as Yup from 'yup'
 import { PHONE_REGEX } from '@/constants/common.js'
 import BCModal from '@/components/BCModal.jsx'
+import { useNavigate } from 'react-router-dom'
+import { ROUTES } from '@/routes/routes.js'
 
 export const OrganizationAddress = ({
   snapshotData,
   complianceReportId,
   isEditing,
-  setIsEditing
+  setIsEditing,
+  isGovernmentUser,
+  orgID,
+  reportID
 }) => {
   const { t } = useTranslation(['common', 'report', 'org'])
+  const navigate = useNavigate()
   const [modalData, setModalData] = useState(null)
   const [sameAsLegalName, setSameAsLegalName] = useState(false)
   const [recordsSameAsService, setRecordsSameAsService] = useState(false)
@@ -259,35 +265,53 @@ export const OrganizationAddress = ({
   // Helper to show either the value or 'Required' in read-only mode
   const displayAddressValue = (value) => (value?.trim() ? value : '')
 
+  const handleUpdateOrgInfo = () => {
+    navigate(ROUTES.ORGANIZATIONS.EDIT.replace(':orgID', orgID), {
+      state: { organizationSnapshot: snapshotData, reportID }
+    })
+  }
+
   return (
     <BCTypography variant="body4" color="text">
       {!isEditing && (
-        <List
-          sx={{
-            listStyleType: 'disc',
-            listStylePosition: 'outside',
-            pl: 2.5,
-            '& .MuiListItem-root': {
-              display: 'list-item',
-              py: 0.5,
-              paddingLeft: 0
-            }
-          }}
-        >
-          {allFormFields.map(({ name, label }) => (
-            <ListItem key={name} sx={{ display: 'flex' }}>
-              <strong>{label}:</strong>{' '}
-              <span>
-                {displayAddressValue(snapshotData[name]) ||
-                  (requiredFields.includes(name) && (
-                    <BCTypography variant="body4" color="error">
-                      Required
-                    </BCTypography>
-                  ))}
-              </span>
-            </ListItem>
-          ))}
-        </List>
+        <>
+          <List
+            sx={{
+              listStyleType: 'disc',
+              listStylePosition: 'outside',
+              pl: 2.5,
+              '& .MuiListItem-root': {
+                display: 'list-item',
+                py: 0.5,
+                paddingLeft: 0
+              }
+            }}
+          >
+            {allFormFields.map(({ name, label }) => (
+              <ListItem key={name} sx={{ display: 'flex' }}>
+                <strong>{label}:</strong>{' '}
+                <span>
+                  {displayAddressValue(snapshotData[name]) ||
+                    (requiredFields.includes(name) && (
+                      <BCTypography variant="body4" color="error">
+                        Required
+                      </BCTypography>
+                    ))}
+                </span>
+              </ListItem>
+            ))}
+          </List>
+          {isGovernmentUser && snapshotData?.isEdited && (
+            <BCButton
+              variant="outlined"
+              color="primary"
+              onClick={handleUpdateOrgInfo}
+              style={{ marginTop: '1rem' }}
+            >
+              {t('report:updateOrgInfo')}
+            </BCButton>
+          )}
+        </>
       )}
 
       {isEditing && (

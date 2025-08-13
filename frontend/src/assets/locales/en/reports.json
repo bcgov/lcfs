@@ -84,6 +84,7 @@
   "createIdirSupplementalConfirmText": "This will create a draft supplemental report for the supplier, further processing will be disabled for government users.",
   "createBceidSupplementalConfirmText": "A supplemental report must be submitted within 30 days of its creation. Failure to do so will result in the draft report being automatically submitted to the Government of British Columbia, and may lead to a discretionary penalty.",
   "supplementalExpiryWarningText": "Please submit this supplemental report by {{deadlineDate}}. After 30 days from the date of creation, the report will be automatically submitted to the Government of British Columbia, and may lead to a discretionary penalty.",
+  "updateOrgInfo": "Update organization info",
   "recommendConfirmText": "Are you sure you want to recommend this compliance report?",
   "returnToAnalystConfirmText": "Are you sure you want to return this compliance report back to analyst?",
   "returnToManagerConfirmText": "Are you sure you want to return this compliance report back to compliance manager?",
@@ -271,6 +272,7 @@
   "qtySuppliedLabel": "Quantity supplied",
   "formulaBefore2024": "Credit or Debit = (CI class × EER fuel – CI fuel) × EC fuel/1,000,000",
   "formulaAfter2024": "Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000",
+  "formulaECDefinition": "EC = quantity * energy density",
   "ciParameters": {
     "tci": "Target carbon intensity",
     "eer": "Energy effectiveness ratio",
