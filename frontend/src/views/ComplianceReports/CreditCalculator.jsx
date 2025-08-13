@@ -291,6 +291,7 @@ Fuel code: ${fuelCode || 'N/A'}
 Quantity supplied: ${quantity?.toLocaleString() || 0} ${unit}
 
 Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000
+${t('report:formulaECDefinition')}
 
 TCI - Target carbon intensity        ${resultData.formulaValues.carbonIntensity}
 EER - Energy effectiveness ratio     ${resultData.formulaValues.eer}
@@ -932,18 +933,22 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                 </BCBox>
 
                 {/* Compliance units formula */}
-                <BCTypography
-                  variant="body2"
-                  sx={{
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    mb: 2
-                  }}
-                >
-                  {parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR
-                    ? t('report:formulaBefore2024')
-                    : t('report:formulaAfter2024')}
-                </BCTypography>
+                <BCBox sx={{ textAlign: 'center', mb: 2 }}>
+                  {parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR ? (
+                    <BCTypography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {t('report:formulaBefore2024')}
+                    </BCTypography>
+                  ) : (
+                    <BCBox sx={{ display: 'inline-block', textAlign: 'left' }}>
+                      <BCTypography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        {t('report:formulaAfter2024')}
+                      </BCTypography>
+                      <BCTypography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        {t('report:formulaECDefinition')}
+                      </BCTypography>
+                    </BCBox>
+                  )}
+                </BCBox>
 
                 {/* Formula values table */}
                 <Paper
