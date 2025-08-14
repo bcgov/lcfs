@@ -371,6 +371,14 @@ async def lcfs_cache_key_builder(
     return cache_key
 
 
+class AudienceType(Enum):
+    """Defines the target audience for notifications."""
+    SAME_ORGANIZATION = "same_organization"  # Notify users in the same organization + government
+    OTHER_ORGANIZATIONS = "other_organizations"  # Notify all other organizations (exclude posting org + government)
+    GOVERNMENT_ONLY = "government_only"  # Notify only government users
+    ALL_EXCEPT_POSTING_ORG = "all_except_posting_org"  # Notify everyone except the posting organization
+
+
 class NotificationTypeEnum(Enum):
     BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT = (
         "BCEID__COMPLIANCE_REPORT__DIRECTOR_ASSESSMENT"

@@ -4,6 +4,7 @@ from lcfs.db.models.notification.NotificationChannel import (
     ChannelEnum,
     NotificationChannel,
 )
+from lcfs.web.api.base import AudienceType
 from lcfs.web.core.decorators import repo_handler
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import func, select, or_, and_
@@ -19,7 +20,7 @@ class CHESEmailRepository:
 
     @repo_handler
     async def get_subscribed_user_emails(
-        self, notification_type: str, organization_id: int
+        self, notification_type: str, organization_id: int, audience_type: AudienceType = AudienceType.SAME_ORGANIZATION
     ) -> List[str]:
         """
         Retrieve emails of users subscribed to a specific notification type and for the Email channel.
@@ -49,16 +50,24 @@ class CHESEmailRepository:
             )
         )
         
-        # Apply organization filtering based on notification type
+        # Apply organization filtering based on audience type
         if organization_id is not None:
-            if notification_type == "BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE":
-                # For credit market notifications, notify OTHER organizations (not the posting org)
+            if audience_type == AudienceType.OTHER_ORGANIZATIONS:
+                # Notify all other organizations (exclude posting org + government)
                 query = query.filter(
-                    UserProfile.organization_id != organization_id,  # Exclude posting org
-                    UserProfile.organization_id.is_not(None),       # Exclude government users
+                    and_(
+                        UserProfile.organization_id != organization_id,  # Exclude posting org
+                        UserProfile.organization_id.is_not(None),       # Exclude government users
+                    )
                 )
-            else:
-                # For other notifications, use the original logic (notify the specific org + government)
+            elif audience_type == AudienceType.GOVERNMENT_ONLY:
+                # Notify only government users
+                query = query.filter(UserProfile.organization_id.is_(None))
+            elif audience_type == AudienceType.ALL_EXCEPT_POSTING_ORG:
+                # Notify everyone except the posting organization
+                query = query.filter(UserProfile.organization_id != organization_id)
+            else:  # AudienceType.SAME_ORGANIZATION (default)
+                # Notify the specific organization + government users
                 query = query.filter(
                     or_(
                         UserProfile.organization_id == organization_id,

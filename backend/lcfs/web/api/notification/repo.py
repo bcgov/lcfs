@@ -9,6 +9,7 @@ from lcfs.db.models.organization import Organization
 from lcfs.db.models.user.Role import Role, RoleEnum
 from lcfs.db.models.user.UserRole import UserRole
 from lcfs.web.api.base import (
+    AudienceType,
     NotificationTypeEnum,
     PaginationRequestSchema,
     apply_filter_conditions,
@@ -481,6 +482,7 @@ class NotificationRepository:
         notification_type: NotificationTypeEnum,
         channel: ChannelEnum,
         organization_id: int = None,
+        audience_type: AudienceType = AudienceType.SAME_ORGANIZATION,
     ) -> List[int]:
         """
         Retrieve a list of user ids subscribed to a notification type
@@ -515,18 +517,24 @@ class NotificationRepository:
             )
         )
         
-        # Apply organization filtering based on notification type
+        # Apply organization filtering based on audience type
         if organization_id is not None:
-            if notification_type.value == "BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE":
-                # For credit market notifications, notify OTHER organizations (not the posting org)
+            if audience_type == AudienceType.OTHER_ORGANIZATIONS:
+                # Notify all other organizations (exclude posting org + government)
                 query = query.filter(
                     and_(
                         UserProfile.organization_id != organization_id,  # Exclude posting org
                         UserProfile.organization_id.is_not(None),       # Exclude government users
                     )
                 )
-            else:
-                # For other notifications, use the original logic (notify the specific org + government)
+            elif audience_type == AudienceType.GOVERNMENT_ONLY:
+                # Notify only government users
+                query = query.filter(UserProfile.organization_id.is_(None))
+            elif audience_type == AudienceType.ALL_EXCEPT_POSTING_ORG:
+                # Notify everyone except the posting organization
+                query = query.filter(UserProfile.organization_id != organization_id)
+            else:  # AudienceType.SAME_ORGANIZATION (default)
+                # Notify the specific organization + government users
                 query = query.filter(
                     or_(
                         UserProfile.organization_id == organization_id,
