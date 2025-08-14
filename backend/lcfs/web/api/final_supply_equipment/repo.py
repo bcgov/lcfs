@@ -429,27 +429,10 @@ class FinalSupplyEquipmentRepository:
                 FinalSupplyEquipment.final_supply_equipment_id
                 != row.final_supply_equipment_id
             )
-            logger.debug(
-                "FSE uniqueness check - excluding self",
-                excluding_fse_id=row.final_supply_equipment_id,
-                compliance_report_id=row.compliance_report_id
-            )
-        else:
-            logger.debug(
-                "FSE uniqueness check - no exclusion (new record)",
-                compliance_report_id=row.compliance_report_id
-            )
 
         query = select(exists().where(*conditions))
         result = await self.db.execute(query)
         found_duplicate = result.scalar()
-        
-        logger.debug(
-            "FSE uniqueness result",
-            found_duplicate=found_duplicate,
-            final_supply_equipment_id=row.final_supply_equipment_id,
-            compliance_report_id=row.compliance_report_id
-        )
 
         return found_duplicate
 
