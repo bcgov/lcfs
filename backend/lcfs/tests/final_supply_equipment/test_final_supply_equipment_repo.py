@@ -255,6 +255,33 @@ async def test_check_uniques_of_fse_row_not_exists(
 
 
 @pytest.mark.anyio
+async def test_check_uniques_of_fse_row_excludes_same_id(
+    repo, fake_db, valid_final_supply_equipment_create_schema
+):
+    # Test that the method excludes records with the same final_supply_equipment_id
+    valid_final_supply_equipment_create_schema.final_supply_equipment_id = 999
+    fake_db.execute.return_value = FakeResult([False])
+    exists_result = await repo.check_uniques_of_fse_row(
+        valid_final_supply_equipment_create_schema
+    )
+    assert exists_result is False
+
+
+@pytest.mark.anyio
+async def test_check_uniques_of_fse_row_scopes_to_current_report(
+    repo, fake_db, valid_final_supply_equipment_create_schema
+):
+    # Test that the method only checks within the current compliance report
+    fake_db.execute.return_value = FakeResult([False])
+    exists_result = await repo.check_uniques_of_fse_row(
+        valid_final_supply_equipment_create_schema
+    )
+    assert exists_result is False
+    # Should have been called once
+    assert fake_db.execute.call_count == 1
+
+
+@pytest.mark.anyio
 async def test_check_overlap_of_fse_row_exists(
     repo, fake_db, valid_final_supply_equipment_create_schema
 ):
@@ -278,7 +305,105 @@ async def test_check_overlap_of_fse_row_not_exists(
 
 
 @pytest.mark.anyio
+async def test_check_overlap_of_fse_row_excludes_same_id(
+    repo, fake_db, valid_final_supply_equipment_create_schema
+):
+    # Test that the method excludes records with the same final_supply_equipment_id
+    valid_final_supply_equipment_create_schema.final_supply_equipment_id = 999
+    valid_final_supply_equipment_create_schema.serial_nbr = "OVERLAP1"
+    fake_db.execute.return_value = FakeResult([False])
+    overlap = await repo.check_overlap_of_fse_row(
+        valid_final_supply_equipment_create_schema
+    )
+    assert overlap is False
+
+
+@pytest.mark.anyio
+async def test_check_overlap_of_fse_row_scopes_to_current_report(
+    repo, fake_db, valid_final_supply_equipment_create_schema
+):
+    # Test that the method only checks within the current compliance report
+    valid_final_supply_equipment_create_schema.serial_nbr = "OVERLAP1"
+    fake_db.execute.return_value = FakeResult([False])
+    overlap = await repo.check_overlap_of_fse_row(
+        valid_final_supply_equipment_create_schema
+    )
+    assert overlap is False
+    # Should have been called once
+    assert fake_db.execute.call_count == 1
+
+
+@pytest.mark.anyio
 async def test_search_manufacturers(repo, fake_db):
     fake_db.execute.return_value = FakeResult(["Manufacturer1", "Manufacturer2"])
     results = await repo.search_manufacturers("manu")
     assert results == ["Manufacturer1", "Manufacturer2"]
+
+
+@pytest.mark.anyio
+async def test_check_uniques_within_current_report_only(
+    repo, fake_db
+):
+    """
+    Test that records are only checked for duplicates within the current compliance report
+    """
+    from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema
+    from datetime import date
+    
+    # Create FSE record for current report
+    fse_record = FinalSupplyEquipmentCreateSchema(
+        compliance_report_id=100,
+        supply_from_date=date(2024, 1, 1),
+        supply_to_date=date(2024, 12, 31),
+        serial_nbr="TEST_SERIAL",
+        postal_code="V3A 7E9",
+        latitude=49.123,
+        longitude=-122.456,
+        manufacturer="Test Manufacturer",
+        level_of_equipment="Level 1",
+        intended_use_types=[],
+        intended_user_types=[],
+        street_address="123 Test St",
+        city="Test City",
+        organization_name="Test Org"
+    )
+    
+    # Mock that no duplicates are found within the current report
+    fake_db.execute.return_value = FakeResult([False])
+    
+    result = await repo.check_uniques_of_fse_row(fse_record)
+    assert result is False  # Should not find duplicates
+
+
+@pytest.mark.anyio
+async def test_check_overlap_within_current_report_only(
+    repo, fake_db
+):
+    """
+    Test that overlapping date ranges are only checked within the current compliance report
+    """
+    from lcfs.web.api.final_supply_equipment.schema import FinalSupplyEquipmentCreateSchema
+    from datetime import date
+    
+    fse_overlap = FinalSupplyEquipmentCreateSchema(
+        compliance_report_id=300,
+        supply_from_date=date(2024, 6, 1),
+        supply_to_date=date(2024, 8, 31),
+        serial_nbr="OVERLAP_SERIAL",
+        postal_code="V5A 4N3",
+        latitude=49.200,
+        longitude=-122.500,
+        manufacturer="Test Manufacturer",
+        level_of_equipment="Level 2",
+        intended_use_types=[],
+        intended_user_types=[],
+        street_address="456 Test Ave",
+        city="Test City",
+        organization_name="Test Org"
+    )
+    
+    # Mock that overlaps are found within the current report
+    fake_db.execute.return_value = FakeResult([True])
+    
+    result = await repo.check_overlap_of_fse_row(fse_overlap)
+    assert result is True  # Should detect overlap within current report

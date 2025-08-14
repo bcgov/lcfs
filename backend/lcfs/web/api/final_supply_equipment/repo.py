@@ -4,7 +4,7 @@ import structlog
 from fastapi import Depends
 from sqlalchemy import and_, delete, distinct, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, aliased
 
 from lcfs.db.dependencies import get_async_db_session
 from lcfs.db.models import Organization
@@ -412,8 +412,10 @@ class FinalSupplyEquipmentRepository:
         """
         Check if a duplicate final supply equipment row exists in the database based on the provided data.
         Returns True if a duplicate is found, False otherwise.
+        Only checks within the current compliance report to avoid false duplicates across versions.
         """
         conditions = [
+            FinalSupplyEquipment.compliance_report_id == row.compliance_report_id,
             FinalSupplyEquipment.supply_from_date == row.supply_from_date,
             FinalSupplyEquipment.supply_to_date == row.supply_to_date,
             FinalSupplyEquipment.serial_nbr == row.serial_nbr,
@@ -430,8 +432,9 @@ class FinalSupplyEquipmentRepository:
 
         query = select(exists().where(*conditions))
         result = await self.db.execute(query)
+        found_duplicate = result.scalar()
 
-        return result.scalar()
+        return found_duplicate
 
     @repo_handler
     async def check_overlap_of_fse_row(
@@ -440,8 +443,10 @@ class FinalSupplyEquipmentRepository:
         """
         Check if there's an overlapping final supply equipment row in the database based on the provided data.
         Returns True if an overlap is found, False otherwise.
+        Only checks within the current compliance report to avoid false overlaps across versions.
         """
         conditions = [
+            FinalSupplyEquipment.compliance_report_id == row.compliance_report_id,
             and_(
                 FinalSupplyEquipment.supply_from_date <= row.supply_to_date,
                 FinalSupplyEquipment.supply_to_date >= row.supply_from_date,
