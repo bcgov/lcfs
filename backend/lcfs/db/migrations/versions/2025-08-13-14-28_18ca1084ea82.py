@@ -1,7 +1,7 @@
 """Create forms with organization link keys
 
 Revision ID: 18ca1084ea82
-Revises: 9f640abe256d
+Revises: 3f5a7b9c1d2e
 Create Date: 2025-08-07 14:28:00.000000
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "18ca1084ea82"
-down_revision = "9f640abe256d"
+down_revision = "3f5a7b9c1d2e"
 branch_labels = None
 depends_on = None
 
