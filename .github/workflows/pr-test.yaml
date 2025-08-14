@@ -77,7 +77,7 @@ jobs:
           # Run pg_dump inside the container (no version mismatch)
           # Exclude ownership and privileges to avoid role issues
           docker exec $CONTAINER_ID pg_dump -U lcfs -d lcfs \
-            --no-owner --no-privileges --clean --if-exists > lcfs_template.sql
+            --no-owner --no-privileges > lcfs_template.sql
 
       - name: Upload database template
         uses: actions/upload-artifact@v4
