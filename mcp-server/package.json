@@ -1,0 +1,33 @@
+{
+  "name": "lcfs-mcp-server",
+  "version": "1.0.0",
+  "description": "LCFS Model Context Protocol server for local development",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "lcfs-mcp-server": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc && node dist/index.js",
+    "start": "node dist/index.js",
+    "mcp": "npm run build && node dist/index.js",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["mcp", "lcfs", "development", "model-context-protocol"],
+  "author": "LCFS Development Team",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "dockerode": "^4.0.2",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.29",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
