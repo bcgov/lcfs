@@ -2,6 +2,7 @@ import logging
 import os
 import debugpy
 import uuid
+import re
 
 import structlog
 from fastapi import FastAPI, HTTPException
@@ -71,10 +72,16 @@ class LazyAuthenticationBackend(AuthenticationBackend):
         if request.scope["method"] == "OPTIONS":
             return AuthCredentials([]), UnauthenticatedUser()
 
-        if (
-            request.url.path.startswith("/api/calculator")
-            or request.url.path == "/api/health"
-        ):  # Skip authentication check
+        # Check for specific paths that should skip authentication
+        path = request.url.path
+
+        # Always skip auth for these paths
+        if path.startswith("/api/calculator") or path == "/api/health":
+            return AuthCredentials([]), UnauthenticatedUser()
+
+        # Skip auth for anonymous form access via secure link keys
+        # Pattern: /api/forms/{form_slug}/{link_key}
+        if re.match(r"^/api/forms/[a-zA-Z0-9_-]{1,50}/[A-Za-z0-9_-]{16,128}/?$", path):
             return AuthCredentials([]), UnauthenticatedUser()
 
         # Lazily retrieve Redis, session, and settings from app state

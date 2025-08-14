@@ -317,3 +317,152 @@ export const useCreditMarketListings = (options = {}) => {
     ...restOptions
   })
 }
+
+// Link Key Management Hooks
+export const useAvailableFormTypes = (orgID, options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['available-form-types', orgID],
+    queryFn: async () => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      const response = await client.get(`/organizations/${orgID}/forms`)
+      return response.data
+    },
+    enabled: enabled && !!orgID,
+    staleTime,
+    cacheTime,
+    ...restOptions
+  })
+}
+
+export const useOrganizationLinkKeys = (orgID, options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization-link-keys', orgID],
+    queryFn: async () => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      const response = await client.get(`/organizations/${orgID}/link-keys`)
+      return response.data
+    },
+    enabled: enabled && !!orgID,
+    staleTime,
+    cacheTime,
+    ...restOptions
+  })
+}
+
+export const useGenerateLinkKey = (orgID, options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async ({ formId }) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      return await client.post(`/organizations/${orgID}/link-keys`, {
+        form_id: formId
+      })
+    },
+    onSuccess: (data, variables, context) => {
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries(['organization-link-keys', orgID])
+      }
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useRegenerateLinkKey = (orgID, options = {}) => {
+  const client = useApiService()
+  const queryClient = useQueryClient()
+
+  const {
+    onSuccess,
+    onError,
+    invalidateRelatedQueries = true,
+    ...restOptions
+  } = options
+
+  return useMutation({
+    mutationFn: async (formId) => {
+      if (!orgID) {
+        throw new Error('Organization ID is required')
+      }
+      if (!formId) {
+        throw new Error('Form ID is required')
+      }
+      return await client.put(`/organizations/${orgID}/link-keys/${formId}`)
+    },
+    onSuccess: (data, variables, context) => {
+      if (invalidateRelatedQueries) {
+        queryClient.invalidateQueries(['organization-link-keys', orgID])
+      }
+      onSuccess?.(data, variables, context)
+    },
+    onError: (error, variables, context) => {
+      onError?.(error, variables, context)
+    },
+    ...restOptions
+  })
+}
+
+export const useValidateLinkKey = (linkKey, options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['validate-link-key', linkKey],
+    queryFn: async () => {
+      if (!linkKey) {
+        throw new Error('Link key is required')
+      }
+      const response = await client.get(
+        `/organizations/validate-link-key/${linkKey}`
+      )
+      return response.data
+    },
+    enabled: enabled && !!linkKey,
+    staleTime,
+    cacheTime,
+    retry: 1, // Don't retry validation failures
+    ...restOptions
+  })
+}

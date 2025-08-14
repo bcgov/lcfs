@@ -103,6 +103,11 @@ export const ROUTES = {
     ADD: '/fuel-codes/add-fuel-code',
     EDIT: '/fuel-codes/:fuelCodeID',
     EXPORT: '/fuel-codes/export'
+  },
+
+  FORMS: {
+    VIEW: '/forms/:formSlug/:linkKey',
+    VIEW_AUTHENTICATED: '/forms/:formSlug'
   }
 }
 

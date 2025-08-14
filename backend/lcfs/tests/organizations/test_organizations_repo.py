@@ -471,3 +471,275 @@ async def test_get_organizations_paginated_with_early_issuance_filter(
     assert isinstance(organizations, list)
     assert isinstance(total_count, int)
     assert total_count >= 0
+
+
+# Link Key Tests
+@pytest.mark.anyio
+async def test_get_organization_link_keys_success(
+    organizations_repo, add_models, unique_id
+):
+    """Test successful retrieval of organization link keys"""
+    from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
+    from lcfs.db.models.form.Form import Form
+
+    org_id = unique_id
+    form_id = unique_id + 1
+
+    # Create test data
+    test_org = Organization(organization_id=org_id, name="Test Org")
+    test_form = Form(
+        form_id=form_id, name="Test Form", slug="test-form", allows_anonymous=True
+    )
+    test_link_key = OrganizationLinkKey(
+        organization_id=org_id, form_id=form_id, link_key="test-key-123"
+    )
+
+    await add_models([test_org, test_form, test_link_key])
+
+    # Test the method
+    result = await organizations_repo.get_organization_link_keys(org_id)
+
+    assert len(result) == 1
+    assert result[0].organization_id == org_id
+    assert result[0].form_id == form_id
+    assert result[0].link_key == "test-key-123"
+
+
+@pytest.mark.anyio
+async def test_get_organization_link_keys_empty(organizations_repo, unique_id):
+    """Test retrieval when no link keys exist for organization"""
+    org_id = unique_id
+
+    result = await organizations_repo.get_organization_link_keys(org_id)
+
+    assert len(result) == 0
+
+
+@pytest.mark.anyio
+async def test_get_link_key_by_form_id_success(
+    organizations_repo, add_models, unique_id
+):
+    """Test successful retrieval of link key by form ID"""
+    from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
+    from lcfs.db.models.form.Form import Form
+
+    org_id = unique_id
+    form_id = unique_id + 1
+
+    # Create test data
+    test_org = Organization(organization_id=org_id, name="Test Org")
+    test_form = Form(
+        form_id=form_id, name="Test Form", slug="test-form", allows_anonymous=True
+    )
+    test_link_key = OrganizationLinkKey(
+        organization_id=org_id, form_id=form_id, link_key="test-key-456"
+    )
+
+    await add_models([test_org, test_form, test_link_key])
+
+    # Test the method
+    result = await organizations_repo.get_link_key_by_form_id(org_id, form_id)
+
+    assert result is not None
+    assert result.organization_id == org_id
+    assert result.form_id == form_id
+    assert result.link_key == "test-key-456"
+
+
+@pytest.mark.anyio
+async def test_get_link_key_by_form_id_not_found(organizations_repo, unique_id):
+    """Test retrieval when link key doesn't exist for form ID"""
+    org_id = unique_id
+    form_id = unique_id + 1
+
+    result = await organizations_repo.get_link_key_by_form_id(org_id, form_id)
+
+    assert result is None
+
+
+@pytest.mark.anyio
+async def test_get_link_key_by_key_success(organizations_repo, add_models, unique_id):
+    """Test successful retrieval of link key by key value"""
+    from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
+    from lcfs.db.models.form.Form import Form
+
+    org_id = unique_id
+    form_id = unique_id + 1
+    link_key_value = f"test-key-{unique_id}"
+
+    # Create test data
+    test_org = Organization(organization_id=org_id, name="Test Org")
+    test_form = Form(
+        form_id=form_id, name="Test Form", slug="test-form", allows_anonymous=True
+    )
+    test_link_key = OrganizationLinkKey(
+        organization_id=org_id, form_id=form_id, link_key=link_key_value
+    )
+
+    await add_models([test_org, test_form, test_link_key])
+
+    # Test the method
+    result = await organizations_repo.get_link_key_by_key(link_key_value)
+
+    assert result is not None
+    assert result.organization_id == org_id
+    assert result.form_id == form_id
+    assert result.link_key == link_key_value
+
+
+@pytest.mark.anyio
+async def test_get_link_key_by_key_not_found(organizations_repo):
+    """Test retrieval when link key doesn't exist"""
+    result = await organizations_repo.get_link_key_by_key("nonexistent-key")
+
+    assert result is None
+
+
+@pytest.mark.anyio
+async def test_create_link_key_success(organizations_repo, add_models, unique_id):
+    """Test successful creation of link key"""
+    from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
+    from lcfs.db.models.form.Form import Form
+
+    org_id = unique_id
+    form_id = unique_id + 1
+
+    # Create prerequisite data
+    test_org = Organization(organization_id=org_id, name="Test Org")
+    test_form = Form(
+        form_id=form_id, name="Test Form", slug="test-form", allows_anonymous=True
+    )
+    await add_models([test_org, test_form])
+
+    # Create new link key
+    new_link_key = OrganizationLinkKey(
+        organization_id=org_id, form_id=form_id, link_key="new-test-key-789"
+    )
+
+    # Test the method
+    result = await organizations_repo.create_link_key(new_link_key)
+
+    assert result is not None
+    assert result.organization_id == org_id
+    assert result.form_id == form_id
+    assert result.link_key == "new-test-key-789"
+    assert result.link_key_id is not None  # Should be assigned after creation
+
+
+@pytest.mark.anyio
+async def test_update_link_key_success(organizations_repo, add_models, unique_id):
+    """Test successful update of link key"""
+    from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
+    from lcfs.db.models.form.Form import Form
+
+    org_id = unique_id
+    form_id = unique_id + 1
+
+    # Create test data
+    test_org = Organization(organization_id=org_id, name="Test Org")
+    test_form = Form(
+        form_id=form_id, name="Test Form", slug="test-form", allows_anonymous=True
+    )
+    test_link_key = OrganizationLinkKey(
+        organization_id=org_id, form_id=form_id, link_key="original-key"
+    )
+
+    await add_models([test_org, test_form, test_link_key])
+
+    # Update the link key
+    test_link_key.link_key = "updated-key"
+
+    # Test the method
+    result = await organizations_repo.update_link_key(test_link_key)
+
+    assert result is not None
+    assert result.link_key == "updated-key"
+    assert result.organization_id == org_id
+    assert result.form_id == form_id
+
+
+@pytest.mark.anyio
+async def test_get_form_by_id_success(organizations_repo, add_models, unique_id):
+    """Test successful retrieval of form by ID"""
+    from lcfs.db.models.form.Form import Form
+
+    form_id = unique_id
+
+    # Create test form
+    test_form = Form(
+        form_id=form_id,
+        name="Test Form",
+        slug="test-form",
+        description="A test form",
+        allows_anonymous=True,
+    )
+
+    await add_models([test_form])
+
+    # Test the method
+    result = await organizations_repo.get_form_by_id(form_id)
+
+    assert result is not None
+    assert result.form_id == form_id
+    assert result.name == "Test Form"
+    assert result.slug == "test-form"
+    assert result.allows_anonymous is True
+
+
+@pytest.mark.anyio
+async def test_get_form_by_id_not_found(organizations_repo, unique_id):
+    """Test retrieval when form doesn't exist"""
+    form_id = unique_id
+
+    result = await organizations_repo.get_form_by_id(form_id)
+
+    assert result is None
+
+
+@pytest.mark.anyio
+async def test_get_available_forms_for_link_keys_success(
+    organizations_repo, add_models, unique_id
+):
+    """Test successful retrieval of forms that allow anonymous access"""
+    from lcfs.db.models.form.Form import Form
+
+    form_id_1 = unique_id
+    form_id_2 = unique_id + 1
+    form_id_3 = unique_id + 2
+
+    # Create test forms - some allow anonymous, some don't
+    test_forms = [
+        Form(
+            form_id=form_id_1,
+            name="Anonymous Form 1",
+            slug="anon-form-1",
+            allows_anonymous=True,
+        ),
+        Form(
+            form_id=form_id_2,
+            name="Private Form",
+            slug="private-form",
+            allows_anonymous=False,
+        ),
+        Form(
+            form_id=form_id_3,
+            name="Anonymous Form 2",
+            slug="anon-form-2",
+            allows_anonymous=True,
+        ),
+    ]
+
+    await add_models(test_forms)
+
+    # Test the method
+    result = await organizations_repo.get_available_forms_for_link_keys()
+
+    # Should only return forms that allow anonymous access
+    anonymous_forms = [form for form in result if form.allows_anonymous]
+    assert len(anonymous_forms) >= 2  # At least our test forms
+
+    # Check our specific test forms are included
+    form_names = [form.name for form in result]
+    assert "Anonymous Form 1" in form_names
+    assert "Anonymous Form 2" in form_names
+    assert "Private Form" not in form_names

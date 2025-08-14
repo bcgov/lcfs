@@ -15,7 +15,8 @@ export const config = {
     fullLegacyReports: true,
     fseImportExport: true,
     allocationAgreementImportExport: true,
-    governmentAdjustment: true
+    governmentAdjustment: true,
+    obfuscatedLinks: true
   }
 }
 
