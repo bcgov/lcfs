@@ -14,7 +14,6 @@ import { systemTools, handleSystemTool } from "./tools/system.js";
 import { dockerTools, handleDockerTool } from "./tools/docker.js";
 import { databaseTools, handleDatabaseTool } from "./tools/database.js";
 import { testingTools, handleTestingTool } from "./tools/testing.js";
-import { githubTools, handleGitHubTool } from "./tools/github.js";
 
 // Environment validation
 const APP_ENVIRONMENT = process.env.APP_ENVIRONMENT;
@@ -42,7 +41,6 @@ const allTools = [
   ...dockerTools,
   ...databaseTools,
   ...testingTools,
-  ...githubTools,
 ];
 
 // List tools handler
@@ -82,9 +80,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       return await handleTestingTool(name, args);
     }
     
-    if (githubTools.some(tool => tool.name === name)) {
-      return await handleGitHubTool(name, args);
-    }
 
     throw new Error(`Unknown tool: ${name}`);
   } catch (error) {
@@ -141,7 +136,6 @@ This is a Model Context Protocol server for the LCFS system, providing developme
 - Database operations (reset, migration management)
 - Test execution (frontend and backend with failure-focused output)
 - Dynamic container discovery and management
-- GitHub issue lookup from the LCFS repository
 
 ## Environment:
 - Node.js version: ${process.version}

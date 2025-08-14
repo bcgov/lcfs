@@ -1,5 +1,5 @@
-import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
+import { CallToolRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 
 export interface ContainerInfo {
   Id: string;
@@ -47,11 +47,11 @@ export const dockerShutdownSchema = z.object({
 
 export const dockerDiscoverSchema = z.object({
   filter: z.string().optional(),
-  status: z.enum(["all", "running", "stopped"]).optional(),
+  status: z.enum(['all', 'running', 'stopped']).optional(),
 });
 
 export const dockerManageSchema = z.object({
-  action: z.enum(["start", "stop", "restart"]),
+  action: z.enum(['start', 'stop', 'restart']),
   containers: z.array(z.string()).optional(),
   filter: z.string().optional(),
   confirm: z.boolean().optional(),
@@ -96,14 +96,10 @@ export const echoSchema = z.object({
   message: z.string(),
 });
 
-export const githubIssueSchema = z.object({
-  issue_number: z.number().positive(),
-});
-
 export const dataTransferSchema = z.object({
-  application: z.enum(["lcfs"]),
-  environment: z.enum(["dev", "test", "prod"]),
-  direction: z.enum(["import"]), // Only import allowed (read-only)
+  application: z.enum(['lcfs']),
+  environment: z.enum(['dev', 'test', 'prod']),
+  direction: z.enum(['import']), // Only import allowed (read-only)
   localContainer: z.string(),
   table: z.string().optional(),
   dryRun: z.boolean().optional(),

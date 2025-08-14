@@ -35,11 +35,6 @@ The LCFS MCP Server is a specialized development tool that integrates with AI co
 - Coverage reporting and test pattern filtering
 - Memory-optimized test configurations for CI/CD
 
-### GitHub Integration
-
-- Issue lookup from the LCFS repository
-- Integration with GitHub API for development context
-
 ### Data Transfer (Read-Only)
 
 - Import data from OpenShift environments for local development
@@ -155,10 +150,6 @@ For Claude Code integration, add to your MCP settings:
 - `frontend-test` - Run frontend tests with failure reporting
 - `backend-test` - Run backend Python tests
 
-### GitHub Tools
-
-- `github-issue-lookup` - Fetch issue details by number
-
 ## Resources
 
 The server provides informational resources accessible through MCP clients:
@@ -178,7 +169,6 @@ src/
 │   ├── docker.ts      # Container management
 │   ├── database.ts    # Database operations
 │   ├── testing.ts     # Test execution
-│   └── github.ts      # GitHub integration
 ├── types/             # TypeScript type definitions
 └── utils/             # Shared utilities
 ```
@@ -216,13 +206,6 @@ src/
    # Discover running containers
    # Restart services after code changes
    # Clean up development environment
-   ```
-
-4. **Issue Investigation**
-   ```bash
-   # Look up GitHub issues for context
-   # Check system status
-   # Review database state
    ```
 
 ## Troubleshooting
