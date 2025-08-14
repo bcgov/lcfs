@@ -31,6 +31,16 @@ import {
   useRegenerateLinkKey
 } from '@/hooks/useOrganization'
 import { copyToClipboard } from '@/utils/clipboard'
+import {
+  normalizeFormId,
+  normalizeKeyData,
+  generateFormLink,
+  hasExistingKey as hasExistingKeyService,
+  getExistingKey as getExistingKeyService,
+  updateCacheEntry,
+  removeCacheEntry,
+  buildCacheFromLinkKeys
+} from './linkKeyUtils'
 
 // Constants
 const ALERT_DISPLAY_DURATION = 5000
@@ -40,24 +50,6 @@ const ALERT_TYPES = {
   SUCCESS: 'success',
   ERROR: 'error',
   INFO: 'info'
-}
-
-// Utility functions
-const normalizeFormId = (formId) => {
-  if (formId == null) return null
-  return typeof formId === 'string' ? parseInt(formId, 10) : formId
-}
-
-const normalizeKeyData = (keyData) => ({
-  formId: keyData.form_id ?? keyData.formId ?? keyData.form?.id,
-  formSlug: keyData.form_slug ?? keyData.formSlug ?? keyData.slug,
-  linkKey: keyData.link_key ?? keyData.linkKey ?? keyData.key,
-  createDate: keyData.create_date ?? keyData.createDate ?? keyData.created_at
-})
-
-const generateFormLink = (formSlug, linkKey) => {
-  const baseUrl = window.location.origin
-  return `${baseUrl}/forms/${formSlug}/${linkKey}`
 }
 
 export const LinkKeyManagement = ({ orgData, orgID }) => {
@@ -156,57 +148,22 @@ export const LinkKeyManagement = ({ orgData, orgID }) => {
 
   // Key management utilities
   const hasExistingKey = useCallback(
-    (formId) => {
-      if (!formId) return false
-
-      const normalizedId = normalizeFormId(formId)
-      const cached = linkKeyCache[normalizedId]
-
-      if (cached?.linkKey) return true
-
-      return normalizedLinkKeys.some(
-        (key) => normalizeFormId(key.formId) === normalizedId && key.linkKey
-      )
-    },
+    (formId) => hasExistingKeyService(normalizedLinkKeys, linkKeyCache, formId),
     [linkKeyCache, normalizedLinkKeys]
   )
 
   const getExistingKey = useCallback(
-    (formId) => {
-      if (!formId) return null
-
-      const normalizedId = normalizeFormId(formId)
-      const cached = linkKeyCache[normalizedId]
-
-      if (cached?.linkKey) return cached
-
-      return normalizedLinkKeys.find(
-        (key) => normalizeFormId(key.formId) === normalizedId && key.linkKey
-      )
-    },
+    (formId) => getExistingKeyService(normalizedLinkKeys, linkKeyCache, formId),
     [linkKeyCache, normalizedLinkKeys]
   )
 
   // Cache management
   const updateCache = useCallback((formId, keyData) => {
-    const normalizedId = normalizeFormId(formId)
-    if (!normalizedId) return
-
-    setLinkKeyCache((prev) => ({
-      ...prev,
-      [normalizedId]: keyData
-    }))
+    setLinkKeyCache((prev) => updateCacheEntry(prev, formId, keyData))
   }, [])
 
   const clearCacheEntry = useCallback((formId) => {
-    const normalizedId = normalizeFormId(formId)
-    if (!normalizedId) return
-
-    setLinkKeyCache((prev) => {
-      const updated = { ...prev }
-      delete updated[normalizedId]
-      return updated
-    })
+    setLinkKeyCache((prev) => removeCacheEntry(prev, formId))
   }, [])
 
   // Clipboard operations
@@ -380,19 +337,7 @@ export const LinkKeyManagement = ({ orgData, orgID }) => {
 
   // Effects
   useEffect(() => {
-    const cacheUpdates = {}
-
-    normalizedLinkKeys.forEach((key) => {
-      if (key.formId && key.linkKey) {
-        const normalizedId = normalizeFormId(key.formId)
-        cacheUpdates[normalizedId] = {
-          formSlug: key.formSlug,
-          linkKey: key.linkKey,
-          createDate: key.createDate
-        }
-      }
-    })
-
+    const cacheUpdates = buildCacheFromLinkKeys(normalizedLinkKeys)
     if (Object.keys(cacheUpdates).length > 0) {
       setLinkKeyCache((prev) => ({ ...prev, ...cacheUpdates }))
     }

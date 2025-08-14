@@ -18,6 +18,28 @@ logger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
+def _get_user_organization_name(request: Request) -> str | None:
+    """Get organization name from authenticated user (regular or link key user)"""
+    # Regular authenticated user
+    if (
+        request.user
+        and request.user.__class__.__name__ != "UnauthenticatedUser"
+        and request.user.organization
+    ):
+        return request.user.organization.name
+
+    # Link key user
+    if (
+        hasattr(request.state, "user")
+        and request.state.user
+        and request.state.user.is_link_key_user
+        and request.state.user.organization
+    ):
+        return request.state.user.organization.name
+
+    return None
+
+
 # Schemas
 class FormResponse(BaseModel):
     form_id: int
@@ -43,12 +65,6 @@ async def get_form_by_slug_authenticated(
     """
     Get form by slug for authenticated users (BCeID users)
     """
-    logger.info(
-        "Authenticated user accessing form",
-        form_slug=form_slug,
-        user=getattr(request.user, "username", "unknown"),
-    )
-
     result = await db.execute(select(Form).where(Form.slug == form_slug))
     form = result.scalar_one_or_none()
 
@@ -57,10 +73,7 @@ async def get_form_by_slug_authenticated(
             status_code=404, detail=f"Form '{form_slug}' not found or not available"
         )
 
-    # For authenticated users, get organization name from their profile
-    organization_name = None
-    if hasattr(request.user, "organization") and request.user.organization:
-        organization_name = request.user.organization.name
+    organization_name = _get_user_organization_name(request)
 
     return FormResponse(
         form_id=form.form_id,
@@ -97,11 +110,7 @@ async def get_form_by_slug_and_key(
             status_code=404, detail=f"Form '{form_slug}' not found or not available"
         )
 
-    organization_name = None
-    # Check if we have a link key user from the state
-    link_key_user = getattr(request.state, "user", None)
-    if link_key_user and getattr(link_key_user, "is_link_key_user", False):
-        organization_name = link_key_user.organization.name
+    organization_name = _get_user_organization_name(request)
 
     return FormResponse(
         form_id=form.form_id,

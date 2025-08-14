@@ -24,19 +24,29 @@ const FormView = () => {
   // Determine if this is an authenticated or anonymous access
   const isAnonymousAccess = Boolean(linkKey)
 
+  const getErrorMessage = (err, isAnonymousAccess) => {
+    if (err.response?.data?.detail) return err.response.data.detail
+
+    const statusMessages = {
+      404: 'Form not found or link key is invalid',
+      401: isAnonymousAccess
+        ? 'Authentication required - please check your link key'
+        : 'Please log in to access this form'
+    }
+
+    const status = err.response?.status
+    if (statusMessages[status]) return statusMessages[status]
+
+    if (err.code === 'ECONNREFUSED') return 'Backend server is not running'
+
+    return err.message || 'Failed to load form'
+  }
+
   useEffect(() => {
     const fetchFormData = async () => {
       try {
         setLoading(true)
         setError(null)
-
-        console.log('Fetching form data for:', {
-          formSlug,
-          linkKey,
-          isAnonymousAccess,
-          keycloakAuthenticated: keycloak.authenticated,
-          hasToken: !!keycloak.token
-        })
 
         // Use different API endpoints based on access type
         const apiUrl = isAnonymousAccess
@@ -52,44 +62,13 @@ const FormView = () => {
           axiosConfig.headers = {
             Authorization: `Bearer ${keycloak.token}`
           }
-          console.log(
-            'Adding auth header with token:',
-            keycloak.token ? 'present' : 'missing'
-          )
         }
-
-        console.log('API URL:', apiUrl)
-        console.log('Axios config:', axiosConfig)
 
         const response = await axios.get(apiUrl, axiosConfig)
 
-        console.log('Form data response:', response)
         setFormData(response.data)
       } catch (err) {
-        console.error('Error fetching form data:', err)
-        console.error('Error response:', err.response)
-        console.error('Error status:', err.response?.status)
-        console.error('Error data:', err.response?.data)
-
-        let errorMessage = 'Failed to load form'
-        if (err.response?.data?.detail) {
-          errorMessage = err.response.data.detail
-        } else if (err.response?.status === 404) {
-          errorMessage = 'Form not found or link key is invalid'
-        } else if (err.response?.status === 401) {
-          if (isAnonymousAccess) {
-            errorMessage =
-              'Authentication required - please check your link key'
-          } else {
-            errorMessage = 'Please log in to access this form'
-          }
-        } else if (err.message) {
-          errorMessage = err.message
-        } else if (err.code === 'ECONNREFUSED') {
-          errorMessage = 'Backend server is not running'
-        }
-
-        setError(errorMessage)
+        setError(getErrorMessage(err, isAnonymousAccess))
       } finally {
         setLoading(false)
       }

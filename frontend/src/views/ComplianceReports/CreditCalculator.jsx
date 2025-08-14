@@ -37,6 +37,7 @@ import {
 import { numberFormatter } from '@/utils/formatters'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { copyToClipboard } from '@/utils/clipboard'
 
 export const CreditCalculator = () => {
   const { t } = useTranslation(['report'])
@@ -303,9 +304,13 @@ ${resultData.formulaDisplay}
 
 Credits generated: ${resultData.credits.toLocaleString()}`
 
-      await navigator.clipboard.writeText(copyText)
-      setCopySuccess(true)
-      setTimeout(() => setCopySuccess(false), 2000)
+      const success = await copyToClipboard(copyText)
+      if (success) {
+        setCopySuccess(true)
+        setTimeout(() => setCopySuccess(false), 2000)
+      } else {
+        console.error('Failed to copy text to clipboard')
+      }
     } catch (err) {
       console.error('Failed to copy text: ', err)
     }
