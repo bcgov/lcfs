@@ -29,6 +29,7 @@ from lcfs.web.api.compliance_report.schema import (
 )
 from lcfs.web.api.fuel_supply.repo import FuelSupplyRepository
 from lcfs.web.core.decorators import repo_handler
+from lcfs.web.exception.exceptions import ServiceException
 
 logger = structlog.get_logger(__name__)
 
@@ -41,6 +42,69 @@ class ComplianceReportSummaryRepository:
     ):
         self.db = db
         self.fuel_supply_repo = fuel_supply_repo
+
+    async def _validate_locked_fields(
+        self, 
+        summary: ComplianceReportSummaryUpdateSchema, 
+        compliance_report: ComplianceReport
+    ) -> None:
+        """
+        Validate that locked fields are not being modified for 2025+ reports.
+        
+        Args:
+            summary: The summary update data
+            compliance_report: The compliance report being updated
+            
+        Raises:
+            ServiceException: If locked fields are being modified
+        """
+        compliance_year = int(compliance_report.compliance_period.description)
+        
+        # Only validate for 2025+ reports
+        if compliance_year < 2025:
+            return
+            
+        # Check for previous assessed report
+        prev_compliance_report = None
+        if not compliance_report.supplemental_initiator:
+            # Get previous year's assessed report
+            prev_query = select(ComplianceReport).where(
+                ComplianceReport.organization_id == compliance_report.organization_id,
+                ComplianceReport.compliance_period_id == compliance_report.compliance_period_id - 1
+            ).join(ComplianceReport.current_status).where(
+                ComplianceReport.current_status.has(status="Assessed")
+            )
+            result = await self.db.execute(prev_query)
+            prev_compliance_report = result.scalar_one_or_none()
+        
+        # If no previous assessed report, all fields are editable
+        if not prev_compliance_report:
+            return
+            
+        # Get current summary values to compare against
+        existing_summary = await self.get_summary_by_report_id(summary.compliance_report_id)
+        if not existing_summary:
+            return
+            
+        # Check if Lines 7 or 9 are being modified (they should be locked)
+        for row in summary.renewable_fuel_target_summary:
+            try:
+                line_number = int(row.line)
+                if line_number in [7, 9]:
+                    # These lines should be locked - check if values are being changed
+                    for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
+                        new_value = getattr(row, fuel_type, 0)
+                        existing_column = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
+                        existing_value = getattr(existing_summary, existing_column, 0)
+                        
+                        if new_value != existing_value:
+                            raise ServiceException(
+                                f"Line {line_number} is locked for 2025+ reports when a previous assessed report exists. "
+                                f"Cannot modify {fuel_type} value from {existing_value} to {new_value}."
+                            )
+            except (ValueError, TypeError):
+                # Skip non-numeric line numbers
+                continue
 
     @repo_handler
     async def add_compliance_report_summary(
@@ -73,6 +137,19 @@ class ComplianceReportSummaryRepository:
 
         :param summary: The generated summary data
         """
+        # Get compliance report to validate locked fields
+        compliance_report_query = select(ComplianceReport).where(
+            ComplianceReport.compliance_report_id == summary.compliance_report_id
+        ).options(joinedload(ComplianceReport.current_status))
+        result = await self.db.execute(compliance_report_query)
+        compliance_report = result.scalar_one_or_none()
+        
+        if not compliance_report:
+            raise ValueError(f"No compliance report found with ID {summary.compliance_report_id}")
+            
+        # Validate locked fields for 2025+ reports
+        await self._validate_locked_fields(summary, compliance_report)
+        
         existing_summary = await self.get_summary_by_report_id(
             summary.compliance_report_id
         )

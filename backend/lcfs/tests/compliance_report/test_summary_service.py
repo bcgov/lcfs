@@ -6,7 +6,9 @@ from unittest.mock import AsyncMock, MagicMock, Mock
 from lcfs.db.models import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
 from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
+from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
 from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
     ReceivedOrTransferredEnumSchema,
@@ -2389,3 +2391,79 @@ async def test_penalty_override_with_zero_values():
     expected_total = renewable_override + low_carbon_override
     
     assert expected_total == 0.0  # 0 + 0 (explicit zeros)
+
+
+# Tests for Summary Lines 7 & 9 Auto-population and Locking (Issue #2893)
+
+class TestSummaryLines7And9AutoPopulation:
+    """Test suite for Summary Lines 7 & 9 auto-population functionality."""
+    
+    @pytest.fixture
+    def summary_service(self):
+        """Create ComplianceReportSummaryService instance with mocked dependencies."""
+        service = ComplianceReportSummaryService(
+            repo=Mock(),
+            cr_repo=Mock(),
+            trxn_repo=Mock(),
+            notional_transfer_service=Mock(),
+            fuel_supply_repo=Mock(),
+            fuel_export_repo=Mock(),
+            allocation_agreement_repo=Mock(),
+            other_uses_repo=Mock(),
+            compliance_data_service=Mock(),
+        )
+        return service
+
+    def test_renewable_fuel_target_summary_auto_population(self, summary_service):
+        """Test that renewable fuel target summary properly auto-populates Lines 7 & 9."""
+        # Mock data
+        fossil_quantities = {"gasoline": 1000, "diesel": 2000, "jet_fuel": 500}
+        renewable_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 50}
+        previous_retained = {"gasoline": 10, "diesel": 20, "jet_fuel": 5}  # This should populate Line 7
+        previous_obligation = {"gasoline": 5, "diesel": 10, "jet_fuel": 2}  # This should populate Line 9
+        notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+        
+        mock_prev_summary = Mock()
+        # Mock all required attributes for prev_summary
+        for line in range(1, 12):
+            for fuel in ["gasoline", "diesel", "jet_fuel"]:
+                field_mapping = {
+                    1: "fossil_fuel_supplied",
+                    2: "renewable_fuel_supplied", 
+                    3: "total_tracked_fuel_supplied",
+                    4: "eligible_renewable_fuel_required",
+                    5: "notional_transfers",
+                    6: "renewable_fuel_retained",
+                    7: "previously_retained",
+                    8: "obligation_deferred", 
+                    9: "obligation_added",
+                    10: "net_renewable_fuel_supplied",
+                    11: "non_compliance_penalty"
+                }
+                attr_name = f"line_{line}_{field_mapping.get(line, 'unknown')}_{fuel}"
+                setattr(mock_prev_summary, attr_name, 0)
+        
+        # Test that the method correctly auto-populates Lines 7 & 9
+        result = summary_service.calculate_renewable_fuel_target_summary(
+            fossil_quantities=fossil_quantities,
+            renewable_quantities=renewable_quantities,
+            previous_retained=previous_retained,
+            previous_obligation=previous_obligation,
+            notional_transfers_sums=notional_transfers_sums,
+            compliance_period=2025,
+            prev_summary=mock_prev_summary,
+        )
+        
+        # Check that Lines 7 & 9 contain the expected auto-populated values
+        line_7_row = next((row for row in result if row.line == 7), None)
+        line_9_row = next((row for row in result if row.line == 9), None)
+        
+        assert line_7_row is not None
+        assert line_7_row.gasoline == previous_retained["gasoline"]  # 10
+        assert line_7_row.diesel == previous_retained["diesel"]      # 20
+        assert line_7_row.jet_fuel == previous_retained["jet_fuel"]  # 5
+        
+        assert line_9_row is not None
+        assert line_9_row.gasoline == previous_obligation["gasoline"]  # 5
+        assert line_9_row.diesel == previous_obligation["diesel"]      # 10
+        assert line_9_row.jet_fuel == previous_obligation["jet_fuel"]  # 2
