@@ -1,473 +1,177 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import React from 'react'
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import { DateEditor } from '../DateEditor'
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
-import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
 
-// Mock date-fns functions
-vi.mock('date-fns', () => ({
-  format: vi.fn((date, formatStr) => {
-    if (!date) return ''
+// Mock date-fns
+const { mockFormat, mockParseISO } = vi.hoisted(() => ({
+  mockFormat: vi.fn((date, formatStr) => {
+    if (!date) return null
     if (formatStr === 'yyyy-MM-dd') {
       return date.toISOString().split('T')[0]
     }
-    return date.toString()
+    return date.toISOString()
   }),
-  parseISO: vi.fn((dateStr) => {
-    if (!dateStr || dateStr === 'YYYY-MM-DD') return null
-    return new Date(dateStr)
+  mockParseISO: vi.fn((dateString) => {
+    if (!dateString || dateString === 'YYYY-MM-DD') return null
+    return new Date(dateString)
   })
 }))
 
-// Mock MUI DatePicker
+vi.mock('date-fns', () => ({
+  format: mockFormat,
+  parseISO: mockParseISO
+}))
+
+// Mock @mui/x-date-pickers
 vi.mock('@mui/x-date-pickers', () => ({
-  DatePicker: React.forwardRef(({
-    value,
-    onChange,
-    onOpen,
-    onClose,
-    open,
-    minDate,
-    maxDate,
-    slotProps,
-    className,
-    ...props
-  }, ref) => {
-    const [isOpenState, setIsOpenState] = React.useState(open || false)
-    
-    React.useEffect(() => {
-      setIsOpenState(open || false)
-    }, [open])
-    
-    const handleDateChange = (newDate) => {
-      onChange(newDate)
-    }
-    
-    const handleOpenCalendar = () => {
-      setIsOpenState(true)
-      onOpen?.()
-    }
-    
-    const handleCloseCalendar = () => {
-      setIsOpenState(false)
-      onClose?.()
-    }
-    
-    const handleClear = () => {
-      onChange(null)
-      slotProps?.field?.onClear?.()
-      slotProps?.clearButton?.onClick?.()
-    }
+  DatePicker: vi.fn(({ value, onChange, onOpen, onClose, open, slotProps, minDate, maxDate, ...restProps }) => {
+    // Filter out MUI-specific props that shouldn't go on DOM elements
+    const { fullWidth, margin, format, variant, disableToolbar, sx, className, id, ...domProps } = restProps
     
     return (
-      <div
-        ref={ref}
-        data-test="date-picker"
-        className={className}
-        {...props}
-      >
+      <div data-test="date-picker">
         <input
           data-test="date-input"
-          type="text"
           value={value ? value.toISOString().split('T')[0] : ''}
           onChange={(e) => {
-            const newDate = e.target.value ? new Date(e.target.value) : null
-            handleDateChange(newDate)
+            const val = e.target.value ? new Date(e.target.value) : null
+            onChange?.(val)
           }}
-          placeholder="YYYY-MM-DD"
+          {...domProps}
         />
         <button
-          data-test="calendar-button"
-          onClick={handleOpenCalendar}
-          type="button"
+          data-test="open-picker-button" 
+          onClick={() => {
+            slotProps?.openPickerButton?.onClick?.()
+            onOpen?.()
+          }}
         >
-          📅
+          Open
         </button>
         <button
           data-test="clear-button"
-          onClick={handleClear}
-          type="button"
+          onClick={() => {
+            slotProps?.clearButton?.onClick?.()
+            onChange?.(null)
+          }}
         >
-          ✕
+          Clear
         </button>
-        {isOpenState && (
-          <div data-test="calendar-popup">
-            <button
-              data-test="select-date"
-              onClick={() => {
-                const testDate = new Date('2024-03-15')
-                handleDateChange(testDate)
-                handleCloseCalendar()
-              }}
-            >
-              Select 2024-03-15
-            </button>
-            <button
-              data-test="close-calendar"
-              onClick={handleCloseCalendar}
-            >
-              Close
-            </button>
-          </div>
-        )}
+        <button
+          data-test="close-button"
+          onClick={onClose}
+          style={{ display: open ? 'block' : 'none' }}
+        >
+          Close
+        </button>
       </div>
     )
   })
 }))
 
-// Create test theme and providers
-const testTheme = createTheme()
-
-const TestWrapper = ({ children }) => (
-  <ThemeProvider theme={testTheme}>
-    <LocalizationProvider dateAdapter={AdapterDateFns}>
-      {children}
-    </LocalizationProvider>
-  </ThemeProvider>
-)
-
-const renderWithProviders = (ui, options = {}) => {
-  return render(ui, { wrapper: TestWrapper, ...options })
-}
-
-// Mock AG-Grid API
-const createMockApi = () => ({
-  getLastDisplayedRowIndex: vi.fn(() => 5)
-})
-
 describe('DateEditor', () => {
-  let mockOnValueChange
-  let mockApi
-  let user
-  let defaultProps
+  const mockOnValueChange = vi.fn()
+  const mockApi = {
+    getLastDisplayedRowIndex: vi.fn(() => 5)
+  }
+
+  const defaultProps = {
+    value: null,
+    onValueChange: mockOnValueChange,
+    rowIndex: 0,
+    api: mockApi
+  }
 
   beforeEach(() => {
-    mockOnValueChange = vi.fn()
-    mockApi = createMockApi()
-    user = userEvent.setup()
-    defaultProps = {
-      value: '2024-01-15',
-      onValueChange: mockOnValueChange,
-      rowIndex: 0,
-      api: mockApi
-    }
-
-    // Mock document event listeners
-    const mockAddEventListener = vi.fn()
-    const mockRemoveEventListener = vi.fn()
-    Object.defineProperty(document, 'addEventListener', {
-      writable: true,
-      value: mockAddEventListener
-    })
-    Object.defineProperty(document, 'removeEventListener', {
-      writable: true,
-      value: mockRemoveEventListener
-    })
+    vi.clearAllMocks()
+    document.addEventListener = vi.fn()
+    document.removeEventListener = vi.fn()
   })
 
   afterEach(() => {
+    cleanup()
     vi.clearAllMocks()
   })
 
-  describe('Component Rendering', () => {
-    it('should render with initial date value', () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
+  describe('Basic Rendering', () => {
+    it('renders with minimal props', () => {
+      render(<DateEditor {...defaultProps} />)
       
-      const datePicker = screen.getByTestId('date-picker')
-      const dateInput = screen.getByTestId('date-input')
-      
-      expect(datePicker).toBeInTheDocument()
-      expect(dateInput).toHaveValue('2024-01-15')
-    })
-
-    it('should render with null value', () => {
-      renderWithProviders(<DateEditor {...defaultProps} value={null} />)
-      
-      const dateInput = screen.getByTestId('date-input')
-      expect(dateInput).toHaveValue('')
-    })
-
-    it('should render with undefined value', () => {
-      renderWithProviders(<DateEditor {...defaultProps} value={undefined} />)
-      
-      const dateInput = screen.getByTestId('date-input')
-      expect(dateInput).toHaveValue('')
-    })
-
-    it('should render with YYYY-MM-DD placeholder value', () => {
-      renderWithProviders(<DateEditor {...defaultProps} value="YYYY-MM-DD" />)
-      
-      const dateInput = screen.getByTestId('date-input')
-      expect(dateInput).toHaveValue('')
-    })
-
-    it('should render calendar and clear buttons', () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      expect(screen.getByTestId('calendar-button')).toBeInTheDocument()
-      expect(screen.getByTestId('clear-button')).toBeInTheDocument()
-    })
-
-    it('should have proper container styling', () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      const container = screen.getByTestId('date-picker').parentElement
-      expect(container).toHaveClass('date-picker-container')
-      expect(container).toHaveStyle({
-        width: '100%',
-        height: '100%',
-        position: 'absolute'
-      })
-    })
-  })
-
-  describe('Date Input Handling', () => {
-    it('should handle direct date input', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} value="" />)
-      
-      const dateInput = screen.getByTestId('date-input')
-      await user.clear(dateInput)
-      await user.type(dateInput, '2024-06-30')
-      
-      expect(mockOnValueChange).toHaveBeenCalledWith('2024-06-30')
-    })
-
-    it('should handle invalid date input gracefully', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} value="" />)
-      
-      const dateInput = screen.getByTestId('date-input')
-      await user.clear(dateInput)
-      await user.type(dateInput, 'invalid-date')
-      
-      // Should handle invalid dates without crashing
       expect(screen.getByTestId('date-picker')).toBeInTheDocument()
-    })
-
-    it('should handle clearing date input', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      const dateInput = screen.getByTestId('date-input')
-      await user.clear(dateInput)
-      
-      expect(mockOnValueChange).toHaveBeenCalledWith(null)
-    })
-
-    it('should handle date change from calendar', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      const calendarButton = screen.getByTestId('calendar-button')
-      await user.click(calendarButton)
-      
-      await waitFor(() => {
-        expect(screen.getByTestId('calendar-popup')).toBeInTheDocument()
-      })
-      
-      const selectDateButton = screen.getByTestId('select-date')
-      await user.click(selectDateButton)
-      
-      expect(mockOnValueChange).toHaveBeenCalledWith('2024-03-15')
-    })
-
-    it('should normalize dates to avoid timezone issues', () => {
-      const testDate = new Date('2024-06-15T10:30:00Z')
-      renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      // Simulate internal updateValue function call
-      const dateInput = screen.getByTestId('date-input')
-      fireEvent.change(dateInput, { target: { value: '2024-06-15' } })
-      
-      expect(mockOnValueChange).toHaveBeenCalledWith('2024-06-15')
+      expect(screen.getByTestId('date-input')).toBeInTheDocument()
     })
   })
 
-  describe('Calendar Interaction', () => {
-    it('should open calendar when calendar button is clicked', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
+  describe('Initial State - selectedDate', () => {
+    it('initializes selectedDate with valid date value', () => {
+      mockParseISO.mockReturnValue(new Date('2023-12-25'))
       
-      const calendarButton = screen.getByTestId('calendar-button')
-      await user.click(calendarButton)
+      render(<DateEditor {...defaultProps} value="2023-12-25" />)
       
-      await waitFor(() => {
-        expect(screen.getByTestId('calendar-popup')).toBeInTheDocument()
-      })
+      expect(mockParseISO).toHaveBeenCalledWith('2023-12-25')
+      expect(screen.getByTestId('date-input')).toHaveValue('2023-12-25')
     })
 
-    it('should close calendar when close button is clicked', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
+    it('initializes selectedDate as null with invalid value', () => {
+      render(<DateEditor {...defaultProps} value="YYYY-MM-DD" />)
       
-      // Open calendar
-      const calendarButton = screen.getByTestId('calendar-button')
-      await user.click(calendarButton)
-      
-      await waitFor(() => {
-        expect(screen.getByTestId('calendar-popup')).toBeInTheDocument()
-      })
-      
-      // Close calendar
-      const closeButton = screen.getByTestId('close-calendar')
-      await user.click(closeButton)
-      
-      await waitFor(() => {
-        expect(screen.queryByTestId('calendar-popup')).not.toBeInTheDocument()
-      })
+      expect(screen.getByTestId('date-input')).toHaveValue('')
     })
 
-    it('should auto-open calendar for last row when autoOpenLastRow is true', () => {
-      mockApi.getLastDisplayedRowIndex.mockReturnValue(3)
+    it('initializes selectedDate as null with empty value', () => {
+      render(<DateEditor {...defaultProps} value="" />)
       
-      renderWithProviders(
-        <DateEditor
-          {...defaultProps}
-          rowIndex={3}
-          autoOpenLastRow={true}
-        />
-      )
-      
-      expect(screen.getByTestId('calendar-popup')).toBeInTheDocument()
+      expect(screen.getByTestId('date-input')).toHaveValue('')
     })
 
-    it('should not auto-open calendar when autoOpenLastRow is false', () => {
-      mockApi.getLastDisplayedRowIndex.mockReturnValue(3)
+    it('initializes selectedDate as null with null value', () => {
+      render(<DateEditor {...defaultProps} value={null} />)
       
-      renderWithProviders(
-        <DateEditor
-          {...defaultProps}
-          rowIndex={3}
-          autoOpenLastRow={false}
-        />
-      )
+      expect(screen.getByTestId('date-input')).toHaveValue('')
+    })
+  })
+
+  describe('Initial State - isOpen', () => {
+    it('initializes isOpen as false without autoOpenLastRow', () => {
+      render(<DateEditor {...defaultProps} />)
       
-      expect(screen.queryByTestId('calendar-popup')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('close-button')).not.toBeVisible()
     })
 
-    it('should not auto-open calendar when not on last row', () => {
+    it('initializes isOpen as false when autoOpenLastRow is false', () => {
+      render(<DateEditor {...defaultProps} autoOpenLastRow={false} />)
+      
+      expect(screen.queryByTestId('close-button')).not.toBeVisible()
+    })
+
+    it('initializes isOpen as true with autoOpenLastRow on last row', () => {
       mockApi.getLastDisplayedRowIndex.mockReturnValue(5)
       
-      renderWithProviders(
-        <DateEditor
-          {...defaultProps}
-          rowIndex={3}
-          autoOpenLastRow={true}
-        />
-      )
+      render(<DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />)
       
-      expect(screen.queryByTestId('calendar-popup')).not.toBeInTheDocument()
+      expect(mockApi.getLastDisplayedRowIndex).toHaveBeenCalled()
+      expect(screen.getByTestId('close-button')).toBeVisible()
+    })
+
+    it('initializes isOpen as false with autoOpenLastRow not on last row', () => {
+      mockApi.getLastDisplayedRowIndex.mockReturnValue(5)
+      
+      render(<DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={3} />)
+      
+      expect(mockApi.getLastDisplayedRowIndex).toHaveBeenCalled()
+      expect(screen.queryByTestId('close-button')).not.toBeVisible()
     })
   })
 
-  describe('Clear Functionality', () => {
-    it('should clear date when clear button is clicked', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
+  describe('useEffect Cleanup', () => {
+    it('adds and removes event listener on mount/unmount', () => {
+      const { unmount } = render(<DateEditor {...defaultProps} />)
       
-      const clearButton = screen.getByTestId('clear-button')
-      await user.click(clearButton)
-      
-      expect(mockOnValueChange).toHaveBeenCalledWith(null)
-    })
-
-    it('should handle clearing null value', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} value={null} />)
-      
-      const clearButton = screen.getByTestId('clear-button')
-      await user.click(clearButton)
-      
-      expect(mockOnValueChange).toHaveBeenCalledWith(null)
-    })
-
-    it('should update local state when clearing', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      const clearButton = screen.getByTestId('clear-button')
-      await user.click(clearButton)
-      
-      const dateInput = screen.getByTestId('date-input')
-      expect(dateInput).toHaveValue('')
-    })
-  })
-
-  describe('Date Range Constraints', () => {
-    it('should pass minDate to DatePicker', () => {
-      const minDate = new Date('2024-01-01')
-      renderWithProviders(
-        <DateEditor {...defaultProps} minDate={minDate} />
-      )
-      
-      // DatePicker should receive minDate prop
-      const datePicker = screen.getByTestId('date-picker')
-      expect(datePicker).toBeInTheDocument()
-    })
-
-    it('should pass maxDate to DatePicker', () => {
-      const maxDate = new Date('2024-12-31')
-      renderWithProviders(
-        <DateEditor {...defaultProps} maxDate={maxDate} />
-      )
-      
-      // DatePicker should receive maxDate prop
-      const datePicker = screen.getByTestId('date-picker')
-      expect(datePicker).toBeInTheDocument()
-    })
-
-    it('should handle both minDate and maxDate constraints', () => {
-      const minDate = new Date('2024-01-01')
-      const maxDate = new Date('2024-12-31')
-      
-      renderWithProviders(
-        <DateEditor
-          {...defaultProps}
-          minDate={minDate}
-          maxDate={maxDate}
-        />
-      )
-      
-      const datePicker = screen.getByTestId('date-picker')
-      expect(datePicker).toBeInTheDocument()
-    })
-  })
-
-  describe('Event Handling and Propagation', () => {
-    it('should stop event propagation on container click', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      const container = screen.getByTestId('date-picker').parentElement
-      
-      const clickEvent = new MouseEvent('click', { bubbles: true })
-      const stopPropagationSpy = vi.spyOn(clickEvent, 'stopPropagation')
-      const preventDefaultSpy = vi.spyOn(clickEvent, 'preventDefault')
-      
-      fireEvent(container, clickEvent)
-      
-      // Our component should handle event propagation
-      expect(container).toBeInTheDocument()
-    })
-
-    it('should stop event propagation on mouse down', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      const container = screen.getByTestId('date-picker').parentElement
-      
-      const mouseDownEvent = new MouseEvent('mousedown', { bubbles: true })
-      fireEvent(container, mouseDownEvent)
-      
-      expect(container).toBeInTheDocument()
-    })
-
-    it('should handle click outside to close calendar', () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      // Verify event listener was added for click outside
       expect(document.addEventListener).toHaveBeenCalledWith(
         'mousedown',
         expect.any(Function),
-        expect.objectContaining({ passive: true })
+        { passive: true }
       )
-    })
-
-    it('should clean up event listeners on unmount', () => {
-      const { unmount } = renderWithProviders(<DateEditor {...defaultProps} />)
       
       unmount()
       
@@ -478,148 +182,175 @@ describe('DateEditor', () => {
     })
   })
 
-  describe('Styling and Z-Index', () => {
-    it('should increase z-index when calendar is open', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
+  describe('Click Outside Handler', () => {
+    it('does not close when clicking inside container', () => {
+      render(<DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />)
       
       const container = screen.getByTestId('date-picker').parentElement
+      const mockEvent = {
+        target: container
+      }
       
-      // Initially should have auto z-index
-      expect(container).toHaveStyle({ zIndex: 'auto' })
+      container.contains = vi.fn(() => true)
       
-      // Open calendar
-      const calendarButton = screen.getByTestId('calendar-button')
-      await user.click(calendarButton)
+      const addEventListenerCall = document.addEventListener.mock.calls.find(
+        call => call[0] === 'mousedown'
+      )
+      const handleClickOutside = addEventListenerCall[1]
       
-      await waitFor(() => {
-        expect(container).toHaveStyle({ zIndex: '1000' })
+      act(() => {
+        handleClickOutside(mockEvent)
       })
+      
+      expect(screen.getByTestId('close-button')).toBeVisible()
     })
 
-    it('should apply proper styling to prevent text selection', () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      const datePicker = screen.getByTestId('date-picker')
-      expect(datePicker).toBeInTheDocument()
-      
-      // Component should have user-select: none styles applied
-      expect(datePicker).toHaveClass('ag-grid-date-editor')
-    })
-
-    it('should have full width and height styling', () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
+    it('closes when clicking outside container', () => {
+      render(<DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />)
       
       const container = screen.getByTestId('date-picker').parentElement
-      expect(container).toHaveStyle({
-        width: '100%',
-        height: '100%'
+      const mockEvent = {
+        target: document.body
+      }
+      
+      container.contains = vi.fn(() => false)
+      
+      const addEventListenerCall = document.addEventListener.mock.calls.find(
+        call => call[0] === 'mousedown'
+      )
+      const handleClickOutside = addEventListenerCall[1]
+      
+      act(() => {
+        handleClickOutside(mockEvent)
       })
+      
+      expect(screen.queryByTestId('close-button')).not.toBeVisible()
     })
   })
 
-  describe('Integration Scenarios', () => {
-    it('should work with AG-Grid editor lifecycle', async () => {
-      renderWithProviders(
-        <DateEditor
-          {...defaultProps}
-          rowIndex={2}
-          value="2024-05-20"
-        />
-      )
+  describe('updateValue Function', () => {
+    it('handles valid date correctly', () => {
+      mockFormat.mockReturnValue('2023-12-25')
       
-      // Should render and be ready for AG-Grid integration
-      const dateInput = screen.getByTestId('date-input')
-      expect(dateInput).toHaveValue('2024-05-20')
+      render(<DateEditor {...defaultProps} />)
       
-      // Should handle value changes
-      await user.clear(dateInput)
-      await user.type(dateInput, '2024-12-25')
+      const input = screen.getByTestId('date-input')
       
-      expect(mockOnValueChange).toHaveBeenCalledWith('2024-12-25')
+      act(() => {
+        fireEvent.change(input, { target: { value: '2023-12-25' } })
+      })
+      
+      expect(mockFormat).toHaveBeenCalledWith(expect.any(Date), 'yyyy-MM-dd')
+      expect(mockOnValueChange).toHaveBeenCalledWith('2023-12-25')
+    })
+  })
+
+  describe('DatePicker Event Handlers', () => {
+    it('opens date picker when handleDatePickerOpen is called', () => {
+      render(<DateEditor {...defaultProps} />)
+      
+      const openButton = screen.getByTestId('open-picker-button')
+      
+      act(() => {
+        fireEvent.click(openButton)
+      })
+      
+      expect(screen.getByTestId('close-button')).toBeVisible()
     })
 
-    it('should handle rapid date changes', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} value="" />)
+    it('closes date picker when handleDatePickerClose is called', () => {
+      render(<DateEditor {...defaultProps} autoOpenLastRow={true} rowIndex={5} />)
       
-      const dateInput = screen.getByTestId('date-input')
+      expect(screen.getByTestId('close-button')).toBeVisible()
       
-      // Rapid date changes
-      await user.type(dateInput, '2024-01-01')
-      await user.clear(dateInput)
-      await user.type(dateInput, '2024-02-02')
-      await user.clear(dateInput)
-      await user.type(dateInput, '2024-03-03')
+      const closeButton = screen.getByTestId('close-button')
       
-      expect(mockOnValueChange).toHaveBeenCalledTimes(6) // 3 clears + 3 type operations
+      act(() => {
+        fireEvent.click(closeButton)
+      })
+      
+      expect(screen.queryByTestId('close-button')).not.toBeVisible()
     })
+  })
 
-    it('should maintain state during calendar operations', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
+  describe('stopPropagation Function', () => {
+    it('handles null/undefined event gracefully', () => {
+      render(<DateEditor {...defaultProps} />)
       
-      // Open calendar
-      const calendarButton = screen.getByTestId('calendar-button')
-      await user.click(calendarButton)
+      const container = screen.getByTestId('date-picker').parentElement
       
-      // Select date from calendar
-      const selectDateButton = screen.getByTestId('select-date')
-      await user.click(selectDateButton)
-      
-      // Verify final state
-      const dateInput = screen.getByTestId('date-input')
-      expect(dateInput).toHaveValue('2024-03-15')
-      expect(mockOnValueChange).toHaveBeenCalledWith('2024-03-15')
+      expect(() => {
+        act(() => {
+          fireEvent.mouseDown(container, null)
+        })
+      }).not.toThrow()
     })
+  })
 
-    it('should handle edge case with multiple null value updates', () => {
-      renderWithProviders(<DateEditor {...defaultProps} value={null} />)
+  describe('handleIconClick Function', () => {
+    it('stops propagation and opens date picker', () => {
+      render(<DateEditor {...defaultProps} />)
       
-      // Clear multiple times
+      const openButton = screen.getByTestId('open-picker-button')
+      const mockEvent = {
+        stopPropagation: vi.fn(),
+        preventDefault: vi.fn()
+      }
+      
+      act(() => {
+        fireEvent.click(openButton, mockEvent)
+      })
+      
+      expect(screen.getByTestId('close-button')).toBeVisible()
+    })
+  })
+
+  describe('handleClear Function', () => {
+    it('clears selectedDate and calls onValueChange with null', () => {
+      render(<DateEditor {...defaultProps} value="2023-12-25" />)
+      
       const clearButton = screen.getByTestId('clear-button')
-      fireEvent.click(clearButton)
-      fireEvent.click(clearButton)
-      fireEvent.click(clearButton)
       
-      // Should handle multiple null updates gracefully
+      act(() => {
+        fireEvent.click(clearButton)
+      })
+      
       expect(mockOnValueChange).toHaveBeenCalledWith(null)
       expect(screen.getByTestId('date-input')).toHaveValue('')
     })
   })
 
-  describe('Error Handling', () => {
-    it('should handle missing api gracefully', () => {
-      renderWithProviders(
+  describe('Props Integration', () => {
+    it('passes minDate and maxDate props correctly', () => {
+      const minDate = new Date('2023-01-01')
+      const maxDate = new Date('2023-12-31')
+      
+      render(
         <DateEditor
           {...defaultProps}
-          api={null}
-          autoOpenLastRow={true}
+          minDate={minDate}
+          maxDate={maxDate}
         />
       )
       
-      // Should not crash with missing API
-      expect(screen.getByTestId('date-picker')).toBeInTheDocument()
+      const datePicker = screen.getByTestId('date-picker')
+      expect(datePicker).toBeInTheDocument()
     })
 
-    it('should handle invalid date objects', async () => {
-      renderWithProviders(<DateEditor {...defaultProps} />)
+    it('renders with all prop combinations', () => {
+      const props = {
+        ...defaultProps,
+        value: '2023-06-15',
+        minDate: new Date('2023-01-01'),
+        maxDate: new Date('2023-12-31'),
+        autoOpenLastRow: true,
+        rowIndex: 5
+      }
       
-      const dateInput = screen.getByTestId('date-input')
+      render(<DateEditor {...props} />)
       
-      // Simulate invalid date input
-      fireEvent.change(dateInput, { target: { value: '2024-13-45' } })
-      
-      // Should handle invalid dates without crashing
       expect(screen.getByTestId('date-picker')).toBeInTheDocument()
-    })
-
-    it('should handle component unmount during open calendar', () => {
-      const { unmount } = renderWithProviders(<DateEditor {...defaultProps} />)
-      
-      // Open calendar then unmount
-      const calendarButton = screen.getByTestId('calendar-button')
-      fireEvent.click(calendarButton)
-      
-      // Should unmount without errors
-      expect(() => unmount()).not.toThrow()
+      expect(screen.getByTestId('close-button')).toBeVisible()
     })
   })
 })

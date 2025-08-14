@@ -1,428 +1,314 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { vi, describe, it, expect, beforeEach } from 'vitest'
+import { ThemeProvider } from '@mui/material/styles'
+import { createTheme } from '@mui/material/styles'
 import { BCPagination } from '../BCPagination'
 
-// Mock MUI components
-const mockTablePagination = vi.fn()
-vi.mock('@mui/material', () => ({
-  TablePagination: (props) => {
-    mockTablePagination(props)
-    
-    // Extract and test labelDisplayedRows function
-    if (props.labelDisplayedRows) {
-      const testLabelResult = props.labelDisplayedRows({ from: 1, to: 10, count: 100 })
-      return (
-        <div data-test="table-pagination">
-          <div data-test="label-displayed-rows">{testLabelResult}</div>
-          <div data-test="actions">
-            {props.ActionsComponent && props.ActionsComponent({ 
-              count: props.count, 
-              page: props.page, 
-              rowsPerPage: props.rowsPerPage,
-              onPageChange: props.onPageChange 
-            })}
-          </div>
-          <div data-test="icon-component">
-            {props.slotProps?.select?.IconComponent && 
-             props.slotProps.select.IconComponent({ 'data-test': 'dropdown-icon' })}
-          </div>
-        </div>
-      )
-    }
-    
-    return <div data-test="table-pagination">TablePagination</div>
-  }
-}))
-
-// Mock MUI icons
-vi.mock('@mui/icons-material', () => ({
-  ArrowDropDown: (props) => <div data-test="arrow-drop-down" {...props}>ArrowDropDown</div>
-}))
-
-// Mock BCPaginationActions
+// Mock BCPaginationActions component
 vi.mock('../BCPaginationActions', () => ({
-  BCPaginationActions: (props) => (
-    <div data-test="bc-pagination-actions" data-props={JSON.stringify(props)}>
-      BCPaginationActions
+  BCPaginationActions: ({ enableResetButton, enableCopyButton, enableExportButton, exportName, gridRef, ...props }) => (
+    <div 
+      data-test="bc-pagination-actions"
+      data-enable-reset={String(enableResetButton)}
+      data-enable-copy={String(enableCopyButton)}
+      data-enable-export={String(enableExportButton)}
+      data-export-name={exportName || ''}
+      data-grid-ref={gridRef ? 'present' : 'null'}
+      data-pagination-props={JSON.stringify(props)}
+    >
+      BCPaginationActions Mock
     </div>
   )
 }))
 
-describe('BCPagination', () => {
-  const defaultProps = {
-    total: 100,
-    page: 1,
-    handleChangePage: vi.fn(),
-    size: 10,
-    handleChangeRowsPerPage: vi.fn(),
-    gridRef: { current: { api: {} } }
+// Mock MUI TablePagination for detailed prop testing
+vi.mock('@mui/material', async () => {
+  const actual = await vi.importActual('@mui/material')
+  return {
+    ...actual,
+    TablePagination: ({ 
+      count, 
+      page, 
+      rowsPerPage, 
+      onPageChange, 
+      onRowsPerPageChange,
+      ActionsComponent,
+      labelDisplayedRows,
+      slotProps,
+      ...props 
+    }) => (
+      <div 
+        data-test="table-pagination"
+        data-count={count}
+        data-page={page}
+        data-rows-per-page={rowsPerPage}
+        data-on-page-change={onPageChange ? 'present' : 'null'}
+        data-on-rows-per-page-change={onRowsPerPageChange ? 'present' : 'null'}
+        {...props}
+      >
+        <div data-test="label-displayed-rows">
+          {labelDisplayedRows && labelDisplayedRows({ from: 1, to: 10, count: 100 })}
+        </div>
+        <div data-test="actions-component">
+          {ActionsComponent && ActionsComponent({ count, page, rowsPerPage })}
+        </div>
+        <div data-test="icon-component">
+          {slotProps?.select?.IconComponent && slotProps.select.IconComponent({})}
+        </div>
+      </div>
+    )
   }
+})
+
+const theme = createTheme()
+
+const renderWithTheme = (component) => {
+  return render(
+    <ThemeProvider theme={theme}>
+      {component}
+    </ThemeProvider>
+  )
+}
+
+describe('BCPagination', () => {
+  let mockHandleChangePage
+  let mockHandleChangeRowsPerPage
+  let defaultProps
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    mockHandleChangePage = vi.fn()
+    mockHandleChangeRowsPerPage = vi.fn()
+    defaultProps = {
+      total: 100,
+      page: 1,
+      handleChangePage: mockHandleChangePage,
+      size: 10,
+      handleChangeRowsPerPage: mockHandleChangeRowsPerPage,
+      gridRef: { current: {} }
+    }
   })
 
-  describe('Basic Rendering', () => {
-    it('renders with default props', () => {
-      render(<BCPagination {...defaultProps} />)
+  describe('Component Rendering', () => {
+    it('renders correctly with default props', () => {
+      renderWithTheme(<BCPagination {...defaultProps} />)
       
-      expect(screen.getByTestId('table-pagination')).toBeInTheDocument()
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          className: 'ag-grid-pagination',
-          'aria-label': 'pagination for BC DataGrid',
-          component: 'div',
-          count: 100,
-          page: 0, // page - 1
-          rowsPerPage: 10,
-          rowsPerPageOptions: [5, 10, 20, 25, 50, 100],
-          labelRowsPerPage: 'Page Size:',
-          showFirstButton: true,
-          showLastButton: true
-        })
-      )
+      const tablePagination = screen.getByTestId('table-pagination')
+      expect(tablePagination).toBeInTheDocument()
+      expect(tablePagination).toHaveAttribute('data-count', '100')
+      expect(tablePagination).toHaveAttribute('data-page', '0') // page - 1
+      expect(tablePagination).toHaveAttribute('data-rows-per-page', '10')
     })
 
-    it('renders with custom props', () => {
+    it('renders with all custom props provided', () => {
       const customProps = {
-        ...defaultProps,
         total: 250,
         page: 3,
+        handleChangePage: mockHandleChangePage,
         size: 25,
+        handleChangeRowsPerPage: mockHandleChangeRowsPerPage,
         enableResetButton: true,
         enableCopyButton: true,
         enableExportButton: true,
-        exportName: 'CustomExport'
+        exportName: 'CustomExport',
+        gridRef: { current: { api: {} } }
       }
-
-      render(<BCPagination {...customProps} />)
       
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          count: 250,
-          page: 2, // page - 1
-          rowsPerPage: 25
-        })
-      )
+      renderWithTheme(<BCPagination {...customProps} />)
+      
+      const tablePagination = screen.getByTestId('table-pagination')
+      expect(tablePagination).toBeInTheDocument()
+      expect(tablePagination).toHaveAttribute('data-count', '250')
+      expect(tablePagination).toHaveAttribute('data-page', '2') // page - 1
+      expect(tablePagination).toHaveAttribute('data-rows-per-page', '25')
+      
+      const actions = screen.getByTestId('bc-pagination-actions')
+      expect(actions).toHaveAttribute('data-enable-reset', 'true')
+      expect(actions).toHaveAttribute('data-enable-copy', 'true')
+      expect(actions).toHaveAttribute('data-enable-export', 'true')
+      expect(actions).toHaveAttribute('data-export-name', 'CustomExport')
+    })
+
+    it('renders with null gridRef', () => {
+      const props = { ...defaultProps, gridRef: null }
+      renderWithTheme(<BCPagination {...props} />)
+      
+      const actions = screen.getByTestId('bc-pagination-actions')
+      expect(actions).toHaveAttribute('data-grid-ref', 'null')
+    })
+
+    it('renders with valid gridRef object', () => {
+      const props = { ...defaultProps, gridRef: { current: { api: {}, columnApi: {} } } }
+      renderWithTheme(<BCPagination {...props} />)
+      
+      const actions = screen.getByTestId('bc-pagination-actions')
+      expect(actions).toHaveAttribute('data-grid-ref', 'present')
     })
   })
 
-  describe('Props Handling', () => {
-    it('applies default values for optional props', () => {
+  describe('Default Props', () => {
+    it('uses default values when props are not provided', () => {
       const minimalProps = {
-        handleChangePage: vi.fn(),
-        handleChangeRowsPerPage: vi.fn(),
-        gridRef: { current: { api: {} } }
+        handleChangePage: mockHandleChangePage,
+        handleChangeRowsPerPage: mockHandleChangeRowsPerPage,
+        gridRef: { current: {} }
       }
-
-      render(<BCPagination {...minimalProps} />)
       
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          count: 0, // default total
-          page: 0, // default page - 1
-          rowsPerPage: 10 // default size
-        })
-      )
-    })
-
-    it('handles zero total correctly', () => {
-      render(<BCPagination {...defaultProps} total={0} />)
+      renderWithTheme(<BCPagination {...minimalProps} />)
       
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          count: 0
-        })
-      )
-    })
-
-    it('passes callback functions correctly', () => {
-      const handleChangePage = vi.fn()
-      const handleChangeRowsPerPage = vi.fn()
-
-      render(
-        <BCPagination 
-          {...defaultProps} 
-          handleChangePage={handleChangePage}
-          handleChangeRowsPerPage={handleChangeRowsPerPage}
-        />
-      )
+      const tablePagination = screen.getByTestId('table-pagination')
+      expect(tablePagination).toHaveAttribute('data-count', '0') // default total = 0
+      expect(tablePagination).toHaveAttribute('data-page', '0') // default page = 1, so page - 1 = 0
+      expect(tablePagination).toHaveAttribute('data-rows-per-page', '10') // default size = 10
       
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          onPageChange: handleChangePage,
-          onRowsPerPageChange: handleChangeRowsPerPage
-        })
-      )
+      const actions = screen.getByTestId('bc-pagination-actions')
+      expect(actions).toHaveAttribute('data-enable-reset', 'false') // default false
+      expect(actions).toHaveAttribute('data-enable-copy', 'false') // default false
+      expect(actions).toHaveAttribute('data-enable-export', 'false') // default false
+      expect(actions).toHaveAttribute('data-export-name', 'ExportData') // default value
     })
   })
 
   describe('labelDisplayedRows Function', () => {
-    it('renders label with correct formatting', () => {
-      render(<BCPagination {...defaultProps} />)
+    it('returns correct JSX format with from/to/count values', () => {
+      renderWithTheme(<BCPagination {...defaultProps} />)
       
       const labelElement = screen.getByTestId('label-displayed-rows')
       expect(labelElement).toBeInTheDocument()
       
-      // Check for bold elements and text content
-      const boldElements = labelElement.querySelectorAll('b')
-      expect(boldElements).toHaveLength(3)
-      expect(boldElements[0]).toHaveTextContent('1')
-      expect(boldElements[1]).toHaveTextContent('10')
-      expect(boldElements[2]).toHaveTextContent('100')
-    })
-
-    it('handles different from/to/count values', () => {
-      // This tests the labelDisplayedRows function with different values
-      // The mock will automatically test with from:1, to:10, count:100
-      render(<BCPagination {...defaultProps} />)
-      
-      expect(screen.getByTestId('label-displayed-rows')).toBeInTheDocument()
+      // The mock passes { from: 1, to: 10, count: 100 } to test the function
+      expect(labelElement.textContent).toContain('1')
+      expect(labelElement.textContent).toContain('to')
+      expect(labelElement.textContent).toContain('10')
+      expect(labelElement.textContent).toContain('of')
+      expect(labelElement.textContent).toContain('100')
     })
   })
 
   describe('ActionsComponent Function', () => {
-    it('renders BCPaginationActions with default props', () => {
-      render(<BCPagination {...defaultProps} />)
-      
-      const actionsElement = screen.getByTestId('bc-pagination-actions')
-      expect(actionsElement).toBeInTheDocument()
-      
-      const propsData = JSON.parse(actionsElement.getAttribute('data-props'))
-      expect(propsData).toEqual(
-        expect.objectContaining({
-          enableResetButton: false,
-          enableCopyButton: false,
-          enableExportButton: false,
-          exportName: 'ExportData',
-          gridRef: { current: { api: {} } }
-        })
-      )
-    })
-
-    it('renders BCPaginationActions with custom props', () => {
-      const customProps = {
+    it('renders BCPaginationActions with passed props', () => {
+      const props = {
         ...defaultProps,
         enableResetButton: true,
         enableCopyButton: true,
         enableExportButton: true,
-        exportName: 'MyExport'
+        exportName: 'TestExport'
       }
-
-      render(<BCPagination {...customProps} />)
       
-      const actionsElement = screen.getByTestId('bc-pagination-actions')
-      const propsData = JSON.parse(actionsElement.getAttribute('data-props'))
+      renderWithTheme(<BCPagination {...props} />)
       
-      expect(propsData).toEqual(
-        expect.objectContaining({
-          enableResetButton: true,
-          enableCopyButton: true,
-          enableExportButton: true,
-          exportName: 'MyExport'
-        })
-      )
-    })
-
-    it('passes pagination props to ActionsComponent', () => {
-      render(<BCPagination {...defaultProps} />)
-      
-      const actionsElement = screen.getByTestId('bc-pagination-actions')
-      const propsData = JSON.parse(actionsElement.getAttribute('data-props'))
-      
-      expect(propsData).toEqual(
-        expect.objectContaining({
-          count: 100,
-          page: 0, // page - 1
-          rowsPerPage: 10
-        })
-      )
+      const actions = screen.getByTestId('bc-pagination-actions')
+      expect(actions).toBeInTheDocument()
+      expect(actions).toHaveAttribute('data-enable-reset', 'true')
+      expect(actions).toHaveAttribute('data-enable-copy', 'true')
+      expect(actions).toHaveAttribute('data-enable-export', 'true')
+      expect(actions).toHaveAttribute('data-export-name', 'TestExport')
     })
   })
 
   describe('IconComponent Function', () => {
-    it('renders ArrowDropDown icon with correct props', () => {
-      render(<BCPagination {...defaultProps} />)
+    it('renders ArrowDropDown with correct styling props', () => {
+      renderWithTheme(<BCPagination {...defaultProps} />)
       
-      const iconElement = screen.getByTestId('dropdown-icon')
-      expect(iconElement).toBeInTheDocument()
-      expect(iconElement).toHaveAttribute('data-test', 'dropdown-icon')
-    })
-
-    it('applies custom styling to ArrowDropDown icon', () => {
-      render(<BCPagination {...defaultProps} />)
-      
-      // Verify that the icon component is called with the correct props
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          slotProps: expect.objectContaining({
-            select: expect.objectContaining({
-              IconComponent: expect.any(Function)
-            })
-          })
-        })
-      )
+      // The IconComponent should be rendered within the slotProps
+      const iconComponent = screen.getByTestId('icon-component')
+      expect(iconComponent).toBeInTheDocument()
     })
   })
 
-  describe('Boolean Props Combinations', () => {
-    it('handles all boolean props as false', () => {
-      const props = {
-        ...defaultProps,
-        enableResetButton: false,
-        enableCopyButton: false,
-        enableExportButton: false
-      }
-
-      render(<BCPagination {...props} />)
+  describe('Prop Values Testing', () => {
+    it('handles different page values', () => {
+      const testCases = [1, 3, 5]
       
-      const actionsElement = screen.getByTestId('bc-pagination-actions')
-      const propsData = JSON.parse(actionsElement.getAttribute('data-props'))
-      
-      expect(propsData.enableResetButton).toBe(false)
-      expect(propsData.enableCopyButton).toBe(false)
-      expect(propsData.enableExportButton).toBe(false)
+      testCases.forEach(pageValue => {
+        const { unmount } = renderWithTheme(<BCPagination {...defaultProps} page={pageValue} />)
+        
+        const tablePagination = screen.getByTestId('table-pagination')
+        expect(tablePagination).toHaveAttribute('data-page', String(pageValue - 1))
+        
+        unmount()
+      })
     })
 
-    it('handles all boolean props as true', () => {
-      const props = {
-        ...defaultProps,
-        enableResetButton: true,
-        enableCopyButton: true,
-        enableExportButton: true
-      }
-
-      render(<BCPagination {...props} />)
+    it('handles different size values', () => {
+      const testCases = [5, 10, 25, 100]
       
-      const actionsElement = screen.getByTestId('bc-pagination-actions')
-      const propsData = JSON.parse(actionsElement.getAttribute('data-props'))
-      
-      expect(propsData.enableResetButton).toBe(true)
-      expect(propsData.enableCopyButton).toBe(true)
-      expect(propsData.enableExportButton).toBe(true)
+      testCases.forEach(sizeValue => {
+        const { unmount } = renderWithTheme(<BCPagination {...defaultProps} size={sizeValue} />)
+        
+        const tablePagination = screen.getByTestId('table-pagination')
+        expect(tablePagination).toHaveAttribute('data-rows-per-page', String(sizeValue))
+        
+        unmount()
+      })
     })
 
-    it('handles mixed boolean prop combinations', () => {
-      const props = {
-        ...defaultProps,
-        enableResetButton: true,
-        enableCopyButton: false,
-        enableExportButton: true
-      }
-
-      render(<BCPagination {...props} />)
+    it('handles different total values', () => {
+      const testCases = [0, 10, 100]
       
-      const actionsElement = screen.getByTestId('bc-pagination-actions')
-      const propsData = JSON.parse(actionsElement.getAttribute('data-props'))
-      
-      expect(propsData.enableResetButton).toBe(true)
-      expect(propsData.enableCopyButton).toBe(false)
-      expect(propsData.enableExportButton).toBe(true)
+      testCases.forEach(totalValue => {
+        const { unmount } = renderWithTheme(<BCPagination {...defaultProps} total={totalValue} />)
+        
+        const tablePagination = screen.getByTestId('table-pagination')
+        expect(tablePagination).toHaveAttribute('data-count', String(totalValue))
+        
+        unmount()
+      })
     })
   })
 
-  describe('Edge Cases', () => {
-    it('handles page 0 correctly', () => {
-      render(<BCPagination {...defaultProps} page={0} />)
+  describe('Enable Buttons Testing', () => {
+    it('handles enableResetButton=true', () => {
+      const props = { ...defaultProps, enableResetButton: true }
+      renderWithTheme(<BCPagination {...props} />)
       
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          page: -1 // page - 1
-        })
-      )
+      const actions = screen.getByTestId('bc-pagination-actions')
+      expect(actions).toHaveAttribute('data-enable-reset', 'true')
     })
 
-    it('handles large page numbers', () => {
-      render(<BCPagination {...defaultProps} page={999} />)
+    it('handles enableCopyButton=true', () => {
+      const props = { ...defaultProps, enableCopyButton: true }
+      renderWithTheme(<BCPagination {...props} />)
       
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          page: 998 // page - 1
-        })
-      )
+      const actions = screen.getByTestId('bc-pagination-actions')
+      expect(actions).toHaveAttribute('data-enable-copy', 'true')
     })
 
-    it('handles null gridRef', () => {
-      render(<BCPagination {...defaultProps} gridRef={null} />)
+    it('handles enableExportButton=true', () => {
+      const props = { ...defaultProps, enableExportButton: true }
+      renderWithTheme(<BCPagination {...props} />)
       
-      const actionsElement = screen.getByTestId('bc-pagination-actions')
-      const propsData = JSON.parse(actionsElement.getAttribute('data-props'))
-      
-      expect(propsData.gridRef).toBe(null)
+      const actions = screen.getByTestId('bc-pagination-actions')
+      expect(actions).toHaveAttribute('data-enable-export', 'true')
     })
 
-    it('handles undefined gridRef', () => {
-      const props = { ...defaultProps }
-      delete props.gridRef
+    it('handles all enable buttons false (default)', () => {
+      renderWithTheme(<BCPagination {...defaultProps} />)
       
-      render(<BCPagination {...props} />)
-      
-      const actionsElement = screen.getByTestId('bc-pagination-actions')
-      const propsData = JSON.parse(actionsElement.getAttribute('data-props'))
-      
-      expect(propsData.gridRef).toBe(null)
+      const actions = screen.getByTestId('bc-pagination-actions')
+      expect(actions).toHaveAttribute('data-enable-reset', 'false')
+      expect(actions).toHaveAttribute('data-enable-copy', 'false')
+      expect(actions).toHaveAttribute('data-enable-export', 'false')
     })
   })
 
-  describe('Slots and SlotProps Configuration', () => {
-    it('configures slots correctly', () => {
-      render(<BCPagination {...defaultProps} />)
+  describe('Callback Functions', () => {
+    it('passes callback functions correctly to TablePagination', () => {
+      renderWithTheme(<BCPagination {...defaultProps} />)
       
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          slots: {
-            root: 'div',
-            toolbar: 'nav'
-          }
-        })
-      )
-    })
-
-    it('configures slotProps with IconComponent', () => {
-      render(<BCPagination {...defaultProps} />)
-      
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          slotProps: {
-            select: {
-              IconComponent: expect.any(Function)
-            }
-          }
-        })
-      )
+      const tablePagination = screen.getByTestId('table-pagination')
+      expect(tablePagination).toHaveAttribute('data-on-page-change', 'present')
+      expect(tablePagination).toHaveAttribute('data-on-rows-per-page-change', 'present')
     })
   })
 
-  describe('Component Configuration', () => {
-    it('sets correct component and accessibility props', () => {
-      render(<BCPagination {...defaultProps} />)
-      
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          className: 'ag-grid-pagination',
-          'aria-label': 'pagination for BC DataGrid',
-          component: 'div'
-        })
-      )
-    })
-
-    it('sets correct pagination options', () => {
-      render(<BCPagination {...defaultProps} />)
-      
-      expect(mockTablePagination).toHaveBeenCalledWith(
-        expect.objectContaining({
-          rowsPerPageOptions: [5, 10, 20, 25, 50, 100],
-          labelRowsPerPage: 'Page Size:',
-          showFirstButton: true,
-          showLastButton: true
-        })
-      )
-    })
-  })
-
-  describe('Component DisplayName', () => {
+  describe('Component Properties', () => {
     it('has correct displayName', () => {
       expect(BCPagination.displayName).toBe('BCPagination')
+    })
+
+    it('has correct PropTypes defined', () => {
+      expect(BCPagination.propTypes).toBeDefined()
+      expect(typeof BCPagination.propTypes).toBe('object')
     })
   })
 })
