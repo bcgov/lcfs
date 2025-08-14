@@ -98,5 +98,6 @@
     "generateNewLinkAriaLabel": "Generate new link",
     "regenerateExistingLinkAriaLabel": "Regenerate existing link",
     "selectFormAriaLabel": "Select form for link generation"
-  }
+  },
+  "snapshotTitle": "Organization Information from Compliance Report"
 }
