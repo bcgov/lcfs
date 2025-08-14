@@ -132,7 +132,7 @@ export const Organizations = () => {
         spacing={{ xs: 2, sm: 2, md: 3 }}
         useFlexGap
         flexWrap="wrap"
-        m={2}
+        my={2}
       >
         <Role roles={[roles.administrator]}>
           <BCButton

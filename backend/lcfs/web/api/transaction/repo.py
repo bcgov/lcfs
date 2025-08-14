@@ -747,7 +747,7 @@ class TransactionRepository:
             return False
         transaction.transaction_action = TransactionActionEnum.Reserved
         self.db.add(transaction)
-        await self.db.commit()
+        await self.db.flush()
         return True
 
     @repo_handler
