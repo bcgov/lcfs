@@ -8,6 +8,8 @@ from lcfs.db.models.notification import (
     ChannelEnum,
 )
 from lcfs.web.api.base import (
+    AudienceType,
+    NotificationTypeEnum,
     PaginationRequestSchema,
     PaginationResponseSchema,
 )
@@ -263,6 +265,19 @@ class NotificationService:
         await self.repo.delete_notification_channel_subscription(subscription_id)
         logger.info(f"Deleted notification channel subscription {subscription_id}.")
 
+    def determine_audience_type(self, notification_type: NotificationTypeEnum) -> AudienceType:
+        """
+        Determine the target audience type based on the notification type.
+        Business logic for notification audience determination is centralized here.
+        """
+        if notification_type == NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE:
+            # For credit market notifications, notify OTHER organizations (not the posting org)
+            # Exclude government users for this notification type
+            return AudienceType.OTHER_ORGANIZATIONS
+        else:
+            # For all other notifications, use the original logic (notify the specific org + government)
+            return AudienceType.SAME_ORGANIZATION
+
     @service_handler
     async def send_notification(self, notification: NotificationRequestSchema):
         """
@@ -296,10 +311,14 @@ class NotificationService:
         ]
 
         for notification_type in notification.notification_types:
+            # Determine audience type based on notification type
+            audience_type = self.determine_audience_type(notification_type)
+            
             in_app_subscribed_users = await self.repo.get_subscribed_users_by_channel(
                 notification_type,
                 ChannelEnum.IN_APP,
                 notification.notification_data.related_organization_id,
+                audience_type,
             )
 
             # Skip sending to Analysts if the org is not the receiving org and status is Recorded/Refused
@@ -341,6 +360,7 @@ class NotificationService:
                 notification_type,
                 notification.notification_context,
                 notification.notification_data.related_organization_id,
+                audience_type,
             )
 
     @service_handler
