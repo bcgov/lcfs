@@ -412,25 +412,10 @@ class FinalSupplyEquipmentRepository:
         """
         Check if a duplicate final supply equipment row exists in the database based on the provided data.
         Returns True if a duplicate is found, False otherwise.
-        Checks within the same compliance report group to handle versioning correctly.
+        Only checks within the current compliance report to avoid false duplicates across versions.
         """
-        CurrentReport = aliased(ComplianceReport)
-        
-        # Get all compliance report IDs that belong to the same group
-        related_reports_subquery = (
-            select(ComplianceReport.compliance_report_id)
-            .join(
-                CurrentReport,
-                CurrentReport.compliance_report_id == row.compliance_report_id,
-            )
-            .where(
-                ComplianceReport.compliance_report_group_uuid
-                == CurrentReport.compliance_report_group_uuid
-            )
-        )
-        
         conditions = [
-            FinalSupplyEquipment.compliance_report_id.in_(related_reports_subquery),
+            FinalSupplyEquipment.compliance_report_id == row.compliance_report_id,
             FinalSupplyEquipment.supply_from_date == row.supply_from_date,
             FinalSupplyEquipment.supply_to_date == row.supply_to_date,
             FinalSupplyEquipment.serial_nbr == row.serial_nbr,
@@ -444,11 +429,29 @@ class FinalSupplyEquipmentRepository:
                 FinalSupplyEquipment.final_supply_equipment_id
                 != row.final_supply_equipment_id
             )
+            logger.debug(
+                "FSE uniqueness check - excluding self",
+                excluding_fse_id=row.final_supply_equipment_id,
+                compliance_report_id=row.compliance_report_id
+            )
+        else:
+            logger.debug(
+                "FSE uniqueness check - no exclusion (new record)",
+                compliance_report_id=row.compliance_report_id
+            )
 
         query = select(exists().where(*conditions))
         result = await self.db.execute(query)
+        found_duplicate = result.scalar()
+        
+        logger.debug(
+            "FSE uniqueness result",
+            found_duplicate=found_duplicate,
+            final_supply_equipment_id=row.final_supply_equipment_id,
+            compliance_report_id=row.compliance_report_id
+        )
 
-        return result.scalar()
+        return found_duplicate
 
     @repo_handler
     async def check_overlap_of_fse_row(
@@ -457,25 +460,10 @@ class FinalSupplyEquipmentRepository:
         """
         Check if there's an overlapping final supply equipment row in the database based on the provided data.
         Returns True if an overlap is found, False otherwise.
-        Checks within the same compliance report group to handle versioning correctly.
+        Only checks within the current compliance report to avoid false overlaps across versions.
         """
-        CurrentReport = aliased(ComplianceReport)
-        
-        # Get all compliance report IDs that belong to the same group
-        related_reports_subquery = (
-            select(ComplianceReport.compliance_report_id)
-            .join(
-                CurrentReport,
-                CurrentReport.compliance_report_id == row.compliance_report_id,
-            )
-            .where(
-                ComplianceReport.compliance_report_group_uuid
-                == CurrentReport.compliance_report_group_uuid
-            )
-        )
-        
         conditions = [
-            FinalSupplyEquipment.compliance_report_id.in_(related_reports_subquery),
+            FinalSupplyEquipment.compliance_report_id == row.compliance_report_id,
             and_(
                 FinalSupplyEquipment.supply_from_date <= row.supply_to_date,
                 FinalSupplyEquipment.supply_to_date >= row.supply_from_date,
