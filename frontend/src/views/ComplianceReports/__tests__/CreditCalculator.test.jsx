@@ -8,10 +8,11 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock calculator hooks
+let mockCompliancePeriods = [{ description: '2022' }, { description: '2023' }]
 vi.mock('@/hooks/useCalculator', () => ({
   useCalculateComplianceUnits: () => ({ data: null }),
   useGetCompliancePeriodList: () => ({
-    data: { data: [{ description: '2022' }, { description: '2023' }] },
+    data: { data: mockCompliancePeriods },
     isLoading: false
   }),
   useGetFuelTypeList: () => ({
@@ -46,5 +47,12 @@ describe('CreditCalculator', () => {
     renderComponent()
     expect(screen.getByRole('button', { name: /clear/i })).toBeInTheDocument()
     expect(screen.getByText(/qtySuppliedLabel/i)).toBeInTheDocument()
+  })
+
+  it('renders post-2024 formula and EC definition when compliance year is 2024+', () => {
+    mockCompliancePeriods = [{ description: '2024' }]
+    renderComponent()
+    expect(screen.getByText('report:formulaAfter2024')).toBeInTheDocument()
+    expect(screen.getByText('report:formulaECDefinition')).toBeInTheDocument()
   })
 })
