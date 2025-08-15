@@ -116,7 +116,7 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
               py: 1,
               borderTop: '1px solid #e0e0e0',
               backgroundColor: '#f5f5f5',
-              cursor: 'default',
+              cursor: 'default'
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -129,7 +129,8 @@ export const NewComplianceReportButton = forwardRef((props, ref) => {
                 }}
               />
               <BCTypography variant="caption" color="text.secondary">
-                2025 reporting is temporarily unavailable due to regulatory updates
+                2025 reporting is temporarily unavailable due to regulatory
+                updates
               </BCTypography>
             </Box>
           </Box>
