@@ -88,30 +88,30 @@ jobs:
 
       - name: Create database dump with compatibility options
         run: |
-          # Create dump with better compatibility options
+          # Create a complete dump but with safe options for restoration
           PGPASSWORD=development_only pg_dump -h localhost -U lcfs -d lcfs \
             --no-owner \
             --no-privileges \
+            --no-comments \
+            --create \
             --clean \
             --if-exists \
-            --no-comments \
-            --disable-triggers \
-            --data-only \
-            --inserts > lcfs_template.sql
+            --format=custom \
+            --compress=6 > lcfs_template.pgdump
           
           # Verify the dump was created and has content
-          if [ ! -s lcfs_template.sql ]; then
+          if [ ! -s lcfs_template.pgdump ]; then
             echo "Error: Database dump is empty or failed"
             exit 1
           fi
           
-          echo "Database dump created successfully ($(wc -l < lcfs_template.sql) lines)"
+          echo "Database dump created successfully ($(stat --printf=%s lcfs_template.pgdump) bytes)"
 
       - name: Upload database template
         uses: actions/upload-artifact@v4
         with:
           name: db-template
-          path: lcfs_template.sql
+          path: lcfs_template.pgdump
           retention-days: 1
           # Add compression to reduce size
           compression-level: 9
@@ -246,34 +246,35 @@ jobs:
 
       - name: Verify database template
         run: |
-          if [ ! -f lcfs_template.sql ]; then
+          if [ ! -f lcfs_template.pgdump ]; then
             echo "Error: Database template file not found"
             exit 1
           fi
           
-          if [ ! -s lcfs_template.sql ]; then
+          if [ ! -s lcfs_template.pgdump ]; then
             echo "Error: Database template file is empty"
             exit 1
           fi
           
-          echo "Database template verified ($(wc -l < lcfs_template.sql) lines)"
+          echo "Database template verified ($(stat --printf=%s lcfs_template.pgdump) bytes)"
 
       - name: Setup shard-specific database
         run: |
-          # Create shard-specific database
+          # Create shard-specific database and restore from template
           PGPASSWORD=development_only createdb -h localhost -U lcfs lcfs_shard_${{ matrix.shard }}
           
-          # First run migrations to create schema
-          cd backend
-          LCFS_DB_BASE=lcfs_shard_${{ matrix.shard }} poetry run alembic upgrade head
-          
-          # Then restore data from template (data-only dump)
-          cd ..
-          PGPASSWORD=development_only psql -h localhost -U lcfs -d lcfs_shard_${{ matrix.shard }} \
-            -f lcfs_template.sql \
-            --quiet \
-            --set ON_ERROR_STOP=1 \
-            --single-transaction
+          # Restore using pg_restore with selective options
+          PGPASSWORD=development_only pg_restore \
+            -h localhost \
+            -U lcfs \
+            -d lcfs_shard_${{ matrix.shard }} \
+            --no-owner \
+            --no-privileges \
+            --disable-triggers \
+            --single-transaction \
+            --exit-on-error \
+            --verbose \
+            lcfs_template.pgdump
         env:
           LCFS_DB_HOST: localhost
           LCFS_DB_PORT: 5432
