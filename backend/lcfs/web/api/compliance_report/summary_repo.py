@@ -43,20 +43,20 @@ class ComplianceReportSummaryRepository:
         self.db = db
         self.fuel_supply_repo = fuel_supply_repo
 
-    async def _validate_locked_fields(
+    async def _validate_lines_7_and_9_locked(
         self, 
         summary: ComplianceReportSummaryUpdateSchema, 
         compliance_report: ComplianceReport
     ) -> None:
         """
-        Validate that locked fields are not being modified for 2025+ reports.
+        Validate that Lines 7 and 9 are not being modified for 2025+ reports with previous assessed report.
         
         Args:
             summary: The summary update data
             compliance_report: The compliance report being updated
             
         Raises:
-            ServiceException: If locked fields are being modified
+            ServiceException: If Lines 7 or 9 are being modified when they should be locked
         """
         compliance_year = int(compliance_report.compliance_period.description)
         
@@ -65,19 +65,17 @@ class ComplianceReportSummaryRepository:
             return
             
         # Check for previous assessed report
+        from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+        cr_repo = ComplianceReportRepository(self.db)
         prev_compliance_report = None
-        if not compliance_report.supplemental_initiator:
-            # Get previous year's assessed report
-            prev_query = select(ComplianceReport).where(
-                ComplianceReport.organization_id == compliance_report.organization_id,
-                ComplianceReport.compliance_period_id == compliance_report.compliance_period_id - 1
-            ).join(ComplianceReport.current_status).where(
-                ComplianceReport.current_status.has(status="Assessed")
-            )
-            result = await self.db.execute(prev_query)
-            prev_compliance_report = result.scalar_one_or_none()
         
-        # If no previous assessed report, all fields are editable
+        if not compliance_report.supplemental_initiator:
+            prev_compliance_report = await cr_repo.get_assessed_compliance_report_by_period(
+                compliance_report.organization_id,
+                compliance_year - 1
+            )
+        
+        # If no previous assessed report, Lines 7 and 9 are editable
         if not prev_compliance_report:
             return
             
@@ -90,17 +88,33 @@ class ComplianceReportSummaryRepository:
         for row in summary.renewable_fuel_target_summary:
             try:
                 line_number = int(row.line)
-                if line_number in [7, 9]:
-                    # These lines should be locked - check if values are being changed
+                if line_number == 7:
+                    # Line 7 should be locked - check if values are being changed
                     for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
-                        new_value = getattr(row, fuel_type, 0)
-                        existing_column = f"line_{line_number}_{row.field.lower()}_{fuel_type}"
-                        existing_value = getattr(existing_summary, existing_column, 0)
+                        new_value = getattr(row, fuel_type, 0) or 0
+                        existing_column = f"line_7_previously_retained_{fuel_type}"
+                        existing_value = getattr(existing_summary, existing_column, 0) or 0
                         
-                        if new_value != existing_value:
+                        # Allow small floating point differences
+                        if abs(float(new_value) - float(existing_value)) > 0.01:
                             raise ServiceException(
-                                f"Line {line_number} is locked for 2025+ reports when a previous assessed report exists. "
-                                f"Cannot modify {fuel_type} value from {existing_value} to {new_value}."
+                                f"Line 7 is locked for 2025+ reports when a previous assessed report exists. "
+                                f"Cannot modify {fuel_type} value from {existing_value} to {new_value}. "
+                                f"This line is automatically populated from Line 6 of the previous year's assessed report."
+                            )
+                elif line_number == 9:
+                    # Line 9 should be locked - check if values are being changed
+                    for fuel_type in ["gasoline", "diesel", "jet_fuel"]:
+                        new_value = getattr(row, fuel_type, 0) or 0
+                        existing_column = f"line_9_obligation_added_{fuel_type}"
+                        existing_value = getattr(existing_summary, existing_column, 0) or 0
+                        
+                        # Allow small floating point differences
+                        if abs(float(new_value) - float(existing_value)) > 0.01:
+                            raise ServiceException(
+                                f"Line 9 is locked for 2025+ reports when a previous assessed report exists. "
+                                f"Cannot modify {fuel_type} value from {existing_value} to {new_value}. "
+                                f"This line is automatically populated from Line 8 of the previous year's assessed report."
                             )
             except (ValueError, TypeError):
                 # Skip non-numeric line numbers
@@ -147,8 +161,8 @@ class ComplianceReportSummaryRepository:
         if not compliance_report:
             raise ValueError(f"No compliance report found with ID {summary.compliance_report_id}")
             
-        # Validate locked fields for 2025+ reports
-        await self._validate_locked_fields(summary, compliance_report)
+        # Validate Lines 7 and 9 for 2025+ reports
+        await self._validate_lines_7_and_9_locked(summary, compliance_report)
         
         existing_summary = await self.get_summary_by_report_id(
             summary.compliance_report_id
