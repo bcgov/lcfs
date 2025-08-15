@@ -77,7 +77,12 @@ class OrganizationsService:
             filter_option = filter.type
             filter_type = filter.filter_type
 
-            if filter.field == "has_early_issuance":
+            # Map frontend field names to backend field names
+            field_name = filter.field
+            if field_name == "hasEarlyIssuance":
+                field_name = "has_early_issuance"
+
+            if field_name == "has_early_issuance":
                 # Get the early issuance field reference
                 early_issuance_field = self.repo.get_early_issuance_field()
                 conditions.append(
@@ -87,10 +92,24 @@ class OrganizationsService:
                 )
                 continue
 
-            if filter.field == "status":
+            if field_name == "registrationStatus":
+                # Registration status is computed from org status
+                # Convert boolean to status enum for filtering
+                if isinstance(filter_value, bool):
+                    status_value = "Registered" if filter_value else ["Unregistered", "Suspended", "Canceled"]
+                    field = get_field_for_filter(OrganizationStatus, "status")
+                    if filter_value:
+                        # Filter for "Registered" status
+                        conditions.append(field == "Registered")
+                    else:
+                        # Filter for non-registered statuses
+                        conditions.append(field.in_(["Unregistered", "Suspended", "Canceled"]))
+                    continue
+
+            if field_name == "status":
                 field = get_field_for_filter(OrganizationStatus, "status")
             else:
-                field = get_field_for_filter(Organization, filter.field)
+                field = get_field_for_filter(Organization, field_name)
 
             conditions.append(
                 apply_filter_conditions(field, filter_value, filter_option, filter_type)
