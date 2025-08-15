@@ -68,8 +68,9 @@ jobs:
 
       - name: Wait for PostgreSQL to be ready
         run: |
-          # Wait for PostgreSQL service to be fully ready
-          until pg_isready -h localhost -p 5432 -U lcfs; do
+          # Wait for PostgreSQL service to be fully ready using Docker
+          CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
+          until docker exec $CONTAINER_ID pg_isready -U lcfs; do
             echo "Waiting for PostgreSQL..."
             sleep 2
           done
@@ -88,8 +89,17 @@ jobs:
 
       - name: Create database dump with compatibility options
         run: |
-          # Create a complete dump but with safe options for restoration
-          PGPASSWORD=development_only pg_dump -h localhost -U lcfs -d lcfs \
+          # Use Docker container's pg_dump to avoid version mismatch issues
+          # Ubuntu runner has PostgreSQL 16 client tools, but container runs PostgreSQL 17
+          CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
+          
+          if [ -z "$CONTAINER_ID" ]; then
+            echo "Error: PostgreSQL container not found"
+            exit 1
+          fi
+          
+          # Run pg_dump inside the container to ensure version compatibility
+          docker exec $CONTAINER_ID pg_dump -U lcfs -d lcfs \
             --no-owner \
             --no-privileges \
             --no-comments \
@@ -232,7 +242,9 @@ jobs:
 
       - name: Wait for PostgreSQL to be ready
         run: |
-          until pg_isready -h localhost -p 5432 -U lcfs; do
+          # Wait for PostgreSQL service to be fully ready using Docker
+          CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
+          until docker exec $CONTAINER_ID pg_isready -U lcfs; do
             echo "Waiting for PostgreSQL..."
             sleep 2
           done
@@ -260,12 +272,17 @@ jobs:
 
       - name: Setup shard-specific database
         run: |
-          # Create shard-specific database and restore from template
-          PGPASSWORD=development_only createdb -h localhost -U lcfs lcfs_shard_${{ matrix.shard }}
+          # Get the container ID of the postgres service
+          CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
           
-          # Restore using pg_restore with selective options
-          PGPASSWORD=development_only pg_restore \
-            -h localhost \
+          # Create shard-specific database using Docker
+          docker exec $CONTAINER_ID createdb -U lcfs lcfs_shard_${{ matrix.shard }}
+          
+          # Copy the dump file into the container
+          docker cp lcfs_template.pgdump $CONTAINER_ID:/tmp/lcfs_template.pgdump
+          
+          # Restore using pg_restore inside the container to avoid version mismatch
+          docker exec $CONTAINER_ID pg_restore \
             -U lcfs \
             -d lcfs_shard_${{ matrix.shard }} \
             --no-owner \
@@ -274,7 +291,7 @@ jobs:
             --single-transaction \
             --exit-on-error \
             --verbose \
-            lcfs_template.pgdump
+            /tmp/lcfs_template.pgdump
         env:
           LCFS_DB_HOST: localhost
           LCFS_DB_PORT: 5432
