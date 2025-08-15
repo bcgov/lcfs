@@ -481,6 +481,7 @@ class TransferServices:
             organization_id=transfer.to_organization_id,
         )
         transfer.to_transaction = to_transaction
+        transfer.to_transaction_id = to_transaction.transaction_id
 
         await self.repo.update_transfer(transfer)
         await self.repo.refresh_transfer(transfer)
