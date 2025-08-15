@@ -8,7 +8,7 @@ export const IDIRSpecificRoleFields = ({ form, disabled, t }) => {
   const { control } = form
   return (
     <Box>
-      <BCTypography variant="label" component="span">
+      <BCTypography variant="label" component="div">
         {t('admin:Roles')}
       </BCTypography>
       <BCFormCheckbox

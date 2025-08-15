@@ -266,7 +266,7 @@ export const OrganizationAddress = ({
   const displayAddressValue = (value) => (value?.trim() ? value : '')
 
   const handleUpdateOrgInfo = () => {
-    navigate(ROUTES.ORGANIZATIONS.EDIT.replace(':orgID', orgID), {
+    navigate(ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', orgID), {
       state: { organizationSnapshot: snapshotData, reportID }
     })
   }

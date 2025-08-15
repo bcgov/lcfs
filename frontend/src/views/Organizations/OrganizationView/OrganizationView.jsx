@@ -23,7 +23,7 @@ function TabPanel({ children, value, index }) {
   )
 }
 
-export const OrganizationView = () => {
+export const OrganizationView = ({ addMode = false }) => {
   const { t } = useTranslation(['org'])
   const [tabIndex, setTabIndex] = useState(0)
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
@@ -35,7 +35,7 @@ export const OrganizationView = () => {
 
   const { data: currentUser, hasRoles } = useCurrentUser()
   const isIdir = hasRoles(roles.government)
-  
+
   // Get the organization ID - either from URL params (IDIR users) or from current user (BCeID users)
   const organizationId = orgID ?? currentUser?.organization?.organizationId
 
@@ -52,7 +52,7 @@ export const OrganizationView = () => {
   const tabs = [
     { 
       label: t('org:dashboardTab', 'Dashboard'), 
-      content: <OrganizationDetailsCard /> 
+      content: <OrganizationDetailsCard addMode={addMode}/> 
     },
     { 
       label: t('org:usersTab'), 

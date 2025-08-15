@@ -5,7 +5,7 @@ import {
 } from '@/views/Organizations'
 import { AddEditUser } from '@/views/Users'
 import ROUTES from '../routes'
-import ViewUser from '@/views/Admin/AdminMenu/components/ViewUser'
+import UserDetailsCard from '@/views/Admin/AdminMenu/components/UserDetailsCard'
 
 export const organizationRoutes = [
   // IDIR routes
@@ -16,38 +16,25 @@ export const organizationRoutes = [
   },
   {
     path: ROUTES.ORGANIZATIONS.ADD,
-    element: <AddEditOrg />,
+    element: <OrganizationView addMode={true} />,
     handle: { title: 'Add organization' }
   },
   {
-    path: ROUTES.ORGANIZATIONS.VIEW,
+    path: ROUTES.ORGANIZATIONS.VIEW, // Organization profile view or edit
     element: <OrganizationView />,
-    handle: { title: 'View organization' }
-  },
-  {
-    path: ROUTES.ORGANIZATIONS.EDIT,
-    element: <AddEditOrg />,
-    handle: { title: 'Edit organization' }
+    handle: { title: 'Organization profile' }
   },
   {
     path: ROUTES.ORGANIZATIONS.ADD_USER,
-    element: <AddEditUser userType="bceid" />,
+    element: <UserDetailsCard addMode={true} userType="bceid" />,
     handle: { title: 'New user' }
   },
   {
     path: ROUTES.ORGANIZATIONS.VIEW_USER,
-    element: <ViewUser userType="bceid" />,
+    element: <UserDetailsCard userType="bceid" />,
     handle: {
       crumb: () => 'Users',
-      title: 'View user'
-    }
-  },
-  {
-    path: ROUTES.ORGANIZATIONS.EDIT_USER,
-    element: <AddEditUser userType="bceid" />,
-    handle: {
-      crumb: () => 'Users',
-      title: 'Edit user'
+      title: 'User profile'
     }
   },
   // BCeID Routes
@@ -58,17 +45,12 @@ export const organizationRoutes = [
   },
   {
     path: ROUTES.ORGANIZATION.ADD_USER,
-    element: <AddEditUser />,
+    element: <UserDetailsCard addMode={true} userType="bceid" />,
     handle: { title: 'New user' }
   },
   {
     path: ROUTES.ORGANIZATION.VIEW_USER,
-    element: <ViewUser />,
-    handle: { title: 'View user' }
-  },
-  {
-    path: ROUTES.ORGANIZATION.EDIT_USER,
-    element: <AddEditUser />,
-    handle: { title: 'Edit user' }
+    element: <UserDetailsCard userType="bceid" />,
+    handle: { title: 'User profile' }
   }
 ]

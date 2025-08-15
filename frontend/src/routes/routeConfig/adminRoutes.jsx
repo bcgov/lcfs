@@ -3,7 +3,7 @@ import ROUTES from '../routes'
 import { Navigate } from 'react-router-dom'
 import { ViewAuditLog } from '@/views/Admin/AdminMenu/components/ViewAuditLog'
 import { AddEditUser } from '@/views/Users'
-import ViewUser from '@/views/Admin/AdminMenu/components/ViewUser'
+import UserDetailsCard from '@/views/Admin/AdminMenu/components/UserDetailsCard'
 
 export const adminRoutes = [
   {
@@ -38,17 +38,12 @@ export const adminRoutes = [
   },
   {
     path: ROUTES.ADMIN.USERS.ADD,
-    element: <AddEditUser userType="idir" />,
+    element: <UserDetailsCard addMode={true} userType="idir" />,
     handle: { title: 'Add user' }
   },
   {
     path: ROUTES.ADMIN.USERS.VIEW,
-    element: <ViewUser />,
-    handle: { title: 'View user' }
-  },
-  {
-    path: ROUTES.ADMIN.USERS.EDIT,
-    element: <AddEditUser userType="idir" />,
-    handle: { title: 'Edit user' }
+    element: <UserDetailsCard />,
+    handle: { title: 'User profile' }
   }
 ]
