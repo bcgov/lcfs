@@ -203,9 +203,10 @@ jobs:
           PGPASSWORD=development_only createdb -h localhost -U lcfs lcfs_shard_${{ matrix.shard }} &
           CREATE_PID=$!
           wait $CREATE_PID
-          # Restore from template with optimized settings
-          PGPASSWORD=development_only psql -h localhost -U lcfs -d lcfs_shard_${{ matrix.shard }} \
-            -f lcfs_template.sql --quiet --set ON_ERROR_STOP=1 \
+          # Filter out problematic \restrict commands and restore
+          sed '/^\\restrict/d' lcfs_template.sql | \
+            PGPASSWORD=development_only psql -h localhost -U lcfs -d lcfs_shard_${{ matrix.shard }} \
+            --quiet --set ON_ERROR_STOP=1 \
             -v ON_ERROR_STOP=1 --single-transaction &
           RESTORE_PID=$!
           wait $RESTORE_PID
