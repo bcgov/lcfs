@@ -243,6 +243,9 @@ try {
     int totalHistoryInserted = 0
     int totalTransactionsInserted = 0
 
+    // Create a prepared statement for checking legacy_id existence in LCFS.
+    def legacyCheckStmt = destinationConn.prepareStatement("SELECT compliance_report_id FROM compliance_report WHERE legacy_id = ?")
+
     // Execute the consolidated compliance reports query
     PreparedStatement consolidatedStmt = sourceConn.prepareStatement(SOURCE_CONSOLIDATED_QUERY)
     ResultSet rs = consolidatedStmt.executeQuery()
@@ -289,6 +292,16 @@ try {
             credit_trade_type       : rs.getString('credit_trade_type'),
             fair_market_value_per_credit : rs.getBigDecimal('fair_market_value_per_credit')
         ]
+
+        // Check if a compliance report with this legacy_id (from source compliance_report_id) already exists in LCFS.
+        legacyCheckStmt.setInt(1, record.compliance_report_id)
+        ResultSet legacyRs = legacyCheckStmt.executeQuery()
+        if (legacyRs.next()) {
+            log.warn("Skipping compliance_report_id: ${record.compliance_report_id} because legacy record already exists in LCFS.")
+            legacyRs.close()
+            continue
+        }
+        legacyRs.close()
 
         // Map TFRS compliance period ID to LCFS compliance period ID
         record.compliance_period_id = mapCompliancePeriodId(record.compliance_period_id)
@@ -507,6 +520,8 @@ try {
 
     rs.close()
     consolidatedStmt.close()
+    legacyCheckStmt.close()  // Close the legacy check statement after processing
+
     // Commit all changes from the original compliance report processing
     destinationConn.commit()
 
@@ -923,6 +938,7 @@ def prepareStatements(Connection conn) {
             update_user,
             update_date
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT (compliance_report_id, status_id) DO NOTHING
     """
 
     def INSERT_TRANSACTION_SQL = '''

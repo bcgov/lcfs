@@ -2,7 +2,8 @@
   "activityLists": {
     "scheduleA": "Schedule A - Notional transfers of renewable fuel",
     "scheduleB": "Schedule B - Part 3 fuel supply",
-    "scheduleC": "Schedule C - Fuels used for other purposes"
+    "scheduleC": "Schedule C - Fuels used for other purposes",
+    "exclusionAgreement": "Exclusion Agreements - Part 3 fuels either purchased or sold under an exclusion agreement"
   },
   "columnLabels": {
     "fuelClass": "Fuel Class",

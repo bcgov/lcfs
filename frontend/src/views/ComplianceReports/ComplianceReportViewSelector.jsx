@@ -7,6 +7,7 @@ import { useLocation, useParams } from 'react-router-dom'
 import { EditViewComplianceReport } from '@/views/ComplianceReports/EditViewComplianceReport.jsx'
 import { useEffect } from 'react'
 import useComplianceReportStore from '@/stores/useComplianceReportStore'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
 
 export const ComplianceReportViewSelector = () => {
   const { complianceReportId } = useParams()
@@ -45,7 +46,17 @@ export const ComplianceReportViewSelector = () => {
     return <Loading />
   }
 
-  return reportData?.report?.legacyId ? (
+  // Determine which view to show:
+  // - 2024+ reports: always show full view
+  // - Pre-2024 reports: use feature flag to control view
+  const reportYear =
+    reportData?.report?.compliancePeriod?.description &&
+    parseInt(reportData.report.compliancePeriod.description)
+
+  const showLegacyView =
+    reportYear < 2024 && !isFeatureEnabled(FEATURE_FLAGS.LEGACY_REPORT_DETAILS)
+
+  return showLegacyView ? (
     <ViewLegacyComplianceReport
       reportData={reportData}
       error={error}
