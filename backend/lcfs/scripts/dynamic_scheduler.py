@@ -468,7 +468,7 @@ class DynamicTaskScheduler:
                         session.add(execution)
 
                         # Commit the changes
-                        session.commit()
+                        await session.commit()
 
                         logger.info(
                             f"✓ Updated task '{fresh_task.name}' - Status: {fresh_task.status}, "
@@ -538,6 +538,9 @@ class DynamicTaskScheduler:
             "errors": [],
         }
 
+        # Initialize tasks_to_execute to empty list to avoid UnboundLocalError
+        tasks_to_execute = []
+
         logger.info("=" * 60)
         logger.info(f"Starting scheduler cycle at {cycle_start}")
         logger.info("=" * 60)
@@ -553,7 +556,6 @@ class DynamicTaskScheduler:
 
             # Check which tasks should run
             current_time = datetime.now()
-            tasks_to_execute = []
 
             for task in tasks:
                 if self.should_execute_task(task, current_time):
@@ -635,20 +637,23 @@ class DynamicTaskScheduler:
             # Show final status of executed tasks
             if tasks_to_execute:
                 logger.info("Final task status:")
-                async with self.session() as session:
-                    for task in tasks_to_execute:
-                        try:
-                            final_task = await session.get(ScheduledTask, task.id)
-                            if final_task:
-                                logger.info(
-                                    f"  - '{final_task.name}': {final_task.status}, "
-                                    f"Last Run: {final_task.last_run.strftime('%Y-%m-%d %H:%M:%S') if final_task.last_run else 'Never'}, "
-                                    f"Next Run: {final_task.next_run.strftime('%Y-%m-%d %H:%M:%S') if final_task.next_run else 'N/A'}"
+                try:
+                    async with self.session() as session:
+                        for task in tasks_to_execute:
+                            try:
+                                final_task = await session.get(ScheduledTask, task.id)
+                                if final_task:
+                                    logger.info(
+                                        f"  - '{final_task.name}': {final_task.status}, "
+                                        f"Last Run: {final_task.last_run.strftime('%Y-%m-%d %H:%M:%S') if final_task.last_run else 'Never'}, "
+                                        f"Next Run: {final_task.next_run.strftime('%Y-%m-%d %H:%M:%S') if final_task.next_run else 'N/A'}"
+                                    )
+                            except Exception as e:
+                                logger.warning(
+                                    f"Could not fetch final status for task '{task.name}': {e}"
                                 )
-                        except Exception as e:
-                            logger.warning(
-                                f"Could not fetch final status for task '{task.name}': {e}"
-                            )
+                except Exception as e:
+                    logger.warning(f"Could not fetch final task status: {e}")
 
             logger.info("=" * 60)
 
