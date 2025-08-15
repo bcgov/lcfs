@@ -17,4 +17,4 @@ This project is under the Apache License 2.0 - see [LICENSE.md](LICENSE.md).
 ## Acknowledgements
 
 - BC Government for the initiative to simplify compliance through technology.
-- Contributors and maintainers of this project.
+- Contributors and maintainers of this project:
