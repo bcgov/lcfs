@@ -392,5 +392,5 @@ export const earlyIssuanceColumns = (t) => [
 ]
 
 export const defaultSortModel = [
-  { field: 'compliancePeriod', direction: 'desc' }
+  { field: 'updateDate', direction: 'desc' }
 ]
