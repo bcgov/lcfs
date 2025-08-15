@@ -124,7 +124,6 @@ class OrganizationBase(BaseSchema):
     reserved_balance: Optional[int] = None
     organization_status_id: int
     organization_type_id: int
-    credit_trading_enabled: Optional[bool] = False
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
@@ -156,7 +155,6 @@ class OrganizationCreateSchema(BaseSchema):
     organization_status_id: int
     organization_type_id: int
     records_address: Optional[str] = None
-    credit_trading_enabled: Optional[bool] = False
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
@@ -178,7 +176,6 @@ class OrganizationUpdateSchema(BaseSchema):
     organization_status_id: Optional[int] = None
     organization_type_id: Optional[int] = None
     records_address: Optional[str] = None
-    credit_trading_enabled: Optional[bool] = None
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
@@ -200,7 +197,6 @@ class OrganizationResponseSchema(BaseSchema):
     has_early_issuance: bool
     total_balance: Optional[int] = None
     reserved_balance: Optional[int] = None
-    credit_trading_enabled: Optional[bool] = False
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None

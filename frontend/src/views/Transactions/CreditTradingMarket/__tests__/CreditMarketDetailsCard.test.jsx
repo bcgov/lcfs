@@ -37,7 +37,6 @@ const mockOrganizationData = {
   creditMarketIsBuyer: false,
   creditsToSell: 100,
   displayInCreditMarket: true,
-  creditTradingEnabled: true,
   totalBalance: 500,
   orgStatus: { status: 'Registered' },
   phone: '555-5678',
@@ -175,8 +174,7 @@ describe('CreditMarketDetailsCard', () => {
   it('shows eligibility warning for unregistered organizations', () => {
     const unregisteredOrgData = {
       ...mockOrganizationData,
-      orgStatus: { status: 'Active' },
-      creditTradingEnabled: false
+      orgStatus: { status: 'Active' }
     }
 
     vi.mocked(useOrganization).mockReturnValue({ 

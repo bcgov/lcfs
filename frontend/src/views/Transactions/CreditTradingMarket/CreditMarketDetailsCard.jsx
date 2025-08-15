@@ -90,7 +90,6 @@ export const CreditMarketDetailsCard = () => {
   }
 
   const isRegistered = organizationData?.orgStatus?.status === ORGANIZATION_STATUSES.REGISTERED
-  const creditTradingEnabled = organizationData?.creditTradingEnabled || false
   
   // Check if user has Transfer or Signing Authority roles (required for editing)
   const hasEditPermission = currentUser?.roles?.some(role => 
@@ -367,8 +366,8 @@ export const CreditMarketDetailsCard = () => {
                     </BCTypography>
 
                     <BCTypography variant="body4">
-                      <strong>{t('creditMarket:roleInMarket', 'Role in Market')}:</strong>{' '}
-                      {currentUser?.roles?.map(role => role.name).join(', ') || t('common:notAvailable', 'Not available')}
+                      <strong>{t('creditMarket:email', 'Email')}:</strong>{' '}
+                      {organizationData?.creditMarketContactEmail || organizationData?.email || t('common:notAvailable', 'Not available')}
                     </BCTypography>
 
                     <BCTypography variant="body4">
@@ -380,14 +379,15 @@ export const CreditMarketDetailsCard = () => {
                   {/* Right Column */}
                   <BCBox display="flex" flexDirection="column" gap={2}>
                     <BCTypography variant="body4">
-                      <strong>{t('creditMarket:email', 'Email')}:</strong>{' '}
-                      {organizationData?.creditMarketContactEmail || organizationData?.email || t('common:notAvailable', 'Not available')}
+                      <strong>{t('creditMarket:roleInMarket', 'Role in Market')}:</strong>{' '}
+                      {(() => {
+                        const roles = []
+                        if (organizationData?.creditMarketIsSeller) roles.push(t('creditMarket:seller', 'Seller'))
+                        if (organizationData?.creditMarketIsBuyer) roles.push(t('creditMarket:buyer', 'Buyer'))
+                        return roles.length > 0 ? roles.join(', ') : t('common:notAvailable', 'Not available')
+                      })()}
                     </BCTypography>
 
-                    <BCTypography variant="body4">
-                      <strong>{t('creditMarket:creditTradingMarket', 'Credit trading market')}:</strong>{' '}
-                      {creditTradingEnabled ? t('common:yes') : t('common:no')}
-                    </BCTypography>
 
                     <BCTypography variant="body4">
                       <strong>{t('creditMarket:displayInMarket', 'Display in Credit trading market')}:</strong>{' '}
@@ -401,19 +401,12 @@ export const CreditMarketDetailsCard = () => {
                   </BCBox>
                 </BCBox>
 
-                {(!isRegistered || !creditTradingEnabled) && !updateCreditMarket.isPending && organizationData && (
+                {!isRegistered && !updateCreditMarket.isPending && organizationData && (
                   <BCBox mt={2} p={2} sx={{ bgcolor: 'warning.light', borderRadius: 1 }}>
                     <BCTypography variant="body4" color="warning.dark">
                       <strong>{t('creditMarket:eligibilityNote', 'Note')}:</strong>{' '}
-                      {!isRegistered && !creditTradingEnabled
-                        ? t('creditMarket:requiresRegistrationAndEnabled', 
-                            'Your organization must be registered for transfers and enabled for credit trading market participation to use this feature.')
-                        : !isRegistered
-                        ? t('creditMarket:requiresRegistration', 
-                            'Your organization must be registered for transfers to participate in the credit trading market.')
-                        : t('creditMarket:requiresEnabled', 
-                            'Credit trading market participation must be enabled by a government administrator.')
-                      }
+                      {t('creditMarket:requiresRegistration', 
+                          'Your organization must be registered for transfers to participate in the credit trading market.')}
                     </BCTypography>
                   </BCBox>
                 )}
