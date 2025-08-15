@@ -5,7 +5,6 @@ from lcfs.web.api import (
     echo,
     fuel_supply,
     monitoring,
-    tasks,
     user,
     role,
     notification,
@@ -101,4 +100,3 @@ api_router.include_router(
     prefix="/credit-ledger",
     tags=["credit_ledger"],
 )
-api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
