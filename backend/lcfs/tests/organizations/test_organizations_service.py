@@ -251,6 +251,7 @@ async def test_update_organization_with_early_issuance_change(
     """Test updating an organization's early issuance flag."""
     update_data = OrganizationUpdateSchema(
         has_early_issuance=True,
+        organization_type_id=1,
         address={
             "name": "Test Org",
             "streetAddress": "123 Main St",

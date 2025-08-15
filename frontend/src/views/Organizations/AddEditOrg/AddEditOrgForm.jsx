@@ -33,7 +33,7 @@ import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { ROUTES } from '@/routes/routes'
-import { useOrganization } from '@/hooks/useOrganization'
+import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { AddressAutocomplete } from '@/components/BCForm/index.js'
 import colors from '@/themes/base/colors'
@@ -61,6 +61,7 @@ export const AddEditOrgForm = () => {
     enabled: !!orgID,
     retry: false
   })
+  const { data: orgTypes } = useOrganizationTypes()
   const dismissBox = (boxType) => {
     setDismissedBoxes((prev) => ({
       ...prev,
@@ -105,7 +106,7 @@ export const AddEditOrgForm = () => {
         orgEDRMSRecord: data.edrmsRecord,
         recordsAddress: data.recordsAddress || '',
         hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
-        orgSupplierType:
+        orgType:
           data.organizationTypeId?.toString() ||
           data.orgType?.organizationTypeId?.toString() ||
           '1',
@@ -190,7 +191,7 @@ export const AddEditOrgForm = () => {
       recordsAddress: data.recordsAddress || '',
       hasEarlyIssuance: data.hasEarlyIssuance === 'yes',
       organizationStatusId: parseInt(data.orgRegForTransfers),
-      organizationTypeId: parseInt(data.orgSupplierType),
+      organizationTypeId: parseInt(data.orgType),
       creditTradingEnabled: data.orgCreditTradingEnabled === 'yes',
       address: {
         name: data.orgOperatingName,
@@ -487,35 +488,47 @@ export const AddEditOrgForm = () => {
                   <FormControl fullWidth>
                     <Grid container>
                       <Grid item xs={6}>
-                        <FormLabel id="orgSupplierType" sx={{ pb: 1 }}>
+                        <FormLabel id="orgType" sx={{ pb: 1 }}>
                           <BCTypography variant="body4">
-                            {t('org:supplierTypLabel')}:
+                            {t('org:orgTypeLabel')}:
                           </BCTypography>
                         </FormLabel>
                       </Grid>
                       <Grid item xs={6} mt={0.5}>
-                        <RadioGroup
-                          row
-                          id="orgSupplierType"
-                          name="orgSupplierType"
+                        <Controller
+                          control={control}
+                          name="orgType"
                           defaultValue="1"
-                        >
-                          <FormControlLabel
-                            value="1"
-                            control={
-                              <Radio
-                                {...register('orgSupplierType')}
-                                data-test="orgSupplierType1"
-                              />
-                            }
-                            label={
-                              <BCTypography variant="body4">
-                                {t('supplier')}
-                              </BCTypography>
-                            }
-                          />
-                        </RadioGroup>
-                        {renderError('orgSupplierType')}
+                          render={({ field }) => (
+                            <TextField
+                              id="orgType"
+                              name="orgType"
+                              data-test="orgType"
+                              select
+                              fullWidth
+                              variant="outlined"
+                              SelectProps={{ native: true }}
+                              {...field}
+                              error={!!errors.orgType}
+                              helperText={errors.orgType?.message}
+                            >
+                              {(orgTypes || []).map((t) => {
+                                const suffix = t.isBceidUser
+                                  ? ' (BCeID user)'
+                                  : ' (non-BCeID user)'
+                                const label = `${t.description || t.orgType}${suffix}`
+                                return (
+                                  <option
+                                    key={t.organizationTypeId}
+                                    value={t.organizationTypeId}
+                                  >
+                                    {label}
+                                  </option>
+                                )
+                              })}
+                            </TextField>
+                          )}
+                        />
                       </Grid>
                     </Grid>
                   </FormControl>

@@ -571,11 +571,13 @@ class OrganizationsRepository:
             .where(
                 and_(
                     Organization.display_in_credit_market == True,
-                    Organization.org_status.has(OrganizationStatus.status == OrgStatusEnum.Registered)
+                    Organization.org_status.has(
+                        OrganizationStatus.status == OrgStatusEnum.Registered
+                    ),
                 )
             )
             .order_by(Organization.name)
         )
-        
+
         result = await self.db.execute(query)
         return result.scalars().all()

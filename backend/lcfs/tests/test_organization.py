@@ -9,7 +9,6 @@ from lcfs.web.api.organizations.schema import (
     OrganizationListSchema,
     OrganizationStatusEnum,
     OrganizationSummaryResponseSchema,
-    OrganizationTypeEnum,
 )
 
 
@@ -76,13 +75,13 @@ async def test_create_organization_success(
     # Set mock user role for organization creation
     set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
     payload = {
-        "name": "Test Organizationa",
+        "name": "Test Organization",
         "operatingName": "Test Operating name",
         "email": "test@gov.bc.ca",
         "phone": "0000000000",
         "edrmsRecord": "EDRMS123",
         "organizationStatusId": 2,
-        "organizationTypeId": 1,
+        "organizationTypeId": 1,  # Fuel supplier
         "hasEarlyIssuance": False,
         "address": {
             "name": "Test Operating name",
@@ -107,6 +106,120 @@ async def test_create_organization_success(
     response = await create_organization(client, fastapi_app, payload)
 
     assert response.status_code == status.HTTP_201_CREATED
+
+    # Verify the response contains organization type information
+    data = response.json()
+    assert "organizationId" in data
+
+
+@pytest.mark.anyio
+async def test_create_organization_with_different_types(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+) -> None:
+    """Test creating organizations with different organization types"""
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+
+    test_cases = [
+        {"type_id": 1, "expected_type": "fuel_supplier", "expected_bceid": True},
+        {"type_id": 2, "expected_type": "aggregator", "expected_bceid": True},
+        {"type_id": 3, "expected_type": "fuel_producer", "expected_bceid": False},
+        {"type_id": 4, "expected_type": "exempted_supplier", "expected_bceid": False},
+        {
+            "type_id": 5,
+            "expected_type": "initiative_agreement_holder",
+            "expected_bceid": False,
+        },
+    ]
+
+    for i, test_case in enumerate(test_cases):
+        payload = {
+            "name": f"Test Org Type {test_case['type_id']}",
+            "operatingName": f"Test Org Type {test_case['type_id']} Op",
+            "email": f"test{i}@gov.bc.ca",
+            "phone": f"000000000{i}",
+            "edrmsRecord": f"EDRMS{i}",
+            "organizationStatusId": 2,
+            "organizationTypeId": test_case["type_id"],
+            "hasEarlyIssuance": False,
+            "address": {
+                "name": f"Test Org Type {test_case['type_id']} Op",
+                "streetAddress": "123 Test Street",
+                "addressOther": "",
+                "city": "Victoria",
+                "provinceState": "BC",
+                "country": "Canada",
+                "postalcodeZipcode": "V8W 2C3",
+            },
+            "attorneyAddress": {
+                "name": f"Test Org Type {test_case['type_id']} Op",
+                "streetAddress": "123 Test Street",
+                "addressOther": "",
+                "city": "Victoria",
+                "provinceState": "BC",
+                "country": "Canada",
+                "postalcodeZipcode": "V8W 2C3",
+            },
+        }
+
+        response = await create_organization(client, fastapi_app, payload)
+        assert response.status_code == status.HTTP_201_CREATED
+
+        # Get the created organization to verify the organization type
+        data = response.json()
+        org_id = data["organizationId"]
+
+        get_url = fastapi_app.url_path_for("get_organization", organization_id=org_id)
+        get_response = await client.get(get_url)
+        assert get_response.status_code == status.HTTP_200_OK
+
+        org_data = get_response.json()
+        assert org_data["organizationTypeId"] == test_case["type_id"]
+        assert org_data["orgType"]["orgType"] == test_case["expected_type"]
+        assert org_data["orgType"]["isBceidUser"] == test_case["expected_bceid"]
+
+
+@pytest.mark.anyio
+async def test_create_organization_invalid_type(
+    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+) -> None:
+    """Test creating organization with invalid organization type ID"""
+    set_mock_user(fastapi_app, [RoleEnum.GOVERNMENT])
+    payload = {
+        "name": "Test Invalid Type Org",
+        "operatingName": "Test Invalid Type Op",
+        "email": "invalid@gov.bc.ca",
+        "phone": "0000000000",
+        "edrmsRecord": "EDRMS999",
+        "organizationStatusId": 2,
+        "organizationTypeId": 999,  # Invalid organization type ID
+        "hasEarlyIssuance": False,
+        "address": {
+            "name": "Test Invalid Type Op",
+            "streetAddress": "123 Test Street",
+            "addressOther": "",
+            "city": "Victoria",
+            "provinceState": "BC",
+            "country": "Canada",
+            "postalcodeZipcode": "V8W 2C3",
+        },
+        "attorneyAddress": {
+            "name": "Test Invalid Type Op",
+            "streetAddress": "123 Test Street",
+            "addressOther": "",
+            "city": "Victoria",
+            "provinceState": "BC",
+            "country": "Canada",
+            "postalcodeZipcode": "V8W 2C3",
+        },
+    }
+
+    response = await create_organization(client, fastapi_app, payload)
+    # Depending on validation strategy, could be 400/422 client error or 500 server error from DB FK violation
+    assert response.status_code in [
+        status.HTTP_400_BAD_REQUEST,
+        status.HTTP_422_UNPROCESSABLE_ENTITY,
+        status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ]
 
 
 @pytest.mark.anyio
@@ -217,7 +330,7 @@ async def test_get_organizations_list(
     assert data.pagination.size == 5
     assert data.pagination.page == 1
     assert len(data.organizations) > 0
-    assert data.organizations[0].org_type.org_type == OrganizationTypeEnum.FUEL_SUPPLIER
+    assert data.organizations[0].org_type.org_type == "fuel_supplier"
     assert response.status_code == status.HTTP_200_OK
 
 
@@ -239,6 +352,27 @@ async def test_get_organization_types_list(
     url = fastapi_app.url_path_for("get_organization_types")
     response = await client.get(url)
     assert response.status_code == status.HTTP_200_OK
+
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 1  # At least fuel supplier should exist
+
+    # Verify fuel supplier exists with correct properties
+    fuel_supplier = next(
+        (org_type for org_type in data if org_type["organizationTypeId"] == 1), None
+    )
+    assert fuel_supplier is not None
+    assert fuel_supplier["orgType"] == "fuel_supplier"
+    assert fuel_supplier["description"] == "Fuel supplier"
+    assert fuel_supplier["isBceidUser"] is True
+
+    # Verify all organization types have required fields
+    for org_type in data:
+        assert "organizationTypeId" in org_type
+        assert "orgType" in org_type
+        assert "description" in org_type
+        assert "isBceidUser" in org_type
+        assert isinstance(org_type["isBceidUser"], bool)
 
 
 @pytest.mark.anyio

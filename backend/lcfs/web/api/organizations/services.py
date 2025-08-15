@@ -283,29 +283,33 @@ class OrganizationsService:
 
         # Update only the credit market fields
         allowed_fields = {
-            'credit_market_contact_name',
-            'credit_market_contact_email', 
-            'credit_market_contact_phone',
-            'credit_market_is_seller',
-            'credit_market_is_buyer',
-            'credits_to_sell',
-            'display_in_credit_market'
+            "credit_market_contact_name",
+            "credit_market_contact_email",
+            "credit_market_contact_phone",
+            "credit_market_is_seller",
+            "credit_market_is_buyer",
+            "credits_to_sell",
+            "display_in_credit_market",
         }
-        
+
         for key, value in credit_market_data.items():
             if key in allowed_fields and hasattr(organization, key):
                 # Special validation for credits_to_sell
-                if key == 'credits_to_sell' and value is not None:
+                if key == "credits_to_sell" and value is not None:
                     if value < 0:
                         raise ValueError("Credits to sell cannot be negative")
-                    
+
                     # Get the organization's total balance to validate against
-                    total_balance = await self.calculate_total_balance(organization.organization_id)
+                    total_balance = await self.calculate_total_balance(
+                        organization.organization_id
+                    )
                     if value > total_balance:
-                        raise ValueError(f"Credits to sell ({value}) cannot exceed available balance ({total_balance})")
-                
+                        raise ValueError(
+                            f"Credits to sell ({value}) cannot exceed available balance ({total_balance})"
+                        )
+
                 setattr(organization, key, value)
-        
+
         # Set the update user
         if user:
             organization.update_user = user.keycloak_username
@@ -328,7 +332,9 @@ class OrganizationsService:
 
         # Calculate and add balance information for credit trading validation
         organization.total_balance = await self.calculate_total_balance(organization_id)
-        organization.reserved_balance = await self.calculate_reserved_balance(organization_id)
+        organization.reserved_balance = await self.calculate_reserved_balance(
+            organization_id
+        )
 
         return organization
 
@@ -616,9 +622,9 @@ class OrganizationsService:
         Returns organizations with their credit market contact details for public viewing.
         """
         from .schema import OrganizationCreditMarketListingSchema
-        
+
         organizations = await self.repo.get_credit_market_organizations()
-        
+
         return [
             OrganizationCreditMarketListingSchema(
                 organization_id=org.organization_id,
