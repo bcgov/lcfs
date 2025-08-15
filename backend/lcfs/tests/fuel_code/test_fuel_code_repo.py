@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
 
 from lcfs.db.models.fuel.FuelCodeListView import FuelCodeListView
@@ -258,6 +258,22 @@ async def test_get_fuel_status_by_status(fuel_code_repo, mock_db):
 
     result = await fuel_code_repo.get_fuel_status_by_status(FuelCodeStatusEnum.Approved)
     assert result == mock_status
+
+
+@pytest.mark.anyio
+async def test_get_expiring_fuel_codes(fuel_code_repo, mock_db):
+    mock_fuel_code = FuelCode(
+        fuel_code_id=1,
+        fuel_suffix="101.0",
+        expiration_date=date.today() + timedelta(days=30)
+    )
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = [mock_fuel_code]
+    mock_db.execute.return_value = mock_result
+
+    result = await fuel_code_repo.get_expiring_fuel_codes()
+    assert len(result) == 1
+    assert result[0] == mock_fuel_code
 
 
 @pytest.mark.anyio

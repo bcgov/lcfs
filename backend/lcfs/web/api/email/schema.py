@@ -27,4 +27,5 @@ TEMPLATE_MAPPING = {
     "IDIR_DIRECTOR__FUEL_CODE__ANALYST_RECOMMENDATION": "idir_director__fuel_code__analyst_recommendation.html",
     "IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED": "idir_analyst__fuel_code__director_returned.html",
     "IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL": "idir_analyst__fuel_code__director_approval.html",
+    "IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION": "idir_analyst__fuel_code__expiry_notification.html",
 }
