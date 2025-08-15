@@ -1,8 +1,5 @@
 from datetime import datetime
 import math
-from collections import defaultdict
-from typing import List, Any, Dict
-import re
 import uuid
 
 from lcfs.db.base import ActionTypeEnum

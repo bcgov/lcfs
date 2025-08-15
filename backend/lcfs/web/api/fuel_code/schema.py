@@ -7,7 +7,6 @@ from lcfs.web.api.base import BaseSchema, PaginationResponseSchema
 from datetime import date, datetime
 from pydantic import (
     Field,
-    computed_field,
     field_validator,
     model_validator,
 )
@@ -179,9 +178,7 @@ class FuelCodeSchema(BaseSchema):
     fuel_production_facility_province_state: Optional[str] = None
     fuel_production_facility_country: Optional[str] = None
     facility_nameplate_capacity: Optional[int] = None
-    facility_nameplate_capacity_unit: Optional[
-        Union[FuelTypeQuantityUnitsEnumSchema, str]
-    ] = None
+    facility_nameplate_capacity_unit: Optional[Union[FuelTypeQuantityUnitsEnumSchema, str]] = None
     former_company: Optional[str] = None
     notes: Optional[str] = None
     fuel_code_status: Optional[FuelCodeStatusSchema] = None
@@ -199,19 +196,19 @@ class FuelCodeSchema(BaseSchema):
     is_notes_required: Optional[bool] = False
     can_edit_ci: Optional[bool] = True
 
-
 class FuelCodeHistorySchema(BaseSchema):
     fuel_code_history_id: int
     fuel_code_id: int
     fuel_status_id: int
     fuel_code_snapshot: Optional[Dict[str, Any]] = Field(
-        None, description="Complete snapshot of fuel code data at time of change"
+        None,
+        description="Complete snapshot of fuel code data at time of change"
     )
     group_uuid: Optional[str] = None
     version: Optional[int] = 0
     action_type: Optional[str] = None
 
-    @field_validator("fuel_code_snapshot", mode="before")
+    @field_validator('fuel_code_snapshot', mode='before')
     @classmethod
     def parse_fuel_code_snapshot(cls, v):
         """Parse fuel_code_snapshot if it comes as a JSON string"""

@@ -13,7 +13,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Import your application modules
+# Import application modules
 from lcfs.web.api.base import NotificationTypeEnum
 from lcfs.web.api.email.services import CHESEmailService
 from lcfs.web.api.email.repo import CHESEmailRepository
@@ -65,7 +65,7 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
         base_context = {
             "subject": "Fuel Code Expiry Notification - Action Required",
             "message": {
-                "id": f"fuel_code_expiry_{datetime.now().strftime('%Y%m%d')}",
+                "id": "",
                 "status": "Expiring",
             },
         }
@@ -75,7 +75,7 @@ async def notify_expiring_fuel_code(db_session: AsyncSession):
                 # Create context for this specific email
                 context = base_context.copy()
                 context["fuel_codes"] = codes_data["codes"]
-                context["contact_email"] = contact_email
+                context["contact_email"] = "prashanth.venkateshappa@gov.bc.ca"
                 context["expiry_count"] = len(codes_data["codes"])
 
                 logger.info(
@@ -123,8 +123,8 @@ def _group_codes_by_email(fuel_codes: List[Any]) -> Dict[str, Dict[str, Any]]:
 
         # Validate email format
         if not _is_valid_email(contact_email):
-            email_groups['tfrs@gov.bc.ca']["codes"].append(code)
-            email_groups['tfrs@gov.bc.ca']["emails"].add('tfrs@gov.bc.ca')
+            email_groups["tfrs@gov.bc.ca"]["codes"].append(code)
+            email_groups["tfrs@gov.bc.ca"]["emails"].add("tfrs@gov.bc.ca")
             logger.warning(
                 f"Invalid email format for fuel code {code.fuel_code}: {contact_email}"
             )
@@ -169,41 +169,3 @@ def _is_valid_email(email: str) -> bool:
     # Basic email regex pattern
     email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
     return re.match(email_pattern, email) is not None
-
-
-# Additional task functions can be added here
-async def test_task(db_session: AsyncSession = None):
-    """
-    Simple test task for scheduler testing.
-
-    Args:
-        db_session: Database session provided by the scheduler (optional for this test)
-    """
-    logger.info("Test task executed successfully")
-    await asyncio.sleep(1)  # Simulate some work
-    return True
-
-
-async def cleanup_old_notifications(db_session: AsyncSession):
-    """
-    Task to clean up old notification records.
-    This is an example of another task that could be scheduled.
-
-    Args:
-        db_session: Database session provided by the scheduler
-    """
-    logger.info("Starting cleanup of old notifications")
-
-    try:
-        # Add your cleanup logic here using the provided db_session
-        # For example, delete notification records older than 30 days
-        cutoff_date = datetime.now() - timedelta(days=30)
-
-        # Implementation would depend on your notification storage
-        logger.info(f"Would clean up notifications older than {cutoff_date}")
-
-        return True
-
-    except Exception as e:
-        logger.error(f"Failed to cleanup old notifications: {e}")
-        return False

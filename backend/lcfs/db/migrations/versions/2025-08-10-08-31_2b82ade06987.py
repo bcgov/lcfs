@@ -1,6 +1,7 @@
 """Scheduled batch tasks
 
 Revision ID: 2b82ade06987
+Revises: 8cb65fb3418e
 Revises: 9f640abe256d
 Create Date: 2025-07-18 08:31:38.002793
 
@@ -13,6 +14,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "2b82ade06987"
+down_revision = "8cb65fb3418e"
 down_revision = "9f640abe256d"
 branch_labels = None
 depends_on = None
@@ -132,8 +134,7 @@ def upgrade() -> None:
     op.execute(
         """
         INSERT INTO scheduled_tasks (name, task_function, schedule, is_enabled) VALUES 
-        ('Fuel Code Expiry Check', 'fuel_code_expiry.notify_expiring_fuel_code', '0 9 * * *', true),
-        ('Auto-Submit Overdue Supplemental Reports', 'compliance_report.auto_submit_overdue_supplemental_reports', '0 2 * * *', true)
+        ('Fuel Code Expiry Check', 'fuel_code_expiry.notify_expiring_fuel_code', '0 9 * * *', true)
         """
     )
 

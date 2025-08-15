@@ -9,7 +9,6 @@ dynamic_scheduler.py          # Main scheduler script
 tasks/                       # Tasks package directory
 ├── __init__.py             # Package initializer
 ├── fuel_code_expiry.py     # Fuel code expiration tasks
-├── common.py              # Common utility tasks
 └── [future modules...]     # Additional task modules
 ```
 
@@ -18,12 +17,7 @@ tasks/                       # Tasks package directory
 ### `tasks/fuel_code_expiry.py`
 Handles fuel code expiration notifications and related operations:
 - `notify_expiring_fuel_code()` - Send expiry notifications
-- `check_expired_fuel_codes()` - Check recently expired codes
 - Helper functions for code grouping and validation
-
-### `tasks/common.py`
-Common utility and maintenance tasks:
-- `test_task()` - Simple test task for validation
 
 ## Task Function Requirements
 
@@ -81,9 +75,7 @@ In your `scheduled_tasks` table, set the `task_function` field to one of the sup
 
 ```sql
 INSERT INTO scheduled_tasks (name, task_function, schedule, is_enabled) VALUES
-('Fuel Code Expiry Check', 'fuel_code_expiry.notify_expiring_fuel_code', '0 9 * * *', true),
-('System Health Report', 'notification.send_system_health_report', '0 6 * * 1', true),
-('Database Health Check', 'common.database_health_check', '*/15 * * * *', true);
+('Fuel Code Expiry Check', 'fuel_code_expiry.notify_expiring_fuel_code', '0 9 * * *', true);
 ```
 
 ## Adding New Task Modules

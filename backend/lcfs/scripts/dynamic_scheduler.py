@@ -468,7 +468,7 @@ class DynamicTaskScheduler:
                         session.add(execution)
 
                         # Commit the changes
-                        await session.flush()
+                        session.commit()
 
                         logger.info(
                             f"✓ Updated task '{fresh_task.name}' - Status: {fresh_task.status}, "
