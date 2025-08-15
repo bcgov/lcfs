@@ -52,7 +52,7 @@ vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
 
 vi.mock('@/components/ClearFiltersButton', () => ({
   ClearFiltersButton: ({ onClick, ...props }) => (
-    <button data-testid="clear-filters-button" onClick={onClick} {...props}>
+    <button data-test="clear-filters-button" onClick={onClick} {...props}>
       Clear filters
     </button>
   )
@@ -193,12 +193,14 @@ describe('OrganizationView Component Tests', () => {
   })
 
   it('has a functioning clear filters button', () => {
-    const clearFilterButtons = screen.getAllByTestId('clear-filters-button')
-    expect(clearFilterButtons.length).toBeGreaterThan(0)
-    expect(clearFilterButtons[0]).not.toBeDisabled()
+    // Click on the Users tab to navigate to the tab with the clear filters button
+    fireEvent.click(screen.getByText(/Users/i))
+    
+    const clearFilterButton = screen.getByRole('button', { name: /clear filters/i })
+    expect(clearFilterButton).toBeInTheDocument()
+    expect(clearFilterButton).not.toBeDisabled()
 
-    const button = clearFilterButtons[0]
-    expect(() => fireEvent.click(button)).not.toThrow()
+    expect(() => fireEvent.click(clearFilterButton)).not.toThrow()
   })
 
   it('shows edit button when user has administrator role', () => {
@@ -213,6 +215,9 @@ describe('OrganizationView Component Tests', () => {
 
   it('shows New User button for users with administrator role', () => {
     setupRoleTest('Administrator', true)
+
+    // Click on the Users tab to navigate to the tab with the New User button
+    fireEvent.click(screen.getByText(/Users/i))
 
     // Check for the New User button
     expect(screen.getByText(/new user/i)).toBeInTheDocument()

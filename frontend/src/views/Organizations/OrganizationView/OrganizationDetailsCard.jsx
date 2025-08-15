@@ -54,6 +54,7 @@ export const OrganizationDetailsCard = () => {
     <>
       <BCBox
         sx={{
+          mt: 5,
           width: {
             md: '100%',
             lg: '90%'
