@@ -70,22 +70,6 @@ jobs:
           LCFS_DB_PASS: development_only
           LCFS_DB_BASE: lcfs
 
-      - name: Create database dump
-        run: |
-          # Get the container ID of the postgres service
-          CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
-          # Run pg_dump inside the container (no version mismatch)
-          # Exclude ownership and privileges to avoid role issues
-          docker exec $CONTAINER_ID pg_dump -U lcfs -d lcfs \
-            --no-owner --no-privileges --clean --if-exists > lcfs_template.sql
-
-      - name: Upload database template
-        uses: actions/upload-artifact@v4
-        with:
-          name: db-template
-          path: lcfs_template.sql
-          retention-days: 1
-
   backend-tests:
     name: 'Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})'
     needs: backend-setup
