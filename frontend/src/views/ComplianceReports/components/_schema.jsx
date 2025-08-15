@@ -302,6 +302,7 @@ export const renewableFuelColumns = (
       editableCells: gasolineEditableCells,
       cellConstraints: {
         5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
+        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
         7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) }
       }
     },
@@ -314,6 +315,7 @@ export const renewableFuelColumns = (
       editableCells: dieselEditableCells,
       cellConstraints: {
         5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
+        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
         7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) }
       }
     },
@@ -326,6 +328,7 @@ export const renewableFuelColumns = (
       editableCells: jetFuelEditableCells,
       cellConstraints: {
         5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) },
+        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) },
         7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) }
       }
     }

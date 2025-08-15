@@ -748,60 +748,41 @@ class ComplianceReportSummaryService:
             * jet_fuel_perc,
         }
 
-        # line 6 & 8: Initialize with Decimal, compare with Decimal
-        decimal_retained_renewables = {
-            "gasoline": DECIMAL_ZERO,
-            "diesel": DECIMAL_ZERO,
-            "jet_fuel": DECIMAL_ZERO,
-        }
-        decimal_deferred_renewables = {
-            "gasoline": DECIMAL_ZERO,
-            "diesel": DECIMAL_ZERO,
-            "jet_fuel": DECIMAL_ZERO,
-        }
+        # line 6 & 8: Always preserve user-entered values, but cap at 5% of current line 4
+        decimal_retained_renewables = {}
+        decimal_deferred_renewables = {}
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
-            # Get previous required amount as Decimal (assuming it was stored correctly or converting if needed)
-            # For simplicity, let's assume prev_summary values are floats/ints that need conversion
-            previous_required_renewable_quantity_dec = Decimal(
+            # Calculate the 5% cap based on current line 4 value, rounded to nearest integer
+            current_required_quantity_dec = decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
+            max_retained = (current_required_quantity_dec * Decimal("0.05")).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+            
+            # Always preserve line 6 value from current summary (user's input)
+            # but cap it at 5% of current line 4
+            line_6_value = Decimal(
                 str(
                     getattr(
                         prev_summary,
-                        f"line_4_eligible_renewable_fuel_required_{category}",
-                        0,  # Default to 0 if attribute missing
+                        f"line_6_renewable_fuel_retained_{category}",
+                        0,
                     )
                     or 0
                 )
-            )  # Ensure None becomes 0
-
-            current_required_quantity_dec = (
-                decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
             )
-
-            # Compare Decimals
-            if (
-                previous_required_renewable_quantity_dec
-                == current_required_quantity_dec
-            ):
-                # Convert previous retained/deferred to Decimal
-                decimal_retained_renewables[category] = Decimal(
-                    str(
-                        getattr(
-                            prev_summary,
-                            f"line_6_renewable_fuel_retained_{category}",
-                            0,
-                        )
-                        or 0
+            decimal_retained_renewables[category] = min(line_6_value, max_retained)
+            
+            # Similarly for line 8 - preserve but cap at 5% of current line 4
+            line_8_value = Decimal(
+                str(
+                    getattr(
+                        prev_summary,
+                        f"line_8_obligation_deferred_{category}",
+                        0,
                     )
+                    or 0
                 )
-                decimal_deferred_renewables[category] = Decimal(
-                    str(
-                        getattr(
-                            prev_summary, f"line_8_obligation_deferred_{category}", 0
-                        )
-                        or 0
-                    )
-                )
+            )
+            decimal_deferred_renewables[category] = min(line_8_value, max_retained)
 
         # line 10: Calculate net supplied using Decimal
         decimal_net_renewable_supplied = {
@@ -964,13 +945,13 @@ class ComplianceReportSummaryService:
                     else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
                 ),
                 field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
-                gasoline=float(values.get("gasoline", 0)),
-                diesel=float(values.get("diesel", 0)),
-                jet_fuel=float(values.get("jet_fuel", 0)),
-                total_value=float(
-                    values.get("gasoline", 0)
-                    + values.get("diesel", 0)
-                    + values.get("jet_fuel", 0)
+                gasoline=(int(values.get("gasoline", 0)) if line != 11 else float(values.get("gasoline", 0))),
+                diesel=(int(values.get("diesel", 0)) if line != 11 else float(values.get("diesel", 0))),
+                jet_fuel=(int(values.get("jet_fuel", 0)) if line != 11 else float(values.get("jet_fuel", 0))),
+                total_value=(
+                    int(values.get("gasoline", 0) + values.get("diesel", 0) + values.get("jet_fuel", 0))
+                    if line != 11
+                    else float(values.get("gasoline", 0) + values.get("diesel", 0) + values.get("jet_fuel", 0))
                 ),
                 format=(FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER),
             )

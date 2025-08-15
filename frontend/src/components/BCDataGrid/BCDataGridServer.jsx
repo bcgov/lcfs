@@ -288,11 +288,6 @@ const BCDataGridServer = ({
     )
   }, [])
 
-  const handleResetFilter = (filterField) => {
-    const filterModel = gridRef.current.api.getFilterModel()
-    delete filterModel[filterField]
-    gridRef.current.api.setFilterModel(filterModel)
-  }
 
   // Memorized default ag-grid options
   // For more details please refer https://ag-grid.com/javascript-data-grid/grid-options/

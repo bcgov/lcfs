@@ -26,7 +26,11 @@ vi.mock('react-i18next', () => ({
   })
 }))
 vi.mock('@/services/useApiService')
-vi.mock('react-router-dom')
+vi.mock('react-router-dom', () => ({
+  useNavigate: vi.fn(),
+  useParams: vi.fn(),
+  useLocation: vi.fn(() => ({ state: null }))
+}))
 
 // Mock AddressAutocomplete to prevent network requests
 vi.mock('@/components/BCForm/AddressAutocomplete', () => ({
@@ -89,7 +93,9 @@ const mockedOrg = {
     streetAddress: '123 Test St',
     addressOther: '',
     city: 'Test City',
-    postalcodeZipcode: 'A1B2C3'
+    postalcodeZipcode: 'A1B2C3',
+    provinceState: 'BC',
+    country: 'Canada'
   },
   orgAttorneyAddress: {
     streetAddress: '456 Attorney Rd',
@@ -195,6 +201,7 @@ describe('AddEditOrg', () => {
         ...mockedOrg,
         phone: 'f91j5qhf91',
         orgAddress: {
+          ...mockedOrg.orgAddress,
           postalcodeZipcode: '2671224'
         }
       },
