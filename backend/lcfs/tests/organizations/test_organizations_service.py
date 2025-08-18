@@ -326,3 +326,99 @@ async def test_apply_organization_filters_with_early_issuance(organizations_serv
 
         # Verify that conditions were modified
         assert len(conditions) == 1
+
+
+@pytest.mark.anyio
+async def test_apply_organization_filters_with_registration_status_boolean(
+    organizations_service,
+):
+    """Test applying organization filters with registration_status as boolean."""
+    pagination = PaginationRequestSchema(
+        filters=[
+            FilterModel(
+                field="registration_status",
+                filter=True,
+                type="equals",
+                filter_type="text",
+            )
+        ]
+    )
+    conditions = []
+
+    # Mock the get_field_for_filter function
+    with patch(
+        "lcfs.web.api.organizations.services.get_field_for_filter"
+    ) as mock_get_field:
+        mock_field = MagicMock()
+        mock_get_field.return_value = mock_field
+
+        organizations_service.apply_organization_filters(pagination, conditions)
+
+        # Verify that get_field_for_filter was called with OrganizationStatus
+        mock_get_field.assert_called_once()
+        # Verify that conditions were modified
+        assert len(conditions) == 1
+
+
+@pytest.mark.anyio
+async def test_apply_organization_filters_with_registration_status_string(
+    organizations_service,
+):
+    """Test applying organization filters with registration_status as string."""
+    pagination = PaginationRequestSchema(
+        filters=[
+            FilterModel(
+                field="registration_status",
+                filter="true",
+                type="equals",
+                filter_type="text",
+            )
+        ]
+    )
+    conditions = []
+
+    # Mock the get_field_for_filter function
+    with patch(
+        "lcfs.web.api.organizations.services.get_field_for_filter"
+    ) as mock_get_field:
+        mock_field = MagicMock()
+        mock_get_field.return_value = mock_field
+
+        organizations_service.apply_organization_filters(pagination, conditions)
+
+        # Verify that get_field_for_filter was called with OrganizationStatus
+        mock_get_field.assert_called_once()
+        # Verify that conditions were modified for string "true"
+        assert len(conditions) == 1
+
+
+@pytest.mark.anyio
+async def test_apply_organization_filters_with_registration_status_false_string(
+    organizations_service,
+):
+    """Test applying organization filters with registration_status as string 'false'."""
+    pagination = PaginationRequestSchema(
+        filters=[
+            FilterModel(
+                field="registration_status",
+                filter="false",
+                type="equals",
+                filter_type="text",
+            )
+        ]
+    )
+    conditions = []
+
+    # Mock the get_field_for_filter function
+    with patch(
+        "lcfs.web.api.organizations.services.get_field_for_filter"
+    ) as mock_get_field:
+        mock_field = MagicMock()
+        mock_get_field.return_value = mock_field
+
+        organizations_service.apply_organization_filters(pagination, conditions)
+
+        # Verify that get_field_for_filter was called with OrganizationStatus
+        mock_get_field.assert_called_once()
+        # Verify that conditions were modified for string "false"
+        assert len(conditions) == 1
