@@ -64,12 +64,10 @@ export const Transactions = () => {
   const gridRef = useRef()
   const downloadButtonRef = useRef(null)
   const { data: currentUser, hasAnyRole, hasRoles } = useCurrentUser()
-  
 
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const highlightedId = searchParams.get('hid')
-
-  const [tabIndex, setTabIndex] = useState(0)
+  const currentTab = searchParams.get('tab') || 'transactions'
   const [tabsOrientation, setTabsOrientation] = useState('horizontal')
 
   const [isDownloadingTransactions, setIsDownloadingTransactions] =
@@ -242,6 +240,17 @@ export const Transactions = () => {
     }
   }, [location.state])
 
+  // Ensure URL has tab parameter (basic setup)
+  useEffect(() => {
+    const currentTabParam = searchParams.get('tab')
+
+    if (!currentTabParam) {
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.set('tab', 'transactions')
+      setSearchParams(newSearchParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
+
   useEffect(() => {
     function handleResize() {
       if (window.innerWidth < 500) {
@@ -256,7 +265,10 @@ export const Transactions = () => {
   }, [])
 
   const handleChangeTab = (event, newValue) => {
-    setTabIndex(newValue)
+    const newTab = newValue === 0 ? 'transactions' : 'credit-trading-market'
+    const newSearchParams = new URLSearchParams(searchParams)
+    newSearchParams.set('tab', newTab)
+    setSearchParams(newSearchParams)
   }
 
   const handleClearFilters = () => {
@@ -278,6 +290,24 @@ export const Transactions = () => {
     ORGANIZATION_STATUSES.REGISTERED
   const showCreditTradingTab =
     hasRoles(roles.government) || (isBCeIDUser && isRegistered)
+
+  // Validate access to credit trading market tab
+  useEffect(() => {
+    const currentTabParam = searchParams.get('tab')
+    if (currentTabParam === 'credit-trading-market' && !showCreditTradingTab) {
+      // Redirect to transactions tab if user doesn't have access to credit trading market
+      const newSearchParams = new URLSearchParams(searchParams)
+      newSearchParams.set('tab', 'transactions')
+      setSearchParams(newSearchParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams, showCreditTradingTab])
+
+  // Convert tab parameter to index
+  const getTabIndex = (tab) => {
+    if (tab === 'credit-trading-market' && showCreditTradingTab) return 1
+    return 0
+  }
+  const tabIndex = getTabIndex(currentTab)
 
   // Build tabs array
   const tabs = [
@@ -412,12 +442,13 @@ export const Transactions = () => {
         </BCAlert>
       )}
 
-      <BCTypography variant="h5" mb={2} color="primary">
-        {t('txn:title')}
-      </BCTypography>
-
       {tabs.length === 1 ? (
-        <BCBox mt={3}>{tabs[0].content}</BCBox>
+        <BCBox>
+          <BCTypography variant="h5" mb={2} color="primary">
+            {t('txn:title')}
+          </BCTypography>
+          <BCBox mt={3}>{tabs[0].content}</BCBox>
+        </BCBox>
       ) : (
         <BCBox sx={{ mt: 2, bgcolor: 'background.paper' }}>
           <AppBar position="static" sx={{ boxShadow: 'none', border: 'none' }}>
@@ -448,6 +479,10 @@ export const Transactions = () => {
               ))}
             </Tabs>
           </AppBar>
+
+          <BCTypography variant="h5" mb={2} mt={2} color="primary">
+            {t('txn:title')}
+          </BCTypography>
 
           {tabs.map((tab, idx) => (
             <TabPanel key={idx} value={tabIndex} index={idx}>

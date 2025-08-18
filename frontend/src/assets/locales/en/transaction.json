@@ -1,7 +1,7 @@
 {
   "title": "Transactions",
   "transactionsTab": "Transactions",
-  "creditTradingMarketTab": "Credit Trading Market",
+  "creditTradingMarketTab": "Credit trading market",
   "txnColLabels": {
     "txnId": "ID",
     "compliancePeriod": "Compliance period",
