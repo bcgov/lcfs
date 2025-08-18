@@ -482,6 +482,74 @@ export const fuelSupplyColDefs = (
       }
     },
     {
+      field: 'isCanadaProduced',
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
+      cellEditor: AutocompleteCellEditor,
+      cellRenderer: SelectRenderer,
+      cellEditorParams: {
+        options: ['Yes', 'No'],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      },
+      editable: (params) => {
+        const complianceYear = parseInt(compliancePeriod, 10)
+        const isRenewable = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )?.renewable
+        return (
+          complianceYear >= 2025 &&
+          isRenewable &&
+          params.data.provisionOfTheAct ===
+            'Default carbon intensity - section 19 (b) (ii)'
+        )
+      },
+      hide: (params) => {
+        const complianceYear = parseInt(compliancePeriod, 10)
+        const isRenewable = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )?.renewable
+        return !(
+          complianceYear >= 2025 &&
+          isRenewable &&
+          params.data.provisionOfTheAct ===
+            'Default carbon intensity - section 19 (b) (ii)'
+        )
+      }
+    },
+    {
+      field: 'supplied_in_q1',
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.suppliedInQ1'),
+      cellEditor: AutocompleteCellEditor,
+      cellRenderer: SelectRenderer,
+      cellEditorParams: {
+        options: ['Yes', 'No'],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      },
+      editable: (params) => {
+        const complianceYear = parseInt(compliancePeriod, 10)
+        const isRenewable = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )?.renewable
+        const fuelCode = params.data.fuelCode
+        const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
+        return complianceYear === 2025 && isRenewable && isNonCanadian
+      },
+      hide: (params) => {
+        const complianceYear = parseInt(compliancePeriod, 10)
+        const isRenewable = optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )?.renewable
+        const fuelCode = params.data.fuelCode
+        const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
+        return !(complianceYear === 2025 && isRenewable && isNonCanadian)
+      }
+    },
+    {
       field: 'quantity',
       headerComponent: RequiredHeader,
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),

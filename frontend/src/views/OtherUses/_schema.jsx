@@ -209,7 +209,7 @@ export const otherUsesColDefs = (
   },
   {
     field: 'isCanadaProduced',
-    headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaPorduced'),
+    headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
     cellEditorParams: {
@@ -221,9 +221,10 @@ export const otherUsesColDefs = (
     },
     editable: (params) => {
       const complianceYear = parseInt(compliancePeriod, 10)
+      debugger
       const isRenewable = optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
-      )?.renewable
+      )?.fossil
       return (
         complianceYear >= 2025 &&
         isRenewable &&

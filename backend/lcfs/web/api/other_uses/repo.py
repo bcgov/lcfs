@@ -411,6 +411,7 @@ class OtherUsesRepository:
                 "fuel_type_id": fuel_type.fuel_type_id,
                 "fuel_type": fuel_type.fuel_type,
                 "default_carbon_intensity": default_ci,
+                "fossil_derived": fuel_type.fossil_derived,
                 "units": fuel_type.units if fuel_type.units else None,
                 "unrecognized": fuel_type.unrecognized,
                 "fuel_categories": [
