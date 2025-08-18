@@ -202,7 +202,8 @@ In the ETL process, the compliance_report_summary table maintains all line value
 - `diesel_class_previously_retained` → `line_7_previously_retained_diesel`
 - `gasoline_class_obligation` → `line_9_obligation_added_gasoline`
 - `gasoline_class_previously_retained` → `line_7_previously_retained_gasoline`
-- `credits_offset` → `line_22_compliance_units_issued`
+
+Note: Line 22 (Available compliance unit balance at period end) is not sourced from `credits_offset` (credits used). It is populated from TFRS snapshots during the summary update step to reflect the end-of-period available balance.
 
 These mappings ensure that historical data from the TFRS system is correctly transferred to the new LCFS system while maintaining data integrity and calculation consistency.
 

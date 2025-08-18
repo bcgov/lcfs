@@ -79,6 +79,27 @@ export const FILTER_KEYS = {
 
 export const MAX_FILE_SIZE_BYTES = 52428800 // 50MB
 
+export const LEGISLATION_TRANSITION_YEAR = 2024
+
+export const isLegacyCompliancePeriod = (compliancePeriod) => {
+  // If it's already a number, use it directly
+  if (typeof compliancePeriod === 'number') {
+    return compliancePeriod < LEGISLATION_TRANSITION_YEAR
+  }
+
+  // Try to parse it as a number
+  const parsedPeriod = Number(compliancePeriod)
+
+  // If parsing failed or resulted in NaN, return false
+  if (isNaN(parsedPeriod)) {
+    return false
+  }
+
+  return parsedPeriod < LEGISLATION_TRANSITION_YEAR
+}
+
+export const FUEL_CATEGORIES = ['Diesel', 'Gasoline', 'Jet fuel']
+
 // File upload constants for compliance reports
 export const COMPLIANCE_REPORT_FILE_TYPES = {
   MIME_TYPES: [
@@ -109,9 +130,6 @@ export const SCHEDULE_IMPORT_FILE_TYPES = {
     return this.MIME_TYPES.join(',')
   }
 }
-
-export const FUEL_CATEGORIES = ['Diesel', 'Gasoline', 'Jet fuel']
-export const LEGISLATION_TRANSITION_YEAR = 2024
 
 export const CURRENT_COMPLIANCE_YEAR = (
   LEGISLATION_TRANSITION_YEAR + 1

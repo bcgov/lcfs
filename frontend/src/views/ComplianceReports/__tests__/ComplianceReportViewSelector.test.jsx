@@ -5,6 +5,7 @@ import { ComplianceReportViewSelector } from '../ComplianceReportViewSelector.js
 import * as useComplianceReportsHook from '@/hooks/useComplianceReports'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser'
 import { wrapper } from '@/tests/utils/wrapper'
+import { isFeatureEnabled } from '@/constants/config.js'
 
 // Import useParams and useLocation after mocking so they're already mocks
 import { useParams, useLocation } from 'react-router-dom'
@@ -32,6 +33,13 @@ vi.mock('@/hooks/useCurrentUser')
 
 vi.mock('@/stores/useComplianceReportStore', () => ({
   default: vi.fn()
+}))
+
+vi.mock('@/constants/config.js', () => ({
+  FEATURE_FLAGS: {
+    LEGACY_REPORT_DETAILS: 'fullLegacyReports'
+  },
+  isFeatureEnabled: vi.fn()
 }))
 
 vi.mock('@/components/Loading', () => ({
@@ -102,6 +110,8 @@ describe('ComplianceReportViewSelector', () => {
     vi.resetAllMocks()
     mockQueryClient.invalidateQueries.mockClear()
     mockRefetch.mockClear()
+    // Default to feature flag disabled
+    isFeatureEnabled.mockReturnValue(false)
   })
 
   it('renders loading when user is loading', async () => {
@@ -122,11 +132,14 @@ describe('ComplianceReportViewSelector', () => {
     })
   })
 
-  it('renders ViewLegacyComplianceReport when legacyId is present', async () => {
+  it('renders ViewLegacyComplianceReport when feature flag is disabled for pre-2024 reports', async () => {
+    // Mock feature flag as disabled
+    isFeatureEnabled.mockReturnValue(false)
+    
     setupMocks({
       reportData: {
         report: {
-          legacyId: 999,
+          compliancePeriod: { description: '2015' },
           currentStatus: { status: 'DRAFT' }
         }
       }
@@ -142,12 +155,15 @@ describe('ComplianceReportViewSelector', () => {
     })
   })
 
-  it('renders EditViewComplianceReport when legacyId is null/undefined', async () => {
+  it('renders EditViewComplianceReport for 2024+ reports regardless of feature flag', async () => {
+    // Mock feature flag as disabled, but 2024+ reports should still show full view
+    isFeatureEnabled.mockReturnValue(false)
+    
     setupMocks({
       reportData: {
         report: {
+          compliancePeriod: { description: '2024' },
           currentStatus: { status: 'DRAFT' }
-          // No legacyId means it should render the EditViewComplianceReport
         }
       }
     })
@@ -160,6 +176,48 @@ describe('ComplianceReportViewSelector', () => {
     })
   })
 
+  it('renders EditViewComplianceReport when feature flag is enabled for pre-2024 reports', async () => {
+    // Mock feature flag as enabled
+    isFeatureEnabled.mockReturnValue(true)
+    
+    setupMocks({
+      reportData: {
+        report: {
+          compliancePeriod: { description: '2015' },
+          currentStatus: { status: 'DRAFT' }
+        }
+      }
+    })
+
+    render(<ComplianceReportViewSelector />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('Edit Compliance Report')).toBeInTheDocument()
+      expect(screen.queryByText('Legacy Report View')).not.toBeInTheDocument()
+    })
+  })
+
+  it('renders ViewLegacyComplianceReport when feature flag is disabled for pre-2024 reports', async () => {
+    // Mock feature flag as disabled
+    isFeatureEnabled.mockReturnValue(false)
+    
+    setupMocks({
+      reportData: {
+        report: {
+          compliancePeriod: { description: '2023' },
+          currentStatus: { status: 'DRAFT' }
+        }
+      }
+    })
+
+    render(<ComplianceReportViewSelector />, { wrapper })
+
+    await waitFor(() => {
+      expect(screen.getByText('Legacy Report View')).toBeInTheDocument()
+      expect(screen.queryByText('Edit Compliance Report')).not.toBeInTheDocument()
+    })
+  })
+
   it('passes error and isError props to the rendered component', async () => {
     const testError = { message: 'Test error' }
     setupMocks({
@@ -167,6 +225,7 @@ describe('ComplianceReportViewSelector', () => {
       error: testError,
       reportData: {
         report: {
+          compliancePeriod: { description: '2024' }, // 2024+ always shows full view
           currentStatus: { status: 'DRAFT' }
         }
       }
@@ -185,6 +244,7 @@ describe('ComplianceReportViewSelector', () => {
       complianceReportId,
       reportData: {
         report: {
+          compliancePeriod: { description: '2024' },
           currentStatus: { status: 'SUBMITTED' }
         }
       },
@@ -206,6 +266,7 @@ describe('ComplianceReportViewSelector', () => {
     setupMocks({
       reportData: {
         report: {
+          compliancePeriod: { description: '2024' },
           currentStatus: { status: 'DRAFT' }
         }
       },
@@ -227,6 +288,7 @@ describe('ComplianceReportViewSelector', () => {
     setupMocks({
       reportData: {
         report: {
+          compliancePeriod: { description: '2024' },
           currentStatus: { status: 'DRAFT' }
         }
       },
