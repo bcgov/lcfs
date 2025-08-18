@@ -481,7 +481,9 @@ export const Transactions = () => {
           </AppBar>
 
           <BCTypography variant="h5" mb={2} mt={2} color="primary">
-            {t('txn:title')}
+            {tabIndex === 1 
+              ? t('txn:creditTradingMarketTitle') 
+              : t('txn:title')}
           </BCTypography>
 
           {tabs.map((tab, idx) => (
