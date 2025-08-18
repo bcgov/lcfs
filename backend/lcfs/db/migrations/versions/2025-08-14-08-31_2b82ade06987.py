@@ -131,6 +131,43 @@ def upgrade() -> None:
     op.execute("commit")
     op.execute(
         """
+        WITH inserted_user AS (
+            INSERT INTO user_profile (
+                keycloak_username, 
+                keycloak_email, 
+                first_name, 
+                last_name, 
+                email, 
+                is_active,
+                create_user,
+                update_user
+            ) VALUES (
+                'system-auto-submit',
+                'system@lcfs.gov.bc.ca',
+                'System',
+                'Auto Submit',
+                'system@lcfs.gov.bc.ca',
+                true,
+                'migration',
+                'migration'
+            )
+            ON CONFLICT (keycloak_username) DO UPDATE SET
+                first_name = EXCLUDED.first_name,
+                last_name = EXCLUDED.last_name,
+                email = EXCLUDED.email,
+                is_active = EXCLUDED.is_active,
+                update_user = 'migration'
+            RETURNING user_profile_id
+        )
+        INSERT INTO user_role (user_profile_id, role_id)
+        SELECT user_profile_id, role_id
+        FROM inserted_user
+        CROSS JOIN (VALUES (1), (2), (4), (8), (9), (10)) AS roles(role_id)
+        ON CONFLICT (user_profile_id, role_id) DO NOTHING
+        """
+    )
+    op.execute(
+        """
         INSERT INTO scheduled_tasks (name, task_function, schedule, is_enabled) VALUES 
         ('Fuel Code Expiry Check', 'fuel_code_expiry.notify_expiring_fuel_code', '0 9 * * *', true)
         """
@@ -138,6 +175,24 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # Remove the system user and their roles
+    op.execute(
+        """
+        DELETE FROM user_role 
+        WHERE user_profile_id IN (
+            SELECT user_profile_id 
+            FROM user_profile 
+            WHERE keycloak_username = 'system-auto-submit'
+        )
+        """
+    )
+    
+    op.execute(
+        """
+        DELETE FROM user_profile 
+        WHERE keycloak_username = 'system-auto-submit'
+        """
+    )
     op.drop_index(op.f("ix_task_executions_task_id"), table_name="task_executions")
     op.drop_index(op.f("ix_task_executions_id"), table_name="task_executions")
     op.drop_table("task_executions")
