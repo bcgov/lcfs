@@ -697,7 +697,7 @@ class ComplianceReportSummaryService:
         # Define constants as Decimal
         DECIMAL_ZERO = Decimal("0")
         GAS_PERC = Decimal("0.05")
-        DIESEL_PERC = Decimal("0.04")
+        DIESEL_PERC = Decimal("0.08") if compliance_period >= 2025 else Decimal("0.04")
         GAS_RATE = Decimal(str(PRESCRIBED_PENALTY_RATE["gasoline"]))
         DIESEL_RATE = Decimal(str(PRESCRIBED_PENALTY_RATE["diesel"]))
         JET_RATE = Decimal(str(PRESCRIBED_PENALTY_RATE["jet_fuel"]))

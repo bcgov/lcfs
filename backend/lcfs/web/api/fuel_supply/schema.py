@@ -156,6 +156,8 @@ class FuelSupplyCreateUpdateSchema(BaseSchema):
     energy: Optional[float] = None
     deleted: Optional[bool] = None
     is_new_supplemental_entry: Optional[bool] = None
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
 
     class Config:
         use_enum_values = True

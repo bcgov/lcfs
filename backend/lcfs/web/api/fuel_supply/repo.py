@@ -405,6 +405,8 @@ class FuelSupplyRepository:
             FuelSupply.provision_of_the_act_id == fuel_supply.provision_of_the_act_id,
             FuelSupply.fuel_code_id == fuel_supply.fuel_code_id,
             FuelSupply.end_use_id == fuel_supply.end_use_id,
+            FuelSupply.is_canada_produced == fuel_supply.is_canada_produced,
+            FuelSupply.is_q1_supplied == fuel_supply.is_q1_supplied,
             FuelSupply.action_type.in_([ActionTypeEnum.CREATE, ActionTypeEnum.UPDATE]),
             FuelSupply.group_uuid != fuel_supply.group_uuid,
         )
