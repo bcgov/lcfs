@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from lcfs.services.redis.dependency import get_redis_client
 from lcfs.services.tfrs.redis_balance import RedisBalanceService
 from sqlalchemy import text
@@ -123,12 +124,16 @@ async def submit_supplemental_report(report_id: int, app: FastAPI):
                 return
 
             # Create update schema
-            update_schema = ComplianceReportUpdateSchema(status="Submitted")
+            update_schema = ComplianceReportUpdateSchema(
+                status="Submitted",
+                supplemental_note=f"Auto-submitted by system on {datetime.now().strftime('%Y-%m-%d')} due to 30+ day draft status",
+            )
 
             # Update the report
             await update_service.update_compliance_report(
                 report_id, update_schema, system_user
             )
+            await session.commit()
             logger.info(
                 f"Successfully submitted supplemental report with ID: {report_id}"
             )
@@ -149,7 +154,8 @@ async def check_overdue_supplemental_reports(app: FastAPI):
     session_factory = app.state.db_session_factory
     async with session_factory() as session:
         try:
-            cutoff_date = datetime.utcnow().date() - timedelta(days=3)
+            now_pst = datetime.now(ZoneInfo("America/Vancouver"))
+            cutoff_date = now_pst - timedelta(days=30)
             query = text(
                 """
                 SELECT 

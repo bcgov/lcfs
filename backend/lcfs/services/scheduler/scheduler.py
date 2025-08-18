@@ -27,23 +27,23 @@ def start_scheduler(app: FastAPI):
         scheduler.start()
         logger.info("Scheduler started")
         # Run immediately on startup
-        scheduler.add_job(
-            check_overdue_supplemental_reports,
-            'date',
-            run_date=datetime.now(utc),
-            id="check_overdue_supplemental_reports_startup",
-            args=[app]
-        )
-        # Add the job to the scheduler to run every day at midnight
         # scheduler.add_job(
         #     check_overdue_supplemental_reports,
-        #     'cron',
-        #     hour=0,
-        #     minute=8,
-        #     id="check_overdue_supplemental_reports",
-        #     replace_existing=True,
+        #     'date',
+        #     run_date=datetime.now(utc),
+        #     id="check_overdue_supplemental_reports_startup",
         #     args=[app]
         # )
+        # Add the job to the scheduler to run every day at midnight
+        scheduler.add_job(
+            check_overdue_supplemental_reports,
+            'cron',
+            hour=0,
+            minute=8,
+            id="check_overdue_supplemental_reports",
+            replace_existing=True,
+            args=[app]
+        )
         logger.info("Added job: 'check_overdue_supplemental_reports' to run daily at midnight.")
 
 def shutdown_scheduler():
