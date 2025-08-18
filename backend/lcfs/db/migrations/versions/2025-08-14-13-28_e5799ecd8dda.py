@@ -1,7 +1,7 @@
 """backfill to_transaction_id in transfers table
 
 Revision ID: e5799ecd8dda
-Revises: 3f5a7b9c1d2e
+Revises: 2b82ade06987
 Create Date: 2025-08-06 13:28:05.038494
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "e5799ecd8dda"
-down_revision = "3f5a7b9c1d2e"
+down_revision = "2b82ade06987"
 branch_labels = None
 depends_on = None
 
