@@ -79,7 +79,7 @@ jobs:
       - name: Run migrations and create template database
         run: |
           cd backend
-          poetry run alembic upgrade head
+          poetry run alembic upgrade heads
         env:
           LCFS_DB_HOST: localhost
           LCFS_DB_PORT: 5432
