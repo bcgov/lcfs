@@ -4,6 +4,7 @@ from fastapi import FastAPI
 import boto3
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
+from lcfs.services.scheduler.scheduler import shutdown_scheduler, start_scheduler
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -73,6 +74,9 @@ def register_startup_event(
         # Setup RabbitMQ Listeners
         await start_consumers(app)
 
+        # Start the scheduler
+        start_scheduler(app)
+
     return _startup
 
 
@@ -92,5 +96,7 @@ def register_shutdown_event(
 
         await shutdown_redis(app)
         await stop_consumers()
+        # Shutdown the scheduler
+        shutdown_scheduler()
 
     return _shutdown
