@@ -55,7 +55,9 @@ export const BCGridBase = forwardRef(
       (params) => {
         gridApiRef.current = params.api
         determineHeight()
-        props.onGridReady(params)
+        if (props.onGridReady && typeof props.onGridReady === 'function') {
+          props.onGridReady(params)
+        }
       },
       [determineHeight]
     )

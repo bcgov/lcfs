@@ -16,6 +16,9 @@ jobs:
   backend-setup:
     name: 'Backend Setup'
     runs-on: ubuntu-latest
+    outputs:
+      # Add output to signal completion
+      setup-complete: ${{ steps.setup-complete.outputs.complete }}
     services:
       postgres:
         image: postgres:17
@@ -25,6 +28,12 @@ jobs:
           POSTGRES_PASSWORD: development_only
         ports:
           - 5432:5432
+        # Add health check to ensure postgres is ready
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,10 +66,18 @@ jobs:
           cd backend
           poetry install
 
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          # Wait for PostgreSQL service to be fully ready using Docker
+          CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
+          until docker exec $CONTAINER_ID pg_isready -U lcfs; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+
       - name: Run migrations and create template database
         run: |
-          # Wait briefly for PostgreSQL to be fully ready
-          sleep 5
           cd backend
           poetry run alembic upgrade heads
         env:
@@ -70,26 +87,55 @@ jobs:
           LCFS_DB_PASS: development_only
           LCFS_DB_BASE: lcfs
 
-      - name: Create database dump
+      - name: Create database dump with compatibility options
         run: |
-          # Get the container ID of the postgres service
+          # Use Docker container's pg_dump to avoid version mismatch issues
+          # Ubuntu runner has PostgreSQL 16 client tools, but container runs PostgreSQL 17
           CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
-          # Run pg_dump inside the container (no version mismatch)
-          # Exclude ownership and privileges to avoid role issues
+          
+          if [ -z "$CONTAINER_ID" ]; then
+            echo "Error: PostgreSQL container not found"
+            exit 1
+          fi
+          
+          # Run pg_dump inside the container to ensure version compatibility
           docker exec $CONTAINER_ID pg_dump -U lcfs -d lcfs \
-            --no-owner --no-privileges --clean --if-exists > lcfs_template.sql
+            --no-owner \
+            --no-privileges \
+            --no-comments \
+            --create \
+            --clean \
+            --if-exists \
+            --format=custom \
+            --compress=6 > lcfs_template.pgdump
+          
+          # Verify the dump was created and has content
+          if [ ! -s lcfs_template.pgdump ]; then
+            echo "Error: Database dump is empty or failed"
+            exit 1
+          fi
+          
+          echo "Database dump created successfully ($(stat --printf=%s lcfs_template.pgdump) bytes)"
 
       - name: Upload database template
         uses: actions/upload-artifact@v4
         with:
           name: db-template
-          path: lcfs_template.sql
+          path: lcfs_template.pgdump
           retention-days: 1
+          # Add compression to reduce size
+          compression-level: 9
+
+      - name: Mark setup as complete
+        id: setup-complete
+        run: echo "complete=true" >> $GITHUB_OUTPUT
 
   backend-tests:
     name: 'Backend Tests (Shard ${{ matrix.shard }}/${{ strategy.job-total }})'
     needs: backend-setup
     runs-on: ubuntu-latest
+    # Add explicit dependency check
+    if: needs.backend-setup.outputs.setup-complete == 'true'
     services:
       postgres:
         image: postgres:17
@@ -99,6 +145,11 @@ jobs:
           POSTGRES_PASSWORD: development_only
         ports:
           - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     strategy:
       matrix:
         shard:
@@ -189,26 +240,63 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pytest-timing-${{ strategy.job-total }}-
 
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          # Wait for PostgreSQL service to be fully ready using Docker
+          CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
+          until docker exec $CONTAINER_ID pg_isready -U lcfs; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+
       - name: Download database template
         uses: actions/download-artifact@v4
         with:
           name: db-template
           path: .
 
-      - name: Restore database from template
+      - name: Verify database template
         run: |
-          # Wait briefly for PostgreSQL to be fully ready
-          sleep 5
-          # Create shard-specific database and restore concurrently
-          PGPASSWORD=development_only createdb -h localhost -U lcfs lcfs_shard_${{ matrix.shard }} &
-          CREATE_PID=$!
-          wait $CREATE_PID
-          # Restore from template with optimized settings
-          PGPASSWORD=development_only psql -h localhost -U lcfs -d lcfs_shard_${{ matrix.shard }} \
-            -f lcfs_template.sql --quiet --set ON_ERROR_STOP=1 \
-            -v ON_ERROR_STOP=1 --single-transaction &
-          RESTORE_PID=$!
-          wait $RESTORE_PID
+          if [ ! -f lcfs_template.pgdump ]; then
+            echo "Error: Database template file not found"
+            exit 1
+          fi
+          
+          if [ ! -s lcfs_template.pgdump ]; then
+            echo "Error: Database template file is empty"
+            exit 1
+          fi
+          
+          echo "Database template verified ($(stat --printf=%s lcfs_template.pgdump) bytes)"
+
+      - name: Setup shard-specific database
+        run: |
+          # Get the container ID of the postgres service
+          CONTAINER_ID=$(docker ps -q -f "ancestor=postgres:17")
+          
+          # Create shard-specific database using Docker
+          docker exec $CONTAINER_ID createdb -U lcfs lcfs_shard_${{ matrix.shard }}
+          
+          # Copy the dump file into the container
+          docker cp lcfs_template.pgdump $CONTAINER_ID:/tmp/lcfs_template.pgdump
+          
+          # Restore using pg_restore inside the container to avoid version mismatch
+          docker exec $CONTAINER_ID pg_restore \
+            -U lcfs \
+            -d lcfs_shard_${{ matrix.shard }} \
+            --no-owner \
+            --no-privileges \
+            --disable-triggers \
+            --single-transaction \
+            --exit-on-error \
+            --verbose \
+            /tmp/lcfs_template.pgdump
+        env:
+          LCFS_DB_HOST: localhost
+          LCFS_DB_PORT: 5432
+          LCFS_DB_USER: lcfs
+          LCFS_DB_PASS: development_only
 
       - name: Ensure pytest cache directory exists
         run: |
@@ -243,6 +331,7 @@ jobs:
         with:
           name: pytest-results-shard-${{ matrix.shard }}
           path: backend/pytest-results-shard-${{ matrix.shard }}.xml
+          retention-days: 1
 
   post-backend-tests:
     name: 'Publish Backend Test Results'
@@ -290,6 +379,8 @@ jobs:
   frontend-setup:
     name: 'Frontend Setup'
     runs-on: ubuntu-latest
+    outputs:
+      setup-complete: ${{ steps.setup-complete.outputs.complete }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -330,10 +421,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-modules-shared-
 
+      - name: Mark setup as complete
+        id: setup-complete
+        run: echo "complete=true" >> $GITHUB_OUTPUT
+
   frontend-tests:
     name: 'Frontend Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})'
     needs: frontend-setup
     runs-on: ubuntu-latest
+    if: needs.frontend-setup.outputs.setup-complete == 'true'
     strategy:
       matrix:
         shardIndex: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32]
@@ -497,6 +593,7 @@ jobs:
           # Merge valid reports
           echo "Merging valid blob reports..."
           npx --yes vitest@$(node -p "require('./package.json').devDependencies.vitest || require('./package.json').dependencies.vitest") --merge-reports --reporter=junit --outputFile=.vitest-reports/vitest-results.xml
+
       - name: Publish Frontend Test Results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()

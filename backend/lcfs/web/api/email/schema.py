@@ -28,4 +28,5 @@ TEMPLATE_MAPPING = {
     "IDIR_ANALYST__FUEL_CODE__DIRECTOR_RETURNED": "idir_analyst__fuel_code__director_returned.html",
     "IDIR_ANALYST__FUEL_CODE__DIRECTOR_APPROVAL": "idir_analyst__fuel_code__director_approval.html",
     "BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE": "bceid__credit_market__credits_listed_for_sale.html",
+    "IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION": "idir_analyst__fuel_code__expiry_notification.html",
 }

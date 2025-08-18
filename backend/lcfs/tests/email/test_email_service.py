@@ -112,6 +112,34 @@ async def test_get_ches_token_success(mock_environment_vars):
 
 
 @pytest.mark.anyio
+async def test_send_fuel_code_expiry_notifications_success(mock_email_repo, mock_environment_vars):
+    # Arrange
+    notification_type = NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION
+    email = "user@example.com"
+    notification_context = {
+        "subject": "Fuel Code Expiry Notification",
+        "user_name": "John Doe",
+        "message_body": "Your fuel code is expiring soon",
+    }
+
+    service = CHESEmailService(repo=mock_email_repo)
+    service._render_email_template = MagicMock(return_value="Rendered HTML Content")
+    service.send_email = AsyncMock(return_value=True)
+
+    # Act
+    result = await service.send_fuel_code_expiry_notifications(
+        notification_type, email, notification_context
+    )
+
+    # Assert
+    assert result is True
+    service._render_email_template.assert_called_once_with(
+        notification_type.value, notification_context
+    )
+    service.send_email.assert_called_once()
+
+
+@pytest.mark.anyio
 async def test_get_ches_token_cached(mock_environment_vars):
     # Arrange
     with patch("requests.post") as mock_post:
