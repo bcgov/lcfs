@@ -131,6 +131,10 @@ export const AddEditFuelSupplies = () => {
     [fuelSupplyData, complianceReportId, compliancePeriod, isSupplemental]
   )
 
+  const onFirstDataRendered = useCallback((params) => {
+    params.api.autoSizeAllColumns()
+  }, [])
+
   useEffect(() => {
     const updatedColumnDefs = fuelSupplyColDefs(
       optionsData,
@@ -228,6 +232,7 @@ export const AddEditFuelSupplies = () => {
           params.node.setDataValue('provisionOfTheAct', provisionValue)
         }
       }
+      params.api.autoSizeAllColumns()
     },
     [optionsData]
   )
@@ -350,6 +355,7 @@ export const AddEditFuelSupplies = () => {
             onCellValueChanged={onCellValueChanged}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
+            onFirstDataRendered={onFirstDataRendered}
             stopEditingWhenCellsLoseFocus
             saveButtonProps={{
               enabled: true,

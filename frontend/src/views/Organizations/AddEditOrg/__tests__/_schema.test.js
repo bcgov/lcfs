@@ -14,8 +14,7 @@ describe('Organization Form Schema Validation', () => {
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
       orgPostalCodeZipCode: 'V6B3K9',
-      hasEarlyIssuance: 'true',
-      orgCreditTradingEnabled: 'true'
+      hasEarlyIssuance: 'true'
     }
 
     await expect(schemaValidation.validate(validData)).resolves.not.toThrow()
@@ -32,8 +31,7 @@ describe('Organization Form Schema Validation', () => {
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
       orgPostalCodeZipCode: 'V6B3K9',
-      hasEarlyIssuance: 'true',
-      orgCreditTradingEnabled: 'true'
+      hasEarlyIssuance: 'true'
     }
 
     await expect(schemaValidation.validate(invalidData)).rejects.toThrow(
@@ -74,8 +72,7 @@ describe('Organization Form Schema Validation', () => {
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
       orgPostalCodeZipCode: 'V6B3K9',
-      hasEarlyIssuance: 'true',
-      orgCreditTradingEnabled: 'true'
+      hasEarlyIssuance: 'true'
     }
 
     await expect(schemaValidation.validate(invalidData)).rejects.toThrow(
@@ -95,8 +92,7 @@ describe('Organization Form Schema Validation', () => {
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
       orgPostalCodeZipCode: 'V6B3K9',
-      hasEarlyIssuance: 'true',
-      orgCreditTradingEnabled: 'true'
+      hasEarlyIssuance: 'true'
     }
 
     await expect(schemaValidation.validate(invalidData)).rejects.toThrow(
@@ -116,8 +112,7 @@ describe('Organization Form Schema Validation', () => {
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
       orgPostalCodeZipCode: 'INVALID',
-      hasEarlyIssuance: 'true',
-      orgCreditTradingEnabled: 'true'
+      hasEarlyIssuance: 'true'
     }
 
     await expect(schemaValidation.validate(invalidData)).rejects.toThrow(
@@ -173,7 +168,6 @@ describe('Organization Form Schema Validation', () => {
       orgCity: 'Vancouver',
       orgPostalCodeZipCode: 'V6B3K9',
       hasEarlyIssuance: 'true',
-      orgCreditTradingEnabled: 'true',
       orgHeadOfficeStreetAddress: null,
       orgHeadOfficeCity: undefined,
       orgHeadOfficeProvince: null,

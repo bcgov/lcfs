@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
-import { 
-  Accordion, 
-  AccordionSummary, 
-  AccordionDetails, 
-  Box 
+import {
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Box
 } from '@mui/material'
 import { ExpandMore } from '@mui/icons-material'
 import BCTypography from '@/components/BCTypography'
@@ -28,10 +28,14 @@ export const CreditMarketAccordion = () => {
           {t('creditMarket:informationBulletin')}
         </BCTypography>
       </AccordionSummary>
-      
+
       <AccordionDetails>
         <Box>
-          <BCTypography variant="h6" gutterBottom sx={{ mt: 0, mb: 2, color: 'primary.main' }}>
+          <BCTypography
+            variant="h6"
+            gutterBottom
+            sx={{ mt: 0, mb: 2, color: 'primary.main' }}
+          >
             {t('creditMarket:background')}
           </BCTypography>
 
@@ -47,7 +51,11 @@ export const CreditMarketAccordion = () => {
             {t('creditMarket:backgroundText3')}
           </BCTypography>
 
-          <BCTypography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
+          <BCTypography
+            variant="h6"
+            gutterBottom
+            sx={{ mt: 3, mb: 2, color: 'primary.main' }}
+          >
             {t('creditMarket:complianceUnitsIssued')}
           </BCTypography>
 
@@ -55,7 +63,11 @@ export const CreditMarketAccordion = () => {
             {t('creditMarket:complianceUnitsText')}
           </BCTypography>
 
-          <BCTypography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
+          <BCTypography
+            variant="h6"
+            gutterBottom
+            sx={{ mt: 3, mb: 2, color: 'primary.main' }}
+          >
             {t('creditMarket:fairMarketValue')}
           </BCTypography>
 
@@ -67,7 +79,11 @@ export const CreditMarketAccordion = () => {
             {t('creditMarket:fairMarketValueText2')}
           </BCTypography>
 
-          <BCTypography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
+          <BCTypography
+            variant="h6"
+            gutterBottom
+            sx={{ mt: 3, mb: 2, color: 'primary.main' }}
+          >
             {t('creditMarket:approvalOfTransfers')}
           </BCTypography>
 
@@ -75,7 +91,11 @@ export const CreditMarketAccordion = () => {
             {t('creditMarket:approvalOfTransfersText')}
           </BCTypography>
 
-          <BCTypography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
+          <BCTypography
+            variant="h6"
+            gutterBottom
+            sx={{ mt: 3, mb: 2, color: 'primary.main' }}
+          >
             {t('creditMarket:applicationOfCredits')}
           </BCTypography>
 
@@ -83,7 +103,11 @@ export const CreditMarketAccordion = () => {
             {t('creditMarket:applicationOfCreditsText')}
           </BCTypography>
 
-          <BCTypography variant="h6" gutterBottom sx={{ mt: 3, mb: 2, color: 'primary.main' }}>
+          <BCTypography
+            variant="h6"
+            gutterBottom
+            sx={{ mt: 3, mb: 2, color: 'primary.main' }}
+          >
             {t('creditMarket:needMoreInformation')}
           </BCTypography>
 
@@ -91,7 +115,7 @@ export const CreditMarketAccordion = () => {
             {t('creditMarket:needMoreInformationText')}
           </BCTypography>
 
-          <BCTypography variant="body2" paragraph sx={{ fontStyle: 'italic', fontSize: '0.875rem' }}>
+          <BCTypography variant="body2" paragraph>
             {t('creditMarket:legalDisclaimer')}
           </BCTypography>
         </Box>
