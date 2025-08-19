@@ -134,7 +134,7 @@ export const AddEditFinalSupplyEquipments = () => {
   useEffect(() => {
     if (isGridReady && data) {
       const defaultOrgName = optionsData?.organizationNames?.[0] || ''
-      
+
       if (isArrayEmpty(data)) {
         setRowData([
           {
@@ -193,6 +193,10 @@ export const AddEditFinalSupplyEquipments = () => {
     }
   }, [compliancePeriod, errors, warnings, optionsData, isGridReady])
 
+  const onFirstDataRendered = useCallback((params) => {
+    params.api.autoSizeAllColumns()
+  }, [])
+
   const onCellEditingStopped = useCallback(
     async (params) => {
       if (params.oldValue === params.newValue) return
@@ -229,6 +233,7 @@ export const AddEditFinalSupplyEquipments = () => {
 
       alertRef.current?.clearAlert()
       params.node.updateData(responseData)
+      params.api.autoSizeAllColumns()
     },
     [saveRow, t]
   )
@@ -497,6 +502,7 @@ export const AddEditFinalSupplyEquipments = () => {
             loading={optionsLoading || equipmentsLoading}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
+            onFirstDataRendered={onFirstDataRendered}
             showAddRowsButton={true}
             saveButtonProps={{
               enabled: true,
