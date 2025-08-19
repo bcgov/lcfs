@@ -584,12 +584,21 @@ class ComplianceReportSummaryService:
         )
 
         # Fetch fuel quantities
-        # line 1
-        fossil_quantities = await self.calculate_fuel_quantities(
-            compliance_report.compliance_report_id,
-            effective_fuel_supplies,
-            fossil_derived=True,
-        )
+        # line 1 - Filter fossil fuel supplies and other uses
+        filtered_fossil_fuel_supplies = [
+            fs for fs in effective_fuel_supplies if fs.fuel_type.fossil_derived
+        ]
+        
+        filtered_fossil_other_uses = [
+            ou for ou in effective_other_uses if ou.fuel_type.fossil_derived or ou.fuel_type.other_uses_fossil_derived
+        ]
+        
+        all_fossil_records = [
+            *filtered_fossil_fuel_supplies,
+            *filtered_fossil_other_uses,
+        ]
+        
+        fossil_quantities = self.repo.aggregate_quantities(all_fossil_records, True)
         # line 2
         filtered_renewable_fuel_supplies = [
             fs for fs in effective_fuel_supplies if fs.fuel_type.renewable
@@ -604,11 +613,7 @@ class ComplianceReportSummaryService:
             *filtered_renewable_other_uses,
         ]
 
-        renewable_quantities = await self.calculate_fuel_quantities(
-            compliance_report.compliance_report_id,
-            all_renewable_records,
-            fossil_derived=False,
-        )
+        renewable_quantities = self.repo.aggregate_quantities(all_renewable_records, False)
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
             fossil_quantities,
@@ -1195,26 +1200,6 @@ class ComplianceReportSummaryService:
 
         return non_compliance_penalty_summary
 
-    @service_handler
-    async def calculate_fuel_quantities(
-        self,
-        compliance_report_id: int,
-        records: List[Union[FuelSupply, OtherUses]],
-        fossil_derived: bool,
-    ) -> Dict[str, float]:
-        """
-        Calculate the total quantities of fuels, separated by fuel category and fossil_derived flag.
-        """
-        fuel_quantities = self.repo.aggregate_quantities(records, fossil_derived)
-
-        other_uses = await self.repo.aggregate_other_uses_quantity(
-            compliance_report_id, fossil_derived
-        )
-
-        for key, value in other_uses.items():
-            fuel_quantities[key] = fuel_quantities.get(key, 0) + value
-
-        return dict(fuel_quantities)
 
     @service_handler
     async def calculate_fuel_supply_compliance_units(
