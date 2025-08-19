@@ -1,8 +1,8 @@
 """Refactor organization_type table: add is_bceid_user column, convert org_type enum to VARCHAR, and seed new organization types.
 
 Revision ID: 2f5a7b9c1d2e1
-Revises: 3f5a7b9c1d2e
-Create Date: 2025-02-14
+Revises: fa2a91444612
+Create Date: 2025-02-19
 """
 
 from alembic import op
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = "2f5a7b9c1d2e1"
-down_revision = "3f5a7b9c1d2e"
+down_revision = "fa2a91444612"
 branch_labels = None
 depends_on = None
 
