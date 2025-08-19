@@ -37,6 +37,7 @@ import {
 import { numberFormatter } from '@/utils/formatters'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { copyToClipboard } from '@/utils/clipboard'
 
 export const CreditCalculator = () => {
   const { t } = useTranslation(['report'])
@@ -44,12 +45,6 @@ export const CreditCalculator = () => {
     () => t('report:ciParameters', { returnObjects: true }),
     [t]
   )
-  const fuelRequirementOptions = useMemo(() => {
-    const arr = t('report:fuelRequirementOptions', { returnObjects: true })
-    return Array.isArray(arr)
-      ? arr.map((option) => ({ value: option, label: option }))
-      : []
-  }, [t])
 
   const { data: currentUser } = useCurrentUser()
 
@@ -102,7 +97,6 @@ export const CreditCalculator = () => {
   const methods = useForm({
     defaultValues: {
       complianceYear: String(defaultCompliancePeriod),
-      fuelRequirement: fuelRequirementOptions[0]?.value || '',
       fuelType: '',
       fuelCode: '',
       provisionOfTheAct: '',
@@ -125,7 +119,6 @@ export const CreditCalculator = () => {
   const {
     complianceYear,
     fuelCategory,
-    fuelRequirement,
     endUseType,
     provisionOfTheAct,
     quantity,
@@ -143,7 +136,7 @@ export const CreditCalculator = () => {
       {
         complianceYear,
         fuelCategory,
-        lcfsOnly: fuelRequirement === 'Low carbon fuel requirement only'
+        lcfsOnly: false
       },
       { enabled: Boolean(fuelCategory) }
     )
@@ -178,7 +171,7 @@ export const CreditCalculator = () => {
         complianceYear,
         fuelCategoryId: selectedFuelObj?.fuelCategoryId,
         fuelTypeId: selectedFuelObj?.fuelTypeId,
-        lcfsOnly: fuelRequirement === 'Low carbon fuel requirement only'
+        lcfsOnly: false
       },
       {
         enabled: Boolean(
@@ -267,7 +260,6 @@ export const CreditCalculator = () => {
   const handleClear = () => {
     reset({
       complianceYear: String(defaultCompliancePeriod),
-      fuelRequirement: fuelRequirementOptions[0]?.value || '',
       fuelType: '',
       fuelCode: '',
       provisionOfTheAct: '',
@@ -304,9 +296,13 @@ ${resultData.formulaDisplay}
 
 Credits generated: ${resultData.credits.toLocaleString()}`
 
-      await navigator.clipboard.writeText(copyText)
-      setCopySuccess(true)
-      setTimeout(() => setCopySuccess(false), 2000)
+      const success = await copyToClipboard(copyText)
+      if (success) {
+        setCopySuccess(true)
+        setTimeout(() => setCopySuccess(false), 2000)
+      } else {
+        console.error('Failed to copy text to clipboard')
+      }
     } catch (err) {
       console.error('Failed to copy text: ', err)
     }
@@ -788,20 +784,6 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                   >
                     Clear
                   </BCButton>
-
-                  {/* fuel requirement type selection */}
-                  {fuelRequirementOptions.length > 0 && (
-                    <BCFormRadio
-                      name="fuelRequirement"
-                      control={control}
-                      options={fuelRequirementOptions}
-                      sx={{
-                        padding: 1,
-                        pb: 2,
-                        maxWidth: '32rem'
-                      }}
-                    />
-                  )}
                 </Stack>
               </Grid>
 

@@ -237,6 +237,10 @@ export const AddEditAllocationAgreements = () => {
     compliancePeriod
   ])
 
+  const onFirstDataRendered = useCallback((params) => {
+    params.api.autoSizeAllColumns()
+  }, [])
+
   const onCellValueChanged = useCallback(
     async (params) => {
       setWarnings({}) // Reset warnings
@@ -403,6 +407,7 @@ export const AddEditAllocationAgreements = () => {
 
       updatedData.ciOfFuel = params.node.data.ciOfFuel
       params.node.updateData(updatedData)
+      params.api.autoSizeAllColumns()
     },
     [saveRow, t]
   )
@@ -619,6 +624,7 @@ export const AddEditAllocationAgreements = () => {
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             stopEditingWhenCellsLoseFocus
+            onFirstDataRendered={onFirstDataRendered}
             saveButtonProps={{
               enabled: true,
               text: t('report:saveReturn'),

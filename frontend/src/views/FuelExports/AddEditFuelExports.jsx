@@ -152,6 +152,10 @@ export const AddEditFuelExports = () => {
     isSupplemental
   ])
 
+  const onFirstDataRendered = useCallback((params) => {
+    params.api.autoSizeAllColumns()
+  }, [])
+
   const onCellValueChanged = useCallback(
     async (params) => {
       if (params.column.colId === 'fuelTypeId') {
@@ -226,6 +230,7 @@ export const AddEditFuelExports = () => {
           columns: ['ciOfFuel', 'targetCi', 'uci', 'complianceUnits']
         })
       }
+      params.api.autoSizeAllColumns()
     },
     [optionsData]
   )
@@ -342,6 +347,7 @@ export const AddEditFuelExports = () => {
             showAddRowsButton={true}
             context={{ errors }}
             onAction={onAction}
+            onFirstDataRendered={onFirstDataRendered}
             saveButtonProps={{
               enabled: true,
               text: t('report:saveReturn'),
