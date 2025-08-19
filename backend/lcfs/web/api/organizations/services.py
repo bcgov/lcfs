@@ -9,7 +9,11 @@ from fastapi import Depends, Request
 from fastapi.responses import StreamingResponse
 from fastapi_cache import FastAPICache
 
-from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.organization.Organization import (
+    Organization,
+    generate_secure_link_key,
+)
+from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
 from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.organization.OrganizationAttorneyAddress import (
     OrganizationAttorneyAddress,
@@ -296,29 +300,33 @@ class OrganizationsService:
 
         # Update only the credit market fields
         allowed_fields = {
-            'credit_market_contact_name',
-            'credit_market_contact_email', 
-            'credit_market_contact_phone',
-            'credit_market_is_seller',
-            'credit_market_is_buyer',
-            'credits_to_sell',
-            'display_in_credit_market'
+            "credit_market_contact_name",
+            "credit_market_contact_email",
+            "credit_market_contact_phone",
+            "credit_market_is_seller",
+            "credit_market_is_buyer",
+            "credits_to_sell",
+            "display_in_credit_market",
         }
-        
+
         for key, value in credit_market_data.items():
             if key in allowed_fields and hasattr(organization, key):
                 # Special validation for credits_to_sell
-                if key == 'credits_to_sell' and value is not None:
+                if key == "credits_to_sell" and value is not None:
                     if value < 0:
                         raise ValueError("Credits to sell cannot be negative")
-                    
+
                     # Get the organization's total balance to validate against
-                    total_balance = await self.calculate_total_balance(organization.organization_id)
+                    total_balance = await self.calculate_total_balance(
+                        organization.organization_id
+                    )
                     if value > total_balance:
-                        raise ValueError(f"Credits to sell ({value}) cannot exceed available balance ({total_balance})")
-                
+                        raise ValueError(
+                            f"Credits to sell ({value}) cannot exceed available balance ({total_balance})"
+                        )
+
                 setattr(organization, key, value)
-        
+
         # Set the update user
         if user:
             organization.update_user = user.keycloak_username
@@ -358,7 +366,9 @@ class OrganizationsService:
 
         # Calculate and add balance information for credit trading validation
         organization.total_balance = await self.calculate_total_balance(organization_id)
-        organization.reserved_balance = await self.calculate_reserved_balance(organization_id)
+        organization.reserved_balance = await self.calculate_reserved_balance(
+            organization_id
+        )
 
         return organization
 
@@ -646,9 +656,9 @@ class OrganizationsService:
         Returns organizations with their credit market contact details for public viewing.
         """
         from .schema import OrganizationCreditMarketListingSchema
-        
+
         organizations = await self.repo.get_credit_market_organizations()
-        
+
         return [
             OrganizationCreditMarketListingSchema(
                 organization_id=org.organization_id,
@@ -663,6 +673,180 @@ class OrganizationsService:
             )
             for org in organizations
         ]
+
+    @service_handler
+    async def get_available_forms(self):
+        """
+        Get available forms for link key generation.
+        """
+        from .schema import AvailableFormsSchema
+
+        # Get published forms that allow anonymous access
+        forms = await self.repo.get_available_forms_for_link_keys()
+
+        return AvailableFormsSchema(
+            forms={
+                form.form_id: {
+                    "id": form.form_id,
+                    "name": form.name,
+                    "slug": form.slug,
+                    "description": form.description,
+                }
+                for form in forms
+            }
+        )
+
+    @service_handler
+    async def get_organization_link_keys(self, organization_id: int):
+        """
+        Get all link keys for an organization.
+        """
+        from .schema import (
+            OrganizationLinkKeysListSchema,
+            OrganizationLinkKeyResponseSchema,
+        )
+
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        link_keys = await self.repo.get_organization_link_keys(organization_id)
+
+        link_key_responses = [
+            OrganizationLinkKeyResponseSchema(
+                link_key_id=lk.link_key_id,
+                organization_id=lk.organization_id,
+                form_id=lk.form_id,
+                form_name=lk.form_name,
+                form_slug=lk.form_slug,
+                link_key=lk.link_key,
+                create_date=lk.create_date,
+                update_date=lk.update_date,
+            )
+            for lk in link_keys
+        ]
+
+        return OrganizationLinkKeysListSchema(
+            organization_id=organization_id,
+            organization_name=organization.name,
+            link_keys=link_key_responses,
+        )
+
+    @service_handler
+    async def generate_link_key(self, organization_id: int, form_id: int, user=None):
+        """
+        Generate a new secure link key for a specific form.
+        """
+        from .schema import LinkKeyOperationResponseSchema
+
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        # Verify the form exists and allows anonymous access
+        form = await self.repo.get_form_by_id(form_id)
+        if not form:
+            raise DataNotFoundException(f"Form with ID {form_id} not found")
+
+        if not form.allows_anonymous:
+            raise ValueError("Form does not support anonymous access")
+
+        # Check if link key already exists for this form
+        existing_link_key = await self.repo.get_link_key_by_form_id(
+            organization_id, form_id
+        )
+        if existing_link_key:
+            raise ValueError(
+                f"Link key already exists for {form.name}. "
+                "Please regenerate if you want to replace it."
+            )
+
+        # Generate a new secure link key
+        new_link_key = generate_secure_link_key()
+
+        # Create new link key record
+        link_key_record = OrganizationLinkKey(
+            organization_id=organization_id,
+            form_id=form_id,
+            link_key=new_link_key,
+        )
+
+        created_link_key = await self.repo.create_link_key(link_key_record)
+
+        return LinkKeyOperationResponseSchema(
+            link_key=created_link_key.link_key,
+            form_id=form_id,
+            form_name=form.name,
+            form_slug=form.slug,
+        )
+
+    @service_handler
+    async def regenerate_link_key(self, organization_id: int, form_id: int, user=None):
+        """
+        Regenerate the link key for a specific form.
+        This invalidates the previous key and creates a new one.
+        """
+        from .schema import LinkKeyOperationResponseSchema
+
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        # Verify the form exists
+        form = await self.repo.get_form_by_id(form_id)
+        if not form:
+            raise DataNotFoundException(f"Form with ID {form_id} not found")
+
+        # Get existing link key
+        existing_link_key = await self.repo.get_link_key_by_form_id(
+            organization_id, form_id
+        )
+        if not existing_link_key:
+            raise DataNotFoundException(f"No link key found for {form.name}")
+
+        old_key = existing_link_key.link_key
+
+        # Generate a new secure link key
+        new_link_key = generate_secure_link_key()
+        existing_link_key.link_key = new_link_key
+
+        updated_link_key = await self.repo.update_link_key(existing_link_key)
+
+        return LinkKeyOperationResponseSchema(
+            link_key=updated_link_key.link_key,
+            form_id=form_id,
+            form_name=form.name,
+            form_slug=form.slug,
+        )
+
+    @service_handler
+    async def validate_link_key(self, link_key: str):
+        """
+        Validate a link key and return the associated organization and form info.
+        Returns detailed validation result including form info and organization info.
+        """
+        from .schema import LinkKeyValidationSchema
+
+        link_key_record = await self.repo.get_link_key_by_key(link_key)
+
+        if not link_key_record:
+            return LinkKeyValidationSchema(
+                organization_id=0,
+                form_id=0,
+                form_name="Unknown",
+                form_slug="unknown",
+                organization_name="",
+                is_valid=False,
+            )
+
+        return LinkKeyValidationSchema(
+            organization_id=link_key_record.organization_id,
+            form_id=link_key_record.form_id,
+            form_name=link_key_record.form_name,
+            form_slug=link_key_record.form_slug,
+            organization_name=link_key_record.organization.name,
+            is_valid=True,
+        )
 
     async def _send_credit_market_notification(self, organization: Organization, user=None):
         """
