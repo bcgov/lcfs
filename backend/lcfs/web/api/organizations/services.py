@@ -1,5 +1,6 @@
 import io
 import math
+import json
 from datetime import datetime
 import structlog
 from typing import List
@@ -33,8 +34,14 @@ from lcfs.web.api.base import (
     apply_filter_conditions,
     get_field_for_filter,
     validate_pagination,
+    NotificationTypeEnum,
 )
 from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.web.api.notification.services import NotificationService
+from lcfs.web.api.notification.schema import (
+    NotificationRequestSchema,
+    NotificationMessageSchema,
+)
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from .repo import OrganizationsRepository
@@ -59,11 +66,13 @@ class OrganizationsService:
         repo: OrganizationsRepository = Depends(OrganizationsRepository),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
         redis_balance_service: RedisBalanceService = Depends(RedisBalanceService),
+        notification_service: NotificationService = Depends(NotificationService),
     ) -> None:
         self.request = (request,)
         self.repo = repo
         self.transaction_repo = transaction_repo
         self.redis_balance_service = redis_balance_service
+        self.notification_service = notification_service
 
     def apply_organization_filters(self, pagination, conditions):
         """
@@ -285,6 +294,10 @@ class OrganizationsService:
         if not organization:
             raise DataNotFoundException("Organization not found")
 
+        # Store original values to detect if a new credit listing is being created
+        was_displayed_in_market = organization.display_in_credit_market or False
+        old_credits_to_sell = organization.credits_to_sell or 0
+
         # Update only the credit market fields
         allowed_fields = {
             "credit_market_contact_name",
@@ -319,6 +332,23 @@ class OrganizationsService:
             organization.update_user = user.keycloak_username
 
         updated_organization = await self.repo.update_organization(organization)
+        
+        # Check if this is a new credit listing that should trigger notifications
+        # A new listing is when:
+        # 1. The organization is now displayed in the credit market AND has credits to sell
+        # 2. AND either wasn't displayed before OR didn't have credits to sell before
+        is_now_displayed = updated_organization.display_in_credit_market or False
+        new_credits_to_sell = updated_organization.credits_to_sell or 0
+        
+        is_new_listing = (
+            is_now_displayed and 
+            new_credits_to_sell > 0 and
+            (not was_displayed_in_market or old_credits_to_sell == 0)
+        )
+        
+        if is_new_listing:
+            await self._send_credit_market_notification(updated_organization, user)
+        
         return updated_organization
 
     @service_handler
@@ -817,3 +847,42 @@ class OrganizationsService:
             organization_name=link_key_record.organization.name,
             is_valid=True,
         )
+
+    async def _send_credit_market_notification(self, organization: Organization, user=None):
+        """
+        Send notification to subscribed BCeID users when new credits are listed for sale.
+        """
+        try:
+            # Create notification message with organization and credit details
+            message_data = {
+                "organizationName": organization.name,
+                "creditsToSell": organization.credits_to_sell,
+                "service": "CreditMarket",
+                "action": "CreditsListedForSale"
+            }
+            
+            # Create notification data
+            notification_data = NotificationMessageSchema(
+                type="Credit market - credits listed for sale",
+                related_transaction_id=f"CM{organization.organization_id}",
+                message=json.dumps(message_data),
+                related_organization_id=organization.organization_id,
+                origin_user_profile_id=user.user_profile_id if user else None,
+            )
+            
+            # Send notification to all subscribed BCeID users
+            await self.notification_service.send_notification(
+                NotificationRequestSchema(
+                    notification_types=[NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE],
+                    notification_context={
+                        "subject": f"LCFS Credit Market - New Credits Available from {organization.name}"
+                    },
+                    notification_data=notification_data,
+                )
+            )
+            
+            logger.info(f"Credit market notification sent for organization {organization.organization_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send credit market notification: {str(e)}")
+            # Don't raise the exception - notification failure shouldn't break the main operation

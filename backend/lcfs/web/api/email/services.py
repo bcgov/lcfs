@@ -1,7 +1,7 @@
 import os
 
 from pydantic import EmailStr
-from lcfs.web.api.base import NotificationTypeEnum
+from lcfs.web.api.base import AudienceType, NotificationTypeEnum
 import requests
 import structlog
 from fastapi import Depends
@@ -34,6 +34,19 @@ class CHESEmailService:
             loader=FileSystemLoader(template_dir),
             autoescape=True,  # Enable autoescaping for security
         )
+
+    def determine_audience_type(self, notification_type: NotificationTypeEnum) -> AudienceType:
+        """
+        Determine the target audience type based on the notification type.
+        Business logic for notification audience determination is centralized here.
+        """
+        if notification_type == NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE:
+            # For credit market notifications, notify OTHER organizations (not the posting org)
+            # Exclude government users for this notification type
+            return AudienceType.OTHER_ORGANIZATIONS
+        else:
+            # For all other notifications, use the original logic (notify the specific org + government)
+            return AudienceType.SAME_ORGANIZATION
 
     @service_handler
     async def send_fuel_code_expiry_notifications(
@@ -83,6 +96,7 @@ class CHESEmailService:
         notification_type: NotificationTypeEnum,
         notification_context: Dict[str, Any],
         organization_id: int,
+        audience_type: Optional[AudienceType] = None,
     ) -> bool:
         """
         Send an email notification to users subscribed to the specified notification type.
@@ -94,9 +108,13 @@ class CHESEmailService:
         if not self._validate_configuration():
             return
 
+        # Determine audience type if not provided
+        if audience_type is None:
+            audience_type = self.determine_audience_type(notification_type)
+
         # Retrieve subscribed user emails
         recipient_emails = await self.repo.get_subscribed_user_emails(
-            notification_type.value, organization_id
+            notification_type.value, organization_id, audience_type
         )
         if not recipient_emails:
             logger.info(

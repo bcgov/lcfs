@@ -1,15 +1,18 @@
 import React, { useState, useRef } from 'react'
 import BCButton from '@/components/BCButton'
-import { useCreateAnalystAdjustment } from '@/hooks/useComplianceReports'
+import {
+  useCreateAnalystAdjustment,
+  useUpdateComplianceReport
+} from '@/hooks/useComplianceReports'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import BCTypography from '@/components/BCTypography/index.jsx'
 import BCBox from '@/components/BCBox/index.jsx'
 import BCModal from '@/components/BCModal.jsx'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses.js'
-import { Assignment } from '@mui/icons-material'
+import { Assignment, CheckCircle } from '@mui/icons-material'
 import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config.js'
-import { Tooltip, FormControlLabel, Checkbox } from '@mui/material'
+import { Tooltip, FormControlLabel, Checkbox, Fade } from '@mui/material'
 import { roles } from '@/constants/roles.js'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import { useMemo } from 'react'
@@ -28,6 +31,7 @@ export const AssessmentRecommendation = ({
   const [isAdjustmentDialogOpen, setIsAdjustmentDialogOpen] = useState(false)
   const [isReassessmentDialogOpen, setIsReassessmentDialogOpen] =
     useState(false)
+  const [showSavedConfirmation, setShowSavedConfirmation] = useState(false)
 
   const { mutate: createAnalystAdjustment, isLoading } =
     useCreateAnalystAdjustment(complianceReportId, {
@@ -47,14 +51,38 @@ export const AssessmentRecommendation = ({
       }
     })
 
+  const { mutate: updateComplianceReport } = useUpdateComplianceReport(
+    complianceReportId,
+    {
+      onSuccess: () => {
+        // Show saved confirmation
+        setShowSavedConfirmation(true)
+        setTimeout(() => setShowSavedConfirmation(false), 3000)
+      }
+    }
+  )
+
   const isGovernmentUser = currentUser?.isGovernmentUser
   const isAnalyst = hasRoles(roles.analyst)
+
+  // Determine if this is an original report (should show non-assessment option)
+  const isOriginalReport = useMemo(() => {
+    return (
+      reportData?.report?.version === 0 &&
+      !reportData?.report?.supplementalInitiator &&
+      reportData?.report?.reportingFrequency !== 'Quarterly'
+    )
+  }, [reportData])
 
   // Only allow editing non-assessment checkbox when user is analyst and report is submitted
   const canEditNonAssessmentStatus = useMemo(() => {
     return isAnalyst && currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED
   }, [isAnalyst, currentStatus])
 
+  // Show non-assessment section only for original reports
+  const shouldShowNonAssessmentSection = useMemo(() => {
+    return isGovernmentUser && isAnalyst && isOriginalReport
+  }, [isGovernmentUser, isAnalyst, isOriginalReport])
   const governmentAdjustmentDialog = (
     <>
       This will put the report into edit mode to update schedule information, do
@@ -79,6 +107,17 @@ export const AssessmentRecommendation = ({
 
   const openAdjustmentDialog = () => {
     setIsAdjustmentDialogOpen(true)
+  }
+
+  const handleNonAssessmentChange = (event) => {
+    const newValue = event.target.checked
+    methods.setValue('isNonAssessment', newValue)
+
+    // Automatically save the change
+    updateComplianceReport({
+      status: currentStatus,
+      isNonAssessment: newValue
+    })
   }
 
   return (
@@ -118,22 +157,36 @@ export const AssessmentRecommendation = ({
           </BCTypography>
         )}
 
-      {/* Not subject to assessment section - Only show to IDIR analysts */}
-      {isGovernmentUser && isAnalyst && (
+      {/* Not subject to assessment section - Only show for original reports */}
+      {shouldShowNonAssessmentSection && (
         <BCBox
           mt={currentStatus === COMPLIANCE_REPORT_STATUSES.SUBMITTED ? 3 : 2}
         >
-          <BCTypography variant="h6" color="primary" mb={2}>
-            {t('report:notSubjectToAssessment')}
-          </BCTypography>
+          <BCBox display="flex" alignItems="center" mb={2}>
+            <BCTypography variant="h6" color="primary">
+              {t('report:notSubjectToAssessment')}
+            </BCTypography>
+            <Fade in={showSavedConfirmation}>
+              <BCBox display="flex" alignItems="center" ml={2}>
+                <CheckCircle
+                  sx={{
+                    color: 'success.main',
+                    fontSize: '1rem',
+                    mr: 0.5
+                  }}
+                />
+                <BCTypography variant="body2" color="success.main">
+                  Saved
+                </BCTypography>
+              </BCBox>
+            </Fade>
+          </BCBox>
           <FormControlLabel
             control={
               <Checkbox
                 disabled={!canEditNonAssessmentStatus}
                 checked={methods.watch('isNonAssessment') || false}
-                onChange={(e) => {
-                  methods.setValue('isNonAssessment', e.target.checked)
-                }}
+                onChange={handleNonAssessmentChange}
               />
             }
             label={t('report:notSubjectToAssessmentDescription')}
