@@ -18,7 +18,7 @@ const checkbox = {
         width: pxToRem(20),
         height: pxToRem(20),
         color: transparent.main,
-        border: `${borderWidth[1]} solid ${borderColor}`,
+        border: `${borderWidth[1]} solid ${colors.grey[700]}`,
         borderRadius: pxToRem(5.6),
         backgroundColor: background.default
       },
@@ -40,7 +40,7 @@ const checkbox = {
     },
 
     colorPrimary: {
-      color: borderColor,
+      color: colors.grey[700],
 
       '&.Mui-checked': {
         color: colors.grey[700],
@@ -63,7 +63,7 @@ const checkbox = {
     },
 
     colorSecondary: {
-      color: borderColor,
+      color: colors.grey[700],
 
       '& .MuiSvgIcon-root': {
         color: primary.main,

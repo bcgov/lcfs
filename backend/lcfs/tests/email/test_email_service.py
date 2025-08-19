@@ -1,4 +1,4 @@
-from lcfs.web.api.base import NotificationTypeEnum
+from lcfs.web.api.base import AudienceType, NotificationTypeEnum
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from lcfs.web.api.email.repo import CHESEmailRepository
@@ -52,7 +52,7 @@ async def test_send_notification_email_success(mock_email_repo, mock_environment
     # Assert
     assert result is True
     mock_email_repo.get_subscribed_user_emails.assert_called_once_with(
-        notification_type.value, organization_id  # Ensure value is passed
+        notification_type.value, organization_id, AudienceType.SAME_ORGANIZATION  # Ensure value is passed with audience type
     )
     service._render_email_template.assert_called_once_with(
         notification_type.value, notification_context
@@ -85,7 +85,7 @@ async def test_send_notification_email_no_recipients(
     # Assert
     assert result is False
     mock_email_repo.get_subscribed_user_emails.assert_called_once_with(
-        notification_type.value, organization_id  # Ensure value is passed
+        notification_type.value, organization_id, AudienceType.SAME_ORGANIZATION  # Ensure value is passed with audience type
     )
 
 
@@ -109,6 +109,34 @@ async def test_get_ches_token_success(mock_environment_vars):
         # Assert
         assert token == mock_token
         mock_post.assert_called_once()
+
+
+@pytest.mark.anyio
+async def test_send_fuel_code_expiry_notifications_success(mock_email_repo, mock_environment_vars):
+    # Arrange
+    notification_type = NotificationTypeEnum.IDIR_ANALYST__FUEL_CODE__EXPIRY_NOTIFICATION
+    email = "user@example.com"
+    notification_context = {
+        "subject": "Fuel Code Expiry Notification",
+        "user_name": "John Doe",
+        "message_body": "Your fuel code is expiring soon",
+    }
+
+    service = CHESEmailService(repo=mock_email_repo)
+    service._render_email_template = MagicMock(return_value="Rendered HTML Content")
+    service.send_email = AsyncMock(return_value=True)
+
+    # Act
+    result = await service.send_fuel_code_expiry_notifications(
+        notification_type, email, notification_context
+    )
+
+    # Assert
+    assert result is True
+    service._render_email_template.assert_called_once_with(
+        notification_type.value, notification_context
+    )
+    service.send_email.assert_called_once()
 
 
 @pytest.mark.anyio
