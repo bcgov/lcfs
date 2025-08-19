@@ -578,18 +578,8 @@ async def test_aggregate_fuel_supplies(
     assert result == expected
 
 
-@pytest.mark.anyio
-async def test_aggregate_other_uses(summary_repo, dbsession):
-    mock_result = [
-        MagicMock(category="Gasoline", quantity=50.0),
-        MagicMock(category="Ethanol", quantity=75.0),
-    ]
-    dbsession.execute = AsyncMock(return_value=mock_result)
-
-    result = await summary_repo.aggregate_other_uses_quantity(1, True)
-
-    assert result == {"gasoline": 50.0, "ethanol": 75.0}
-    dbsession.execute.assert_awaited_once()
+# Test removed: aggregate_other_uses_quantity method no longer exists
+# Other Uses are now handled through aggregate_quantities with records from get_effective_other_uses
 
 
 @pytest.mark.anyio

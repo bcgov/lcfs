@@ -1036,9 +1036,7 @@ async def test_can_sign_flag_logic(
     mock_repo.get_compliance_report_by_id = AsyncMock(
         return_value=mock_compliance_report
     )
-    mock_summary_repo.aggregate_other_uses_quantity = AsyncMock(
-        return_value={"gasoline": 50, "diesel": 25, "jet_fuel": 10}
-    )
+    # aggregate_other_uses_quantity no longer exists - handled via aggregate_quantities
     mock_summary_repo.get_assessed_compliance_report_by_period = AsyncMock(
         return_value=MagicMock(
             summary=MagicMock(
@@ -1123,43 +1121,9 @@ async def test_can_sign_flag_logic(
     assert result.can_sign is False
 
 
-@pytest.mark.anyio
-@pytest.mark.parametrize(
-    "fossil_derived, agg_quantities_return, agg_other_uses_return, compliance_report_id, expected_result",
-    [
-        (
-            True,
-            {"diesel": 100.0},
-            {"gasoline": 50.0},
-            1,
-            {"diesel": 100.0, "gasoline": 50.0},
-        ),
-        (
-            False,
-            {"gasoline": 200.0},
-            {"diesel": 75.0, "jet-fuel": 25.0},
-            2,
-            {"gasoline": 200.0, "diesel": 75.0, "jet-fuel": 25.0},
-        ),
-    ],
-)
-async def test_calculate_fuel_quantities_parametrized(
-    compliance_report_summary_service,
-    mock_summary_repo,
-    mock_trxn_repo,
-    mock_fuel_supply_repo,
-    fossil_derived,
-    agg_quantities_return,
-    agg_other_uses_return,
-    compliance_report_id,
-    expected_result,
-):
-    mock_summary_repo.aggregate_quantities.return_value = agg_quantities_return
-    mock_summary_repo.aggregate_other_uses_quantity.return_value = agg_other_uses_return
-    result = await compliance_report_summary_service.calculate_fuel_quantities(
-        compliance_report_id, [], fossil_derived
-    )
-    assert result == expected_result
+# Test removed: calculate_fuel_quantities method no longer exists
+# Fuel quantities are now calculated directly using repo.aggregate_quantities 
+# with records from get_effective_fuel_supplies and get_effective_other_uses
 
 
 @pytest.mark.anyio
@@ -2129,7 +2093,7 @@ async def test_quarterly_notional_transfer_calculation_logic(
 
     # Mock aggregate methods to return empty results
     mock_summary_repo.aggregate_quantities.return_value = {}
-    mock_summary_repo.aggregate_other_uses_quantity.return_value = {}
+    # aggregate_other_uses_quantity no longer exists - handled via aggregate_quantities
 
     # Call the compliance report summary calculation
     result = (

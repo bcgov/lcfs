@@ -265,34 +265,6 @@ class ComplianceReportSummaryRepository:
 
         return dict(fuel_quantities)
 
-    @repo_handler
-    async def aggregate_other_uses_quantity(
-        self, compliance_report_id: int, fossil_derived: bool
-    ) -> Dict[str, float]:
-        """Aggregate quantities from other uses."""
-        query = (
-            select(
-                FuelCategory.category,
-                func.coalesce(func.sum(OtherUses.quantity_supplied), 0).label(
-                    "quantity"
-                ),
-            )
-            .select_from(OtherUses)
-            .join(FuelType, OtherUses.fuel_type_id == FuelType.fuel_type_id)
-            .join(
-                FuelCategory,
-                OtherUses.fuel_category_id == FuelCategory.fuel_category_id,
-            )
-            .where(
-                OtherUses.compliance_report_id == compliance_report_id,
-                FuelType.fossil_derived.is_(fossil_derived),
-                FuelType.other_uses_fossil_derived.is_(fossil_derived),
-            )
-            .group_by(FuelCategory.category)
-        )
-
-        result = await self.db.execute(query)
-        return {self._format_category(row.category): row.quantity for row in result}
 
     @staticmethod
     def _format_category(category: str) -> str:
