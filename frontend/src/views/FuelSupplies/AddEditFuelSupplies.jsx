@@ -1,7 +1,7 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
+import { DEFAULT_CI_FUEL, NEW_REGULATION_YEAR, REPORT_SCHEDULES } from '@/constants/common'
 import { buildPath, ROUTES } from '@/routes/routes'
 import {
   useFuelSupplyOptions,
@@ -16,7 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { v4 as uuid } from 'uuid'
-import { defaultColDef, fuelSupplyColDefs } from './_schema'
+import { DEFAULT_CI_FUEL_CODE, defaultColDef, fuelSupplyColDefs } from './_schema'
 import { REPORT_SCHEDULES_VIEW } from '@/constants/statuses'
 import { useComplianceReportWithCache } from '@/hooks/useComplianceReports'
 
@@ -171,6 +171,42 @@ export const AddEditFuelSupplies = () => {
     isSupplemental
   ])
 
+  const updateIsCanadaProducedVisibility = useCallback(() => {
+    if (!gridRef.current?.api) return
+
+    const api = gridRef.current.api
+
+    // Check if any row should show the isCanadaProduced column
+    let shouldShowColumn = false
+
+    api.forEachNode((node) => {
+      if (node.data) {
+        const complianceYear = parseInt(compliancePeriod, 10)
+        const isRenewable = !optionsData?.fuelTypes?.find(
+          (obj) => node.data.fuelType === obj.fuelType
+        )?.fossilDerived
+
+        const shouldShow =
+          node.data.fuelCategory === 'Diesel' &&
+          complianceYear >= NEW_REGULATION_YEAR &&
+          isRenewable &&
+          node.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+
+        if (shouldShow) {
+          shouldShowColumn = true
+        }
+      }
+    })
+
+    // Show or hide the column based on the evaluation
+    api?.setColumnsVisible(['isCanadaProduced'], shouldShowColumn)
+  }, [compliancePeriod, optionsData])
+
+  // Call this function whenever relevant data changes
+  useEffect(() => {
+    updateIsCanadaProducedVisibility()
+  }, [rowData, optionsData, updateIsCanadaProducedVisibility])
+
   const onCellValueChanged = useCallback(
     async (params) => {
       setWarnings({})
@@ -228,8 +264,11 @@ export const AddEditFuelSupplies = () => {
           params.node.setDataValue('provisionOfTheAct', provisionValue)
         }
       }
+      setTimeout(() => {
+        updateIsCanadaProducedVisibility()
+      }, 0)
     },
-    [optionsData]
+    [optionsData, updateIsCanadaProducedVisibility]
   )
 
   const onCellEditingStopped = useCallback(
