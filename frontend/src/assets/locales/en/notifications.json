@@ -33,7 +33,8 @@
       "transfers": {
         "title": "Transfers",
         "partnerActions": "Transfer partner proposed, declined, rescinded or signed & submitted",
-        "directorDecision": "Director recorded/refused"
+        "directorDecision": "Director recorded/refused",
+        "creditsListedForSale": "Credits listed for sale on the credit market"
       },
       "initiativeAgreements": {
         "title": "Initiative agreements and other transactions",
