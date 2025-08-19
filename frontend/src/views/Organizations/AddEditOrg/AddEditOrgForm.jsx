@@ -41,7 +41,7 @@ import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
 import ReferenceCompareBox from './ReferenceCompareBox'
 
 // Component for adding a new organization
-export const AddEditOrgForm = () => {
+export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   const { t } = useTranslation(['common', 'org'])
   const navigate = useNavigate()
   const alertRef = useRef(null)
@@ -226,14 +226,11 @@ export const AddEditOrgForm = () => {
   } = useMutation({
     mutationFn: async (userData) =>
       await apiService.post('/organizations/create', userData),
-    onSuccess: () => {
+    onSuccess: (response) => {
       // Redirect to Organization route on success
-      navigate(ROUTES.ORGANIZATIONS.LIST, {
-        state: {
-          message: 'Organization has been successfully added.',
-          severity: 'success'
-        }
-      })
+      if (handleSaveSuccess) {
+        handleSaveSuccess(response?.data?.organizationId)
+      }
     },
     onError: (error) => {
       // Error handling logic
@@ -250,12 +247,9 @@ export const AddEditOrgForm = () => {
     mutationFn: async (payload) =>
       await apiService.put(`/organizations/${orgID}`, payload),
     onSuccess: () => {
-      navigate(ROUTES.ORGANIZATIONS.LIST, {
-        state: {
-          message: 'Organization has been successfully updated.',
-          severity: 'success'
-        }
-      })
+      if (handleSaveSuccess) {
+        handleSaveSuccess()
+      }
     },
     onError: (error) => {
       console.error('Error posting data:', error)
@@ -330,7 +324,15 @@ export const AddEditOrgForm = () => {
 
   // Conditional rendering for loading
   if (isCreateOrgPending || isUpdateOrgPending) {
-    return <Loading message="Adding Organization..." />
+    return (
+      <Loading
+        message={
+          isCreateOrgPending
+            ? 'Adding Organization...'
+            : 'Updating Organization...'
+        }
+      />
+    )
   }
 
   // Form layout and structure
@@ -985,16 +987,10 @@ export const AddEditOrgForm = () => {
                     backgroundColor: 'white.main',
                     ml: 2
                   }}
-                  startIcon={
-                    <FontAwesomeIcon
-                      icon={faArrowLeft}
-                      className="small-icon"
-                    />
-                  }
-                  onClick={() => navigate(ROUTES.ORGANIZATIONS.LIST)}
+                  onClick={() => handleCancelEdit()}
                 >
                   <BCTypography variant="subtitle2" textTransform="none">
-                    {t('backBtn')}
+                    {t('cancelBtn')}
                   </BCTypography>
                 </BCButton>
               </Box>
