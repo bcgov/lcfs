@@ -1,4 +1,3 @@
-from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
 import structlog
 from datetime import date, datetime
 from fastapi import Depends
@@ -31,11 +30,9 @@ class OtherUsesRepository:
         self,
         db: AsyncSession = Depends(get_async_db_session),
         fuel_code_repo: FuelCodeRepository = Depends(),
-        cr_repo: ComplianceReportRepository = Depends(),
     ):
         self.db = db
         self.fuel_code_repo = fuel_code_repo
-        self.cr_repo = cr_repo
 
     @repo_handler
     async def get_table_options(self, compliance_period: str) -> dict:
@@ -466,7 +463,9 @@ class OtherUsesRepository:
     async def check_duplicate(self, other_use: OtherUsesSchema):
         """Check if this would duplicate an existing row"""
         # Get all compliance report IDs that belong to the same group in a subquery
-        related_report_ids = await self.cr_repo.get_related_compliance_report_ids(
+        from lcfs.web.api.compliance_report.repo import ComplianceReportRepository
+        cr_repo = ComplianceReportRepository(db=self.db)
+        related_report_ids = await cr_repo.get_related_compliance_report_ids(
             other_use.compliance_report_id
         )
 

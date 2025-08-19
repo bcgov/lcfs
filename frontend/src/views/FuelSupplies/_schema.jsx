@@ -27,8 +27,11 @@ import {
   extractOriginalFuelCode,
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
+import { NEW_REGULATION_YEAR } from '@/constants/common'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
+export const DEFAULT_CI_FUEL_CODE =
+  'Default carbon intensity - section 19 (b) (ii)'
 export const PROVISION_GHGENIUS =
   'GHGenius modelled - Section 6 (5) (d) (ii) (A)'
 
@@ -495,32 +498,39 @@ export const fuelSupplyColDefs = (
       },
       editable: (params) => {
         const complianceYear = parseInt(compliancePeriod, 10)
-        const isRenewable = optionsData?.fuelTypes?.find(
+        const isRenewable = !optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
-        )?.renewable
+        )?.fossilDerived
         return (
-          complianceYear >= 2025 &&
+          params.data.fuelCategory === 'Diesel' &&
+          complianceYear >= NEW_REGULATION_YEAR &&
           isRenewable &&
-          params.data.provisionOfTheAct ===
-            'Default carbon intensity - section 19 (b) (ii)'
+          params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
         )
       },
       hide: (params) => {
         const complianceYear = parseInt(compliancePeriod, 10)
-        const isRenewable = optionsData?.fuelTypes?.find(
+        const isRenewable = !optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
-        )?.renewable
+        )?.fossilDerived
         return !(
-          complianceYear >= 2025 &&
+          params.data.fuelCategory === 'Diesel' &&
+          complianceYear >= NEW_REGULATION_YEAR &&
           isRenewable &&
-          params.data.provisionOfTheAct ===
-            'Default carbon intensity - section 19 (b) (ii)'
+          params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
         )
+      },
+      valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : 'No'),
+      valueSetter: (params) => {
+        if (params.newValue) {
+          params.data.isCanadaProduced = params.newValue === 'Yes'
+        }
+        return true
       }
     },
     {
-      field: 'supplied_in_q1',
-      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.suppliedInQ1'),
+      field: 'isQ1Supplied',
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
       cellEditor: AutocompleteCellEditor,
       cellRenderer: SelectRenderer,
       cellEditorParams: {
@@ -532,21 +542,34 @@ export const fuelSupplyColDefs = (
       },
       editable: (params) => {
         const complianceYear = parseInt(compliancePeriod, 10)
-        const isRenewable = optionsData?.fuelTypes?.find(
+        const isRenewable = !optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
-        )?.renewable
+        )?.fossilDerived
         const fuelCode = params.data.fuelCode
         const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
-        return complianceYear === 2025 && isRenewable && isNonCanadian
+        return (
+          complianceYear >= NEW_REGULATION_YEAR && isRenewable && isNonCanadian
+        )
       },
       hide: (params) => {
         const complianceYear = parseInt(compliancePeriod, 10)
-        const isRenewable = optionsData?.fuelTypes?.find(
+        const isRenewable = !optionsData?.fuelTypes?.find(
           (obj) => params.data.fuelType === obj.fuelType
-        )?.renewable
+        )?.fossilDerived
         const fuelCode = params.data.fuelCode
         const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
-        return !(complianceYear === 2025 && isRenewable && isNonCanadian)
+        return !(
+          complianceYear >= NEW_REGULATION_YEAR &&
+          isRenewable &&
+          isNonCanadian
+        )
+      },
+      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
+      valueSetter: (params) => {
+        if (params.newValue) {
+          params.data.isQ1Supplied = params.newValue === 'Yes'
+        }
+        return true
       }
     },
     {
