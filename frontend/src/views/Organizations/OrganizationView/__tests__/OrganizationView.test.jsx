@@ -77,6 +77,7 @@ vi.mock('@/hooks/useOrganization', () => ({
       email: 'test@test.com',
       phone: '1234567890',
       hasEarlyIssuance: false,
+      creditTradingEnabled: true,
       orgAddress: {
         streetAddress: '123 Test St',
         addressOther: 'Unit 101',
