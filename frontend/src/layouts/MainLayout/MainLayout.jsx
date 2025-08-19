@@ -26,8 +26,13 @@ export const MainLayout = () => {
   const isGovernmentRole =
     currentUser?.roles?.some(({ name }) => name === t('gov')) ?? false
   const matches = useMatches()
-  const pageTitle = matches[matches.length - 1]?.handle?.title || 'LCFS'
   const location = useLocation()
+  const currentMatch = matches[matches.length - 1]
+  const handleTitle = currentMatch?.handle?.title
+  const pageTitle =
+    typeof handleTitle === 'function'
+      ? handleTitle({ params: currentMatch?.params || {}, location })
+      : handleTitle || 'LCFS'
 
   useEffect(() => {
     // If "forbidden" is set, go to unauthorized page (unless we're already there)

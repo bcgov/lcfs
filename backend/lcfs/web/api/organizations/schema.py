@@ -1,8 +1,8 @@
 from enum import Enum
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
+from datetime import datetime
 
 from lcfs.web.api.base import BaseSchema
-
 from lcfs.web.api.base import PaginationResponseSchema
 
 
@@ -124,7 +124,6 @@ class OrganizationBase(BaseSchema):
     reserved_balance: Optional[int] = None
     organization_status_id: int
     organization_type_id: int
-    credit_trading_enabled: Optional[bool] = False
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
@@ -156,7 +155,6 @@ class OrganizationCreateSchema(BaseSchema):
     organization_status_id: int
     organization_type_id: int
     records_address: Optional[str] = None
-    credit_trading_enabled: Optional[bool] = False
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
@@ -178,7 +176,6 @@ class OrganizationUpdateSchema(BaseSchema):
     organization_status_id: Optional[int] = None
     organization_type_id: Optional[int] = None
     records_address: Optional[str] = None
-    credit_trading_enabled: Optional[bool] = None
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
@@ -200,7 +197,6 @@ class OrganizationResponseSchema(BaseSchema):
     has_early_issuance: bool
     total_balance: Optional[int] = None
     reserved_balance: Optional[int] = None
-    credit_trading_enabled: Optional[bool] = False
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
@@ -254,6 +250,7 @@ class OrganizationCreditMarketUpdateSchema(BaseSchema):
 
 class OrganizationCreditMarketListingSchema(BaseSchema):
     """Schema for credit market listings - public data only"""
+
     organization_id: int
     organization_name: str
     credits_to_sell: Optional[int] = 0
@@ -261,5 +258,69 @@ class OrganizationCreditMarketListingSchema(BaseSchema):
     credit_market_is_seller: bool
     credit_market_is_buyer: bool
     credit_market_contact_name: Optional[str] = None
-    credit_market_contact_email: Optional[str] = None  
+    credit_market_contact_email: Optional[str] = None
     credit_market_contact_phone: Optional[str] = None
+
+
+# --------------------------------------
+# Link Key Operations
+# --------------------------------------
+
+
+class OrganizationLinkKeyBaseSchema(BaseSchema):
+    """Base schema for organization link keys"""
+
+    link_key_id: Optional[int] = None
+    organization_id: int
+    form_id: int
+    link_key: str
+
+
+class OrganizationLinkKeyCreateSchema(BaseSchema):
+    """Schema for creating organization link keys"""
+
+    form_id: int
+
+
+class OrganizationLinkKeyResponseSchema(OrganizationLinkKeyBaseSchema):
+    """Schema for organization link key responses"""
+
+    link_key_id: int
+    form_name: str
+    form_slug: str
+    create_date: datetime
+    update_date: datetime
+
+
+class OrganizationLinkKeysListSchema(BaseSchema):
+    """Schema for listing organization link keys"""
+
+    organization_id: int
+    organization_name: str
+    link_keys: List[OrganizationLinkKeyResponseSchema]
+
+
+class LinkKeyOperationResponseSchema(BaseSchema):
+    """Schema for link key operation responses (generate/regenerate)"""
+
+    link_key: str
+    form_id: int
+    form_name: str
+    form_slug: str
+
+
+class LinkKeyValidationSchema(BaseSchema):
+    """Schema for validating link key access"""
+
+    organization_id: int
+    form_id: int
+    form_name: str
+    form_slug: str
+    organization_name: str
+    is_valid: bool
+
+
+class AvailableFormsSchema(BaseSchema):
+    """Schema for available forms"""
+
+    forms: Dict[int, Dict[str, Any]]
