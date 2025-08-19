@@ -34,6 +34,7 @@ class TestCreditMarketRepository:
         org1.organization_id = 1
         org1.name = "Seller Corp"
         org1.operating_name = "Seller Corp Operating"  # Required field
+        org1.organization_type_id = 1
         org1.credit_market_contact_name = "Seller Contact"
         org1.credit_market_contact_email = "seller@corp.com"
         org1.credit_market_contact_phone = "555-0001"
@@ -56,6 +57,7 @@ class TestCreditMarketRepository:
         org2.organization_id = 2
         org2.name = "Buyer LLC"
         org2.operating_name = "Buyer LLC Operating"  # Required field
+        org2.organization_type_id = 1
         org2.credit_market_contact_name = "Buyer Contact"
         org2.credit_market_contact_email = "buyer@llc.com"
         org2.credit_market_contact_phone = "555-0002"

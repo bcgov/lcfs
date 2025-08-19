@@ -1,14 +1,6 @@
-from sqlalchemy import Column, Integer, String, Enum
+from sqlalchemy import Column, Integer, String, Boolean
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, DisplayOrder
-import enum
-
-
-class OrgTypeEnum(enum.Enum):
-    fuel_supplier = "Fuel Supplier"
-    electricity_supplier = "Electricity Supplier"
-    broker = "Broker"
-    utilities = "Utilities (local or public)"
 
 
 class OrganizationType(BaseModel, Auditable, DisplayOrder):
@@ -24,9 +16,17 @@ class OrganizationType(BaseModel, Auditable, DisplayOrder):
         comment="Unique identifier for the organization_type",
     )
     org_type = Column(
-        Enum(OrgTypeEnum, name="org_type_enum", create_type=True),
-        default=OrgTypeEnum.fuel_supplier,
-        comment="Organization's Types",
+        String(64),
+        nullable=False,
+        default="fuel_supplier",
+        comment="Organization type key",
     )
     description = Column(String(500), nullable=True, comment="Organization Types")
+    is_bceid_user = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        server_default="true",
+        comment="Indicates whether this organization type is for BCeID users",
+    )
     organizations = relationship("Organization", back_populates="org_type")

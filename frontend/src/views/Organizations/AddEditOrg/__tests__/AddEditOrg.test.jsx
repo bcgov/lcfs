@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useForm, FormProvider } from 'react-hook-form'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { useOrganization } from '@/hooks/useOrganization'
+import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/routes/routes'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -84,6 +84,13 @@ describe('AddEditOrg', () => {
     // Mocking the useOrganization hook
     useOrganization.mockReturnValue({
       isFetched: true
+    })
+
+    // Ensure organization types hook returns a default value for the form
+    useOrganizationTypes.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null
     })
 
     apiSpy = {
@@ -227,8 +234,8 @@ describe('AddEditOrg', () => {
   //   await user.type(document.getElementById('orgEmailAddress'), 'new-test@example.com')
   //   await user.type(document.getElementById('orgPhoneNumber'), '555-123-4567')
 
-  //   // Supplier Type Radio - click the correct radio button
-  //   await user.click(screen.getByTestId('orgSupplierType1'))
+  //   // Organization Type Dropdown - select organization type
+  //   await user.selectOptions(screen.getByTestId('orgType'), '1')
 
   //   // Registered for Transfers Radio (value="2" is Yes)
   //   await user.click(screen.getByTestId('orgRegForTransfers2'))
