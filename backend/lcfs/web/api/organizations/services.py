@@ -1,5 +1,6 @@
 import io
 import math
+import json
 from datetime import datetime
 import structlog
 from typing import List
@@ -8,7 +9,11 @@ from fastapi import Depends, Request
 from fastapi.responses import StreamingResponse
 from fastapi_cache import FastAPICache
 
-from lcfs.db.models.organization.Organization import Organization
+from lcfs.db.models.organization.Organization import (
+    Organization,
+    generate_secure_link_key,
+)
+from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
 from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.organization.OrganizationAttorneyAddress import (
     OrganizationAttorneyAddress,
@@ -29,8 +34,14 @@ from lcfs.web.api.base import (
     apply_filter_conditions,
     get_field_for_filter,
     validate_pagination,
+    NotificationTypeEnum,
 )
 from lcfs.web.api.transaction.repo import TransactionRepository
+from lcfs.web.api.notification.services import NotificationService
+from lcfs.web.api.notification.schema import (
+    NotificationRequestSchema,
+    NotificationMessageSchema,
+)
 from lcfs.web.core.decorators import service_handler
 from lcfs.web.exception.exceptions import DataNotFoundException
 from .repo import OrganizationsRepository
@@ -55,11 +66,13 @@ class OrganizationsService:
         repo: OrganizationsRepository = Depends(OrganizationsRepository),
         transaction_repo: TransactionRepository = Depends(TransactionRepository),
         redis_balance_service: RedisBalanceService = Depends(RedisBalanceService),
+        notification_service: NotificationService = Depends(NotificationService),
     ) -> None:
         self.request = (request,)
         self.repo = repo
         self.transaction_repo = transaction_repo
         self.redis_balance_service = redis_balance_service
+        self.notification_service = notification_service
 
     def apply_organization_filters(self, pagination, conditions):
         """
@@ -309,6 +322,10 @@ class OrganizationsService:
         if not organization:
             raise DataNotFoundException("Organization not found")
 
+        # Store original values to detect if a new credit listing is being created
+        was_displayed_in_market = organization.display_in_credit_market or False
+        old_credits_to_sell = organization.credits_to_sell or 0
+
         # Update only the credit market fields
         allowed_fields = {
             "credit_market_contact_name",
@@ -343,6 +360,23 @@ class OrganizationsService:
             organization.update_user = user.keycloak_username
 
         updated_organization = await self.repo.update_organization(organization)
+        
+        # Check if this is a new credit listing that should trigger notifications
+        # A new listing is when:
+        # 1. The organization is now displayed in the credit market AND has credits to sell
+        # 2. AND either wasn't displayed before OR didn't have credits to sell before
+        is_now_displayed = updated_organization.display_in_credit_market or False
+        new_credits_to_sell = updated_organization.credits_to_sell or 0
+        
+        is_new_listing = (
+            is_now_displayed and 
+            new_credits_to_sell > 0 and
+            (not was_displayed_in_market or old_credits_to_sell == 0)
+        )
+        
+        if is_new_listing:
+            await self._send_credit_market_notification(updated_organization, user)
+        
         return updated_organization
 
     @service_handler
@@ -667,3 +701,216 @@ class OrganizationsService:
             )
             for org in organizations
         ]
+
+    @service_handler
+    async def get_available_forms(self):
+        """
+        Get available forms for link key generation.
+        """
+        from .schema import AvailableFormsSchema
+
+        # Get published forms that allow anonymous access
+        forms = await self.repo.get_available_forms_for_link_keys()
+
+        return AvailableFormsSchema(
+            forms={
+                form.form_id: {
+                    "id": form.form_id,
+                    "name": form.name,
+                    "slug": form.slug,
+                    "description": form.description,
+                }
+                for form in forms
+            }
+        )
+
+    @service_handler
+    async def get_organization_link_keys(self, organization_id: int):
+        """
+        Get all link keys for an organization.
+        """
+        from .schema import (
+            OrganizationLinkKeysListSchema,
+            OrganizationLinkKeyResponseSchema,
+        )
+
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        link_keys = await self.repo.get_organization_link_keys(organization_id)
+
+        link_key_responses = [
+            OrganizationLinkKeyResponseSchema(
+                link_key_id=lk.link_key_id,
+                organization_id=lk.organization_id,
+                form_id=lk.form_id,
+                form_name=lk.form_name,
+                form_slug=lk.form_slug,
+                link_key=lk.link_key,
+                create_date=lk.create_date,
+                update_date=lk.update_date,
+            )
+            for lk in link_keys
+        ]
+
+        return OrganizationLinkKeysListSchema(
+            organization_id=organization_id,
+            organization_name=organization.name,
+            link_keys=link_key_responses,
+        )
+
+    @service_handler
+    async def generate_link_key(self, organization_id: int, form_id: int, user=None):
+        """
+        Generate a new secure link key for a specific form.
+        """
+        from .schema import LinkKeyOperationResponseSchema
+
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        # Verify the form exists and allows anonymous access
+        form = await self.repo.get_form_by_id(form_id)
+        if not form:
+            raise DataNotFoundException(f"Form with ID {form_id} not found")
+
+        if not form.allows_anonymous:
+            raise ValueError("Form does not support anonymous access")
+
+        # Check if link key already exists for this form
+        existing_link_key = await self.repo.get_link_key_by_form_id(
+            organization_id, form_id
+        )
+        if existing_link_key:
+            raise ValueError(
+                f"Link key already exists for {form.name}. "
+                "Please regenerate if you want to replace it."
+            )
+
+        # Generate a new secure link key
+        new_link_key = generate_secure_link_key()
+
+        # Create new link key record
+        link_key_record = OrganizationLinkKey(
+            organization_id=organization_id,
+            form_id=form_id,
+            link_key=new_link_key,
+        )
+
+        created_link_key = await self.repo.create_link_key(link_key_record)
+
+        return LinkKeyOperationResponseSchema(
+            link_key=created_link_key.link_key,
+            form_id=form_id,
+            form_name=form.name,
+            form_slug=form.slug,
+        )
+
+    @service_handler
+    async def regenerate_link_key(self, organization_id: int, form_id: int, user=None):
+        """
+        Regenerate the link key for a specific form.
+        This invalidates the previous key and creates a new one.
+        """
+        from .schema import LinkKeyOperationResponseSchema
+
+        organization = await self.repo.get_organization(organization_id)
+        if not organization:
+            raise DataNotFoundException("Organization not found")
+
+        # Verify the form exists
+        form = await self.repo.get_form_by_id(form_id)
+        if not form:
+            raise DataNotFoundException(f"Form with ID {form_id} not found")
+
+        # Get existing link key
+        existing_link_key = await self.repo.get_link_key_by_form_id(
+            organization_id, form_id
+        )
+        if not existing_link_key:
+            raise DataNotFoundException(f"No link key found for {form.name}")
+
+        old_key = existing_link_key.link_key
+
+        # Generate a new secure link key
+        new_link_key = generate_secure_link_key()
+        existing_link_key.link_key = new_link_key
+
+        updated_link_key = await self.repo.update_link_key(existing_link_key)
+
+        return LinkKeyOperationResponseSchema(
+            link_key=updated_link_key.link_key,
+            form_id=form_id,
+            form_name=form.name,
+            form_slug=form.slug,
+        )
+
+    @service_handler
+    async def validate_link_key(self, link_key: str):
+        """
+        Validate a link key and return the associated organization and form info.
+        Returns detailed validation result including form info and organization info.
+        """
+        from .schema import LinkKeyValidationSchema
+
+        link_key_record = await self.repo.get_link_key_by_key(link_key)
+
+        if not link_key_record:
+            return LinkKeyValidationSchema(
+                organization_id=0,
+                form_id=0,
+                form_name="Unknown",
+                form_slug="unknown",
+                organization_name="",
+                is_valid=False,
+            )
+
+        return LinkKeyValidationSchema(
+            organization_id=link_key_record.organization_id,
+            form_id=link_key_record.form_id,
+            form_name=link_key_record.form_name,
+            form_slug=link_key_record.form_slug,
+            organization_name=link_key_record.organization.name,
+            is_valid=True,
+        )
+
+    async def _send_credit_market_notification(self, organization: Organization, user=None):
+        """
+        Send notification to subscribed BCeID users when new credits are listed for sale.
+        """
+        try:
+            # Create notification message with organization and credit details
+            message_data = {
+                "organizationName": organization.name,
+                "creditsToSell": organization.credits_to_sell,
+                "service": "CreditMarket",
+                "action": "CreditsListedForSale"
+            }
+            
+            # Create notification data
+            notification_data = NotificationMessageSchema(
+                type="Credit market - credits listed for sale",
+                related_transaction_id=f"CM{organization.organization_id}",
+                message=json.dumps(message_data),
+                related_organization_id=organization.organization_id,
+                origin_user_profile_id=user.user_profile_id if user else None,
+            )
+            
+            # Send notification to all subscribed BCeID users
+            await self.notification_service.send_notification(
+                NotificationRequestSchema(
+                    notification_types=[NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE],
+                    notification_context={
+                        "subject": f"LCFS Credit Market - New Credits Available from {organization.name}"
+                    },
+                    notification_data=notification_data,
+                )
+            )
+            
+            logger.info(f"Credit market notification sent for organization {organization.organization_id}")
+            
+        except Exception as e:
+            logger.error(f"Failed to send credit market notification: {str(e)}")
+            # Don't raise the exception - notification failure shouldn't break the main operation

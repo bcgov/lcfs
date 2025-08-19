@@ -16,6 +16,8 @@ from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.organization.OrganizationAttorneyAddress import (
     OrganizationAttorneyAddress,
 )
+from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
+from lcfs.db.models.form.Form import Form
 from lcfs.db.models.organization.OrganizationStatus import (
     OrgStatusEnum,
     OrganizationStatus,
@@ -609,11 +611,109 @@ class OrganizationsRepository:
             .where(
                 and_(
                     Organization.display_in_credit_market == True,
-                    Organization.org_status.has(OrganizationStatus.status == OrgStatusEnum.Registered)
+                    Organization.org_status.has(
+                        OrganizationStatus.status == OrgStatusEnum.Registered
+                    ),
                 )
             )
             .order_by(Organization.name)
         )
-        
+
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_organization_link_keys(self, organization_id: int):
+        """
+        Get all link keys for an organization.
+        """
+        query = (
+            select(OrganizationLinkKey)
+            .options(
+                joinedload(OrganizationLinkKey.organization),
+                joinedload(OrganizationLinkKey.form),
+            )
+            .where(OrganizationLinkKey.organization_id == organization_id)
+            .order_by(OrganizationLinkKey.form_id)
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_link_key_by_form_id(
+        self, organization_id: int, form_id: int
+    ) -> OrganizationLinkKey:
+        """
+        Get a link key for a specific organization and form.
+        """
+        query = (
+            select(OrganizationLinkKey)
+            .options(
+                joinedload(OrganizationLinkKey.organization),
+                joinedload(OrganizationLinkKey.form),
+            )
+            .where(
+                and_(
+                    OrganizationLinkKey.organization_id == organization_id,
+                    OrganizationLinkKey.form_id == form_id,
+                )
+            )
+        )
+        return await self.db.scalar(query)
+
+    @repo_handler
+    async def get_link_key_by_key(self, link_key: str) -> OrganizationLinkKey:
+        """
+        Get a link key record by the actual link key value.
+        Used for validating anonymous form access.
+        """
+        query = (
+            select(OrganizationLinkKey)
+            .options(
+                joinedload(OrganizationLinkKey.organization),
+                joinedload(OrganizationLinkKey.form),
+            )
+            .where(OrganizationLinkKey.link_key == link_key)
+        )
+        return await self.db.scalar(query)
+
+    @repo_handler
+    async def create_link_key(
+        self, link_key: OrganizationLinkKey
+    ) -> OrganizationLinkKey:
+        """
+        Create a new organization link key record.
+        """
+        self.db.add(link_key)
+        await self.db.flush()
+        await self.db.refresh(link_key)
+        return link_key
+
+    @repo_handler
+    async def update_link_key(
+        self, link_key: OrganizationLinkKey
+    ) -> OrganizationLinkKey:
+        """
+        Update an existing organization link key record.
+        """
+        link_key = await self.db.merge(link_key)
+        await self.db.flush()
+        await self.db.refresh(link_key)
+        return link_key
+
+    @repo_handler
+    async def get_form_by_id(self, form_id: int) -> Form:
+        """
+        Get a form by its ID.
+        """
+        query = select(Form).where(Form.form_id == form_id)
+        return await self.db.scalar(query)
+
+    @repo_handler
+    async def get_available_forms_for_link_keys(self) -> List[Form]:
+        """
+        Get all forms that can have link keys generated for them.
+        """
+        query = select(Form).where(Form.allows_anonymous == True).order_by(Form.name)
         result = await self.db.execute(query)
         return result.scalars().all()
