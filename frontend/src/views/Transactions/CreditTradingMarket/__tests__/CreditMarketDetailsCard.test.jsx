@@ -4,7 +4,10 @@ import { vi, describe, it, expect, beforeEach } from 'vitest'
 import { CreditMarketDetailsCard } from '../CreditMarketDetailsCard'
 import { wrapper } from '@/tests/utils/wrapper'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
-import { useOrganization, useUpdateCurrentOrgCreditMarket } from '@/hooks/useOrganization'
+import {
+  useOrganization,
+  useUpdateCurrentOrgCreditMarket
+} from '@/hooks/useOrganization'
 
 // Mock the hooks
 vi.mock('@/hooks/useCurrentUser')
@@ -19,10 +22,7 @@ vi.mock('@fortawesome/react-fontawesome', () => ({
 const mockCurrentUser = {
   firstName: 'John',
   lastName: 'Doe',
-  roles: [
-    { name: 'Transfer' },
-    { name: 'Signing Authority' }
-  ],
+  roles: [{ name: 'Transfer' }, { name: 'Signing Authority' }],
   organization: {
     organizationId: 1
   }
@@ -37,7 +37,6 @@ const mockOrganizationData = {
   creditMarketIsBuyer: false,
   creditsToSell: 100,
   displayInCreditMarket: true,
-  creditTradingEnabled: true,
   totalBalance: 500,
   orgStatus: { status: 'Registered' },
   phone: '555-5678',
@@ -54,20 +53,24 @@ const mockUpdateMutation = {
 describe('CreditMarketDetailsCard', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     // Setup default mocks
     vi.mocked(useCurrentUser).mockReturnValue({ data: mockCurrentUser })
-    vi.mocked(useOrganization).mockReturnValue({ 
-      data: mockOrganizationData, 
-      isLoading: false 
+    vi.mocked(useOrganization).mockReturnValue({
+      data: mockOrganizationData,
+      isLoading: false
     })
-    vi.mocked(useUpdateCurrentOrgCreditMarket).mockReturnValue(mockUpdateMutation)
+    vi.mocked(useUpdateCurrentOrgCreditMarket).mockReturnValue(
+      mockUpdateMutation
+    )
   })
 
   it('renders the component correctly in read-only mode', () => {
     render(<CreditMarketDetailsCard />, { wrapper })
 
-    expect(screen.getByText('Credit Trading Market Details')).toBeInTheDocument()
+    expect(
+      screen.getByText('Credit trading market details')
+    ).toBeInTheDocument()
     expect(screen.getByText('Jane Smith')).toBeInTheDocument()
     expect(screen.getByText('555-1234')).toBeInTheDocument()
     expect(screen.getByText('jane@example.com')).toBeInTheDocument()
@@ -91,7 +94,9 @@ describe('CreditMarketDetailsCard', () => {
 
     render(<CreditMarketDetailsCard />, { wrapper })
 
-    expect(screen.queryByRole('button', { name: /edit/i })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: /edit/i })
+    ).not.toBeInTheDocument()
   })
 
   it('enters edit mode when edit button is clicked', async () => {
@@ -136,7 +141,7 @@ describe('CreditMarketDetailsCard', () => {
           credit_market_contact_email: expect.any(String),
           credit_market_contact_phone: expect.any(String),
           credit_market_is_seller: expect.any(Boolean),
-          credit_market_is_buyer: expect.any(Boolean), 
+          credit_market_is_buyer: expect.any(Boolean),
           credits_to_sell: expect.any(Number),
           display_in_credit_market: expect.any(Boolean)
         })
@@ -162,9 +167,9 @@ describe('CreditMarketDetailsCard', () => {
   })
 
   it('shows loading state', () => {
-    vi.mocked(useOrganization).mockReturnValue({ 
-      data: null, 
-      isLoading: true 
+    vi.mocked(useOrganization).mockReturnValue({
+      data: null,
+      isLoading: true
     })
 
     render(<CreditMarketDetailsCard />, { wrapper })
@@ -175,37 +180,42 @@ describe('CreditMarketDetailsCard', () => {
   it('shows eligibility warning for unregistered organizations', () => {
     const unregisteredOrgData = {
       ...mockOrganizationData,
-      orgStatus: { status: 'Active' },
-      creditTradingEnabled: false
+      orgStatus: { status: 'Active' }
     }
 
-    vi.mocked(useOrganization).mockReturnValue({ 
-      data: unregisteredOrgData, 
-      isLoading: false 
+    vi.mocked(useOrganization).mockReturnValue({
+      data: unregisteredOrgData,
+      isLoading: false
     })
 
     render(<CreditMarketDetailsCard />, { wrapper })
 
-    expect(screen.getByText(/must be registered for transfers/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/must be registered for transfers/i)
+    ).toBeInTheDocument()
   })
 
   it('displays card title heading', () => {
     render(<CreditMarketDetailsCard />, { wrapper })
 
     // Check for the card title heading
-    expect(screen.getByRole('heading', { name: 'Credit Trading Market Details' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Credit trading market details' })
+    ).toBeInTheDocument()
   })
 
   it('handles missing organization data gracefully', () => {
-    vi.mocked(useOrganization).mockReturnValue({ 
-      data: null, 
-      isLoading: false 
+    vi.mocked(useOrganization).mockReturnValue({
+      data: null,
+      isLoading: false
     })
 
     render(<CreditMarketDetailsCard />, { wrapper })
 
     // Should not crash and should show component title
-    expect(screen.queryByText('Credit Trading Market Details')).toBeInTheDocument()
+    expect(
+      screen.queryByText('Credit trading market details')
+    ).toBeInTheDocument()
   })
 
   it('handles form validation for credits field', async () => {
@@ -233,7 +243,7 @@ describe('CreditMarketDetailsCard', () => {
       // Check for checkboxes
       const sellerCheckbox = screen.getByLabelText(/seller/i)
       const buyerCheckbox = screen.getByLabelText(/buyer/i)
-      
+
       expect(sellerCheckbox).toBeInTheDocument()
       expect(buyerCheckbox).toBeInTheDocument()
     })

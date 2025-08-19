@@ -1,5 +1,7 @@
 import os
-from lcfs.web.api.base import NotificationTypeEnum
+
+from pydantic import EmailStr
+from lcfs.web.api.base import AudienceType, NotificationTypeEnum
 import requests
 import structlog
 from fastapi import Depends
@@ -33,12 +35,25 @@ class CHESEmailService:
             autoescape=True,  # Enable autoescaping for security
         )
 
+    def determine_audience_type(self, notification_type: NotificationTypeEnum) -> AudienceType:
+        """
+        Determine the target audience type based on the notification type.
+        Business logic for notification audience determination is centralized here.
+        """
+        if notification_type == NotificationTypeEnum.BCEID__CREDIT_MARKET__CREDITS_LISTED_FOR_SALE:
+            # For credit market notifications, notify OTHER organizations (not the posting org)
+            # Exclude government users for this notification type
+            return AudienceType.OTHER_ORGANIZATIONS
+        else:
+            # For all other notifications, use the original logic (notify the specific org + government)
+            return AudienceType.SAME_ORGANIZATION
+
     @service_handler
-    async def send_notification_email(
+    async def send_fuel_code_expiry_notifications(
         self,
         notification_type: NotificationTypeEnum,
-        notification_context: Dict[str, Any],
-        organization_id: int,
+        email: EmailStr,
+        notification_context: Dict[str, Any] = None,
     ) -> bool:
         """
         Send an email notification to users subscribed to the specified notification type.
@@ -51,8 +66,55 @@ class CHESEmailService:
             return
 
         # Retrieve subscribed user emails
+        recipient_emails = [email]
+        if not recipient_emails:
+            logger.info(
+                f"""No subscribers for notification type: {
+                        notification_type.value}"""
+            )
+            return False
+
+        # Include environment in the context
+        notification_context["environment"] = settings.environment.lower()
+
+        # Render the email content
+        email_body = self._render_email_template(
+            notification_type.value, notification_context
+        )
+
+        # Build email payload
+        email_payload = self._build_email_payload(
+            recipient_emails, notification_context, email_body
+        )
+
+        # Send email
+        return await self.send_email(email_payload)
+
+    @service_handler
+    async def send_notification_email(
+        self,
+        notification_type: NotificationTypeEnum,
+        notification_context: Dict[str, Any],
+        organization_id: int,
+        audience_type: Optional[AudienceType] = None,
+    ) -> bool:
+        """
+        Send an email notification to users subscribed to the specified notification type.
+        """
+        if not settings.ches_enabled:
+            return False
+
+        # Validate configuration before performing any operations
+        if not self._validate_configuration():
+            return
+
+        # Determine audience type if not provided
+        if audience_type is None:
+            audience_type = self.determine_audience_type(notification_type)
+
+        # Retrieve subscribed user emails
         recipient_emails = await self.repo.get_subscribed_user_emails(
-            notification_type.value, organization_id
+            notification_type.value, organization_id, audience_type
         )
         if not recipient_emails:
             logger.info(
