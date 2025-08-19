@@ -28,30 +28,6 @@
                 color: #666;
                 font-size: 12px;
             }
-            .fuel-codes-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin: 20px 0;
-                font-size: 12px;
-            }
-            .fuel-codes-table th {
-                background-color: #f5f5f5;
-                border: 1px solid #ddd;
-                padding: 10px 8px;
-                text-align: left;
-                font-weight: bold;
-            }
-            .fuel-codes-table td {
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }
-            .fuel-codes-table tr:nth-child(even) {
-                background-color: #f9f9f9;
-            }
-            .fuel-codes-table tr:hover {
-                background-color: #f1f1f1;
-            }
         </style>
     </head>
     <body>
@@ -85,23 +61,16 @@
                             <p>
                                 <span style="font-weight: bold">
                                     The following has occurred within the Low Carbon
-                                    Fuel Standard Portal: {{ notification_type }} {{ message.status }}
+                                    Fuel Standard Portal: Credits listed for sale
                                 </span><br />
+                                <strong>Organization:</strong> {{ message.organizationName }}<br />
+                                <strong>Credits Available:</strong> {{ message.creditsToSell }} compliance units<br />
+                                <br />
                                 For more details, please go to: 
-                                {% if url_slug == 'compliance-reporting' %}
-                                    <a href="{{ base_url }}/{{ url_slug }}/{{ message.compliancePeriod }}/{{ message.id }}">
-                                        {{ base_url }}/{{ url_slug }}/{{ message.compliancePeriod }}/{{ message.id }}
-                                    </a>
-                                {% else %}
-                                    <a href="{{ base_url }}/{{ url_slug }}/{{ message.id }}">
-                                        {{ base_url }}/{{ url_slug }}/{{ message.id }}
-                                    </a>
-                                {% endif %}
+                                <a href="{{ base_url }}/transactions">
+                                    {{ base_url }}/transactions
+                                </a>
                             </p>
-
-                            {% block additional_content %}
-                            {# This block can be overridden in extending templates #}
-                            {% endblock %}
 
                             <p>
                                 You received this email because you subscribed at the
