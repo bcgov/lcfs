@@ -578,10 +578,6 @@ async def test_aggregate_fuel_supplies(
     assert result == expected
 
 
-# Test removed: aggregate_other_uses_quantity method no longer exists
-# Other Uses are now handled through aggregate_quantities with records from get_effective_other_uses
-
-
 @pytest.mark.anyio
 async def test_penalty_override_field_defaults(summary_repo, compliance_reports):
     """Test that penalty override fields have correct default values"""
