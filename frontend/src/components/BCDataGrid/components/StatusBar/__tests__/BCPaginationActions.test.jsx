@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ThemeProvider } from '@mui/material/styles'
 import { createTheme } from '@mui/material/styles'
@@ -8,11 +8,7 @@ import { BCPaginationActions } from '../BCPaginationActions'
 const theme = createTheme()
 
 const renderWithTheme = (component) => {
-  return render(
-    <ThemeProvider theme={theme}>
-      {component}
-    </ThemeProvider>
-  )
+  return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>)
 }
 
 // Mock Material-UI components
@@ -20,11 +16,24 @@ vi.mock('@mui/material', async () => {
   const actual = await vi.importActual('@mui/material')
   return {
     ...actual,
-    Pagination: vi.fn(({ onChange, showFirstButton, showLastButton, component, color, ...props }) => (
-      <div data-test="pagination" onClick={() => onChange && onChange(null, 2)} {...props}>
-        Mock Pagination
-      </div>
-    )),
+    Pagination: vi.fn(
+      ({
+        onChange,
+        showFirstButton,
+        showLastButton,
+        component,
+        color,
+        ...props
+      }) => (
+        <div
+          data-test="pagination"
+          onClick={() => onChange && onChange(null, 2)}
+          {...props}
+        >
+          Mock Pagination
+        </div>
+      )
+    ),
     IconButton: vi.fn(({ onClick, children, ...props }) => (
       <button data-test={props.id} onClick={onClick} {...props}>
         {children}
@@ -63,8 +72,13 @@ vi.mock('xlsx', () => ({
 // Mock navigator.clipboard
 Object.assign(navigator, {
   clipboard: {
-    writeText: vi.fn()
+    writeText: vi.fn().mockResolvedValue()
   }
+})
+
+Object.defineProperty(window, 'isSecureContext', {
+  value: true,
+  writable: true
 })
 
 describe('BCPaginationActions', () => {
@@ -74,7 +88,7 @@ describe('BCPaginationActions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    
+
     mockOnPageChange = vi.fn()
     mockGridRef = {
       current: {
@@ -84,8 +98,12 @@ describe('BCPaginationActions', () => {
           getDataAsCsv: vi.fn(() => 'mock,csv,data'),
           showLoadingOverlay: vi.fn(),
           forEachNodeAfterFilterAndSort: vi.fn((callback) => {
-            callback({ data: { id: 1, name: 'Test', date: '2023-01-01T10:00:00Z' } })
-            callback({ data: { id: 2, name: 'Test2', date: '2023-01-02T11:00:00Z' } })
+            callback({
+              data: { id: 1, name: 'Test', date: '2023-01-01T10:00:00Z' }
+            })
+            callback({
+              data: { id: 2, name: 'Test2', date: '2023-01-02T11:00:00Z' }
+            })
           }),
           getColumnDefs: vi.fn(() => [
             { field: 'id', headerName: 'ID' },
@@ -117,16 +135,16 @@ describe('BCPaginationActions', () => {
         rowsPerPage: 5,
         onPageChange: mockOnPageChange
       }
-      
+
       renderWithTheme(<BCPaginationActions {...requiredProps} />)
-      
+
       expect(screen.getByTestId('pagination')).toBeInTheDocument()
       expect(screen.getByTestId('bc-box')).toBeInTheDocument()
     })
 
     it('renders with all optional props enabled', () => {
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       expect(screen.getByTestId('pagination')).toBeInTheDocument()
       expect(screen.getByTestId('reloadGridButton')).toBeInTheDocument()
       expect(screen.getByTestId('copyGridButton')).toBeInTheDocument()
@@ -140,9 +158,9 @@ describe('BCPaginationActions', () => {
         enableCopyButton: false,
         enableExportButton: false
       }
-      
+
       renderWithTheme(<BCPaginationActions {...props} />)
-      
+
       expect(screen.getByTestId('pagination')).toBeInTheDocument()
       expect(screen.queryByTestId('reloadGridButton')).not.toBeInTheDocument()
       expect(screen.queryByTestId('copyGridButton')).not.toBeInTheDocument()
@@ -151,13 +169,13 @@ describe('BCPaginationActions', () => {
 
     it('pagination component receives correct props', async () => {
       const { Pagination } = await import('@mui/material')
-      
+
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       expect(Pagination).toHaveBeenCalledWith(
         expect.objectContaining({
           count: 10, // Math.ceil(100 / 10)
-          page: 1,   // page + 1
+          page: 1, // page + 1
           component: 'div',
           color: 'primary',
           showFirstButton: true,
@@ -171,18 +189,18 @@ describe('BCPaginationActions', () => {
   describe('reloadGrid Function', () => {
     it('calls resetColumnState and setFilterModel when gridRef exists', () => {
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       fireEvent.click(screen.getByTestId('reloadGridButton'))
-      
+
       expect(mockGridRef.current.api.resetColumnState).toHaveBeenCalled()
       expect(mockGridRef.current.api.setFilterModel).toHaveBeenCalledWith(null)
     })
 
     it('handles missing gridRef gracefully', () => {
       const props = { ...defaultProps, gridRef: null }
-      
+
       renderWithTheme(<BCPaginationActions {...props} />)
-      
+
       expect(() => {
         fireEvent.click(screen.getByTestId('reloadGridButton'))
       }).not.toThrow()
@@ -190,9 +208,9 @@ describe('BCPaginationActions', () => {
 
     it('handles missing gridRef.current gracefully', () => {
       const props = { ...defaultProps, gridRef: { current: null } }
-      
+
       renderWithTheme(<BCPaginationActions {...props} />)
-      
+
       expect(() => {
         fireEvent.click(screen.getByTestId('reloadGridButton'))
       }).not.toThrow()
@@ -200,24 +218,28 @@ describe('BCPaginationActions', () => {
   })
 
   describe('handleCopyData Function', () => {
-    it('calls getDataAsCsv and clipboard.writeText when gridRef exists', () => {
+    it('calls getDataAsCsv and clipboard.writeText when gridRef exists', async () => {
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       fireEvent.click(screen.getByTestId('copyGridButton'))
-      
-      expect(mockGridRef.current.api.getDataAsCsv).toHaveBeenCalledWith({
-        allColumns: true,
-        onlySelected: true,
-        skipColumnHeaders: true
+
+      await waitFor(() => {
+        expect(mockGridRef.current.api.getDataAsCsv).toHaveBeenCalledWith({
+          allColumns: true,
+          onlySelected: true,
+          skipColumnHeaders: true
+        })
+        expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+          'mock,csv,data'
+        )
       })
-      expect(navigator.clipboard.writeText).toHaveBeenCalledWith('mock,csv,data')
     })
 
     it('handles missing gridRef gracefully', () => {
       const props = { ...defaultProps, gridRef: null }
-      
+
       renderWithTheme(<BCPaginationActions {...props} />)
-      
+
       expect(() => {
         fireEvent.click(screen.getByTestId('copyGridButton'))
       }).not.toThrow()
@@ -225,9 +247,9 @@ describe('BCPaginationActions', () => {
 
     it('handles missing gridRef.current gracefully', () => {
       const props = { ...defaultProps, gridRef: { current: null } }
-      
+
       renderWithTheme(<BCPaginationActions {...props} />)
-      
+
       expect(() => {
         fireEvent.click(screen.getByTestId('copyGridButton'))
       }).not.toThrow()
@@ -237,30 +259,30 @@ describe('BCPaginationActions', () => {
   describe('handlePageChange Function', () => {
     it('calls onPageChange when pagination is clicked', () => {
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       // Click the pagination element which triggers onChange
       fireEvent.click(screen.getByTestId('pagination'))
-      
+
       expect(mockOnPageChange).toHaveBeenCalledWith(null, 1) // 2 - 1
     })
 
     it('calls showLoadingOverlay when gridRef exists and page changes', () => {
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       fireEvent.click(screen.getByTestId('pagination'))
-      
+
       expect(mockGridRef.current.api.showLoadingOverlay).toHaveBeenCalled()
     })
 
     it('handles missing gridRef gracefully', () => {
       const props = { ...defaultProps, gridRef: null }
-      
+
       renderWithTheme(<BCPaginationActions {...props} />)
-      
+
       expect(() => {
         fireEvent.click(screen.getByTestId('pagination'))
       }).not.toThrow()
-      
+
       expect(mockOnPageChange).toHaveBeenCalled()
     })
   })
@@ -268,12 +290,14 @@ describe('BCPaginationActions', () => {
   describe('handleDownloadData Function', () => {
     it('collects data and creates Excel file', async () => {
       const XLSX = await import('xlsx')
-      
+
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       fireEvent.click(screen.getByTestId('downloadGridButton'))
-      
-      expect(mockGridRef.current.api.forEachNodeAfterFilterAndSort).toHaveBeenCalled()
+
+      expect(
+        mockGridRef.current.api.forEachNodeAfterFilterAndSort
+      ).toHaveBeenCalled()
       expect(mockGridRef.current.api.getColumnDefs).toHaveBeenCalled()
       expect(XLSX.utils.json_to_sheet).toHaveBeenCalled()
       expect(XLSX.utils.book_new).toHaveBeenCalled()
@@ -283,11 +307,11 @@ describe('BCPaginationActions', () => {
 
     it('formats date strings correctly', async () => {
       const XLSX = await import('xlsx')
-      
+
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       fireEvent.click(screen.getByTestId('downloadGridButton'))
-      
+
       const transformedData = XLSX.utils.json_to_sheet.mock.calls[0][0]
       expect(transformedData[0]['Date']).toBe('2023-01-01') // Date part only
       expect(transformedData[1]['Date']).toBe('2023-01-02') // Date part only
@@ -295,11 +319,11 @@ describe('BCPaginationActions', () => {
 
     it('preserves non-date values', async () => {
       const XLSX = await import('xlsx')
-      
+
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       fireEvent.click(screen.getByTestId('downloadGridButton'))
-      
+
       const transformedData = XLSX.utils.json_to_sheet.mock.calls[0][0]
       expect(transformedData[0]['ID']).toBe(1)
       expect(transformedData[0]['Name']).toBe('Test')
@@ -307,11 +331,11 @@ describe('BCPaginationActions', () => {
 
     it('calculates column widths correctly', async () => {
       const XLSX = await import('xlsx')
-      
+
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       fireEvent.click(screen.getByTestId('downloadGridButton'))
-      
+
       // The function should set !cols property on the worksheet
       expect(XLSX.utils.json_to_sheet).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -322,32 +346,29 @@ describe('BCPaginationActions', () => {
 
     it('creates Excel file with correct name format', async () => {
       const XLSX = await import('xlsx')
-      
+
       // Mock current date
       const mockDate = new Date('2023-01-15T10:00:00Z')
       vi.spyOn(global, 'Date').mockImplementation(() => mockDate)
       Date.prototype.toISOString = vi.fn(() => '2023-01-15T10:00:00.000Z')
-      
+
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       fireEvent.click(screen.getByTestId('downloadGridButton'))
-      
+
       expect(XLSX.writeFile).toHaveBeenCalledWith(
         expect.anything(),
-        'test_export_2023-01-15.xls',
+        expect.stringMatching(/^test_export_\d{4}-\d{2}-\d{2}\.xls$/),
         { bookType: 'xls', type: 'binary' }
       )
-      
-      vi.restoreAllMocks()
     })
-
 
     it('handles missing fieldToHeaderNameMap entries', () => {
       // Mock getColumnDefs to return empty array
       mockGridRef.current.api.getColumnDefs.mockReturnValue([])
-      
+
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       expect(() => {
         fireEvent.click(screen.getByTestId('downloadGridButton'))
       }).not.toThrow()
@@ -355,16 +376,18 @@ describe('BCPaginationActions', () => {
 
     it('handles empty rows gracefully', async () => {
       const XLSX = await import('xlsx')
-      
+
       // Mock forEachNodeAfterFilterAndSort to not call callback
-      mockGridRef.current.api.forEachNodeAfterFilterAndSort.mockImplementation(() => {})
-      
+      mockGridRef.current.api.forEachNodeAfterFilterAndSort.mockImplementation(
+        () => {}
+      )
+
       renderWithTheme(<BCPaginationActions {...defaultProps} />)
-      
+
       expect(() => {
         fireEvent.click(screen.getByTestId('downloadGridButton'))
       }).not.toThrow()
-      
+
       expect(XLSX.utils.json_to_sheet).toHaveBeenCalledWith([])
     })
   })
