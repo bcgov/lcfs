@@ -29,6 +29,7 @@ from lcfs.web.api import (
     email,
     organization_snapshot,
     credit_ledger,
+    forms,
 )
 
 api_router = APIRouter()
@@ -100,3 +101,4 @@ api_router.include_router(
     prefix="/credit-ledger",
     tags=["credit_ledger"],
 )
+api_router.include_router(forms.router, prefix="/forms", tags=["forms"])

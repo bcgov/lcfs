@@ -77,6 +77,7 @@ vi.mock('@/hooks/useOrganization', () => ({
       email: 'test@test.com',
       phone: '1234567890',
       hasEarlyIssuance: false,
+      creditTradingEnabled: true,
       orgAddress: {
         streetAddress: '123 Test St',
         addressOther: 'Unit 101',
@@ -187,9 +188,9 @@ describe('OrganizationView Component Tests', () => {
   it('shows no for early issuance if user is government', () => {
     setupRoleTest(roles.government, true)
     expect(screen.getByText(/Early issuance reporting/i)).toBeInTheDocument()
-    // Get all "No" texts and verify there are 2 (for credit market and early issuance)
+    // Get all "No" texts and verify there is 1 (for early issuance)
     const noTexts = screen.getAllByText(/^No$/i)
-    expect(noTexts).toHaveLength(2)
+    expect(noTexts).toHaveLength(1)
   })
 
   it('has a functioning clear filters button', () => {

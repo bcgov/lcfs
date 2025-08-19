@@ -8,6 +8,8 @@ import { useTranslation } from 'react-i18next'
 import { phoneNumberFormatter } from '@/utils/formatters'
 import { constructAddress } from '@/utils/constructAddress'
 import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
+import { FEATURE_FLAGS, isFeatureEnabled } from '@/constants/config'
+import { LinkKeyManagement } from './components/LinkKeyManagement'
 
 export const OrganizationProfile = ({
   hasRoles,
@@ -96,6 +98,16 @@ export const OrganizationProfile = ({
               </strong>{' '}
               {orgData?.hasEarlyIssuance ? t('common:yes') : t('common:no')}
             </BCTypography>
+          )}
+          {isFeatureEnabled(FEATURE_FLAGS.OBFUSCATED_LINKS) && (
+            <Role roles={[roles.analyst]}>
+              <BCBox>
+                <LinkKeyManagement
+                  orgData={orgData}
+                  orgID={orgID ?? currentUser?.organization?.organizationId}
+                />
+              </BCBox>
+            </Role>
           )}
         </BCBox>
       </BCBox>

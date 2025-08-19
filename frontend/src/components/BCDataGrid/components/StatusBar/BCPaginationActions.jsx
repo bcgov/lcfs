@@ -5,6 +5,7 @@ import { Pagination, IconButton, Tooltip } from '@mui/material'
 import { Replay, ContentCopy, FileDownloadOutlined } from '@mui/icons-material'
 import BCBox from '@/components/BCBox'
 import * as XLSX from 'xlsx'
+import { copyToClipboard } from '@/utils/clipboard'
 
 export function BCPaginationActions({
   count,
@@ -25,14 +26,17 @@ export function BCPaginationActions({
     // TODO: clear custom filters
   }, [gridRef])
 
-  const handleCopyData = useCallback(() => {
+  const handleCopyData = useCallback(async () => {
     const selectedRows = gridRef?.current?.api?.getDataAsCsv({
       allColumns: true,
       onlySelected: true,
       skipColumnHeaders: true
     })
-    navigator.clipboard.writeText(selectedRows)
-  })
+    const success = await copyToClipboard(selectedRows)
+    if (!success) {
+      console.error('Failed to copy data to clipboard')
+    }
+  }, [gridRef])
 
   const handleDownloadData = useCallback(() => {
     const rows = []

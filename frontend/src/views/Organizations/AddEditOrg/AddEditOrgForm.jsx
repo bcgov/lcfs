@@ -111,7 +111,6 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
           '1',
         orgRegForTransfers:
           data.orgStatus.organizationStatusId === 2 ? '2' : '1',
-        orgCreditTradingEnabled: data.creditTradingEnabled ? 'yes' : 'no',
         orgStreetAddress: data.orgAddress?.streetAddress || '',
         orgAddressOther: data.orgAddress?.addressOther || '',
         orgCity: data.orgAddress?.city || '',
@@ -191,7 +190,6 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
       hasEarlyIssuance: data.hasEarlyIssuance === 'yes',
       organizationStatusId: parseInt(data.orgRegForTransfers),
       organizationTypeId: parseInt(data.orgSupplierType),
-      creditTradingEnabled: data.orgCreditTradingEnabled === 'yes',
       address: {
         name: data.orgOperatingName,
         streetAddress: data.orgStreetAddress,
@@ -636,72 +634,7 @@ export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
                     </Grid>
                   </FormControl>
                 </Box>
-                <Box mb={2}>
-                  <FormControl fullWidth>
-                    <Grid container>
-                      <Grid item xs={6} mt={0.5}>
-                        <FormLabel id="orgCreditTradingEnabled" sx={{ pb: 1 }}>
-                          <BCTypography variant="body4">
-                            Credit trading market participation:
-                          </BCTypography>
-                        </FormLabel>
-                      </Grid>
-                      <Grid item xs={6}>
-                        <Controller
-                          control={control}
-                          name="orgCreditTradingEnabled"
-                          defaultValue=""
-                          render={({ field }) => (
-                            <RadioGroup
-                              row
-                              id="orgCreditTradingEnabled"
-                              name="orgCreditTradingEnabled"
-                              sx={{ pt: 1 }}
-                              {...field}
-                            >
-                              <FormControlLabel
-                                value="yes"
-                                control={
-                                  <Radio data-test="orgCreditTradingEnabledYes" />
-                                }
-                                label={
-                                  <BCTypography variant="body4">
-                                    {t('yes')}
-                                  </BCTypography>
-                                }
-                              />
-                              <FormControlLabel
-                                value="no"
-                                sx={{ ml: 2 }}
-                                control={
-                                  <Radio data-test="orgCreditTradingEnabledNo" />
-                                }
-                                label={
-                                  <BCTypography variant="body4">
-                                    {t('no')}
-                                  </BCTypography>
-                                }
-                              />
-                            </RadioGroup>
-                          )}
-                        >
-                          /
-                        </Controller>
-                        {renderError('orgCreditTradingEnabled')}
-                      </Grid>
-                    </Grid>
-                  </FormControl>
-                </Box>
-                <Box
-                  mb={2}
-                  sx={{
-                    mt: {
-                      sm: 0,
-                      md: 0,
-                      lg: dismissedBoxes?.organizationInfo ? 11 : 37
-                    }
-                  }}
-                >
+                <Box mb={2} sx={{ mt: { sm: 0, md: 9.5, xl: 17.5 } }}>
                   <InputLabel htmlFor="orgEDRMSRecord" sx={{ pb: 1 }}>
                     {t('org:edrmsLabel')}:
                   </InputLabel>
