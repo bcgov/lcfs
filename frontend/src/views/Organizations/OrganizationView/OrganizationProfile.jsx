@@ -14,6 +14,7 @@ import { LinkKeyManagement } from './components/LinkKeyManagement'
 export const OrganizationProfile = ({
   hasRoles,
   isCurrentUserLoading,
+  orgID,
   orgData,
   orgBalanceInfo
 }) => {
@@ -102,10 +103,7 @@ export const OrganizationProfile = ({
           {isFeatureEnabled(FEATURE_FLAGS.OBFUSCATED_LINKS) && (
             <Role roles={[roles.analyst]}>
               <BCBox>
-                <LinkKeyManagement
-                  orgData={orgData}
-                  orgID={orgID ?? currentUser?.organization?.organizationId}
-                />
+                <LinkKeyManagement orgData={orgData} orgID={orgID} />
               </BCBox>
             </Role>
           )}

@@ -135,6 +135,7 @@ export const OrganizationDetailsCard = ({ addMode = false }) => {
               <OrganizationProfile
                 hasRoles={hasRoles}
                 isCurrentUserLoading={isCurrentUserLoading}
+                orgID={orgID ?? currentUser?.organization?.organizationId}
                 orgData={orgData}
                 orgBalanceInfo={orgBalanceInfo}
               />
