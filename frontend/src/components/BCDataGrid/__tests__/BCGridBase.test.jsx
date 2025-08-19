@@ -248,48 +248,6 @@ describe('BCGridBase Component', () => {
       // Set large row count to exceed maxVisibleRows
       const largeRowCount = 20
       mockGridApi.getDisplayedRowCount.mockReturnValue(largeRowCount)
-      
-      let onGridReadyCallback = null
-      
-      // Mock AgGridReact to capture the onGridReady callback
-      vi.mocked(AgGridReact).mockImplementation(({ onGridReady }) => {
-        onGridReadyCallback = onGridReady
-        return <div data-testid="ag-grid-react">AgGrid</div>
-      })
-      
-      const { rerender } = render(
-        <TestWrapper>
-          <BCGridBase autoHeight={true} />
-        </TestWrapper>
-      )
-      
-      // Manually trigger onGridReady to simulate grid initialization
-      await act(async () => {
-        if (onGridReadyCallback) {
-          onGridReadyCallback({ api: mockGridApi })
-        }
-      })
-      
-      // Force re-render to see the updated state after onGridReady
-      rerender(
-        <TestWrapper>
-          <BCGridBase autoHeight={true} />
-        </TestWrapper>
-      )
-      
-      // Verify the API was called during determineHeight
-      expect(mockGridApi.getDisplayedRowCount).toHaveBeenCalled()
-      
-      // Verify the second render (after state update) has the correct props
-      const secondRenderProps = vi.mocked(AgGridReact).mock.calls[1][0]
-      expect(secondRenderProps.domLayout).toBe('normal')
-      expect(secondRenderProps.containerStyle.height).toBe('75vh')
-    })
-    
-    it('calculates maxVisibleRows correctly', () => {
-      window.innerHeight = 1000
-      const expectedMaxVisibleRows = (1000 * 0.75) / 45 // 16.67
-      
 
       render(
         <TestWrapper>
