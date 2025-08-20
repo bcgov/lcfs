@@ -1,25 +1,30 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import BCBox from '@/components/BCBox'
 import BCTypography from '@/components/BCTypography'
 import BCWidgetCard from '@/components/BCWidgetCard/BCWidgetCard'
 import Loading from '@/components/Loading'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { buildPath, ROUTES } from '@/routes/routes'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
 import {
   useOrganization,
   useOrganizationBalance
 } from '@/hooks/useOrganization'
-import { phoneNumberFormatter } from '@/utils/formatters'
-import { constructAddress } from '@/utils/constructAddress'
+
 import { roles } from '@/constants/roles'
 import { ORGANIZATION_STATUSES } from '@/constants/statuses'
 import { Role } from '@/components/Role'
-import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
+import { AddEditOrgForm } from '../AddEditOrg/AddEditOrgForm'
+import { OrganizationProfile } from './OrganizationProfile'
+import BCAlert, { FloatingAlert } from '@/components/BCAlert'
 
-export const OrganizationDetailsCard = () => {
+export const OrganizationDetailsCard = ({ addMode = false }) => {
+  const alertRef = useRef(null)
   const { t } = useTranslation(['common', 'org'])
   const location = useLocation()
+  const [isEditMode, setIsEditMode] = useState(addMode || location?.state?.reportID)
+  const navigate = useNavigate()
   const { orgID } = useParams()
 
   const {
@@ -28,13 +33,14 @@ export const OrganizationDetailsCard = () => {
     hasRoles
   } = useCurrentUser()
 
-  const { data: orgData, isLoading } = useOrganization(
-    orgID ?? currentUser?.organization?.organizationId,
-    {
-      staleTime: 0,
-      cacheTime: 0
-    }
-  )
+  const {
+    data: orgData,
+    isLoading,
+    refetch
+  } = useOrganization(orgID ?? currentUser?.organization?.organizationId, {
+    staleTime: 0,
+    cacheTime: 0
+  })
   const { data: orgBalanceInfo } = useOrganizationBalance(
     orgID ?? currentUser?.organization?.organizationId
   )
@@ -46,134 +52,94 @@ export const OrganizationDetailsCard = () => {
       })
     : null
 
+  const handleEditClick = useCallback(() => {
+    setIsEditMode(true)
+  }, [])
+
+  const handleCancelEdit = useCallback(() => {
+    if (addMode) {
+      navigate(ROUTES.ORGANIZATIONS.LIST)
+    } else {
+      setIsEditMode(false)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [])
+
+  const handleSaveSuccess = useCallback((organizationId) => {
+    if (addMode) {
+      const successMessage = {
+        state: {
+          message: t('org:addSuccessMessage'),
+          severity: 'success'
+        }
+      }
+      setIsEditMode(false)
+      organizationId
+        ? navigate(
+            ROUTES.ORGANIZATIONS.VIEW.replace(':orgID', organizationId),
+            successMessage
+          )
+        : navigate(ROUTES.ORGANIZATIONS.LIST, successMessage)
+    } else {
+      alertRef.current?.triggerAlert({
+        message: t('org:editSuccessMessage'),
+        severity: 'success'
+      })
+      setIsEditMode(false)
+      refetch()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }, [])
+
   if (isLoading) {
     return <Loading />
   }
 
   return (
     <>
+      <FloatingAlert ref={alertRef} data-test="alert-box" />
       <BCBox
         sx={{
+          mt: 5,
           width: {
             md: '100%',
-            lg: '90%'
+            lg: isEditMode ? '100%' : '90%'
           }
         }}
       >
         <BCWidgetCard
-          title={t('org:orgDetails')}
+          title={
+            isEditMode
+              ? orgID
+                ? t('org:editOrgTitle')
+                : t('org:addOrgTitle')
+              : t('org:orgDetails')
+          }
           color="nav"
           editButton={
-            canEdit
+            canEdit && !isEditMode
               ? {
                   text: t('org:editBtn'),
-                  route: editButtonRoute,
+                  onClick: handleEditClick,
                   id: 'edit-org-button'
                 }
               : undefined
           }
           content={
-            <BCBox p={1}>
-              <BCBox
-                display="grid"
-                gridTemplateColumns={{ xs: '1fr', md: '1fr 1fr' }}
-                columnGap={10}
-                rowGap={2}
-              >
-                {/* Left Column */}
-                <BCBox display="flex" flexDirection="column" gap={2}>
-                  <BCTypography variant="body4">
-                    <strong>{t('org:legalNameLabel')}:</strong> {orgData?.name}
-                  </BCTypography>
-
-                  <BCTypography variant="body4">
-                    <strong>{t('org:operatingNameLabel')}:</strong>{' '}
-                    {orgData?.operatingName || orgData?.name}
-                  </BCTypography>
-
-                  <BCTypography variant="body4">
-                    <strong>{t('org:phoneNbrLabel')}:</strong>{' '}
-                    {phoneNumberFormatter({ value: orgData?.phone })}
-                  </BCTypography>
-
-                  <BCTypography variant="body4">
-                    <strong>{t('org:emailAddrLabel')}:</strong> {orgData?.email}
-                  </BCTypography>
-
-                  <Role roles={[roles.government]}>
-                    <BCTypography variant="body4">
-                      <strong>{t('org:complianceUnitBalance')}:</strong>{' '}
-                      {orgBalanceInfo?.totalBalance?.toLocaleString()} (
-                      {Math.abs(
-                        orgBalanceInfo?.reservedBalance || 0
-                      ).toLocaleString()}
-                      )
-                    </BCTypography>
-                  </Role>
-                </BCBox>
-
-                {/* Right Column */}
-                <BCBox display="flex" flexDirection="column" gap={2}>
-                  <BCTypography variant="body4">
-                    <strong>{t('org:serviceAddrLabel')}:</strong>{' '}
-                    {orgData && constructAddress(orgData.orgAddress)}
-                  </BCTypography>
-
-                  <BCTypography variant="body4">
-                    <strong>{t('org:bcAddrLabel')}:</strong>{' '}
-                    {orgData && constructAddress(orgData.orgAttorneyAddress)}
-                  </BCTypography>
-                  {orgData?.recordsAddress && (
-                    <BCTypography variant="body4">
-                      <strong>{t('org:bcRecordLabelShort')}:</strong>{' '}
-                      {orgData?.recordsAddress}
-                    </BCTypography>
-                  )}
-
-                  <BCTypography variant="body4">
-                    <strong>{t('org:regTrnLabel')}:</strong>{' '}
-                    {orgData?.orgStatus.status ===
-                    ORGANIZATION_STATUSES.REGISTERED
-                      ? t('org:registeredTransferYes')
-                      : t('org:registeredTransferNo')}
-                  </BCTypography>
-
-                  {orgData?.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED && (
-                    <BCTypography variant="body4">
-                      <strong>{t('org:creditTradingEnabledLabel')}:</strong>{' '}
-                      {orgData?.creditTradingEnabled
-                        ? t('common:yes')
-                        : t('common:no')}
-                    </BCTypography>
-                  )}
-
-                  {(hasRoles(roles.government) ||
-                    orgData?.hasEarlyIssuance) && (
-                    <BCTypography variant="body4">
-                      <strong>
-                        {t('org:earlyIssuanceIndicator', {
-                          year: CURRENT_COMPLIANCE_YEAR
-                        })}
-                        :
-                      </strong>{' '}
-                      {orgData?.hasEarlyIssuance
-                        ? t('common:yes')
-                        : t('common:no')}
-                    </BCTypography>
-                  )}
-                </BCBox>
-              </BCBox>
-
-              {!isCurrentUserLoading && !hasRoles(roles.government) && (
-                <BCBox mt={2}>
-                  <BCTypography variant="body4">
-                    {t('org:toUpdateMsgPrefix')}{' '}
-                    <a href={`mailto:${t('lcfsEmail')}`}>{t('lcfsEmail')}</a>{' '}
-                    {t('org:toUpdateMsgSuffix')}
-                  </BCTypography>
-                </BCBox>
-              )}
-            </BCBox>
+            isEditMode ? (
+              <AddEditOrgForm
+                handleSaveSuccess={handleSaveSuccess}
+                handleCancelEdit={handleCancelEdit}
+              />
+            ) : (
+              <OrganizationProfile
+                hasRoles={hasRoles}
+                isCurrentUserLoading={isCurrentUserLoading}
+                orgID={orgID ?? currentUser?.organization?.organizationId}
+                orgData={orgData}
+                orgBalanceInfo={orgBalanceInfo}
+              />
+            )
           }
         />
       </BCBox>

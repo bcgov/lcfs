@@ -37,6 +37,7 @@ import {
 import { numberFormatter } from '@/utils/formatters'
 import { useCurrentOrgBalance } from '@/hooks/useOrganization'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { copyToClipboard } from '@/utils/clipboard'
 
 export const CreditCalculator = () => {
   const { t } = useTranslation(['report'])
@@ -44,12 +45,6 @@ export const CreditCalculator = () => {
     () => t('report:ciParameters', { returnObjects: true }),
     [t]
   )
-  const fuelRequirementOptions = useMemo(() => {
-    const arr = t('report:fuelRequirementOptions', { returnObjects: true })
-    return Array.isArray(arr)
-      ? arr.map((option) => ({ value: option, label: option }))
-      : []
-  }, [t])
 
   const { data: currentUser } = useCurrentUser()
 
@@ -102,7 +97,6 @@ export const CreditCalculator = () => {
   const methods = useForm({
     defaultValues: {
       complianceYear: String(defaultCompliancePeriod),
-      fuelRequirement: fuelRequirementOptions[0]?.value || '',
       fuelType: '',
       fuelCode: '',
       provisionOfTheAct: '',
@@ -125,7 +119,6 @@ export const CreditCalculator = () => {
   const {
     complianceYear,
     fuelCategory,
-    fuelRequirement,
     endUseType,
     provisionOfTheAct,
     quantity,
@@ -143,7 +136,7 @@ export const CreditCalculator = () => {
       {
         complianceYear,
         fuelCategory,
-        lcfsOnly: fuelRequirement === 'Low carbon fuel requirement only'
+        lcfsOnly: false
       },
       { enabled: Boolean(fuelCategory) }
     )
@@ -178,7 +171,7 @@ export const CreditCalculator = () => {
         complianceYear,
         fuelCategoryId: selectedFuelObj?.fuelCategoryId,
         fuelTypeId: selectedFuelObj?.fuelTypeId,
-        lcfsOnly: fuelRequirement === 'Low carbon fuel requirement only'
+        lcfsOnly: false
       },
       {
         enabled: Boolean(
@@ -267,7 +260,6 @@ export const CreditCalculator = () => {
   const handleClear = () => {
     reset({
       complianceYear: String(defaultCompliancePeriod),
-      fuelRequirement: fuelRequirementOptions[0]?.value || '',
       fuelType: '',
       fuelCode: '',
       provisionOfTheAct: '',
@@ -291,11 +283,12 @@ Fuel code: ${fuelCode || 'N/A'}
 Quantity supplied: ${quantity?.toLocaleString() || 0} ${unit}
 
 Compliance units = (TCI * EER - (RCI + UCI)) * EC / 1,000,000
+${t('report:formulaECDefinition')}
 
 TCI - Target carbon intensity        ${resultData.formulaValues.carbonIntensity}
 EER - Energy effectiveness ratio     ${resultData.formulaValues.eer}
 RCI - Recorded carbon intensity      ${resultData.formulaValues.ci}  
-UCI - Additional carbon intensity    ${resultData.formulaValues.uci || '0'}
+UCI - Additional carbon intensity    ${resultData.formulaValues.uci}
 EC - Energy content                  ${resultData.formulaValues.energyContent}
 ED - Energy density                  ${resultData.formulaValues.energyDensity}
 
@@ -303,9 +296,13 @@ ${resultData.formulaDisplay}
 
 Credits generated: ${resultData.credits.toLocaleString()}`
 
-      await navigator.clipboard.writeText(copyText)
-      setCopySuccess(true)
-      setTimeout(() => setCopySuccess(false), 2000)
+      const success = await copyToClipboard(copyText)
+      if (success) {
+        setCopySuccess(true)
+        setTimeout(() => setCopySuccess(false), 2000)
+      } else {
+        console.error('Failed to copy text to clipboard')
+      }
     } catch (err) {
       console.error('Failed to copy text: ', err)
     }
@@ -369,11 +366,11 @@ Credits generated: ${resultData.credits.toLocaleString()}`
       availableUnits: numberFormatter(totalBalance + data.complianceUnits),
       previousUnits: numberFormatter(totalBalance),
       formulaValues: {
-        carbonIntensity: data.tci || 0,
+        carbonIntensity: `${data.tci || 0} gCO₂e/MJ`,
         eer: (data.eer || 0).toFixed(2),
-        ci: data.rci || 0,
-        uci: data.uci || 0,
-        energyContent: numberFormatter(data.energyContent || 0),
+        ci: `${data.rci || 0} gCO₂e/MJ`,
+        uci: data.uci ? `${data.uci} gCO₂e/MJ` : 'N/A',
+        energyContent: `${numberFormatter(data.energyContent || 0)} MJ`,
         energyDensity: `${data.energyDensity || 0} ${fuelTypeOptions?.data?.energyDensity?.unit?.name || ''}`
       },
       formulaDisplay: `${(data.complianceUnits || 0).toLocaleString()} = (${data.tci || 0} * ${data.eer || 0} - (${data.rci || 0} + ${data.uci || 'N/A'})) * ${numberFormatter(data.energyContent || 0)} / 1,000,000`
@@ -787,20 +784,6 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                   >
                     Clear
                   </BCButton>
-
-                  {/* fuel requirement type selection */}
-                  {fuelRequirementOptions.length > 0 && (
-                    <BCFormRadio
-                      name="fuelRequirement"
-                      control={control}
-                      options={fuelRequirementOptions}
-                      sx={{
-                        padding: 1,
-                        pb: 2,
-                        maxWidth: '32rem'
-                      }}
-                    />
-                  )}
                 </Stack>
               </Grid>
 
@@ -932,18 +915,22 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                 </BCBox>
 
                 {/* Compliance units formula */}
-                <BCTypography
-                  variant="body2"
-                  sx={{
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    mb: 2
-                  }}
-                >
-                  {parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR
-                    ? t('report:formulaBefore2024')
-                    : t('report:formulaAfter2024')}
-                </BCTypography>
+                <BCBox sx={{ textAlign: 'center', mb: 2 }}>
+                  {parseInt(complianceYear) < LEGISLATION_TRANSITION_YEAR ? (
+                    <BCTypography variant="body2" sx={{ fontWeight: 'bold' }}>
+                      {t('report:formulaBefore2024')}
+                    </BCTypography>
+                  ) : (
+                    <BCBox sx={{ display: 'inline-block', textAlign: 'left' }}>
+                      <BCTypography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        {t('report:formulaAfter2024')}
+                      </BCTypography>
+                      <BCTypography variant="body2" sx={{ fontWeight: 'bold' }}>
+                        {t('report:formulaECDefinition')}
+                      </BCTypography>
+                    </BCBox>
+                  )}
+                </BCBox>
 
                 {/* Formula values table */}
                 <Paper
@@ -956,52 +943,55 @@ Credits generated: ${resultData.credits.toLocaleString()}`
                     mb: 2
                   }}
                 >
-                  <Stack
-                    direction="row"
-                    divider={
-                      <Divider
-                        orientation="vertical"
-                        flexItem
-                        sx={{
-                          borderColor: '#8c8c8c',
-                          my: 2,
-                          borderRightWidth: 2
-                        }}
-                      />
-                    }
+                  <BCBox
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: '2fr 2px 1fr', // Left column, divider, right column
+                      gap: 0,
+                      position: 'relative'
+                    }}
                   >
-                    {/* Left column - Labels */}
-                    <BCBox sx={{ flex: 2, p: 2 }}>
-                      {Object.entries(ciParameterLabels).map(([key, label]) => (
+                    {/* Continuous vertical divider */}
+                    <BCBox
+                      sx={{
+                        gridColumn: 2,
+                        gridRow: `1 / span ${Object.keys(ciParameterLabels).length}`,
+                        backgroundColor: '#8c8c8c',
+                        width: '2px'
+                      }}
+                    />
+                    
+                    {Object.entries(ciParameterLabels).map(([key, label], index) => (
+                      <React.Fragment key={key}>
+                        {/* Left column - Label */}
                         <BCTypography
-                          key={key}
                           variant="body2"
-                          sx={{ py: 0.5, fontWeight: 'bold' }}
+                          sx={{ 
+                            fontWeight: 'bold',
+                            py: 0.5,
+                            pr: 3,
+                            gridColumn: 1
+                          }}
                         >
                           {`${key.toUpperCase()} - ${label}`}
                         </BCTypography>
-                      ))}
-                    </BCBox>
-
-                    {/* Right column - Values */}
-                    <BCBox sx={{ flex: 1, p: 2 }}>
-                      {Object.values(resultData.formulaValues).map(
-                        (value, index) => (
-                          <BCTypography
-                            key={index}
-                            variant="body2"
-                            sx={{
-                              py: 0.5,
-                              fontWeight: 'bold',
-                              textAlign: 'right'
-                            }}
-                          >
-                            {value}
-                          </BCTypography>
-                        )
-                      )}
-                    </BCBox>
-                  </Stack>
+                        
+                        {/* Right column - Value */}
+                        <BCTypography
+                          variant="body2"
+                          sx={{ 
+                            fontWeight: 'bold',
+                            textAlign: 'right',
+                            py: 0.5,
+                            pl: 3,
+                            gridColumn: 3
+                          }}
+                        >
+                          {Object.values(resultData.formulaValues)[index]}
+                        </BCTypography>
+                      </React.Fragment>
+                    ))}
+                  </BCBox>
                 </Paper>
 
                 {/* Formula calculation display */}

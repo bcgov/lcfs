@@ -108,6 +108,29 @@ class ComplianceReportSummaryService:
         self.other_uses_repo = other_uses_repo
         self.compliance_data_service = compliance_data_service
 
+    async def _should_lock_lines_7_and_9(self, compliance_report: ComplianceReport) -> bool:
+        """
+        Check if Lines 7 and 9 should be locked for 2025+ reports with previous assessed report.
+        
+        Returns:
+            bool: True if Lines 7 and 9 should be locked (non-editable)
+        """
+        compliance_year = int(compliance_report.compliance_period.description)
+        
+        # Only lock for 2025+ reports
+        if compliance_year < 2025:
+            return False
+            
+        # Check for previous assessed report
+        if not compliance_report.supplemental_initiator:
+            prev_compliance_report = await self.cr_repo.get_assessed_compliance_report_by_period(
+                compliance_report.organization_id,
+                compliance_year - 1
+            )
+            return prev_compliance_report is not None
+            
+        return False
+
     def convert_summary_to_dict(
         self, summary_obj: ComplianceReportSummary, compliance_report: ComplianceReport = None
     ) -> ComplianceReportSummarySchema:
@@ -454,7 +477,10 @@ class ComplianceReportSummaryService:
         # After the report has been submitted, the summary becomes locked
         # so we can return the existing summary rather than re-calculating
         if summary_model.is_locked:
-            return self.convert_summary_to_dict(compliance_report.summary, compliance_report)
+            locked_summary = self.convert_summary_to_dict(compliance_report.summary, compliance_report)
+            # If the summary is locked, Lines 7 and 9 are also locked
+            locked_summary.lines_7_and_9_locked = True
+            return locked_summary
 
         compliance_period_start = compliance_report.compliance_period.effective_date
         compliance_period_end = compliance_report.compliance_period.expiration_date
@@ -463,9 +489,33 @@ class ComplianceReportSummaryService:
         # Placeholder values for demonstration purposes
         # need to get these values from the db after fuel supply is implemented
 
-        # If report for previous period copy carryover amounts
-        if prev_compliance_report:
-            # TODO: if previous report exists then ensure in the UI we're disabling the line 7 & 9 for editing
+        # Auto-populate Lines 7 and 9 for 2025+ reports from previous assessed report
+        compliance_year = int(compliance_report.compliance_period.description)
+        
+        if prev_compliance_report and compliance_year >= 2025:
+            # For 2025+ reports with previous assessed report: auto-populate and lock Lines 7 & 9
+            previous_retained = {
+                "gasoline": prev_compliance_report.summary.line_6_renewable_fuel_retained_gasoline,
+                "diesel": prev_compliance_report.summary.line_6_renewable_fuel_retained_diesel,
+                "jet_fuel": prev_compliance_report.summary.line_6_renewable_fuel_retained_jet_fuel,
+            }
+            previous_obligation = {
+                "gasoline": prev_compliance_report.summary.line_8_obligation_deferred_gasoline,
+                "diesel": prev_compliance_report.summary.line_8_obligation_deferred_diesel,
+                "jet_fuel": prev_compliance_report.summary.line_8_obligation_deferred_jet_fuel,
+            }
+            
+            # Update the current summary model with auto-populated values for Lines 7 and 9
+            summary_model.line_7_previously_retained_gasoline = previous_retained["gasoline"]
+            summary_model.line_7_previously_retained_diesel = previous_retained["diesel"]
+            summary_model.line_7_previously_retained_jet_fuel = previous_retained["jet_fuel"]
+            
+            summary_model.line_9_obligation_added_gasoline = previous_obligation["gasoline"]
+            summary_model.line_9_obligation_added_diesel = previous_obligation["diesel"]
+            summary_model.line_9_obligation_added_jet_fuel = previous_obligation["jet_fuel"]
+            
+        elif prev_compliance_report:
+            # For pre-2025 reports with previous report: use previous values but don't force update
             previous_retained = {
                 "gasoline": prev_compliance_report.summary.line_6_renewable_fuel_retained_gasoline,
                 "diesel": prev_compliance_report.summary.line_6_renewable_fuel_retained_diesel,
@@ -477,6 +527,7 @@ class ComplianceReportSummaryService:
                 "jet_fuel": prev_compliance_report.summary.line_8_obligation_deferred_jet_fuel,
             }
         else:
+            # No previous assessed report: use current summary values (editable)
             previous_retained = {
                 "gasoline": summary_model.line_7_previously_retained_gasoline,
                 "diesel": summary_model.line_7_previously_retained_diesel,
@@ -614,6 +665,11 @@ class ComplianceReportSummaryService:
             early_issuance_summary,
         )
 
+        # Check if Lines 7 and 9 should be locked (for draft/editable reports)
+        lines_7_and_9_locked = await self._should_lock_lines_7_and_9(compliance_report)
+        summary.lines_7_and_9_locked = lines_7_and_9_locked
+        existing_summary.lines_7_and_9_locked = lines_7_and_9_locked
+
         # Only save if summary has changed
         if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):
             logger.info(
@@ -737,60 +793,41 @@ class ComplianceReportSummaryService:
             * jet_fuel_perc,
         }
 
-        # line 6 & 8: Initialize with Decimal, compare with Decimal
-        decimal_retained_renewables = {
-            "gasoline": DECIMAL_ZERO,
-            "diesel": DECIMAL_ZERO,
-            "jet_fuel": DECIMAL_ZERO,
-        }
-        decimal_deferred_renewables = {
-            "gasoline": DECIMAL_ZERO,
-            "diesel": DECIMAL_ZERO,
-            "jet_fuel": DECIMAL_ZERO,
-        }
+        # line 6 & 8: Always preserve user-entered values, but cap at 5% of current line 4
+        decimal_retained_renewables = {}
+        decimal_deferred_renewables = {}
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
-            # Get previous required amount as Decimal (assuming it was stored correctly or converting if needed)
-            # For simplicity, let's assume prev_summary values are floats/ints that need conversion
-            previous_required_renewable_quantity_dec = Decimal(
+            # Calculate the 5% cap based on current line 4 value, rounded to nearest integer
+            current_required_quantity_dec = decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
+            max_retained = (current_required_quantity_dec * Decimal("0.05")).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
+            
+            # Always preserve line 6 value from current summary (user's input)
+            # but cap it at 5% of current line 4
+            line_6_value = Decimal(
                 str(
                     getattr(
                         prev_summary,
-                        f"line_4_eligible_renewable_fuel_required_{category}",
-                        0,  # Default to 0 if attribute missing
+                        f"line_6_renewable_fuel_retained_{category}",
+                        0,
                     )
                     or 0
                 )
-            )  # Ensure None becomes 0
-
-            current_required_quantity_dec = (
-                decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
             )
-
-            # Compare Decimals
-            if (
-                previous_required_renewable_quantity_dec
-                == current_required_quantity_dec
-            ):
-                # Convert previous retained/deferred to Decimal
-                decimal_retained_renewables[category] = Decimal(
-                    str(
-                        getattr(
-                            prev_summary,
-                            f"line_6_renewable_fuel_retained_{category}",
-                            0,
-                        )
-                        or 0
+            decimal_retained_renewables[category] = min(line_6_value, max_retained)
+            
+            # Similarly for line 8 - preserve but cap at 5% of current line 4
+            line_8_value = Decimal(
+                str(
+                    getattr(
+                        prev_summary,
+                        f"line_8_obligation_deferred_{category}",
+                        0,
                     )
+                    or 0
                 )
-                decimal_deferred_renewables[category] = Decimal(
-                    str(
-                        getattr(
-                            prev_summary, f"line_8_obligation_deferred_{category}", 0
-                        )
-                        or 0
-                    )
-                )
+            )
+            decimal_deferred_renewables[category] = min(line_8_value, max_retained)
 
         # line 10: Calculate net supplied using Decimal
         decimal_net_renewable_supplied = {
@@ -955,13 +992,13 @@ class ComplianceReportSummaryService:
                     else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
                 ),
                 field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
-                gasoline=float(values.get("gasoline", 0)),
-                diesel=float(values.get("diesel", 0)),
-                jet_fuel=float(values.get("jet_fuel", 0)),
-                total_value=float(
-                    values.get("gasoline", 0)
-                    + values.get("diesel", 0)
-                    + values.get("jet_fuel", 0)
+                gasoline=(int(values.get("gasoline", 0)) if line != 11 else float(values.get("gasoline", 0))),
+                diesel=(int(values.get("diesel", 0)) if line != 11 else float(values.get("diesel", 0))),
+                jet_fuel=(int(values.get("jet_fuel", 0)) if line != 11 else float(values.get("jet_fuel", 0))),
+                total_value=(
+                    int(values.get("gasoline", 0) + values.get("diesel", 0) + values.get("jet_fuel", 0))
+                    if line != 11
+                    else float(values.get("gasoline", 0) + values.get("diesel", 0) + values.get("jet_fuel", 0))
                 ),
                 format=(FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER),
             )

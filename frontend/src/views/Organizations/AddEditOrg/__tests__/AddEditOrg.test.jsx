@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { AddEditOrgForm } from '../AddEditOrgForm'
 import { useForm, FormProvider } from 'react-hook-form'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { useOrganization } from '@/hooks/useOrganization'
+import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { ROUTES } from '@/routes/routes'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -19,7 +19,11 @@ vi.mock('react-i18next', () => ({
   })
 }))
 vi.mock('@/services/useApiService')
-vi.mock('react-router-dom')
+vi.mock('react-router-dom', () => ({
+  useNavigate: vi.fn(),
+  useParams: vi.fn(),
+  useLocation: vi.fn(() => ({ state: null }))
+}))
 
 // Mock the useMutation hook to properly handle onSuccess callback
 const mockMutate = vi.fn()
@@ -53,7 +57,9 @@ const mockedOrg = {
     streetAddress: '123 Test St',
     addressOther: '',
     city: 'Test City',
-    postalcodeZipcode: 'A1B2C3'
+    postalcodeZipcode: 'A1B2C3',
+    provinceState: 'BC',
+    country: 'Canada'
   },
   orgAttorneyAddress: {
     streetAddress: '456 Attorney Rd',
@@ -78,6 +84,13 @@ describe('AddEditOrg', () => {
     // Mocking the useOrganization hook
     useOrganization.mockReturnValue({
       isFetched: true
+    })
+
+    // Ensure organization types hook returns a default value for the form
+    useOrganizationTypes.mockReturnValue({
+      data: [],
+      isLoading: false,
+      error: null
     })
 
     apiSpy = {
@@ -155,6 +168,7 @@ describe('AddEditOrg', () => {
         ...mockedOrg,
         phone: 'f91j5qhf91',
         orgAddress: {
+          ...mockedOrg.orgAddress,
           postalcodeZipcode: '2671224'
         }
       },
@@ -220,8 +234,8 @@ describe('AddEditOrg', () => {
   //   await user.type(document.getElementById('orgEmailAddress'), 'new-test@example.com')
   //   await user.type(document.getElementById('orgPhoneNumber'), '555-123-4567')
 
-  //   // Supplier Type Radio - click the correct radio button
-  //   await user.click(screen.getByTestId('orgSupplierType1'))
+  //   // Organization Type Dropdown - select organization type
+  //   await user.selectOptions(screen.getByTestId('orgType'), '1')
 
   //   // Registered for Transfers Radio (value="2" is Yes)
   //   await user.click(screen.getByTestId('orgRegForTransfers2'))

@@ -155,7 +155,8 @@ export const renewableFuelColumns = (
   t,
   data,
   editable,
-  compliancePeriodYear
+  compliancePeriodYear,
+  lines7And9Locked = false
 ) => {
   /**
    * Editable Lines Logic:
@@ -262,17 +263,17 @@ export const renewableFuelColumns = (
   }
 
   if (parseInt(compliancePeriodYear) === 2024) {
-    // by default enable in editing mode for compliance period 2024
-    gasolineEditableCells = [
-      ...gasolineEditableCells,
-      SUMMARY.LINE_7,
-      SUMMARY.LINE_9
-    ]
-    dieselEditableCells = [
-      ...dieselEditableCells,
-      SUMMARY.LINE_7,
-      SUMMARY.LINE_9
-    ]
+    // by default enable in editing mode for compliance period 2024, but respect locks for Lines 7 & 9
+    if (!lines7And9Locked) {
+      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+    }
+  } else if (parseInt(compliancePeriodYear) >= 2025) {
+    // For 2025+ reports, only allow editing Lines 7 & 9 if not locked
+    if (!lines7And9Locked) {
+      gasolineEditableCells = [...gasolineEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+      dieselEditableCells = [...dieselEditableCells, SUMMARY.LINE_7, SUMMARY.LINE_9]
+    }
   }
   if (parseInt(compliancePeriodYear) < 2029) {
     // The Jet Fuel cells for lines 7 and 9 should remain unavailable until 2029 (one year after the first renewable requirements come into effect for 2028).
@@ -301,6 +302,7 @@ export const renewableFuelColumns = (
       editableCells: gasolineEditableCells,
       cellConstraints: {
         5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
+        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) },
         7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].gasoline) }
       }
     },
@@ -313,6 +315,7 @@ export const renewableFuelColumns = (
       editableCells: dieselEditableCells,
       cellConstraints: {
         5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
+        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) },
         7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].diesel) }
       }
     },
@@ -325,6 +328,7 @@ export const renewableFuelColumns = (
       editableCells: jetFuelEditableCells,
       cellConstraints: {
         5: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) },
+        6: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) },
         7: { min: 0, max: Math.round(0.05 * data[SUMMARY.LINE_4].jetFuel) }
       }
     }
@@ -389,5 +393,5 @@ export const earlyIssuanceColumns = (t) => [
 ]
 
 export const defaultSortModel = [
-  { field: 'compliancePeriod', direction: 'desc' }
+  { field: 'updateDate', direction: 'desc' }
 ]

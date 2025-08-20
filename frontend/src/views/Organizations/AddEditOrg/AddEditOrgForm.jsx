@@ -1,5 +1,9 @@
 // External Modules
-import { faArrowLeft, faFloppyDisk } from '@fortawesome/free-solid-svg-icons'
+import {
+  faArrowLeft,
+  faFloppyDisk,
+  faClose
+} from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { yupResolver } from '@hookform/resolvers/yup'
 import {
@@ -15,29 +19,41 @@ import {
   RadioGroup,
   TextField
 } from '@mui/material'
+import { Close as CloseIcon } from '@mui/icons-material'
 import BCTypography from '@/components/BCTypography'
 import { useMutation } from '@tanstack/react-query'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useForm, Controller } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { schemaValidation } from './_schema'
 
 // Internal Modules
-import BCAlert from '@/components/BCAlert'
+import BCAlert, { BCAlert2 } from '@/components/BCAlert'
 import BCButton from '@/components/BCButton'
 import Loading from '@/components/Loading'
 import { ROUTES } from '@/routes/routes'
-import { useOrganization } from '@/hooks/useOrganization'
+import { useOrganization, useOrganizationTypes } from '@/hooks/useOrganization'
 import { useApiService } from '@/services/useApiService'
 import { AddressAutocomplete } from '@/components/BCForm/index.js'
 import colors from '@/themes/base/colors'
 import { CURRENT_COMPLIANCE_YEAR } from '@/constants/common'
+import ReferenceCompareBox from './ReferenceCompareBox'
 
 // Component for adding a new organization
-export const AddEditOrgForm = () => {
+export const AddEditOrgForm = ({ handleSaveSuccess, handleCancelEdit }) => {
   const { t } = useTranslation(['common', 'org'])
   const navigate = useNavigate()
+  const alertRef = useRef(null)
+  const location = useLocation()
+  const organizationSnapshot = location.state?.organizationSnapshot
+  const reportID = location.state?.reportID
+  const [dismissedBoxes, setDismissedBoxes] = useState({
+    organizationInfo: !reportID,
+    serviceAddress: !reportID,
+    headOfficeAddress: !reportID,
+    recordsAddress: !reportID
+  })
   const apiService = useApiService()
   const { orgID } = useParams()
 
@@ -45,7 +61,13 @@ export const AddEditOrgForm = () => {
     enabled: !!orgID,
     retry: false
   })
-
+  const { data: orgTypes } = useOrganizationTypes()
+  const dismissBox = (boxType) => {
+    setDismissedBoxes((prev) => ({
+      ...prev,
+      [boxType]: true
+    }))
+  }
   // State for controlling checkbox behavior
   const [sameAsLegalName, setSameAsLegalName] = useState(false)
   const [sameAsServiceAddress, setSameAsServiceAddress] = useState(false)
@@ -84,13 +106,12 @@ export const AddEditOrgForm = () => {
         orgEDRMSRecord: data.edrmsRecord,
         recordsAddress: data.recordsAddress || '',
         hasEarlyIssuance: data.hasEarlyIssuance ? 'yes' : 'no',
-        orgSupplierType:
+        orgType:
           data.organizationTypeId?.toString() ||
           data.orgType?.organizationTypeId?.toString() ||
           '1',
         orgRegForTransfers:
           data.orgStatus.organizationStatusId === 2 ? '2' : '1',
-        orgCreditTradingEnabled: data.creditTradingEnabled ? 'yes' : 'no',
         orgStreetAddress: data.orgAddress?.streetAddress || '',
         orgAddressOther: data.orgAddress?.addressOther || '',
         orgCity: data.orgAddress?.city || '',
@@ -169,7 +190,7 @@ export const AddEditOrgForm = () => {
       recordsAddress: data.recordsAddress || '',
       hasEarlyIssuance: data.hasEarlyIssuance === 'yes',
       organizationStatusId: parseInt(data.orgRegForTransfers),
-      organizationTypeId: parseInt(data.orgSupplierType),
+      organizationTypeId: parseInt(data.orgType),
       creditTradingEnabled: data.orgCreditTradingEnabled === 'yes',
       address: {
         name: data.orgOperatingName,
@@ -207,14 +228,11 @@ export const AddEditOrgForm = () => {
   } = useMutation({
     mutationFn: async (userData) =>
       await apiService.post('/organizations/create', userData),
-    onSuccess: () => {
+    onSuccess: (response) => {
       // Redirect to Organization route on success
-      navigate(ROUTES.ORGANIZATIONS.LIST, {
-        state: {
-          message: 'Organization has been successfully added.',
-          severity: 'success'
-        }
-      })
+      if (handleSaveSuccess) {
+        handleSaveSuccess(response?.data?.organizationId)
+      }
     },
     onError: (error) => {
       // Error handling logic
@@ -231,12 +249,9 @@ export const AddEditOrgForm = () => {
     mutationFn: async (payload) =>
       await apiService.put(`/organizations/${orgID}`, payload),
     onSuccess: () => {
-      navigate(ROUTES.ORGANIZATIONS.LIST, {
-        state: {
-          message: 'Organization has been successfully updated.',
-          severity: 'success'
-        }
-      })
+      if (handleSaveSuccess) {
+        handleSaveSuccess()
+      }
     },
     onError: (error) => {
       console.error('Error posting data:', error)
@@ -259,6 +274,15 @@ export const AddEditOrgForm = () => {
     clearFields,
     watch
   ])
+
+  useEffect(() => {
+    if (organizationSnapshot) {
+      alertRef.current?.triggerAlert({
+        severity: 'warning',
+        message: `Address compare mode from compliance report ${reportID}`
+      })
+    }
+  }, [organizationSnapshot])
 
   // Syncing logic for 'sameAsServiceAddress'
   useEffect(() => {
@@ -302,7 +326,15 @@ export const AddEditOrgForm = () => {
 
   // Conditional rendering for loading
   if (isCreateOrgPending || isUpdateOrgPending) {
-    return <Loading message="Adding Organization..." />
+    return (
+      <Loading
+        message={
+          isCreateOrgPending
+            ? 'Adding Organization...'
+            : 'Updating Organization...'
+        }
+      />
+    )
   }
 
   // Form layout and structure
@@ -330,339 +362,335 @@ export const AddEditOrgForm = () => {
         sx={{ mt: 2 }}
       >
         {/* Form Fields */}
+        <BCAlert2 ref={alertRef} dismissable={true} noFade={true} />
         <Grid container spacing={3}>
-          <Grid item xs={12}>
+          <Grid item xs={12} md={6}>
             <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
-              <Grid container spacing={2}>
-                <Grid item xs={12} md={6}>
-                  <Box sx={{ mr: { sm: 0, md: 4 } }}>
-                    <Box mb={2}>
-                      <InputLabel htmlFor="orgLegalName" sx={{ pb: 1 }}>
-                        {t('org:legalNameLabel')}
+              <Box sx={{ mr: { sm: 0, md: 4 } }}>
+                {organizationSnapshot && !dismissedBoxes.organizationInfo && (
+                  <ReferenceCompareBox
+                    title="Organization Details"
+                    data={[
+                      {
+                        label: t('org:legalNameLabel'),
+                        value: organizationSnapshot.name
+                      },
+                      {
+                        label: t('org:operatingNameLabel'),
+                        value: organizationSnapshot.operatingName
+                      },
+                      {
+                        label: t('org:emailAddrLabel'),
+                        value: organizationSnapshot.email
+                      },
+                      {
+                        label: t('org:phoneNbrLabel'),
+                        value: organizationSnapshot.phone
+                      }
+                    ]}
+                    onDismiss={() => dismissBox('organizationInfo')}
+                    isDismissed={dismissedBoxes.organizationInfo}
+                  />
+                )}
+                <Box mb={2}>
+                  <InputLabel htmlFor="orgLegalName" sx={{ pb: 1 }}>
+                    {t('org:legalNameLabel')}
+                  </InputLabel>
+                  <TextField
+                    required
+                    id="orgLegalName"
+                    data-test="orgLegalName"
+                    variant="outlined"
+                    fullWidth
+                    error={!!errors.orgLegalName}
+                    helperText={errors.orgLegalName?.message}
+                    {...register('orgLegalName')}
+                  />
+                </Box>
+                <Box mb={2}>
+                  <Grid container mb={0.5}>
+                    <Grid item xs={6}>
+                      <InputLabel htmlFor="orgOperatingName" sx={{ pb: 1 }}>
+                        {t('org:operatingNameLabel')}:
                       </InputLabel>
-                      <TextField
-                        required
-                        id="orgLegalName"
-                        data-test="orgLegalName"
-                        variant="outlined"
-                        fullWidth
-                        error={!!errors.orgLegalName}
-                        helperText={errors.orgLegalName?.message}
-                        {...register('orgLegalName')}
-                      />
-                    </Box>
-                    <Box mb={2}>
-                      <Grid container mb={0.5}>
-                        <Grid item xs={6}>
-                          <InputLabel htmlFor="orgOperatingName" sx={{ pb: 1 }}>
-                            {t('org:operatingNameLabel')}:
-                          </InputLabel>
-                        </Grid>
-                        <Grid
-                          item
-                          xs={6}
-                          sx={{ display: 'flex', justifyContent: 'flex-start' }}
-                        >
-                          <FormControlLabel
-                            control={
-                              <Checkbox
-                                checked={sameAsLegalName}
-                                onChange={(e) =>
-                                  setSameAsLegalName(e.target.checked)
-                                }
-                                data-test="sameAsLegalName"
-                              />
+                    </Grid>
+                    <Grid
+                      item
+                      xs={6}
+                      sx={{ display: 'flex', justifyContent: 'flex-start' }}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox
+                            checked={sameAsLegalName}
+                            onChange={(e) =>
+                              setSameAsLegalName(e.target.checked)
                             }
-                            label={
-                              <BCTypography variant="body3">
-                                {t('org:sameAsLegalNameLabel')}
-                              </BCTypography>
-                            }
+                            data-test="sameAsLegalName"
                           />
-                        </Grid>
+                        }
+                        label={
+                          <BCTypography variant="subtitle3">
+                            {t('org:sameAsLegalNameLabel')}
+                          </BCTypography>
+                        }
+                      />
+                    </Grid>
+                  </Grid>
+                  <TextField
+                    required
+                    disabled={sameAsLegalName}
+                    id="orgOperatingName"
+                    data-test="orgOperatingName"
+                    variant="outlined"
+                    fullWidth
+                    error={!!errors.orgOperatingName}
+                    helperText={errors.orgOperatingName?.message}
+                    {...register('orgOperatingName')}
+                  />
+                </Box>
+                <Box mb={2}>
+                  <InputLabel htmlFor="orgEmailAddress" sx={{ pb: 1 }}>
+                    {t('org:emailAddrLabel')}:
+                  </InputLabel>
+                  <TextField
+                    required
+                    id="orgEmailAddress"
+                    data-test="orgEmailAddress"
+                    variant="outlined"
+                    fullWidth
+                    error={!!errors.orgEmailAddress}
+                    helperText={errors.orgEmailAddress?.message}
+                    {...register('orgEmailAddress')}
+                  />
+                </Box>
+                <Box mb={2}>
+                  <InputLabel htmlFor="orgPhoneNumber" sx={{ pb: 1 }}>
+                    {t('org:phoneNbrLabel')}:
+                  </InputLabel>
+                  <TextField
+                    required
+                    id="orgPhoneNumber"
+                    data-test="orgPhoneNumber"
+                    variant="outlined"
+                    fullWidth
+                    error={!!errors.orgPhoneNumber}
+                    helperText={errors.orgPhoneNumber?.message}
+                    {...register('orgPhoneNumber')}
+                  />
+                </Box>
+              </Box>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
+              <Box>
+                <Box mb={2}>
+                  <FormControl fullWidth>
+                    <Grid container>
+                      <Grid item xs={6}>
+                        <FormLabel id="orgType" sx={{ pb: 1 }}>
+                          <BCTypography variant="body4">
+                            {t('org:orgTypeLabel')}:
+                          </BCTypography>
+                        </FormLabel>
                       </Grid>
-                      <TextField
-                        required
-                        disabled={sameAsLegalName}
-                        id="orgOperatingName"
-                        data-test="orgOperatingName"
-                        variant="outlined"
-                        fullWidth
-                        error={!!errors.orgOperatingName}
-                        helperText={errors.orgOperatingName?.message}
-                        {...register('orgOperatingName')}
-                      />
-                    </Box>
-                    <Box mb={2}>
-                      <InputLabel htmlFor="orgEmailAddress" sx={{ pb: 1 }}>
-                        {t('org:emailAddrLabel')}:
-                      </InputLabel>
-                      <TextField
-                        required
-                        id="orgEmailAddress"
-                        data-test="orgEmailAddress"
-                        variant="outlined"
-                        fullWidth
-                        error={!!errors.orgEmailAddress}
-                        helperText={errors.orgEmailAddress?.message}
-                        {...register('orgEmailAddress')}
-                      />
-                    </Box>
-                    <Box mb={2}>
-                      <InputLabel htmlFor="orgPhoneNumber" sx={{ pb: 1 }}>
-                        {t('org:phoneNbrLabel')}:
-                      </InputLabel>
-                      <TextField
-                        required
-                        id="orgPhoneNumber"
-                        data-test="orgPhoneNumber"
-                        variant="outlined"
-                        fullWidth
-                        error={!!errors.orgPhoneNumber}
-                        helperText={errors.orgPhoneNumber?.message}
-                        {...register('orgPhoneNumber')}
-                      />
-                    </Box>
-                  </Box>
-                </Grid>
-                <Grid item xs={12} md={6}>
-                  <Box>
-                    <Box mb={2}>
-                      <FormControl fullWidth>
-                        <Grid container>
-                          <Grid item xs={6}>
-                            <FormLabel id="orgSupplierType" sx={{ pb: 1 }}>
-                              <BCTypography variant="body3">
-                                {t('org:supplierTypLabel')}:
-                              </BCTypography>
-                            </FormLabel>
-                          </Grid>
-                          <Grid item xs={6} mt={0.5}>
+                      <Grid item xs={6} mt={0.5}>
+                        <Controller
+                          control={control}
+                          name="orgType"
+                          defaultValue="1"
+                          render={({ field }) => (
+                            <TextField
+                              id="orgType"
+                              name="orgType"
+                              data-test="orgType"
+                              select
+                              fullWidth
+                              variant="outlined"
+                              SelectProps={{ native: true }}
+                              {...field}
+                              error={!!errors.orgType}
+                              helperText={errors.orgType?.message}
+                            >
+                              {(orgTypes || []).map((t) => {
+                                const suffix = t.isBceidUser
+                                  ? ' (BCeID user)'
+                                  : ' (non-BCeID user)'
+                                const label = `${t.description || t.orgType}${suffix}`
+                                return (
+                                  <option
+                                    key={t.organizationTypeId}
+                                    value={t.organizationTypeId}
+                                  >
+                                    {label}
+                                  </option>
+                                )
+                              })}
+                            </TextField>
+                          )}
+                        />
+                      </Grid>
+                    </Grid>
+                  </FormControl>
+                </Box>
+                <Box mb={2}>
+                  <FormControl fullWidth>
+                    <Grid container>
+                      <Grid item xs={6}>
+                        <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
+                          <BCTypography variant="body4">
+                            {t('org:regTrnLabel')}:
+                          </BCTypography>
+                        </FormLabel>
+                      </Grid>
+                      <Grid item xs={6} mt={0.5}>
+                        <Controller
+                          control={control}
+                          name="orgRegForTransfers"
+                          defaultValue=""
+                          render={({ field }) => (
                             <RadioGroup
                               row
-                              id="orgSupplierType"
-                              name="orgSupplierType"
-                              defaultValue="1"
+                              id="orgRegForTransfers"
+                              name="orgRegForTransfers"
+                              {...field}
                             >
                               <FormControlLabel
-                                value="1"
+                                value="2"
                                 control={
-                                  <Radio
-                                    {...register('orgSupplierType')}
-                                    data-test="orgSupplierType1"
-                                  />
+                                  <Radio data-test="orgRegForTransfers2" />
                                 }
                                 label={
-                                  <BCTypography variant="body3">
-                                    {t('supplier')}
+                                  <BCTypography variant="body4">
+                                    {t('yes')}
+                                  </BCTypography>
+                                }
+                              />
+                              <FormControlLabel
+                                value="1"
+                                sx={{ ml: 2 }}
+                                control={
+                                  <Radio data-test="orgRegForTransfers1" />
+                                }
+                                label={
+                                  <BCTypography variant="body4">
+                                    {t('no')}
                                   </BCTypography>
                                 }
                               />
                             </RadioGroup>
-                            {renderError('orgSupplierType')}
-                          </Grid>
-                        </Grid>
-                      </FormControl>
-                    </Box>
-                    <Box mb={2}>
-                      <FormControl fullWidth>
-                        <Grid container>
-                          <Grid item xs={6}>
-                            <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
-                              <BCTypography variant="body3">
-                                {t('org:regTrnLabel')}:
-                              </BCTypography>
-                            </FormLabel>
-                          </Grid>
-                          <Grid item xs={6} mt={0.5}>
-                            <Controller
-                              control={control}
-                              name="orgRegForTransfers"
-                              defaultValue=""
-                              render={({ field }) => (
-                                <RadioGroup
-                                  row
-                                  id="orgRegForTransfers"
-                                  name="orgRegForTransfers"
-                                  {...field}
-                                >
-                                  <FormControlLabel
-                                    value="2"
-                                    control={
-                                      <Radio data-test="orgRegForTransfers2" />
-                                    }
-                                    label={
-                                      <BCTypography variant="body3">
-                                        {t('yes')}
-                                      </BCTypography>
-                                    }
-                                  />
-                                  <FormControlLabel
-                                    value="1"
-                                    sx={{ ml: 2 }}
-                                    control={
-                                      <Radio data-test="orgRegForTransfers1" />
-                                    }
-                                    label={
-                                      <BCTypography variant="body3">
-                                        {t('no')}
-                                      </BCTypography>
-                                    }
-                                  />
-                                </RadioGroup>
-                              )}
-                            >
-                              /
-                            </Controller>
-                            {renderError('orgRegForTransfers')}
-                          </Grid>
-                        </Grid>
-                      </FormControl>
-                    </Box>
-                    <Box mb={2}>
-                      <FormControl fullWidth>
-                        <Grid container>
-                          <Grid item xs={6} mt={0.5}>
-                            <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
-                              <BCTypography variant="body3">
-                                {t('org:earlyIssuanceLabel', {
-                                  year: CURRENT_COMPLIANCE_YEAR
-                                })}
-                                :
-                              </BCTypography>
-                            </FormLabel>
-                          </Grid>
-                          <Grid item xs={6}>
-                            <Controller
-                              control={control}
+                          )}
+                        >
+                          /
+                        </Controller>
+                        {renderError('orgRegForTransfers')}
+                      </Grid>
+                    </Grid>
+                  </FormControl>
+                </Box>
+                <Box mb={2}>
+                  <FormControl fullWidth>
+                    <Grid container>
+                      <Grid item xs={6} mt={0.5}>
+                        <FormLabel id="orgRegForTransfers" sx={{ pb: 1 }}>
+                          <BCTypography variant="body4">
+                            {t('org:earlyIssuanceLabel', {
+                              year: CURRENT_COMPLIANCE_YEAR
+                            })}
+                            :
+                          </BCTypography>
+                        </FormLabel>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Controller
+                          control={control}
+                          name="hasEarlyIssuance"
+                          defaultValue=""
+                          render={({ field }) => (
+                            <RadioGroup
+                              row
+                              id="hasEarlyIssuance"
                               name="hasEarlyIssuance"
-                              defaultValue=""
-                              render={({ field }) => (
-                                <RadioGroup
-                                  row
-                                  id="hasEarlyIssuance"
-                                  name="hasEarlyIssuance"
-                                  sx={{ pt: 1 }}
-                                  {...field}
-                                >
-                                  <FormControlLabel
-                                    value="yes"
-                                    control={
-                                      <Radio data-test="hasEarlyIssuanceYes" />
-                                    }
-                                    label={
-                                      <BCTypography variant="body3">
-                                        {t('yes')}
-                                      </BCTypography>
-                                    }
-                                  />
-                                  <FormControlLabel
-                                    value="no"
-                                    sx={{ ml: 2 }}
-                                    control={
-                                      <Radio data-test="hasEarlyIssuanceNo" />
-                                    }
-                                    label={
-                                      <BCTypography variant="body3">
-                                        {t('no')}
-                                      </BCTypography>
-                                    }
-                                  />
-                                </RadioGroup>
-                              )}
+                              sx={{ pt: 1 }}
+                              {...field}
                             >
-                              /
-                            </Controller>
-                            {renderError('hasEarlyIssuance')}
-                          </Grid>
-                        </Grid>
-                      </FormControl>
-                    </Box>
-                    <Box mb={2}>
-                      <FormControl fullWidth>
-                        <Grid container>
-                          <Grid item xs={6} mt={0.5}>
-                            <FormLabel id="orgCreditTradingEnabled" sx={{ pb: 1 }}>
-                              <BCTypography variant="body3">
-                                Credit trading market participation:
-                              </BCTypography>
-                            </FormLabel>
-                          </Grid>
-                          <Grid item xs={6}>
-                            <Controller
-                              control={control}
-                              name="orgCreditTradingEnabled"
-                              defaultValue=""
-                              render={({ field }) => (
-                                <RadioGroup
-                                  row
-                                  id="orgCreditTradingEnabled"
-                                  name="orgCreditTradingEnabled"
-                                  sx={{ pt: 1 }}
-                                  {...field}
-                                >
-                                  <FormControlLabel
-                                    value="yes"
-                                    control={
-                                      <Radio data-test="orgCreditTradingEnabledYes" />
-                                    }
-                                    label={
-                                      <BCTypography variant="body3">
-                                        {t('yes')}
-                                      </BCTypography>
-                                    }
-                                  />
-                                  <FormControlLabel
-                                    value="no"
-                                    sx={{ ml: 2 }}
-                                    control={
-                                      <Radio data-test="orgCreditTradingEnabledNo" />
-                                    }
-                                    label={
-                                      <BCTypography variant="body3">
-                                        {t('no')}
-                                      </BCTypography>
-                                    }
-                                  />
-                                </RadioGroup>
-                              )}
-                            >
-                              /
-                            </Controller>
-                            {renderError('orgCreditTradingEnabled')}
-                          </Grid>
-                        </Grid>
-                      </FormControl>
-                    </Box>
-                    <Box mb={2} sx={{ mt: { sm: 0, md: 9.5, xl: 17.5 } }}>
-                      <InputLabel htmlFor="orgEDRMSRecord" sx={{ pb: 1 }}>
-                        {t('org:edrmsLabel')}:
-                      </InputLabel>
-                      <TextField
-                        required
-                        id="orgEDRMSRecord"
-                        data-test="orgEDRMSRecord"
-                        variant="outlined"
-                        fullWidth
-                        error={!!errors.orgEDRMSRecord}
-                        helperText={errors.orgEDRMSRecord?.message}
-                        {...register('orgEDRMSRecord')}
-                      />
-                    </Box>
-                  </Box>
-                </Grid>
-              </Grid>
+                              <FormControlLabel
+                                value="yes"
+                                control={
+                                  <Radio data-test="hasEarlyIssuanceYes" />
+                                }
+                                label={
+                                  <BCTypography variant="body4">
+                                    {t('yes')}
+                                  </BCTypography>
+                                }
+                              />
+                              <FormControlLabel
+                                value="no"
+                                sx={{ ml: 2 }}
+                                control={
+                                  <Radio data-test="hasEarlyIssuanceNo" />
+                                }
+                                label={
+                                  <BCTypography variant="body4">
+                                    {t('no')}
+                                  </BCTypography>
+                                }
+                              />
+                            </RadioGroup>
+                          )}
+                        >
+                          /
+                        </Controller>
+                        {renderError('hasEarlyIssuance')}
+                      </Grid>
+                    </Grid>
+                  </FormControl>
+                </Box>
+                <Box mb={2} sx={{ mt: { sm: 0, md: 9.5, xl: 17.5 } }}>
+                  <InputLabel htmlFor="orgEDRMSRecord" sx={{ pb: 1 }}>
+                    {t('org:edrmsLabel')}:
+                  </InputLabel>
+                  <TextField
+                    required
+                    id="orgEDRMSRecord"
+                    data-test="orgEDRMSRecord"
+                    variant="outlined"
+                    fullWidth
+                    error={!!errors.orgEDRMSRecord}
+                    helperText={errors.orgEDRMSRecord?.message}
+                    {...register('orgEDRMSRecord')}
+                  />
+                </Box>
+              </Box>
             </Box>
           </Grid>
           <Grid item xs={12} md={6} data-test="service-address-section">
             <Box sx={{ bgcolor: 'background.grey', p: 3 }}>
               <BCTypography
                 variant="h6"
-                sx={{ pb: 7, color: colors.primary.main }}
+                sx={{
+                  pb: dismissedBoxes.serviceAddress ? 7 : 2.2,
+                  color: colors.primary.main
+                }}
               >
                 {t('org:serviceAddrLabel')}
               </BCTypography>
-              <Box mb={2}>
+              {organizationSnapshot && !dismissedBoxes.serviceAddress && (
+                <ReferenceCompareBox
+                  title="Service Address"
+                  data={[{ value: organizationSnapshot.serviceAddress }]}
+                  onDismiss={() => dismissBox('serviceAddress')}
+                  isDismissed={dismissedBoxes.serviceAddress}
+                />
+              )}
+              <Box
+                sx={{
+                  mb: 2,
+                  mt: { lg: dismissedBoxes.serviceAddress ? 0 : 7 }
+                }}
+              >
                 <InputLabel htmlFor="orgStreetAddress" sx={{ pb: 1 }}>
                   {t('org:streetAddrLabel')}:
                 </InputLabel>
@@ -766,6 +794,14 @@ export const AddEditOrgForm = () => {
                 >
                   {t('org:bcRecordLabel')}
                 </BCTypography>
+                {organizationSnapshot && !dismissedBoxes.headOfficeAddress && (
+                  <ReferenceCompareBox
+                    title="Head Office Address"
+                    data={[{ value: organizationSnapshot.headOfficeAddress }]}
+                    onDismiss={() => dismissBox('headOfficeAddress')}
+                    isDismissed={dismissedBoxes.headOfficeAddress}
+                  />
+                )}
                 <InputLabel
                   htmlFor="orgRecordsAddr"
                   sx={{
@@ -798,6 +834,14 @@ export const AddEditOrgForm = () => {
               >
                 {t('org:bcAddrLabel')}
               </BCTypography>
+              {organizationSnapshot && !dismissedBoxes.recordsAddress && (
+                <ReferenceCompareBox
+                  title="Records Address"
+                  data={[{ value: organizationSnapshot.recordsAddress }]}
+                  onDismiss={() => dismissBox('recordsAddress')}
+                  isDismissed={dismissedBoxes.recordsAddress}
+                />
+              )}
               <Box mb={2}>
                 <FormControlLabel
                   control={
@@ -809,7 +853,7 @@ export const AddEditOrgForm = () => {
                     />
                   }
                   label={
-                    <BCTypography variant="body3">
+                    <BCTypography variant="body4">
                       {t('org:sameAddrLabel')}
                     </BCTypography>
                   }
@@ -957,16 +1001,10 @@ export const AddEditOrgForm = () => {
                     backgroundColor: 'white.main',
                     ml: 2
                   }}
-                  startIcon={
-                    <FontAwesomeIcon
-                      icon={faArrowLeft}
-                      className="small-icon"
-                    />
-                  }
-                  onClick={() => navigate(ROUTES.ORGANIZATIONS.LIST)}
+                  onClick={() => handleCancelEdit()}
                 >
                   <BCTypography variant="subtitle2" textTransform="none">
-                    {t('backBtn')}
+                    {t('cancelBtn')}
                   </BCTypography>
                 </BCButton>
               </Box>

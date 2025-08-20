@@ -46,6 +46,12 @@ const SummaryTable = ({
     )
   }
 
+  const isCellLocked = (rowIndex, row) => {
+    // Check if this is Line 7 or 9 and Lines 7&9 are locked
+    const lineNumber = parseInt(row.line)
+    return props.lines7And9Locked && (lineNumber === 7 || lineNumber === 9)
+  }
+
   const getCellConstraints = (rowIndex, columnId) => {
     const column = columns.find((col) => col.id === columnId)
     if (column.cellConstraints && column.cellConstraints[rowIndex]) {
@@ -57,6 +63,7 @@ const SummaryTable = ({
   const handleCellChange = (e, rowIndex, columnId) => {
     const enteredValue = e.target.value
     const column = columns.find((col) => col.id === columnId)
+    const constraints = getCellConstraints(rowIndex, columnId)
     
     let value
     if (column.editable && column.editableCells && column.editableCells.includes(rowIndex)) {
@@ -65,6 +72,14 @@ const SummaryTable = ({
     } else {
       // Convert to integer for non-currency fields
       value = enteredValue === '' ? 0 : parseInt(enteredValue.replace(/\D/g, ''), 10)
+    }
+
+    // Apply constraints validation
+    if (constraints.max !== undefined && parseInt(value) > constraints.max) {
+      value = constraints.max
+    }
+    if (constraints.min !== undefined && parseInt(value) < constraints.min) {
+      value = constraints.min
     }
 
     setData((prevData) => {
@@ -159,7 +174,13 @@ const SummaryTable = ({
                         : 'none',
                     maxWidth: column.maxWidth || 'none',
                     width: column.width || 'auto',
-                    padding: isCellEditable(rowIndex, column.id) ? 0 : undefined
+                    padding: isCellEditable(rowIndex, column.id) ? 0 : undefined,
+                    backgroundColor: isCellLocked(rowIndex, row) && column.id !== 'line' && column.id !== 'description' 
+                      ? '#f5f5f5' 
+                      : undefined,
+                    opacity: isCellLocked(rowIndex, row) && column.id !== 'line' && column.id !== 'description'
+                      ? 0.7
+                      : 1
                   }}
                 >
                   {isCellEditable(rowIndex, column.id) ? (
@@ -181,7 +202,7 @@ const SummaryTable = ({
                         ...props.inputProps
                       }}
                       startAdornment={
-                        column.editable && column.editableCells && column.editableCells.includes(rowIndex) ? (
+                        column.editable && column.editableCells && column.editableCells.includes(rowIndex) && row.format === 'currency' ? (
                           <InputAdornment position="start">$</InputAdornment>
                         ) : null
                       }
