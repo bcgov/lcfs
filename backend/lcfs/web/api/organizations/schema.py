@@ -18,17 +18,11 @@ class BaseConfig:
 # --------------------------------------
 
 
-class OrganizationTypeEnum(str, Enum):
-    FUEL_SUPPLIER = "Fuel Supplier"
-    ELECTRICITY_SUPPLIER = "Electricity Supplier"
-    BROKER = "Broker"
-    UTILITIES = "Utilities (local or public)"
-
-
 class OrganizationTypeBase(BaseSchema):
     organization_type_id: int
-    org_type: OrganizationTypeEnum
+    org_type: str
     description: Optional[str] = None
+    is_bceid_user: bool
 
 
 class OrganizationTypeSchema(OrganizationTypeBase):
@@ -174,7 +168,7 @@ class OrganizationUpdateSchema(BaseSchema):
     edrms_record: Optional[str] = None
     has_early_issuance: bool
     organization_status_id: Optional[int] = None
-    organization_type_id: Optional[int] = None
+    organization_type_id: int
     records_address: Optional[str] = None
     credit_market_contact_name: Optional[str] = None
     credit_market_contact_email: Optional[str] = None
@@ -204,7 +198,9 @@ class OrganizationResponseSchema(BaseSchema):
     credit_market_is_buyer: Optional[bool] = False
     credits_to_sell: Optional[int] = 0
     display_in_credit_market: Optional[bool] = False
+    organization_type_id: Optional[int] = None
     org_status: Optional[OrganizationStatusSchema] = []
+    org_type: Optional[OrganizationTypeSchema] = []
     records_address: Optional[str] = None
     org_address: Optional[OrganizationAddressSchema] = []
     org_attorney_address: Optional[OrganizationAttorneyAddressSchema] = []
