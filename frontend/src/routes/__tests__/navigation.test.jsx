@@ -1,7 +1,13 @@
 import React from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { createMemoryRouter, RouterProvider, useNavigate, useParams, useLocation } from 'react-router-dom'
+import {
+  createMemoryRouter,
+  RouterProvider,
+  useNavigate,
+  useParams,
+  useLocation
+} from 'react-router-dom'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { router } from '../index'
 import { useKeycloak } from '@react-keycloak/web'
@@ -40,7 +46,11 @@ vi.mock('react-router-dom', async (importOriginal) => {
 vi.mock('@/layouts/MainLayout', () => {
   const { Outlet } = require('react-router-dom')
   return {
-    MainLayout: () => <div data-test="main-layout"><Outlet /></div>
+    MainLayout: () => (
+      <div data-test="main-layout">
+        <Outlet />
+      </div>
+    )
   }
 })
 
@@ -48,18 +58,18 @@ vi.mock('@/layouts/PublicLayout', () => {
   const { Outlet } = require('react-router-dom')
   return {
     __esModule: true,
-    default: () => <div data-test="public-layout"><Outlet /></div>
+    default: () => (
+      <div data-test="public-layout">
+        <Outlet />
+      </div>
+    )
   }
 })
 
 vi.mock('@/views/Dashboard', () => ({
   Dashboard: () => {
     const location = useLocation()
-    return (
-      <div data-test="dashboard">
-        Dashboard - {location.pathname}
-      </div>
-    )
+    return <div data-test="dashboard">Dashboard - {location.pathname}</div>
   }
 }))
 
@@ -67,9 +77,7 @@ vi.mock('@/views/Organizations', () => ({
   Organizations: () => {
     const location = useLocation()
     return (
-      <div data-test="organizations">
-        Organizations - {location.pathname}
-      </div>
+      <div data-test="organizations">Organizations - {location.pathname}</div>
     )
   },
   AddEditOrg: () => {
@@ -98,7 +106,8 @@ vi.mock('@/views/Transactions', () => ({
     const searchParams = new URLSearchParams(location.search)
     return (
       <div data-test="transactions">
-        Transactions - {location.pathname} - highlighted: {searchParams.get('hid')}
+        Transactions - {location.pathname} - highlighted:{' '}
+        {searchParams.get('hid')}
       </div>
     )
   },
@@ -107,7 +116,8 @@ vi.mock('@/views/Transactions', () => ({
     const location = useLocation()
     return (
       <div data-test="add-edit-view-transaction">
-        Transaction - transactionId: {params.transactionId} - {location.pathname}
+        Transaction - transactionId: {params.transactionId} -{' '}
+        {location.pathname}
       </div>
     )
   },
@@ -116,7 +126,8 @@ vi.mock('@/views/Transactions', () => ({
     const location = useLocation()
     return (
       <div data-test="view-org-transaction">
-        Org Transaction - transactionId: {params.transactionId} - {location.pathname}
+        Org Transaction - transactionId: {params.transactionId} -{' '}
+        {location.pathname}
       </div>
     )
   }
@@ -125,11 +136,7 @@ vi.mock('@/views/Transactions', () => ({
 vi.mock('@/views/Transfers', () => ({
   Transfers: () => {
     const location = useLocation()
-    return (
-      <div data-test="transfers">
-        Transfers - {location.pathname}
-      </div>
-    )
+    return <div data-test="transfers">Transfers - {location.pathname}</div>
   },
   AddEditViewTransfer: () => {
     const params = useParams()
@@ -167,7 +174,8 @@ vi.mock('@/views/ComplianceReports/ComplianceReportViewSelector', () => ({
     const location = useLocation()
     return (
       <div data-test="compliance-report-view">
-        Report View - period: {params.compliancePeriod}, reportId: {params.complianceReportId} - {location.pathname}
+        Report View - period: {params.compliancePeriod}, reportId:{' '}
+        {params.complianceReportId} - {location.pathname}
       </div>
     )
   }
@@ -176,18 +184,15 @@ vi.mock('@/views/ComplianceReports/ComplianceReportViewSelector', () => ({
 vi.mock('@/views/FuelCodes', () => ({
   FuelCodes: () => {
     const location = useLocation()
-    return (
-      <div data-test="fuel-codes">
-        Fuel Codes - {location.pathname}
-      </div>
-    )
+    return <div data-test="fuel-codes">Fuel Codes - {location.pathname}</div>
   },
   AddEditFuelCode: () => {
     const params = useParams()
     const location = useLocation()
     return (
       <div data-test="add-edit-fuel-code">
-        Add/Edit Fuel Code - fuelCodeID: {params.fuelCodeID || 'new'} - {location.pathname}
+        Add/Edit Fuel Code - fuelCodeID: {params.fuelCodeID || 'new'} -{' '}
+        {location.pathname}
       </div>
     )
   }
@@ -222,20 +227,26 @@ vi.mock('@/views/Users', () => ({
     const location = useLocation()
     return (
       <div data-test={`add-edit-user-${userType || 'default'}`}>
-        Add/Edit User {userType} - userID: {params.userID} - orgID: {params.orgID} - {location.pathname}
+        Add/Edit User {userType} - userID: {params.userID} - orgID:{' '}
+        {params.orgID} - {location.pathname}
       </div>
     )
   }
 }))
 
-vi.mock('@/views/Admin/AdminMenu/components/ViewUser', () => ({
+vi.mock('@/views/Admin/AdminMenu/components/UserDetailsCard', () => ({
   __esModule: true,
-  default: ({ userType }) => {
+  default: ({ addMode, userType }) => {
     const params = useParams()
     const location = useLocation()
+    const testId = addMode
+      ? `user-details-card-add-${userType || 'default'}`
+      : `user-details-card-view-${userType || 'default'}`
+
     return (
-      <div data-test={`view-user-${userType || 'default'}`}>
-        View User {userType} - userID: {params.userID} - orgID: {params.orgID} - {location.pathname}
+      <div data-test={testId}>
+        {addMode ? 'Add' : 'View'} User {userType || 'default'} - userID:{' '}
+        {params.userID} - orgID: {params.orgID} - {location.pathname}
       </div>
     )
   }
@@ -244,11 +255,7 @@ vi.mock('@/views/Admin/AdminMenu/components/ViewUser', () => ({
 vi.mock('@/components/NotFound', () => ({
   NotFound: () => {
     const location = useLocation()
-    return (
-      <div data-test="not-found">
-        Not Found - {location.pathname}
-      </div>
-    )
+    return <div data-test="not-found">Not Found - {location.pathname}</div>
   }
 }))
 
@@ -259,7 +266,8 @@ vi.mock('@/views/FuelSupplies/AddEditFuelSupplies', () => ({
     const location = useLocation()
     return (
       <div data-test="add-edit-fuel-supplies">
-        Add/Edit Fuel Supplies - period: {params.compliancePeriod}, reportId: {params.complianceReportId} - {location.pathname}
+        Add/Edit Fuel Supplies - period: {params.compliancePeriod}, reportId:{' '}
+        {params.complianceReportId} - {location.pathname}
       </div>
     )
   }
@@ -271,7 +279,8 @@ vi.mock('@/views/NotionalTransfers', () => ({
     const location = useLocation()
     return (
       <div data-test="add-edit-notional-transfers">
-        Add/Edit Notional Transfers - period: {params.compliancePeriod}, reportId: {params.complianceReportId} - {location.pathname}
+        Add/Edit Notional Transfers - period: {params.compliancePeriod},
+        reportId: {params.complianceReportId} - {location.pathname}
       </div>
     )
   }
@@ -283,7 +292,8 @@ vi.mock('@/views/AllocationAgreements/AddEditAllocationAgreements', () => ({
     const location = useLocation()
     return (
       <div data-test="add-edit-allocation-agreements">
-        Add/Edit Allocation Agreements - period: {params.compliancePeriod}, reportId: {params.complianceReportId} - {location.pathname}
+        Add/Edit Allocation Agreements - period: {params.compliancePeriod},
+        reportId: {params.complianceReportId} - {location.pathname}
       </div>
     )
   }
@@ -295,7 +305,8 @@ vi.mock('@/views/OtherUses/AddEditOtherUses', () => ({
     const location = useLocation()
     return (
       <div data-test="add-edit-other-uses">
-        Add/Edit Other Uses - period: {params.compliancePeriod}, reportId: {params.complianceReportId} - {location.pathname}
+        Add/Edit Other Uses - period: {params.compliancePeriod}, reportId:{' '}
+        {params.complianceReportId} - {location.pathname}
       </div>
     )
   }
@@ -307,7 +318,8 @@ vi.mock('@/views/FinalSupplyEquipments/AddEditFinalSupplyEquipments', () => ({
     const location = useLocation()
     return (
       <div data-test="add-edit-final-supply-equipments">
-        Add/Edit Final Supply Equipments - period: {params.compliancePeriod}, reportId: {params.complianceReportId} - {location.pathname}
+        Add/Edit Final Supply Equipments - period: {params.compliancePeriod},
+        reportId: {params.complianceReportId} - {location.pathname}
       </div>
     )
   }
@@ -319,7 +331,8 @@ vi.mock('@/views/FuelExports/AddEditFuelExports', () => ({
     const location = useLocation()
     return (
       <div data-test="add-edit-fuel-exports">
-        Add/Edit Fuel Exports - period: {params.compliancePeriod}, reportId: {params.complianceReportId} - {location.pathname}
+        Add/Edit Fuel Exports - period: {params.compliancePeriod}, reportId:{' '}
+        {params.complianceReportId} - {location.pathname}
       </div>
     )
   }
@@ -419,7 +432,7 @@ describe('Dynamic Routes and Navigation', () => {
       keycloak: mockKeycloak
     })
     useCurrentUser.mockReturnValue(mockCurrentUser)
-    
+
     sessionStorage.clear()
     mockNavigate = vi.fn()
   })
@@ -445,7 +458,9 @@ describe('Dynamic Routes and Navigation', () => {
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('add-edit-view-transaction')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('add-edit-view-transaction')
+        ).toBeInTheDocument()
         expect(screen.getByText(/transactionId: 456/)).toBeInTheDocument()
         expect(screen.getByText(/\/transactions\/456/)).toBeInTheDocument()
       })
@@ -463,7 +478,9 @@ describe('Dynamic Routes and Navigation', () => {
     })
 
     it('should handle compliance report multiple parameters', async () => {
-      const testRouter = createTestRouter(['/compliance-reporting/2024/report123'])
+      const testRouter = createTestRouter([
+        '/compliance-reporting/2024/report123'
+      ])
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
@@ -493,23 +510,12 @@ describe('Dynamic Routes and Navigation', () => {
       })
     })
 
-    it('should handle nested user parameters in organizations', async () => {
+    it('should handle nested user parameters in organizations', async () => {      
       const testRouter = createTestRouter(['/organizations/org123/user456'])
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('view-user-bceid')).toBeInTheDocument()
-        expect(screen.getByText(/userID: user456/)).toBeInTheDocument()
-        expect(screen.getByText(/orgID: org123/)).toBeInTheDocument()
-      })
-    })
-
-    it('should handle edit user with multiple parameters', async () => {
-      const testRouter = createTestRouter(['/organizations/org123/user456/edit-user'])
-      renderRouterWithProviders(testRouter)
-
-      await waitFor(() => {
-        expect(screen.getByTestId('add-edit-user-bceid')).toBeInTheDocument()
+        expect(screen.getByTestId('user-details-card-view-bceid')).toBeInTheDocument()
         expect(screen.getByText(/userID: user456/)).toBeInTheDocument()
         expect(screen.getByText(/orgID: org123/)).toBeInTheDocument()
       })
@@ -523,7 +529,9 @@ describe('Dynamic Routes and Navigation', () => {
 
       await waitFor(() => {
         expect(screen.getByTestId('transactions')).toBeInTheDocument()
-        expect(screen.getByText(/highlighted: transaction123/)).toBeInTheDocument()
+        expect(
+          screen.getByText(/highlighted: transaction123/)
+        ).toBeInTheDocument()
       })
     })
 
@@ -560,7 +568,7 @@ describe('Dynamic Routes and Navigation', () => {
 
       // Navigate to organizations
       await user.click(screen.getByTestId('nav-to-organizations'))
-      
+
       await waitFor(() => {
         expect(onNavigate).toHaveBeenCalledWith('/organizations')
       })
@@ -582,7 +590,7 @@ describe('Dynamic Routes and Navigation', () => {
 
       // Navigate with state
       await user.click(screen.getByTestId('nav-with-state'))
-      
+
       await waitFor(() => {
         expect(onNavigate).toHaveBeenCalledWith('/organizations/123')
       })
@@ -615,8 +623,12 @@ describe('Dynamic Routes and Navigation', () => {
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('add-edit-view-transaction')).toBeInTheDocument()
-        expect(screen.getByText(/transactionId: tx-123-abc/)).toBeInTheDocument()
+        expect(
+          screen.getByTestId('add-edit-view-transaction')
+        ).toBeInTheDocument()
+        expect(
+          screen.getByText(/transactionId: tx-123-abc/)
+        ).toBeInTheDocument()
       })
     })
 
@@ -638,22 +650,22 @@ describe('Dynamic Routes and Navigation', () => {
     })
 
     it('should build paths with multiple parameters', () => {
-      const path = buildPath('/organizations/:orgID/:userID', { 
-        orgID: '123', 
-        userID: '456' 
+      const path = buildPath('/organizations/:orgID/:userID', {
+        orgID: '123',
+        userID: '456'
       })
       expect(path).toBe('/organizations/123/456')
     })
 
     it('should build paths with missing parameters', () => {
-      const path = buildPath('/organizations/:orgID/:userID', { 
-        orgID: '123' 
+      const path = buildPath('/organizations/:orgID/:userID', {
+        orgID: '123'
       })
       expect(path).toBe('/organizations/123/:userID')
     })
 
     it('should build paths with extra parameters', () => {
-      const path = buildPath('/organizations/:orgID', { 
+      const path = buildPath('/organizations/:orgID', {
         orgID: '123',
         extra: 'ignored'
       })
@@ -677,9 +689,13 @@ describe('Dynamic Routes and Navigation', () => {
       renderRouterWithProviders(testRouter)
 
       await waitFor(() => {
-        expect(screen.getByTestId('add-edit-view-transaction')).toBeInTheDocument()
+        expect(
+          screen.getByTestId('add-edit-view-transaction')
+        ).toBeInTheDocument()
         expect(screen.getByText(/transactionId: txn456/)).toBeInTheDocument()
-        expect(screen.getByText(/\/admin-adjustment\/edit\/txn456/)).toBeInTheDocument()
+        expect(
+          screen.getByText(/\/admin-adjustment\/edit\/txn456/)
+        ).toBeInTheDocument()
       })
     })
 
@@ -694,7 +710,9 @@ describe('Dynamic Routes and Navigation', () => {
     })
 
     it('should handle compliance report nested routes', async () => {
-      const testRouter = createTestRouter(['/compliance-reporting/2024/123/supply-of-fuel'])
+      const testRouter = createTestRouter([
+        '/compliance-reporting/2024/123/supply-of-fuel'
+      ])
       renderRouterWithProviders(testRouter)
 
       // This should render the supply of fuel component for the nested route
@@ -719,7 +737,7 @@ describe('Dynamic Routes and Navigation', () => {
 
     it('should preserve location state during navigation', async () => {
       const state = { fromDashboard: true, timestamp: Date.now() }
-      
+
       const testRouter = createTestRouter([
         { pathname: '/organizations/123', state }
       ])

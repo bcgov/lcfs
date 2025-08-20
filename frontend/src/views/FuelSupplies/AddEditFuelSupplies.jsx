@@ -131,6 +131,10 @@ export const AddEditFuelSupplies = () => {
     [fuelSupplyData, complianceReportId, compliancePeriod, isSupplemental]
   )
 
+  const onFirstDataRendered = useCallback((params) => {
+    params.api.autoSizeAllColumns()
+  }, [])
+
   useEffect(() => {
     const updatedColumnDefs = fuelSupplyColDefs(
       optionsData,
@@ -267,6 +271,7 @@ export const AddEditFuelSupplies = () => {
       setTimeout(() => {
         updateIsCanadaProducedVisibility()
       }, 0)
+      params.api.autoSizeAllColumns()
     },
     [optionsData, updateIsCanadaProducedVisibility]
   )
@@ -389,6 +394,7 @@ export const AddEditFuelSupplies = () => {
             onCellValueChanged={onCellValueChanged}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
+            onFirstDataRendered={onFirstDataRendered}
             stopEditingWhenCellsLoseFocus
             saveButtonProps={{
               enabled: true,

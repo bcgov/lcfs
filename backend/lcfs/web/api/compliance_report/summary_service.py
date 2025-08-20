@@ -108,6 +108,29 @@ class ComplianceReportSummaryService:
         self.other_uses_repo = other_uses_repo
         self.compliance_data_service = compliance_data_service
 
+    async def _should_lock_lines_7_and_9(self, compliance_report: ComplianceReport) -> bool:
+        """
+        Check if Lines 7 and 9 should be locked for 2025+ reports with previous assessed report.
+        
+        Returns:
+            bool: True if Lines 7 and 9 should be locked (non-editable)
+        """
+        compliance_year = int(compliance_report.compliance_period.description)
+        
+        # Only lock for 2025+ reports
+        if compliance_year < 2025:
+            return False
+            
+        # Check for previous assessed report
+        if not compliance_report.supplemental_initiator:
+            prev_compliance_report = await self.cr_repo.get_assessed_compliance_report_by_period(
+                compliance_report.organization_id,
+                compliance_year - 1
+            )
+            return prev_compliance_report is not None
+            
+        return False
+
     def convert_summary_to_dict(
         self, summary_obj: ComplianceReportSummary, compliance_report: ComplianceReport = None
     ) -> ComplianceReportSummarySchema:
@@ -454,7 +477,10 @@ class ComplianceReportSummaryService:
         # After the report has been submitted, the summary becomes locked
         # so we can return the existing summary rather than re-calculating
         if summary_model.is_locked:
-            return self.convert_summary_to_dict(compliance_report.summary, compliance_report)
+            locked_summary = self.convert_summary_to_dict(compliance_report.summary, compliance_report)
+            # If the summary is locked, Lines 7 and 9 are also locked
+            locked_summary.lines_7_and_9_locked = True
+            return locked_summary
 
         compliance_period_start = compliance_report.compliance_period.effective_date
         compliance_period_end = compliance_report.compliance_period.expiration_date
@@ -463,9 +489,33 @@ class ComplianceReportSummaryService:
         # Placeholder values for demonstration purposes
         # need to get these values from the db after fuel supply is implemented
 
-        # If report for previous period copy carryover amounts
-        if prev_compliance_report:
-            # TODO: if previous report exists then ensure in the UI we're disabling the line 7 & 9 for editing
+        # Auto-populate Lines 7 and 9 for 2025+ reports from previous assessed report
+        compliance_year = int(compliance_report.compliance_period.description)
+        
+        if prev_compliance_report and compliance_year >= 2025:
+            # For 2025+ reports with previous assessed report: auto-populate and lock Lines 7 & 9
+            previous_retained = {
+                "gasoline": prev_compliance_report.summary.line_6_renewable_fuel_retained_gasoline,
+                "diesel": prev_compliance_report.summary.line_6_renewable_fuel_retained_diesel,
+                "jet_fuel": prev_compliance_report.summary.line_6_renewable_fuel_retained_jet_fuel,
+            }
+            previous_obligation = {
+                "gasoline": prev_compliance_report.summary.line_8_obligation_deferred_gasoline,
+                "diesel": prev_compliance_report.summary.line_8_obligation_deferred_diesel,
+                "jet_fuel": prev_compliance_report.summary.line_8_obligation_deferred_jet_fuel,
+            }
+            
+            # Update the current summary model with auto-populated values for Lines 7 and 9
+            summary_model.line_7_previously_retained_gasoline = previous_retained["gasoline"]
+            summary_model.line_7_previously_retained_diesel = previous_retained["diesel"]
+            summary_model.line_7_previously_retained_jet_fuel = previous_retained["jet_fuel"]
+            
+            summary_model.line_9_obligation_added_gasoline = previous_obligation["gasoline"]
+            summary_model.line_9_obligation_added_diesel = previous_obligation["diesel"]
+            summary_model.line_9_obligation_added_jet_fuel = previous_obligation["jet_fuel"]
+            
+        elif prev_compliance_report:
+            # For pre-2025 reports with previous report: use previous values but don't force update
             previous_retained = {
                 "gasoline": prev_compliance_report.summary.line_6_renewable_fuel_retained_gasoline,
                 "diesel": prev_compliance_report.summary.line_6_renewable_fuel_retained_diesel,
@@ -477,6 +527,7 @@ class ComplianceReportSummaryService:
                 "jet_fuel": prev_compliance_report.summary.line_8_obligation_deferred_jet_fuel,
             }
         else:
+            # No previous assessed report: use current summary values (editable)
             previous_retained = {
                 "gasoline": summary_model.line_7_previously_retained_gasoline,
                 "diesel": summary_model.line_7_previously_retained_diesel,
@@ -613,6 +664,11 @@ class ComplianceReportSummaryService:
             can_sign,
             early_issuance_summary,
         )
+
+        # Check if Lines 7 and 9 should be locked (for draft/editable reports)
+        lines_7_and_9_locked = await self._should_lock_lines_7_and_9(compliance_report)
+        summary.lines_7_and_9_locked = lines_7_and_9_locked
+        existing_summary.lines_7_and_9_locked = lines_7_and_9_locked
 
         # Only save if summary has changed
         if existing_summary.model_dump(mode="json") != summary.model_dump(mode="json"):

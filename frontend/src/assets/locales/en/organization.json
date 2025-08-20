@@ -23,7 +23,7 @@
   "sameAsLegalNameLabel": "Same as legal name",
   "emailAddrLabel": "Email address",
   "phoneNbrLabel": "Phone number",
-  "supplierTypLabel": "Supplier type",
+  "orgTypeLabel": "Organization type",
   "regTrnLabel": "Registered for transfers",
   "registeredTransferYes": "Yes — A registered organization is able to transfer compliance units.",
   "registeredTransferNo": "No — An organization must be registered to transfer compliance units.",
@@ -73,6 +73,8 @@
   "availableCreditBalanceFootnote": "* The Available Compliance Unit Balance is the number of compliance units in an organization's balance that are available for use in achieving compliance within a specific period. It reflects the compliance units the organization had in their balance as of the March 31st reporting deadline. Compliance units generated in future periods cannot be used for prior years, and future debit obligations (such as transfers out or debit obligations from future compliance reports) will be subtracted from available balances in prior years.",
   "toUpdateMsgPrefix": "To update address information, email",
   "toUpdateMsgSuffix": "and our team will assist you.",
+  "addSuccessMessage": "Organization has been successfully added.",
+  "editSuccessMessage": "Organization has been successfully updated.",
   "linkKeyManagement": {
     "externalFormLinks": "External form links:",
     "selectLinkToCopy": "Select link to copy",
