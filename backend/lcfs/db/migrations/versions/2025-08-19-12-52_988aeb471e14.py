@@ -1,7 +1,7 @@
 """Extend lookup tables to 2030
 
 Revision ID: 988aeb471e14
-Revises: e5799ecd8dda
+Revises: 2f5a7b9c1d2e1
 Create Date: 2025-08-19 10:52:00.000000
 
 """
@@ -11,7 +11,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "988aeb471e14"
-down_revision = "e5799ecd8dda"
+down_revision = "2f5a7b9c1d2e1"
 branch_labels = None
 depends_on = None
 
@@ -109,11 +109,39 @@ def upgrade() -> None:
                 WHEN ft.fuel_type = 'LNG' AND fc.category = 'Diesel' AND eut."type" = 'Compression-ignition engine' THEN 1.0
                 WHEN ft.fuel_type = 'LNG' AND fc.category = 'Diesel' AND eut."type" = 'Unknown engine type' THEN 0.9
                 
-                -- Petroleum-based Diesel / Gasoline
-                WHEN ft.fuel_type = 'Petroleum-based diesel' AND fc.category = 'Diesel' AND eut."type" = 'Any' THEN 1.0
-                WHEN ft.fuel_type = 'Petroleum-based diesel' AND fc.category = 'Gasoline' AND eut."type" = 'Any' THEN 1.0
-                WHEN ft.fuel_type = 'Petroleum-based gasoline' AND fc.category = 'Diesel' AND eut."type" = 'Any' THEN 1.0
-                WHEN ft.fuel_type = 'Petroleum-based gasoline' AND fc.category = 'Gasoline' AND eut."type" = 'Any' THEN 1.0
+                -- Biodiesel - follows standard effectiveness ratios
+                WHEN ft.fuel_type = 'Biodiesel' AND fc.category = 'Diesel' AND eut."type" = 'Any' THEN 1.0
+                WHEN ft.fuel_type = 'Biodiesel' AND fc.category = 'Gasoline' AND eut."type" = 'Any' THEN 1.0
+                
+                -- Electricity - high effectiveness ratios for electric vehicles
+                WHEN ft.fuel_type = 'Electricity' AND fc.category = 'Diesel' AND eut."type" = 'Any' THEN 3.5
+                WHEN ft.fuel_type = 'Electricity' AND fc.category = 'Gasoline' AND eut."type" = 'Any' THEN 1.0
+                
+                -- Ethanol - standard effectiveness ratios
+                WHEN ft.fuel_type = 'Ethanol' AND fc.category = 'Diesel' AND eut."type" = 'Any' THEN 1.0
+                WHEN ft.fuel_type = 'Ethanol' AND fc.category = 'Gasoline' AND eut."type" = 'Any' THEN 1.0
+                
+                -- HDRD - standard effectiveness ratios
+                WHEN ft.fuel_type = 'HDRD' AND fc.category = 'Diesel' AND eut."type" = 'Any' THEN 1.0
+                WHEN ft.fuel_type = 'HDRD' AND fc.category = 'Gasoline' AND eut."type" = 'Any' THEN 1.0
+                
+                -- Other/Other diesel fuel - standard effectiveness ratios
+                WHEN ft.fuel_type = 'Other' AND fc.category = 'Jet fuel' AND eut."type" = 'Any' THEN 1.0
+                WHEN ft.fuel_type = 'Other diesel fuel' AND fc.category = 'Diesel' AND eut."type" = 'Any' THEN 1.0
+                
+                -- Jet fuel types - standard effectiveness ratios
+                WHEN ft.fuel_type = 'Alternative jet fuel' AND fc.category = 'Jet fuel' AND eut."type" = 'Any' THEN 1.0
+                WHEN ft.fuel_type = 'Fossil-derived jet fuel' AND fc.category = 'Jet fuel' AND eut."type" = 'Any' THEN 1.0
+                
+                -- Renewable fuels - standard effectiveness ratios
+                WHEN ft.fuel_type = 'Renewable gasoline' AND fc.category = 'Gasoline' AND eut."type" = 'Any' THEN 1.0
+                WHEN ft.fuel_type = 'Renewable naphtha' AND fc.category = 'Gasoline' AND eut."type" = 'Any' THEN 1.0
+                
+                -- Fossil-derived Diesel / Gasoline (modern fuel types for 2027-2030)
+                WHEN ft.fuel_type = 'Fossil-derived diesel' AND fc.category = 'Diesel' AND eut."type" = 'Any' THEN 1.0
+                WHEN ft.fuel_type = 'Fossil-derived diesel' AND fc.category = 'Gasoline' AND eut."type" = 'Any' THEN 1.0
+                WHEN ft.fuel_type = 'Fossil-derived gasoline' AND fc.category = 'Diesel' AND eut."type" = 'Any' THEN 1.0
+                WHEN ft.fuel_type = 'Fossil-derived gasoline' AND fc.category = 'Gasoline' AND eut."type" = 'Any' THEN 1.0
                 
                 -- Propane - Diesel / Gasoline
                 WHEN ft.fuel_type = 'Propane' AND fc.category = 'Diesel' AND eut."type" = 'Any' THEN 0.9
@@ -143,10 +171,24 @@ def upgrade() -> None:
                 OR (ft.fuel_type = 'Hydrogen' AND fc.category = 'Gasoline' AND eut."type" = 'Other or unknown')
                 OR (ft.fuel_type = 'LNG' AND fc.category = 'Diesel' AND eut."type" = 'Compression-ignition engine')
                 OR (ft.fuel_type = 'LNG' AND fc.category = 'Diesel' AND eut."type" = 'Unknown engine type')
-                OR (ft.fuel_type = 'Petroleum-based diesel' AND fc.category = 'Diesel' AND eut."type" = 'Any')
-                OR (ft.fuel_type = 'Petroleum-based diesel' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
-                OR (ft.fuel_type = 'Petroleum-based gasoline' AND fc.category = 'Diesel' AND eut."type" = 'Any')
-                OR (ft.fuel_type = 'Petroleum-based gasoline' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Biodiesel' AND fc.category = 'Diesel' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Biodiesel' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Electricity' AND fc.category = 'Diesel' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Electricity' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Ethanol' AND fc.category = 'Diesel' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Ethanol' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'HDRD' AND fc.category = 'Diesel' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'HDRD' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Other' AND fc.category = 'Jet fuel' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Other diesel fuel' AND fc.category = 'Diesel' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Alternative jet fuel' AND fc.category = 'Jet fuel' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Fossil-derived jet fuel' AND fc.category = 'Jet fuel' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Renewable gasoline' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Renewable naphtha' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Fossil-derived diesel' AND fc.category = 'Diesel' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Fossil-derived diesel' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Fossil-derived gasoline' AND fc.category = 'Diesel' AND eut."type" = 'Any')
+                OR (ft.fuel_type = 'Fossil-derived gasoline' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
                 OR (ft.fuel_type = 'Propane' AND fc.category = 'Diesel' AND eut."type" = 'Any')
                 OR (ft.fuel_type = 'Propane' AND fc.category = 'Gasoline' AND eut."type" = 'Any')
             )
