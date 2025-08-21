@@ -55,6 +55,14 @@ export const OrganizationProfile = ({
               {Math.abs(orgBalanceInfo?.reservedBalance || 0).toLocaleString()})
             </BCTypography>
           </Role>
+          {orgData?.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED && (
+            <BCTypography variant="body4">
+              <strong>{t('org:enrolledInCreditMarket')}:</strong>{' '}
+              {orgData?.displayInCreditMarket
+                ? t('common:yes')
+                : t('common:no')}
+            </BCTypography>
+          )}
         </BCBox>
 
         {/* Right Column */}
@@ -81,13 +89,6 @@ export const OrganizationProfile = ({
               ? t('org:registeredTransferYes')
               : t('org:registeredTransferNo')}
           </BCTypography>
-
-          {orgData?.orgStatus.status === ORGANIZATION_STATUSES.REGISTERED && (
-            <BCTypography variant="body4">
-              <strong>{t('org:creditTradingEnabledLabel')}:</strong>{' '}
-              {orgData?.creditTradingEnabled ? t('common:yes') : t('common:no')}
-            </BCTypography>
-          )}
 
           {(hasRoles(roles.government) || orgData?.hasEarlyIssuance) && (
             <BCTypography variant="body4">
