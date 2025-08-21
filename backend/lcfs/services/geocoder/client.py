@@ -505,7 +505,7 @@ class BCGeocoderService:
     ) -> GeocodingResult:
         """Reverse geocode using Nominatim API."""
         self._metrics["nominatim_calls"] += 1
-        logger.debug(f"Reverse geocoding with Nominatim: {latitude}, {longitude}")
+        logger.debug("Reverse geocoding with Nominatim invoked.")
         
         params = {
             "lat": latitude,
