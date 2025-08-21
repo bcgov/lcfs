@@ -893,7 +893,7 @@ async def test_calculate_renewable_fuel_target_summary_copy_lines_6_and_8(
     # Set required renewable fuel values to match the summary model.
     expected_eligible_renewable_fuel_required = {
         "gasoline": 500.0,  # 5% of 10000
-        "diesel": 800.0,    # 4% of 20000  
+        "diesel": 800.0,  # 4% of 20000
         "jet_fuel": 900.0,  # 3% of 30000
     }
     summary_model.line_4_eligible_renewable_fuel_required_gasoline = (
@@ -1036,9 +1036,7 @@ async def test_can_sign_flag_logic(
     mock_repo.get_compliance_report_by_id = AsyncMock(
         return_value=mock_compliance_report
     )
-    mock_summary_repo.aggregate_other_uses_quantity = AsyncMock(
-        return_value={"gasoline": 50, "diesel": 25, "jet_fuel": 10}
-    )
+
     mock_summary_repo.get_assessed_compliance_report_by_period = AsyncMock(
         return_value=MagicMock(
             summary=MagicMock(
@@ -1121,45 +1119,6 @@ async def test_can_sign_flag_logic(
 
     # Assert that `can_sign` is False
     assert result.can_sign is False
-
-
-@pytest.mark.anyio
-@pytest.mark.parametrize(
-    "fossil_derived, agg_quantities_return, agg_other_uses_return, compliance_report_id, expected_result",
-    [
-        (
-            True,
-            {"diesel": 100.0},
-            {"gasoline": 50.0},
-            1,
-            {"diesel": 100.0, "gasoline": 50.0},
-        ),
-        (
-            False,
-            {"gasoline": 200.0},
-            {"diesel": 75.0, "jet-fuel": 25.0},
-            2,
-            {"gasoline": 200.0, "diesel": 75.0, "jet-fuel": 25.0},
-        ),
-    ],
-)
-async def test_calculate_fuel_quantities_parametrized(
-    compliance_report_summary_service,
-    mock_summary_repo,
-    mock_trxn_repo,
-    mock_fuel_supply_repo,
-    fossil_derived,
-    agg_quantities_return,
-    agg_other_uses_return,
-    compliance_report_id,
-    expected_result,
-):
-    mock_summary_repo.aggregate_quantities.return_value = agg_quantities_return
-    mock_summary_repo.aggregate_other_uses_quantity.return_value = agg_other_uses_return
-    result = await compliance_report_summary_service.calculate_fuel_quantities(
-        compliance_report_id, [], fossil_derived
-    )
-    assert result == expected_result
 
 
 @pytest.mark.anyio
@@ -2129,7 +2088,6 @@ async def test_quarterly_notional_transfer_calculation_logic(
 
     # Mock aggregate methods to return empty results
     mock_summary_repo.aggregate_quantities.return_value = {}
-    mock_summary_repo.aggregate_other_uses_quantity.return_value = {}
 
     # Call the compliance report summary calculation
     result = (
@@ -2154,17 +2112,19 @@ async def test_penalty_override_enabled_2024_compliance_period(
     compliance_report_summary_service,
 ):
     """Test penalty override fields are available for 2024+ compliance periods"""
-    from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+    from lcfs.db.models.compliance.ComplianceReportSummary import (
+        ComplianceReportSummary,
+    )
     from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
     from datetime import datetime, timezone
-    
+
     # Create a 2024 compliance report
     compliance_report = MagicMock(spec=ComplianceReport)
     compliance_report.compliance_period = MagicMock()
     compliance_report.compliance_period.description = "2024"
-    
+
     penalty_date = datetime(2024, 6, 15, 10, 30, 0, tzinfo=timezone.utc)
-    
+
     summary_obj = ComplianceReportSummary(
         compliance_report_id=1,
         penalty_override_enabled=True,
@@ -2179,11 +2139,13 @@ async def test_penalty_override_enabled_2024_compliance_period(
         # Initialize other required fields
         line_11_fossil_derived_base_fuel_total=0,
         line_21_non_compliance_penalty_payable=0,
-        total_non_compliance_penalty_payable=0
+        total_non_compliance_penalty_payable=0,
     )
-    
-    result = compliance_report_summary_service.convert_summary_to_dict(summary_obj, compliance_report)
-    
+
+    result = compliance_report_summary_service.convert_summary_to_dict(
+        summary_obj, compliance_report
+    )
+
     assert result.penalty_override_enabled is True
     assert result.renewable_penalty_override == 1500.75
     assert result.low_carbon_penalty_override == 750.50
@@ -2196,17 +2158,19 @@ async def test_penalty_override_disabled_pre_2024_compliance_period(
     compliance_report_summary_service,
 ):
     """Test penalty override fields are disabled for pre-2024 compliance periods"""
-    from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+    from lcfs.db.models.compliance.ComplianceReportSummary import (
+        ComplianceReportSummary,
+    )
     from lcfs.db.models.compliance.ComplianceReport import ComplianceReport
     from datetime import datetime, timezone
-    
+
     # Create a 2023 compliance report
     compliance_report = MagicMock(spec=ComplianceReport)
     compliance_report.compliance_period = MagicMock()
     compliance_report.compliance_period.description = "2023"
-    
+
     penalty_date = datetime(2023, 6, 15, 10, 30, 0, tzinfo=timezone.utc)
-    
+
     summary_obj = ComplianceReportSummary(
         compliance_report_id=1,
         penalty_override_enabled=True,  # Should be ignored for 2023
@@ -2221,11 +2185,13 @@ async def test_penalty_override_disabled_pre_2024_compliance_period(
         # Initialize other required fields
         line_11_fossil_derived_base_fuel_total=0,
         line_21_non_compliance_penalty_payable=0,
-        total_non_compliance_penalty_payable=0
+        total_non_compliance_penalty_payable=0,
     )
-    
-    result = compliance_report_summary_service.convert_summary_to_dict(summary_obj, compliance_report)
-    
+
+    result = compliance_report_summary_service.convert_summary_to_dict(
+        summary_obj, compliance_report
+    )
+
     # All penalty override fields should be disabled/None for pre-2024
     assert result.penalty_override_enabled is False
     assert result.renewable_penalty_override is None
@@ -2239,11 +2205,13 @@ async def test_penalty_override_without_compliance_report(
     compliance_report_summary_service,
 ):
     """Test penalty override fields are disabled when no compliance report is provided"""
-    from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+    from lcfs.db.models.compliance.ComplianceReportSummary import (
+        ComplianceReportSummary,
+    )
     from datetime import datetime, timezone
-    
+
     penalty_date = datetime(2024, 6, 15, 10, 30, 0, tzinfo=timezone.utc)
-    
+
     summary_obj = ComplianceReportSummary(
         compliance_report_id=1,
         penalty_override_enabled=True,
@@ -2258,11 +2226,13 @@ async def test_penalty_override_without_compliance_report(
         # Initialize other required fields
         line_11_fossil_derived_base_fuel_total=0,
         line_21_non_compliance_penalty_payable=0,
-        total_non_compliance_penalty_payable=0
+        total_non_compliance_penalty_payable=0,
     )
-    
-    result = compliance_report_summary_service.convert_summary_to_dict(summary_obj, None)
-    
+
+    result = compliance_report_summary_service.convert_summary_to_dict(
+        summary_obj, None
+    )
+
     # All penalty override fields should be disabled/None when no compliance report
     assert result.penalty_override_enabled is False
     assert result.renewable_penalty_override is None
@@ -2276,19 +2246,19 @@ async def test_calculate_non_compliance_penalty_with_override_scenarios(
     compliance_report_summary_service, compliance_report_summary_row_schema
 ):
     """Test penalty calculation scenarios with different override states"""
-    
+
     # Test scenario 1: Normal penalty calculation (no override)
     mock_renewable_summary = [
         compliance_report_summary_row_schema(
             line=11, gasoline=500, diesel=750, jet_fuel=250, total_value=1500
         )
     ]
-    
+
     penalty_payable_units = -2  # Should result in penalty
     result = compliance_report_summary_service.calculate_non_compliance_penalty_summary(
         penalty_payable_units, mock_renewable_summary
     )
-    
+
     assert len(result) == 3
     # Line 11 (renewable fuel penalty) - can be int, string, or legacy format
     assert result[0].line in [11, "11", "11 | 22"]
@@ -2299,13 +2269,13 @@ async def test_calculate_non_compliance_penalty_with_override_scenarios(
     # Total
     assert result[2].line is None
     assert result[2].total_value == 2700  # 1500 + 1200
-    
+
     # Test scenario 2: Zero penalty units
     penalty_payable_units = 0
     result = compliance_report_summary_service.calculate_non_compliance_penalty_summary(
         penalty_payable_units, mock_renewable_summary
     )
-    
+
     assert len(result) == 3
     assert result[1].total_value == 0  # No penalty when units are 0
     assert result[2].total_value == 1500  # Only renewable penalty
@@ -2314,20 +2284,22 @@ async def test_calculate_non_compliance_penalty_with_override_scenarios(
 @pytest.mark.anyio
 async def test_penalty_override_calculation_integration():
     """Test that penalty override values are properly used in total calculation"""
-    from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-    
+    from lcfs.db.models.compliance.ComplianceReportSummary import (
+        ComplianceReportSummary,
+    )
+
     # This would typically be tested at the repository level where the total is calculated
     # based on override state, but we can test the logic here
-    
+
     summary_obj = ComplianceReportSummary()
-    
+
     # Test with override enabled
     summary_obj.penalty_override_enabled = True
     summary_obj.renewable_penalty_override = 1000.0
     summary_obj.low_carbon_penalty_override = 500.0
     summary_obj.line_11_fossil_derived_base_fuel_total = 1500.0  # Should be ignored
     summary_obj.line_21_non_compliance_penalty_payable = 750.0  # Should be ignored
-    
+
     # This logic would be in the repository when saving
     if summary_obj.penalty_override_enabled:
         renewable_override = summary_obj.renewable_penalty_override or 0
@@ -2337,12 +2309,12 @@ async def test_penalty_override_calculation_integration():
         line_11_total = summary_obj.line_11_fossil_derived_base_fuel_total or 0
         line_21_total = summary_obj.line_21_non_compliance_penalty_payable or 0
         expected_total = line_11_total + line_21_total
-    
+
     assert expected_total == 1500.0  # 1000 + 500 (override values)
-    
+
     # Test with override disabled
     summary_obj.penalty_override_enabled = False
-    
+
     if summary_obj.penalty_override_enabled:
         renewable_override = summary_obj.renewable_penalty_override or 0
         low_carbon_override = summary_obj.low_carbon_penalty_override or 0
@@ -2351,41 +2323,45 @@ async def test_penalty_override_calculation_integration():
         line_11_total = summary_obj.line_11_fossil_derived_base_fuel_total or 0
         line_21_total = summary_obj.line_21_non_compliance_penalty_payable or 0
         expected_total = line_11_total + line_21_total
-    
+
     assert expected_total == 2250.0  # 1500 + 750 (calculated values)
 
 
 @pytest.mark.anyio
 async def test_penalty_override_with_null_values():
     """Test penalty override calculation with null override values"""
-    from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-    
+    from lcfs.db.models.compliance.ComplianceReportSummary import (
+        ComplianceReportSummary,
+    )
+
     summary_obj = ComplianceReportSummary()
     summary_obj.penalty_override_enabled = True
     summary_obj.renewable_penalty_override = None  # Null value
     summary_obj.low_carbon_penalty_override = 500.0
-    
+
     # Test the null handling logic
     renewable_override = summary_obj.renewable_penalty_override or 0
     low_carbon_override = summary_obj.low_carbon_penalty_override or 0
     expected_total = renewable_override + low_carbon_override
-    
+
     assert expected_total == 500.0  # 0 + 500 (null treated as 0)
 
 
 @pytest.mark.anyio
 async def test_penalty_override_with_zero_values():
     """Test penalty override calculation with explicit zero values"""
-    from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
-    
+    from lcfs.db.models.compliance.ComplianceReportSummary import (
+        ComplianceReportSummary,
+    )
+
     summary_obj = ComplianceReportSummary()
     summary_obj.penalty_override_enabled = True
     summary_obj.renewable_penalty_override = 0.0
     summary_obj.low_carbon_penalty_override = 0.0
-    
+
     # Test the zero handling logic
     renewable_override = summary_obj.renewable_penalty_override or 0
     low_carbon_override = summary_obj.low_carbon_penalty_override or 0
     expected_total = renewable_override + low_carbon_override
-    
+
     assert expected_total == 0.0  # 0 + 0 (explicit zeros)
