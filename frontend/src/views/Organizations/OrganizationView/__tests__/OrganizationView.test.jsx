@@ -188,9 +188,9 @@ describe('OrganizationView Component Tests', () => {
   it('shows no for early issuance if user is government', () => {
     setupRoleTest(roles.government, true)
     expect(screen.getByText(/Early issuance reporting/i)).toBeInTheDocument()
-    // Get all "No" texts and verify there is 1 (for early issuance)
+    // Get all "No" texts and verify there is 1 (for early issuance) and 1 for enrolled Credit Market
     const noTexts = screen.getAllByText(/^No$/i)
-    expect(noTexts).toHaveLength(1)
+    expect(noTexts).toHaveLength(2)
   })
 
   it('has a functioning clear filters button', () => {
