@@ -255,7 +255,7 @@ class BCGeocoderService:
             await self._cache.set(cache_key, result)
             return result
         except Exception as e:
-            logger.error(f"Reverse geocoding failed for {latitude}, {longitude}: {e}")
+            logger.error(f"Reverse geocoding failed: {e}")
             result = GeocodingResult(
                 success=False,
                 error=f"Reverse geocoding failed: {e}"
