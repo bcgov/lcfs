@@ -19,9 +19,43 @@ import {
 import { StandardCellWarningAndErrors } from '@/utils/grid/errorRenderers'
 import { apiRoutes } from '@/constants/routes'
 import { numberFormatter } from '@/utils/formatters.js'
-import { ADDRESS_SEARCH_URL } from '@/constants/common'
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
 import { sortMixedStrings } from './components/utils'
+
+// Helper function for address autocomplete within grid
+const addressAutocompleteQuery = async ({ client, queryKey }) => {
+  const partialAddress = queryKey[1]
+  if (!partialAddress || partialAddress.length < 3) {
+    return []
+  }
+
+  try {
+    // Use the new geocoder API endpoint with authenticated client
+    const response = await client.post(apiRoutes.geocoderAutocomplete, {
+      partial_address: partialAddress,
+      max_results: 5
+    })
+
+    const data = response.data
+    
+    // Return in the format expected by AsyncSuggestionEditor
+    // Now suggestions come as complete AddressSchema objects
+    return data.suggestions?.map((addr) => ({
+      label: addr.full_address,
+      fullAddress: addr.full_address,
+      streetAddress: addr.street_address,
+      city: addr.city,
+      province: addr.province,
+      postalCode: addr.postal_code,
+      latitude: addr.latitude,
+      longitude: addr.longitude,
+      score: addr.score
+    })) || []
+  } catch (error) {
+    console.error('Address autocomplete failed:', error)
+    return []
+  }
+}
 
 export const finalSupplyEquipmentColDefs = (
   optionsData,
@@ -320,38 +354,27 @@ export const finalSupplyEquipmentColDefs = (
       ),
       cellEditor: AsyncSuggestionEditor,
       cellEditorParams: (params) => ({
-        queryKey: 'fuel-code-search',
-        queryFn: async ({ queryKey, client }) => {
-          const response = await fetch(
-            ADDRESS_SEARCH_URL + encodeURIComponent(queryKey[1])
-          )
-          if (!response.ok) throw new Error('Network response was not ok')
-          const data = await response.json()
-          return data.features.map((feature) => ({
-            label: feature.properties.fullAddress || '',
-            coordinates: feature.geometry.coordinates
-          }))
-        },
+        queryKey: 'address-autocomplete',
+        queryFn: addressAutocompleteQuery,
         optionLabel: 'label'
       }),
       valueSetter: async (params) => {
         if (params.newValue === '' || params.newValue?.name === '') {
           params.data.streetAddress = ''
           params.data.city = ''
+          params.data.postalCode = ''
           params.data.latitude = ''
           params.data.longitude = ''
         } else if (typeof params.newValue === 'string') {
           // Directly set the street address if it's a custom input
           params.data.streetAddress = params.newValue
-        } else {
-          const [street = '', city = '', province = ''] = params.newValue.label
-            .split(',')
-            .map((val) => val.trim())
-          const [long, lat] = params.newValue.coordinates
-          params.data.streetAddress = street
-          params.data.city = city
-          params.data.latitude = lat
-          params.data.longitude = long
+        } else if (params.newValue?.fullAddress) {
+          // Address selected from autocomplete - we already have all the data
+          params.data.streetAddress = params.newValue.streetAddress || params.newValue.fullAddress
+          params.data.city = params.newValue.city || ''
+          params.data.postalCode = params.newValue.postalCode || ''
+          params.data.latitude = params.newValue.latitude || ''
+          params.data.longitude = params.newValue.longitude || ''
         }
         return true
       },
