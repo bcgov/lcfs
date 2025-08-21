@@ -18,7 +18,7 @@ export const schemaValidation = Yup.object({
       'Invalid format. Only numbers, spaces, parentheses, plus signs, and hyphens are allowed.'
     )
     .max(30, 'Phone number is too long.'),
-  orgSupplierType: Yup.string().required('Supplier type is required.'),
+  orgType: Yup.string().required('Organization type is required.'),
   orgRegForTransfers: Yup.string().required(
     'Registered For Transfers is required.'
   ),
@@ -38,5 +38,8 @@ export const schemaValidation = Yup.object({
   orgHeadOfficeProvince: Yup.string().nullable(),
   orgHeadOfficeCountry: Yup.string().nullable(),
   orgHeadOfficePostalCodeZipCode: Yup.string().nullable(),
-  hasEarlyIssuance: Yup.string().required('Early issuance setting is required')
+  hasEarlyIssuance: Yup.string().required('Early issuance setting is required'),
+  orgCreditTradingEnabled: Yup.string().required(
+    'Credit trading market setting is required'
+  )
 })

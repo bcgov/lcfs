@@ -40,6 +40,31 @@ export const useOrganization = (orgID, options = {}) => {
   })
 }
 
+export const useOrganizationTypes = (options = {}) => {
+  const client = useApiService()
+
+  const {
+    staleTime = DEFAULT_STALE_TIME,
+    cacheTime = DEFAULT_CACHE_TIME,
+    enabled = true,
+    ...restOptions
+  } = options
+
+  return useQuery({
+    queryKey: ['organization-types'],
+    queryFn: async () => {
+      const response = await client.get('/organizations/types/')
+      return response.data
+    },
+    enabled,
+    staleTime,
+    cacheTime,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    ...restOptions
+  })
+}
+
 export const useOrganizationUser = (orgID, userID, options = {}) => {
   const client = useApiService()
 
