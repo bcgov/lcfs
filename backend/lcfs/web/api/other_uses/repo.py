@@ -231,6 +231,8 @@ class OtherUsesRepository:
                     ou.provision_of_the_act.name if ou.provision_of_the_act else None
                 ),
                 fuel_code=(ou.fuel_code.fuel_code if ou.fuel_code else None),
+                is_canada_produced=ou.is_canada_produced,
+                is_q1_supplied=ou.is_q1_supplied,
                 expected_use=ou.expected_use.name,
                 units=ou.units,
                 rationale=ou.rationale,

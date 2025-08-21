@@ -117,3 +117,5 @@ export const NEW_REGULATION_YEAR = 2025
 export const CURRENT_COMPLIANCE_YEAR = (
   LEGISLATION_TRANSITION_YEAR + 1
 ).toString()
+export const DEFAULT_CI_FUEL_CODE =
+  'Default carbon intensity - section 19 (b) (ii)'

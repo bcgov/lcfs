@@ -20,6 +20,7 @@ import {
   extractOriginalFuelCode,
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
+import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -209,6 +210,7 @@ export const otherUsesColDefs = (
   },
   {
     field: 'isCanadaProduced',
+    headerComponent: RequiredHeader,
     headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
@@ -221,32 +223,28 @@ export const otherUsesColDefs = (
     },
     editable: (params) => {
       const complianceYear = parseInt(compliancePeriod, 10)
-      debugger
-      const isRenewable = optionsData?.fuelTypes?.find(
+      const isRenewable = !optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
-      )?.fossil
+      )?.fossilDerived
       return (
-        complianceYear >= 2025 &&
+        params.data.fuelCategory === 'Diesel' &&
+        complianceYear >= NEW_REGULATION_YEAR &&
         isRenewable &&
-        params.data.provisionOfTheAct ===
-          'Default carbon intensity - section 19 (b) (ii)'
+        params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
       )
     },
-    hide: (params) => {
-      const complianceYear = parseInt(compliancePeriod, 10)
-      const isRenewable = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )?.renewable
-      return !(
-        complianceYear >= 2025 &&
-        isRenewable &&
-        params.data.provisionOfTheAct ===
-          'Default carbon intensity - section 19 (b) (ii)'
-      )
-    }
+    valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : 'No'),
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.isCanadaProduced = params.newValue === 'Yes'
+      }
+      return true
+    },
+    minWidth: 220
   },
   {
     field: 'isQ1Supplied',
+    headerComponent: RequiredHeader,
     headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
     cellEditor: AutocompleteCellEditor,
     cellRenderer: SelectRenderer,
@@ -259,21 +257,21 @@ export const otherUsesColDefs = (
     },
     editable: (params) => {
       const complianceYear = parseInt(compliancePeriod, 10)
-      const isRenewable = optionsData?.fuelTypes?.find(
+      const isRenewable = !optionsData?.fuelTypes?.find(
         (obj) => params.data.fuelType === obj.fuelType
-      )?.renewable
+      )?.fossilDerived
       const fuelCode = params.data.fuelCode
       const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
-      return complianceYear === 2025 && isRenewable && isNonCanadian
+      return (
+        complianceYear === NEW_REGULATION_YEAR && isRenewable && isNonCanadian
+      )
     },
-    hide: (params) => {
-      const complianceYear = parseInt(compliancePeriod, 10)
-      const isRenewable = optionsData?.fuelTypes?.find(
-        (obj) => params.data.fuelType === obj.fuelType
-      )?.renewable
-      const fuelCode = params.data.fuelCode
-      const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
-      return !(complianceYear === 2025 && isRenewable && isNonCanadian)
+    valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
+    valueSetter: (params) => {
+      if (params.newValue) {
+        params.data.isQ1Supplied = params.newValue === 'Yes'
+      }
+      return true
     }
   },
   {

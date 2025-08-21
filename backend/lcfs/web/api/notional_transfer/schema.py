@@ -32,6 +32,8 @@ class NotionalTransferChangelogSchema(BaseSchema):
     legal_name: str
     address_for_service: str
     fuel_category: FuelCategorySchema
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
     received_or_transferred: ReceivedOrTransferredEnumSchema
     quantity: Optional[int] = None
     q1_quantity: Optional[int] = None
@@ -51,6 +53,8 @@ class NotionalTransferCreateSchema(BaseSchema):
     legal_name: str
     address_for_service: str
     fuel_category: str
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
     received_or_transferred: ReceivedOrTransferredEnumSchema
     quantity: Optional[int] = None
     q1_quantity: Optional[int] = None

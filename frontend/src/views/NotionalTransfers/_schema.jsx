@@ -108,6 +108,7 @@ export const notionalTransferColDefs = (
       headerName: i18n.t(
         'notionalTransfer:notionalTransferColLabels.addressForService'
       ),
+      minWidth: 260,
       headerComponent: RequiredHeader,
       cellEditor: 'agTextCellEditor',
       cellDataType: 'text',
@@ -132,7 +133,54 @@ export const notionalTransferColDefs = (
       },
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-      cellRenderer: SelectRenderer
+      cellRenderer: SelectRenderer,
+      minWidth: 150,
+    },
+    {
+      field: 'isCanadaProduced',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
+      cellEditor: AutocompleteCellEditor,
+      cellRenderer: SelectRenderer,
+      cellEditorParams: {
+        options: ['Yes', 'No'],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      },
+      editable: (params) => params.data?.fuelCategory === 'Diesel',
+      valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : 'No'),
+      valueSetter: (params) => {
+        if (params.newValue) {
+          params.data.isCanadaProduced = params.newValue === 'Yes'
+        }
+        return true
+      },
+      minWidth: 240
+    },
+    {
+      field: 'isQ1Supplied',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
+      cellEditor: AutocompleteCellEditor,
+      cellRenderer: SelectRenderer,
+      cellEditorParams: {
+        options: ['Yes', 'No'],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      },
+      editable: (params) => params.data?.fuelCategory === 'Diesel',
+      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
+      valueSetter: (params) => {
+        if (params.newValue) {
+          params.data.isQ1Supplied = params.newValue === 'Yes'
+        }
+        return true
+      },
+      minWidth: 160
     },
     {
       field: 'receivedOrTransferred',
@@ -152,13 +200,15 @@ export const notionalTransferColDefs = (
       },
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
-      cellRenderer: SelectRenderer
+      cellRenderer: SelectRenderer,
+      minWidth: 240
     },
     {
       field: 'quantity',
       headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
       headerComponent: RequiredHeader,
       cellEditor: NumberEditor,
+      minWidth: 170,
       cellEditorParams: {
         precision: 0,
         min: 0,
@@ -447,8 +497,7 @@ export const changelogCommonColDefs = (highlight = true) => [
     headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
     field: 'quantity',
     valueFormatter,
-    cellStyle: (params) =>
-      highlight && changelogCellStyle(params, 'quantity')
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'quantity')
   }
 ]
 

@@ -27,11 +27,9 @@ import {
   extractOriginalFuelCode,
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
-import { NEW_REGULATION_YEAR } from '@/constants/common'
+import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
-export const DEFAULT_CI_FUEL_CODE =
-  'Default carbon intensity - section 19 (b) (ii)'
 export const PROVISION_GHGENIUS =
   'GHGenius modelled - Section 6 (5) (d) (ii) (A)'
 
@@ -209,6 +207,8 @@ export const fuelSupplyColDefs = (
           params.data.provisionOfTheAct = null
           params.data.provisionOfTheActId = null
           params.data.fuelCode = null
+          params.data.isCanadaProduced = false
+          params.data.isQ1Supplied = false
         }
         return true
       },
@@ -360,6 +360,8 @@ export const fuelSupplyColDefs = (
             }
           }
         }
+        params.data.isCanadaProduced = false
+        params.data.isQ1Supplied = false
         return true
       },
       editable: true,
@@ -481,6 +483,8 @@ export const fuelSupplyColDefs = (
           params.data.fuelCode = undefined
           params.data.fuelCodeId = undefined
         }
+        params.data.isCanadaProduced = false
+        params.data.isQ1Supplied = false
         return true
       }
     },
@@ -518,50 +522,38 @@ export const fuelSupplyColDefs = (
       },
       minWidth: 220
     },
-    // {
-    //   field: 'isQ1Supplied',
-    //   headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
-    //   cellEditor: AutocompleteCellEditor,
-    //   cellRenderer: SelectRenderer,
-    //   cellEditorParams: {
-    //     options: ['Yes', 'No'],
-    //     multiple: false,
-    //     disableCloseOnSelect: false,
-    //     freeSolo: false,
-    //     openOnFocus: true
-    //   },
-    //   editable: (params) => {
-    //     const complianceYear = parseInt(compliancePeriod, 10)
-    //     const isRenewable = !optionsData?.fuelTypes?.find(
-    //       (obj) => params.data.fuelType === obj.fuelType
-    //     )?.fossilDerived
-    //     const fuelCode = params.data.fuelCode
-    //     const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
-    //     return (
-    //       complianceYear >= NEW_REGULATION_YEAR && isRenewable && isNonCanadian
-    //     )
-    //   },
-    //   hide: (params) => {
-    //     const complianceYear = parseInt(compliancePeriod, 10)
-    //     const isRenewable = !optionsData?.fuelTypes?.find(
-    //       (obj) => params.data.fuelType === obj.fuelType
-    //     )?.fossilDerived
-    //     const fuelCode = params.data.fuelCode
-    //     const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
-    //     return !(
-    //       complianceYear >= NEW_REGULATION_YEAR &&
-    //       isRenewable &&
-    //       isNonCanadian
-    //     )
-    //   },
-    //   valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
-    //   valueSetter: (params) => {
-    //     if (params.newValue) {
-    //       params.data.isQ1Supplied = params.newValue === 'Yes'
-    //     }
-    //     return true
-    //   }
-    // },
+    {
+      field: 'isQ1Supplied',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
+      cellEditor: AutocompleteCellEditor,
+      cellRenderer: SelectRenderer,
+      cellEditorParams: {
+        options: ['Yes', 'No'],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      },
+      editable: (params) => {
+        const complianceYear = parseInt(compliancePeriod, 10)
+        const isRenewable = !optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )?.fossilDerived
+        const fuelCode = params.data.fuelCode
+        const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
+        return (
+          complianceYear === NEW_REGULATION_YEAR && isRenewable && isNonCanadian
+        )
+      },
+      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
+      valueSetter: (params) => {
+        if (params.newValue) {
+          params.data.isQ1Supplied = params.newValue === 'Yes'
+        }
+        return true
+      }
+    },
     {
       field: 'quantity',
       headerComponent: RequiredHeader,
