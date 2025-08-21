@@ -24,6 +24,9 @@ from lcfs.db.models.user import UserProfile
 from lcfs.web.api.compliance_report.schema import (
     ComplianceReportBaseSchema,
     ComplianceReportUpdateSchema,
+    ComplianceReportStatusSchema,
+    ComplianceReportOrganizationSchema,
+    CompliancePeriodBaseSchema,
 )
 from lcfs.web.exception.exceptions import ServiceException, DataNotFoundException
 
@@ -267,7 +270,9 @@ async def test_get_compliance_report_by_id_not_found(
 async def test_get_compliance_report_by_id_unexpected_error(
     compliance_report_service, mock_repo
 ):
-    mock_repo.get_compliance_report_schema_by_id.side_effect = Exception("Unexpected error")
+    mock_repo.get_compliance_report_schema_by_id.side_effect = Exception(
+        "Unexpected error"
+    )
 
     with pytest.raises(ServiceException):
         await compliance_report_service.get_compliance_report_by_id(1, UserProfile())
@@ -572,15 +577,21 @@ async def test_create_government_initiated_supplemental_report_success(
         mock_new_report.compliance_report_id = 999
         mock_new_report.version = new_version
         mock_new_report.compliance_report_group_uuid = group_uuid
-        mock_new_report.compliance_period_id = mock_compliance_report_submitted.compliance_period_id
+        mock_new_report.compliance_period_id = (
+            mock_compliance_report_submitted.compliance_period_id
+        )
         mock_new_report.compliance_period = (
             mock_compliance_report_submitted.compliance_period
         )  # Pydantic schema
-        mock_new_report.organization_id = mock_compliance_report_submitted.organization_id
+        mock_new_report.organization_id = (
+            mock_compliance_report_submitted.organization_id
+        )
         mock_new_report.organization = (
             mock_compliance_report_submitted.organization
         )  # Pydantic schema
-        mock_new_report.current_status_id = mock_draft_status.compliance_report_status_id
+        mock_new_report.current_status_id = (
+            mock_draft_status.compliance_report_status_id
+        )
         mock_new_report.current_status = (
             mock_draft_status  # Mock configured like schema
         )
@@ -1074,7 +1085,7 @@ async def test_get_changelog_data_fuel_supplies_success(
     mock_report.supplemental_note = "Test note"
     mock_report.reporting_frequency = ReportingFrequency.ANNUAL
     mock_report.assessment_statement = "Test assessment"
-    
+
     # Mock compliance period
     mock_compliance_period = MagicMock()
     mock_compliance_period.description = "2024"
@@ -1083,7 +1094,7 @@ async def test_get_changelog_data_fuel_supplies_success(
     mock_compliance_period.expiration_date = datetime(2024, 12, 31).date()
     mock_compliance_period.effective_status = True
     mock_report.compliance_period = mock_compliance_period
-    
+
     # Mock organization
     mock_organization = MagicMock()
     mock_organization.organization_code = "TEST"
@@ -1099,7 +1110,7 @@ async def test_get_changelog_data_fuel_supplies_success(
     mock_organization.organization_type = MagicMock()
     mock_organization.organization_type.organization_type = "Supplier"
     mock_report.organization = mock_organization
-    
+
     # Mock other required fields
     mock_report.history = []
     mock_report.summary = MagicMock()
@@ -1125,7 +1136,7 @@ async def test_get_changelog_data_fuel_supplies_success(
     mock_report.summary.line_20_total_compliance_units = 0
     mock_report.summary.line_21_total_compliance_units_balance = 0
     mock_report.summary.line_22_unused_compliance_units = 0
-    
+
     # Mock transaction
     mock_report.transaction = None
 
@@ -1182,15 +1193,15 @@ async def test_get_changelog_data_fuel_supplies_success(
         mock_report.assessment_statement = None
         mock_report.legacy_id = None
         mock_report.transaction_id = None
-        
+
         # Mock current_status
         mock_report.current_status = MagicMock()
         mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
         mock_report.current_status.compliance_report_status_id = 1
         mock_report.current_status.display_order = 1
-        
+
         return [mock_report]
-    
+
     mock_repo.get_changelog_data.side_effect = mock_get_changelog_data
 
     # Create a simpler mock for deepcopy that handles our custom objects
@@ -1223,13 +1234,13 @@ async def test_get_changelog_data_fuel_supplies_success(
         mock_user.role_names = [RoleEnum.GOVERNMENT]
         mock_user.user_profile_id = 1
         mock_user.keycloak_username = "test.user"
-        
+
         # Mock user_roles for is_government_user function
         mock_user_role = MagicMock()
         mock_user_role.role = MagicMock()
         mock_user_role.role.is_government_role = True
         mock_user.user_roles = [mock_user_role]
-        
+
         # Call the service method
         result = await compliance_report_service.get_changelog_data(
             "test-group-uuid", "fuel_supplies", mock_user
@@ -1362,7 +1373,7 @@ async def test_get_changelog_data_fuel_supplies_update(
         mock_report2.current_status = MagicMock()
         mock_report2.current_status.status = ComplianceReportStatusEnum.Submitted
         return [mock_report2, mock_report1]
-    
+
     mock_repo.get_changelog_data.side_effect = mock_get_changelog_data
 
     # Create a custom deep copy function to handle our mock objects
@@ -1394,13 +1405,13 @@ async def test_get_changelog_data_fuel_supplies_update(
         mock_user.role_names = [RoleEnum.GOVERNMENT]
         mock_user.user_profile_id = 1
         mock_user.keycloak_username = "test.user"
-        
+
         # Mock user_roles for is_government_user function
         mock_user_role = MagicMock()
         mock_user_role.role = MagicMock()
         mock_user_role.role.is_government_role = True
         mock_user.user_roles = [mock_user_role]
-        
+
         # Call the service method
         result = await compliance_report_service.get_changelog_data(
             "test-group-uuid", "fuel_supplies", mock_user
@@ -1649,7 +1660,7 @@ async def test_get_changelog_data_fuel_supplies_delete(
     mock_user.user_profile_id = 1
     mock_user.keycloak_username = "test.user"
     mock_user.role_names = [RoleEnum.SUPPLIER]
-    
+
     # Call the service method
     result = await compliance_report_service.get_changelog_data(
         "test-group-uuid", "fuel_supplies", mock_user
@@ -1746,7 +1757,7 @@ async def test_get_changelog_data_with_multiple_items(
     mock_user.user_profile_id = 1
     mock_user.keycloak_username = "test.user"
     mock_user.role_names = [RoleEnum.SUPPLIER]
-    
+
     # Call the service method
     result = await compliance_report_service.get_changelog_data(
         "test-group-uuid", "fuel_supplies", mock_user
@@ -1823,7 +1834,7 @@ async def test_get_changelog_data_other_types(compliance_report_service, mock_re
         mock_report.current_status = MagicMock()
         mock_report.current_status.status = ComplianceReportStatusEnum.Submitted
         return [mock_report]
-    
+
     mock_repo.get_changelog_data.side_effect = mock_get_changelog_data
 
     # Create a mock user for the test
@@ -1831,13 +1842,13 @@ async def test_get_changelog_data_other_types(compliance_report_service, mock_re
     mock_user.user_profile_id = 1
     mock_user.keycloak_username = "test.user"
     mock_user.role_names = [RoleEnum.SUPPLIER]
-    
+
     # Mock user_roles for is_government_user function
     mock_user_role = MagicMock()
     mock_user_role.role = MagicMock()
     mock_user_role.role.is_government_role = False  # Supplier is not government
     mock_user.user_roles = [mock_user_role]
-    
+
     # Call the service method for allocation_agreements
     result = await compliance_report_service.get_changelog_data(
         "test-group-uuid", "allocation_agreements", mock_user
@@ -1882,7 +1893,7 @@ async def test_get_changelog_data_empty_results(compliance_report_service, mock_
     mock_user.user_profile_id = 1
     mock_user.keycloak_username = "test.user"
     mock_user.role_names = [RoleEnum.SUPPLIER]
-    
+
     # Call the service method
     result = await compliance_report_service.get_changelog_data(
         "test-group-uuid", "fuel_supplies", mock_user
@@ -1904,7 +1915,7 @@ async def test_get_changelog_data_invalid_type(compliance_report_service):
     mock_user.user_profile_id = 1
     mock_user.keycloak_username = "test.user"
     mock_user.role_names = [RoleEnum.SUPPLIER]
-    
+
     # Call the service method with invalid data type
     with pytest.raises(ValueError) as exc:
         await compliance_report_service.get_changelog_data(
@@ -2808,6 +2819,7 @@ async def test_update_compliance_report_non_assessment_success(
     mock_repo.create_compliance_report.assert_called_once()
     mock_snapshot_service.create_organization_snapshot.assert_called_once()
 
+
 # Analyst Assignment Service Tests
 @pytest.mark.anyio
 async def test_assign_analyst_to_report_success(compliance_report_service, mock_repo):
@@ -2816,23 +2828,25 @@ async def test_assign_analyst_to_report_success(compliance_report_service, mock_
     report_id = 1
     analyst_id = 123
     mock_user = MagicMock()
-    
+
     mock_report = MagicMock()
     mock_report.compliance_report_id = report_id
-    
+
     mock_analyst = MagicMock()
     mock_analyst.user_profile_id = analyst_id
     mock_analyst.organization_id = None  # IDIR user
     mock_analyst.user_roles = [MagicMock()]
     mock_analyst.user_roles[0].role.name = RoleEnum.ANALYST
-    
+
     mock_repo.get_compliance_report_by_id.return_value = mock_report
     mock_repo.get_user_by_id.return_value = mock_analyst
     mock_repo.assign_analyst_to_report.return_value = None
-    
+
     # Act
-    await compliance_report_service.assign_analyst_to_report(report_id, analyst_id, mock_user)
-    
+    await compliance_report_service.assign_analyst_to_report(
+        report_id, analyst_id, mock_user
+    )
+
     # Assert
     mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id)
     mock_repo.get_user_by_id.assert_called_once_with(analyst_id)
@@ -2845,16 +2859,16 @@ async def test_assign_analyst_to_report_unassign(compliance_report_service, mock
     # Arrange
     report_id = 1
     mock_user = MagicMock()
-    
+
     mock_report = MagicMock()
     mock_report.compliance_report_id = report_id
-    
+
     mock_repo.get_compliance_report_by_id.return_value = mock_report
     mock_repo.assign_analyst_to_report.return_value = None
-    
+
     # Act
     await compliance_report_service.assign_analyst_to_report(report_id, None, mock_user)
-    
+
     # Assert
     mock_repo.get_compliance_report_by_id.assert_called_once_with(report_id)
     mock_repo.get_user_by_id.assert_not_called()  # Should not call when analyst_id is None
@@ -2862,18 +2876,22 @@ async def test_assign_analyst_to_report_unassign(compliance_report_service, mock
 
 
 @pytest.mark.anyio
-async def test_assign_analyst_to_report_report_not_found(compliance_report_service, mock_repo):
+async def test_assign_analyst_to_report_report_not_found(
+    compliance_report_service, mock_repo
+):
     """Test assignment when compliance report doesnt exist"""
     # Arrange
     report_id = 999
     analyst_id = 123
     mock_user = MagicMock()
-    
+
     mock_repo.get_compliance_report_by_id.return_value = None
-    
+
     # Act & Assert
     with pytest.raises(DataNotFoundException, match="Compliance report not found"):
-        await compliance_report_service.assign_analyst_to_report(report_id, analyst_id, mock_user)
+        await compliance_report_service.assign_analyst_to_report(
+            report_id, analyst_id, mock_user
+        )
 
 
 @pytest.mark.anyio
@@ -2885,13 +2903,14 @@ async def test_get_available_analysts_success(compliance_report_service, mock_re
         MagicMock(user_profile_id=2, first_name="Jane", last_name="Smith"),
     ]
     mock_repo.get_active_idir_analysts.return_value = mock_analysts
-    
+
     # Act
     result = await compliance_report_service.get_available_analysts()
-    
+
     # Assert
     assert len(result) == 2
     mock_repo.get_active_idir_analysts.assert_called_once()
+
 
 # CHANGELOG STATUS FILTERING TESTS
 
@@ -2901,14 +2920,14 @@ async def test_get_changelog_data_filters_draft_reports_for_suppliers(
     compliance_report_service, mock_repo
 ):
     """Test that get_changelog_data does not filter draft reports for supplier users"""
-    
+
     # Create mock current status objects
     submitted_status = MagicMock()
     submitted_status.status = ComplianceReportStatusEnum.Submitted
-    
+
     draft_status = MagicMock()
     draft_status.status = ComplianceReportStatusEnum.Draft
-    
+
     # Create mock reports - one draft, one submitted
     draft_report = MagicMock()
     draft_report.nickname = "Draft Report"
@@ -2938,12 +2957,12 @@ async def test_get_changelog_data_filters_draft_reports_for_suppliers(
         "test-group-uuid", "fuel_supplies", supplier_user
     )
 
-    # Assertions - should return all reports (current state + both reports) 
+    # Assertions - should return all reports (current state + both reports)
     assert len(result) == 3  # Current State + Draft Report + Submitted Report
     assert result[0].nickname == "Current State"
     assert result[1].nickname == "Draft Report"
     assert result[2].nickname == "Submitted Report"
-    
+
     # Verify repo was called with user parameter
     mock_repo.get_changelog_data.assert_called_once_with(
         "test-group-uuid", unittest.mock.ANY, supplier_user
@@ -2955,14 +2974,14 @@ async def test_get_changelog_data_filters_draft_reports_for_government_users(
     compliance_report_service, mock_repo
 ):
     """Test that get_changelog_data filters out draft reports for government users"""
-    
+
     # Create mock current status objects
     submitted_status = MagicMock()
     submitted_status.status = ComplianceReportStatusEnum.Submitted
-    
+
     draft_status = MagicMock()
     draft_status.status = ComplianceReportStatusEnum.Draft
-    
+
     # Create mock reports - one draft, one submitted
     draft_report = MagicMock()
     draft_report.nickname = "Draft Report"
@@ -2972,7 +2991,7 @@ async def test_get_changelog_data_filters_draft_reports_for_government_users(
     draft_report.fuel_supplies = []
 
     submitted_report = MagicMock()
-    submitted_report.nickname = "Submitted Report" 
+    submitted_report.nickname = "Submitted Report"
     submitted_report.version = 2
     submitted_report.compliance_report_id = 2
     submitted_report.current_status = submitted_status
@@ -2996,19 +3015,182 @@ async def test_get_changelog_data_filters_draft_reports_for_government_users(
     assert len(result) == 2  # Current State + Submitted Report
     assert result[0].nickname == "Current State"
     assert result[1].nickname == "Submitted Report"
-    
+
     # Verify repo was called with user parameter
     mock_repo.get_changelog_data.assert_called_once_with(
         "test-group-uuid", unittest.mock.ANY, gov_user
     )
 
+@pytest.mark.anyio
+async def test_has_gov_reassessment_true_when_analyst_adjustment_newer_version(
+    compliance_report_service, mock_repo
+):
+    v1 = MagicMock()
+    v1.version = 1
+    v1.supplemental_initiator = "Government Reassessment"
+    v1.compliance_report_id = 101
+    v1.compliance_report_group_uuid = "grp"
+    v1.compliance_period_id = 15
+    v1.compliance_period = CompliancePeriodBaseSchema(
+        compliance_period_id=15, description="2024"
+    )
+    v1.organization_id = 1
+    v1.organization = ComplianceReportOrganizationSchema(
+        organization_id=1, organization_code="ORG", name="Org"
+    )
+    v1.summary = None
+    v1.current_status_id = 1
+    v1.current_status = ComplianceReportStatusSchema(
+        compliance_report_status_id=1,
+        status=ComplianceReportStatusEnum.Analyst_adjustment.value,
+    )
+    v1.assigned_analyst = None
+    v1.history = []
 
-@pytest.mark.anyio 
+    v0 = MagicMock()
+    v0.version = 0
+    v0.supplemental_initiator = None
+    v0.compliance_report_id = 100
+    v0.compliance_report_group_uuid = "grp"
+    v0.compliance_period_id = 15
+    v0.compliance_period = CompliancePeriodBaseSchema(
+        compliance_period_id=15, description="2024"
+    )
+    v0.organization_id = 1
+    v0.organization = ComplianceReportOrganizationSchema(
+        organization_id=1, organization_code="ORG", name="Org"
+    )
+    v0.summary = None
+    v0.current_status_id = 1
+    v0.current_status = ComplianceReportStatusSchema(
+        compliance_report_status_id=1,
+        status=ComplianceReportStatusEnum.Assessed.value,
+    )
+    v0.assigned_analyst = None
+    v0.history = []
+
+    mock_repo.get_compliance_report_chain = AsyncMock(return_value=[v1, v0])
+
+    current = ComplianceReportBaseSchema(
+        compliance_report_id=100,
+        compliance_report_group_uuid="grp",
+        version=0,
+        supplemental_initiator=None,
+        compliance_period_id=15,
+        compliance_period=CompliancePeriodBaseSchema(
+            compliance_period_id=15, description="2024"
+        ),
+        organization_id=1,
+        organization=ComplianceReportOrganizationSchema(
+            organization_id=1, organization_code="ORG", name="Org"
+        ),
+        summary=None,
+        current_status_id=1,
+        current_status=ComplianceReportStatusSchema(
+            compliance_report_status_id=1,
+            status=ComplianceReportStatusEnum.Assessed.value,
+        ),
+        assigned_analyst=None,
+        history=[],
+        nickname="",
+        supplemental_note="",
+        reporting_frequency="Annual",
+        assessment_statement="",
+    )
+    mock_repo.get_compliance_report_schema_by_id = AsyncMock(return_value=current)
+
+    result = await compliance_report_service.get_compliance_report_chain(1, MagicMock())
+    assert result.has_government_reassessment_in_progress is True
+
+
+@pytest.mark.anyio
+async def test_has_gov_reassessment_false_when_newer_assessed(
+    compliance_report_service, mock_repo
+):
+    v1 = MagicMock()
+    v1.version = 1
+    v1.supplemental_initiator = "Government Reassessment"
+    v1.compliance_report_id = 101
+    v1.compliance_report_group_uuid = "grp"
+    v1.compliance_period_id = 15
+    v1.compliance_period = CompliancePeriodBaseSchema(
+        compliance_period_id=15, description="2024"
+    )
+    v1.organization_id = 1
+    v1.organization = ComplianceReportOrganizationSchema(
+        organization_id=1, organization_code="ORG", name="Org"
+    )
+    v1.summary = None
+    v1.current_status_id = 1
+    v1.current_status = ComplianceReportStatusSchema(
+        compliance_report_status_id=1,
+        status=ComplianceReportStatusEnum.Assessed.value,
+    )
+    v1.assigned_analyst = None
+    v1.history = []
+
+    v0 = MagicMock()
+    v0.version = 0
+    v0.supplemental_initiator = None
+    v0.compliance_report_id = 100
+    v0.compliance_report_group_uuid = "grp"
+    v0.compliance_period_id = 15
+    v0.compliance_period = CompliancePeriodBaseSchema(
+        compliance_period_id=15, description="2024"
+    )
+    v0.organization_id = 1
+    v0.organization = ComplianceReportOrganizationSchema(
+        organization_id=1, organization_code="ORG", name="Org"
+    )
+    v0.summary = None
+    v0.current_status_id = 1
+    v0.current_status = ComplianceReportStatusSchema(
+        compliance_report_status_id=1,
+        status=ComplianceReportStatusEnum.Assessed.value,
+    )
+    v0.assigned_analyst = None
+    v0.history = []
+
+    mock_repo.get_compliance_report_chain = AsyncMock(return_value=[v1, v0])
+
+    current = ComplianceReportBaseSchema(
+        compliance_report_id=100,
+        compliance_report_group_uuid="grp",
+        version=0,
+        supplemental_initiator=None,
+        compliance_period_id=15,
+        compliance_period=CompliancePeriodBaseSchema(
+            compliance_period_id=15, description="2024"
+        ),
+        organization_id=1,
+        organization=ComplianceReportOrganizationSchema(
+            organization_id=1, organization_code="ORG", name="Org"
+        ),
+        summary=None,
+        current_status_id=1,
+        current_status=ComplianceReportStatusSchema(
+            compliance_report_status_id=1,
+            status=ComplianceReportStatusEnum.Assessed.value,
+        ),
+        assigned_analyst=None,
+        history=[],
+        nickname="",
+        supplemental_note="",
+        reporting_frequency="Annual",
+        assessment_statement="",
+    )
+    mock_repo.get_compliance_report_schema_by_id = AsyncMock(return_value=current)
+
+    result = await compliance_report_service.get_compliance_report_chain(1, MagicMock())
+    assert result.has_government_reassessment_in_progress is False
+
+
+@pytest.mark.anyio
 async def test_get_changelog_data_handles_missing_status_gracefully(
     compliance_report_service, mock_repo
 ):
     """Test that get_changelog_data handles reports with missing status gracefully"""
-    
+
     # Create mock report with no current_status
     report_no_status = MagicMock()
     report_no_status.nickname = "Report No Status"
@@ -3034,7 +3216,7 @@ async def test_get_changelog_data_handles_missing_status_gracefully(
 
     # Assertions - should return empty result since report with no status was filtered at DB level
     assert len(result) == 0  # No reports should be returned
-    
+
     # Verify repo was called with user parameter
     mock_repo.get_changelog_data.assert_called_once_with(
         "test-group-uuid", unittest.mock.ANY, supplier_user
@@ -3049,14 +3231,14 @@ async def test_get_changelog_data_filters_draft_reports_for_suppliers(
     compliance_report_service, mock_repo
 ):
     """Test that get_changelog_data does not filter draft reports for supplier users"""
-    
+
     # Create mock current status objects
     submitted_status = MagicMock()
     submitted_status.status = ComplianceReportStatusEnum.Submitted
-    
+
     draft_status = MagicMock()
     draft_status.status = ComplianceReportStatusEnum.Draft
-    
+
     # Create mock reports - one draft, one submitted
     draft_report = MagicMock()
     draft_report.nickname = "Draft Report"
@@ -3086,12 +3268,12 @@ async def test_get_changelog_data_filters_draft_reports_for_suppliers(
         "test-group-uuid", "fuel_supplies", supplier_user
     )
 
-    # Assertions - should return all reports (current state + both reports) 
+    # Assertions - should return all reports (current state + both reports)
     assert len(result) == 3  # Current State + Draft Report + Submitted Report
     assert result[0].nickname == "Current State"
     assert result[1].nickname == "Draft Report"
     assert result[2].nickname == "Submitted Report"
-    
+
     # Verify repo was called with user parameter
     mock_repo.get_changelog_data.assert_called_once_with(
         "test-group-uuid", unittest.mock.ANY, supplier_user
@@ -3103,14 +3285,14 @@ async def test_get_changelog_data_filters_draft_reports_for_government_users(
     compliance_report_service, mock_repo
 ):
     """Test that get_changelog_data filters out draft reports for government users"""
-    
+
     # Create mock current status objects
     submitted_status = MagicMock()
     submitted_status.status = ComplianceReportStatusEnum.Submitted
-    
+
     draft_status = MagicMock()
     draft_status.status = ComplianceReportStatusEnum.Draft
-    
+
     # Create mock reports - one draft, one submitted
     draft_report = MagicMock()
     draft_report.nickname = "Draft Report"
@@ -3120,7 +3302,7 @@ async def test_get_changelog_data_filters_draft_reports_for_government_users(
     draft_report.fuel_supplies = []
 
     submitted_report = MagicMock()
-    submitted_report.nickname = "Submitted Report" 
+    submitted_report.nickname = "Submitted Report"
     submitted_report.version = 2
     submitted_report.compliance_report_id = 2
     submitted_report.current_status = submitted_status
@@ -3144,7 +3326,7 @@ async def test_get_changelog_data_filters_draft_reports_for_government_users(
     assert len(result) == 2  # Current State + Submitted Report
     assert result[0].nickname == "Current State"
     assert result[1].nickname == "Submitted Report"
-    
+
     # Verify repo was called with user parameter
     mock_repo.get_changelog_data.assert_called_once_with(
         "test-group-uuid", unittest.mock.ANY, gov_user

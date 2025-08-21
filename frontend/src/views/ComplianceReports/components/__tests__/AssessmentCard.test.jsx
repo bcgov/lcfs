@@ -1,4 +1,5 @@
 import { COMPLIANCE_REPORT_STATUSES } from '@/constants/statuses'
+import { roles } from '@/constants/roles'
 import * as useCurrentUserHook from '@/hooks/useCurrentUser.js'
 import { wrapper } from '@/tests/utils/wrapper'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -6,6 +7,29 @@ import { expect, it, vi } from 'vitest'
 import { AssessmentCard } from '../AssessmentCard'
 import { useOrganizationSnapshot } from '@/hooks/useOrganizationSnapshot.js'
 import * as useComplianceReportHook from '@/hooks/useComplianceReports.js'
+
+vi.mock('@/constants/config.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    isFeatureEnabled: vi.fn(() => true)
+  }
+})
+
+vi.mock('@/views/ComplianceReports/components/OrganizationAddress.jsx', () => ({
+  OrganizationAddress: () => <div />
+}))
+
+vi.mock('@/hooks/useOrganizationSnapshot.js', () => ({
+  useOrganizationSnapshot: vi.fn(() => ({
+    data: { isEdited: false },
+    isLoading: false
+  })),
+  useUpdateOrganizationSnapshot: vi.fn(() => ({
+    mutate: vi.fn(),
+    isLoading: false
+  }))
+}))
 
 // Mock BCWidgetCard component
 vi.mock('@/components/BCWidgetCard/BCWidgetCard', () => ({
@@ -149,7 +173,7 @@ describe('AssessmentCard', () => {
       isLoading: false
     })
 
-    render(
+    const { container } = render(
       <AssessmentCard
         orgData={mockOrgData}
         hasSupplemental={false}
@@ -334,6 +358,82 @@ describe('AssessmentCard', () => {
 
     await waitFor(() => {
       expect(screen.getByText('assessment statement test')).toBeInTheDocument()
+    })
+  })
+})
+
+describe('AssessmentCard - supplier visibility of Create Supplemental button', () => {
+  beforeEach(() => {
+    vi.spyOn(useCurrentUserHook, 'useCurrentUser').mockReturnValue({
+      hasRoles: (r) => r === roles.supplier,
+      data: { isGovernmentUser: false, roles: [{ name: roles.supplier }] }
+    })
+    vi.mocked(useOrganizationSnapshot).mockReturnValue({
+      data: { isEdited: false },
+      isLoading: false
+    })
+  })
+
+  it('hides Create Supplemental when hasGovernmentReassessmentInProgress is true', async () => {
+    const mockOrgData = { name: 'Test Org' }
+    const { container } = render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        complianceReportId={1}
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={[
+          {
+            version: 0,
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+            history: [
+              { status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED } }
+            ]
+          }
+        ]}
+        setModalData={vi.fn()}
+        hasGovernmentReassessmentInProgress={true}
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      expect(
+        container.querySelector('[data-test="create-supplemental"]')
+      ).toBeNull()
+    })
+  })
+
+  it('shows Create Supplemental when hasGovernmentReassessmentInProgress is false', async () => {
+    const mockOrgData = { name: 'Test Org' }
+    const { container } = render(
+      <AssessmentCard
+        orgData={mockOrgData}
+        hasSupplemental={false}
+        isGovernmentUser={false}
+        currentStatus={COMPLIANCE_REPORT_STATUSES.ASSESSED}
+        complianceReportId={1}
+        alertRef={{ current: { triggerAlert: vi.fn() } }}
+        chain={[
+          {
+            version: 0,
+            currentStatus: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED },
+            history: [
+              { status: { status: COMPLIANCE_REPORT_STATUSES.ASSESSED } }
+            ]
+          }
+        ]}
+        setModalData={vi.fn()}
+        hasGovernmentReassessmentInProgress={false}
+      />,
+      { wrapper }
+    )
+
+    await waitFor(() => {
+      const el = container.querySelector('[data-test="create-supplemental"]')
+      expect(el).toBeTruthy()
     })
   })
 })

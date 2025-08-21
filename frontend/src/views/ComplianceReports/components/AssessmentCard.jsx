@@ -29,6 +29,7 @@ export const AssessmentCard = ({
   alertRef,
   chain,
   setModalData,
+  hasGovernmentReassessmentInProgress
 }) => {
   const { t } = useTranslation(['report', 'org'])
   const navigate = useNavigate()
@@ -95,12 +96,14 @@ export const AssessmentCard = ({
       secondaryButtonText: t('common:cancelBtn'),
       secondaryButtonAction: () => setModalData(null),
       title: t('report:createSupplementalRptBtn'),
-      content: t('report:createBceidSupplementalConfirmText'),
+      content: t('report:createBceidSupplementalConfirmText')
     })
   }
 
   const filteredChain = useMemo(() => {
-    return chain?.filter((report) => report.history && report.history.length > 0)
+    return chain?.filter(
+      (report) => report.history && report.history.length > 0
+    )
   }, [chain])
 
   const isAddressEditable = useMemo(() => {
@@ -205,7 +208,8 @@ export const AssessmentCard = ({
               <Box display={'flex'} gap={2}>
                 <Role roles={[roles.supplier]}>
                   {isFeatureEnabled(FEATURE_FLAGS.SUPPLEMENTAL_REPORTING) &&
-                    currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED && (
+                    currentStatus === COMPLIANCE_REPORT_STATUSES.ASSESSED &&
+                    !hasGovernmentReassessmentInProgress && (
                       <Box>
                         <BCButton
                           data-test="create-supplemental"
