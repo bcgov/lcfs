@@ -23,7 +23,7 @@
   "sameAsLegalNameLabel": "Same as legal name",
   "emailAddrLabel": "Email address",
   "phoneNbrLabel": "Phone number",
-  "supplierTypLabel": "Supplier type",
+  "orgTypeLabel": "Organization type",
   "regTrnLabel": "Registered for transfers",
   "registeredTransferYes": "Yes — A registered organization is able to transfer compliance units.",
   "registeredTransferNo": "No — An organization must be registered to transfer compliance units.",
@@ -100,5 +100,6 @@
     "regenerateExistingLinkAriaLabel": "Regenerate existing link",
     "selectFormAriaLabel": "Select form for link generation"
   },
-  "snapshotTitle": "Organization Information from Compliance Report"
+  "snapshotTitle": "Organization Information from Compliance Report",
+  "enrolledInCreditMarket": "Enrolled in credit trading market"
 }
