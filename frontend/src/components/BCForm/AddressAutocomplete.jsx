@@ -1,20 +1,26 @@
-import React, { useState, useEffect, forwardRef } from 'react'
-import { TextField, Autocomplete, Box, Grid } from '@mui/material'
+import React, { useState, useEffect, forwardRef, useRef } from 'react'
+import { TextField, Autocomplete, Box, Grid, CircularProgress } from '@mui/material'
 import { LocationOn as LocationOnIcon } from '@mui/icons-material'
 import parse from 'autosuggest-highlight/parse'
 import match from 'autosuggest-highlight/match'
 import BCTypography from '../BCTypography'
-import { ADDRESS_SEARCH_URL } from '@/constants/common'
+import useGeocoder from '@/hooks/useGeocoder'
 
+/**
+ * Enhanced AddressAutocomplete component using the consolidated geocoder service.
+ * Provides better caching, error handling, and consistency across the application.
+ */
 export const AddressAutocomplete = forwardRef(
-  ({ className, value, onChange, onSelectAddress, disabled }, ref) => {
+  ({ className, value, onChange, onSelectAddress, disabled, minScore = 50, maxResults = 5, id }, ref) => {
     const [inputValue, setInputValue] = useState(value || '')
     const [options, setOptions] = useState([])
-    const [loading, setLoading] = useState(false)
     const [isAddressSelected, setIsAddressSelected] = useState(false)
+    
+    const { autocompleteAddress, validateAddress } = useGeocoder()
+    const timeoutRef = useRef()
 
-    useEffect(() => {
-      if (!inputValue || inputValue.length < 1) {
+    const fetchAddresses = async (searchValue) => {
+      if (!searchValue || searchValue.length < 3) {
         setOptions([])
         return
       }
@@ -22,51 +28,69 @@ export const AddressAutocomplete = forwardRef(
       // Don't fetch if user is just adding postal code to selected address
       if (
         isAddressSelected &&
-        inputValue.includes(',') &&
-        (inputValue.endsWith(' ') ||
-          /[A-Za-z][0-9][A-Za-z]/.test(inputValue.slice(-3)))
+        searchValue.includes(',') &&
+        (searchValue.endsWith(' ') ||
+          /[A-Za-z][0-9][A-Za-z]/.test(searchValue.slice(-3)))
       ) {
         return
       }
 
-      const controller = new AbortController()
-      const signal = controller.signal
+      try {
+        // Use the new autocomplete endpoint
+        const result = await autocompleteAddress.mutateAsync({
+          partialAddress: searchValue,
+          maxResults
+        })
 
-      const fetchAddresses = async () => {
-        setLoading(true)
-        try {
-          const response = await fetch(
-            ADDRESS_SEARCH_URL + encodeURIComponent(inputValue),
-            {
-              signal
-            }
-          )
-
-          if (!response.ok) throw new Error('Network response was not ok')
-          const data = await response.json()
-          const addresses = data.features.map((feature) => ({
-            fullAddress: feature.properties.fullAddress || '',
-            streetAddress: feature.properties.streetAddress || '',
-            localityName: feature.properties.localityName || ''
+        if (result.suggestions) {
+          // Suggestions now come as complete AddressSchema objects
+          const addresses = result.suggestions.map((addr) => ({
+            fullAddress: addr.full_address,
+            streetAddress: addr.street_address || '',
+            city: addr.city || '',
+            localityName: addr.city || '',
+            province: addr.province || '',
+            postalCode: addr.postal_code || '',
+            postal_code: addr.postal_code || '',
+            latitude: addr.latitude,
+            longitude: addr.longitude,
+            score: addr.score
           }))
-          setOptions(addresses.filter((addr) => addr.fullAddress))
-        } catch (error) {
-          if (error.name !== 'AbortError') {
-            console.error('Error fetching addresses:', error)
-          }
+          
+          setOptions(addresses)
         }
-        setLoading(false)
+      } catch (error) {
+        console.error('Error fetching addresses:', error)
+        setOptions([])
+      }
+    }
+
+    useEffect(() => {
+      // Clear previous timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
       }
 
-      const delayDebounceFn = setTimeout(() => {
-        fetchAddresses()
+      // Clear options immediately if input is too short
+      if (!inputValue || inputValue.length < 3) {
+        setOptions([])
+        return
+      }
+
+      // Set new timeout for API call
+      timeoutRef.current = setTimeout(() => {
+        fetchAddresses(inputValue)
       }, 500)
 
+      // Cleanup
       return () => {
-        clearTimeout(delayDebounceFn)
-        controller.abort()
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current)
+        }
       }
-    }, [inputValue, isAddressSelected])
+    }, [inputValue]) // Only depend on inputValue
+
+    const isLoading = autocompleteAddress.isPending || validateAddress.isPending
 
     return (
       <Autocomplete
@@ -83,7 +107,7 @@ export const AddressAutocomplete = forwardRef(
         }}
         freeSolo
         options={options}
-        loading={loading}
+        loading={isLoading}
         filterOptions={(x) => x}
         value={value || inputValue}
         disabled={disabled}
@@ -108,28 +132,85 @@ export const AddressAutocomplete = forwardRef(
             setIsAddressSelected(false)
           }
         }}
-        onChange={(event, newValue) => {
+        onChange={async (event, newValue) => {
           if (newValue) {
             // Mark that an address has been selected
             setIsAddressSelected(true)
 
             if (onSelectAddress) {
               if (typeof newValue === 'string') {
-                onSelectAddress(newValue)
+                // For string selections, still validate to get detailed info
+                try {
+                  const validationResult = await validateAddress.mutateAsync({
+                    addressString: newValue,
+                    minScore: 50,
+                    maxResults: 1
+                  })
+                  
+                  if (validationResult.addresses && validationResult.addresses.length > 0) {
+                    const addr = validationResult.addresses[0]
+                    const addressData = {
+                      fullAddress: addr.full_address || newValue,
+                      streetAddress: addr.street_address || '',
+                      city: addr.city || '',
+                      province: addr.province || '',
+                      postalCode: addr.postal_code || '',
+                      latitude: addr.latitude,
+                      longitude: addr.longitude,
+                      score: addr.score
+                    }
+                    
+                    // Auto-populate postal code in the input field
+                    const fullAddressWithPostal = addr.postal_code 
+                      ? `${addr.full_address}, ${addr.postal_code}`
+                      : addr.full_address
+                    setInputValue(fullAddressWithPostal)
+                    if (onChange) onChange(fullAddressWithPostal)
+                    
+                    onSelectAddress(addressData)
+                  } else {
+                    onSelectAddress(newValue)
+                  }
+                } catch (error) {
+                  console.error('Error validating selected address:', error)
+                  onSelectAddress(newValue)
+                }
               } else {
-                const [streetAddress, city] = newValue.fullAddress.split(', ')
-                onSelectAddress({
+                // For object selections, use the data directly from autocomplete
+                // Since autocomplete now returns complete AddressSchema objects
+                const addressData = {
                   fullAddress: newValue.fullAddress,
-                  inputValue,
-                  streetAddress,
-                  city
-                })
+                  streetAddress: newValue.streetAddress || '',
+                  city: newValue.localityName || newValue.city || '',
+                  province: newValue.province || '',
+                  postalCode: newValue.postalCode || newValue.postal_code || '',
+                  latitude: newValue.latitude,
+                  longitude: newValue.longitude,
+                  score: newValue.score
+                }
+                
+                // Auto-populate postal code in the input field
+                const postalCode = newValue.postalCode || newValue.postal_code
+                const fullAddressWithPostal = postalCode 
+                  ? `${newValue.fullAddress}, ${postalCode}`
+                  : newValue.fullAddress
+                setInputValue(fullAddressWithPostal)
+                if (onChange) onChange(fullAddressWithPostal)
+                
+                onSelectAddress(addressData)
               }
             } else if (onChange) {
-              // Default behavior: just set the field value
-              onChange(
-                typeof newValue === 'string' ? newValue : newValue?.fullAddress
-              )
+              // Default behavior: just set the field value with postal code if available
+              if (typeof newValue === 'string') {
+                onChange(newValue)
+              } else {
+                const postalCode = newValue.postalCode || newValue.postal_code
+                const fullAddressWithPostal = postalCode 
+                  ? `${newValue.fullAddress}, ${postalCode}`
+                  : newValue.fullAddress
+                setInputValue(fullAddressWithPostal)
+                onChange(fullAddressWithPostal)
+              }
             }
           }
         }}
@@ -141,9 +222,18 @@ export const AddressAutocomplete = forwardRef(
               fullWidth
               placeholder={
                 isAddressSelected
-                  ? 'Add postal code...'
+                  ? 'Postal code included'
                   : 'Start typing address...'
               }
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <>
+                    {isLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                    {params.InputProps.endAdornment}
+                  </>
+                ),
+              }}
             />
           </Box>
         )}
@@ -177,7 +267,8 @@ export const AddressAutocomplete = forwardRef(
                     </Box>
                   ))}
                   <BCTypography variant="body2" color="text" fontSize="0.75rem">
-                    Select and add postal code
+                    {option.score ? `Confidence: ${option.score}% • ` : ''}
+                    {option.postalCode || option.postal_code ? 'Address with postal code' : 'Select to add postal code'}
                   </BCTypography>
                 </Grid>
               </Grid>

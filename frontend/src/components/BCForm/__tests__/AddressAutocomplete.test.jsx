@@ -22,9 +22,11 @@ vi.mock('@/components/BCTypography', () => ({
   )
 }))
 
-// Mock the ADDRESS_SEARCH_URL constant
-vi.mock('@/constants/common', () => ({
-  ADDRESS_SEARCH_URL: 'https://api.test.com/address?q='
+// Mock the API routes
+vi.mock('@/constants/routes', () => ({
+  apiRoutes: {
+    geocoderAutocomplete: '/geocoder/autocomplete'
+  }
 }))
 
 // Mock autosuggest-highlight modules
@@ -78,21 +80,9 @@ describe('AddressAutocomplete', () => {
   }
 
   const mockAddressResponse = {
-    features: [
-      {
-        properties: {
-          fullAddress: '123 Main St, Vancouver, BC',
-          streetAddress: '123 Main St',
-          localityName: 'Vancouver'
-        }
-      },
-      {
-        properties: {
-          fullAddress: '456 Oak Ave, Victoria, BC',
-          streetAddress: '456 Oak Ave',
-          localityName: 'Victoria'
-        }
-      }
+    suggestions: [
+      '123 Main St, Vancouver, BC',
+      '456 Oak Ave, Victoria, BC'
     ]
   }
 
@@ -149,8 +139,13 @@ describe('AddressAutocomplete', () => {
       // Wait for debounced API call
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          'https://api.test.com/address?q=test',
+          '/api/geocoder/autocomplete',
           expect.objectContaining({
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: expect.any(String),
             signal: expect.any(Object)
           })
         )
@@ -227,6 +222,11 @@ describe('AddressAutocomplete', () => {
         expect(mockFetch).toHaveBeenCalledWith(
           'https://api.test.com/address?q=main',
           expect.objectContaining({
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: expect.any(String),
             signal: expect.any(Object)
           })
         )
@@ -324,6 +324,11 @@ describe('AddressAutocomplete', () => {
         expect(mockFetch).toHaveBeenCalledWith(
           'https://api.test.com/address?q=main',
           expect.objectContaining({
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: expect.any(String),
             signal: expect.any(Object)
           })
         )
@@ -530,8 +535,13 @@ describe('AddressAutocomplete', () => {
       // Wait for debounced API call
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          'https://api.test.com/address?q=test',
+          '/api/geocoder/autocomplete',
           expect.objectContaining({
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: expect.any(String),
             signal: expect.any(Object)
           })
         )
@@ -877,8 +887,13 @@ describe('AddressAutocomplete', () => {
       // Wait for debounced API call
       await waitFor(() => {
         expect(mockFetch).toHaveBeenCalledWith(
-          'https://api.test.com/address?q=test',
+          '/api/geocoder/autocomplete',
           expect.objectContaining({
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: expect.any(String),
             signal: expect.any(Object)
           })
         )

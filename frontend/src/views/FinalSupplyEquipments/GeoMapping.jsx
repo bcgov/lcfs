@@ -25,9 +25,9 @@ import {
   fixLeafletIcons,
   transformApiData,
   groupLocationsByCoordinates,
-  findOverlappingPeriods,
-  batchProcessGeofencing
+  findOverlappingPeriods
 } from './components/utils'
+import { useLocationService } from '@/services/locationService'
 import { useGetFinalSupplyEquipments } from '@/hooks/useFinalSupplyEquipment'
 
 // Fix Leaflet icon issue
@@ -47,6 +47,9 @@ const GeoMapping = ({ complianceReportId }) => {
     bcOverlapping: 0,
     nonBcOverlapping: 0
   })
+
+  // Use the location service for geofencing
+  const { batchProcessGeofencing } = useLocationService()
 
   // Use react-query for fetching data
   const {

@@ -30,6 +30,7 @@ from lcfs.web.api import (
     organization_snapshot,
     credit_ledger,
     forms,
+    geocoder,
 )
 
 api_router = APIRouter()
@@ -102,3 +103,4 @@ api_router.include_router(
     tags=["credit_ledger"],
 )
 api_router.include_router(forms.router, prefix="/forms", tags=["forms"])
+api_router.include_router(geocoder.router, prefix="/geocoder", tags=["geocoder"])
