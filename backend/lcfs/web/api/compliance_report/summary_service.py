@@ -109,7 +109,9 @@ class ComplianceReportSummaryService:
         self.compliance_data_service = compliance_data_service
 
     def convert_summary_to_dict(
-        self, summary_obj: ComplianceReportSummary, compliance_report: ComplianceReport = None
+        self,
+        summary_obj: ComplianceReportSummary,
+        compliance_report: ComplianceReport = None,
     ) -> ComplianceReportSummarySchema:
         """
         Convert a ComplianceReportSummary object to a dictionary representation.
@@ -124,11 +126,36 @@ class ComplianceReportSummaryService:
             low_carbon_fuel_target_summary=[],
             non_compliance_penalty_summary=[],
             can_sign=False,
-            penalty_override_enabled=summary_obj.penalty_override_enabled if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else False,
-            renewable_penalty_override=summary_obj.renewable_penalty_override if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
-            low_carbon_penalty_override=summary_obj.low_carbon_penalty_override if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
-            penalty_override_date=summary_obj.penalty_override_date if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
-            penalty_override_user=summary_obj.penalty_override_user if compliance_report and int(compliance_report.compliance_period.description) >= 2024 else None,
+            penalty_override_enabled=(
+                summary_obj.penalty_override_enabled
+                if compliance_report
+                and int(compliance_report.compliance_period.description) >= 2024
+                else False
+            ),
+            renewable_penalty_override=(
+                summary_obj.renewable_penalty_override
+                if compliance_report
+                and int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            low_carbon_penalty_override=(
+                summary_obj.low_carbon_penalty_override
+                if compliance_report
+                and int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            penalty_override_date=(
+                summary_obj.penalty_override_date
+                if compliance_report
+                and int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            penalty_override_user=(
+                summary_obj.penalty_override_user
+                if compliance_report
+                and int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
         )
 
         for column in inspector.mapper.column_attrs:
@@ -421,7 +448,7 @@ class ComplianceReportSummaryService:
         compliance_year = None
         if compliance_report and compliance_report.compliance_period:
             compliance_year = int(compliance_report.compliance_period.description)
-            
+
         await self.repo.save_compliance_report_summary(summary_data, compliance_year)
         summary_data = await self.calculate_compliance_report_summary(report_id)
 
@@ -454,7 +481,9 @@ class ComplianceReportSummaryService:
         # After the report has been submitted, the summary becomes locked
         # so we can return the existing summary rather than re-calculating
         if summary_model.is_locked:
-            return self.convert_summary_to_dict(compliance_report.summary, compliance_report)
+            return self.convert_summary_to_dict(
+                compliance_report.summary, compliance_report
+            )
 
         compliance_period_start = compliance_report.compliance_period.effective_date
         compliance_period_end = compliance_report.compliance_period.expiration_date
@@ -537,16 +566,16 @@ class ComplianceReportSummaryService:
         filtered_fossil_fuel_supplies = [
             fs for fs in effective_fuel_supplies if fs.fuel_type.fossil_derived
         ]
-        
+
         filtered_fossil_other_uses = [
-            ou for ou in effective_other_uses if ou.fuel_type.fossil_derived or ou.fuel_type.other_uses_fossil_derived
+            ou for ou in effective_other_uses if ou.fuel_type.fossil_derived
         ]
-        
+
         all_fossil_records = [
             *filtered_fossil_fuel_supplies,
             *filtered_fossil_other_uses,
         ]
-        
+
         fossil_quantities = self.repo.aggregate_quantities(all_fossil_records, True)
         # line 2
         filtered_renewable_fuel_supplies = [
@@ -562,7 +591,9 @@ class ComplianceReportSummaryService:
             *filtered_renewable_other_uses,
         ]
 
-        renewable_quantities = self.repo.aggregate_quantities(all_renewable_records, False)
+        renewable_quantities = self.repo.aggregate_quantities(
+            all_renewable_records, False
+        )
 
         renewable_fuel_target_summary = self.calculate_renewable_fuel_target_summary(
             fossil_quantities,
@@ -681,11 +712,31 @@ class ComplianceReportSummaryService:
             non_compliance_penalty_summary=non_compliance_penalty_summary,
             can_sign=can_sign,
             early_issuance_summary=early_issuance_summary,
-            penalty_override_enabled=summary_model.penalty_override_enabled if int(compliance_report.compliance_period.description) >= 2024 else False,
-            renewable_penalty_override=summary_model.renewable_penalty_override if int(compliance_report.compliance_period.description) >= 2024 else None,
-            low_carbon_penalty_override=summary_model.low_carbon_penalty_override if int(compliance_report.compliance_period.description) >= 2024 else None,
-            penalty_override_date=summary_model.penalty_override_date if int(compliance_report.compliance_period.description) >= 2024 else None,
-            penalty_override_user=summary_model.penalty_override_user if int(compliance_report.compliance_period.description) >= 2024 else None,
+            penalty_override_enabled=(
+                summary_model.penalty_override_enabled
+                if int(compliance_report.compliance_period.description) >= 2024
+                else False
+            ),
+            renewable_penalty_override=(
+                summary_model.renewable_penalty_override
+                if int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            low_carbon_penalty_override=(
+                summary_model.low_carbon_penalty_override
+                if int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            penalty_override_date=(
+                summary_model.penalty_override_date
+                if int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
+            penalty_override_user=(
+                summary_model.penalty_override_user
+                if int(compliance_report.compliance_period.description) >= 2024
+                else None
+            ),
         )
         return summary
 
@@ -748,9 +799,13 @@ class ComplianceReportSummaryService:
 
         for category in ["gasoline", "diesel", "jet_fuel"]:
             # Calculate the 5% cap based on current line 4 value, rounded to nearest integer
-            current_required_quantity_dec = decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
-            max_retained = (current_required_quantity_dec * Decimal("0.05")).quantize(Decimal("1"), rounding=ROUND_HALF_UP)
-            
+            current_required_quantity_dec = (
+                decimal_eligible_renewable_fuel_required.get(category, DECIMAL_ZERO)
+            )
+            max_retained = (current_required_quantity_dec * Decimal("0.05")).quantize(
+                Decimal("1"), rounding=ROUND_HALF_UP
+            )
+
             # Always preserve line 6 value from current summary (user's input)
             # but cap it at 5% of current line 4
             line_6_value = Decimal(
@@ -764,7 +819,7 @@ class ComplianceReportSummaryService:
                 )
             )
             decimal_retained_renewables[category] = min(line_6_value, max_retained)
-            
+
             # Similarly for line 8 - preserve but cap at 5% of current line 4
             line_8_value = Decimal(
                 str(
@@ -941,13 +996,33 @@ class ComplianceReportSummaryService:
                     else RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["description"]
                 ),
                 field=RENEWABLE_FUEL_TARGET_DESCRIPTIONS[line]["field"],
-                gasoline=(int(values.get("gasoline", 0)) if line != 11 else float(values.get("gasoline", 0))),
-                diesel=(int(values.get("diesel", 0)) if line != 11 else float(values.get("diesel", 0))),
-                jet_fuel=(int(values.get("jet_fuel", 0)) if line != 11 else float(values.get("jet_fuel", 0))),
-                total_value=(
-                    int(values.get("gasoline", 0) + values.get("diesel", 0) + values.get("jet_fuel", 0))
+                gasoline=(
+                    int(values.get("gasoline", 0))
                     if line != 11
-                    else float(values.get("gasoline", 0) + values.get("diesel", 0) + values.get("jet_fuel", 0))
+                    else float(values.get("gasoline", 0))
+                ),
+                diesel=(
+                    int(values.get("diesel", 0))
+                    if line != 11
+                    else float(values.get("diesel", 0))
+                ),
+                jet_fuel=(
+                    int(values.get("jet_fuel", 0))
+                    if line != 11
+                    else float(values.get("jet_fuel", 0))
+                ),
+                total_value=(
+                    int(
+                        values.get("gasoline", 0)
+                        + values.get("diesel", 0)
+                        + values.get("jet_fuel", 0)
+                    )
+                    if line != 11
+                    else float(
+                        values.get("gasoline", 0)
+                        + values.get("diesel", 0)
+                        + values.get("jet_fuel", 0)
+                    )
                 ),
                 format=(FORMATS.CURRENCY if (str(line) == "11") else FORMATS.NUMBER),
             )
@@ -1035,7 +1110,8 @@ class ComplianceReportSummaryService:
         )  # line 20 = line 18 + line 19 - line 15 - line 16
 
         calculated_penalty_units = int(
-            available_balance_for_period + compliance_unit_balance_change_from_assessment
+            available_balance_for_period
+            + compliance_unit_balance_change_from_assessment
         )
         non_compliance_penalty_payable_units = (
             calculated_penalty_units if (calculated_penalty_units < 0) else 0
@@ -1143,7 +1219,6 @@ class ComplianceReportSummaryService:
         ]
 
         return non_compliance_penalty_summary
-
 
     @service_handler
     async def calculate_fuel_supply_compliance_units(

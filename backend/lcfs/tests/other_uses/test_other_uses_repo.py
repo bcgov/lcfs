@@ -74,8 +74,9 @@ async def test_get_table_options(other_uses_repo, mock_db_session):
     mock_fuel_type.default_carbon_intensity = 12.34
     mock_fuel_type.units = "L"
     mock_fuel_type.unrecognized = False
-    mock_fuel_type.other_uses_fossil_derived = True
     mock_fuel_type.is_legacy = False
+    mock_fuel_type.fossil_derived = True
+    mock_fuel_type.renewable = False
     mock_fuel_type.fuel_instances = []
     mock_fuel_type.fuel_codes = [mock_fuel_code]
     mock_fuel_type.provision_1 = mock_provision

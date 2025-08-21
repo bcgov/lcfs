@@ -66,7 +66,6 @@ async def fuel_types(dbsession):
             units="Litres",
             unrecognized=False,
             fossil_derived=True,
-            other_uses_fossil_derived=True,
         ),
         FuelType(
             fuel_type_id=997,
@@ -74,7 +73,6 @@ async def fuel_types(dbsession):
             units="Litres",
             unrecognized=False,
             fossil_derived=True,
-            other_uses_fossil_derived=True,
         ),
         FuelType(
             fuel_type_id=998,
