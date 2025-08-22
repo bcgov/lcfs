@@ -331,7 +331,10 @@ class OtherUsesRepository:
     ) -> List[Dict[str, Any]]:
         """Get all fuel type options with their associated fuel categories and fuel codes for other uses"""
         base_conditions = [
-            FuelType.other_uses_fossil_derived == True,
+            # Show fuel types that are either fossil-derived OR renewable
+            # but exclude the "Other" fuel type itself from the list
+            or_(FuelType.fossil_derived == True, FuelType.renewable == True),
+            FuelType.fuel_type != "Other",
         ]
 
         # Conditionally add the is_legacy filter
