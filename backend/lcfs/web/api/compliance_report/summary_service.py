@@ -660,7 +660,7 @@ class ComplianceReportSummaryService:
             if ou.fuel_type.renewable
             and (
                 compliance_year < 2025
-                or ou.fuel_catgory.category != "Diesel"
+                or ou.fuel_category.category != "Diesel"
                 or (ou.fuel_category.category == "Diesel" and ou.is_canada_produced)
             )
         ]
