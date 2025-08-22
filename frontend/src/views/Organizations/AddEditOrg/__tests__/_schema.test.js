@@ -9,7 +9,7 @@ describe('Organization Form Schema Validation', () => {
       orgOperatingName: 'Test Co',
       orgEmailAddress: 'test@example.com',
       orgPhoneNumber: '(604) 123-4567',
-      orgSupplierType: '1',
+      orgType: '1',
       orgRegForTransfers: '1',
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
@@ -27,7 +27,7 @@ describe('Organization Form Schema Validation', () => {
       orgOperatingName: 'Test Co',
       orgEmailAddress: 'test@example.com',
       orgPhoneNumber: '(604) 123-4567',
-      orgSupplierType: '1',
+      orgType: '1',
       orgRegForTransfers: '1',
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
@@ -36,8 +36,30 @@ describe('Organization Form Schema Validation', () => {
       orgCreditTradingEnabled: 'true'
     }
 
-    await expect(schemaValidation.validate(invalidData))
-      .rejects.toThrow('Legal Name of Organization is required.')
+    await expect(schemaValidation.validate(invalidData)).rejects.toThrow(
+      'Legal Name of Organization is required.'
+    )
+  })
+
+  // Test orgType is required
+  it('requires orgType field', async () => {
+    const invalidData = {
+      orgLegalName: 'Test Company Inc.',
+      orgOperatingName: 'Test Co',
+      orgEmailAddress: 'test@example.com',
+      orgPhoneNumber: '(604) 123-4567',
+      // orgType: '1', // Missing orgType
+      orgRegForTransfers: '1',
+      orgStreetAddress: '123 Test St',
+      orgCity: 'Vancouver',
+      orgPostalCodeZipCode: 'V6B3K9',
+      hasEarlyIssuance: 'true',
+      orgCreditTradingEnabled: 'true'
+    }
+
+    await expect(schemaValidation.validate(invalidData)).rejects.toThrow(
+      'Organization type is required.'
+    )
   })
 
   // Test email format
@@ -47,7 +69,7 @@ describe('Organization Form Schema Validation', () => {
       orgOperatingName: 'Test Co',
       orgEmailAddress: 'not-an-email',
       orgPhoneNumber: '(604) 123-4567',
-      orgSupplierType: '1',
+      orgType: '1',
       orgRegForTransfers: '1',
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
@@ -56,8 +78,9 @@ describe('Organization Form Schema Validation', () => {
       orgCreditTradingEnabled: 'true'
     }
 
-    await expect(schemaValidation.validate(invalidData))
-      .rejects.toThrow('Please enter a valid Email Address.')
+    await expect(schemaValidation.validate(invalidData)).rejects.toThrow(
+      'Please enter a valid Email Address.'
+    )
   })
 
   // Test phone number format
@@ -67,7 +90,7 @@ describe('Organization Form Schema Validation', () => {
       orgOperatingName: 'Test Co',
       orgEmailAddress: 'test@example.com',
       orgPhoneNumber: 'not a phone number!',
-      orgSupplierType: '1',
+      orgType: '1',
       orgRegForTransfers: '1',
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
@@ -76,8 +99,9 @@ describe('Organization Form Schema Validation', () => {
       orgCreditTradingEnabled: 'true'
     }
 
-    await expect(schemaValidation.validate(invalidData))
-      .rejects.toThrow('Invalid format')
+    await expect(schemaValidation.validate(invalidData)).rejects.toThrow(
+      'Invalid format'
+    )
   })
 
   // Test postal code format
@@ -87,7 +111,7 @@ describe('Organization Form Schema Validation', () => {
       orgOperatingName: 'Test Co',
       orgEmailAddress: 'test@example.com',
       orgPhoneNumber: '(604) 123-4567',
-      orgSupplierType: '1',
+      orgType: '1',
       orgRegForTransfers: '1',
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
@@ -96,35 +120,44 @@ describe('Organization Form Schema Validation', () => {
       orgCreditTradingEnabled: 'true'
     }
 
-    await expect(schemaValidation.validate(invalidData))
-      .rejects.toThrow('Please enter a valid Postal / ZIP Code.')
+    await expect(schemaValidation.validate(invalidData)).rejects.toThrow(
+      'Please enter a valid Postal / ZIP Code.'
+    )
   })
 
   // Test valid postal codes
   it('accepts valid postal/zip code formats', async () => {
     // Valid Canadian postal code
-    await expect(schemaValidation.validate({
-      ...validFormData,
-      orgPostalCodeZipCode: 'V6B3K9'
-    })).resolves.not.toThrow()
+    await expect(
+      schemaValidation.validate({
+        ...validFormData,
+        orgPostalCodeZipCode: 'V6B3K9'
+      })
+    ).resolves.not.toThrow()
 
     // Valid Canadian postal code with space
-    await expect(schemaValidation.validate({
-      ...validFormData,
-      orgPostalCodeZipCode: 'V6B 3K9'
-    })).resolves.not.toThrow()
+    await expect(
+      schemaValidation.validate({
+        ...validFormData,
+        orgPostalCodeZipCode: 'V6B 3K9'
+      })
+    ).resolves.not.toThrow()
 
     // Valid US zip code
-    await expect(schemaValidation.validate({
-      ...validFormData,
-      orgPostalCodeZipCode: '12345'
-    })).resolves.not.toThrow()
+    await expect(
+      schemaValidation.validate({
+        ...validFormData,
+        orgPostalCodeZipCode: '12345'
+      })
+    ).resolves.not.toThrow()
 
     // Valid US zip+4
-    await expect(schemaValidation.validate({
-      ...validFormData,
-      orgPostalCodeZipCode: '12345-6789'
-    })).resolves.not.toThrow()
+    await expect(
+      schemaValidation.validate({
+        ...validFormData,
+        orgPostalCodeZipCode: '12345-6789'
+      })
+    ).resolves.not.toThrow()
   })
 
   // Test head office fields are optional
@@ -134,7 +167,7 @@ describe('Organization Form Schema Validation', () => {
       orgOperatingName: 'Test Co',
       orgEmailAddress: 'test@example.com',
       orgPhoneNumber: '(604) 123-4567',
-      orgSupplierType: '1',
+      orgType: '1',
       orgRegForTransfers: '1',
       orgStreetAddress: '123 Test St',
       orgCity: 'Vancouver',
@@ -158,7 +191,7 @@ const validFormData = {
   orgOperatingName: 'Test Co',
   orgEmailAddress: 'test@example.com',
   orgPhoneNumber: '(604) 123-4567',
-  orgSupplierType: '1',
+  orgType: '1',
   orgRegForTransfers: '1',
   orgStreetAddress: '123 Test St',
   orgCity: 'Vancouver',

@@ -1,12 +1,14 @@
 import pytest
-from datetime import datetime
+from datetime import datetime, date
 from typing import List
 from unittest.mock import AsyncMock, MagicMock, Mock
 
 from lcfs.db.models import ComplianceReport
 from lcfs.db.models.compliance.ComplianceReport import ReportingFrequency
 from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+from lcfs.db.models.compliance.ComplianceReportStatus import ComplianceReportStatus
 from lcfs.web.api.compliance_report.schema import ComplianceReportSummaryRowSchema
+from lcfs.web.api.compliance_report.summary_service import ComplianceReportSummaryService
 from lcfs.web.api.notional_transfer.schema import (
     NotionalTransferSchema,
     ReceivedOrTransferredEnumSchema,
@@ -2365,3 +2367,60 @@ async def test_penalty_override_with_zero_values():
     expected_total = renewable_override + low_carbon_override
 
     assert expected_total == 0.0  # 0 + 0 (explicit zeros)
+
+
+# Tests for Summary Lines 7 & 9 Auto-population and Locking (Issue #2893)
+
+@pytest.mark.anyio
+async def test_renewable_fuel_target_summary_contains_lines_7_and_9(
+    compliance_report_summary_service,
+):
+    """Test that renewable fuel target summary includes Lines 7 & 9 in the result."""
+    # Mock data
+    fossil_quantities = {"gasoline": 1000, "diesel": 2000, "jet_fuel": 500}
+    renewable_quantities = {"gasoline": 100, "diesel": 200, "jet_fuel": 50}
+    previous_retained = {"gasoline": 10, "diesel": 20, "jet_fuel": 5}  # This should populate Line 7
+    previous_obligation = {"gasoline": 5, "diesel": 10, "jet_fuel": 2}  # This should populate Line 9
+    notional_transfers_sums = {"gasoline": 0, "diesel": 0, "jet_fuel": 0}
+    
+    # Create a proper ComplianceReportSummary mock with the actual fields
+    from lcfs.db.models.compliance.ComplianceReportSummary import ComplianceReportSummary
+    mock_prev_summary = ComplianceReportSummary(
+        line_6_renewable_fuel_retained_gasoline=100,
+        line_6_renewable_fuel_retained_diesel=200,
+        line_6_renewable_fuel_retained_jet_fuel=50,
+        line_8_obligation_deferred_gasoline=10,
+        line_8_obligation_deferred_diesel=20,
+        line_8_obligation_deferred_jet_fuel=5,
+        line_4_eligible_renewable_fuel_required_gasoline=50,
+        line_4_eligible_renewable_fuel_required_diesel=80,
+        line_4_eligible_renewable_fuel_required_jet_fuel=0,
+    )
+    
+    # Test that the method includes Lines 7 & 9 in the result
+    result = compliance_report_summary_service.calculate_renewable_fuel_target_summary(
+        fossil_quantities,
+        renewable_quantities,
+        previous_retained,
+        previous_obligation,
+        notional_transfers_sums,
+        2025,
+        mock_prev_summary,
+    )
+    
+    # Check that all lines are present in the result - should be 11 lines total
+    assert len(result) == 11, f"Expected 11 lines, got {len(result)}"
+    
+    # Find Lines 7 & 9 in the result (handle both legacy and non-legacy formats)
+    line_7_row = next((row for row in result if row.line in [7, "7", "7 | 18"]), None)
+    line_9_row = next((row for row in result if row.line in [9, "9", "9 | 20"]), None)
+    
+    assert line_7_row is not None, f"Line 7 should be present in summary. Found lines: {[row.line for row in result]}"
+    assert line_9_row is not None, f"Line 9 should be present in summary. Found lines: {[row.line for row in result]}"
+    assert line_7_row.gasoline == previous_retained["gasoline"]  # 10
+    assert line_7_row.diesel == previous_retained["diesel"]      # 20
+    assert line_7_row.jet_fuel == previous_retained["jet_fuel"]  # 5
+    
+    assert line_9_row.gasoline == previous_obligation["gasoline"]  # 5
+    assert line_9_row.diesel == previous_obligation["diesel"]      # 10
+    assert line_9_row.jet_fuel == previous_obligation["jet_fuel"]  # 2

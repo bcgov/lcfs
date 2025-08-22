@@ -52,7 +52,7 @@ vi.mock('@/components/BCDataGrid/BCDataGridServer', () => ({
 
 vi.mock('@/components/ClearFiltersButton', () => ({
   ClearFiltersButton: ({ onClick, ...props }) => (
-    <button data-testid="clear-filters-button" onClick={onClick} {...props}>
+    <button data-test="clear-filters-button" onClick={onClick} {...props}>
       Clear filters
     </button>
   )
@@ -77,6 +77,7 @@ vi.mock('@/hooks/useOrganization', () => ({
       email: 'test@test.com',
       phone: '1234567890',
       hasEarlyIssuance: false,
+      creditTradingEnabled: true,
       orgAddress: {
         streetAddress: '123 Test St',
         addressOther: 'Unit 101',
@@ -187,18 +188,20 @@ describe('OrganizationView Component Tests', () => {
   it('shows no for early issuance if user is government', () => {
     setupRoleTest(roles.government, true)
     expect(screen.getByText(/Early issuance reporting/i)).toBeInTheDocument()
-    // Get all "No" texts and verify there are 2 (for credit market and early issuance)
+    // Get all "No" texts and verify there is 1 (for early issuance) and 1 for enrolled Credit Market
     const noTexts = screen.getAllByText(/^No$/i)
     expect(noTexts).toHaveLength(2)
   })
 
   it('has a functioning clear filters button', () => {
-    const clearFilterButtons = screen.getAllByTestId('clear-filters-button')
-    expect(clearFilterButtons.length).toBeGreaterThan(0)
-    expect(clearFilterButtons[0]).not.toBeDisabled()
+    // Click on the Users tab to navigate to the tab with the clear filters button
+    fireEvent.click(screen.getByText(/Users/i))
+    
+    const clearFilterButton = screen.getByRole('button', { name: /clear filters/i })
+    expect(clearFilterButton).toBeInTheDocument()
+    expect(clearFilterButton).not.toBeDisabled()
 
-    const button = clearFilterButtons[0]
-    expect(() => fireEvent.click(button)).not.toThrow()
+    expect(() => fireEvent.click(clearFilterButton)).not.toThrow()
   })
 
   it('shows edit button when user has administrator role', () => {
@@ -213,6 +216,9 @@ describe('OrganizationView Component Tests', () => {
 
   it('shows New User button for users with administrator role', () => {
     setupRoleTest('Administrator', true)
+
+    // Click on the Users tab to navigate to the tab with the New User button
+    fireEvent.click(screen.getByText(/Users/i))
 
     // Check for the New User button
     expect(screen.getByText(/new user/i)).toBeInTheDocument()

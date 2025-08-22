@@ -3,6 +3,7 @@ from .OrganizationAddress import OrganizationAddress
 from .OrganizationAttorneyAddress import OrganizationAttorneyAddress
 from .OrganizationBalance import OrganizationBalanceView
 from .OrganizationEarlyIssuanceByYear import OrganizationEarlyIssuanceByYear
+from .OrganizationLinkKey import OrganizationLinkKey
 from .OrganizationStatus import OrganizationStatus
 from .OrganizationType import OrganizationType
 
@@ -12,6 +13,7 @@ __all__ = [
     "OrganizationAttorneyAddress",
     "OrganizationBalanceView",
     "OrganizationEarlyIssuanceByYear",
+    "OrganizationLinkKey",
     "OrganizationStatus",
     "OrganizationType",
 ]

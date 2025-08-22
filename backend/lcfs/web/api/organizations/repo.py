@@ -16,6 +16,8 @@ from lcfs.db.models.organization.OrganizationAddress import OrganizationAddress
 from lcfs.db.models.organization.OrganizationAttorneyAddress import (
     OrganizationAttorneyAddress,
 )
+from lcfs.db.models.organization.OrganizationLinkKey import OrganizationLinkKey
+from lcfs.db.models.form.Form import Form
 from lcfs.db.models.organization.OrganizationStatus import (
     OrgStatusEnum,
     OrganizationStatus,
@@ -189,10 +191,14 @@ class OrganizationsRepository:
 
         current_year = LCFS_Constants.get_current_compliance_year()
 
-        # Check if early issuance filter is present
+        # Check if early issuance filter or sort is present
         has_early_issuance_filter = any(
-            filter.field == "has_early_issuance" for filter in pagination.filters
+            filter.field in ["has_early_issuance", "hasEarlyIssuance"] for filter in pagination.filters
         )
+        has_early_issuance_sort = any(
+            order.field in ["has_early_issuance", "hasEarlyIssuance"] for order in pagination.sort_orders
+        )
+        needs_early_issuance_joins = has_early_issuance_filter or has_early_issuance_sort
 
         # Base query with standard joins
         query = (
@@ -219,8 +225,8 @@ class OrganizationsRepository:
             )
         )
 
-        # Add early issuance joins if needed (either for filtering or for general data)
-        if has_early_issuance_filter:
+        # Add early issuance joins if needed (either for filtering, sorting, or general data)
+        if needs_early_issuance_joins:
             query = query.outerjoin(
                 OrganizationEarlyIssuanceByYear,
                 Organization.organization_id
@@ -259,9 +265,36 @@ class OrganizationsRepository:
         # Sort the query results
         for order in pagination.sort_orders:
             sort_method = asc if order.direction == "asc" else desc
-            query = query.order_by(
-                sort_method(order.field if order.field != "status" else "description")
-            )
+            
+            # Map frontend field names to backend field names
+            field_name = order.field
+            if field_name == "hasEarlyIssuance":
+                field_name = "has_early_issuance"
+            
+            if field_name == "status":
+                # Sort by organization status description
+                query = query.order_by(sort_method(OrganizationStatus.status))
+            elif field_name == "registrationStatus":
+                # Sort by whether the organization is registered (status == "Registered")
+                registration_case = case(
+                    (OrganizationStatus.status == "Registered", 1),
+                    else_=0
+                )
+                query = query.order_by(sort_method(registration_case))
+            elif field_name == "has_early_issuance":
+                # Sort by early issuance if the joins are available
+                if needs_early_issuance_joins:
+                    query = query.order_by(sort_method(OrganizationEarlyIssuanceByYear.has_early_issuance))
+                else:
+                    # Skip sorting by early issuance if no joins are available
+                    continue
+            else:
+                # Default sorting for other fields
+                if hasattr(Organization, field_name):
+                    query = query.order_by(sort_method(getattr(Organization, field_name)))
+                else:
+                    # Skip unknown fields
+                    continue
 
         results = await self.db.execute(query.offset(offset).limit(limit))
         organizations = results.scalars().all()
@@ -556,6 +589,13 @@ class OrganizationsRepository:
         # Default to False if no year-specific setting exists
         return False
 
+    def get_early_issuance_field(self):
+        """
+        Get the field reference for early issuance filtering.
+        Returns the SQLAlchemy field that can be used in filter conditions.
+        """
+        return OrganizationEarlyIssuanceByYear.has_early_issuance
+
     @repo_handler
     async def get_credit_market_organizations(self) -> List[Organization]:
         """
@@ -571,11 +611,109 @@ class OrganizationsRepository:
             .where(
                 and_(
                     Organization.display_in_credit_market == True,
-                    Organization.org_status.has(OrganizationStatus.status == OrgStatusEnum.Registered)
+                    Organization.org_status.has(
+                        OrganizationStatus.status == OrgStatusEnum.Registered
+                    ),
                 )
             )
             .order_by(Organization.name)
         )
-        
+
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_organization_link_keys(self, organization_id: int):
+        """
+        Get all link keys for an organization.
+        """
+        query = (
+            select(OrganizationLinkKey)
+            .options(
+                joinedload(OrganizationLinkKey.organization),
+                joinedload(OrganizationLinkKey.form),
+            )
+            .where(OrganizationLinkKey.organization_id == organization_id)
+            .order_by(OrganizationLinkKey.form_id)
+        )
+        result = await self.db.execute(query)
+        return result.scalars().all()
+
+    @repo_handler
+    async def get_link_key_by_form_id(
+        self, organization_id: int, form_id: int
+    ) -> OrganizationLinkKey:
+        """
+        Get a link key for a specific organization and form.
+        """
+        query = (
+            select(OrganizationLinkKey)
+            .options(
+                joinedload(OrganizationLinkKey.organization),
+                joinedload(OrganizationLinkKey.form),
+            )
+            .where(
+                and_(
+                    OrganizationLinkKey.organization_id == organization_id,
+                    OrganizationLinkKey.form_id == form_id,
+                )
+            )
+        )
+        return await self.db.scalar(query)
+
+    @repo_handler
+    async def get_link_key_by_key(self, link_key: str) -> OrganizationLinkKey:
+        """
+        Get a link key record by the actual link key value.
+        Used for validating anonymous form access.
+        """
+        query = (
+            select(OrganizationLinkKey)
+            .options(
+                joinedload(OrganizationLinkKey.organization),
+                joinedload(OrganizationLinkKey.form),
+            )
+            .where(OrganizationLinkKey.link_key == link_key)
+        )
+        return await self.db.scalar(query)
+
+    @repo_handler
+    async def create_link_key(
+        self, link_key: OrganizationLinkKey
+    ) -> OrganizationLinkKey:
+        """
+        Create a new organization link key record.
+        """
+        self.db.add(link_key)
+        await self.db.flush()
+        await self.db.refresh(link_key)
+        return link_key
+
+    @repo_handler
+    async def update_link_key(
+        self, link_key: OrganizationLinkKey
+    ) -> OrganizationLinkKey:
+        """
+        Update an existing organization link key record.
+        """
+        link_key = await self.db.merge(link_key)
+        await self.db.flush()
+        await self.db.refresh(link_key)
+        return link_key
+
+    @repo_handler
+    async def get_form_by_id(self, form_id: int) -> Form:
+        """
+        Get a form by its ID.
+        """
+        query = select(Form).where(Form.form_id == form_id)
+        return await self.db.scalar(query)
+
+    @repo_handler
+    async def get_available_forms_for_link_keys(self) -> List[Form]:
+        """
+        Get all forms that can have link keys generated for them.
+        """
+        query = select(Form).where(Form.allows_anonymous == True).order_by(Form.name)
         result = await self.db.execute(query)
         return result.scalars().all()

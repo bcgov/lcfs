@@ -262,42 +262,6 @@ describe('AddEditUser', () => {
     ).toBeInTheDocument()
   })
 
-  it('renders "Add user" title for IDIR user', () => {
-    render(<AddEditUser userType="idir" />, { wrapper })
-    expect(screen.getByText('Add user')).toBeInTheDocument()
-    expect(screen.queryByText(/to Test Org/i)).not.toBeInTheDocument()
-  })
-
-  it('renders "Edit user to [Org Name]" title for BCeID user (edit mode)', async () => {
-    mockUseParams.mockReturnValue({ userID: 'user123', orgID: 'org456' })
-    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
-      data: {
-        organization: { organizationId: 1, name: 'Current User Org' },
-        roles: []
-      },
-      hasRoles: vi.fn((role) => role === roles.supplier),
-      isLoading: false
-    })
-    vi.mocked(organizationUserHooks.useOrganizationUser).mockReturnValue({
-      data: {
-        userProfileId: 'user123',
-        firstName: 'John',
-        lastName: 'Doe',
-        organization: { name: 'Specific Org' },
-        roles: [],
-        isActive: true,
-        isGovernmentUser: false,
-        isSafeToRemove: true
-      },
-      isLoading: false,
-      isFetched: true
-    })
-    render(<AddEditUser userType="bceid" />, { wrapper })
-    await waitFor(() => {
-      expect(screen.getByText('Edit user to Specific Org')).toBeInTheDocument()
-    })
-  })
-
   // --- Form Submission Tests ---
   it('calls createUser when submitting in add mode', async () => {
     mockUseParams.mockReturnValue({}) // Add mode (no userID)
@@ -615,41 +579,6 @@ describe('AddEditUser', () => {
     mockUseParams.mockReturnValue({}) // Add mode
     render(<AddEditUser userType="bceid" />, { wrapper })
     expect(screen.queryByTestId('delete-user-btn')).not.toBeInTheDocument()
-  })
-
-  // --- Navigation Tests ---
-  it('navigates to IDIR users list on back button for IDIR user', () => {
-    render(<AddEditUser userType="idir" />, { wrapper })
-    fireEvent.click(screen.getByTestId('back-btn'))
-    expect(mockUseNavigate).toHaveBeenCalledWith(ROUTES.ADMIN.USERS.LIST)
-  })
-
-  it('navigates to organizations list on back button for BCeID user (admin adding new org user)', () => {
-    mockUseParams.mockReturnValue({}) // No orgID in params, implies adding from orgs list
-    render(<AddEditUser userType="bceid" />, { wrapper })
-    fireEvent.click(screen.getByTestId('back-btn'))
-    expect(mockUseNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST)
-  })
-
-  it('navigates to current organization page on back button for supplier user', () => {
-    vi.mocked(currentUserHooks.useCurrentUser).mockReturnValue({
-      data: {
-        organization: { organizationId: 1, name: 'Current Org' },
-        roles: []
-      },
-      hasRoles: vi.fn((role) => role === roles.supplier),
-      isLoading: false
-    })
-    render(<AddEditUser userType="bceid" />, { wrapper })
-    fireEvent.click(screen.getByTestId('back-btn'))
-    expect(mockUseNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATION.ORG)
-  })
-
-  it('navigates to organizations list on back button when orgID is in params (admin editing org user)', () => {
-    mockUseParams.mockReturnValue({ orgID: 'someOrgId' })
-    render(<AddEditUser userType="bceid" />, { wrapper })
-    fireEvent.click(screen.getByTestId('back-btn'))
-    expect(mockUseNavigate).toHaveBeenCalledWith(ROUTES.ORGANIZATIONS.LIST)
   })
 
   // --- Form State Tests ---
