@@ -282,6 +282,8 @@ class FuelSupplyServices:
             energy=fuel_supply.energy,
             deleted=False,
             is_new_supplemental_entry=False,
+            is_canada_produced=fuel_supply.is_canada_produced,
+            is_q1_supplied=fuel_supply.is_q1_supplied,
         )
 
     @service_handler

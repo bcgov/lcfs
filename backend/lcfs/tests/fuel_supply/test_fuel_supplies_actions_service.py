@@ -215,6 +215,8 @@ def sample_fs_data():
         group_uuid=str(uuid4()),
         version=0,
         provision_of_the_act_id=123,
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
 
@@ -506,6 +508,8 @@ async def test_create_compliance_units_calculation(
         group_uuid=str(uuid4()),
         version=0,
         provision_of_the_act_id=123,
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
     mock_fuel_code_repo.get_standardized_fuel_data.return_value = CarbonIntensityResult(
         effective_carbon_intensity=case["input"]["ci_of_fuel"],

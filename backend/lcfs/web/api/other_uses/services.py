@@ -106,6 +106,8 @@ class OtherUsesServices:
             fuel_category=model.fuel_category.category,
             provision_of_the_act=model.provision_of_the_act.name,
             fuel_code=model.fuel_code.fuel_code if model.fuel_code else None,
+            is_canada_produced=model.is_canada_produced,
+            is_q1_supplied=model.is_q1_supplied,
             ci_of_fuel=model.ci_of_fuel,
             expected_use=model.expected_use.name,
             group_uuid=model.group_uuid,

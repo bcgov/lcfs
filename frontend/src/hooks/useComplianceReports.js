@@ -148,7 +148,7 @@ export const useComplianceReportWithCache = (reportId, options = {}) => {
   const needsFetch = shouldFetchReport(reportId)
   const { data: currentUser } = useCurrentUser({
     enabled:
-      needsFetch && !!reportId && !!currentUser?.organization?.organizationId
+      needsFetch && !!reportId
   })
   const queryResult = useGetComplianceReport(
     currentUser?.organization?.organizationId,
@@ -634,18 +634,20 @@ export const useAssignAnalyst = (options = {}) => {
         // More aggressive cache clearing - remove and refetch everything
         queryClient.removeQueries({ queryKey: ['compliance-reports-list'] })
         queryClient.removeQueries({ queryKey: ['compliance-reports'] })
-        queryClient.invalidateQueries({ queryKey: ['compliance-report', variables.reportId] })
-        
+        queryClient.invalidateQueries({
+          queryKey: ['compliance-report', variables.reportId]
+        })
+
         // Small delay to ensure backend transaction is committed
-        await new Promise(resolve => setTimeout(resolve, 200))
-        
+        await new Promise((resolve) => setTimeout(resolve, 200))
+
         // Force refetch of all compliance report list queries with exact matching
-        await queryClient.refetchQueries({ 
+        await queryClient.refetchQueries({
           queryKey: ['compliance-reports-list'],
           exact: false,
           type: 'active'
         })
-        
+
         // Invalidate available analysts list to ensure updated roles are reflected
         queryClient.invalidateQueries({ queryKey: ['available-analysts'] })
       }

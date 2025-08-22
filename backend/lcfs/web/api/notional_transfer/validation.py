@@ -73,6 +73,8 @@ class NotionalTransferValidation:
             and new_transfer.received_or_transferred
             == existing_transfer.received_or_transferred
             and self._quantities_match(new_transfer, existing_transfer)
+            and new_transfer.is_canada_produced == existing_transfer.is_canada_produced
+            and new_transfer.is_q1_supplied == existing_transfer.is_q1_supplied
         )
 
     def _quantities_match(self, new_transfer, existing_transfer) -> bool:

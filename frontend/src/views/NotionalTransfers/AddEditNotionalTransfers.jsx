@@ -289,6 +289,30 @@ export const AddEditNotionalTransfers = () => {
     transfersLoading
   ])
 
+  const updateGridColumnsVisibility = useCallback(() => {
+    if (!gridRef.current?.api) return
+    const api = gridRef.current.api
+    let showColumns = false
+    api.forEachNode((node) => {
+      if (node.data?.fuelCategory === 'Diesel') {
+        showColumns = true
+      }
+    })
+    api.setColumnsVisible(['isCanadaProduced'], showColumns)
+    api.setColumnsVisible(['isQ1Supplied'], showColumns)
+    if (showColumns) {
+      api.autoSizeAllColumns()
+    }
+  })
+  const onCellValueChanged = useCallback(async () => {
+    setTimeout(() => {
+      updateGridColumnsVisibility()
+    }, 0)
+  })
+  useEffect(() => {
+    updateGridColumnsVisibility()
+  }, [rowData, optionsData])
+
   const handleNavigateBack = useCallback(() => {
     navigate(
       buildPath(ROUTES.REPORTS.VIEW, {
@@ -334,6 +358,7 @@ export const AddEditNotionalTransfers = () => {
               'notionalTransfer:noNotionalTransfersFound'
             )}
             loading={optionsLoading || transfersLoading}
+            onCellValueChanged={onCellValueChanged}
             onCellEditingStopped={onCellEditingStopped}
             onAction={onAction}
             autoSizeStrategy={{

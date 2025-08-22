@@ -1,3 +1,4 @@
+from fastapi.responses import JSONResponse
 import structlog
 from fastapi import (
     APIRouter,
@@ -154,15 +155,56 @@ async def save_other_uses_row(
         )
         await service.delete_other_use(request_data)
         return DeleteOtherUsesResponseSchema(message="Other use deleted successfully")
-    elif other_uses_id:
-        # Update existing other use
-        await validate.validate_compliance_report_id(
-            compliance_report_id, [request_data]
-        )
-        return await service.update_other_use(request_data)
     else:
-        # Create new other use
-        await validate.validate_compliance_report_id(
-            compliance_report_id, [request_data]
-        )
-        return await service.create_other_use(request_data)
+        # Check for duplicates
+        duplicate_id = await validate.validate_duplicate(request_data)
+        if duplicate_id:
+            return format_duplicate_error(duplicate_id)
+        if other_uses_id:
+            # Update existing other use
+            await validate.validate_compliance_report_id(
+                compliance_report_id, [request_data]
+            )
+            return await service.update_other_use(request_data)
+        else:
+            # Create new other use
+            await validate.validate_compliance_report_id(
+                compliance_report_id, [request_data]
+            )
+            return await service.create_other_use(request_data)
+
+
+def format_duplicate_error(duplicate_id: int):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "message": "Validation failed",
+            "errors": [
+                {
+                    "fields": [
+                        "fuelCode",
+                        "fuelType",
+                        "fuelCategory",
+                        "provisionOfTheAct",
+                        "isCanadaProduced",
+                        "isQ1Supplied",
+                    ],
+                    "message": "There are duplicate fuel entries, please combine the quantity into a single value on one row.",
+                }
+            ],
+            "warnings": [
+                {
+                    "id": duplicate_id,
+                    "fields": [
+                        "fuelCode",
+                        "fuelType",
+                        "fuelCategory",
+                        "provisionOfTheAct",
+                        "isCanadaProduced",
+                        "isQ1Supplied",
+                    ],
+                    "message": "There are duplicate fuel entries, please combine the quantity into a single value on one row.",
+                }
+            ],
+        },
+    )

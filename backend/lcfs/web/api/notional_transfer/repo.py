@@ -145,6 +145,8 @@ class NotionalTransferRepository:
                 legal_name=nt.legal_name,
                 address_for_service=nt.address_for_service,
                 fuel_category=nt.fuel_category.category,
+                is_canada_produced=nt.is_canada_produced,
+                is_q1_supplied=nt.is_q1_supplied,
                 received_or_transferred=nt.received_or_transferred,
                 group_uuid=nt.group_uuid,
                 version=nt.version,

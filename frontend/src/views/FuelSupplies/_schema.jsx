@@ -27,6 +27,7 @@ import {
   extractOriginalFuelCode,
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
+import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 export const PROVISION_GHGENIUS =
@@ -206,6 +207,8 @@ export const fuelSupplyColDefs = (
           params.data.provisionOfTheAct = null
           params.data.provisionOfTheActId = null
           params.data.fuelCode = null
+          params.data.isCanadaProduced = false
+          params.data.isQ1Supplied = false
         }
         return true
       },
@@ -357,6 +360,8 @@ export const fuelSupplyColDefs = (
             }
           }
         }
+        params.data.isCanadaProduced = false
+        params.data.isQ1Supplied = false
         return true
       },
       editable: true,
@@ -478,6 +483,74 @@ export const fuelSupplyColDefs = (
           params.data.fuelCode = undefined
           params.data.fuelCodeId = undefined
         }
+        params.data.isCanadaProduced = false
+        params.data.isQ1Supplied = false
+        return true
+      }
+    },
+    {
+      field: 'isCanadaProduced',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
+      cellEditor: AutocompleteCellEditor,
+      cellRenderer: SelectRenderer,
+      cellEditorParams: {
+        options: ['Yes', 'No'],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      },
+      editable: (params) => {
+        const complianceYear = parseInt(compliancePeriod, 10)
+        const isRenewable = !optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )?.fossilDerived
+        return (
+          params.data.fuelCategory === 'Diesel' &&
+          complianceYear >= NEW_REGULATION_YEAR &&
+          isRenewable &&
+          params.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+        )
+      },
+      valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : 'No'),
+      valueSetter: (params) => {
+        if (params.newValue) {
+          params.data.isCanadaProduced = params.newValue === 'Yes'
+        }
+        return true
+      },
+      minWidth: 220
+    },
+    {
+      field: 'isQ1Supplied',
+      headerComponent: RequiredHeader,
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
+      cellEditor: AutocompleteCellEditor,
+      cellRenderer: SelectRenderer,
+      cellEditorParams: {
+        options: ['Yes', 'No'],
+        multiple: false,
+        disableCloseOnSelect: false,
+        freeSolo: false,
+        openOnFocus: true
+      },
+      editable: (params) => {
+        const complianceYear = parseInt(compliancePeriod, 10)
+        const isRenewable = !optionsData?.fuelTypes?.find(
+          (obj) => params.data.fuelType === obj.fuelType
+        )?.fossilDerived
+        const fuelCode = params.data.fuelCode
+        const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
+        return (
+          complianceYear === NEW_REGULATION_YEAR && isRenewable && isNonCanadian
+        )
+      },
+      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : 'No'),
+      valueSetter: (params) => {
+        if (params.newValue) {
+          params.data.isQ1Supplied = params.newValue === 'Yes'
+        }
         return true
       }
     },
@@ -545,12 +618,14 @@ export const fuelSupplyColDefs = (
           return true
         }
         return false
-      }
+      },
+      minWidth: 100
     },
     {
       field: 'uci',
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.uci'),
       editable: false,
+      minWidth: 100,
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental)
     },
@@ -766,6 +841,16 @@ export const fuelSupplySummaryColDef = (isEarlyIssuance, showFuelTypeOther) => {
       valueGetter: (params) => params.data.fuelCode
     },
     {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
+      field: 'isCanadaProduced',
+      valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
+      field: 'isQ1Supplied',
+      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
+    },
+    {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
       field: 'quantity',
       valueFormatter: formatNumberWithCommas
@@ -900,6 +985,16 @@ export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
+    field: 'isCanadaProduced',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
+    field: 'isQ1Supplied',
     cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {

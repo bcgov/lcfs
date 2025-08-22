@@ -60,6 +60,8 @@ class FuelSupplyDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseDTO):
     fuel_code: Optional[FuelCodeDTO] = None
     fuel_type: Optional[FuelTypeDTO] = None
     provision_of_the_act: Optional[ProvisionOfTheActDTO] = None
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
     end_use_type: Optional[EndUseTypeDTO] = None
 
 
@@ -90,6 +92,8 @@ class NotionalTransferDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseD
 
     legal_name: str
     address_for_service: str
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
     received_or_transferred: ReceivedOrTransferredEnum
     quantity: Optional[int] = None
     q1_quantity: Optional[int] = None
@@ -109,7 +113,8 @@ class OtherUseDTO(BaseSchema, Auditable, Versioning, ChangelogItemsBaseDTO):
     ci_of_fuel: float
 
     rationale: Optional[str] = None
-
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
     fuel_category: Optional[FuelCategoryDTO] = None
     fuel_code: Optional[FuelCodeDTO] = None
     fuel_type: Optional[FuelTypeDTO] = None

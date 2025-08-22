@@ -150,6 +150,8 @@ def format_duplicate_error(duplicate_id: int):
                         "fuelType",
                         "fuelCategory",
                         "provisionOfTheAct",
+                        "isCanadaProduced",
+                        "isQ1Supplied",
                     ],
                     "message": "There are duplicate fuel entries, please combine the quantity into a single value on one row.",
                 }
@@ -162,6 +164,8 @@ def format_duplicate_error(duplicate_id: int):
                         "fuelType",
                         "fuelCategory",
                         "provisionOfTheAct",
+                        "isCanadaProduced",
+                        "isQ1Supplied",
                     ],
                     "message": "There are duplicate fuel entries, please combine the quantity into a single value on one row.",
                 }

@@ -32,6 +32,8 @@ async def test_validate_compliance_report_id_mismatch():
                     address_for_service="123 Test St",
                     quantity=1000,
                     received_or_transferred="Received",
+                    is_canada_produced=True,
+                    is_q1_supplied=False,
                 )
             ],
         )
@@ -50,6 +52,8 @@ async def test_no_duplicates_validation_passes(validation):
         address_for_service="123 Test St",
         quantity=1000,
         received_or_transferred="Received",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     await val.validate_no_duplicates(new_transfer)  # Should not raise
@@ -68,6 +72,8 @@ async def test_duplicate_detection_fails(validation):
         quantity=1000,
         received_or_transferred="Received",
         group_uuid="different-uuid",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
     mock_repo.get_notional_transfers = AsyncMock(return_value=[existing_transfer])
 
@@ -78,6 +84,8 @@ async def test_duplicate_detection_fails(validation):
         address_for_service="123 Test St",
         quantity=1000,
         received_or_transferred="Received",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     with pytest.raises(ValidationErrorException) as exc_info:
@@ -102,6 +110,8 @@ async def test_case_insensitive_duplicate_detection(validation):
         quantity=1000,
         received_or_transferred="Received",
         group_uuid="different-uuid",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
     mock_repo.get_notional_transfers = AsyncMock(return_value=[existing_transfer])
 
@@ -112,6 +122,8 @@ async def test_case_insensitive_duplicate_detection(validation):
         address_for_service="123 Test St",
         quantity=1000,
         received_or_transferred="Received",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     with pytest.raises(ValidationErrorException):
@@ -131,6 +143,8 @@ async def test_different_fields_allowed(validation):
         quantity=1000,
         received_or_transferred="Received",
         group_uuid="different-uuid",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
     mock_repo.get_notional_transfers = AsyncMock(return_value=[existing_transfer])
 
@@ -142,6 +156,8 @@ async def test_different_fields_allowed(validation):
         address_for_service="123 Test St",
         quantity=1000,
         received_or_transferred="Received",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
     await val.validate_no_duplicates(new_transfer)  # Should not raise
 
@@ -160,6 +176,8 @@ async def test_same_group_uuid_update_allowed(validation):
         quantity=1000,
         received_or_transferred="Received",
         group_uuid=same_group_uuid,
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
     mock_repo.get_notional_transfers = AsyncMock(return_value=[existing_transfer])
 
@@ -171,6 +189,8 @@ async def test_same_group_uuid_update_allowed(validation):
         quantity=1000,
         received_or_transferred="Received",
         group_uuid=same_group_uuid,
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     await val.validate_no_duplicates(update_transfer)  # Should not raise

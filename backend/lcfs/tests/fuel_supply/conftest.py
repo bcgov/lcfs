@@ -89,4 +89,6 @@ def create_sample_fs_data() -> FuelSupplyCreateUpdateSchema:
         group_uuid=str(uuid4()),
         version=0,
         provision_of_the_act_id=123,
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )

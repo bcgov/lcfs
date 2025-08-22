@@ -31,7 +31,9 @@
     "energyDensity": "Energy density",
     "eer": "EER",
     "energy": "Energy Content",
-    "determiningCarbonIntensity": "Determining carbon intensity"
+    "determiningCarbonIntensity": "Determining carbon intensity",
+    "isCanadaProduced": "Fuel produced in Canada?",
+    "isQ1Supplied": "Supplied in Q1?"
   },
   "validateMsg": {
     "isRequired": "{{field}} is required"

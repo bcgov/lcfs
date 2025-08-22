@@ -109,6 +109,8 @@ class OtherUsesCreateSchema(BaseSchema):
     version: Optional[int] = None
     action_type: Optional[str] = None
     is_new_supplemental_entry: Optional[bool] = None
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
 
     @model_validator(mode="before")
     @classmethod
@@ -144,6 +146,8 @@ class OtherUsesChangelogSchema(BaseSchema):
     fuel_type: OtherUsesChangelogFuelTypeSchema
     fuel_category: FuelCategorySchema
     provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
     quantity_supplied: int
     units: str
     expected_use: ExpectedUseTypeSchema

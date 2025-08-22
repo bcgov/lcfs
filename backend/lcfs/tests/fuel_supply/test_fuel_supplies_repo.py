@@ -105,6 +105,8 @@ async def test_check_duplicate(fuel_supply_repo, mock_db_session):
         provision_of_the_act_id=1,
         quantity=1000,
         units="L",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     # Set up the mock chain using MagicMock for synchronous chained methods.
@@ -149,6 +151,8 @@ async def test_get_fuel_supplies_paginated_exclude_draft_reports(fuel_supply_rep
         "fuelCategoryId": 1,
         "endUseId": 1,
         "provisionOfTheActId": 1,
+        "is_canada_produced": True,
+        "is_q1_supplied": False,
     }
     expected_fuel_supplies = [valid_fuel_supply]
 

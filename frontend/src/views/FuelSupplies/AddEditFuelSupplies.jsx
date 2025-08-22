@@ -1,7 +1,12 @@
 import BCBox from '@/components/BCBox'
 import { BCGridEditor } from '@/components/BCDataGrid/BCGridEditor'
 import BCTypography from '@/components/BCTypography'
-import { DEFAULT_CI_FUEL, REPORT_SCHEDULES } from '@/constants/common'
+import {
+  DEFAULT_CI_FUEL,
+  DEFAULT_CI_FUEL_CODE,
+  NEW_REGULATION_YEAR,
+  REPORT_SCHEDULES
+} from '@/constants/common'
 import { buildPath, ROUTES } from '@/routes/routes'
 import {
   useFuelSupplyOptions,
@@ -175,6 +180,56 @@ export const AddEditFuelSupplies = () => {
     isSupplemental
   ])
 
+  const updateGridColumnsVisibility = useCallback(() => {
+    if (!gridRef.current?.api) return
+
+    const api = gridRef.current.api
+
+    // Track if any row should show each column
+    let shouldShowIsCanadaProduced = false
+    let shouldShowIsQ1Supplied = false
+
+    api.forEachNode((node) => {
+      if (node.data) {
+        const complianceYear = parseInt(compliancePeriod, 10)
+        const isRenewable = !optionsData?.fuelTypes?.find(
+          (obj) => node.data.fuelType === obj.fuelType
+        )?.fossilDerived
+        const fuelCode = node.data.fuelCode
+        const isNonCanadian = fuelCode && !fuelCode.startsWith('C-')
+
+        // Check if this row should show the isCanadaProduced column
+        if (
+          node.data.fuelCategory === 'Diesel' &&
+          complianceYear >= NEW_REGULATION_YEAR &&
+          isRenewable &&
+          node.data.provisionOfTheAct === DEFAULT_CI_FUEL_CODE
+        ) {
+          shouldShowIsCanadaProduced = true
+        }
+
+        // Check if this row should show the isQ1Supplied column
+        if (
+          node.data.fuelCategory === 'Diesel' &&
+          complianceYear === NEW_REGULATION_YEAR &&
+          isRenewable &&
+          isNonCanadian
+        ) {
+          shouldShowIsQ1Supplied = true
+        }
+      }
+    })
+
+    // Set column visibility based on whether any row met the conditions
+    api?.setColumnsVisible(['isCanadaProduced'], shouldShowIsCanadaProduced)
+    api?.setColumnsVisible(['isQ1Supplied'], shouldShowIsQ1Supplied)
+  }, [compliancePeriod, optionsData])
+
+  // Call this function whenever relevant data changes
+  useEffect(() => {
+    updateGridColumnsVisibility()
+  }, [rowData, optionsData, updateGridColumnsVisibility])
+
   const onCellValueChanged = useCallback(
     async (params) => {
       setWarnings({})
@@ -204,6 +259,8 @@ export const AddEditFuelSupplies = () => {
           params.node.setDataValue('fuelCategory', categoryValue)
           params.node.setDataValue('endUseType', endUseValue)
           params.node.setDataValue('provisionOfTheAct', provisionValue)
+          params.node.setDataValue('isCanadaProduced', false)
+          params.node.setDataValue('isQ1Supplied', false)
         }
       }
 
@@ -230,11 +287,16 @@ export const AddEditFuelSupplies = () => {
 
           params.node.setDataValue('endUseType', endUseValue)
           params.node.setDataValue('provisionOfTheAct', provisionValue)
+          params.node.setDataValue('isCanadaProduced', false)
+          params.node.setDataValue('isQ1Supplied', false)
         }
       }
+      setTimeout(() => {
+        updateGridColumnsVisibility()
+      }, 0)
       params.api.autoSizeAllColumns()
     },
-    [optionsData]
+    [optionsData, updateGridColumnsVisibility]
   )
 
   const onCellEditingStopped = useCallback(

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Numeric, BigInteger
+from sqlalchemy import Boolean, Column, Integer, String, ForeignKey, Numeric, BigInteger, text
 from sqlalchemy.orm import relationship
 from lcfs.db.base import BaseModel, Auditable, Versioning
 
@@ -67,6 +67,8 @@ class OtherUses(BaseModel, Auditable, Versioning):
         nullable=True,
         comment="Rationale for the use of the fuel, required if 'Other' is selected as expected use",
     )
+    is_canada_produced = Column(Boolean, server_default=text('false'), comment="Flag for Canada production fuels")
+    is_q1_supplied = Column(Boolean, server_default=text('false'), comment="Flag for Q1 supply of fuel")
 
     compliance_report = relationship("ComplianceReport", back_populates="other_uses")
     fuel_type = relationship("FuelType")

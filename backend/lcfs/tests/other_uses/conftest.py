@@ -18,6 +18,8 @@ def create_mock_entity(overrides: dict):
     mock_entity.version = 1
     mock_entity.quantity_supplied = 1000
     mock_entity.action_type = ActionTypeEnum.CREATE
+    mock_entity.is_canada_produced = True
+    mock_entity.is_q1_supplied = False
 
     # Apply overrides
     if overrides:
@@ -41,6 +43,8 @@ def create_mock_schema(overrides: dict):
         group_uuid="test-group-uuid",
         version=1,
         action_type="Create",
+        is_canada_produced=True,
+        is_q1_supplied=False,
     )
 
     # Apply overrides

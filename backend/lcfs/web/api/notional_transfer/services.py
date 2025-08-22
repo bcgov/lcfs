@@ -78,6 +78,8 @@ class NotionalTransferServices:
             legal_name=model.legal_name,
             address_for_service=model.address_for_service,
             fuel_category=model.fuel_category.category,
+            is_canada_produced=model.is_canada_produced,
+            is_q1_supplied=model.is_q1_supplied,
             received_or_transferred=model.received_or_transferred,
             group_uuid=model.group_uuid,
             version=model.version,
