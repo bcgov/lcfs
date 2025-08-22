@@ -146,6 +146,8 @@ class OtherUsesChangelogSchema(BaseSchema):
     fuel_type: OtherUsesChangelogFuelTypeSchema
     fuel_category: FuelCategorySchema
     provision_of_the_act: Optional[ProvisionOfTheActSchema] = None
+    is_canada_produced: Optional[bool] = False
+    is_q1_supplied: Optional[bool] = False
     quantity_supplied: int
     units: str
     expected_use: ExpectedUseTypeSchema

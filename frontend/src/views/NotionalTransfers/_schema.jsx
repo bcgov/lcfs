@@ -134,12 +134,14 @@ export const notionalTransferColDefs = (
       cellStyle: (params) =>
         StandardCellWarningAndErrors(params, errors, warnings, isSupplemental),
       cellRenderer: SelectRenderer,
-      minWidth: 150,
+      minWidth: 150
     },
     {
       field: 'isCanadaProduced',
       headerComponent: RequiredHeader,
-      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
+      headerName: i18n.t(
+        'notionalTransfer:notionalTransferColLabels.isCanadaProduced'
+      ),
       cellEditor: AutocompleteCellEditor,
       cellRenderer: SelectRenderer,
       cellEditorParams: {
@@ -162,7 +164,9 @@ export const notionalTransferColDefs = (
     {
       field: 'isQ1Supplied',
       headerComponent: RequiredHeader,
-      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
+      headerName: i18n.t(
+        'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
+      ),
       cellEditor: AutocompleteCellEditor,
       cellRenderer: SelectRenderer,
       cellEditorParams: {
@@ -363,7 +367,7 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
       ),
       field: 'legalName',
       flex: 1,
-      minWidth: 200
+      minWidth: 300
     },
     {
       headerName: i18n.t(
@@ -381,9 +385,29 @@ export const notionalTransferSummaryColDefs = (isEarlyIssuance = false) => {
     },
     {
       headerName: i18n.t(
+        'notionalTransfer:notionalTransferColLabels.isCanadaProduced'
+      ),
+      field: 'isCanadaProduced',
+      flex: 1,
+      minWidth: 240,
+      valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
+    },
+    {
+      headerName: i18n.t(
+        'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
+      ),
+      field: 'isQ1Supplied',
+      flex: 1,
+      minWidth: 180,
+      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
+    },
+    {
+      headerName: i18n.t(
         'notionalTransfer:notionalTransferColLabels.receivedOrTransferred'
       ),
-      field: 'receivedOrTransferred'
+      field: 'receivedOrTransferred',
+      flex: 1,
+      minWidth: 240
     },
     {
       headerName: i18n.t('notionalTransfer:notionalTransferColLabels.quantity'),
@@ -484,6 +508,24 @@ export const changelogCommonColDefs = (highlight = true) => [
     field: 'fuelCategory.category',
     cellStyle: (params) =>
       highlight && changelogCellStyle(params, 'fuelCategory')
+  },
+  {
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.isCanadaProduced'
+    ),
+    field: 'isCanadaProduced',
+    minWidth: 240,
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'isCanadaProduced')
+  },
+  {
+    headerName: i18n.t(
+      'notionalTransfer:notionalTransferColLabels.isQ1Supplied'
+    ),
+    field: 'isQ1Supplied',
+    minWidth: 240,
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'isQ1Supplied')
   },
   {
     headerName: i18n.t(

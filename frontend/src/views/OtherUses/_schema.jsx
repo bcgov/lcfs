@@ -21,6 +21,7 @@ import {
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
+import { min } from 'node_modules/cypress/types/lodash'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 
@@ -272,7 +273,8 @@ export const otherUsesColDefs = (
         params.data.isQ1Supplied = params.newValue === 'Yes'
       }
       return true
-    }
+    },
+    minWidth: 180
   },
   {
     field: 'quantitySupplied',
@@ -410,6 +412,20 @@ export const otherUsesSummaryColDefs = [
     }
   },
   {
+    headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
+    field: 'isCanadaProduced',
+    floatingFilter: false,
+    valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : ''),
+    minWidth: 240
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
+    field: 'isQ1Supplied',
+    floatingFilter: false,
+    valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : ''),
+    minWidth: 180
+  },
+  {
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),
     field: 'quantitySupplied',
     floatingFilter: false,
@@ -482,6 +498,20 @@ export const changelogCommonColDefs = (highlight = true) => [
       }
       return ''
     }
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.isCanadaProduced'),
+    field: 'isCanadaProduced',
+    minWidth: 240,
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'isCanadaProduced')
+  },
+  {
+    headerName: i18n.t('otherUses:otherUsesColLabels.isQ1Supplied'),
+    field: 'isQ1Supplied',
+    minWidth: 180,
+    cellStyle: (params) =>
+      highlight && changelogCellStyle(params, 'isQ1Supplied')
   },
   {
     headerName: i18n.t('otherUses:otherUsesColLabels.quantitySupplied'),

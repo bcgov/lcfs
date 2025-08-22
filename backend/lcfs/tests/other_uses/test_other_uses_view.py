@@ -324,6 +324,8 @@ async def test_save_other_uses_draft_status_allowed(
             "units": "L",
             "expected_use": "Transport",
             "rationale": "Test rationale",
+            "is_canada_produced": True,
+            "is_q1_supplied": False,
         }
         response = await client.post(url, json=payload)
         assert response.status_code == 200
@@ -367,6 +369,8 @@ async def test_save_other_uses_submitted_status_blocked(
             "units": "L",
             "expected_use": "Transport",
             "rationale": "Test rationale",
+            "is_canada_produced": True,
+            "is_q1_supplied": False,
         }
         response = await client.post(url, json=payload)
         assert response.status_code == 403

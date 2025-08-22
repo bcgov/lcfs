@@ -184,10 +184,6 @@ class OtherUsesServices:
         self, new_data: OtherUsesCreateSchema
     ) -> OtherUsesSchema:
         """Update an existing other use"""
-        # Check for duplicates
-        is_duplicate = await self.repo.check_duplicate(new_data)
-        if is_duplicate:
-            raise ValueError("A record with the same attributes already exists.")
         existing_other_use = await self.repo.get_other_use(new_data.other_uses_id)
 
         if not existing_other_use:
@@ -264,10 +260,6 @@ class OtherUsesServices:
         existing_record: Optional[OtherUses] = None,
     ) -> OtherUsesSchema:
         """Create a new other use"""
-        # Check for duplicates
-        is_duplicate = await self.repo.check_duplicate(other_use_data)
-        if is_duplicate:
-            raise ValueError("A record with the same attributes already exists.")
         other_use = await self.schema_to_model(other_use_data)
         new_group_uuid = str(uuid.uuid4())
         other_use.group_uuid = (

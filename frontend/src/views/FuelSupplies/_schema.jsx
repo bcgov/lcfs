@@ -841,6 +841,16 @@ export const fuelSupplySummaryColDef = (isEarlyIssuance, showFuelTypeOther) => {
       valueGetter: (params) => params.data.fuelCode
     },
     {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
+      field: 'isCanadaProduced',
+      valueGetter: (params) => (params.data.isCanadaProduced ? 'Yes' : '')
+    },
+    {
+      headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
+      field: 'isQ1Supplied',
+      valueGetter: (params) => (params.data.isQ1Supplied ? 'Yes' : '')
+    },
+    {
       headerName: i18n.t('fuelSupply:fuelSupplyColLabels.quantity'),
       field: 'quantity',
       valueFormatter: formatNumberWithCommas
@@ -975,6 +985,16 @@ export const changelogCommonColDefs = (highlight = true) => [
   {
     headerName: i18n.t('fuelSupply:fuelSupplyColLabels.fuelCode'),
     field: 'fuelCode.fuelCode',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isCanadaProduced'),
+    field: 'isCanadaProduced',
+    cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
+  },
+  {
+    headerName: i18n.t('fuelSupply:fuelSupplyColLabels.isQ1Supplied'),
+    field: 'isQ1Supplied',
     cellStyle: (params) => highlight && changelogCellStyle(params, 'fuelCode')
   },
   {
