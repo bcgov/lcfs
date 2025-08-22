@@ -12,7 +12,6 @@ from lcfs.web.api.compliance_report.validation import ComplianceReportValidation
 from lcfs.web.api.other_uses.schema import (
     PaginatedOtherUsesRequestSchema,
     OtherUsesSchema,
-    OtherUsesCreateSchema,
 )
 from lcfs.web.api.other_uses.services import OtherUsesServices
 from lcfs.web.api.other_uses.validation import OtherUsesValidation
@@ -28,6 +27,9 @@ def mock_other_uses_validation():
     validation = MagicMock(spec=OtherUsesValidation)
     validation.validate_organization_access = AsyncMock()
     validation.validate_compliance_report_id = AsyncMock()
+    validation.validate_duplicate = AsyncMock(
+        return_value=None
+    )  # No duplicates by default
     return validation
 
 
@@ -288,7 +290,11 @@ async def test_save_other_uses_row_delete(
 # Tests for editable validation
 @pytest.mark.anyio
 async def test_save_other_uses_draft_status_allowed(
-    client: AsyncClient, fastapi_app: FastAPI, set_mock_user
+    client: AsyncClient,
+    fastapi_app: FastAPI,
+    set_mock_user,
+    mock_other_uses_service,
+    mock_other_uses_validation,
 ):
     """Test that saving is allowed when compliance report is in Draft status"""
     mock_report = ComplianceReport(organization=Organization())
@@ -301,17 +307,34 @@ async def test_save_other_uses_draft_status_allowed(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_access"
     ) as mock_validate_access, patch(
         "lcfs.web.api.compliance_report.validation.ComplianceReportValidation.validate_compliance_report_editable"
-    ) as mock_validate_editable, patch(
-        "lcfs.web.api.other_uses.services.OtherUsesServices.create_other_use"
-    ) as mock_create, patch(
-        "lcfs.web.api.other_uses.validation.OtherUsesValidation.validate_compliance_report_id"
-    ) as mock_validate_id:
+    ) as mock_validate_editable:
 
         mock_validate_org.return_value = mock_report
         mock_validate_access.return_value = None
         mock_validate_editable.return_value = None  # Should not raise exception
-        mock_validate_id.return_value = None
-        mock_create.return_value = {"otherUsesId": 1, "quantitySupplied": 1000}
+
+        # Mock the service to return expected data
+        mock_other_uses_service.create_other_use.return_value = OtherUsesSchema(
+            other_uses_id=1,
+            compliance_report_id=1,
+            fuel_type="Gasoline",
+            fuel_category="Petroleum-based",
+            provision_of_the_act="Fuel supplied",
+            quantity_supplied=1000,
+            units="L",
+            expected_use="Transport",
+            rationale="Test rationale",
+            is_canada_produced=True,
+            is_q1_supplied=False,
+        )
+
+        # Set up dependency overrides
+        fastapi_app.dependency_overrides[OtherUsesServices] = (
+            lambda: mock_other_uses_service
+        )
+        fastapi_app.dependency_overrides[OtherUsesValidation] = (
+            lambda: mock_other_uses_validation
+        )
 
         set_mock_user(fastapi_app, [RoleEnum.COMPLIANCE_REPORTING])
         url = fastapi_app.url_path_for("save_other_uses_row")

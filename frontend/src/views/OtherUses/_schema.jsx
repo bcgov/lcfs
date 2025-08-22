@@ -21,7 +21,6 @@ import {
   formatFuelCodeWithCountryPrefix
 } from '@/utils/fuelCodeCountryPrefix'
 import { DEFAULT_CI_FUEL_CODE, NEW_REGULATION_YEAR } from '@/constants/common'
-import { min } from 'node_modules/cypress/types/lodash'
 
 export const PROVISION_APPROVED_FUEL_CODE = 'Fuel code - section 19 (b) (i)'
 

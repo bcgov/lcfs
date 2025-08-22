@@ -643,11 +643,27 @@ class ComplianceReportSummaryService:
         fossil_quantities = self.repo.aggregate_quantities(all_fossil_records, True)
         # line 2
         filtered_renewable_fuel_supplies = [
-            fs for fs in effective_fuel_supplies if fs.fuel_type.renewable
+            fs
+            for fs in effective_fuel_supplies
+            if (fs.fuel_catgory.category != "Diesel" and fs.fuel_type.renewable)
+            # Ensure non-Canadian renewable diesel volumes are not added into lines 1 or 2.
+            or (
+                fs.fuel_category.category == "Diesel"
+                and fs.fuel_type.renewable
+                and (fs.is_canada_produced or fs.is_canada_imported)
+            )
         ]
 
         filtered_renewable_other_uses = [
-            ou for ou in effective_other_uses if ou.fuel_type.renewable
+            ou
+            for ou in effective_other_uses
+            if (ou.fuel_category.category != "Diesel" and ou.fuel_type.renewable)
+            # Ensure non-Canadian renewable diesel volumes are not added into lines 1 or 2.
+            or (
+                ou.fuel_category.category == "Diesel"
+                and ou.fuel_type.renewable
+                and (ou.is_canada_produced or ou.is_canada_imported)
+            )
         ]
 
         all_renewable_records = [
