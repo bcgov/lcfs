@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from lcfs.db.models.compliance.FinalSupplyEquipment import (
     final_supply_intended_use_association,
 )
+from lcfs.db.models.compliance.FSE import fse_intended_use_association
 
 
 class EndUseType(BaseModel, Auditable, DisplayOrder):
@@ -33,4 +34,9 @@ class EndUseType(BaseModel, Auditable, DisplayOrder):
         "AdditionalCarbonIntensity",
         back_populates="end_use_type",
         overlaps="additional_carbon_intensity",
+    )
+    fse = relationship(
+        "FSE",
+        secondary=fse_intended_use_association,
+        back_populates="intended_uses",
     )
