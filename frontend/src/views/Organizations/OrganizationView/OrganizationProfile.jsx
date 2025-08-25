@@ -40,6 +40,16 @@ export const OrganizationProfile = ({
           </BCTypography>
 
           <BCTypography variant="body4">
+            <strong>{t('org:orgTypeLabel')}:</strong>{' '}
+            {orgData?.orgType?.description || orgData?.orgType?.orgType}
+            {orgData?.orgType?.isBceidUser === true
+              ? ' (BCeID user)'
+              : orgData?.orgType?.isBceidUser === false
+                ? ' (non-BCeID user)'
+                : ''}
+          </BCTypography>
+
+          <BCTypography variant="body4">
             <strong>{t('org:phoneNbrLabel')}:</strong>{' '}
             {phoneNumberFormatter({ value: orgData?.phone })}
           </BCTypography>
