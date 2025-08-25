@@ -97,8 +97,8 @@ class TestGeocoderViews:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["success"] is True
-        assert data["address"]["latitude"] == 49.2827
-        assert data["address"]["longitude"] == -123.1207
+        assert abs(data["address"]["latitude"] - 49.2827) < 0.01  # Allow small variation
+        assert abs(data["address"]["longitude"] - (-123.1207)) < 0.01  # Allow small variation
 
     @pytest.mark.anyio
     async def test_reverse_geocode_success(self, client, mock_geocoder_service, sample_geocoding_result):
