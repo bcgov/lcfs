@@ -1,8 +1,8 @@
 """Add Metabase view for Fuels for Other Use Data
 
 Revision ID: 71e8f75d9815
-Revises: 2f5a7b9c1d2e1
-Create Date: 2025-08-20 15:48:00.000000
+Revises: 32a1f93375bd
+Create Date: 2025-08-25 15:48:00.000000
 
 """
 
@@ -15,7 +15,7 @@ from lcfs.db.dependencies import (
 
 # revision identifiers, used by Alembic.
 revision = "71e8f75d9815"
-down_revision = "2f5a7b9c1d2e1"
+down_revision = "32a1f93375bd"
 branch_labels = None
 depends_on = None
 
