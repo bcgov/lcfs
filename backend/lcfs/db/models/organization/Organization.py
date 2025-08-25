@@ -187,9 +187,13 @@ class Organization(BaseModel, Auditable, EffectiveDates):
         back_populates="organization",
         cascade="all, delete-orphan",
     )
-    
+
     charging_sites = relationship("ChargingSite", back_populates="organization")
- 
+    fse_compliance_associations = relationship(
+        "FSEComplianceAssociation", back_populates="organization"
+    )
+
+
 @event.listens_for(Organization, "before_insert")
 def receive_before_insert(mapper, connection, target):
     session = Session(bind=connection)
